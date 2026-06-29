@@ -282,6 +282,26 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "MetaConfig was loaded")
 
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	printBanner(ctx)
+
+	if interactive {
+		progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
+		bctx.finishProgress = finishProgress
+
+		onUpdateFunc := func(progress phases.Progress) error {
+			// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
+			// stopped and the channel is no longer drained; never block or panic on it.
+			select {
+			case progressCh <- progress:
+			default:
+			}
+			return nil
+		}
+
+		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
+	}
+
 	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
 	}
@@ -333,25 +353,25 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	b.lastState = nil
 
-	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
-	printBanner(ctx)
+	// interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	// printBanner(ctx)
 
-	if interactive {
-		progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
-		bctx.finishProgress = finishProgress
+	// if interactive {
+	// 	progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
+	// 	bctx.finishProgress = finishProgress
 
-		onUpdateFunc := func(progress phases.Progress) error {
-			// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
-			// stopped and the channel is no longer drained; never block or panic on it.
-			select {
-			case progressCh <- progress:
-			default:
-			}
-			return nil
-		}
+	// 	onUpdateFunc := func(progress phases.Progress) error {
+	// 		// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
+	// 		// stopped and the channel is no longer drained; never block or panic on it.
+	// 		select {
+	// 		case progressCh <- progress:
+	// 		default:
+	// 		}
+	// 		return nil
+	// 	}
 
-		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
-	}
+	// 	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
+	// }
 
 	configHash := state.ConfigHash(ctx, b.Options.Global.ConfigPaths)
 

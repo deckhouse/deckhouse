@@ -16,6 +16,7 @@ package commands
 
 import (
 	"fmt"
+	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -72,14 +73,6 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		if !opts.Global.SanityCheck {
-			l.Warn(fmt.Sprint(destroyApprovalsMessage))
-
-			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
-				return fmt.Errorf("Cluster resource cleanup was not approved")
-			}
-		}
-
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
 			return err
@@ -114,6 +107,17 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 				return nil
 			}
 			destroyerParams.OnProgressFunc = onUpdateFunc
+
+			// TODO: add sync to make sure progress UI is started
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		if !opts.Global.SanityCheck {
+			l.Warn(fmt.Sprint(destroyApprovalsMessage))
+
+			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
+				return fmt.Errorf("Cluster resource cleanup was not approved")
+			}
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(ctx, destroyerParams)
