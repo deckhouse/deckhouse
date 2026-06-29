@@ -20,10 +20,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 const (
-	editionPath = "/deckhouse/edition"
+	editionPath = app.PathEdition
 
 	defaultBundle = "Default"
 

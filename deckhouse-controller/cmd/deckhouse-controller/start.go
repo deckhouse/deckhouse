@@ -125,7 +125,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 
 		operator.StartAPIServer()
 
-		versionFile := "/deckhouse/version"
+		versionFile := app.PathVersion
 
 		version := "unknown"
 		content, err := os.ReadFile(versionFile)
@@ -275,7 +275,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	operatorStarted := false
 	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
 
-	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml"); err != nil {
+	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathCRDs); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 

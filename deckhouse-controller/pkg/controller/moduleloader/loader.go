@@ -59,7 +59,7 @@ const (
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
 
-	embeddedModulesDir = "/deckhouse/modules"
+	embeddedModulesDir = app.PathEmbeddedModules
 )
 
 var (
