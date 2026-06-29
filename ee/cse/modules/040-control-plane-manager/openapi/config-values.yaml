@@ -440,6 +440,9 @@ properties:
               Defaults to `true` when the cluster has three or more etcd members (masters ≥ 3, or
               masters = 2 with an etcd-arbiter node); otherwise defaults to `false`.
               An explicit value always takes priority over the computed default.
+
+              > **Warning.** Enabling defragmentation on a single-master cluster will cause a brief
+              > control plane unavailability while etcd is being defragmented.
           cronSchedule:
             type: string
             default: "0 1 * * *"
