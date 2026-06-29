@@ -2,6 +2,11 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capcd-controller-manager,namespace=d8-cloud-provider-vcd
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=capcd-controller-manager-webhook-service,namespace=d8-cloud-provider-vcd
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   name: capcd-mutating-webhook
   {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
 webhooks:
@@ -52,6 +57,11 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capcd-controller-manager,namespace=d8-cloud-provider-vcd
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=capcd-controller-manager-webhook-service,namespace=d8-cloud-provider-vcd
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   name: capcd-validating-webhook
   {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
 webhooks:
