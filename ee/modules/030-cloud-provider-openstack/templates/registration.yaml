@@ -12,6 +12,7 @@ capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quo
 capiClusterName: {{ b64enc "openstack" | quote }}
 capiMachineTemplateKind: {{ b64enc "OpenStackMachineTemplate" | quote }}
 capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
+capiMachineDeploymentSpecPatch: {{ tpl ($context.Files.Get "capi/machine-deployment-spec-patch.yaml") $context | b64enc | quote }}
 
 # openstack
 {{- $internal := $context.Values.cloudProviderOpenstack.internal }}

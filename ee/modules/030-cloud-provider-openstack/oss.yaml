@@ -64,4 +64,4 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: capo-openstack
-  version: v0.12.3
+  version: v0.14.6

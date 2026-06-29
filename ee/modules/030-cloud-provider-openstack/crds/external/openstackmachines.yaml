@@ -8,7 +8,7 @@ metadata:
     cluster.x-k8s.io/provider: openstack
     cluster.x-k8s.io/v1beta1: v1beta1
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: openstackmachines.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -200,12 +200,15 @@ spec:
                   cloudName:
                     description: CloudName specifies the name of the entry in the
                       clouds.yaml file to use.
+                    minLength: 1
                     type: string
                   name:
                     description: |-
-                      Name is the name of a secret in the same namespace as the resource being provisioned.
-                      The secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
-                      The secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                      Name is the name of a Secret (type=Secret) in the same namespace as the resource being provisioned,
+                      or the name of an OpenStackClusterIdentity (type=ClusterIdentity).
+                      The Secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
+                      The Secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                    minLength: 1
                     type: string
                   region:
                     description: |-
@@ -213,9 +216,18 @@ spec:
                       any value in clouds.yaml. If specified for an OpenStackMachine, its
                       value will be included in providerID.
                     type: string
+                  type:
+                    default: Secret
+                    description: Type specifies the identity reference type. Defaults
+                      to Secret for backward compatibility.
+                    enum:
+                    - Secret
+                    - ClusterIdentity
+                    type: string
                 required:
                 - cloudName
                 - name
+                - type
                 type: object
                 x-kubernetes-validations:
                 - message: region is immutable
@@ -960,35 +972,43 @@ spec:
                   type: object
                 type: array
               conditions:
-                description: Conditions provide observations of the operational state
-                  of a Cluster API resource.
+                description: |-
+                  Conditions defines current service state of the OpenStackMachine.
+                  This field surfaces into Machine's status.conditions[InfrastructureReady] condition.
+                  The Ready condition must surface issues during the entire lifecycle of the OpenStackMachine
+                  (both during initial provisioning and after the initial provisioning is completed).
                 items:
                   description: Condition defines an observation of a Cluster API resource
                     operational state.
                   properties:
                     lastTransitionTime:
                       description: |-
-                        Last time the condition transitioned from one status to another.
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
                         This should be when the underlying condition changed. If that is not known, then using the time when
                         the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
                       description: |-
-                        A human readable message indicating details about the transition.
+                        message is a human readable message indicating details about the transition.
                         This field may be empty.
+                      maxLength: 10240
+                      minLength: 1
                       type: string
                     reason:
                       description: |-
-                        The reason for the condition's last transition in CamelCase.
+                        reason is the reason for the condition's last transition in CamelCase.
                         The specific API may choose whether or not this field is considered a guaranteed API.
                         This field may be empty.
+                      maxLength: 256
+                      minLength: 1
                       type: string
                     severity:
                       description: |-
                         severity provides an explicit classification of Reason code, so the users or machines can immediately
                         understand the current situation and act accordingly.
                         The Severity field MUST be set only when Status=False.
+                      maxLength: 32
                       type: string
                     status:
                       description: status of the condition, one of True, False, Unknown.
@@ -998,6 +1018,8 @@ spec:
                         type of condition in CamelCase or in foo.example.com/CamelCase.
                         Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
                         can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      maxLength: 256
+                      minLength: 1
                       type: string
                   required:
                   - lastTransitionTime
@@ -1023,11 +1045,27 @@ spec:
                   Any transient errors that occur during the reconciliation of Machines
                   can be added as events to the Machine object and/or logged in the
                   controller's output.
+
+                  Deprecated: This field is deprecated and will be removed in a future API version.
+                  Use status.conditions to report failures.
                 type: string
               failureReason:
-                description: DeprecatedCAPIMachineStatusError defines errors states
-                  for Machine objects.
+                description: |-
+                  FailureReason explains the reson behind a failure.
+
+                  Deprecated: This field is deprecated and will be removed in a future API version.
+                  Use status.conditions to report failures.
                 type: string
+              initialization:
+                description: Initialization contains information about the initialization
+                  status of the machine.
+                properties:
+                  provisioned:
+                    description: |-
+                      Provisioned is set to true when the initial provisioning of the machine infrastructure is completed.
+                      The value of this field is never updated after provisioning is completed.
+                    type: boolean
+                type: object
               instanceID:
                 description: InstanceID is the OpenStack instance ID for this machine.
                 type: string
@@ -1038,7 +1076,11 @@ spec:
                   Instead, it's set by the OpenStackServer controller.
                 type: string
               ready:
-                description: Ready is true when the provider resource is ready.
+                description: |-
+                  Ready is true when the provider resource is ready.
+
+                  Deprecated: This field is deprecated and will be removed in a future API version.
+                  Use status.conditions to determine the ready state of the machine.
                 type: boolean
               resolved:
                 description: |-

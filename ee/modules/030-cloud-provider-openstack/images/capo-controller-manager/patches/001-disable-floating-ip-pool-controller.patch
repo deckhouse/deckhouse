@@ -1,16 +1,16 @@
 diff --git a/controllers/openstackmachine_controller.go b/controllers/openstackmachine_controller.go
-index 5e70dc7..fc8918f 100644
+index 3ed0e9f847..d013666568 100644
 --- a/controllers/openstackmachine_controller.go
 +++ b/controllers/openstackmachine_controller.go
-@@ -30,7 +30,6 @@ import (
- 	"k8s.io/client-go/tools/record"
+@@ -31,7 +31,6 @@ import (
  	"k8s.io/utils/ptr"
- 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
--	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+ 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+-	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
  	"sigs.k8s.io/cluster-api/util"
  	"sigs.k8s.io/cluster-api/util/annotations"
- 	"sigs.k8s.io/cluster-api/util/conditions"
-@@ -210,10 +209,6 @@ func (r *OpenStackMachineReconciler) SetupWithManager(ctx context.Context, mgr c
+ 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+@@ -214,10 +213,6 @@ func (r *OpenStackMachineReconciler) SetupWithManager(ctx context.Context, mgr c
  		// with the ClusterUnpausedAndInfrastructureReady predicate. The only
  		// fields in OpenStackCluster we are interested in are dependent on
  		// InfrastructureReady, so we don't need to watch both.
@@ -21,11 +21,26 @@ index 5e70dc7..fc8918f 100644
  		Watches(
  			&infrav1alpha1.OpenStackServer{},
  			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &infrav1.OpenStackMachine{}),
+diff --git a/controllers/openstackserver_controller.go b/controllers/openstackserver_controller.go
+index 93a5a00d48..32296a5443 100644
+--- a/controllers/openstackserver_controller.go
++++ b/controllers/openstackserver_controller.go
+@@ -229,10 +229,6 @@ func (r *OpenStackServerReconciler) SetupWithManager(ctx context.Context, mgr ct
+ 			handler.EnqueueRequestsFromMapFunc(r.requeueOpenStackServersForCluster(ctx)),
+ 			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), log)),
+ 		).
+-		Watches(
+-			&ipamv1.IPAddressClaim{},
+-			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &infrav1alpha1.OpenStackServer{}),
+-		).
+ 		Complete(r)
+ }
+ 
 diff --git a/main.go b/main.go
-index 54dbf00..e368f6f 100644
+index cf37f8a1f7..1b3d1c97cd 100644
 --- a/main.go
 +++ b/main.go
-@@ -318,16 +318,6 @@ func setupReconcilers(ctx context.Context, mgr ctrl.Manager, caCerts []byte) {
+@@ -378,16 +378,6 @@ func setupReconcilers(ctx context.Context, mgr ctrl.Manager, caCerts []byte) {
  		setupLog.Error(err, "unable to create controller", "controller", "OpenStackMachine")
  		os.Exit(1)
  	}
