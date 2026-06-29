@@ -263,8 +263,30 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /modules/340-monitoring-deckhouse
+  to: /deckhouse/modules/340-monitoring-deckhouse
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /modules/340-monitoring-kubernetes-control-plane
+  to: /deckhouse/modules/340-monitoring-kubernetes-control-plane
   excludePaths:
     - docs
     - README.md
@@ -287,6 +309,17 @@
         - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /modules/402-ingress-nginx
+  to: /deckhouse/modules/402-ingress-nginx
   excludePaths:
     - docs
     - README.md
@@ -765,11 +798,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
-  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   stageDependencies:
@@ -894,16 +922,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller.go
-  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
-  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/cse/modules/040-node-manager/hooks/gpu_enabled.go
   to: /deckhouse/modules/040-node-manager/hooks/gpu_enabled.go
   stageDependencies:
@@ -921,28 +939,6 @@
         - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/early-oom
   to: /deckhouse/modules/040-node-manager/templates/early-oom
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/templates/integrity-containerd-configurator
-  to: /deckhouse/modules/040-node-manager/templates/integrity-containerd-configurator
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/templates/integrity-controller
-  to: /deckhouse/modules/040-node-manager/templates/integrity-controller
   excludePaths:
     - docs
     - README.md
