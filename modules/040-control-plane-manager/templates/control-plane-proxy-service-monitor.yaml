@@ -23,7 +23,7 @@ spec:
       heritage: deckhouse
   namespaceSelector:
     matchNames:
-    - d8-monitoring
+    - kube-system
   endpoints:
   - scheme: https
     port: https-metrics
