@@ -66,11 +66,11 @@ const (
 	modulesDirEnv      = "MODULES_DIR"
 	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
 
-	leaseName        = "deckhouse-leader-election"
+	leaseName        = app.LeaseName
 	defaultNamespace = app.NamespaceDeckhouse
-	leaseDuration    = 35
-	renewalDeadline  = 30
-	retryPeriod      = 10
+	leaseDuration    = app.LeaseDurationSeconds
+	renewalDeadline  = app.RenewDeadlineSeconds
+	retryPeriod      = app.RetryPeriodSeconds
 )
 
 type reaperMutex struct {
@@ -426,7 +426,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 }
 
 const (
-	cmLockName  = "deckhouse-bootstrap-lock"
+	cmLockName  = app.BootstrapLockName
 	cmNamespace = app.NamespaceDeckhouse
 )
 

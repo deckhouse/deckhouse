@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"os"
 	"sync"
-	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
@@ -154,7 +153,7 @@ func NewDeckhouseController(
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
 		},
-		GracefulShutdownTimeout: ptr.To(10 * time.Second),
+		GracefulShutdownTimeout: ptr.To(app.GracefulShutdownTimeout),
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// for ModuleDocumentation controller
