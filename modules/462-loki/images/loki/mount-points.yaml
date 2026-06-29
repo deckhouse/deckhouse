@@ -2,3 +2,6 @@ files:
 - /etc/loki/config.yaml
 dirs:
 - /loki
+- /tmp
+- /etc/kube-rbac-proxy/ca
+- /etc/kube-rbac-proxy/tls
