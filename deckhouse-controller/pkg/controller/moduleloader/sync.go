@@ -292,7 +292,7 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 			// flow (release ensuring, source switching). This is the single point where
 			// a migrated module transitions from embedded to external.
 			if moduleExists && module.IsEmbedded() {
-				l.logger.Info("embedded copy is gone, switch the module active source", slog.String("name", moduleName), slog.String("source", source.Name))
+				l.logger.Info("embedded copy is gone, switch the module active source", slog.String("name", moduleName), slog.String("source_name", source.Name))
 				err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
 					if module.Properties.Source == v1alpha1.ModuleSourceEmbedded {
 						module.Properties.Source = source.Name

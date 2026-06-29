@@ -358,6 +358,20 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	// The operator pinned a source via ModuleConfig that does not offer the module
+	// (a stale or mistyped .spec.source - e.g. the source stopped publishing the
+	// module after the config was admitted). It must be treated as a conflict, not
+	// silently skipped: no ModuleRelease is created and the conflict alert fires.
+	suite.Run("embedded module with a chosen source that is not available", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"ingressnginx"},
+			[]string{})
+		suite.setupTestController("embedded-module-stale-chosen-source.yaml", withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	})
+
 	// Several sources, but the operator pinned the reconciled source via ModuleConfig:
 	// a ModuleRelease is created from the chosen source.
 	suite.Run("embedded module with several sources and a chosen source", func() {

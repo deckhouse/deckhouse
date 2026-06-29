@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -472,13 +473,27 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 
 			switch {
-			case chosenSource != "":
+			case chosenSource != "" && slices.Contains(module.Properties.AvailableSources, chosenSource):
 				embeddedTargetSource = chosenSource
-			case len(module.Properties.AvailableSources) == 1:
+			case chosenSource == "" && len(module.Properties.AvailableSources) == 1:
 				embeddedTargetSource = module.Properties.AvailableSources[0]
 			default:
-				// several sources and none chosen as primary
-				logger.Warn("embedded module is available in several sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved")
+				// The release source is undecided, so the module cannot be pre-staged.
+				// Either several sources offer it and none is selected via ModuleConfig,
+				// or the selected .spec.source does not (or no longer does) offer this
+				// module - a stale or mistyped ModuleConfig that the admission webhook
+				// validated against an AvailableSources list which has since changed.
+				// Fire the conflict alert instead of silently never creating a release,
+				// which would block the Deckhouse upgrade with no diagnostic signal.
+				if chosenSource != "" {
+					logger.Warn("embedded module's configured source does not offer the module, cannot pre-stage a release until the ModuleConfig .spec.source is fixed",
+						slog.String("name", moduleName),
+						slog.String("configured_source", chosenSource),
+						slog.Any("available_sources", module.Properties.AvailableSources))
+				} else {
+					logger.Warn("embedded module is available in several sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved",
+						slog.String("name", moduleName))
+				}
 				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{"module": moduleName})
 
 				availableModule.Checksum = meta.Checksum
