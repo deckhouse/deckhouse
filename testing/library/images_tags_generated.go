@@ -349,7 +349,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"clusterAutoscaler135":     "imageHash-nodeManager-clusterAutoscaler135",
 		"clusterAutoscaler136":     "imageHash-nodeManager-clusterAutoscaler136",
 		"d8ShutdownInhibitor":      "imageHash-nodeManager-d8ShutdownInhibitor",
-		"earlyOom":                 "imageHash-nodeManager-earlyOom",
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"kubernetesApiProxy":       "imageHash-nodeManager-kubernetesApiProxy",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",

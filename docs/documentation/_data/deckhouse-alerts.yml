@@ -3948,29 +3948,6 @@ alerts:
         Deployment is outdated.
       severity: "4"
       markupFormat: default
-    - name: EarlyOOMPodIsNotReady
-      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-      moduleUrl: 040-node-manager
-      module: node-manager
-      edition: ce
-      description: |-
-        The Pod {{$labels.pod}} detected that the Pressure Stall Information (PSI) subsystem is unavailable.
-
-        For details, check the logs:
-
-        ```shell
-        d8 k -n d8-cloud-instance-manager logs {{$labels.pod}}
-        ```
-
-        Troubleshooting options:
-
-        - Upgrade the Linux kernel to version 4.20 or higher.
-        - Enable the [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).
-        - [Disable early OOM](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/configuration.html#parameters-earlyoomenabled).
-      summary: |
-        Pod {{$labels.pod}} has detected an unavailable PSI subsystem.
-      severity: "8"
-      markupFormat: markdown
     - name: FdExhaustionClose
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
       moduleUrl: 340-monitoring-kubernetes
