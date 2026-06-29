@@ -197,7 +197,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
-			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
+			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger, phases.DestroyPhases())
 			if err != nil {
 				return err
 			}

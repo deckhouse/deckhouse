@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -246,6 +247,7 @@ func (r *Runner) attemptExecuteBundle(
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
+	bundleCmd.WithBundlerOpts(libcon.BundlerWithStepHeaderRegex(regexp.MustCompile("^=== Step (.*) ===$")), libcon.BundlerWithStepDelimiter("==="), libcon.BundlerWithRetries(10))
 	parentDir := params.BundleDir + "/var/lib"
 	bundleDir := "bashible"
 

@@ -16,6 +16,7 @@ package input
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"strings"
 
@@ -52,13 +53,17 @@ func (c *Confirmation) Ask() bool {
 
 	pb := progressbar.GetDefaultPb()
 	if pb != nil {
-		confirmWriter := pb.LogBox.ShiftDown()
+		var confirmWriter io.Writer
+		if pb.LogBox != nil {
+			confirmWriter = pb.LogBox.ShiftDown()
+		} else {
+			confirmWriter = pb.WriterFabric.GetWriter()
+		}
 
 		oldWriter := pb.MultiPrinter.Writer
 		pterm.SetDefaultOutput(confirmWriter)
 		result, _ := pterm.DefaultInteractiveConfirm.Show(c.message)
 		pterm.SetDefaultOutput(oldWriter)
-		pb.LogBox.ShiftUp(confirmWriter)
 
 		return result
 	} else {
