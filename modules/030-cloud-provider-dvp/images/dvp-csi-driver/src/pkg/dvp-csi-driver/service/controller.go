@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	dvpapi "dvp-common/api"
 
@@ -187,7 +188,7 @@ func (c *ControllerService) DeleteVolume(
 
 	_, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
-		if errors.Is(err, dvpapi.ErrNotFound) {
+		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.DiskNotFound) {
 			return &csi.DeleteVolumeResponse{}, nil
 		}
 		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while finding disk %v by id: %v", diskName, err)
@@ -235,14 +236,28 @@ func (c *ControllerService) ControllerPublishVolume(
 	}
 
 	if exists {
-		klog.Errorf("Publish requested but vmBDA exists for disk=%s vm=%s and is not Attached yet; retry later",
-			diskName, vmHostname,
-		)
-		return nil, status.Errorf(
-			codes.Aborted,
-			"Publish requested but vmBDA exists for disk=%s vm=%s and is not Attached yet; retry later",
-			diskName, vmHostname,
-		)
+		vmBDAName := fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname)
+		klog.Infof("Publish: vmBDA %s exists but not Attached yet, waiting", vmBDAName)
+		waitCtx, cancel := context.WithTimeout(ctx, dvpapi.DefaultDiskAttachTimeout)
+		defer cancel()
+		waitErr := c.dvpCloudAPI.ComputeService.WaitDiskAttaching(waitCtx, vmBDAName)
+		if waitErr != nil {
+			if errors.Is(waitErr, context.DeadlineExceeded) {
+				return nil, status.Errorf(codes.DeadlineExceeded,
+					"Publish: timeout waiting for vmBDA attachment: disk=%s vm=%s",
+					diskName, vmHostname,
+				)
+			}
+			klog.Errorf("Publish: vmBDA %s failed (%v), cleaning up for retry", vmBDAName, waitErr)
+			if detachErr := c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname); detachErr != nil {
+				klog.Errorf("Publish: failed to cleanup vmBDA %s: %v", vmBDAName, detachErr)
+			}
+			return nil, status.Errorf(codes.Internal,
+				"Publish: vmBDA failed, cleaned up, retry: disk=%s vm=%s: %v",
+				diskName, vmHostname, waitErr,
+			)
+		}
+		return &csi.ControllerPublishVolumeResponse{}, nil
 	}
 
 	err = c.dvpCloudAPI.ComputeService.AttachDiskToVM(ctx, diskName, vmHostname)
@@ -289,14 +304,6 @@ func (c *ControllerService) getDiskAttachState(
 	}
 
 	attached := vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached
-
-	if vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
-		return true, attached, status.Errorf(
-			codes.FailedPrecondition,
-			"vmBDA %s is Failed for disk=%s vm=%s",
-			vmbda.Name, diskName, vmHostname,
-		)
-	}
 
 	return true, attached, nil
 }
@@ -393,7 +400,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 
 	disk, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, volumeName)
 	if err != nil {
-		if errors.Is(err, dvpapi.ErrNotFound) {
+		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.DiskNotFound) {
 			return nil, status.Errorf(codes.NotFound, "disk %v wasn't found", volumeName)
 		}
 		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while finding disk %v: %v", volumeName, err)

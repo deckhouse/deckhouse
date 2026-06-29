@@ -1,0 +1,59 @@
+diff --git a/api/v1alpha1/yandexmachine_types.go b/api/v1alpha1/yandexmachine_types.go
+index 040fa0f..b40a107 100644
+--- a/api/v1alpha1/yandexmachine_types.go
++++ b/api/v1alpha1/yandexmachine_types.go
+@@ -38,6 +38,10 @@ type YandexMachineSpec struct {
+ 	// ProviderID is the unique identifier as specified by the cloud provider.
+ 	ProviderID *string `json:"providerID,omitempty"`
+ 
++	// Metadata contains metadata entries for the YandexCloud VM.
++	// +optional
++	Metadata map[string]string `json:"metadata,omitempty"`
++
+ 	// ZoneID is the identifier of YandexCloud availability zone.
+ 	// +optional
+ 	// +kubebuilder:default=ru-central1-d
+diff --git a/api/v1alpha1/zz_generated.deepcopy.go b/api/v1alpha1/zz_generated.deepcopy.go
+index 92d889c..72dab6b 100644
+--- a/api/v1alpha1/zz_generated.deepcopy.go
++++ b/api/v1alpha1/zz_generated.deepcopy.go
+@@ -508,6 +508,13 @@ func (in *YandexMachineSpec) DeepCopyInto(out *YandexMachineSpec) {
+ 		*out = new(string)
+ 		**out = **in
+ 	}
++	if in.Metadata != nil {
++		in, out := &in.Metadata, &out.Metadata
++		*out = make(map[string]string, len(*in))
++		for key, val := range *in {
++			(*out)[key] = val
++		}
++	}
+ 	if in.ZoneID != nil {
+ 		in, out := &in.ZoneID, &out.ZoneID
+ 		*out = new(string)
+diff --git a/internal/pkg/cloud/scope/machine.go b/internal/pkg/cloud/scope/machine.go
+index 647cd08..9bd75e1 100644
+--- a/internal/pkg/cloud/scope/machine.go
++++ b/internal/pkg/cloud/scope/machine.go
+@@ -223,14 +223,18 @@ func (m *MachineScope) GetInstanceReq() (*compute.CreateInstanceRequest, error)
+ 		return nil, errors.New("failed to parse instance's boot disk size from yandex machine specification")
+ 	}
+ 
++	metadata := make(map[string]string, len(m.YandexMachine.Spec.Metadata)+1)
++	for key, value := range m.YandexMachine.Spec.Metadata {
++		metadata[key] = value
++	}
++	metadata["user-data"] = bootstrapData
++
+ 	return &compute.CreateInstanceRequest{
+ 		FolderId:   m.ClusterGetter.GetFolderID(),
+ 		Name:       m.YandexMachine.GetName(),
+ 		ZoneId:     *m.YandexMachine.Spec.ZoneID,
+ 		PlatformId: *m.YandexMachine.Spec.PlatformID,
+-		Metadata: map[string]string{
+-			"user-data": bootstrapData,
+-		},
++		Metadata:   metadata,
+ 		Labels:        m.getMachineLabels(),
+ 		Hostname:      m.YandexMachine.GetName(),
+ 		ResourcesSpec: resourcesSpec,

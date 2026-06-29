@@ -20,7 +20,7 @@ description: Архитектура модуля node-manager для Static-уз
 Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля node-manager для Static-узлов](../../../../images/architecture/cluster-and-infrastructure/c4-l2-static-nodes.ru.png)
+![Архитектура модуля node-manager для Static-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-static-nodes.ru.png)
 
 ## Компоненты модуля
 
@@ -41,14 +41,7 @@ Bashible — это ключевой компонент подсистемы Clu
 
    CAPS представляет собой дополнительный слой абстракции над существующим функционалом DKP по автоматической настройке и очистке статических узлов с помощью скриптов, генерируемых для каждой группы узлов. Компонент не привязан к конкретному облаку. Подробнее про работу CAPS можно почитать в [документации модуля `node-manager`](/modules/node-manager/#работа-со-статическими-узлами).
 
-4. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
-
-   Включает в себя следующие контейнеры:
-
-   * **psi-monitor** — основной контейнер, который отслеживает метрику *PSI (Pressure Stall Information)*, отражающую время, в течение которого процессы ожидают освобождения определённых ресурсов, таких как CPU, память или I/O;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **early-oom**.
-
-5. **Fencing-agent** (DaemonSet) — разворачивается на группе узлов при включённом параметре [`spec.fencing`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing) кастомного ресурса NodeGroup.
+4. **Fencing-agent** (DaemonSet) — разворачивается на группе узлов при включённом параметре [`spec.fencing`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing) кастомного ресурса NodeGroup.
 
    Принцип работы компонента подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
 
@@ -56,7 +49,7 @@ Bashible — это ключевой компонент подсистемы Clu
 
    * **fencing-agent** — выполняет необходимые проверки. Сигнал в watchdog отправляется посредством записи в файл `/dev/watchdog` на хосте.
 
-6. **Fencing-controller** — контроллер, который отслеживает все узлы с лейблом `node-manager.deckhouse.io/fencing-enabled`.
+5. **Fencing-controller** — контроллер, который отслеживает все узлы с лейблом `node-manager.deckhouse.io/fencing-enabled`.
 
    Если узел недоступен более 60 секунд, контроллер удаляет с него все поды, но **не удаляет сам объект Node**: для статических узлов (`node.deckhouse.io/type=Static`) регистрация в кластере сохраняется, чтобы узел мог вернуться в работу после ручного восстановления.
 
@@ -74,7 +67,6 @@ Bashible — это ключевой компонент подсистемы Clu
 
 2. Файлы на узлах:
 
-   * `/proc` — читает метрики PSI для OOM Kill;
    * `/dev/watchdog` — отправляет сигнал в Watchdog для сброса сторожевого таймера.
 
 С модулем взаимодействуют следующие внешние для него компоненты:

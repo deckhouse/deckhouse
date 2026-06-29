@@ -897,40 +897,6 @@
       }
     },
     {
-      "title": "The extended-monitoring module",
-      "description": "Metrics for extended monitoring of the Deckhouse Kubernetes Platform cluster.",
-      "module": "extended-monitoring",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "extended-monitoring/",
-      "ru": {
-        "title": "Модуль extended-monitoring",
-        "description": "Метрики для расширенного мониторинга кластера Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "extended-monitoring",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "requirements": {
-          "modules": {
-            "prometheus": ">= 0.0.0"
-          }
-        },
-        "descriptions": {
-          "en": "Extends cluster monitoring capabilities with additional metrics exporters, which allow you to identify potential problems before they affect the operation of services.",
-          "ru": "Расширяет возможности мониторинга кластера за счёт дополнительных экспортеров метрик, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов."
-        },
-        "oss": []
-      }
-    },
-    {
       "title": "The ingress-nginx module",
       "description": "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using Ingress NGINX Controller.",
       "module": "ingress-nginx",
@@ -1254,44 +1220,6 @@
       }
     },
     {
-      "title": "The log-shipper module",
-      "description": "Collection, filtering, and enrichment of logs in the Deckhouse Kubernetes Platform cluster.",
-      "module": "log-shipper",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "logging",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "log-shipper/",
-      "ru": {
-        "title": "Модуль log-shipper",
-        "description": "Сбор, фильтрация и обогащение логов в кластере Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "log-shipper",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-log-shipper",
-        "descriptions": {
-          "en": "Simplifies the configuration of log collection in Kubernetes. Allows organization of log collection from applications running in the cluster and from nodes themselves.",
-          "ru": "Упрощает настройку сбора логов в Kubernetes. Позволяет организовать сбор логов с приложений, запущенных в кластере, и с узлов, а затем отправлять их в систему хранения (Loki, Elasticsearch, S3 и другие)."
-        },
-        "oss": [
-          {
-            "name": "Vector",
-            "link": "https://github.com/timberio/vector",
-            "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
-            "logo": "/images/logos/vector.svg",
-            "license": "Mozilla Public License, version 2.0"
-          }
-        ]
-      }
-    },
-    {
       "title": "The loki module",
       "description": "Log storage in the Deckhouse Kubernetes Platform cluster based on Grafana Loki.",
       "module": "loki",
@@ -1493,43 +1421,6 @@
             "license": "Apache License 2.0"
           }
         ]
-      }
-    },
-    {
-      "title": "Monitoring the control plane",
-      "description": "Monitoring control plane components in the Deckhouse Kubernetes Platform cluster.",
-      "module": "monitoring-kubernetes-control-plane",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "monitoring-kubernetes-control-plane/",
-      "ru": {
-        "title": "Мониторинг control plane",
-        "description": "Мониторинг компонентов control plane кластера Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "monitoring-kubernetes-control-plane",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "requirements": {
-          "kubernetes": ">= 1.22.0",
-          "deckhouse": ">= 1.22.0",
-          "modules": {
-            "prometheus": ">= 0.0.0",
-            "control-plane-manager": ">= 0.0.0"
-          }
-        },
-        "descriptions": {
-          "en": "Monitors the Kubernetes control plane components. Safely scrapes metrics and provides basic monitoring rules for kube-apiserver, kube-controller-manager, kube-scheduler, and etcd.",
-          "ru": "Мониторит компоненты control plane Kubernetes. Организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга для kube-apiserver, kube-controller-manager, kube-scheduler и etcd."
-        },
-        "oss": []
       }
     },
     {
@@ -2013,50 +1904,6 @@
             "logo": "/images/logos/memcached-icon.svg",
             "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
             "license": "BSD-3-Clause license"
-          }
-        ]
-      }
-    },
-    {
-      "title": "The prometheus-metrics-adapter module",
-      "search": "autoscaler, HorizontalPodAutoscaler",
-      "description": "Ensuring the operation of horizontal and vertical autoscaling based on any metrics in the cluster of the Deckhouse Kubernetes Platform.",
-      "module": "prometheus-metrics-adapter",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "prometheus-metrics-adapter/",
-      "ru": {
-        "title": "Модуль prometheus-metrics-adapter",
-        "search": "autoscaler, HorizontalPodAutoscaler",
-        "description": "Обеспечение работы горизонтального и вертикального масштабирования по любым метрикам в кластере Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "prometheus-metrics-adapter",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "requirements": {
-          "modules": {
-            "prometheus": ">= 0.0.0"
-          }
-        },
-        "descriptions": {
-          "en": "Enables HPA and VPA autoscalers to use monitoring metrics for scaling decisions. Implements Kubernetes resource metrics API, custom metrics API, and external metrics API.",
-          "ru": "Позволяет HPA и VPA автоскейлерам использовать метрики мониторинга для принятия решений о масштабировании. Реализует API метрик ресурсов Kubernetes, API пользовательских метрик и API внешних метрик."
-        },
-        "oss": [
-          {
-            "name": "Kubernetes Metrics Server",
-            "link": "https://github.com/kubernetes-sigs/metrics-server",
-            "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
-            "logo": "/images/logos/kubernetes.svg",
-            "license": "Apache License 2.0"
           }
         ]
       }

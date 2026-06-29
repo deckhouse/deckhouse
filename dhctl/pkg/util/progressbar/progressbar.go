@@ -287,6 +287,7 @@ func phaseToString(p phases.Progress, completed bool) string {
 	subphasesMap[phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes] = "Install additional static nodes"
 	subphasesMap[phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait] = "Wait for control plane manager become ready"
 	subphasesMap[phases.InstallKubernetesSubPhaseBundlePreparation] = "Prepare bashible bundle"
+	subphasesMap[phases.InstallKubernetesSubPhaseModulesPreparation] = "Prepare modules for bashible bundle"
 	subphasesMap[phases.InstallKubernetesSubPhaseRegistryPackagesProxy] = "Prepare registry packages proxy"
 	subphasesMap[phases.InstallKubernetesSubPhaseNodePreparation] = "Prepare node"
 	subphasesMap[phases.InstallKubernetesSubPhaseExecuteBashibleBundle] = "Execute bashible bundle"

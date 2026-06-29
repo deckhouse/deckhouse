@@ -39,7 +39,7 @@ import (
 const (
 	privKeyFilename = "signature-private.jwk"
 	pubKeyFilename  = "signature-public.jwks"
-	configFilename  = "encryption-config.yaml"
+	configFilename  = "secret-encryption-config.yaml"
 
 	signaturePath        = app.NodeDeckhouseDirectoryPath + `/signature`
 	kubernetesConfigPath = `/etc/kubernetes`
@@ -47,7 +47,7 @@ const (
 )
 
 var (
-	createSigDirDefaultOpts = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+	createSigDirDefaultOpts = retry.AttemptsWithWaitOpts(100, 1*time.Second)
 )
 
 type LoopsParams struct {
@@ -56,6 +56,7 @@ type LoopsParams struct {
 
 type ModuleSettings interface {
 	SignatureMode() (string, error)
+	TemplateConfigForBootstrap(nodeIP string) (*TemplateConfig, error)
 }
 
 type EncryptionConfiguration struct {
@@ -108,6 +109,10 @@ func (p *BootstrapPreparator) WithDirPrefix(pr string) *BootstrapPreparator {
 	p.dirPathPrefix = pr
 
 	return p
+}
+
+func (p *BootstrapPreparator) TemplateConfigForBootstrap(nodeIP string) (*TemplateConfig, error) {
+	return p.settings.TemplateConfigForBootstrap(nodeIP)
 }
 
 func (p *BootstrapPreparator) PrepareModule(ctx context.Context) error {

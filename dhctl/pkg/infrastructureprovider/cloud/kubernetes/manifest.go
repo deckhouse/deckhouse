@@ -25,7 +25,7 @@ func IsManifest(change plan.ChangeOp, kind string, logger log.Logger) bool {
 	return strings.EqualFold(extractManifestKind(change.After, logger), kind)
 }
 
-func extractManifestKind(state map[string]interface{}, logger log.Logger) string {
+func extractManifestKind(state map[string]any, logger log.Logger) string {
 	v, ok := state["manifest"]
 	if !ok || v == nil {
 		logger.LogDebugF("State does not have a manifest. Returning empty kind\n")

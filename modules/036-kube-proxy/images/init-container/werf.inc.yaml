@@ -13,7 +13,7 @@ shell:
   - cd /src
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

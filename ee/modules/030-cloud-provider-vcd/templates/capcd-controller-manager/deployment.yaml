@@ -73,7 +73,7 @@ periodSeconds: 10
 {{- $capiConfig := dict -}}
 {{- $_ := set $capiConfig "fullname" "capcd-controller-manager" -}}
 {{- $_ := set $capiConfig "image" $capiImage -}}
-{{- $_ := set $capiConfig "capiProviderName" "infrastructure-static" -}}
+{{- $_ := set $capiConfig "capiProviderName" "infrastructure-vcd" -}}
 {{- $_ := set $capiConfig "hostNetwork" true -}}
 {{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
 {{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}

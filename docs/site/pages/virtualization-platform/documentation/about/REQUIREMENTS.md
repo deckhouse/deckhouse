@@ -105,20 +105,20 @@ In this context, worker nodes are nodes that do not have taints preventing regul
 
 The table lists the main components of the `virtualization` module control plane and the nodes where they can be placed. Components are scheduled by priority: if a suitable node type is available in the cluster, the component will be placed on it.
 
-| Component name                | Node group        | Comment                               |
-|-------------------------------|-------------------|---------------------------------------|
-| `cdi-operator-*`              | system/worker     |                                       |
-| `cdi-apiserver-*`             | master            |                                       |
-| `cdi-deployment-*`            | system/worker     |                                       |
-| `virt-api-*`                  | master            |                                       |
-| `virt-controller-*`           | system/worker     |                                       |
-| `virt-operator-*`             | system/worker     |                                       |
-| `virtualization-api-*`        | master            |                                       |
-| `virtualization-controller-*` | master            |                                       |
-| `virtualization-audit-*`      | system/worker     |                                       |
-| `dvcr-*`                      | system/worker     | Storage must be available on the node |
-| `virt-handler-*`              | All cluster nodes |                                       |
-| `vm-route-forge-*`            | All cluster nodes |                                       |
+| Component name                | Node group        | Comment                                                                                                       |
+|-------------------------------|-------------------|---------------------------------------------------------------------------------------------------------------|
+| `cdi-operator-*`              | system/worker     |                                                                                                               |
+| `cdi-apiserver-*`             | master            |                                                                                                               |
+| `cdi-deployment-*`            | system/worker     |                                                                                                               |
+| `virt-api-*`                  | master            |                                                                                                               |
+| `virt-controller-*`           | system/worker     |                                                                                                               |
+| `virt-operator-*`             | system/worker     |                                                                                                               |
+| `virtualization-api-*`        | master            |                                                                                                               |
+| `virtualization-controller-*` | master            |                                                                                                               |
+| `virtualization-audit-*`      | system/worker     |                                                                                                               |
+| `dvcr-*`                      | system            | Storage must be available on the node. If there is no system nodes, the component is placed on a worker node. |
+| `virt-handler-*`              | All cluster nodes |                                                                                                               |
+| `vm-route-forge-*`            | All cluster nodes |                                                                                                               |
 
 Components used to create and import virtual machine images or disks (they run only for the duration of the creation or import operation):
 

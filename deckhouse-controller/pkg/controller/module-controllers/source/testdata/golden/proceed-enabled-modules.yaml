@@ -4,20 +4,18 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/default-source: "true"
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
   finalizers:
   - modules.deckhouse.io/module-exists
   name: test-source-1
   resourceVersion: "1001"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
   scanInterval: 6h30m0s
 status:
-  message: ""
   modules:
   - checksum: 'sha256:'
     name: bundlenabledmodule
@@ -66,9 +64,7 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -98,9 +94,7 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -130,7 +124,5 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   pullDuration: 0s
-  size: 0
   transitionTime: null

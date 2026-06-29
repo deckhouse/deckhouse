@@ -387,6 +387,44 @@ apiserver:
 		})
 	})
 
+	Context("Control plane metrics scrape stack", func() {
+		Context("With prometheus module enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.HelmRender()
+			})
+
+			It("should render control-plane-proxy stack, ServiceMonitors and scraper role", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "d8-control-plane-manager-control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeTrue())
+
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:control-plane-proxy:rbac-proxy").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("Prometheus module disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.HelmRender()
+			})
+
+			It("should not render the scrape stack", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeFalse())
+			})
+		})
+	})
+
 	Context("Prometheus rules", func() {
 		assertSpecDotGroupsArray := func(rule object_store.KubeObject, length int) {
 			Expect(rule.Exists()).To(BeTrue())
@@ -1157,6 +1195,66 @@ apiserver:
 		})
 	})
 
+	Context("encryptionAlgorithm in d8-control-plane-manager-config secret", func() {
+		assertEncryptionAlgorithm := func(ff *Config, expectedAlgorithm string) {
+			Expect(ff.RenderError).ShouldNot(HaveOccurred())
+			s := ff.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			Expect(s.Exists()).To(BeTrue())
+			field := s.Field("data.encryption-algorithm")
+			if expectedAlgorithm == "" {
+				Expect(field.Exists()).Should(BeFalse())
+				return
+			}
+			data, err := base64.StdEncoding.DecodeString(field.String())
+			Expect(err).To(BeNil())
+			Expect(string(data)).To(Equal(expectedAlgorithm))
+		}
+
+		Context("when encryptionAlgorithm is set in ModuleConfig only", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.encryptionAlgorithm", "ECDSA-P256")
+				f.HelmRender()
+			})
+
+			It("should set encryption-algorithm from ModuleConfig", func() {
+				assertEncryptionAlgorithm(f, "ECDSA-P256")
+			})
+		})
+
+		Context("when encryptionAlgorithm is set in ClusterConfiguration only", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.clusterConfiguration.encryptionAlgorithm", `"RSA-4096"`)
+				f.HelmRender()
+			})
+
+			It("should fall back to ClusterConfiguration value", func() {
+				assertEncryptionAlgorithm(f, "RSA-4096")
+			})
+		})
+
+		Context("when encryptionAlgorithm is set in both ModuleConfig and ClusterConfiguration", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.encryptionAlgorithm", "ECDSA-P256")
+				f.ValuesSetFromYaml("global.clusterConfiguration.encryptionAlgorithm", `"RSA-4096"`)
+				f.HelmRender()
+			})
+
+			It("should prefer ModuleConfig over ClusterConfiguration", func() {
+				assertEncryptionAlgorithm(f, "ECDSA-P256")
+			})
+		})
+
+		Context("when encryptionAlgorithm is not set anywhere", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should not set encryption-algorithm key in Secret", func() {
+				assertEncryptionAlgorithm(f, "")
+			})
+		})
+	})
+
 	Context("rootKubeconfigSymlink (control-plane-manager module values)", func() {
 		Context("when user-authz is enabled and controlPlaneManager.rootKubeconfigSymlink is false", func() {
 			BeforeEach(func() {
@@ -1251,6 +1349,8 @@ apiserver:
 				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(crb.Exists()).To(BeTrue())
 				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
+				// keep policy must always be present so a future hook-only migration cannot let Helm prune it.
+				Expect(crb.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
 				Expect(sup.Exists()).To(BeFalse())

@@ -9,7 +9,6 @@ spec:
   version: v1.49.0
 status:
   approved: true
-  message: ""
   phase: Deployed
   transitionTime: "2019-10-17T15:32:00Z"
 ---

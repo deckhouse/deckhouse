@@ -16,13 +16,14 @@ package runtime
 
 import (
 	"context"
-	"path/filepath"
 	"slices"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
@@ -46,6 +47,46 @@ type Module struct {
 	Name       string
 	Definition modules.Definition
 	Settings   addonutils.Values
+}
+
+// ValidateModuleSettings checks settings against the package's OpenAPI schema.
+// Returns valid if the package is not loaded yet (settings validated on load).
+func (r *Runtime) ValidateModuleSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidateModuleSettings")
+	defer span.End()
+
+	r.mu.Lock()
+	module := r.modules[name]
+	if module == nil {
+		r.mu.Unlock()
+		return settingscheck.Result{Valid: true}, nil
+	}
+	r.mu.Unlock()
+
+	return module.ValidateSettings(ctx, settings)
+}
+
+// UpdateModuleSettings applies a settings-only change to an already-tracked
+// module without redeploying or reloading it. It is meant to be wired into the
+// module-config-controller, which owns module settings independently of the
+// module version handled by UpdateModule.
+//
+// Unlike UpdateModule, this never enqueues Deploy/Load tasks and never cancels
+// the module's context tree: it only stashes the new pending settings and, if
+// they actually changed, triggers Reschedule so the scheduler re-runs the
+// Configure → Startup → Run pipeline (see schedulePackage) with the new values.
+// Any in-flight deploy or load for the module keeps running untouched.
+//
+// If the module is not tracked yet (no prior UpdateModule), the settings are
+// dropped: there is nothing to reschedule, and the eventual UpdateModule will
+// register the module and pick up its own settings.
+func (r *Runtime) UpdateModuleSettings(name string, settings addonutils.Values) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.packages.UpdateSettings(name, settings) {
+		r.scheduler.Reschedule(name)
+	}
 }
 
 // UpdateModule handles module creation and version changes from the module controller.
@@ -75,7 +116,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 		return
 	}
 
-	r.status.ClearStatus(name)
+	r.status.NewStatus(name)
 
 	tasks := []queue.Task{
 		taskdeploy.NewModuleTask(name, version, repo, r.moduleDeployer, r.status, r.logger),
@@ -112,9 +153,9 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
-	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
+	conf.GlobalValuesGetter = r.global.GetValues
 
-	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)
+	module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", status.NewError("LoadFailed", err)

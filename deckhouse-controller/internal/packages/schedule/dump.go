@@ -32,6 +32,7 @@ type nodeDump struct {
 	Version      string                `json:"version" yaml:"version"`
 	Order        Order                 `json:"order" yaml:"order"`
 	State        nodeState             `json:"state" yaml:"state"`
+	Disabled     bool                  `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 	Status       checker.Result        `json:"status" yaml:"status"`
 	Dependencies map[string]Dependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 }
@@ -50,6 +51,7 @@ func (s *Scheduler) Dump() []byte {
 			Version:      n.version.String(),
 			Order:        n.order,
 			State:        n.state,
+			Disabled:     n.disabled,
 			Status:       n.status,
 			Dependencies: maps.Clone(n.dependencies),
 		}
@@ -77,6 +79,7 @@ func (s *Scheduler) DumpByName(name string) []byte {
 		Version:      n.version.String(),
 		Order:        n.order,
 		State:        n.state,
+		Disabled:     n.disabled,
 		Status:       n.status,
 		Dependencies: maps.Clone(n.dependencies),
 	}

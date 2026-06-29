@@ -9,7 +9,6 @@ spec:
   version: v1.31.0
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
@@ -28,5 +27,4 @@ spec:
   version: v1.37.0
 status:
   approved: false
-  message: ""
   transitionTime: null

@@ -37,6 +37,6 @@ spec:
     - d8-loki
 ```
 
-For more examples, see the [log-shipper](../log-shipper/examples.html) module page.
+For more examples, see the [log-shipper](/modules/log-shipper/examples.html) module page.
 
 {% endraw %}

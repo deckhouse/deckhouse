@@ -1,0 +1,42 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package global
+
+import (
+	addonutils "github.com/flant/addon-operator/pkg/utils"
+)
+
+type Info struct {
+	Name    string            `json:"name" yaml:"name"`
+	Running bool              `json:"running" yaml:"running"`
+	Path    string            `json:"path" yaml:"path"`
+	Values  addonutils.Values `json:"values,omitempty" yaml:"values,omitempty"`
+	Hooks   []string          `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+}
+
+func (m *Module) GetInfo() Info {
+	hooks := make([]string, len(m.hooks.GetHooks()))
+	for idx, hook := range m.hooks.GetHooks() {
+		hooks[idx] = hook.GetName()
+	}
+
+	return Info{
+		Name:    m.name,
+		Running: m.running.Load(),
+		Path:    m.path,
+		Values:  m.values.GetValues(),
+		Hooks:   hooks,
+	}
+}

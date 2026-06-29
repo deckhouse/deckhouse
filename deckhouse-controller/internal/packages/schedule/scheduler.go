@@ -26,10 +26,6 @@ import (
 )
 
 const (
-	// packageGlobal is the sentinel node that all other nodes implicitly depend on.
-	// It acts as the root of the dependency graph and must complete before any scheduling begins.
-	packageGlobal = "global"
-
 	// FunctionalOrder is the Order value assigned to functional (non-critical) packages.
 	// It is higher than any critical package order, ensuring functional packages are
 	// scheduled only after all critical packages have been processed.
@@ -42,6 +38,11 @@ const (
 	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
 	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
 	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
+
+	// reasonDisabled is the status reason recorded when a node is explicitly
+	// disabled by an operator via [Scheduler.Disable], as opposed to losing
+	// eligibility through a failed checker.
+	reasonDisabled = "PackageDisabled"
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -260,18 +261,42 @@ func (s *Scheduler) Complete(completed string) {
 		n.state = nodeStateActive
 	}
 
-	if completed == packageGlobal {
-		var enabled []string
-		for _, n := range s.compute() {
-			if n.name == packageGlobal || !n.status.Enabled {
-				continue
-			}
+	s.schedule()
+}
 
-			enabled = append(enabled, n.name)
-		}
+// Disable explicitly turns the named package off, forcing it disabled on every
+// subsequent scheduling pass regardless of its checker chain. A scheduling pass
+// runs immediately, cascade-disabling the node (and emitting an [EventDisable]
+// if it was previously enabled). It is a no-op if the package does not exist or
+// is already disabled.
+func (s *Scheduler) Disable(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-		s.send(Event{Kind: EventGlobalDone, Enabled: enabled})
+	n, ok := s.nodes[name]
+	if !ok || n.disabled {
+		return
 	}
+
+	n.disabled = true
+
+	s.schedule()
+}
+
+// Enable clears an explicit disable set by [Scheduler.Disable], allowing the
+// node's checker chain to govern eligibility again. A scheduling pass runs
+// immediately, re-scheduling the node if its checkers now pass. It is a no-op
+// if the package does not exist or is not explicitly disabled.
+func (s *Scheduler) Enable(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	n, ok := s.nodes[name]
+	if !ok || !n.disabled {
+		return
+	}
+
+	n.disabled = false
 
 	s.schedule()
 }
@@ -307,14 +332,15 @@ func (s *Scheduler) schedule() {
 		return
 	}
 
-	for _, n := range s.compute() {
+	enabled, sorted := s.compute()
+	for _, n := range sorted {
 		if n.state != nodeStateIdle {
 			continue
 		}
 
 		if s.canSchedule(n) {
 			n.state = nodeStateScheduled
-			s.send(Event{Name: n.name, Kind: EventSchedule})
+			s.send(Event{Name: n.name, Kind: EventSchedule, Enabled: enabled})
 		}
 	}
 }
@@ -326,7 +352,7 @@ func (s *Scheduler) schedule() {
 // [EventDisable]. No global reconverge happens — canSchedule no longer gates
 // on per-dep state, so one node's status change cannot invalidate another
 // node's schedulability beyond the live order-tier check.
-func (s *Scheduler) compute() []*node {
+func (s *Scheduler) compute() ([]string, []*node) {
 	// AddNode is the authoritative cycle gate, so topoSort should never
 	// return an error here. The disabled-mark-active loop below walks `sorted`
 	// and relies on that invariant; a cycle slipping through (gate bug) would
@@ -336,6 +362,12 @@ func (s *Scheduler) compute() []*node {
 	for _, n := range sorted {
 		current := n.status.Enabled
 		n.status = checker.Check(n.checkers...)
+		// An explicit operator disable is the final gate: it forces the node
+		// off even when every checker passes, but defers to the checker chain's
+		// more specific reason when that already disabled the node.
+		if n.disabled && n.status.Enabled {
+			n.status = checker.Result{Reason: reasonDisabled, Message: "package is explicitly disabled"}
+		}
 		if current == n.status.Enabled {
 			continue
 		}
@@ -350,17 +382,27 @@ func (s *Scheduler) compute() []*node {
 		}
 	}
 
+	var enabled []string
+
 	// Disabled nodes have nothing to wait for — mark them active so they do
-	// not block higher-order nodes via canSchedule's order-tier gate. Nodes
-	// that later flip back to enabled are reset to idle by the loop above and
-	// go through normal scheduling from there.
+	// not block higher-order nodes via canSchedule's order-tier gate. This
+	// sweep is unconditional (not gated on a status flip), so nodes that are
+	// born disabled — never enabled to begin with — are parked active too.
+	// Nodes that later flip back to enabled are reset to idle by the loop
+	// above and go through normal scheduling from there.
 	for _, n := range sorted {
 		if n.state == nodeStateIdle && !n.status.Enabled {
 			n.state = nodeStateActive
 		}
+
+		// global is the barrier node, not a module — never advertise it in the
+		// enabled set the runtime publishes to global values.
+		if n.status.Enabled && n.name != "global" {
+			enabled = append(enabled, n.name)
+		}
 	}
 
-	return sorted
+	return enabled, sorted
 }
 
 // canSchedule returns true if a node is eligible to transition from idle to

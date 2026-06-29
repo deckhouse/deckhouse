@@ -52,6 +52,11 @@ type DeckhouseInstaller struct {
 	CloudDiscovery           []byte
 	ModuleConfigs            []*ModuleConfig
 
+	// ModuleConfigCRDPath is the path to the ModuleConfig CRD manifest shipped
+	// in the installer image (or downloaded candi image). Empty means the file
+	// is unavailable and the CRD will be installed by deckhouse-controller.
+	ModuleConfigCRDPath string
+
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
 
@@ -206,6 +211,11 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, deckhouseCm)
 	}
 
+	moduleConfigCRDPath := ""
+	if globalOptions != nil {
+		moduleConfigCRDPath = globalOptions.ModuleConfigCRDPath
+	}
+
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
 		Registry:              metaConfig.Registry,
@@ -217,6 +227,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		StaticClusterConfig:   staticClusterConfig,
 		ClusterConfig:         clusterConfig,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
+		ModuleConfigCRDPath:   moduleConfigCRDPath,
 		InstallerVersion:      metaConfig.InstallerVersion,
 		VersionFilePath:       metaConfig.VersionFilePath,
 		DownloadDir:           metaConfig.DownloadRootDir,

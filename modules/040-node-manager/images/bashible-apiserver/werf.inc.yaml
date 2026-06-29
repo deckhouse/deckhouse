@@ -77,6 +77,7 @@ git:
   - bb_node_ip.sh.tpl
   - bashible.sh.tpl
   - lib.sh.tpl
+  - cleanup_static_node.sh.tpl
   {{- if eq .Env "CE" }}
   - detect_bundle.sh
   {{- end }}

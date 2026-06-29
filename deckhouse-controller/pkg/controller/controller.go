@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -46,7 +47,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -330,7 +330,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module release controller: %w", err)
 	}
 
-	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, dc, logger.Named("module-pull-override-controller"))
+	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, edition, dc, logger.Named("module-pull-override-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
@@ -486,15 +486,10 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 	for {
 		deckhouseConfig := <-c.deckhouseConfigCh
 
-		configBytes, _ := deckhouseConfig.AsBytes("yaml")
-		settings := &helpers.DeckhouseSettings{
-			ReleaseChannel:           "",
-			AllowExperimentalModules: false,
-		}
-		settings.Update.Mode = "Auto"
-		settings.Update.DisruptionApprovalMode = "Auto"
+		configBytes, _ := deckhouseConfig.AsBytes("json")
+		settings := helpers.DefaultDeckhouseSettings()
 
-		if err := yaml.Unmarshal(configBytes, settings); err != nil {
+		if err := json.Unmarshal(configBytes, settings); err != nil {
 			c.log.Error("failed to unmarshal the deckhouse setting", log.Err(err))
 			continue
 		}

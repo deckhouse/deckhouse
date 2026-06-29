@@ -25,7 +25,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.70.0"
+  WERF_VERSION: "v2.73.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -44,7 +44,7 @@ env:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing

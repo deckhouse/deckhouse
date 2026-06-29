@@ -68,7 +68,6 @@ func TestGetCloudApiURLFromMetaConfig(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			s := require.New(t)
 			clusterConfigYAML := `

@@ -112,6 +112,7 @@ func (suite *ControllerTestSuite) buildReconciler(options ...reconcilerOption) {
 				DisruptionApprovalMode string                            `json:"disruptionApprovalMode"`
 				Windows                update.Windows                    `json:"windows"`
 				NotificationConfig     releaseUpdater.NotificationConfig `json:"notification"`
+				BlockOnAlerts          releaseUpdater.BlockOnAlerts      `json:"blockOnAlerts"`
 			}{},
 			ReleaseChannel:           "",
 			AllowExperimentalModules: true,
@@ -583,7 +584,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   annotations:
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
     modules.deckhouse.io/default-source: "true"
   name: test-source
 spec:
@@ -705,7 +706,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   annotations:
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
     modules.deckhouse.io/default-source: "true"
   name: test-source
 spec:

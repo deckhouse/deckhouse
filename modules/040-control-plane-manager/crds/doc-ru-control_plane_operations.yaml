@@ -33,6 +33,7 @@ spec:
                     * `JoinEtcdCluster` — присоединение нового члена к etcd-кластеру;
                     * `WaitPodReady` — ожидание готовности статического пода после перезагрузки;
                     * `CertObserve` — сбор данных о текущих сроках действия сертификатов компонента и их публикация в `status.observedState`.
+                    * `RenewSignature` — перевыпуск ключа подписи для kube-apiserver (CSE).
                   items:
                     description: |
                       Имя этапа операции.

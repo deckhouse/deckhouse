@@ -24,6 +24,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/go-openapi/spec"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -32,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/cel"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -62,7 +65,7 @@ func disableConfirmationReason(reason string, needConfirm bool) (string, bool) {
 }
 
 func experimentalRejectMessage(moduleName string) string {
-	return fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", moduleName)
+	return fmt.Sprintf("the '%s' module is experimental; to allow it, in the 'deckhouse' ModuleConfig either set spec.settings.allowExperimentalModules: true (allows all experimental modules) or add '%s' to spec.settings.allowedExperimentalModules", moduleName, moduleName)
 }
 
 // moduleConfigValidationHandler validates ModuleConfig admission requests.
@@ -118,7 +121,9 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 	}
 
-	allowExperimental := v.settings.Get().AllowExperimentalModules
+	allowExperimental := v.settings.ExperimentalModuleAllowed(cfg.Name)
+
+	var oldSettings map[string]interface{}
 
 	switch review.Operation {
 	case kwhmodel.OperationDelete:
@@ -133,12 +138,18 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		}
 
 	case kwhmodel.OperationUpdate:
+		var extractErr error
+		oldSettings, extractErr = v.extractOldSettings(review.OldObjectRaw)
+		if extractErr != nil {
+			oldSettings = nil
+		}
+
 		if res, err := v.validateUpdate(ctx, review, cfg, allowExperimental); res != nil || err != nil {
 			return res, err
 		}
 	}
 
-	return v.validateCommon(ctx, cfg)
+	return v.validateCommon(ctx, cfg, oldSettings)
 }
 
 // validateDelete guards deletion: a confirmation-required module that is still
@@ -226,7 +237,69 @@ func (v *moduleConfigValidator) validateModuleEnabling(ctx context.Context, cfg 
 		return rejectResult(err.Error())
 	}
 
-	return v.checkExperimentalFromModuleCR(ctx, cfg.Name, allowExperimental, rejectMissingModuleCR)
+	// The Module CR is fetched once and feeds both the experimental gate and the
+	// dependency fallback below. The global module has no Module CR.
+	if cfg.Name == globalModuleName {
+		return nil, nil
+	}
+
+	module := new(v1alpha1.Module)
+	if err := v.client.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+		}
+
+		if rejectMissingModuleCR {
+			return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+		}
+
+		return nil, nil
+	}
+
+	if module.IsExperimental() && !allowExperimental {
+		return rejectResult(experimentalRejectMessage(cfg.Name))
+	}
+
+	// Fallback for the dependency extender: enforce the parent-module
+	// requirements declared on the Module CR when the extender has no registered
+	// constraints for the module (e.g. the module is not yet downloaded to disk,
+	// so its module.yaml requirements were never loaded into the extender).
+	if res, err := v.checkDependenciesFromModuleCR(module); res != nil || err != nil {
+		return res, err
+	}
+
+	return nil, nil
+}
+
+// checkDependenciesFromModuleCR enforces the "parent module must be enabled" part
+// of the requirements declared on the Module CR. It is a fallback for the
+// dependency extender, which only knows about modules whose module.yaml has been
+// loaded from disk; a module whose requirements are synced from the registry but
+// not yet downloaded would otherwise pass the extender's CheckEnabling silently.
+// Version constraints are intentionally not validated here: they are enforced by
+// the extender once the module is downloaded and its constraints are registered.
+func (v *moduleConfigValidator) checkDependenciesFromModuleCR(module *v1alpha1.Module) (*kwhvalidating.ValidatorResult, error) {
+	if module.Properties.Requirements == nil || len(module.Properties.Requirements.ParentModules) == 0 {
+		return nil, nil
+	}
+
+	missing := make([]string, 0, len(module.Properties.Requirements.ParentModules))
+	for parent := range module.Properties.Requirements.ParentModules {
+		if parent == module.Name {
+			continue
+		}
+		if !v.moduleManager.IsModuleEnabled(parent) {
+			missing = append(missing, parent)
+		}
+	}
+
+	if len(missing) == 0 {
+		return nil, nil
+	}
+
+	slices.Sort(missing)
+
+	return rejectResult(fmt.Sprintf("the '%s' module depends on disabled module(s): %s", module.Name, strings.Join(missing, ", ")))
 }
 
 // checkExperimentalFromStorage applies the experimental gate using the downloaded
@@ -245,37 +318,11 @@ func (v *moduleConfigValidator) checkExperimentalFromStorage(moduleName string, 
 	return nil, nil
 }
 
-// checkExperimentalFromModuleCR applies the experimental gate using the Module CR
-// (whose properties are synced from the registry even before the module is
-// downloaded). The global module has no Module CR and is skipped.
-func (v *moduleConfigValidator) checkExperimentalFromModuleCR(ctx context.Context, moduleName string, allowExperimental, rejectMissing bool) (*kwhvalidating.ValidatorResult, error) {
-	if moduleName == globalModuleName {
-		return nil, nil
-	}
-
-	module := new(v1alpha1.Module)
-	if err := v.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
-		}
-		if rejectMissing {
-			return rejectResult(fmt.Sprintf("the '%s' module not found", moduleName))
-		}
-		return nil, nil
-	}
-
-	if module.IsExperimental() && !allowExperimental {
-		return rejectResult(experimentalRejectMessage(moduleName))
-	}
-
-	return nil, nil
-}
-
 // validateCommon runs the validation shared by CREATE and UPDATE: source
 // resolution, update policy existence, settings validation and the
 // exclusive-group conflict check. It returns an allow result with any
 // accumulated warnings when nothing rejects the request.
-func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha1.ModuleConfig) (*kwhvalidating.ValidatorResult, error) {
+func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha1.ModuleConfig, oldSettings map[string]interface{}) (*kwhvalidating.ValidatorResult, error) {
 	if cfg.Spec.Source == v1alpha1.ModuleSourceEmbedded {
 		return rejectResult("'Embedded' is a forbidden source")
 	}
@@ -293,19 +340,109 @@ func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha
 	}
 
 	// check if spec.version value is valid and the version is the latest
-	if result := v.configValidator.Validate(cfg); result.HasError() {
+	result := v.configValidator.Validate(cfg)
+	if result.HasError() {
 		return rejectResult(result.Error)
-	} else if result.Warning != "" {
+	}
+	if result.Warning != "" {
 		warnings = append(warnings, result.Warning)
 	}
 
 	v.setAllowedToDisableMetric(cfg, allowedToDisableMetricValue(cfg))
+
+	// CEL transition rules (x-deckhouse-validations with oldSelf).
+	// Executed only on UPDATE (oldSettings != nil).
+	// On CREATE oldSettings == nil → this block is skipped.
+	if oldSettings != nil {
+		if res, err := v.validateCELTransition(cfg, result.Settings, oldSettings); res != nil || err != nil {
+			return res, err
+		}
+	}
 
 	if res, err := v.validateExclusiveGroup(cfg); res != nil || err != nil {
 		return res, err
 	}
 
 	return allowResult(warnings)
+}
+
+// extractOldSettings parses the OldObjectRaw from the AdmissionReview and returns the settings in the latest-version form.
+// Returns nil, nil if the old object has no settings or version.
+// If an error occurs, the transition rules are simply skipped.
+func (v *moduleConfigValidator) extractOldSettings(oldObjectRaw []byte) (map[string]interface{}, error) {
+	if len(oldObjectRaw) == 0 {
+		return nil, nil
+	}
+
+	oldConfig := new(v1alpha1.ModuleConfig)
+	if err := json.Unmarshal(oldObjectRaw, oldConfig); err != nil {
+		return nil, fmt.Errorf("unmarshal old ModuleConfig: %w", err)
+	}
+
+	if oldConfig.Spec.Version == 0 || oldConfig.Spec.Settings == nil {
+		return nil, nil
+	}
+
+	settings, err := v.configValidator.ExtractLatestSettings(oldConfig)
+	if err != nil {
+		return nil, fmt.Errorf("extract old settings: %w", err)
+	}
+
+	return settings, nil
+}
+
+// validateCELTransition runs x-deckhouse-validations CEL transition rules—those that reference oldSelf. Called only on UPDATE (oldSettings != nil).
+// Uses cel.ValidateTransition from the internal deckhouse-controller package.
+func (v *moduleConfigValidator) validateCELTransition(cfg *v1alpha1.ModuleConfig, newSettings, oldSettings map[string]interface{}) (*kwhvalidating.ValidatorResult, error) {
+	if newSettings == nil {
+		return nil, nil
+	}
+
+	// Get spec.Schema from addon-operator SchemaStorage.
+	addonSchema := v.configSchema(cfg.GetName())
+	if addonSchema == nil {
+		return nil, nil
+	}
+
+	errs, celErr := cel.ValidateTransition(addonSchema, newSettings, oldSettings)
+	if celErr != nil {
+		return rejectResult(fmt.Sprintf("cel transition validation: %v", celErr))
+	}
+	if len(errs) > 0 {
+		msgs := make([]string, len(errs))
+		for i, e := range errs {
+			msgs[i] = e.Error()
+		}
+		return rejectResult(fmt.Sprintf(
+			"spec.settings are not valid (version %d): %s",
+			cfg.Spec.Version,
+			strings.Join(msgs, "; "),
+		))
+	}
+	return nil, nil
+}
+
+// configSchema returns the spec.Schema for the module's config values.
+// Chain: v.moduleStorage.GetModuleByName → GetBasicModule → GetSchemaStorage → Schemas[ConfigValuesSchema]
+// The addon-operator uses the same schema in ValidateConfigValues().
+func (v *moduleConfigValidator) configSchema(moduleName string) *spec.Schema {
+	mod, err := v.moduleStorage.GetModuleByName(moduleName)
+	if err != nil {
+		return nil
+	}
+
+	basic := mod.GetBasicModule()
+	if basic == nil {
+		return nil
+	}
+
+	ss := basic.GetSchemaStorage()
+	if ss == nil {
+		return nil
+	}
+
+	// validation.ConfigValuesSchema - constant from addon-operator pkg/values/validation
+	return ss.Schemas[validation.ConfigValuesSchema]
 }
 
 // resolveModuleSource fetches the Module CR and validates the configured source.

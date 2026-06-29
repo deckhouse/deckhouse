@@ -60,8 +60,8 @@ func TestSyncInstanceStatusPreservesLastTransitionTimeWhenConditionSemanticsMatc
 		Build()
 
 	err := SyncInstanceStatus(context.Background(), c, instance, machine.MachineStatus{
-		Phase:         deckhousev1alpha2.InstancePhaseRunning,
-		Status:        machine.StatusReady,
+		Phase:  deckhousev1alpha2.InstancePhaseRunning,
+		Status: machine.StatusReady,
 		MachineReadyCondition: &deckhousev1alpha2.InstanceCondition{
 			Type:               deckhousev1alpha2.InstanceConditionTypeMachineReady,
 			Status:             metav1.ConditionFalse,
@@ -114,8 +114,8 @@ func TestSyncInstanceStatusUpdatesLastTransitionTimeWhenConditionStatusChanges(t
 		Build()
 
 	err := SyncInstanceStatus(context.Background(), c, instance, machine.MachineStatus{
-		Phase:         deckhousev1alpha2.InstancePhaseRunning,
-		Status:        machine.StatusReady,
+		Phase:  deckhousev1alpha2.InstancePhaseRunning,
+		Status: machine.StatusReady,
 		MachineReadyCondition: &deckhousev1alpha2.InstanceCondition{
 			Type:               deckhousev1alpha2.InstanceConditionTypeMachineReady,
 			Status:             metav1.ConditionTrue,

@@ -4,11 +4,229 @@ permalink: en/admin/configuration/security/policies.html
 description: "Configure security policies in Deckhouse Kubernetes Platform using Gatekeeper and Pod Security Standards. Policy enforcement, compliance, and cluster security management."
 ---
 
-Deckhouse Kubernetes Platform (DKP) lets you manage application security in the cluster using a set of policies
-that follow the [Kubernetes Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) model
-and can be extended with DKP's built-in mechanisms.
+Deckhouse Kubernetes Platform (DKP) lets you manage application security in the cluster using a set of admission policies.
+These are rules that apply to objects (such as Pods and Services) at the time of their creation and modification in the cluster (but not during their operation), based on the information provided in their manifests. These policies are designed to formalize the parameters that are permitted or prohibited in object manifests. Support for admission policies in the DKP cluster is implemented using the [`admission-policy-engine`](/modules/admission-policy-engine/) module.
 
-DKP implements security policies using [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
+In the DKP policies are divided into three categories:
+
+- [Pod Security Standards](#applying-pod-security-standards): Policies that comply with the relevant [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+- [Operational policies](#operational-policies): Policies for creating additional requirements for objects by validating the values of parameters that are **not directly related** to security (for example, a list of allowed prefixes for container images, an image download policy, a list of required container images, etc.).
+- [Security policies](#security-policies): Policies for creating additional requirements on objects by validating the values of security-related parameters (for example, container access to the host’s IPC or PID namespaces, privilege lists for containers, etc.).
+
+{% alert level="info" %}
+These policies complement each other. If multiple policies are applied to a single namespace, objects are validated against each of them. If even one policy is violated, the object will not be created.
+{% endalert %}
+
+In addition to policies that prohibit using parameters different from the set requirements, DKP supports the [SecurityPolicyException](#security-policy-exceptions) resource, which allows creating fine-grained exceptions from security policy checks. With this resource, you can allow using specific parameters for individual pods or containers without changing security policies applied to the entire namespace.
+
+## How validation failure messages are displayed
+
+Depending on how pods are created, there are differences in how the API generates messages regarding validation failures (violations of established policies):
+
+- If a pod is created directly, the validation error is returned in the API response indicating a validation failure (policy violation).
+- If pods are created via Deployment, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
+
+## Pod validation when policies are modified or added
+
+For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.
+
+In DKP, there are alerts (ClusterObservabilityAlert resources) for such cases, notifying you of pods in the namespace that violate policies after an existing policy is modified or a new one is added.
+
+To get a list of alerts, use the command:
+
+```bash
+d8 k get clusterobservabilityalerts
+```
+
+Output example:
+
+<!-- markdownlint-disable MD031 -->
+```console
+NAME                                                  SEVERITY   STATUS   DURATION   SUMMARY                          AGE
+SecurityPolicyViolation-f3a77d1dd2175402-1777370195   1          Firing   5h         Alerting PrometheusUnavailable   5h1m
+OperationPolicyViolation-9b21d0c871796913-1777370435  1          Firing   6h         Alerting PrometheusUnavailable   6h1m
+```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
+
+To view information about a specific alert, use the following command:
+
+```bash
+d8 k get clusterobservabilityalert OperationPolicyViolation-9b21d0c871796913-1777370435 -oyaml
+```
+
+{% offtopic title="Example of an alert for a violation of the Pod Security Standards policy..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: PodSecurityStandardsViolation-91e71759e048a397-1777369535
+  resourceVersion: "7454828154578800069"
+  creationTimestamp: 2026-04-28T09:45:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: PodSecurityStandardsViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: |-
+      You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
+
+      To identify violating pods:
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            violating_namespace=~".*",
+            violating_kind="Pod",
+            source_type="PSS"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one pod violates the configured cluster pod security standards.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="PSS",violating_kind="Pod",violating_namespace=~".*",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T09:45:35Z
+  resolvedAt: null
+  duration: 20h40m1.015261771s
+```
+
+{% endofftopic %}
+
+{% offtopic title="Example of an alert for a violation of an operational policy..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: OperationPolicyViolation-9b21d0c871796913-1777370435
+  resourceVersion: "7454831929456594373"
+  creationTimestamp: 2026-04-28T10:00:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: OperationPolicyViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: >-
+      You have configured operation policies for the cluster, and one or more
+      existing objects are violating these policies.
+
+
+      To identify violating objects:
+
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            source_type="OperationPolicy"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one object violates the configured cluster operation policies.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="OperationPolicy",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T10:00:35Z
+  resolvedAt: null
+  duration: 20h23m41.023025059s
+```
+
+{% endofftopic %}
+
+{% offtopic title="Example of an alert for a security policy violation..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: SecurityPolicyViolation-f3a77d1dd2175402-1777370195
+  resourceVersion: "7454830922622307781"
+  creationTimestamp: 2026-04-28T09:56:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: SecurityPolicyViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: >-
+      You have configured security policies for the cluster, and one or more
+      existing objects are violating these policies.
+
+
+      To identify violating objects:
+
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            source_type="SecurityPolicy"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one object violates the configured cluster security policies.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="SecurityPolicy",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T09:56:35Z
+  resolvedAt: null
+  duration: 20h29m21.015479019s
+```
+
+{% endofftopic %}
 
 ## Applying Pod Security Standards
 
@@ -18,6 +236,10 @@ DKP supports three security policy levels:
 - `baseline`: A minimally restrictive policy that prevents the most well-known and common privilege escalation techniques.
   Allows the use of a standard (minimally specified) Pod configuration.
 - `restricted`: A highly restrictive policy with the strictest requirements for Pods.
+
+{% alert level="info" %}
+In the Deckhouse Kubernetes Platform, these policies are implemented using Gatekeeper and enforced by the admission controllers of the `admission-policy-engine` module, rather than the Kubernetes [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) controller. Only the policy descriptions are taken from Kubernetes.
+{% endalert %}
 
 ### Default policy
 
@@ -204,6 +426,10 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 
 Using the [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy), you can create security policies that define container behavior restrictions in the cluster, such as host network access, privileges, AppArmor usage, and more.
 
+{% alert level="info" %}
+Detailed information on pod and container security settings (such as `hostNetwork`, `hostPID`, `hostIPC` and others), available values, and practical suggestions are available on the ["Pod and container security settings"](../../../user/security/pod-settings.html) page.
+{% endalert %}
+
 Example security policy:
 
 ```yaml
@@ -268,6 +494,98 @@ spec:
 ```
 
 To assign this security policy, add the `enforce: "mypolicy"` label to the target namespace.
+
+## Security policy exceptions
+
+[SecurityPolicyException](/modules/admission-policy-engine/cr.html#securitypolicyexception) is a resource that lets you create fine-grained exceptions from security policy checks for individual pods and containers. It allows you to avoid excluding an entire namespace from checks and instead define only the necessary exceptions from a specific rule for a pod or container.
+
+### Adding exceptions
+
+To add exceptions for a pod or container, do the following:
+
+1. Create a [SecurityPolicyException](/modules/admission-policy-engine/cr.html#securitypolicyexception) object describing the required exceptions.
+
+   It is recommended that you describe the reason for each exception in the rule's `metadata` field (for example, `metadata.description`). This makes auditing and maintenance easier.
+
+2. In the pod template (usually via `spec.template.metadata.labels` in a Deployment, StatefulSet, or DaemonSet resource), add one of the following labels referencing the exception:
+   - `security.deckhouse.io/security-policy-exception: <exception-name>`: Exception for the entire pod.
+   - `security.deckhouse.io/security-policy-exception.container.<container-name>: <exception-name>`: Exception for a specific container.
+
+Priority when selecting an exception for a container:
+
+1. The label `security.deckhouse.io/security-policy-exception.container.<container-name>` is checked first.
+1. If the container-specific label is absent, the exception from `security.deckhouse.io/security-policy-exception` is used.
+
+{% alert level="warning" %}
+If a container-specific label is set for a container but it points to an invalid or non-existent SecurityPolicyException object, it still has priority over the global label and may lead to pod placement denial.
+{% endalert %}
+
+### Configuration example
+
+For this example, consider a pod that requires:
+
+- Permission to use the [`hostNetwork`](../../../user/security/pod-settings.html#hostnetwork) parameter for the entire pod.
+- Permission to use the [`privileged`](../../../user/security/pod-settings.html#privileged) parameter only for the `sample-init` container.
+
+Without the SecurityPolicyException resource, allowing these parameters would require implementing a custom security policy where these settings could be allowed for any pod in the cluster.
+
+With SecurityPolicyException, it is enough to create only the following resources:
+
+- Exception to allow the `hostNetwork` parameter:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: SecurityPolicyException
+  metadata:
+    name: allow-hostnetwork-pod
+  spec:
+    network:
+      hostNetwork:
+        allowedValue: true
+        metadata:
+          description: >-
+            Pod requires host network mode for node-level network diagnostics.
+  ```
+
+- Exception to allow the `privileged` parameter in the `sample-init` container:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: SecurityPolicyException
+  metadata:
+    name: allow-privileged-init-container
+  spec:
+    securityContext:
+      privileged:
+        allowedValue: true
+        metadata:
+          description: >-
+            Container init requires privileged mode to access host-level networking features.
+  ```
+
+After that, the corresponding labels need to be added to the pod template:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example
+spec:
+  template:
+    metadata:
+      labels:
+        # General exception applicable to the entire pod.
+        security.deckhouse.io/security-policy-exception: allow-hostnetwork-pod
+        # Exception applicable to the sample-init container.
+        security.deckhouse.io/security-policy-exception.container.sample-init: allow-privileged-init-container
+    spec:
+      hostNetwork: true
+    ...
+    containers:
+      - name: sample-init
+        securityContext:
+          privileged: true
+```
 
 ### Partial policy enforcement
 

@@ -16,6 +16,7 @@ package entity
 
 import (
 	"context"
+	"maps"
 	"testing"
 	"time"
 
@@ -289,7 +290,7 @@ func TestWaitNodeUserPresentOnNodeWithParams(t *testing.T) {
 	}
 
 	assertDefaultParams := func(t *testing.T, w *NodeUserPresentsWaiter) {
-		assertParams(t, w, 50, 5*time.Second)
+		assertParams(t, w, 250, 1*time.Second)
 	}
 
 	t.Run("nil params", func(t *testing.T) {
@@ -470,9 +471,7 @@ func testCreateTestControlPlaneNodeWithAdditionalLabels(name string, labels map[
 		"some-annotation": "test",
 	})
 
-	for k, v := range labels {
-		n.labels[k] = v
-	}
+	maps.Copy(n.labels, labels)
 
 	return n
 }
@@ -482,9 +481,7 @@ func testCreateTestWorkerNodeWithAdditionalLabels(name string, labels map[string
 		"some-annotation-worker": "test",
 	})
 
-	for k, v := range labels {
-		n.labels[k] = v
-	}
+	maps.Copy(n.labels, labels)
 
 	return n
 }

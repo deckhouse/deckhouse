@@ -1370,38 +1370,6 @@ modules:
     namespace: d8-monitoring
     subsystems:
     - observability
-  monitoring-kubernetes-control-plane:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:monitoring-kubernetes-control-plane:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - monitoring-kubernetes-control-plane
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:monitoring-kubernetes-control-plane:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - monitoring-kubernetes-control-plane
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-monitoring
-    subsystems:
-    - observability
   monitoring-ping:
     capabilities:
       manage:
@@ -2533,7 +2501,6 @@ subsystems:
     - monitoring-custom
     - monitoring-deckhouse
     - monitoring-kubernetes
-    - monitoring-kubernetes-control-plane
     - monitoring-ping
     - log-shipper
     - dashboard

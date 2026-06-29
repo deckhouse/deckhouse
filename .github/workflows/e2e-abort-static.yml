@@ -40,7 +40,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.70.0"
+  WERF_VERSION: "v2.73.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -82,7 +82,7 @@ jobs:
   # <template: check_e2e_labels_job>
   check_e2e_labels:
     name: Check e2e labels
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     permissions:
       contents: read
       issues: write
@@ -296,11 +296,6 @@ jobs:
           else
             echo "Create temporary dir for job: ${TMP_DIR_PATH}."
             mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -627,11 +622,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -954,11 +944,6 @@ jobs:
           else
             echo "Create temporary dir for job: ${TMP_DIR_PATH}."
             mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -1285,11 +1270,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -1612,11 +1592,6 @@ jobs:
           else
             echo "Create temporary dir for job: ${TMP_DIR_PATH}."
             mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -1943,11 +1918,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -2270,11 +2240,6 @@ jobs:
           else
             echo "Create temporary dir for job: ${TMP_DIR_PATH}."
             mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -2601,11 +2566,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -2928,11 +2888,6 @@ jobs:
           else
             echo "Create temporary dir for job: ${TMP_DIR_PATH}."
             mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -3259,11 +3214,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -3586,11 +3536,6 @@ jobs:
           else
             echo "Create temporary dir for job: ${TMP_DIR_PATH}."
             mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -3917,11 +3862,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -4246,11 +4186,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -4573,11 +4508,6 @@ jobs:
           else
             echo "Create temporary dir for job: ${TMP_DIR_PATH}."
             mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"

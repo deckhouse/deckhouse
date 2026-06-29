@@ -105,7 +105,7 @@ type Config struct {
 	GlobalValuesGetter GlobalValuesGetter
 }
 
-type GlobalValuesGetter func(prefix bool) addonutils.Values
+type GlobalValuesGetter func() addonutils.Values
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -144,6 +144,9 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	if err != nil {
 		return nil, fmt.Errorf("build values storage: %v", err)
 	}
+
+	// TODO(ipaqsa): get rid of it after migration to module v2
+	m.values.InjectRegistryValue(cfg.Repository)
 
 	return m, nil
 }
@@ -200,7 +203,7 @@ func (m *Module) GetRuntimeValues() string {
 	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	marshalledGlobal := m.globalValuesGetter(false)
+	marshalledGlobal := m.globalValuesGetter()
 
 	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
 }
@@ -290,11 +293,17 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetValues returns values with hooks patches
+// GetValues returns values with hooks patches.
+//
+// Module values are exposed both flat (.Values.replicas) and under the module's
+// camelCase key (.Values.<moduleName>.replicas) so templates written for the old
+// addon-operator layout keep working.
 func (m *Module) GetValues() addonutils.Values {
+	moduleValues := m.values.GetValues()
 	return addonutils.MergeValues(
-		addonutils.Values{"global": m.globalValuesGetter(false)},
-		m.values.GetValues(),
+		addonutils.Values{"global": m.globalValuesGetter()},
+		moduleValues,
+		addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): moduleValues},
 	)
 }
 
@@ -377,8 +386,8 @@ func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 }
 
 // GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook {
-	return m.hooks.GetHooksByBinding(binding)
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
+	return hooks.ToControllable(m.hooks.GetHooksByBinding(binding))
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.

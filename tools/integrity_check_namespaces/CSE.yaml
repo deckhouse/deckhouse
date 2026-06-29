@@ -11,8 +11,10 @@ additionalNamespaces:
   - d8-csi-yadro-tatlin-unified
   - d8-gpu
   - d8-ingress-nginx
+  - d8-monitoring
   - d8-observability
   - d8-operator-argo
+  - d8-neuvector
   - d8-operator-trivy
   - d8-payload-registry
   - d8-pod-reloader
@@ -21,6 +23,7 @@ additionalNamespaces:
   - d8-sds-local-volume
   - d8-sds-node-configurator
   - d8-secrets-store-integration
+  - d8-security-events-manager  
   - d8-snapshot-controller
   - d8-static-routing-manager
   - d8-storage-volume-data-manager

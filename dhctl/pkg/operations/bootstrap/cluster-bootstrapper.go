@@ -200,7 +200,7 @@ type bootstrapContext struct {
 	bootstrapState          *State
 	nodeIP                  string
 	devicePath              string
-	resourcesTemplateData   map[string]interface{}
+	resourcesTemplateData   map[string]any
 	resourcesToCreateBefore template.Resources
 	resourcesToCreateAfter  template.Resources
 	installDeckhouseResult  *InstallDeckhouseResult
@@ -431,8 +431,9 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 		}
 
 		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
-			InstallConfig: bctx.deckhouseInstallConfig,
-			MetaConfig:    bctx.metaConfig,
+			InstallConfig:          bctx.deckhouseInstallConfig,
+			MetaConfig:             bctx.metaConfig,
+			SSHProviderInitializer: b.SSHProviderInitializer,
 		})
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
 			MetaConfig:  bctx.metaConfig,
@@ -500,13 +501,13 @@ func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *boot
 			log.DebugLn("Base infrastructure was created")
 			b.PhasedExecutionContext.CompleteSubPhase(phases.BaseInfraSubPhaseBaseInfra)
 
-			var cloudDiscoveryData map[string]interface{}
+			var cloudDiscoveryData map[string]any
 			err = json.Unmarshal(baseOutputs.CloudDiscovery, &cloudDiscoveryData)
 			if err != nil {
 				return err
 			}
 
-			bctx.resourcesTemplateData = map[string]interface{}{
+			bctx.resourcesTemplateData = map[string]any{
 				"cloudDiscovery": cloudDiscoveryData,
 			}
 
@@ -1064,7 +1065,7 @@ func createResources(
 
 		if len(resourcesToCreate) == 0 {
 			for _, task := range tasks {
-				return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
+				return retry.NewLoop(task.Title, 300, 1*time.Second).RunContext(ctx, func() error {
 					return task.Do(kubeCl)
 				})
 			}

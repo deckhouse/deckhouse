@@ -147,6 +147,7 @@ func (ng *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 			RootDir:              ng.Spec.Kubelet.RootDir,
 			ContainerLogMaxSize:  ng.Spec.Kubelet.ContainerLogMaxSize,
 			ContainerLogMaxFiles: ng.Spec.Kubelet.ContainerLogMaxFiles,
+			SeccompDefault:       ng.Spec.Kubelet.SeccompDefault,
 		}
 	}
 
@@ -292,6 +293,7 @@ func (ng *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 			RootDir:              src.Spec.Kubelet.RootDir,
 			ContainerLogMaxSize:  src.Spec.Kubelet.ContainerLogMaxSize,
 			ContainerLogMaxFiles: src.Spec.Kubelet.ContainerLogMaxFiles,
+			SeccompDefault:       src.Spec.Kubelet.SeccompDefault,
 		}
 	}
 
@@ -337,6 +339,7 @@ func (ng *NodeGroupList) ConvertFrom(srcRaw conversion.Hub) error {
 
 // convertStatusTo converts v1alpha2.NodeGroupStatus to v1.NodeGroupStatus
 func convertStatusTo(in *NodeGroupStatus, out *v1.NodeGroupStatus) error {
+	out.Engine = in.Engine
 	out.Ready = in.Ready
 	out.Nodes = in.Nodes
 	out.Instances = in.Instances
@@ -377,6 +380,7 @@ func convertStatusTo(in *NodeGroupStatus, out *v1.NodeGroupStatus) error {
 
 // convertStatusFrom converts v1.NodeGroupStatus to v1alpha2.NodeGroupStatus
 func convertStatusFrom(in *v1.NodeGroupStatus, out *NodeGroupStatus) error {
+	out.Engine = in.Engine
 	out.Ready = in.Ready
 	out.Nodes = in.Nodes
 	out.Instances = in.Instances

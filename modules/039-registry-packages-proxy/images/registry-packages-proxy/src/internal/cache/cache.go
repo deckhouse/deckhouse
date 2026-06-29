@@ -181,7 +181,7 @@ func (c *Cache) deleteOrphanedOrCorruptedEntries() {
 	// delete corrupted entries
 	for k, v := range c.storage {
 		if v.isCorrupted || v.layerDigest == "" {
-			c.logger.Info("delete corrupted entry", slog.String("digest", k), slog.String("layerDigest", v.layerDigest))
+			c.logger.Info("delete corrupted entry", slog.String("digest", k), slog.String("layer_digest", v.layerDigest))
 			delete(c.storage, k)
 		}
 	}
@@ -324,7 +324,7 @@ func (c *Cache) checkHashIsOK(layerDigest string) bool {
 	}
 	hsum := fmt.Sprintf("%x", h.Sum(nil))
 	if hsum != layerDigest {
-		c.logger.Warn("entry with layer digest corrupted in the cache", slog.String("path", path), slog.String("hash", hsum), slog.String("layerHash", layerDigest))
+		c.logger.Warn("entry with layer digest corrupted in the cache", slog.String("path", path), slog.String("hash", hsum), slog.String("layer_hash", layerDigest))
 		return false
 	}
 
