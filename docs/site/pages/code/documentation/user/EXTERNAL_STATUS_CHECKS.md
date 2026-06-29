@@ -21,12 +21,12 @@ External status checks can affect merging only if the project setting **Status c
 
 ## Configuring external status checks
 
-To configure external status checks, open the project and go to **Settings** -> **Merge requests**.
+To configure external status checks, open the project and go to "Settings" → "Merge requests".
 
 The page contains two related configuration areas:
 
-- **Merge checks** - project-level settings that affect mergeability.
-- **External status checks** - a table for creating, updating, and deleting external status check services.
+- "Merge checks": Project-level settings that affect mergeability.
+- "External status checks": A table for creating, updating, and deleting external status check services.
 
 Users need permission to manage merge request settings in the project. In standard roles, this is available to users with the **Maintainer** or **Owner** role.
 
@@ -69,18 +69,18 @@ If a check does not have an individual timeout, the table shows the project defa
 To add an external status check:
 
 1. Open the project.
-1. Go to **Settings** -> **Merge requests**.
-1. In **External status checks**, select **Add external status check**.
+1. Go to "Settings" → "Merge requests".
+1. In "External status checks", select "Add external status check".
 1. Fill in the fields.
-1. Select **New external status check**.
+1. Select "New external status check".
 
 | Field | Description |
 |-------|-------------|
-| **Service name** | Name of the external service. The value is required, must be unique in the project, and must not exceed 255 characters. |
-| **API to check** | URL of the external service endpoint. The value is required, must be unique in the project, and must use the `http` or `https` protocol. |
-| **Target branch** | Scope that defines which merge request target branches use the check. |
-| **Timeout minutes** | Individual timeout for this check. If set, it overrides the project-level **Status checks timeout** value. |
-| **HMAC Shared Secret** | Optional secret used to sign requests sent from Deckhouse Code to the external service. |
+| **Service name** | Name of the external service. The value is required, must be unique in the project, and must not exceed 255 characters |
+| **API to check** | URL of the external service endpoint. The value is required, must be unique in the project, and must use the `http` or `https` protocol |
+| **Target branch** | Scope that defines which merge request target branches use the check |
+| **Timeout minutes** | Individual timeout for this check. If set, it overrides the project-level **Status checks timeout** value |
+| **HMAC Shared Secret** | Optional secret used to sign requests sent from Deckhouse Code to the external service |
 
 After a check is created, Deckhouse Code creates `pending` check responses for matching open merge requests. Requests to the external service are not sent for those existing merge requests. These responses become `failed` after the timeout expires unless a user retries the check.
 
@@ -92,9 +92,9 @@ The "Target branch" field defines which merge requests use the status check.
 
 | Scope | Description |
 |-------|-------------|
-| **All branches** | Applies the check to merge requests targeting any branch. |
-| **All protected branches** | Applies the check to merge requests targeting protected branches. |
-| Selected protected branches | Applies the check only to merge requests targeting the selected protected branches. Wildcard protected branches are supported. |
+| **All branches** | Applies the check to merge requests targeting any branch |
+| **All protected branches** | Applies the check to merge requests targeting protected branches |
+| Selected protected branches | Applies the check only to merge requests targeting the selected protected branches. Wildcard protected branches are supported |
 
 If a merge request target branch does not match a check scope, the check is not shown in the merge request widget.
 
@@ -166,7 +166,7 @@ The widget shows:
 - Check status.
 - External service URL, if your role allows viewing it.
 - Error details for failed checks, if Deckhouse Code has an error reason.
-- **Retry** action for failed checks, if your role allows retrying them.
+- "Retry" action for failed checks, if your role allows retrying them.
 
 The widget helps authors and reviewers understand which external systems still need to respond before the merge request can be merged.
 
@@ -187,7 +187,7 @@ A check can become `failed` when:
 - The external service URL is blocked or unavailable.
 - The external service does not respond before the timeout expires.
 
-If **Status checks must succeed** is enabled for the project, a failed check blocks merging until the check passes or the project settings are changed.
+If "Status checks must succeed" is enabled for the project, a failed check blocks merging until the check passes or the project settings are changed.
 
 ## Retry a failed check
 
@@ -198,8 +198,8 @@ Retry is available only for failed checks that belong to the current `HEAD` SHA 
 To retry a failed check:
 
 1. Open the merge request.
-1. Find the **External status checks** widget.
-1. In the failed check row, select **Retry**.
+1. Find the "External status checks" widget.
+1. In the failed check row, select "Retry".
 
 After retry, Deckhouse Code changes the check back to `pending` and sends the current merge request payload to the external service again.
 
