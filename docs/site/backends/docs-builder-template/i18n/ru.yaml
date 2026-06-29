@@ -10,7 +10,7 @@ modules2: модулей
 module: модуль
 module_enabling_details_title: Как явно включить или отключить модуль…
 module_enabling_details_content: |
-  Явно включить или выключить модуль можно одним из следующих способов:
+  <span id="enable"></span>Явно включить или выключить модуль можно одним из следующих способов:
   - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`, включите (или выключите) переключатель «Модуль включен». Сохраните изменения.
 
     Пример:
@@ -44,7 +44,7 @@ module_enabling_details_content: |
 module_settings: настройки
 module_settings_details_title: Как настроить модуль...
 module_settings_details_content: |
-  Настроить модуль можно одним из следующих способов:
+  <span id="setup"></span>Настроить модуль можно одним из следующих способов:
   - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).**
 
     В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`, включите переключатель «Дополнительные настройки». Заполните необходимые поля формы на вкладке «Конфигурация», или укажите настройки модуля в формате YAML на вкладке «YAML», **не включая секцию settings**. Сохраните изменения.

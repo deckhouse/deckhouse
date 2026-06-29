@@ -81,6 +81,10 @@ const (
 	// this CRB is dropped from the Helm template, Helm must not prune it (admin.conf would lose root).
 	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
 	helmResourcePolicyKeep       = "keep"
+
+	// forceWildcardClusterAdmin temporarily pins kubeadm:cluster-admins to the wildcard cluster-admin
+	// role, pausing the granular user-authz:cluster-admin rollout. Set to false to re-enable granular.
+	forceWildcardClusterAdmin = true
 )
 
 // kubeadmClusterAdminsBindingState keeps the moving pieces of the CRB we care about.
@@ -147,8 +151,18 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 	}
 	userAuthzCRAvailable := len(userAuthzCRSnaps) > 0
 
+	// TEMPORARY: the granular user-authz:cluster-admin rollout for kubeadm:cluster-admins is paused.
+	// The binding is pinned back to the wildcard cluster-admin role for every cluster. The gate
+	// computation below is kept intact so re-enabling is a one-liner: drop forceWildcardClusterAdmin
+	// (and restore the granular test expectations).
+	//
+	// Safety during the rollback flip (granular -> wildcard, an immutable-roleRef Delete+Create):
+	// the supplement binding stays enabled (supplementEnabled = userAuthzEnabled), so the group keeps
+	// nodes/proxy (kubectl exec/logs/port-forward) and impersonate through the whole window. Wildcard
+	// is a strict superset of granular, so no permission is ever lost — only the sub-second core-rbac
+	// window of the Delete+Create, which the hook self-heals on the CRB delete event / next OnBeforeHelm.
 	desiredRoleName := clusterAdminWildcardClusterRoleName
-	if userAuthzEnabled && clusterBootstrapped && userAuthzCRAvailable {
+	if !forceWildcardClusterAdmin && userAuthzEnabled && clusterBootstrapped && userAuthzCRAvailable {
 		desiredRoleName = userAuthzClusterAdminClusterRoleName
 	}
 

@@ -157,12 +157,18 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 		sett.WithLogger(loggerProvider)
 		parser := libcon_config.NewFlagsParser(sett)
 		parser.WithEnvsPrefix(global.SSHEnvsPrefix)
-		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
-		flags, err := parser.InitFlags(fset)
+
+		flags, err := parser.InitFlags(
+			flag.NewFlagSet("my-set", flag.ExitOnError),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("init flags: %w", err)
 		}
-		config, err = flags.ExtractConfig(os.Args[1:])
+
+		config, err = flags.ExtractConfig(
+			os.Args[1:],
+			libcon_config.ParseWithRequiredSSHHost(false),
+		)
 		if err != nil {
 			if strings.Contains(err.Error(), "Failed to read private keys from flags") && options.kubeFlagsDefined {
 				return nil, nil

@@ -368,8 +368,9 @@ func resolveKubernetesVersion(v string) string {
 	return v
 }
 
-func clusterConfigToMap(raw map[string]json.RawMessage) (map[string]any, error) {
-	out := make(map[string]any, len(raw))
+func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
+	raw := m.ClusterConfig
+	out := make(map[string]interface{}, len(raw))
 	for k, v := range raw {
 		var a any
 		if err := json.Unmarshal(v, &a); err != nil {
@@ -383,41 +384,8 @@ func clusterConfigToMap(raw map[string]json.RawMessage) (map[string]any, error) 
 	return out, nil
 }
 
-func (m *MetaConfig) ConfigForControlPlaneTemplates(nodeIP string) (*ControlPlaneTemplateConfig, error) {
-	clusterConfiguration, err := clusterConfigToMap(m.ClusterConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := &ControlPlaneTemplateConfig{
-		RunType:              "ClusterBootstrap",
-		NodeIP:               "$MY_IP", // bashible placeholder, replaced by envsubst
-		NodeName:             "$MY_NODENAME",
-		Registry:             m.Registry.Manifest().KubeadmContext().ToMap(),
-		Images:               m.Images.ConvertToMap(),
-		VersionMap:           m.VersionMap,
-		ClusterConfiguration: clusterConfiguration,
-	}
-
-	if nodeIP != "" {
-		cfg.NodeIP = nodeIP
-	}
-
-	mcSettings, err := m.controlPlaneManagerSettings()
-	if err != nil {
-		return nil, fmt.Errorf("read control-plane-manager moduleConfig: %w", err)
-	}
-	if mcSettings != nil {
-		cfg.Settings = mcSettings
-	} else {
-		cfg.Settings = make(map[string]any)
-	}
-
-	return cfg, nil
-}
-
-func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP string) (map[string]any, error) {
-	data := make(map[string]any, len(m.ClusterConfig))
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP string) (map[string]interface{}, error) {
+	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
 		var t any

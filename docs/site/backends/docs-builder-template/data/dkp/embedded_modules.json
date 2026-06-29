@@ -1220,44 +1220,6 @@
       }
     },
     {
-      "title": "The log-shipper module",
-      "description": "Collection, filtering, and enrichment of logs in the Deckhouse Kubernetes Platform cluster.",
-      "module": "log-shipper",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "logging",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "log-shipper/",
-      "ru": {
-        "title": "Модуль log-shipper",
-        "description": "Сбор, фильтрация и обогащение логов в кластере Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "log-shipper",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-log-shipper",
-        "descriptions": {
-          "en": "Simplifies the configuration of log collection in Kubernetes. Allows organization of log collection from applications running in the cluster and from nodes themselves.",
-          "ru": "Упрощает настройку сбора логов в Kubernetes. Позволяет организовать сбор логов с приложений, запущенных в кластере, и с узлов, а затем отправлять их в систему хранения (Loki, Elasticsearch, S3 и другие)."
-        },
-        "oss": [
-          {
-            "name": "Vector",
-            "link": "https://github.com/timberio/vector",
-            "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
-            "logo": "/images/logos/vector.svg",
-            "license": "Mozilla Public License, version 2.0"
-          }
-        ]
-      }
-    },
-    {
       "title": "The loki module",
       "description": "Log storage in the Deckhouse Kubernetes Platform cluster based on Grafana Loki.",
       "module": "loki",
@@ -1942,50 +1904,6 @@
             "logo": "/images/logos/memcached-icon.svg",
             "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
             "license": "BSD-3-Clause license"
-          }
-        ]
-      }
-    },
-    {
-      "title": "The prometheus-metrics-adapter module",
-      "search": "autoscaler, HorizontalPodAutoscaler",
-      "description": "Ensuring the operation of horizontal and vertical autoscaling based on any metrics in the cluster of the Deckhouse Kubernetes Platform.",
-      "module": "prometheus-metrics-adapter",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "prometheus-metrics-adapter/",
-      "ru": {
-        "title": "Модуль prometheus-metrics-adapter",
-        "search": "autoscaler, HorizontalPodAutoscaler",
-        "description": "Обеспечение работы горизонтального и вертикального масштабирования по любым метрикам в кластере Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "prometheus-metrics-adapter",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "requirements": {
-          "modules": {
-            "prometheus": ">= 0.0.0"
-          }
-        },
-        "descriptions": {
-          "en": "Enables HPA and VPA autoscalers to use monitoring metrics for scaling decisions. Implements Kubernetes resource metrics API, custom metrics API, and external metrics API.",
-          "ru": "Позволяет HPA и VPA автоскейлерам использовать метрики мониторинга для принятия решений о масштабировании. Реализует API метрик ресурсов Kubernetes, API пользовательских метрик и API внешних метрик."
-        },
-        "oss": [
-          {
-            "name": "Kubernetes Metrics Server",
-            "link": "https://github.com/kubernetes-sigs/metrics-server",
-            "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
-            "logo": "/images/logos/kubernetes.svg",
-            "license": "Apache License 2.0"
           }
         ]
       }

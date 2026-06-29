@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -175,7 +176,14 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			return err
 		}
 
-		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
+		extractor := controlplane.NewSettingsExtractor(
+			metaConfig,
+			config.NewSchemaStore(&opts.Global),
+			config.GetEdition(),
+			loggerProvider,
+		)
+
+		controlPlaneConfig, err := extractor.TemplateConfigForBootstrap("")
 		if err != nil {
 			return err
 		}

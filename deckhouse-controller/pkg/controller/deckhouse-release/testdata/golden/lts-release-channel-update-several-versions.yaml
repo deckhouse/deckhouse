@@ -9,7 +9,6 @@ spec:
   version: v1.60.1
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -27,7 +26,6 @@ spec:
   version: v1.65.6
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -45,7 +43,6 @@ spec:
   version: v1.70.7
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
 ---
