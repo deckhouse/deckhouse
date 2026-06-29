@@ -58,7 +58,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (tag) (istio_build{component=\"ztunnel\"})",
+          "expr": "sum by (tag) (istio_build{component=\"ztunnel\", tag!=\"\"})",
           "legendFormat": "Version ({{tag}})"
         }
       ],

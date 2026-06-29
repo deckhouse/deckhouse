@@ -55,7 +55,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (tag) (istio_build{component=\"pilot\"})",
+          "expr": "sum by (tag) (istio_build{component=\"pilot\", tag!=\"\"})",
           "legendFormat": "Version ({{tag}})"
         }
       ],
