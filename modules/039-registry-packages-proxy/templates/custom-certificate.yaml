@@ -1,4 +1,9 @@
 {{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 {{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-cloud-instance-manager" "ingress-tls") }}
+
+{{ $moduleGateway := dict }}
+{{ include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{ if $moduleGateway }}
 {{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-cloud-instance-manager" "registry-packages-proxy-httproute-tls") }}
+{{- end }}
 {{- end }}
