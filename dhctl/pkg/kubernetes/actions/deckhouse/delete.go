@@ -103,7 +103,7 @@ func WaitForNodeControllerDeploymentDeletion(ctx context.Context, kubeCl *client
 	return retry.NewLoop("Wait for node-controller Deployment deletion", 30, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		_, err := kubeCl.AppsV1().Deployments(nodeControllerDeploymentNamespace).Get(ctx, nodeControllerDeploymentName, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
-			log.InfoLn("node-controller Deployment and its dependents are removed")
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s\n", "node-controller Deployment and its dependents are removed"))
 			return nil
 		}
 
