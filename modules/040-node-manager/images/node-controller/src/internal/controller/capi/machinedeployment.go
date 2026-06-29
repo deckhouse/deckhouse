@@ -353,6 +353,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			},
 		}}
 
+		if cloudConfig.providerType == "openstack" {
+			md.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})["failureDomain"] = zone
+		}
+
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MachineDeployment %s: %w", mdName, err)
 		}
@@ -479,6 +483,7 @@ type cloudProviderConfig struct {
 	capiClusterName               string
 	capiMachineTemplateKind       string
 	capiMachineTemplateAPIVersion string
+	providerType                  string
 	zones                         []string
 }
 
@@ -497,6 +502,7 @@ func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Contex
 		capiClusterName:               string(secret.Data["capiClusterName"]),
 		capiMachineTemplateKind:       string(secret.Data["capiMachineTemplateKind"]),
 		capiMachineTemplateAPIVersion: string(secret.Data["capiMachineTemplateAPIVersion"]),
+		providerType:                  string(secret.Data["type"]),
 	}
 	if cfg.capiMachineTemplateAPIVersion == "" {
 		cfg.capiMachineTemplateAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
