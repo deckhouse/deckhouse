@@ -61,8 +61,8 @@ metadata:
     network.deckhouse.io/load-balancer-ips: 192.168.217.217
 spec:
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: nginx
   type: LoadBalancer
@@ -82,11 +82,11 @@ kind: Service
 metadata:
   name: nginx
   annotations:
-    metallb.universe.tf/address-pool: production-public-ips
+    network.deckhouse.io/load-balancer-pool: production-public-ips
 spec:
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: nginx
   type: LoadBalancer
