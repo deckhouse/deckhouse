@@ -12,7 +12,7 @@ This test covers the fix from [PR #20174](https://github.com/deckhouse/deckhouse
 
 - Deckhouse cluster with DVP / CAPI cloud provider
 - Cluster Autoscaler deployment ready in `d8-cloud-instance-manager`
-- CA container args contain `clusterapi`
+- CA container arguments contain `clusterapi`
 - PR #20174 fix applied (system labels in capacity annotation)
 - Existing `DVPInstanceClass` named `worker`
 - Chainsaw CLI, `kubectl`, and `jq` installed. See `../../README.md` for instructions.
@@ -30,7 +30,7 @@ Before the fix, the `serializeLabels` function only included labels from `spec.n
 | 3    | `create-e2e-worker-small-instanceclass`       | Clones `worker` → `e2e-worker-small`                                                                    |
 | 4    | `apply-nodegroup-infra`                       | Applies NodeGroup `e2e-worker-infra` (no `node.deckhouse.io/group` in nodeTemplate.labels)              |
 | 5    | `assert-cluster-autoscaler-exists`            | Asserts CA deployment is ready                                                                          |
-| 6    | `assert-ca-uses-clusterapi-provider`          | Verifies CA args contain `clusterapi`                                                                   |
+| 6    | `assert-ca-uses-clusterapi-provider`          | Verifies CA arguments contain `clusterapi`                                                                   |
 | 7    | `restart-cluster-autoscaler`                  | Rollout restart and wait for readiness                                                                  |
 | 8    | `wait-for-ca-initialization`                  | Sleep 15s                                                                                               |
 | 9    | `verify-machine-deployment-labels-annotation` | Verifies MachineDeployment has `node.deckhouse.io/group=e2e-worker-infra` in capacity labels annotation |
@@ -55,7 +55,7 @@ Before the fix, the `serializeLabels` function only included labels from `spec.n
 
 The test explicitly checks that the MachineDeployment annotation contains the system label:
 
-```text
+```yaml
 capacity.cluster-autoscaler.kubernetes.io/labels: node.deckhouse.io/group=e2e-worker-infra
 ```
 
