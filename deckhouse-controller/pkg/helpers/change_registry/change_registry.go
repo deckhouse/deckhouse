@@ -199,7 +199,7 @@ func newKubeClient() (*kclient.KubernetesClient, error) {
 
 func modifyPullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient, newSecretData map[string]string) (*v1.Secret, error) {
 	secretClient := kubeCl.KubeClient.CoreV1().Secrets(d8SystemNS)
-	deckhouseRegSecret, err := secretClient.Get(ctx, "deckhouse-registry", metav1.GetOptions{})
+	deckhouseRegSecret, err := secretClient.Get(ctx, app.SecretRegistry, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}
@@ -274,7 +274,7 @@ func getCAContent(caFile string) (string, error) {
 
 func deckhouseDeployment(ctx context.Context, kubeCl *kclient.KubernetesClient) (*appsv1.Deployment, error) {
 	deployClient := kubeCl.KubeClient.AppsV1().Deployments(d8SystemNS)
-	deploy, err := deployClient.Get(ctx, "deckhouse", metav1.GetOptions{})
+	deploy, err := deployClient.Get(ctx, app.DeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}

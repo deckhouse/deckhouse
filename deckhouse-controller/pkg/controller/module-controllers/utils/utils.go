@@ -45,7 +45,7 @@ import (
 const (
 	deckhouseNamespace = app.NamespaceDeckhouse
 
-	deckhouseDiscoverySecret = "deckhouse-discovery"
+	deckhouseDiscoverySecret = app.SecretDiscovery
 )
 
 // GenerateRegistryOptionsFromModuleSource fetches settings from ModuleSource and generate registry options from them

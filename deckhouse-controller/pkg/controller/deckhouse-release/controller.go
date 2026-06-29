@@ -64,8 +64,8 @@ import (
 
 const (
 	deckhouseNamespace          = app.NamespaceDeckhouse
-	deckhouseDeployment         = "deckhouse"
-	deckhouseRegistrySecretName = "deckhouse-registry"
+	deckhouseDeployment         = app.DeploymentName
+	deckhouseRegistrySecretName = app.SecretRegistry
 
 	controllerName = "d8-deckhouse-release-controller"
 )
@@ -227,7 +227,7 @@ func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) error {
 
 func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string {
 	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: deckhouseNamespace, Name: "deckhouse-discovery"}
+	key := types.NamespacedName{Namespace: deckhouseNamespace, Name: app.SecretDiscovery}
 	err := r.client.Get(ctx, key, &secret)
 	if err != nil {
 		r.logger.Warn("read clusterUUID from secret", slog.Any("namespaced_name", key), log.Err(err))
@@ -1074,7 +1074,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: leaderPod.Namespace,
-				Name:      "deckhouse",
+				Name:      deckhouseDeployment,
 			},
 		},
 		client.RawPatch(types.MergePatchType, jsonPatch),
