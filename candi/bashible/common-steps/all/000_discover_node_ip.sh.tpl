@@ -19,7 +19,13 @@
 
 {{- if or (eq .runType "ClusterBootstrap") (eq .nodeGroup.nodeType "Static") }}
 if [ -z "$(cat /var/lib/bashible/discovered-node-ip)" ] ; then
-  bb-log-error "Failed to discover node_ip that matches internalNetworkCIDRs."
+  bb-log-error "Failed to discover node IP for this node."
+  bb-log-error "The node IP must match one of the networks from internalNetworkCIDRs."
+  bb-log-error "Check that the node has an IP address from internalNetworkCIDRs. For static nodes, specify internalNetworkCIDRs explicitly in StaticClusterConfiguration."
+  bb-log-error "Current IPv4 addresses:"
+  ip -o -4 addr show 2>/dev/null | awk '{print "  " $2 ": " $4}' >&2 || true
+  bb-log-error "Current routes:"
+  ip route 2>/dev/null >&2 || true
   exit 1
 fi
 {{- end }}
