@@ -285,7 +285,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	}
 
 	if DefaultReleaseChannel == "" {
-		DefaultReleaseChannel = defaultReleaseChannel
+		DefaultReleaseChannel = app.DefaultReleaseChannel
 	}
 
 	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, DefaultReleaseChannel, operator, logger.Named("deckhouse-controller"))
@@ -528,10 +528,10 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 
 	resource := sdkresource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String(AppName),
+		semconv.ServiceNameKey.String(app.AppName),
 		semconv.ServiceVersionKey.String(DeckhouseVersion),
 		semconv.TelemetrySDKLanguageKey.String("en"),
-		semconv.K8SDeploymentName(AppName),
+		semconv.K8SDeploymentName(app.AppName),
 	)
 
 	provider := sdktrace.NewTracerProvider(

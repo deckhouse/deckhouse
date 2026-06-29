@@ -50,21 +50,12 @@ var (
 	DefaultReleaseChannel = ""
 )
 
-const (
-	defaultReleaseChannel = "Stable"
-)
-
 func version() string {
 	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, nelm %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, NelmVersion, runtime.Version())
 }
 
 // main is almost a copy from addon-operator. We compile addon-operator to inline
 // Go hooks and set some defaults. Also, helper commands are defined for Shell hooks.
-
-const (
-	AppName        = "deckhouse"
-	AppDescription = "controller for Kubernetes platform from Flant"
-)
 
 // legacyBashCompletion is bound to the backward-compatibility flag
 // `--completion-script-bash` (see rootCmd setup in main).
@@ -118,7 +109,7 @@ func main() {
 
 	rootCmd := &cobra.Command{
 		Use:   fileName,
-		Short: fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription),
+		Short: fmt.Sprintf("%s %s: %s", app.AppName, DeckhouseVersion, app.AppDescription),
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// Backward-compatibility alias for the legacy kingpin flag
 			// `--completion-script-bash`, which was replaced by the cobra
