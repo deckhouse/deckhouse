@@ -8,18 +8,16 @@ metadata:
     heritage: deckhouse
     module: node-manager
     cluster.x-k8s.io/provider: cluster-api
-  name: machinepools.cluster.x-k8s.io
+  name: machinesets.cluster.x-k8s.io
 spec:
   group: cluster.x-k8s.io
   names:
     categories:
     - cluster-api
-    kind: MachinePool
-    listKind: MachinePoolList
-    plural: machinepools
-    shortNames:
-    - mp
-    singular: machinepool
+    kind: MachineSet
+    listKind: MachineSetList
+    plural: machinesets
+    singular: machineset
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -27,25 +25,28 @@ spec:
       jsonPath: .spec.clusterName
       name: Cluster
       type: string
-    - description: Total number of machines desired by this MachinePool
+    - description: Total number of machines desired by this machineset
       jsonPath: .spec.replicas
       name: Desired
       priority: 10
       type: integer
-    - description: MachinePool replicas count
+    - description: Total number of non-terminated machines targeted by this machineset
       jsonPath: .status.replicas
       name: Replicas
-      type: string
-    - description: MachinePool status such as Terminating/Pending/Provisioning/Running/Failed
-        etc
-      jsonPath: .status.phase
-      name: Phase
-      type: string
-    - description: Time duration since creation of MachinePool
+      type: integer
+    - description: Total number of ready machines targeted by this machineset.
+      jsonPath: .status.readyReplicas
+      name: Ready
+      type: integer
+    - description: Total number of available machines (ready for at least minReadySeconds)
+      jsonPath: .status.availableReplicas
+      name: Available
+      type: integer
+    - description: Time duration since creation of MachineSet
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    - description: Kubernetes version associated with this MachinePool
+    - description: Kubernetes version associated with this MachineSet
       jsonPath: .spec.template.spec.version
       name: Version
       type: string
@@ -53,7 +54,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: MachinePool is the Schema for the machinepools API.
+        description: MachineSet is the Schema for the machinesets API.
         properties:
           apiVersion:
             description: |-
@@ -73,7 +74,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec is the desired state of MachinePool.
+            description: spec is the desired state of MachineSet.
             properties:
               clusterName:
                 description: clusterName is the name of the Cluster this object belongs
@@ -81,41 +82,124 @@ spec:
                 maxLength: 63
                 minLength: 1
                 type: string
-              failureDomains:
-                description: failureDomains is the list of failure domains this MachinePool
-                  should be attached to.
-                items:
-                  maxLength: 256
-                  minLength: 1
-                  type: string
-                maxItems: 100
-                type: array
+              deletePolicy:
+                description: |-
+                  deletePolicy defines the policy used to identify nodes to delete when downscaling.
+                  Defaults to "Random".  Valid values are "Random, "Newest", "Oldest"
+                enum:
+                - Random
+                - Newest
+                - Oldest
+                type: string
+              machineNamingStrategy:
+                description: |-
+                  machineNamingStrategy allows changing the naming pattern used when creating Machines.
+                  Note: InfraMachines & BootstrapConfigs will use the same name as the corresponding Machines.
+                properties:
+                  template:
+                    description: |-
+                      template defines the template to use for generating the names of the
+                      Machine objects.
+                      If not defined, it will fallback to `{{ .machineSet.name }}-{{ .random }}`.
+                      If the generated name string exceeds 63 characters, it will be trimmed to
+                      58 characters and will
+                      get concatenated with a random suffix of length 5.
+                      Length of the template string must not exceed 256 characters.
+                      The template allows the following variables `.cluster.name`,
+                      `.machineSet.name` and `.random`.
+                      The variable `.cluster.name` retrieves the name of the cluster object
+                      that owns the Machines being created.
+                      The variable `.machineSet.name` retrieves the name of the MachineSet
+                      object that owns the Machines being created.
+                      The variable `.random` is substituted with random alphanumeric string,
+                      without vowels, of length 5. This variable is required part of the
+                      template. If not provided, validation will fail.
+                    maxLength: 256
+                    minLength: 1
+                    type: string
+                type: object
               minReadySeconds:
                 description: |-
-                  minReadySeconds is the minimum number of seconds for which a newly created machine instances should
-                  be ready.
-                  Defaults to 0 (machine instance will be considered available as soon as it
-                  is ready)
+                  minReadySeconds is the minimum number of seconds for which a Node for a newly created machine should be ready before considering the replica available.
+                  Defaults to 0 (machine will be considered available as soon as the Node is ready)
                 format: int32
                 type: integer
-              providerIDList:
-                description: |-
-                  providerIDList are the identification IDs of machine instances provided by the provider.
-                  This field must match the provider IDs as seen on the node objects corresponding to a machine pool's machine instances.
-                items:
-                  maxLength: 512
-                  minLength: 1
-                  type: string
-                maxItems: 10000
-                type: array
               replicas:
                 description: |-
-                  replicas is the number of desired machines. Defaults to 1.
-                  This is a pointer to distinguish between explicit zero and not specified.
+                  replicas is the number of desired replicas.
+                  This is a pointer to distinguish between explicit zero and unspecified.
+
+                  Defaults to:
+                  * if the Kubernetes autoscaler min size and max size annotations are set:
+                    - if it's a new MachineSet, use min size
+                    - if the replicas field of the old MachineSet is < min size, use min size
+                    - if the replicas field of the old MachineSet is > max size, use max size
+                    - if the replicas field of the old MachineSet is in the (min size, max size) range, keep the value from the oldMS
+                  * otherwise use 1
+                  Note: Defaulting will be run whenever the replicas field is not set:
+                  * A new MachineSet is created with replicas not set.
+                  * On an existing MachineSet the replicas field was first set and is now unset.
+                  Those cases are especially relevant for the following Kubernetes autoscaler use cases:
+                  * A new MachineSet is created and replicas should be managed by the autoscaler
+                  * An existing MachineSet which initially wasn't controlled by the autoscaler
+                    should be later controlled by the autoscaler
                 format: int32
                 type: integer
+              selector:
+                description: |-
+                  selector is a label query over machines that should match the replica count.
+                  Label keys and values that must match in order to be controlled by this MachineSet.
+                  It must match the machine template's labels.
+                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
               template:
-                description: template describes the machines that will be created.
+                description: |-
+                  template is the object that describes the machine that will be created if
+                  insufficient replicas are detected.
+                  Object references to custom resources are treated as templates.
                 properties:
                   metadata:
                     description: |-
@@ -359,21 +443,18 @@ spec:
                 type: object
             required:
             - clusterName
-            - template
+            - selector
             type: object
           status:
-            description: status is the observed state of MachinePool.
+            description: status is the observed state of MachineSet.
             properties:
               availableReplicas:
                 description: availableReplicas is the number of available replicas
-                  (ready for at least minReadySeconds) for this MachinePool.
+                  (ready for at least minReadySeconds) for this MachineSet.
                 format: int32
                 type: integer
-              bootstrapReady:
-                description: bootstrapReady is the state of the bootstrap provider.
-                type: boolean
               conditions:
-                description: conditions define the current service state of the MachinePool.
+                description: conditions defines current service state of the MachineSet.
                 items:
                   description: Condition defines an observation of a Cluster API resource
                     operational state.
@@ -426,8 +507,9 @@ spec:
                 type: array
               failureMessage:
                 description: |-
-                  failureMessage indicates that there is a problem reconciling the state,
-                  and will be set to a descriptive error message.
+                  failureMessage will be set in the event that there is a terminal problem
+                  reconciling the Machine and will contain a more verbose string suitable
+                  for logging and human consumption.
 
                   Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
                 maxLength: 10240
@@ -435,86 +517,46 @@ spec:
                 type: string
               failureReason:
                 description: |-
-                  failureReason indicates that there is a problem reconciling the state, and
-                  will be set to a token value suitable for programmatic interpretation.
+                  failureReason will be set in the event that there is a terminal problem
+                  reconciling the Machine and will contain a succinct value suitable
+                  for machine interpretation.
+
+                  In the event that there is a terminal problem reconciling the
+                  replicas, both FailureReason and FailureMessage will be set. FailureReason
+                  will be populated with a succinct value suitable for machine
+                  interpretation, while FailureMessage will contain a more verbose
+                  string suitable for logging and human consumption.
+
+                  These fields should not be set for transitive errors that a
+                  controller faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the MachineTemplate's spec or the configuration of
+                  the machine controller, and that manual intervention is required. Examples
+                  of terminal errors would be invalid combinations of settings in the
+                  spec, values that are unsupported by the machine controller, or the
+                  responsible machine controller itself being critically misconfigured.
+
+                  Any transient errors that occur during the reconciliation of Machines
+                  can be added as events to the MachineSet object and/or logged in the
+                  controller's output.
 
                   Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
                 type: string
-              infrastructureReady:
-                description: infrastructureReady is the state of the infrastructure
-                  provider.
-                type: boolean
-              nodeRefs:
-                description: nodeRefs will point to the corresponding Nodes if it
-                  they exist.
-                items:
-                  description: ObjectReference contains enough information to let
-                    you inspect or modify the referred object.
-                  properties:
-                    apiVersion:
-                      description: API version of the referent.
-                      type: string
-                    fieldPath:
-                      description: |-
-                        If referring to a piece of an object instead of an entire object, this string
-                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                        For example, if the object reference is to a container within a pod, this would take on a value like:
-                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                        the event) or if no container name is specified "spec.containers[2]" (container with
-                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                        referencing a part of an object.
-                      type: string
-                    kind:
-                      description: |-
-                        Kind of the referent.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                      type: string
-                    name:
-                      description: |-
-                        Name of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      type: string
-                    namespace:
-                      description: |-
-                        Namespace of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                      type: string
-                    resourceVersion:
-                      description: |-
-                        Specific resourceVersion to which this reference is made, if any.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                      type: string
-                    uid:
-                      description: |-
-                        UID of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                      type: string
-                  type: object
-                  x-kubernetes-map-type: atomic
-                maxItems: 10000
-                type: array
+              fullyLabeledReplicas:
+                description: |-
+                  fullyLabeledReplicas is the number of replicas that have labels matching the labels of the machine template of the MachineSet.
+
+                  Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
+                format: int32
+                type: integer
               observedGeneration:
-                description: observedGeneration is the latest generation observed
-                  by the controller.
+                description: observedGeneration reflects the generation of the most
+                  recently observed MachineSet.
                 format: int64
                 type: integer
-              phase:
-                description: phase represents the current phase of cluster actuation.
-                enum:
-                - Pending
-                - Provisioning
-                - Provisioned
-                - Running
-                - ScalingUp
-                - ScalingDown
-                - Scaling
-                - Deleting
-                - Failed
-                - Unknown
-                type: string
               readyReplicas:
                 description: readyReplicas is the number of ready replicas for this
-                  MachinePool. A machine is considered ready when the node has been
+                  MachineSet. A machine is considered ready when the node has been
                   created and is "Ready".
                 format: int32
                 type: integer
@@ -522,32 +564,28 @@ spec:
                 description: replicas is the most recently observed number of replicas.
                 format: int32
                 type: integer
-              unavailableReplicas:
+              selector:
                 description: |-
-                  unavailableReplicas is the total number of unavailable machine instances targeted by this machine pool.
-                  This is the total number of machine instances that are still required for
-                  the machine pool to have 100% available capacity. They may either
-                  be machine instances that are running but not yet available or machine instances
-                  that still have not been created.
-
-                  Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
-                format: int32
-                type: integer
+                  selector is the same as the label selector but in the string format to avoid introspection
+                  by clients. The string will be in the same format as the query-param syntax.
+                  More info about label selectors: http://kubernetes.io/docs/user-guide/labels#label-selectors
+                maxLength: 4096
+                minLength: 1
+                type: string
               v1beta2:
                 description: v1beta2 groups all the fields that will be added or modified
-                  in MachinePool's status with the V1Beta2 version.
+                  in MachineSet's status with the V1Beta2 version.
                 properties:
                   availableReplicas:
                     description: availableReplicas is the number of available replicas
-                      for this MachinePool. A machine is considered available when
+                      for this MachineSet. A machine is considered available when
                       Machine's Available condition is true.
                     format: int32
                     type: integer
                   conditions:
                     description: |-
-                      conditions represents the observations of a MachinePool's current state.
-                      Known condition types are Available, BootstrapConfigReady, InfrastructureReady, MachinesReady, MachinesUpToDate,
-                      ScalingUp, ScalingDown, Remediating, Deleting, Paused.
+                      conditions represents the observations of a MachineSet's current state.
+                      Known condition types are MachinesReady, MachinesUpToDate, ScalingUp, ScalingDown, Remediating, Deleting, Paused.
                     items:
                       description: Condition contains details for one aspect of the
                         current state of this API Resource.
@@ -610,23 +648,24 @@ spec:
                     x-kubernetes-list-type: map
                   readyReplicas:
                     description: readyReplicas is the number of ready replicas for
-                      this MachinePool. A machine is considered ready when Machine's
+                      this MachineSet. A machine is considered ready when Machine's
                       Ready condition is true.
                     format: int32
                     type: integer
                   upToDateReplicas:
                     description: upToDateReplicas is the number of up-to-date replicas
-                      targeted by this MachinePool. A machine is considered up-to-date
-                      when Machine's UpToDate condition is true.
+                      for this MachineSet. A machine is considered up-to-date when
+                      Machine's UpToDate condition is true.
                     format: int32
                     type: integer
                 type: object
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       scale:
+        labelSelectorPath: .status.selector
         specReplicasPath: .spec.replicas
         statusReplicasPath: .status.replicas
       status: {}
@@ -660,25 +699,18 @@ spec:
       name: Paused
       priority: 10
       type: string
-    - description: MachinePool status such as Terminating/Pending/Provisioning/Running/Failed
-        etc
-      jsonPath: .status.phase
-      name: Phase
-      type: string
-    - description: Time duration since creation of MachinePool
+    - description: Time duration since creation of MachineSet
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    - description: Kubernetes version associated with this MachinePool
+    - description: Kubernetes version associated with this MachineSet
       jsonPath: .spec.template.spec.version
       name: Version
       type: string
     name: v1beta2
     schema:
       openAPIV3Schema:
-        description: |-
-          MachinePool is the Schema for the machinepools API.
-          NOTE: This CRD can only be used if the MachinePool feature gate is enabled.
+        description: MachineSet is the Schema for the machinesets API.
         properties:
           apiVersion:
             description: |-
@@ -698,7 +730,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec is the desired state of MachinePool.
+            description: spec is the desired state of MachineSet.
             properties:
               clusterName:
                 description: clusterName is the name of the Cluster this object belongs
@@ -706,35 +738,125 @@ spec:
                 maxLength: 63
                 minLength: 1
                 type: string
-              failureDomains:
-                description: failureDomains is the list of failure domains this MachinePool
-                  should be attached to.
-                items:
-                  maxLength: 256
-                  minLength: 1
-                  type: string
-                maxItems: 100
-                type: array
-                x-kubernetes-list-type: atomic
-              providerIDList:
+              deletion:
+                description: deletion contains configuration options for MachineSet
+                  deletion.
+                minProperties: 1
+                properties:
+                  order:
+                    description: |-
+                      order defines the order in which Machines are deleted when downscaling.
+                      Defaults to "Random".  Valid values are "Random, "Newest", "Oldest"
+                    enum:
+                    - Random
+                    - Newest
+                    - Oldest
+                    type: string
+                type: object
+              machineNaming:
                 description: |-
-                  providerIDList are the identification IDs of machine instances provided by the provider.
-                  This field must match the provider IDs as seen on the node objects corresponding to a machine pool's machine instances.
-                items:
-                  maxLength: 512
-                  minLength: 1
-                  type: string
-                maxItems: 10000
-                type: array
-                x-kubernetes-list-type: atomic
+                  machineNaming allows changing the naming pattern used when creating Machines.
+                  Note: InfraMachines & BootstrapConfigs will use the same name as the corresponding Machines.
+                minProperties: 1
+                properties:
+                  template:
+                    description: |-
+                      template defines the template to use for generating the names of the
+                      Machine objects.
+                      If not defined, it will fallback to `{{ .machineSet.name }}-{{ .random }}`.
+                      If the generated name string exceeds 63 characters, it will be trimmed to
+                      58 characters and will
+                      get concatenated with a random suffix of length 5.
+                      Length of the template string must not exceed 256 characters.
+                      The template allows the following variables `.cluster.name`,
+                      `.machineSet.name` and `.random`.
+                      The variable `.cluster.name` retrieves the name of the cluster object
+                      that owns the Machines being created.
+                      The variable `.machineSet.name` retrieves the name of the MachineSet
+                      object that owns the Machines being created.
+                      The variable `.random` is substituted with random alphanumeric string,
+                      without vowels, of length 5. This variable is required part of the
+                      template. If not provided, validation will fail.
+                    maxLength: 256
+                    minLength: 1
+                    type: string
+                type: object
               replicas:
                 description: |-
-                  replicas is the number of desired machines. Defaults to 1.
-                  This is a pointer to distinguish between explicit zero and not specified.
+                  replicas is the number of desired replicas.
+                  This is a pointer to distinguish between explicit zero and unspecified.
+
+                  Defaults to:
+                  * if the Kubernetes autoscaler min size and max size annotations are set:
+                    - if it's a new MachineSet, use min size
+                    - if the replicas field of the old MachineSet is < min size, use min size
+                    - if the replicas field of the old MachineSet is > max size, use max size
+                    - if the replicas field of the old MachineSet is in the (min size, max size) range, keep the value from the oldMS
+                  * otherwise use 1
+                  Note: Defaulting will be run whenever the replicas field is not set:
+                  * A new MachineSet is created with replicas not set.
+                  * On an existing MachineSet the replicas field was first set and is now unset.
+                  Those cases are especially relevant for the following Kubernetes autoscaler use cases:
+                  * A new MachineSet is created and replicas should be managed by the autoscaler
+                  * An existing MachineSet which initially wasn't controlled by the autoscaler
+                    should be later controlled by the autoscaler
                 format: int32
                 type: integer
+              selector:
+                description: |-
+                  selector is a label query over machines that should match the replica count.
+                  Label keys and values that must match in order to be controlled by this MachineSet.
+                  It must match the machine template's labels.
+                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
               template:
-                description: template describes the machines that will be created.
+                description: |-
+                  template is the object that describes the machine that will be created if
+                  insufficient replicas are detected.
+                  Object references to custom resources are treated as templates.
                 properties:
                   metadata:
                     description: |-
@@ -982,23 +1104,23 @@ spec:
                 type: object
             required:
             - clusterName
+            - selector
             - template
             type: object
           status:
-            description: status is the observed state of MachinePool.
+            description: status is the observed state of MachineSet.
             minProperties: 1
             properties:
               availableReplicas:
                 description: availableReplicas is the number of available replicas
-                  for this MachinePool. A machine is considered available when Machine's
+                  for this MachineSet. A machine is considered available when Machine's
                   Available condition is true.
                 format: int32
                 type: integer
               conditions:
                 description: |-
-                  conditions represents the observations of a MachinePool's current state.
-                  Known condition types are Available, BootstrapConfigReady, InfrastructureReady, MachinesReady, MachinesUpToDate,
-                  ScalingUp, ScalingDown, Remediating, Deleting, Paused.
+                  conditions represents the observations of a MachineSet's current state.
+                  Known condition types are MachinesReady, MachinesUpToDate, ScalingUp, ScalingDown, Remediating, Deleting, Paused.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -1068,14 +1190,14 @@ spec:
                     properties:
                       availableReplicas:
                         description: |-
-                          availableReplicas is the number of available replicas (ready for at least minReadySeconds) for this MachinePool.
+                          availableReplicas is the number of available replicas (ready for at least minReadySeconds) for this MachineSet.
 
                           Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
                         format: int32
                         type: integer
                       conditions:
                         description: |-
-                          conditions define the current service state of the MachinePool.
+                          conditions defines current service state of the MachineSet.
 
                           Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
                         items:
@@ -1131,8 +1253,9 @@ spec:
                         type: array
                       failureMessage:
                         description: |-
-                          failureMessage indicates that there is a problem reconciling the state,
-                          and will be set to a descriptive error message.
+                          failureMessage will be set in the event that there is a terminal problem
+                          reconciling the Machine and will contain a more verbose string suitable
+                          for logging and human consumption.
 
                           Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
                         maxLength: 10240
@@ -1140,134 +1263,75 @@ spec:
                         type: string
                       failureReason:
                         description: |-
-                          failureReason indicates that there is a problem reconciling the state, and
-                          will be set to a token value suitable for programmatic interpretation.
+                          failureReason will be set in the event that there is a terminal problem
+                          reconciling the Machine and will contain a succinct value suitable
+                          for machine interpretation.
+
+                          In the event that there is a terminal problem reconciling the
+                          replicas, both FailureReason and FailureMessage will be set. FailureReason
+                          will be populated with a succinct value suitable for machine
+                          interpretation, while FailureMessage will contain a more verbose
+                          string suitable for logging and human consumption.
+
+                          These fields should not be set for transitive errors that a
+                          controller faces that are expected to be fixed automatically over
+                          time (like service outages), but instead indicate that something is
+                          fundamentally wrong with the MachineTemplate's spec or the configuration of
+                          the machine controller, and that manual intervention is required. Examples
+                          of terminal errors would be invalid combinations of settings in the
+                          spec, values that are unsupported by the machine controller, or the
+                          responsible machine controller itself being critically misconfigured.
+
+                          Any transient errors that occur during the reconciliation of Machines
+                          can be added as events to the MachineSet object and/or logged in the
+                          controller's output.
 
                           Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
                         type: string
-                      readyReplicas:
+                      fullyLabeledReplicas:
                         description: |-
-                          readyReplicas is the number of ready replicas for this MachinePool. A machine is considered ready when the node has been created and is "Ready".
+                          fullyLabeledReplicas is the number of replicas that have labels matching the labels of the machine template of the MachineSet.
 
                           Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
                         format: int32
                         type: integer
-                      unavailableReplicas:
+                      readyReplicas:
                         description: |-
-                          unavailableReplicas is the total number of unavailable machine instances targeted by this machine pool.
-                          This is the total number of machine instances that are still required for
-                          the machine pool to have 100% available capacity. They may either
-                          be machine instances that are running but not yet available or machine instances
-                          that still have not been created.
+                          readyReplicas is the number of ready replicas for this MachineSet. A machine is considered ready when the node has been created and is "Ready".
 
                           Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
                         format: int32
                         type: integer
                     type: object
                 type: object
-              initialization:
-                description: |-
-                  initialization provides observations of the MachinePool initialization process.
-                  NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial MachinePool provisioning.
-                minProperties: 1
-                properties:
-                  bootstrapDataSecretCreated:
-                    description: |-
-                      bootstrapDataSecretCreated is true when the bootstrap provider reports that the MachinePool's boostrap secret is created.
-                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
-                      The value of this field is never updated after provisioning is completed.
-                    type: boolean
-                  infrastructureProvisioned:
-                    description: |-
-                      infrastructureProvisioned is true when the infrastructure provider reports that MachinePool's infrastructure is fully provisioned.
-                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
-                      The value of this field is never updated after provisioning is completed.
-                    type: boolean
-                type: object
-              nodeRefs:
-                description: nodeRefs will point to the corresponding Nodes if it
-                  they exist.
-                items:
-                  description: ObjectReference contains enough information to let
-                    you inspect or modify the referred object.
-                  properties:
-                    apiVersion:
-                      description: API version of the referent.
-                      type: string
-                    fieldPath:
-                      description: |-
-                        If referring to a piece of an object instead of an entire object, this string
-                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                        For example, if the object reference is to a container within a pod, this would take on a value like:
-                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                        the event) or if no container name is specified "spec.containers[2]" (container with
-                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                        referencing a part of an object.
-                      type: string
-                    kind:
-                      description: |-
-                        Kind of the referent.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                      type: string
-                    name:
-                      description: |-
-                        Name of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      type: string
-                    namespace:
-                      description: |-
-                        Namespace of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                      type: string
-                    resourceVersion:
-                      description: |-
-                        Specific resourceVersion to which this reference is made, if any.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                      type: string
-                    uid:
-                      description: |-
-                        UID of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                      type: string
-                  type: object
-                  x-kubernetes-map-type: atomic
-                maxItems: 10000
-                type: array
-                x-kubernetes-list-type: atomic
               observedGeneration:
-                description: observedGeneration is the latest generation observed
-                  by the controller.
+                description: observedGeneration reflects the generation of the most
+                  recently observed MachineSet.
                 format: int64
                 minimum: 1
                 type: integer
-              phase:
-                description: phase represents the current phase of cluster actuation.
-                enum:
-                - Pending
-                - Provisioning
-                - Provisioned
-                - Running
-                - ScalingUp
-                - ScalingDown
-                - Scaling
-                - Deleting
-                - Failed
-                - Unknown
-                type: string
               readyReplicas:
                 description: readyReplicas is the number of ready replicas for this
-                  MachinePool. A machine is considered ready when Machine's Ready
-                  condition is true.
+                  MachineSet. A machine is considered ready when Machine's Ready condition
+                  is true.
                 format: int32
                 type: integer
               replicas:
                 description: replicas is the most recently observed number of replicas.
                 format: int32
                 type: integer
+              selector:
+                description: |-
+                  selector is the same as the label selector but in the string format to avoid introspection
+                  by clients. The string will be in the same format as the query-param syntax.
+                  More info about label selectors: http://kubernetes.io/docs/user-guide/labels#label-selectors
+                maxLength: 4096
+                minLength: 1
+                type: string
               upToDateReplicas:
                 description: upToDateReplicas is the number of up-to-date replicas
-                  targeted by this MachinePool. A machine is considered up-to-date
-                  when Machine's UpToDate condition is true.
+                  for this MachineSet. A machine is considered up-to-date when Machine's
+                  UpToDate condition is true.
                 format: int32
                 type: integer
             type: object
@@ -1275,9 +1339,10 @@ spec:
         - spec
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       scale:
+        labelSelectorPath: .status.selector
         specReplicasPath: .spec.replicas
         statusReplicasPath: .status.replicas
       status: {}
