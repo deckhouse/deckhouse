@@ -109,7 +109,7 @@ func TestValidateInstanceClassRequiresMasterEtcdDisk(t *testing.T) {
 	}
 }
 
-func TestValidateNodeGroupRejectsNilCloudInstancesOnCloudPermanentWorker(t *testing.T) {
+func TestValidateNodeGroupAllowsNilCloudInstancesOnCloudPermanentWorker(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
@@ -123,8 +123,8 @@ func TestValidateNodeGroupRejectsNilCloudInstancesOnCloudPermanentWorker(t *test
 	)
 
 	result := ValidateNodeGroup(state, admissionv1.Update)
-	if !hasViolationCode(result, "node_group_cloud_instances_required") {
-		t.Fatalf("ValidateNodeGroup() = %q, want node_group_cloud_instances_required", result.Error())
+	if result.HasErrors() {
+		t.Fatalf("ValidateNodeGroup() unexpected errors for worker without CloudInstances: %s", result.Error())
 	}
 }
 

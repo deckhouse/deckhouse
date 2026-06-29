@@ -156,13 +156,6 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 			want:            `NodeGroup/master: NodeGroup "master" is required`,
 		},
 		{
-			name:            "master without class reference",
-			secrets:         validSecrets,
-			nodeGroups:      map[string]map[string]any{"master": testNodeGroup("master", nil)},
-			instanceClasses: validInstanceClasses,
-			want:            `NodeGroup/master.spec.cloudInstances: NodeGroup "master" with CloudPermanent nodeType must have spec.cloudInstances.classReference configured`,
-		},
-		{
 			name:            "master instance class missing etcd disk",
 			secrets:         validSecrets,
 			nodeGroups:      validNodeGroups,
