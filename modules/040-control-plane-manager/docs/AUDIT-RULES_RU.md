@@ -256,7 +256,6 @@ users:
   - system:serviceaccount:d8-chrony:chrony-exporter-master
   - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
-  - system:serviceaccount:d8-cloud-instance-manager:early-oom
   - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
   - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:node-controller
@@ -322,7 +321,6 @@ users:
   - system:serviceaccount:d8-istio:waypoint-controller
   - system:serviceaccount:d8-istio:ztunnel
   - system:serviceaccount:d8-local-path-provisioner:local-path-provisioner
-  - system:serviceaccount:d8-log-shipper:log-shipper
   - system:serviceaccount:d8-metallb:controller
   - system:serviceaccount:d8-metallb:l2lb-controller
   - system:serviceaccount:d8-metallb:l2lb-speaker
@@ -428,7 +426,6 @@ namespaces:
   - d8-istio
   - d8-keepalived
   - d8-local-path-provisioner
-  - d8-log-shipper
   - d8-metallb
   - d8-monitoring
   - d8-multitenancy-manager
@@ -747,7 +744,6 @@ rules:
       - system:serviceaccount:d8-chrony:chrony-exporter-master
       - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
-      - system:serviceaccount:d8-cloud-instance-manager:early-oom
       - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
       - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:node-controller
@@ -813,7 +809,6 @@ rules:
       - system:serviceaccount:d8-istio:waypoint-controller
       - system:serviceaccount:d8-istio:ztunnel
       - system:serviceaccount:d8-local-path-provisioner:local-path-provisioner
-      - system:serviceaccount:d8-log-shipper:log-shipper
       - system:serviceaccount:d8-metallb:controller
       - system:serviceaccount:d8-metallb:l2lb-controller
       - system:serviceaccount:d8-metallb:l2lb-speaker
@@ -911,7 +906,6 @@ rules:
       - d8-istio
       - d8-keepalived
       - d8-local-path-provisioner
-      - d8-log-shipper
       - d8-metallb
       - d8-monitoring
       - d8-multitenancy-manager

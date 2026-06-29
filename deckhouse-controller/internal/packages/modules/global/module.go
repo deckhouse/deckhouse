@@ -54,6 +54,10 @@ type Module struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
+	// initialized tracks whether hook controllers have been built, so the Enable
+	// task skips re-initialization on every reschedule.
+	initialized atomic.Bool
+
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
@@ -207,6 +211,19 @@ func (m *Module) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+
+	m.initialized.Store(true)
+}
+
+// HooksInitialized reports whether InitializeHooks has built the hook controllers.
+func (m *Module) HooksInitialized() bool {
+	return m.initialized.Load()
+}
+
+// GetHooksByBinding returns the global hooks for the binding as the ControllableHook
+// view, so the shared Enable task can drive global like any package.
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
+	return hooks.ToControllable(m.hooks.GetHooksByBinding(binding))
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events

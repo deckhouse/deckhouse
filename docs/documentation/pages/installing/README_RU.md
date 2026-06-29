@@ -222,8 +222,7 @@ metadata:
 spec:
   version: 1
   enabled: true
-  settings:
-    earlyOomEnabled: false
+  settings: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -375,8 +374,7 @@ metadata:
 spec:
   version: 1
   enabled: true
-  settings:
-    earlyOomEnabled: false
+  settings: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

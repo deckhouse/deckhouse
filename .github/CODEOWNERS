@@ -80,7 +80,6 @@
 160-multitenancy-manager/                                        @nabokihms @AlwxSin
 200-operator-prometheus/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
 300-prometheus/                                                  @vladimirGuryanov @lazovskiy @maksimmadzhuga
-301-prometheus-*/                                                @vladimirGuryanov @lazovskiy @maksimmadzhuga
 302-vertical-pod-autoscaler/                                     @yalosev @ergoz
 303-prometheus-*/                                                @vladimirGuryanov @lazovskiy
 340-extended-monitoring/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
@@ -91,7 +90,6 @@
 402-ingress-nginx/                                               @miklezzzz @apolovov
 450-keepalived/                                                  @AndreyPavlovFlant @apolovov
 450-network-gateway/                                             @AndreyPavlovFlant @apolovov
-460-log-shipper/                                                 @vladimirGuryanov @lazovskiy @maksimmadzhuga
 462-loki/                                                        @vladimirGuryanov @lazovskiy @maksimmadzhuga
 470-chrony/                                                      @borg-z @090809
 491-containerized-data-importer                                  @fl64

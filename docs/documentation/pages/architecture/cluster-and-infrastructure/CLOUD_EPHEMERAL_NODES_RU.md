@@ -44,16 +44,9 @@ Bashible — это ключевой компонент подсистемы Clu
    * **cluster-autoscaler** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **cluster-autoscaler**.
 
-4. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
+4. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
 
-   Включает в себя следующие контейнеры:
-
-   * **psi-monitor** — основной контейнер, который отслеживает метрику *PSI (Pressure Stall Information)*, отражающую время, в течение которого процессы ожидают освобождения определённых ресурсов, таких как CPU, память или I/O;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **early-oom**.
-
-5. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
-
-6. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются резервные узлы.
+5. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются резервные узлы.
 
    Резервный узел — это узел кластера, на котором резервируются ресурсы, доступные в любой момент для масштабирования. Наличие такого узла позволяет cluster-autoscaler не ждать инициализации узла (которая может занимать несколько минут), а сразу размещать на нем нагрузку.
 
@@ -78,7 +71,6 @@ Bashible — это ключевой компонент подсистемы Clu
 
 2. Файлы на узлах:
 
-   * `/proc` — читает метрики PSI для OOM Kill;
    * `/dev/watchdog` — отправляет сигнал в Watchdog для сброса сторожевого таймера.
 
 {% alert level="info" %}

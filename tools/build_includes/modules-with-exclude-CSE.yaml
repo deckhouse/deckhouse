@@ -379,25 +379,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/301-prometheus-metrics-adapter
-  to: /deckhouse/modules/301-prometheus-metrics-adapter
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler
   to: /deckhouse/modules/302-vertical-pod-autoscaler
   excludePaths:
@@ -457,25 +438,6 @@
         - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/460-log-shipper
-  to: /deckhouse/modules/460-log-shipper
   excludePaths:
     - docs
     - README.md
@@ -1307,30 +1269,6 @@
   to: /deckhouse/modules/040-node-manager/crds/mcm.yaml
   stageDependencies:
     install:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/templates/early-oom
-  to: /deckhouse/modules/040-node-manager/templates/early-oom
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
         - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/machine-controller-manager
   to: /deckhouse/modules/040-node-manager/templates/machine-controller-manager

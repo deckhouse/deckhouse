@@ -606,13 +606,15 @@ func (r *Runtime) Run() {
 	}()
 }
 
-// scheduleGlobal runs the global node's work whenever the scheduler schedules it
-// via the globalrun task: ensure the CRDs of every enabled module, then publish
-// the enabled set and the resulting GVK capabilities into global values. The
-// scheduler holds every module behind global (canSchedule barrier), so this runs
-// before any module and modules render against a complete capability set.
+// scheduleGlobal runs the global node's work whenever the scheduler schedules it,
+// via two tasks on the global queue: Enable initializes and syncs the global
+// hooks, then globalrun runs BeforeAll, ensures the CRDs of every enabled module
+// and publishes the enabled set and the resulting GVK capabilities into global
+// values. The scheduler holds every module behind global (canSchedule barrier),
+// so this runs before any module and modules render against a complete capability
+// set.
 //
-// The globalrun task (and its per-module EnsureCRDs subtasks) runs under global's
+// Both tasks (and globalrun's per-module EnsureCRDs subtasks) run under global's
 // EventSchedule context, mirroring how schedulePackage scopes a package's tasks:
 // rescheduling global renews that context and cancels the in-flight run. onDone
 // completes the global node, unblocking the modules waiting behind it.
@@ -638,8 +640,15 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 		}
 	}
 
-	task := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.queueService, r.status, r.logger)
-	r.queueService.Enqueue(ctx, "global", task, onDone)
+	// Enable initializes and syncs the global hooks; its OnStartup step is a no-op
+	// because global has no OnStartup hooks. globalrun then runs BeforeAll, ensures
+	// every enabled module's CRDs and publishes the capabilities. Both share the
+	// global queue, so Enable completes before globalrun.
+	enableTask := taskenable.NewTask(r.global, r.nelmService, r.queueService, r.status, r.logger)
+	r.queueService.Enqueue(ctx, "global", enableTask)
+
+	runTask := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.queueService, r.status, r.logger)
+	r.queueService.Enqueue(ctx, "global", runTask, onDone)
 }
 
 // schedulePackage handles scheduler enable events by enqueueing

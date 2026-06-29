@@ -41,6 +41,7 @@ func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, erro
 		checks.CidrIntersectionStatic(deps.MetaConfig),
 		checks.StaticInstancesIPDuplication(deps.MetaConfig),
 		checks.SingleSSHHost(deps.SSHProviderInitializer),
+		checks.BastionAvailability(deps.SSHProviderInitializer),
 		checks.SSHCredential(deps.SSHProviderInitializer),
 		checks.SSHTunnel(deps.SSHProviderInitializer, deps.GlobalOpts),
 		checks.StaticInstancesSSHCredentials(deps.MetaConfig, deps.SSHProviderInitializer),

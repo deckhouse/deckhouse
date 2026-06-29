@@ -1036,6 +1036,10 @@ entries:
                 en: Using TLS certificates
                 ru: Использование TLS-сертификатов
               url: /user/security/tls.html
+            - title:
+                en: Pod and container security settings
+                ru: Параметры безопасности подов и контейнеров
+              url: /user/security/pod-settings.html
         - title:
             en: Interfaces
             ru: Интерфейсы
