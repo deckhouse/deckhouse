@@ -89,12 +89,18 @@ func applySolverPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("cleanup-stale-http01-solver-pods"),
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "cleanup_stale_http01_solver_pods",
+			Crontab: "* * * * *",
+		},
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         solverPodsSnapshot,
 			ApiVersion:                   "v1",
 			Kind:                         "Pod",
-			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			ExecuteHookOnSynchronization: ptr.To(true),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
