@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controlplanenode
+package cpnreconcile
 
 import (
 	"errors"
@@ -33,11 +33,13 @@ const (
 	maintenanceModeEnabledHelp       = "Maintenance mode status for control-plane nodes."
 )
 
-type metrics struct {
+// Metrics reports maintenance-mode state of ControlPlaneNodes. It is used by the physical
+// controller only; the virtual controller passes a nil *Metrics and all methods are no-ops.
+type Metrics struct {
 	maintenanceMode *collectors.ConstGaugeCollector
 }
 
-func newMetrics(storage metricsstorage.Storage) (*metrics, error) {
+func NewMetrics(storage metricsstorage.Storage) (*Metrics, error) {
 	if storage == nil {
 		return nil, errors.New("metric storage is nil")
 	}
@@ -51,7 +53,7 @@ func newMetrics(storage metricsstorage.Storage) (*metrics, error) {
 		return nil, fmt.Errorf("register maintenance mode metric: %w", err)
 	}
 
-	return &metrics{
+	return &Metrics{
 		maintenanceMode: maintenanceMode,
 	}, nil
 }
@@ -60,7 +62,7 @@ func maintenanceModeGroup(node string) string {
 	return "cpn/" + node
 }
 
-func (m *metrics) syncMaintenanceModeMetrics(cpn *controlplanev1alpha1.ControlPlaneNode) {
+func (m *Metrics) syncMaintenanceModeMetrics(cpn *controlplanev1alpha1.ControlPlaneNode) {
 	if m == nil || cpn == nil {
 		return
 	}
@@ -79,7 +81,7 @@ func (m *metrics) syncMaintenanceModeMetrics(cpn *controlplanev1alpha1.ControlPl
 	)
 }
 
-func (m *metrics) deleteMaintenanceModeMetrics(node string) {
+func (m *Metrics) deleteMaintenanceModeMetrics(node string) {
 	if m == nil || node == "" {
 		return
 	}

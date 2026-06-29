@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controlplanenode
+package cpnreconcile
 
 import (
 	"context"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,19 +34,42 @@ import (
 	"control-plane-manager/internal/operations"
 )
 
-type reconciler struct {
+const requeueInterval = 5 * time.Minute
+
+// Reconciler drives a ControlPlaneNode towards its desired state by creating and rotating ControlPlaneOperation objects.
+type Reconciler struct {
 	client client.Client
 	// apiReader is an uncached reader used to confirm, right before creating an operation, that the previous reconcile of the same node did not already create it.
 	apiReader        client.Reader
 	scheme           *runtime.Scheme
 	operationBuilder cpnplanner.OperationBuilder
-	metrics          *metrics
-	log              *log.Logger
+	// for normal cpn only, TODO vcp support
+	metrics *Metrics
+	log     *log.Logger
 }
 
-var _ reconcile.Reconciler = (*reconciler)(nil)
+// New builds the shared ControlPlaneNode reconciler.
+func New(
+	cl client.Client,
+	apiReader client.Reader,
+	scheme *runtime.Scheme,
+	operationBuilder cpnplanner.OperationBuilder,
+	metrics *Metrics,
+	logger *log.Logger,
+) *Reconciler {
+	return &Reconciler{
+		client:           cl,
+		apiReader:        apiReader,
+		scheme:           scheme,
+		operationBuilder: operationBuilder,
+		metrics:          metrics,
+		log:              logger,
+	}
+}
 
-func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+var _ reconcile.Reconciler = (*Reconciler)(nil)
+
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
 	if err := r.client.Get(ctx, req.NamespacedName, cpn); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -76,7 +100,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
-func (r *reconciler) reconcileStatus(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, target *controlplanev1alpha1.ControlPlaneNodeStatus) error {
+func (r *Reconciler) reconcileStatus(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, target *controlplanev1alpha1.ControlPlaneNodeStatus) error {
 	if target == nil {
 		return nil
 	}
@@ -85,7 +109,7 @@ func (r *reconciler) reconcileStatus(ctx context.Context, cpn *controlplanev1alp
 	return r.patchStatus(ctx, cpn, base)
 }
 
-func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, planned []cpnplanner.PlannedOperation) error {
+func (r *Reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, planned []cpnplanner.PlannedOperation) error {
 	if len(planned) == 0 {
 		return nil
 	}
@@ -105,7 +129,7 @@ func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev
 	return nil
 }
 
-func (r *reconciler) reconcileRotation(ctx context.Context, toDelete []*controlplanev1alpha1.ControlPlaneOperation) error {
+func (r *Reconciler) reconcileRotation(ctx context.Context, toDelete []*controlplanev1alpha1.ControlPlaneOperation) error {
 	for _, op := range toDelete {
 		if err := r.deleteOperation(ctx, op); err != nil {
 			return err
@@ -114,15 +138,15 @@ func (r *reconciler) reconcileRotation(ctx context.Context, toDelete []*controlp
 	return nil
 }
 
-func (r *reconciler) listOperationsForNode(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
+func (r *Reconciler) listOperationsForNode(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
 	return r.listOperations(ctx, r.client, cpn)
 }
 
-func (r *reconciler) listOperationsForNodeUncached(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
+func (r *Reconciler) listOperationsForNodeUncached(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
 	return r.listOperations(ctx, r.apiReader, cpn)
 }
 
-func (r *reconciler) listOperations(ctx context.Context, reader client.Reader, cpn *controlplanev1alpha1.ControlPlaneNode) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
+func (r *Reconciler) listOperations(ctx context.Context, reader client.Reader, cpn *controlplanev1alpha1.ControlPlaneNode) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
 	list := &controlplanev1alpha1.ControlPlaneOperationList{}
 	if err := reader.List(ctx, list,
 		client.InNamespace(cpn.Namespace),
@@ -134,17 +158,17 @@ func (r *reconciler) listOperations(ctx context.Context, reader client.Reader, c
 	return cpnplanner.OwnedOperations(cpn, list.Items), nil
 }
 
-func (r *reconciler) createOperation(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, op *controlplanev1alpha1.ControlPlaneOperation) error {
+func (r *Reconciler) createOperation(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, op *controlplanev1alpha1.ControlPlaneOperation) error {
 	if err := controllerutil.SetControllerReference(cpn, op, r.scheme); err != nil {
 		return err
 	}
 	return r.client.Create(ctx, op)
 }
 
-func (r *reconciler) patchStatus(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, base *controlplanev1alpha1.ControlPlaneNode) error {
+func (r *Reconciler) patchStatus(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, base *controlplanev1alpha1.ControlPlaneNode) error {
 	return r.client.Status().Patch(ctx, cpn, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{}))
 }
 
-func (r *reconciler) deleteOperation(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation) error {
+func (r *Reconciler) deleteOperation(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation) error {
 	return client.IgnoreNotFound(r.client.Delete(ctx, op))
 }

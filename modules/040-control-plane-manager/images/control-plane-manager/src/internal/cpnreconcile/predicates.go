@@ -14,43 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package virtualcontrolplanenode
+package cpnreconcile
 
 import (
 	"reflect"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
 )
 
-// controlPlaneNodePredicates filters ControlPlaneNode events for virtual nodes with spec changed.
-func controlPlaneNodePredicates() ([]predicate.Predicate, error) {
-	labelPred, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			constants.ControlPlaneTypeLabelKey: string(constants.ControlPlaneTypeVirtual),
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return []predicate.Predicate{labelPred, predicate.GenerationChangedPredicate{}}, nil
-}
-
-// controlPlaneOperationPredicates filters owned ControlPlaneOperation events for virtual cpo with status changed.
-func controlPlaneOperationPredicates() ([]predicate.Predicate, error) {
-	labelPred, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			constants.ControlPlaneTypeLabelKey: string(constants.ControlPlaneTypeVirtual),
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	statusChanged := predicate.Funcs{
+// OperationStatusChangedPredicate reacts only to ControlPlaneOperation Status updates
+func OperationStatusChangedPredicate() predicate.Predicate {
+	return predicate.Funcs{
 		CreateFunc: func(event.CreateEvent) bool { return false },
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldOp, okOld := e.ObjectOld.(*controlplanev1alpha1.ControlPlaneOperation)
@@ -63,5 +40,4 @@ func controlPlaneOperationPredicates() ([]predicate.Predicate, error) {
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
-	return []predicate.Predicate{labelPred, statusChanged}, nil
 }
