@@ -18,8 +18,9 @@ import (
 	"testing"
 	"time"
 
-	ad_app "github.com/flant/addon-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
+
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 // TestLoad_RegressionMODULES_DIR pins the original bug fix: the deployment
@@ -30,7 +31,7 @@ import (
 func TestLoad_RegressionMODULES_DIR(t *testing.T) {
 	t.Setenv("MODULES_DIR", "/deckhouse/modules:/deckhouse/downloaded/modules")
 
-	cfg := ad_app.NewConfig()
+	cfg := app.NewConfig()
 	if err := Load(cfg); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -46,7 +47,7 @@ func TestLoad_RegressionMODULES_DIR(t *testing.T) {
 func TestLoad_GLOBAL_HOOKS_DIR(t *testing.T) {
 	t.Setenv("GLOBAL_HOOKS_DIR", "/deckhouse/global-hooks")
 
-	cfg := ad_app.NewConfig()
+	cfg := app.NewConfig()
 	if err := Load(cfg); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -57,10 +58,10 @@ func TestLoad_GLOBAL_HOOKS_DIR(t *testing.T) {
 }
 
 // TestLoad_KeepsAddonOperatorDefaults verifies that fields whose env var is
-// not set keep the value seeded from ad_app.NewConfig. This is what allows us
-// to bypass ad_app.ParseEnv without losing addon-operator's built-in defaults.
+// not set keep the value seeded from app.NewConfig. This is what allows us
+// to bypass addon-operator's ParseEnv without losing its built-in defaults.
 func TestLoad_KeepsAddonOperatorDefaults(t *testing.T) {
-	cfg := ad_app.NewConfig()
+	cfg := app.NewConfig()
 	defaults := *cfg
 
 	if err := Load(cfg); err != nil {
@@ -162,7 +163,7 @@ func TestLoad_AllFields(t *testing.T) {
 		t.Setenv(k, v)
 	}
 
-	cfg := ad_app.NewConfig()
+	cfg := app.NewConfig()
 	if err := Load(cfg); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -234,27 +235,27 @@ func TestLoad_ShellOperatorEnvFallback(t *testing.T) {
 	cases := []struct {
 		envName string
 		envVal  string
-		get     func(*ad_app.Config) any
+		get     func(*app.Config) any
 		want    any
 	}{
 		{"SHELL_OPERATOR_HOOKS_DIR", "/so/hooks",
-			func(c *ad_app.Config) any { return c.App.GlobalHooksDir }, "/so/hooks"},
+			func(c *app.Config) any { return c.App.GlobalHooksDir }, "/so/hooks"},
 		{"SHELL_OPERATOR_TMP_DIR", "/so/tmp",
-			func(c *ad_app.Config) any { return c.App.TempDir }, "/so/tmp"},
+			func(c *app.Config) any { return c.App.TempDir }, "/so/tmp"},
 		{"SHELL_OPERATOR_LISTEN_ADDRESS", "10.0.0.1",
-			func(c *ad_app.Config) any { return c.App.ListenAddress }, "10.0.0.1"},
+			func(c *app.Config) any { return c.App.ListenAddress }, "10.0.0.1"},
 		{"SHELL_OPERATOR_LISTEN_PORT", "9999",
-			func(c *ad_app.Config) any { return c.App.ListenPort }, "9999"},
+			func(c *app.Config) any { return c.App.ListenPort }, "9999"},
 		{"SHELL_OPERATOR_PROMETHEUS_METRICS_PREFIX", "so_",
-			func(c *ad_app.Config) any { return c.App.PrometheusMetricsPrefix }, "so_"},
+			func(c *app.Config) any { return c.App.PrometheusMetricsPrefix }, "so_"},
 		{"SHELL_OPERATOR_NAMESPACE", "so-ns",
-			func(c *ad_app.Config) any { return c.App.Namespace }, "so-ns"},
+			func(c *app.Config) any { return c.App.Namespace }, "so-ns"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.envName, func(t *testing.T) {
 			t.Setenv(tc.envName, tc.envVal)
 
-			cfg := ad_app.NewConfig()
+			cfg := app.NewConfig()
 			if err := Load(cfg); err != nil {
 				t.Fatalf("Load: %v", err)
 			}
@@ -276,49 +277,49 @@ func TestLoad_AddonOperatorEnvWinsOverShellOperator(t *testing.T) {
 		aoEnv      string
 		shellOpVal string
 		aoVal      string
-		get        func(*ad_app.Config) any
+		get        func(*app.Config) any
 	}{
 		{
 			shellOpEnv: "SHELL_OPERATOR_HOOKS_DIR",
 			aoEnv:      "GLOBAL_HOOKS_DIR",
 			shellOpVal: "/so/hooks",
 			aoVal:      "/ao/hooks",
-			get:        func(c *ad_app.Config) any { return c.App.GlobalHooksDir },
+			get:        func(c *app.Config) any { return c.App.GlobalHooksDir },
 		},
 		{
 			shellOpEnv: "SHELL_OPERATOR_TMP_DIR",
 			aoEnv:      "ADDON_OPERATOR_TMP_DIR",
 			shellOpVal: "/so/tmp",
 			aoVal:      "/ao/tmp",
-			get:        func(c *ad_app.Config) any { return c.App.TempDir },
+			get:        func(c *app.Config) any { return c.App.TempDir },
 		},
 		{
 			shellOpEnv: "SHELL_OPERATOR_LISTEN_ADDRESS",
 			aoEnv:      "ADDON_OPERATOR_LISTEN_ADDRESS",
 			shellOpVal: "10.0.0.1",
 			aoVal:      "127.0.0.1",
-			get:        func(c *ad_app.Config) any { return c.App.ListenAddress },
+			get:        func(c *app.Config) any { return c.App.ListenAddress },
 		},
 		{
 			shellOpEnv: "SHELL_OPERATOR_LISTEN_PORT",
 			aoEnv:      "ADDON_OPERATOR_LISTEN_PORT",
 			shellOpVal: "9999",
 			aoVal:      "4222",
-			get:        func(c *ad_app.Config) any { return c.App.ListenPort },
+			get:        func(c *app.Config) any { return c.App.ListenPort },
 		},
 		{
 			shellOpEnv: "SHELL_OPERATOR_PROMETHEUS_METRICS_PREFIX",
 			aoEnv:      "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX",
 			shellOpVal: "so_",
 			aoVal:      "ao_",
-			get:        func(c *ad_app.Config) any { return c.App.PrometheusMetricsPrefix },
+			get:        func(c *app.Config) any { return c.App.PrometheusMetricsPrefix },
 		},
 		{
 			shellOpEnv: "SHELL_OPERATOR_NAMESPACE",
 			aoEnv:      "ADDON_OPERATOR_NAMESPACE",
 			shellOpVal: "so-ns",
 			aoVal:      "ao-ns",
-			get:        func(c *ad_app.Config) any { return c.App.Namespace },
+			get:        func(c *app.Config) any { return c.App.Namespace },
 		},
 	}
 	for _, tc := range cases {
@@ -326,7 +327,7 @@ func TestLoad_AddonOperatorEnvWinsOverShellOperator(t *testing.T) {
 			t.Setenv(tc.shellOpEnv, tc.shellOpVal)
 			t.Setenv(tc.aoEnv, tc.aoVal)
 
-			cfg := ad_app.NewConfig()
+			cfg := app.NewConfig()
 			if err := Load(cfg); err != nil {
 				t.Fatalf("Load: %v", err)
 			}
@@ -340,7 +341,7 @@ func TestLoad_AddonOperatorEnvWinsOverShellOperator(t *testing.T) {
 
 // TestLoad_ThenApplyConfig_SyncsDebugSocketGlobals pins the contract that the
 // deckhouse-controller main() flow — envconfig.Load(cfg) followed by
-// ad_app.ApplyConfig(cfg) and direct assignment of sh_debug.DefaultSocketPath
+// app.ApplyConfig(cfg) and direct assignment of sh_debug.DefaultSocketPath
 // — propagates DEBUG_UNIX_SOCKET into the addon-operator and shell-operator
 // package-level globals consulted by debug sub-commands (queue, hook, global,
 // module, raw) when NewAddonOperator is not invoked (i.e. for any CLI flow
@@ -349,19 +350,19 @@ func TestLoad_AddonOperatorEnvWinsOverShellOperator(t *testing.T) {
 func TestLoad_ThenApplyConfig_SyncsDebugSocketGlobals(t *testing.T) {
 	const want = "/tmp/shell-operator-debug.socket"
 
-	prevAd := ad_app.DebugUnixSocket
+	prevAd := app.DebugUnixSocket()
 	prevSh := sh_debug.DefaultSocketPath
 	t.Cleanup(func() {
-		ad_app.DebugUnixSocket = prevAd
+		app.SetDebugUnixSocket(prevAd)
 		sh_debug.DefaultSocketPath = prevSh
 	})
 
-	ad_app.DebugUnixSocket = "/stale/addon-operator.socket"
+	app.SetDebugUnixSocket("/stale/addon-operator.socket")
 	sh_debug.DefaultSocketPath = "/stale/shell-operator.socket"
 
 	t.Setenv("DEBUG_UNIX_SOCKET", want)
 
-	cfg := ad_app.NewConfig()
+	cfg := app.NewConfig()
 	if err := Load(cfg); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -370,12 +371,12 @@ func TestLoad_ThenApplyConfig_SyncsDebugSocketGlobals(t *testing.T) {
 		t.Fatalf("cfg.Debug.UnixSocket: got %q, want %q", cfg.Debug.UnixSocket, want)
 	}
 
-	ad_app.ApplyConfig(cfg)
+	app.ApplyConfig(cfg)
 	sh_debug.DefaultSocketPath = cfg.Debug.UnixSocket
 
-	if ad_app.DebugUnixSocket != want {
-		t.Errorf("ad_app.DebugUnixSocket: got %q, want %q (ad_app.ApplyConfig must mirror cfg into addon-operator global)",
-			ad_app.DebugUnixSocket, want)
+	if app.DebugUnixSocket() != want {
+		t.Errorf("app.DebugUnixSocket(): got %q, want %q (app.ApplyConfig must mirror cfg into addon-operator global)",
+			app.DebugUnixSocket(), want)
 	}
 	if sh_debug.DefaultSocketPath != want {
 		t.Errorf("sh_debug.DefaultSocketPath: got %q, want %q (assignment must mirror cfg into shell-operator global so queue/hook/raw CLI dial the right path)",
