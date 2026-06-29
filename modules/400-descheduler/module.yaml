@@ -15,4 +15,3 @@ accessibility:
         - Managed
     cse:
       available: true
-      enabledInBundles: []

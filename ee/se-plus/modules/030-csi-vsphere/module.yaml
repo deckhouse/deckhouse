@@ -11,4 +11,3 @@ accessibility:
   editions:
     _default:
       available: true
-      enabledInBundles: []

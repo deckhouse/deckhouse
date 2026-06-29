@@ -165,7 +165,7 @@ type ModuleAccessibility struct {
 
 type ModuleEdition struct {
 	Available        bool     `json:"available" yaml:"available"`
-	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
+	EnabledInBundles []string `json:"enabledInBundles,omitempty" yaml:"enabledInBundles,omitempty"`
 }
 
 // ModuleDisableOptions configures module disable protection.
