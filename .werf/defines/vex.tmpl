@@ -8,6 +8,13 @@
   {{- $imageName := index . 1 }}
   {{- $knownVulnPath := "" }}
   {{- $isVault := false }}
+  {{- $werfSignKey := env "WERF_SIGN_KEY" "" }}
+  {{- $vaultKey := env "VAULT_KEY" "" }}
+  {{- $actionsIdToken := env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "" }}
+  {{- if or (ne $werfSignKey "") (ne $vaultKey "") (ne $actionsIdToken "") }}
+    {{- $isVault = true }}
+  {{- end }}
+  {{- if eq $isVault true }}
   {{- if eq $imageName "dev" }}
     {{- $knownVulnPath = "/deckhouse-controller/known_vulnerabilities.vex" }}
   {{- else if eq $imageName "dev/install" }}
@@ -24,12 +31,6 @@
   {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
     {{- $vexFile = true }}
   {{- end }}
-  {{- $werfSignKey := env "WERF_SIGN_KEY" "" }}
-  {{- $vaultKey := env "VAULT_KEY" "" }}
-  {{- $actionsIdToken := env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "" }}
-  {{- if or (ne $werfSignKey "") (ne $vaultKey "") (ne $actionsIdToken "") }}
-    {{- $isVault = true }}
-  {{- end }}
   {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
@@ -40,7 +41,6 @@ secrets:
   env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
   env: REGISTRY_PASSWORD
-{{- if eq $isVault true }}
 {{- if ne $werfSignKey "" }}
 - id: VAULT_ADDR
   env: VAULT_ADDR
