@@ -438,6 +438,11 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		return fmt.Errorf("failed to list ModuleReleases: %w", err)
 	}
 
+	sourceList := &v1alpha1.ModuleSourceList{}
+	if err := c.k8sclient.List(ctx, sourceList); err != nil {
+		return fmt.Errorf("failed to list ModuleSources: %w", err)
+	}
+
 	for _, moduleName := range modules {
 		moduleEnabled := false
 		// Check if module exists in ModuleList and is enabled
@@ -460,14 +465,29 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		// before the upgrade drops its embedded copy. A Deployed ModuleRelease means
 		// the module is downloaded and present on disk, so the upgrade will not race
 		// a registry download that could leave the module unavailable.
-		if !c.hasDeployedRelease(moduleName, releaseList) {
-			c.logger.Warn("migrated module has no Deployed ModuleRelease, it is not pre-downloaded yet", slog.String("module", moduleName))
-			c.setMigratedModuleNotFoundAlert(moduleName)
-
-			return fmt.Errorf(`migrated module '%s' is not pre-downloaded yet: no Deployed ModuleRelease found, wait for the module to be downloaded from a ModuleSource before upgrading`, moduleName)
+		if c.hasDeployedRelease(moduleName, releaseList) {
+			c.logger.Debug("migrated module is pre-downloaded", slog.String("module", moduleName))
+			continue
 		}
 
-		c.logger.Debug("migrated module is pre-downloaded", slog.String("module", moduleName))
+		// No Deployed ModuleRelease - the upgrade is blocked either way, but the two
+		// causes need different operator actions, so distinguish them:
+		c.setMigratedModuleNotFoundAlert(moduleName)
+
+		if !c.isAvailableInAnySource(moduleName, sourceList) {
+			// Terminal: no ModuleSource offers the module at all. Waiting will not
+			// help - the operator must publish it in a ModuleSource (or fix the
+			// module's configured source) before upgrading.
+			c.logger.Warn("migrated module is not available in any ModuleSource registry", slog.String("module", moduleName))
+
+			return fmt.Errorf(`migrated module '%s' not found in any ModuleSource registry: publish it in a ModuleSource (or fix the module's source) before upgrading`, moduleName)
+		}
+
+		// Transient: a ModuleSource offers the module, but it has not been downloaded
+		// yet. Waiting for the source controller to pre-stage it resolves this.
+		c.logger.Warn("migrated module has no Deployed ModuleRelease, it is not pre-downloaded yet", slog.String("module", moduleName))
+
+		return fmt.Errorf(`migrated module '%s' is not pre-downloaded yet: no Deployed ModuleRelease found, wait for the module to be downloaded from a ModuleSource before upgrading`, moduleName)
 	}
 
 	c.logger.Debug("all migrated modules validation passed")
@@ -481,6 +501,30 @@ func (c *migratedModulesCheck) hasDeployedRelease(moduleName string, releaseList
 	for _, release := range releaseList.Items {
 		if release.GetModuleName() == moduleName && release.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
 			return true
+		}
+	}
+	return false
+}
+
+// isAvailableInAnySource reports whether at least one ModuleSource advertises the
+// module without a pull error. It distinguishes a module that simply has not been
+// downloaded yet (available, transient) from one that no source offers at all
+// (terminal).
+func (c *migratedModulesCheck) isAvailableInAnySource(moduleName string, sourceList *v1alpha1.ModuleSourceList) bool {
+	for i := range sourceList.Items {
+		if c.isModuleAvailableInSource(moduleName, &sourceList.Items[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// isModuleAvailableInSource checks if a module is available in a specific ModuleSource.
+func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, source *v1alpha1.ModuleSource) bool {
+	for _, availableModule := range source.Status.AvailableModules {
+		if availableModule.Name == moduleName {
+			// a pull error means the module is not actually available
+			return availableModule.Error == ""
 		}
 	}
 	return false
