@@ -45,6 +45,7 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -54,7 +55,7 @@ import (
 // (waiting for new "go-containerregistry" version)
 
 const (
-	d8SystemNS         = "d8-system"
+	d8SystemNS         = app.NamespaceDeckhouse
 	caKey              = "ca"
 	registryModuleName = "registry"
 )

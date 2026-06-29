@@ -799,7 +799,7 @@ func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	}
 
 	// do not cleanup modules namespace
-	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
+	r.nelmService.Cleanup(ctx, keepReleases, app.NamespaceDeckhouse)
 }
 
 // GetStatus returns package status.

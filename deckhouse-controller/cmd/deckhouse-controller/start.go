@@ -67,7 +67,7 @@ const (
 	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
 
 	leaseName        = "deckhouse-leader-election"
-	defaultNamespace = "d8-system"
+	defaultNamespace = app.NamespaceDeckhouse
 	leaseDuration    = 35
 	renewalDeadline  = 30
 	retryPeriod      = 10
@@ -427,7 +427,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 
 const (
 	cmLockName  = "deckhouse-bootstrap-lock"
-	cmNamespace = "d8-system"
+	cmNamespace = app.NamespaceDeckhouse
 )
 
 func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {

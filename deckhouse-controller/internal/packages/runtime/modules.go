@@ -33,10 +33,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 const (
-	modulesNamespace = "d8-system"
+	modulesNamespace = app.NamespaceDeckhouse
 )
 
 // Module represents a module instance as received from the module controller.

@@ -77,14 +77,15 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
 
-	deckhouseNamespace  = "d8-system"
-	kubernetesNamespace = "kube-system"
+	deckhouseNamespace  = app.NamespaceDeckhouse
+	kubernetesNamespace = app.NamespaceKubeSystem
 
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	defaultModuleVersion    = "v2.0.0"

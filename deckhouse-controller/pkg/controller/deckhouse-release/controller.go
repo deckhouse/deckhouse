@@ -63,7 +63,7 @@ import (
 )
 
 const (
-	deckhouseNamespace          = "d8-system"
+	deckhouseNamespace          = app.NamespaceDeckhouse
 	deckhouseDeployment         = "deckhouse"
 	deckhouseRegistrySecretName = "deckhouse-registry"
 
@@ -227,7 +227,7 @@ func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) error {
 
 func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string {
 	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
+	key := types.NamespacedName{Namespace: deckhouseNamespace, Name: "deckhouse-discovery"}
 	err := r.client.Get(ctx, key, &secret)
 	if err != nil {
 		r.logger.Warn("read clusterUUID from secret", slog.Any("namespaced_name", key), log.Err(err))
@@ -944,7 +944,7 @@ func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) 
 	err := r.client.List(
 		ctx,
 		&pods,
-		client.InNamespace("d8-system"),
+		client.InNamespace(deckhouseNamespace),
 		client.MatchingLabels{"app": "deckhouse", "leader": "true"},
 	)
 	if err != nil {
