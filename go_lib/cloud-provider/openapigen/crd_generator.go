@@ -261,7 +261,6 @@ func (g *CRDGenerator) generateCRDDescriptionRuYAML(versions []VersionSpec) ([]b
 	delete(crdRaw, "metadata")
 	delete(crdRaw, "status")
 
-
 	out, err := yaml.Marshal(crdRaw)
 	if err != nil {
 		return nil, fmt.Errorf("marshal CRD: %w", err)
