@@ -90,7 +90,6 @@
 402-ingress-nginx/                                               @miklezzzz @apolovov
 450-keepalived/                                                  @AndreyPavlovFlant @apolovov
 450-network-gateway/                                             @AndreyPavlovFlant @apolovov
-460-log-shipper/                                                 @vladimirGuryanov @lazovskiy @maksimmadzhuga
 462-loki/                                                        @vladimirGuryanov @lazovskiy @maksimmadzhuga
 470-chrony/                                                      @borg-z @090809
 491-containerized-data-importer                                  @fl64

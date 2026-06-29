@@ -24,7 +24,7 @@ description: "Авторизация и управление доступом п
   Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в `ClusterRoleBinding` роль `d8:manage:networking:manager`.
 - Управлять доступом к *пользовательским* ресурсам модулей в рамках пространства имён.
 
-  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](../log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](../log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
+  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
 
 Роли, создаваемые модулем, делятся на два класса:
 
@@ -334,13 +334,9 @@ read:
 
 ```text
 read:
-    - deckhouse.io/clusterlogdestinations
-    - deckhouse.io/clusterloggingconfigs
     - deckhouse.io/customprometheusrules
     - deckhouse.io/grafanaadditionaldatasources
     - deckhouse.io/grafanadashboarddefinitions
-read-write:
-    - deckhouse.io/podloggingconfigs
 write:
     - apps/deployments
     - apps/statefulsets
@@ -461,8 +457,6 @@ write:
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
-    - deckhouse.io/clusterlogdestinations
-    - deckhouse.io/clusterloggingconfigs
     - deckhouse.io/customprometheusrules
     - deckhouse.io/deckhousereleases
     - deckhouse.io/grafanaadditionaldatasources

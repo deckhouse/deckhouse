@@ -350,6 +350,19 @@
     "external": "true",
     "path": ""
   },
+  "log-shipper": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/log-shipper/"
+  },
   "istio": {
     "editionMinimumAvailable": "ce",
     "editionsWithRestrictions": [
