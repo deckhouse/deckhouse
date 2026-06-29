@@ -21,6 +21,21 @@ index 3ed0e9f847..d013666568 100644
  		Watches(
  			&infrav1alpha1.OpenStackServer{},
  			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &infrav1.OpenStackMachine{}),
+diff --git a/controllers/openstackserver_controller.go b/controllers/openstackserver_controller.go
+index 93a5a00d48..32296a5443 100644
+--- a/controllers/openstackserver_controller.go
++++ b/controllers/openstackserver_controller.go
+@@ -229,10 +229,6 @@ func (r *OpenStackServerReconciler) SetupWithManager(ctx context.Context, mgr ct
+ 			handler.EnqueueRequestsFromMapFunc(r.requeueOpenStackServersForCluster(ctx)),
+ 			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), log)),
+ 		).
+-		Watches(
+-			&ipamv1.IPAddressClaim{},
+-			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &infrav1alpha1.OpenStackServer{}),
+-		).
+ 		Complete(r)
+ }
+ 
 diff --git a/main.go b/main.go
 index cf37f8a1f7..1b3d1c97cd 100644
 --- a/main.go
