@@ -29,10 +29,8 @@ import (
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
-	aoapp "github.com/flant/addon-operator/pkg/app"
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
-	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/executor"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
@@ -54,6 +52,7 @@ import (
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -85,7 +84,7 @@ func (r *reaperMutex) Release() {
 	r.Unlock()
 }
 
-func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args []string) error {
+func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
 	return func(_ *cobra.Command, _ []string) error {
 		if os.Getenv(skipEntrypointEnv) != "true" {
 			if err := entrypoint(logger); err != nil {
@@ -95,8 +94,8 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 		}
 
 		// addon-operator prints its own startup banner via its AppStartMessage.
-		aoapp.AppStartMessage = version()
-		shapp.KubeClientFieldManager = "deckhouse-hook"
+		app.SetAppStartMessage(version())
+		app.SetKubeClientFieldManager("deckhouse-hook")
 
 		ctx := context.Background()
 
@@ -115,8 +114,8 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 		admetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
 
 		// Hand the fully-built *Config to addon-operator via WithConfig: it
-		// then calls app.ApplyConfig internally to populate its package
-		// globals and projects the relevant subset onto shell-operator's
+		// then calls addon-operator's ApplyConfig internally to populate its
+		// package globals and projects the relevant subset onto shell-operator's
 		// *Config (kube clients, listen addr, metric prefix), so no env vars
 		// are re-parsed downstream. See deckhouse-controller/pkg/envconfig.
 		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage,
@@ -163,14 +162,14 @@ func entrypoint(logger *log.Logger) error {
 
 	chrootDirEnvValue, found := os.LookupEnv(chrootDirEnv)
 	if found && len(chrootDirEnvValue) > 0 {
-		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, aoapp.DefaultTempDir)
+		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, app.DefaultTempDir)
 		if err := os.MkdirAll(chrootedTmpDirPath, 0750); err != nil {
 			return fmt.Errorf("create chroot dir: %w", err)
 		}
 
-		if _, err := os.Stat(aoapp.DefaultTempDir); err != nil {
+		if _, err := os.Stat(app.DefaultTempDir); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				if err := os.Symlink(chrootedTmpDirPath, aoapp.DefaultTempDir); err != nil {
+				if err := os.Symlink(chrootedTmpDirPath, app.DefaultTempDir); err != nil {
 					return fmt.Errorf("create tmp directory symlink: %w", err)
 				}
 			} else {

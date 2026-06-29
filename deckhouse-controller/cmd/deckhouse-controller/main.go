@@ -22,10 +22,8 @@ import (
 	"runtime"
 	"strconv"
 
-	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
 	"github.com/flant/kube-client/klogtolog"
-	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"github.com/spf13/cobra"
 
@@ -35,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -72,8 +71,8 @@ const (
 var legacyBashCompletion bool
 
 func main() {
-	sh_app.Version = ShellOperatorVersion
-	ad_app.Version = AddonOperatorVersion
+	app.SetShellOperatorVersion(ShellOperatorVersion)
+	app.SetAddonOperatorVersion(AddonOperatorVersion)
 
 	// deckhouse-controller is the single source of truth for environment-driven
 	// configuration of addon-operator (and the shell-operator globals
@@ -83,7 +82,7 @@ func main() {
 	// ParseEnv is intentionally not called: upstream renames (e.g. addon-operator
 	// v1.21 moved MODULES_DIR under ADDON_OPERATOR_MODULES_DIR) must not
 	// silently change the deckhouse env contract.
-	cfg := ad_app.NewConfig()
+	cfg := app.NewConfig()
 	if err := envconfig.Load(cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(1)
@@ -93,7 +92,7 @@ func main() {
 	// debug.DefaultSocketPath before registering debug sub-commands (queue,
 	// hook, global, module, raw).
 	//
-	// ad_app.ApplyConfig populates the addon-operator globals (ModulesDir,
+	// app.ApplyConfig populates the addon-operator globals (ModulesDir,
 	// Namespace, etc.) so that debug commands defined by addon-operator can
 	// locate config paths. The `start` command flow also performs this bridge
 	// inside NewAddonOperator, but for non-start invocations (e.g.
@@ -109,7 +108,7 @@ func main() {
 	// sh_debug.DefineDebugCommands(rootCmd) below. In the `start` path,
 	// NewAddonOperator also assigns sh_debug.DefaultSocketPath, so the two
 	// assignments are idempotent.
-	ad_app.ApplyConfig(cfg)
+	app.ApplyConfig(cfg)
 	sh_debug.DefaultSocketPath = cfg.Debug.UnixSocket
 
 	logger := log.NewLogger()
@@ -167,12 +166,12 @@ func main() {
 		Short: "Start deckhouse.",
 		RunE:  start(logger, cfg),
 	}
-	ad_app.BindFlags(cfg, rootCmd, startCmd)
+	app.BindFlags(cfg, rootCmd, startCmd)
 	rootCmd.AddCommand(startCmd)
 
 	// Add debug commands from shell-operator and addon-operator.
 	sh_debug.DefineDebugCommands(rootCmd)
-	ad_app.DefineDebugCommands(rootCmd)
+	app.DefineDebugCommands(rootCmd)
 
 	// Add more commands to the "module" command registered by addon-operator above.
 	debug.DefineModuleConfigDebugCommands(rootCmd, logger)
