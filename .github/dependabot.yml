@@ -295,6 +295,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/cloud-provider/openapigen"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/configtools/conversion"
   labels:
   - "type/dependencies"
@@ -575,6 +584,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/030-cloud-provider-dvp/pkg"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-dvp/tools"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

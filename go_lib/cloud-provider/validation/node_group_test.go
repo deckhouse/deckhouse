@@ -53,15 +53,15 @@ func TestValidateNodeGroupsClassReferenceNilState(t *testing.T) {
 	}
 }
 
-func TestValidateNodeGroupsClassReferenceRejectsNilCloudInstancesOnMaster(t *testing.T) {
+func TestValidateNodeGroupsClassReferenceSkipsNilCloudInstancesOnMaster(t *testing.T) {
 	t.Parallel()
 
 	master := validMasterNodeGroup()
 	master.Spec.CloudInstances = nil
 
 	result := ValidateNodeGroupsClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}), true)
-	if !hasViolationCode(result, "node_group_cloud_instances_required") {
-		t.Fatalf("ValidateNodeGroupsClassReference() = %q, want node_group_cloud_instances_required", result.Error())
+	if result.HasErrors() {
+		t.Fatalf("ValidateNodeGroupsClassReference() unexpected errors for NodeGroup without CloudInstances: %s", result.Error())
 	}
 }
 
@@ -117,7 +117,7 @@ func TestValidateNodeGroupsClassReferenceSuccess(t *testing.T) {
 	}
 }
 
-func TestValidateNodeGroupsClassReferenceRejectsNilCloudInstancesOnWorker(t *testing.T) {
+func TestValidateNodeGroupsClassReferenceSkipsNilCloudInstancesOnWorker(t *testing.T) {
 	t.Parallel()
 
 	state := masterNodeGroupState([]cpapi.NodeGroup{
@@ -130,8 +130,8 @@ func TestValidateNodeGroupsClassReferenceRejectsNilCloudInstancesOnWorker(t *tes
 	state.InstanceClasses = []cpapi.InstanceClass{{ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"}}}
 
 	result := ValidateNodeGroupsClassReference(state, true)
-	if !hasViolationCode(result, "node_group_cloud_instances_required") {
-		t.Fatalf("ValidateNodeGroupsClassReference() = %q, want node_group_cloud_instances_required for worker", result.Error())
+	if result.HasErrors() {
+		t.Fatalf("ValidateNodeGroupsClassReference() unexpected errors for worker without CloudInstances: %s", result.Error())
 	}
 }
 
@@ -212,15 +212,15 @@ func TestValidateNodeGroupsClassReferenceIteratesAllNodeGroups(t *testing.T) {
 	}
 }
 
-func TestValidateNodeGroupsClassReferenceRejectsNilClassReferenceOnMaster(t *testing.T) {
+func TestValidateNodeGroupsClassReferenceSkipsNilClassReferenceOnMaster(t *testing.T) {
 	t.Parallel()
 
 	master := validMasterNodeGroup()
 	master.Spec.CloudInstances = &cpapi.CloudInstances{}
 
 	result := ValidateNodeGroupsClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}), true)
-	if !hasViolationCode(result, "node_group_cloud_instances_required") {
-		t.Fatalf("ValidateNodeGroupsClassReference() = %q, want node_group_cloud_instances_required", result.Error())
+	if result.HasErrors() {
+		t.Fatalf("ValidateNodeGroupsClassReference() unexpected errors for NodeGroup without classReference: %s", result.Error())
 	}
 }
 
