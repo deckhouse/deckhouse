@@ -15,8 +15,10 @@
 package destroy
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -48,7 +50,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -799,7 +800,8 @@ func assertClusterDestroyError(t *testing.T, shouldReturnError bool, err error) 
 type baseTest struct {
 	stateCache   dhctlstate.Cache
 	tmpDir       string
-	logger       *log.InMemoryLogger
+	logger       *slog.Logger
+	logBuf       *bytes.Buffer
 	kubeProvider kube.ClientProviderWithCleanup
 	metaConfig   *config.MetaConfig
 }
@@ -827,11 +829,11 @@ func (ts *baseTest) clean(t *testing.T) {
 
 	err := os.RemoveAll(tmpDir)
 	if err != nil {
-		logger.LogErrorF("Couldn't remove tmp dir '%s': %v\n", tmpDir, err)
+		logger.Error(fmt.Sprintf("Couldn't remove tmp dir '%s': %v\n", tmpDir, err))
 		return
 	}
 
-	logger.LogInfoF("tmp dir '%s' removed\n", tmpDir)
+	logger.Info(fmt.Sprintf("tmp dir '%s' removed\n", tmpDir))
 }
 
 func (ts *baseTest) setResourcesDestroyed(t *testing.T) {

@@ -18,11 +18,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -37,7 +38,6 @@ type AutoConvergerParams struct {
 	ListenAddress string
 	CheckInterval time.Duration
 	TmpDir        string
-	Logger        log.Logger
 }
 
 func NewAutoConverger(runner *runner, params AutoConvergerParams) *AutoConverger {
@@ -48,11 +48,11 @@ func NewAutoConverger(runner *runner, params AutoConvergerParams) *AutoConverger
 }
 
 func (c *AutoConverger) Start(ctx *convergectx.Context) error {
-	defer log.InfoLn("Stopping autoconverger completely")
+	defer dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Stopping autoconverger completely")
 
-	log.InfoLn("Start exporter")
-	log.InfoLn("Address: ", c.params.ListenAddress)
-	log.InfoLn("Check interval: ", c.params.CheckInterval)
+	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Start exporter")
+	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprint("Address: ", c.params.ListenAddress))
+	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprint("Check interval: ", c.params.CheckInterval))
 
 	// channels to stop converge loop
 	shutdownAllCh := make(chan struct{})
@@ -66,7 +66,7 @@ func (c *AutoConverger) Start(ctx *convergectx.Context) error {
 
 		err := httpServer.Shutdown(context.TODO())
 		if err != nil {
-			log.ErrorF("Cannot shut down http server: %v", err)
+			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), strings.TrimRight(fmt.Sprintf("Cannot shut down http server %v", err), "\n"))
 		}
 	})
 
@@ -86,7 +86,6 @@ func (c *AutoConverger) convergerLoop(ctx *convergectx.Context, shutdownCh <-cha
 		RemoveTombStone: true,
 		TmpDir:          c.params.TmpDir,
 		DefaultTmpDir:   c.params.TmpDir, // do not remove root tmp dir
-		LoggerProvider:  log.SimpleLoggerProvider(c.params.Logger),
 	})
 
 	c.runConverge(ctx, clearTmp)
@@ -124,24 +123,24 @@ func (c *AutoConverger) getHTTPServer() *http.Server {
 }
 
 func (c *AutoConverger) runConverge(ctx *convergectx.Context, tmpCleaner cache.TmpCleaner) {
-	log.InfoLn("Start next converge")
+	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Start next converge")
 
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
-		log.ErrorF("Cannot get meta config: %v\n", err)
+		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("Cannot get meta config: %v", err))
 		return
 	}
 
 	provider, err := ctx.ProviderGetter()(ctx.Ctx(), metaConfig)
 	if err != nil {
-		log.ErrorF("Cannot get provider: %v\n", err)
+		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("Cannot get provider: %v", err))
 		return
 	}
 
 	defer func() {
 		err = provider.Cleanup()
 		if err != nil {
-			log.ErrorF("Cannot cleanup provider: %v\n", err)
+			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("Cannot cleanup provider: %v", err))
 			// do not return if error clean whole tmp dir
 		}
 
@@ -150,6 +149,6 @@ func (c *AutoConverger) runConverge(ctx *convergectx.Context, tmpCleaner cache.T
 
 	err = c.runner.RunConverge(ctx)
 	if err != nil {
-		log.ErrorF("Converge error: %v\n", err)
+		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("Converge error: %v", err))
 	}
 }

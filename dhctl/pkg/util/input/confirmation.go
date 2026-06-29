@@ -16,14 +16,14 @@ package input
 
 import (
 	"bufio"
+	"context"
+	"fmt"
 	"os"
 	"strings"
 
-	"github.com/pterm/pterm"
 	terminal "golang.org/x/term"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
+	logger "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type Confirmation struct {
@@ -50,40 +50,33 @@ func (c *Confirmation) Ask() bool {
 		return c.defaultAnswer
 	}
 
-	pb := progressbar.GetDefaultPb()
-	if pb != nil {
-		confirmWriter := pb.LogBox.ShiftDown()
+	// Ask() is called from many places without a context, and its signature is part of a widely
+	// used exported API, so we use a background context here. Pause/Resume progress markers are
+	// best-effort: when SetDefault(root) is wired in production, FromContext routes them to the
+	// active terminal session; when no session is active they are inert.
+	ctx := context.Background()
+	l := logger.FromContext(ctx)
 
-		oldWriter := pb.MultiPrinter.Writer
-		pterm.SetDefaultOutput(confirmWriter)
-		result, _ := pterm.DefaultInteractiveConfirm.Show(c.message)
-		pterm.SetDefaultOutput(oldWriter)
-		pb.LogBox.ShiftUp(confirmWriter)
+	// Stop the progress UI (if any) so the prompt and typed input are not clobbered by a redraw.
+	logger.PauseProgress(ctx, l)
+	defer logger.ResumeProgress(ctx, l)
 
-		return result
-	} else {
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			log.InteractiveWarnF("%s [y/n]: ", c.message)
-			line, _, err := reader.ReadLine()
-			if err != nil {
-				log.ErrorF("can't read from stdin: %v\n", err)
-				return false
-			}
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		l.WarnContext(ctx, fmt.Sprintf("%s [y/n]: ", c.message))
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			l.ErrorContext(ctx, fmt.Sprintf("can't read from stdin: %v", err))
+			return false
+		}
 
-			response := strings.ToLower(strings.TrimSpace(string(line)))
+		response := strings.ToLower(strings.TrimSpace(string(line)))
 
-			switch response {
-			case "y", "yes":
-				log.InteractiveInfoF("\r")
-				return true
-
-			case "n", "no":
-				log.InteractiveInfoF("\r")
-				return false
-			}
-
-			log.InteractiveInfoF("\r")
+		switch response {
+		case "y", "yes":
+			return true
+		case "n", "no":
+			return false
 		}
 	}
 }

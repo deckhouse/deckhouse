@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,14 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -38,9 +40,9 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		logger := log.GetDefaultLogger()
+		l := logger.FromContext(ctx)
 
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
@@ -54,7 +56,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
@@ -73,9 +75,9 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		}
 
 		if ready {
-			log.InteractiveInfoF("%s\n", "Control plane manager is ready")
+			l.Info("Control plane manager is ready")
 		} else {
-			log.InteractiveWarnLn("Control plane manager is not ready")
+			l.Warn("Control plane manager is not ready")
 		}
 
 		return nil
@@ -90,9 +92,9 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		logger := log.GetDefaultLogger()
+		l := logger.FromContext(ctx)
 
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
@@ -106,7 +108,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
@@ -134,7 +136,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 			return fmt.Errorf("control plane node is not ready: %v", err)
 		}
 
-		log.InteractiveInfoLn("Control plane manager node is ready")
+		l.Info("Control plane manager node is ready")
 
 		return nil
 	})

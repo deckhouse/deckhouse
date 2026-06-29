@@ -17,28 +17,29 @@ package infrastructureprovider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 var defaultProvidersCache = newCloudProvidersMapCache()
 
 // CleanupProvidersFromDefaultCache - warning! is not tread-safe to avoid deadlock
-func CleanupProvidersFromDefaultCache(loggerProvider log.LoggerProvider) {
+func CleanupProvidersFromDefaultCache() {
 	defaultProvidersCache.finalizedMutex.Lock()
 	defer defaultProvidersCache.finalizedMutex.Unlock()
 
-	logger := log.SafeProvideLogger(loggerProvider)
+	ctx := context.Background()
 
 	for _, provider := range defaultProvidersCache.cloudProvidersCache {
-		logDebugF(logger, "CleanupProvidersFromDefaultCache called. Cleaning up provider %s from default cache\n", provider.String())
+		logDebugF(ctx, "CleanupProvidersFromDefaultCache called. Cleaning up provider %s from default cache\n", provider.String())
 		if err := provider.Cleanup(); err != nil {
-			logWarnF(logger, "Failed to cleanup provider %s from default cache: %v\n", provider.String(), err)
+			logWarnF(ctx, "Failed to cleanup provider %s from default cache: %v\n", provider.String(), err)
 		}
 	}
 
@@ -46,14 +47,14 @@ func CleanupProvidersFromDefaultCache(loggerProvider log.LoggerProvider) {
 }
 
 type (
-	ProviderCreatorForCache func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, error)
+	ProviderCreatorForCache func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error)
 
 	CloudProvidersCacheIteratorFunc func(key string, provider infrastructure.CloudProvider)
 )
 
 type CloudProvidersCache interface {
-	GetOrAdd(ctx context.Context, uuid string, metaConfig *config.MetaConfig, logger log.Logger, creator ProviderCreatorForCache) (infrastructure.CloudProvider, error)
-	Get(uuid string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, bool, error)
+	GetOrAdd(ctx context.Context, uuid string, metaConfig *config.MetaConfig, creator ProviderCreatorForCache) (infrastructure.CloudProvider, error)
+	Get(uuid string, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, bool, error)
 	IterateOverCache(iteratorFunc CloudProvidersCacheIteratorFunc) error
 }
 
@@ -72,13 +73,13 @@ func newCloudProvidersMapCache() *cloudProvidersMapCache {
 	}
 }
 
-func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger, creator ProviderCreatorForCache) (infrastructure.CloudProvider, error) {
+func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, creator ProviderCreatorForCache) (infrastructure.CloudProvider, error) {
 	if creator == nil {
 		return nil, fmt.Errorf("Provider creator is nil for cluster %s", clusterUUID)
 	}
 
-	create := func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, error) {
-		provider, err := creator(ctx, clusterUUID, metaConfig, logger)
+	create := func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error) {
+		provider, err := creator(ctx, clusterUUID, metaConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -91,8 +92,8 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 	}
 
 	if metaConfig.ProviderName == "" {
-		logger.LogDebugF("Not storing provider for empty provider for cluster %s, probably it is a static cluster and does not need any cleanup\n", clusterUUID)
-		return create(ctx, clusterUUID, metaConfig, logger)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Not storing provider for empty provider for cluster %s, probably it is a static cluster and does not need any cleanup", clusterUUID))
+		return create(ctx, clusterUUID, metaConfig)
 	}
 
 	c.finalizedMutex.Lock()
@@ -109,27 +110,27 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 
 	cachedProvider, ok := c.cloudProvidersCache[cacheKey]
 	if ok {
-		logger.LogDebugF("Found existing provider for cluster %s in cache by key %s. Returning from cache\n", cachedProvider.String(), cacheKey)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found existing provider for cluster %s in cache by key %s. Returning from cache", cachedProvider.String(), cacheKey))
 		return cachedProvider, nil
 	}
 
-	provider, err := create(ctx, clusterUUID, metaConfig, logger)
+	provider, err := create(ctx, clusterUUID, metaConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	afterCleanup := func(l log.Logger) {
+	afterCleanup := func() {
 		c.cloudProvidersCacheMutex.Lock()
 		defer c.cloudProvidersCacheMutex.Unlock()
 
 		p, ok := c.cloudProvidersCache[cacheKey]
 		if !ok {
-			l.LogDebugF("Provider with key %s not found. Skipping cleanup\n", cacheKey)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider with key %s not found. Skipping cleanup", cacheKey))
 			return
 		}
 
 		delete(c.cloudProvidersCache, cacheKey)
-		l.LogDebugF("Provider %s found in cache by key %s and deleted\n", p.String(), cacheKey)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider %s found in cache by key %s and deleted", p.String(), cacheKey))
 		p = nil
 	}
 
@@ -139,14 +140,16 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 	provider.AddAfterCleanupFunc("zCloudProviderCacheCleaner", afterCleanup)
 
 	c.cloudProvidersCache[cacheKey] = provider
-	logger.LogDebugF("Storing %s in cache with key %s\n", provider.String(), cacheKey)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Storing %s in cache with key %s", provider.String(), cacheKey))
 
 	return provider, nil
 }
 
-func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, bool, error) {
+func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, bool, error) {
+	ctx := context.Background()
+
 	if metaConfig.ProviderName == "" {
-		logger.LogDebugF("Not storing provider for cluster %s in cache with empty provider name\n", clusterUUID)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Not storing provider for cluster %s in cache with empty provider name", clusterUUID))
 		return nil, false, nil
 	}
 
@@ -164,16 +167,16 @@ func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.Meta
 
 	provider, ok := c.cloudProvidersCache[cacheKey]
 	if !ok {
-		logger.LogDebugF("Provider with key %s not found.\n", cacheKey)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider with key %s not found.", cacheKey))
 		return nil, false, nil
 	}
 
 	if govalue.IsNil(provider) {
-		logger.LogDebugF("Provider with key %s is nil.\n", cacheKey)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider with key %s is nil.", cacheKey))
 		return nil, false, nil
 	}
 
-	logger.LogDebugF("Found existing provider for cluster %s in cache by key %s. Returning it.\n", provider.String(), cacheKey)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found existing provider for cluster %s in cache by key %s. Returning it.", provider.String(), cacheKey))
 
 	return provider, true, nil
 }
@@ -206,18 +209,10 @@ func getKey(clusterUUID string, metaConfig *config.MetaConfig) string {
 	)
 }
 
-func logWarnF(logger log.Logger, f string, args ...any) {
-	if govalue.IsNil(logger) {
-		return
-	}
-
-	logger.LogWarnF(f, args...)
+func logWarnF(ctx context.Context, f string, args ...any) {
+	dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf(f, args...), "\n"))
 }
 
-func logDebugF(logger log.Logger, f string, args ...any) {
-	if govalue.IsNil(logger) {
-		return
-	}
-
-	logger.LogDebugF(f, args...)
+func logDebugF(ctx context.Context, f string, args ...any) {
+	dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf(f, args...), "\n"))
 }

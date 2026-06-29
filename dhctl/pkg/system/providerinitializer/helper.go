@@ -16,20 +16,20 @@ package providerinitializer
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 func CleanupSSHProvider(
 	ctx context.Context,
-	logger log.Logger,
 	sshProviderInitializer *SSHProviderInitializer,
 ) {
 	if sshProviderInitializer == nil {
 		return
 	}
 
-	if err := sshProviderInitializer.Cleanup(ctx); err != nil && logger != nil {
-		logger.LogWarnF("failed to cleanup ssh provider: %v\n", err)
+	if err := sshProviderInitializer.Cleanup(ctx); err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to cleanup ssh provider: %v", err))
 	}
 }

@@ -17,9 +17,8 @@ package dvp
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func IsVMManifest(rc plan.ResourceChange, logger log.Logger) bool {
-	return kubernetes.IsManifest(rc.Change, "VirtualMachine", logger)
+func IsVMManifest(rc plan.ResourceChange) bool {
+	return kubernetes.IsManifest(rc.Change, "VirtualMachine")
 }

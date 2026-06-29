@@ -29,11 +29,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -298,6 +296,8 @@ func main() {
 	}
 
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
+	registerOnShutdown("Leave alternate screen if needed", logger.RestoreTerminal)
+	defer logger.RestoreTerminal()
 	registerOnShutdown("Stop kubernetes provider daemon", tofu.StopProviderDaemon)
 
 	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
@@ -309,7 +309,7 @@ func main() {
 	app.GlobalFlags(kpApp, &opts.Global)
 
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
-		fmt.Printf("%s %s\n", app.AppName, opts.BuildInfo.AppVersion)
+		fmt.Printf("%s %s", app.AppName, opts.BuildInfo.AppVersion)
 		return nil
 	})
 
@@ -351,7 +351,8 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 		command, err := kpApp.Parse(os.Args[1:])
 		errorCode := 0
 		if err != nil {
-			log.DebugLn(command)
+			l := initer.Logger()
+			l.Debug(command)
 
 			msg := err.Error()
 
@@ -359,10 +360,7 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 				msg = fmt.Sprintf("%s\nDebug log file: %s", msg, logFile)
 			}
 
-			log.ErrorLn(msg)
-			if input.IsTerminal() && !opts.Global.ShowProgress {
-				progressbar.ErrorF("%s\n", msg)
-			}
+			l.Error(msg)
 			errorCode = 1
 		}
 		kptelemetry.EndCommand(err, errorCode)

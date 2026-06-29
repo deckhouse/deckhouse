@@ -20,11 +20,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger) (*config.MetaConfig, error) {
+func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 	if err != nil {
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
@@ -39,7 +38,7 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		ctx,
 		configData,
 		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		),
 		nil,
 		config.ValidateOptionCommanderMode(true),

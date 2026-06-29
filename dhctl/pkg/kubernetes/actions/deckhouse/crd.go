@@ -22,7 +22,7 @@ import (
 	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 // EnsureModuleConfigCRD applies the ModuleConfig CRD shipped in the installer
@@ -37,16 +37,16 @@ import (
 // installs the CRD.
 func EnsureModuleConfigCRD(ctx context.Context, kubeCl *client.KubernetesClient, crdPath string) error {
 	if crdPath == "" {
-		log.WarnLn("ModuleConfig CRD path is not set. The CRD will be installed by deckhouse-controller.")
+		dhlog.FromContext(ctx).WarnContext(ctx, "ModuleConfig CRD path is not set. The CRD will be installed by deckhouse-controller.")
 		return nil
 	}
 
 	if _, err := os.Stat(crdPath); err != nil {
-		log.WarnF("ModuleConfig CRD file %q is not available: %v. The CRD will be installed by deckhouse-controller.\n", crdPath, err)
+		dhlog.FromContext(ctx).WarnContext(ctx, "ModuleConfig CRD file %q is not available: %v. The CRD will be installed by deckhouse-controller.\n", crdPath, err)
 		return nil
 	}
 
-	return log.ProcessCtx(ctx, "default", "Install ModuleConfig CRD", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Install ModuleConfig CRD", func(ctx context.Context) error {
 		inst := crdinstaller.NewCRDsInstaller(
 			kubeCl.Dynamic(),
 			[]string{crdPath},
