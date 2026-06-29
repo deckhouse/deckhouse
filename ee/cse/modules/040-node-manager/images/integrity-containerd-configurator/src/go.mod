@@ -3,7 +3,7 @@ module integrity-containerd-configurator
 go 1.25.6
 
 replace (
-	github.com/deckhouse/deckhouse/go_lib/controlplane => ../../../../../go_lib/controlplane
+	github.com/deckhouse/deckhouse/go_lib/controlplane => ../../../../../../../go_lib/controlplane
 	integrity-controller => ../../integrity-controller/src
 )
 

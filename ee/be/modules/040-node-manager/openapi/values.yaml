@@ -69,8 +69,6 @@ properties:
         - true
       capsControllerManagerEnabled:
         type: boolean
-      containerdIntegrityControllerEnabled:
-        type: boolean
       deployAutoscaler:
         type: boolean
       deployAutoscalerMCM:
