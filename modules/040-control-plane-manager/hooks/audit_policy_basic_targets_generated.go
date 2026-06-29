@@ -122,6 +122,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-monitoring:alerts-receiver",
 	"system:serviceaccount:d8-monitoring:grafana",
 	"system:serviceaccount:d8-monitoring:kube-state-metrics",
+	"system:serviceaccount:d8-monitoring:kube-summary-exporter",
 	"system:serviceaccount:d8-monitoring:loki",
 	"system:serviceaccount:d8-monitoring:node-exporter",
 	"system:serviceaccount:d8-monitoring:oom-kills-exporter",
