@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -450,7 +451,13 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 		return nil
 	}
 
-	if string(existing.Data["userData"]) == string(userData) {
+	if bytes.Equal(existing.Data["userData"], userData) {
+		if existing.Immutable == nil || !*existing.Immutable {
+			existing.Immutable = ptr.To(true)
+			if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
+				return fmt.Errorf("patch immutable on existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
+			}
+		}
 		return nil
 	}
 
