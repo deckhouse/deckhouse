@@ -482,6 +482,19 @@
     "external": "true",
     "path": "/modules/pod-reloader/stable/"
   },
+  "prometheus-metrics-adapter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/prometheus-metrics-adapter/"
+  },
   "runtime-audit-engine": {
     "editions": [
       "ee",

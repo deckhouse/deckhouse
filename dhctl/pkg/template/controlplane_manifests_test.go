@@ -23,22 +23,32 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
 )
 
 func TestControlplaneRendering(t *testing.T) {
+	tests := map[string]func(t *testing.T){
+		"Version Selection":             testVersionSelection,
+		"Feature Gates":                 testFeatureGates,
+		"API Server Configuration":      testAPIServerConfiguration,
+		"Cluster Types":                 testClusterTypes,
+		"Run Types":                     testRunTypes,
+		"Service Account Configuration": testServiceAccountConfiguration,
+		"ETCD Configuration":            testETCDConfiguration,
+		"Optional Arguments":            testOptionalArguments,
+		"Patches Rendering":             testPatchesRendering,
+		"Edge Cases":                    testEdgeCases,
+		"Missing Coverage":              testMissingCoverage,
+		"Full Manifests Rendering":      testManifestsRendering,
+		"Encryption API Server args":    testSignatureArgsAPIServerRender,
+	}
 
-	t.Run("Version Selection", testVersionSelection)
-	t.Run("Feature Gates", testFeatureGates)
-	t.Run("API Server Configuration", testAPIServerConfiguration)
-	t.Run("Cluster Types", testClusterTypes)
-	t.Run("Run Types", testRunTypes)
-	t.Run("Service Account Configuration", testServiceAccountConfiguration)
-	t.Run("ETCD Configuration", testETCDConfiguration)
-	t.Run("Optional Arguments", testOptionalArguments)
-	t.Run("Patches Rendering", testPatchesRendering)
-	t.Run("Edge Cases", testEdgeCases)
-	t.Run("Missing Coverage", testMissingCoverage)
-	t.Run("Full Manifests Rendering", testManifestsRendering)
+	for name, doTest := range tests {
+		t.Run(name, doTest)
+	}
 }
 
 func testVersionSelection(t *testing.T) {
@@ -83,40 +93,45 @@ func testVersionSelection(t *testing.T) {
 	}
 }
 
+func getDataForFullManifestRendering(version string) map[string]any {
+	data := getBaseTemplateData(version)
+	data["apiserver"] = map[string]interface{}{
+		"webhookURL":        "https://webhook.example.com",
+		"oidcIssuerURL":     "https://oidc.example.com",
+		"oidcIssuerAddress": "192.168.1.100",
+	}
+	data["images"] = map[string]interface{}{
+		"controlPlaneManager": map[string]interface{}{
+			"etcd":                     "sha256:62c84f",
+			"kubeApiserver131":         "sha256:5db2b9",
+			"kubeApiserver132":         "sha256:b4b2b5",
+			"kubeControllerManager131": "sha256:acb28d",
+			"kubeControllerManager132": "sha256:177438",
+			"kubeScheduler131":         "sha256:2e366b",
+			"kubeScheduler132":         "sha256:268cf6",
+		},
+	}
+	data["registry"] = map[string]interface{}{
+		"address": "registry.example.com",
+		"path":    "/deckhouse",
+	}
+	data["settings"] = map[string]interface{}{
+		"resourcesRequests": map[string]interface{}{
+			"milliCPU":    int64(1000),
+			"memoryBytes": int64(1073741824),
+		},
+	}
+
+	return data
+}
+
 func testManifestsRendering(t *testing.T) {
 	t.Run("All Control Plane Pod Manifests Render Successfully", func(t *testing.T) {
 		versions := []string{"1.32", "1.33"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
-				data := getBaseTemplateData(version)
-				data["apiserver"] = map[string]any{
-					"webhookURL":        "https://webhook.example.com",
-					"oidcIssuerURL":     "https://oidc.example.com",
-					"oidcIssuerAddress": "192.168.1.100",
-				}
-				data["images"] = map[string]any{
-					"controlPlaneManager": map[string]any{
-						"etcd":                     "sha256:62c84f",
-						"kubeApiserver131":         "sha256:5db2b9",
-						"kubeApiserver132":         "sha256:b4b2b5",
-						"kubeControllerManager131": "sha256:acb28d",
-						"kubeControllerManager132": "sha256:177438",
-						"kubeScheduler131":         "sha256:2e366b",
-						"kubeScheduler132":         "sha256:268cf6",
-					},
-				}
-				data["registry"] = map[string]any{
-					"address": "registry.example.com",
-					"path":    "/deckhouse",
-				}
-				data["settings"] = map[string]any{
-					"resourcesRequests": map[string]any{
-						"milliCPU":    int64(1000),
-						"memoryBytes": int64(1073741824),
-					},
-				}
-
+				data := getDataForFullManifestRendering(version)
 				manifests, err := renderFullManifests(data)
 				if err != nil {
 					t.Fatalf("Failed to render control plane pod manifests: %v", err)
@@ -1053,6 +1068,85 @@ func renderFullManifests(data map[string]any, requestedManifests ...string) (map
 	}
 
 	return manifests, nil
+}
+
+func testSignatureArgsAPIServerRender(t *testing.T) {
+	renderAPIServerManifest := func(t *testing.T, data map[string]any) *corev1.Pod {
+		manifests, err := renderFullManifests(data, "kube-apiserver")
+		require.NoError(t, err, "Manifests should rendered")
+		require.Contains(t, manifests, "kube-apiserver.yaml", "should contains kube api server manifest")
+
+		podManifest := manifests["kube-apiserver.yaml"]
+		pod := corev1.Pod{}
+		err = yaml.Unmarshal([]byte(podManifest), &pod)
+		require.NoError(t, err, "kube apiserver pod should be unmarshal")
+		return &pod
+	}
+
+	assertEncryptionArgs := func(t *testing.T, pod *corev1.Pod, shouldPresent bool) {
+		var container *corev1.Container
+		for _, c := range pod.Spec.Containers {
+			if c.Name == "kube-apiserver" {
+				container = &c
+				break
+			}
+		}
+		require.NotNil(t, container, "api server container not found")
+
+		presentsArgs := map[string]bool{
+			"--encryption-provider-config=/etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml": false,
+			"--encryption-provider-config-automatic-reload=true":                                               false,
+		}
+
+		for argToCheck := range presentsArgs {
+			for _, arg := range container.Command {
+				if argToCheck == arg {
+					presentsArgs[argToCheck] = true
+				}
+			}
+		}
+
+		assert := require.False
+		msg := "not present"
+		if shouldPresent {
+			assert = require.True
+			msg = "present"
+		}
+
+		for arg, isPresent := range presentsArgs {
+			assert(t, isPresent, "argument %s %s", arg, msg)
+		}
+	}
+
+	tests := []struct {
+		name          string
+		shouldPresent bool
+		changeData    func(map[string]any)
+	}{
+		{
+			name:          "not provided",
+			shouldPresent: false,
+		},
+		{
+			name:          "provided",
+			shouldPresent: true,
+			changeData: func(data map[string]any) {
+				apiserver := data["apiserver"].(map[string]any)
+				apiserver["signature"] = "enforce"
+			},
+		},
+	}
+
+	for _, tst := range tests {
+		t.Run(fmt.Sprintf("Signature mode %s", tst.name), func(t *testing.T) {
+			data := getDataForFullManifestRendering("1.33")
+			if tst.changeData != nil {
+				tst.changeData(data)
+			}
+			pod := renderAPIServerManifest(t, data)
+			assertEncryptionArgs(t, pod, tst.shouldPresent)
+		})
+	}
 }
 
 func testMissingCoverage(t *testing.T) {

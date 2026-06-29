@@ -51,6 +51,11 @@ type Storage struct {
 	// These are stored separately before merging with static and openapi values
 	settings addonutils.Values
 
+	// grantDefaults are runtime-resolved defaults for fields tagged with
+	// x-deckhouse-grantable-resource. They are injected by the grantDefaultsTransformer
+	// between the schema defaults and user config layers.
+	grantDefaults []GrantDefault
+
 	// resultValues is the final merged result of all value sources
 	// This is what hooks and templates see
 	resultValues addonutils.Values
@@ -91,6 +96,21 @@ func (s *Storage) GrantRefs() ([]schema.GrantRef, error) {
 	return s.schemaStorage.GrantRefs()
 }
 
+// SetGrantDefaults stores the runtime-resolved grant defaults for subsequent
+// injection via the grantDefaultsTransformer in GetSettings() and calculateResultValues().
+func (s *Storage) SetGrantDefaults(defaults []GrantDefault) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.grantDefaults = defaults
+}
+
+// grantDefaultsTransformer returns a transformer that applies grant defaults
+// to empty settings fields. Caller must hold s.mu.
+func (s *Storage) grantDefaultsTransformer() transformer {
+	return &applyGrantDefaults{defaults: s.grantDefaults}
+}
+
 // GetValuesChecksum returns a checksum of the final merged values.
 // Used to detect when values have changed (e.g., for triggering hook reruns).
 func (s *Storage) GetValuesChecksum() string {
@@ -129,7 +149,8 @@ func (s *Storage) GetSettings() addonutils.Values {
 		settings = addonutils.Values{}
 	}
 
-	return s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
+	settings = s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
+	return s.grantDefaultsTransformer().Transform(settings)
 }
 
 // ApplySettingsDefaults returns a copy of the provided values with defaults
@@ -142,7 +163,8 @@ func (s *Storage) ApplySettingsDefaults(settings addonutils.Values) addonutils.V
 		settings = addonutils.Values{}
 	}
 
-	return s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
+	settings = s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
+	return s.grantDefaultsTransformer().Transform(settings)
 }
 
 // ValidateSettings validates values against the config OpenAPI schema.
@@ -208,7 +230,7 @@ func (s *Storage) ApplyValuesPatch(patch addonutils.ValuesPatch) error {
 }
 
 // calculateResultValues merges all value layers and applies patches.
-// Layer order: static -> config schema defaults -> dynamic defaults -> user config -> values schema defaults -> patches
+// Layer order: static -> config schema defaults -> grant defaults -> user config -> values schema defaults -> patches
 func (s *Storage) calculateResultValues() error {
 	merged := mergeLayers(
 		addonutils.Values{},
@@ -217,6 +239,9 @@ func (s *Storage) calculateResultValues() error {
 
 		// from openapi config spec
 		s.openapiDefaultsTransformer(schema.TypeSettings),
+
+		// runtime-resolved grant defaults for x-deckhouse-grantable-resource fields
+		s.grantDefaultsTransformer(),
 
 		// from package settings
 		s.settings,

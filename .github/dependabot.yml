@@ -808,15 +808,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/301-prometheus-metrics-adapter/images/prometheus-reverse-proxy/app"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/src"
   labels:
   - "type/dependencies"

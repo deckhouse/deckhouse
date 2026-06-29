@@ -87,3 +87,49 @@ func TestValidateGrants(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestApplyGrantDefaults(t *testing.T) {
+	app := newTestApp(t, stubResolver{catalog: grants.Catalog{
+		Found:     true,
+		Default:   "ssd",
+		Available: []string{"ssd", "hdd"},
+	}})
+
+	t.Run("injects default into empty field", func(t *testing.T) {
+		err := app.ApplySettings(addonutils.Values{})
+		require.NoError(t, err)
+
+		settings := app.GetSettings()
+		assert.Equal(t, "ssd", settings["storageClass"])
+	})
+
+	t.Run("user value overrides default", func(t *testing.T) {
+		err := app.ApplySettings(addonutils.Values{"storageClass": "hdd"})
+		require.NoError(t, err)
+
+		settings := app.GetSettings()
+		assert.Equal(t, "hdd", settings["storageClass"])
+	})
+
+	t.Run("no default when feature inactive", func(t *testing.T) {
+		inactive := newTestApp(t, grants.NoopResolver{})
+		err := inactive.ApplySettings(addonutils.Values{})
+		require.NoError(t, err)
+
+		settings := inactive.GetSettings()
+		assert.Nil(t, settings["storageClass"])
+	})
+
+	t.Run("no default when catalog has empty default", func(t *testing.T) {
+		noDefault := newTestApp(t, stubResolver{catalog: grants.Catalog{
+			Found:     true,
+			Default:   "",
+			Available: []string{"ssd", "hdd"},
+		}})
+		err := noDefault.ApplySettings(addonutils.Values{})
+		require.NoError(t, err)
+
+		settings := noDefault.GetSettings()
+		assert.Nil(t, settings["storageClass"])
+	})
+}

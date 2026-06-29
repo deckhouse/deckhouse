@@ -88,7 +88,10 @@ If the dashboard does not appear in Grafana after being applied, there might be 
 
 ## How do I add alerts and/or recording rules?
 
-The `CustomPrometheusRules` resource allows you to add alerts.
+There are two ways to add alerts:
+
+- **Recommended**: Using the [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) and [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) resources of the `observability` module.
+- **Outdated**: Using the [CustomPrometheusRules](cr.html#customprometheusrules) resource. The following is an example configuration for this resource.
 
 Parameters:
 
