@@ -61,10 +61,10 @@ const (
 	deckhouseControllerBinaryPath         = "/usr/bin/deckhouse-controller"
 	deckhouseControllerWithCapsBinaryPath = "/usr/bin/caps-deckhouse-controller"
 
-	deckhouseBundleEnv = "DECKHOUSE_BUNDLE"
-	chrootDirEnv       = "ADDON_OPERATOR_SHELL_CHROOT_DIR"
-	modulesDirEnv      = "MODULES_DIR"
-	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
+	deckhouseBundleEnv = app.EnvBundle
+	chrootDirEnv       = app.EnvShellChrootDir
+	modulesDirEnv      = app.EnvModulesDir
+	skipEntrypointEnv  = app.EnvSkipEntrypoint
 
 	leaseName        = app.LeaseName
 	defaultNamespace = app.NamespaceDeckhouse
@@ -135,7 +135,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 			version = strings.TrimSuffix(string(content), "\n")
 		}
 
-		if version == "dev" && os.Getenv("DECKHOUSE_HA") == "false" {
+		if version == "dev" && app.HADisabled() {
 			if err := run(ctx, operator, logger); err != nil {
 				logger.Error("run", log.Err(err))
 				os.Exit(1)
@@ -201,22 +201,22 @@ func entrypoint(logger *log.Logger) error {
 
 func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
-	podName := os.Getenv("DECKHOUSE_POD")
+	podName := app.PodName()
 	if len(podName) == 0 {
 		logger.Fatal("DECKHOUSE_POD env not set or empty")
 	}
 
-	podIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
+	podIP := app.PodIP()
 	if len(podIP) == 0 {
 		logger.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
 	}
 
-	podNs := os.Getenv("ADDON_OPERATOR_NAMESPACE")
+	podNs := app.PodNamespace()
 	if len(podNs) == 0 {
 		podNs = defaultNamespace
 	}
 
-	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
+	clusterDomain := app.ClusterDomain()
 	if len(clusterDomain) == 0 {
 		logger.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - its value won't be used for the leader election")
 		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
@@ -480,10 +480,10 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 }
 
 func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
-	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
-	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
-	insecureTransport := os.Getenv("TRACING_OTLP_INSECURE") == "true"
-	tlsSkipVerify := os.Getenv("TRACING_OTLP_TLS_SKIP_VERIFY") == "true"
+	endpoint := app.TracingOTLPEndpoint()
+	authToken := app.TracingOTLPAuthToken()
+	insecureTransport := app.TracingOTLPInsecure()
+	tlsSkipVerify := app.TracingOTLPTLSSkipVerify()
 
 	if endpoint == "" {
 		return func(_ context.Context) error {

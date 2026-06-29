@@ -29,7 +29,7 @@ const (
 
 	defaultBundle = "Default"
 
-	bundleEnv = "DECKHOUSE_BUNDLE"
+	bundleEnv = app.EnvBundle
 )
 
 type Edition struct {

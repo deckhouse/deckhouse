@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
 	"github.com/flant/kube-client/klogtolog"
@@ -192,10 +191,10 @@ func main() {
 	// remaining argv to a kingpin Application built on the fly.
 	{
 		dhctlOpts := options.New()
-		dhctlOpts.Global.LoggerType = envOr("DECKHOUSE_LOGGER_TYPE", "json")
-		dhctlOpts.Render.Editor = envOr("DECKHOUSE_EDITOR", "vim")
-		dhctlOpts.Kube.InCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
-		dhctlOpts.Global.TmpDir = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
+		dhctlOpts.Global.LoggerType = app.EnvOr(app.EnvLoggerType, "json")
+		dhctlOpts.Render.Editor = app.EnvOr(app.EnvEditor, "vim")
+		dhctlOpts.Kube.InCluster = app.EnvBoolOr(app.EnvKubeConfigInCluster, true)
+		dhctlOpts.Global.TmpDir = app.EnvOr(app.EnvTmpDir, os.TempDir())
 
 		// Pin the dhctl content directories to the deckhouse image layout
 		// (/deckhouse/...). The legacy kingpin entrypoint relied on
@@ -225,26 +224,4 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
-}
-
-// envOr returns the env var name's value, or defaultValue when unset/empty.
-func envOr(name, defaultValue string) string {
-	if v, ok := os.LookupEnv(name); ok && v != "" {
-		return v
-	}
-	return defaultValue
-}
-
-// envBoolOr parses the env var as a bool (per strconv.ParseBool), or returns
-// defaultValue when unset, empty, or unparseable.
-func envBoolOr(name string, defaultValue bool) bool {
-	v, ok := os.LookupEnv(name)
-	if !ok || v == "" {
-		return defaultValue
-	}
-	parsed, err := strconv.ParseBool(v)
-	if err != nil {
-		return defaultValue
-	}
-	return parsed
 }
