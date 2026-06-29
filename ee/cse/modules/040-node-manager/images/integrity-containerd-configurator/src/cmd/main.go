@@ -5,13 +5,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package main
 
-//nolint:goimports
+//nolint:goimports,gci
 import (
 	"flag"
 	"os"
 
-	//nolint:goimports
-	//nolint:gci
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 
 	"github.com/go-logr/logr"
