@@ -31,6 +31,10 @@ import:
   add: /src/kiali
   to: /src/kiali
   before: install
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-kiali-frontend-build-artifact
+  add: /src/kiali/frontend/build
+  to: /src/kiali/frontend/build
+  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
