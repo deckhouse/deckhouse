@@ -39,7 +39,7 @@ git:
     - go.mod
     - go.sum
     - api/**/*.go
-- add: /{{ $.ModulePath }}go_lib/controlplane
+- add: /go_lib/controlplane
   to: /go_lib/controlplane
   includePaths:
   - '**/*.go'
