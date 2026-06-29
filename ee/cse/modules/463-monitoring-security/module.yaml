@@ -13,3 +13,8 @@ accessibility:
   editions:
     _default:
       available: true
+    cse:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
