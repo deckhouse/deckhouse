@@ -408,7 +408,7 @@ entries:
                     - title:
                         en: Hybrid cluster with DVP
                         ru: Гибридный кластер с DVP
-                      url: /admin/integrations/hybrid/dvp-hybrid.html  
+                      url: /admin/integrations/hybrid/dvp-hybrid.html
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
@@ -870,6 +870,18 @@ entries:
                     ru: Управление проектами
                   url: /admin/multitenancy/project-management.html
             - title:
+                en: Managed-services
+                ru: Managed-сервисы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/managed-services/
+                - title:
+                    en: Managed PostgreSQL
+                    ru: Managed PostgreSQL
+                  url: /admin/configuration/managed-services/postgres/
+            - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
               url: /admin/configuration/backup/backup-and-restore.html
@@ -1095,6 +1107,18 @@ entries:
             en: Multitenancy
             ru: Мультитенантность
           url: /user/multitenancy/
+        - title:
+            en: Managed-services
+            ru: Managed-сервисы
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/managed-services/
+            - title:
+                en: Managed PostgreSQL
+                ru: Managed PostgreSQL
+              url: /user/managed-services/postgres/
         - title:
             en: Monitoring
             ru: Мониторинг
@@ -1413,7 +1437,7 @@ entries:
                 - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
-                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html                
+                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1605,7 +1629,7 @@ entries:
             - title:
                 en: Observability module
                 ru: Модуль observability
-              url: /architecture/observability/observability.html                
+              url: /architecture/observability/observability.html
             - title:
                 en: Logging modules
                 ru: Модули логирования
@@ -1625,7 +1649,7 @@ entries:
             - title:
                 en: Virtualization core
                 ru: Ядро виртуализации
-              url: /architecture/virtualization/core.html              
+              url: /architecture/virtualization/core.html
             - title:
                 en: Deckhouse Virtualization Container Registry (DVCR)
                 ru: Deckhouse Virtualization Container Registry (DVCR)
@@ -1637,7 +1661,7 @@ entries:
             - title:
                 en: Auxiliary components
                 ru: Вспомогательные компоненты
-              url: /architecture/virtualization/auxiliary.html             
+              url: /architecture/virtualization/auxiliary.html
     - title:
         en: Reference
         ru: Справка
