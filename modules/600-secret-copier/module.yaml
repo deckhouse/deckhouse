@@ -10,34 +10,9 @@ accessibility:
   editions:
     _default:
       available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    cse:
+      available: true
       enabledInBundles: []
-    be:
-      available: true
-      enabledInBundles:
-        - Default
-        - Managed
-    ce:
-      available: true
-      enabledInBundles:
-        - Default
-        - Managed
-    ee:
-      available: true
-      enabledInBundles:
-        - Default
-        - Managed
-    fe:
-      available: true
-      enabledInBundles:
-        - Default
-        - Managed
-    se:
-      available: true
-      enabledInBundles:
-        - Default
-        - Managed
-    se-plus:
-      available: true
-      enabledInBundles:
-        - Default
-        - Managed
