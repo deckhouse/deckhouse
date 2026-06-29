@@ -77,6 +77,7 @@ editions:
   - deckhouse-tools
   - descheduler
   - documentation
+  - extended-monitoring
   - istio
   - kube-dns
   - local-path-provisioner
