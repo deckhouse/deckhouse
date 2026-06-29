@@ -68,6 +68,6 @@ periodSeconds: 10
 {{- $_ := set $capiConfig "livenessProbe" (include "capo_controller_manager_liveness_probe" . | fromYaml) -}}
 {{- $_ := set $capiConfig "readinessProbe" (include "capo_controller_manager_readiness_probe" . | fromYaml) -}}
 {{- $_ := set $capiConfig "vpaEnabled" true -}}
-{{- $_ := set $capiConfig "securityPolicyExceptionEnabled" false -}}
+{{- $_ := set $capiConfig "securityPolicyExceptionEnabled" true -}}
 
 {{- include "helm_lib_capi_controller_manager_manifests" (list . $capiConfig) }}

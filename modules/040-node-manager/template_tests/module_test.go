@@ -1243,18 +1243,13 @@ ccc: ddd
 				Expect(clusterAutoscalerDeploy.Exists()).To(BeTrue())
 				Expect(clusterAutoscalerMCMDeploy.Exists()).To(BeFalse())
 				Expect(clusterAutoscalerDeploy.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--cloud-provider=clusterapi"))
-				Expect(machineDeployment.Exists()).To(BeTrue())
-				Expect(machineDeployment.Field("spec.template.spec.failureDomain").String()).To(Equal("zonea"))
+				Expect(machineDeployment.Exists()).To(BeFalse())
 			})
 
 			It("must render allowed address pairs for internal OpenStack networks", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				Expect(machineDeployment.Exists()).To(BeTrue())
-
-				templateName := machineDeployment.Field("spec.template.spec.infrastructureRef.name").String()
-				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", templateName)
+				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", "worker-d03da7ca")
 				Expect(openStackTemplate.Exists()).To(BeTrue())
 
 				Expect(openStackTemplate.Field("spec.template.spec.ports").String()).To(MatchYAML(`
@@ -1323,11 +1318,7 @@ ccc: ddd
 			It("must not render allowed address pairs for VXLAN", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				Expect(machineDeployment.Exists()).To(BeTrue())
-
-				templateName := machineDeployment.Field("spec.template.spec.infrastructureRef.name").String()
-				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", templateName)
+				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", "worker-d03da7ca")
 				Expect(openStackTemplate.Exists()).To(BeTrue())
 
 				Expect(openStackTemplate.Field("spec.template.spec.ports").String()).To(MatchYAML(`

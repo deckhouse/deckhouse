@@ -8,7 +8,7 @@ metadata:
     cluster.x-k8s.io/provider: openstack
     cluster.x-k8s.io/v1beta1: v1beta1
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: openstackmachinetemplates.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -191,12 +191,15 @@ spec:
                           cloudName:
                             description: CloudName specifies the name of the entry
                               in the clouds.yaml file to use.
+                            minLength: 1
                             type: string
                           name:
                             description: |-
-                              Name is the name of a secret in the same namespace as the resource being provisioned.
-                              The secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
-                              The secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                              Name is the name of a Secret (type=Secret) in the same namespace as the resource being provisioned,
+                              or the name of an OpenStackClusterIdentity (type=ClusterIdentity).
+                              The Secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
+                              The Secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                            minLength: 1
                             type: string
                           region:
                             description: |-
@@ -204,9 +207,18 @@ spec:
                               any value in clouds.yaml. If specified for an OpenStackMachine, its
                               value will be included in providerID.
                             type: string
+                          type:
+                            default: Secret
+                            description: Type specifies the identity reference type.
+                              Defaults to Secret for backward compatibility.
+                            enum:
+                            - Secret
+                            - ClusterIdentity
+                            type: string
                         required:
                         - cloudName
                         - name
+                        - type
                         type: object
                         x-kubernetes-validations:
                         - message: region is immutable
@@ -943,6 +955,36 @@ spec:
             required:
             - template
             type: object
+          status:
+            description: OpenStackMachineTemplateStatus defines the observed state
+              of OpenStackMachineTemplate.
+            properties:
+              capacity:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: |-
+                  Capacity defines the resource capacity for this machine.
+                  This value is used for autoscaling from zero operations as defined in:
+                  https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20210310-opt-in-autoscaling-from-zero.md
+                type: object
+              nodeInfo:
+                description: NodeInfo contains information about the node's architecture
+                  and operating system.
+                minProperties: 1
+                properties:
+                  operatingSystem:
+                    description: |-
+                      operatingSystem is a string representing the operating system of the node.
+                      This may be a string like 'linux' or 'windows'.
+                    type: string
+                type: object
+            type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
