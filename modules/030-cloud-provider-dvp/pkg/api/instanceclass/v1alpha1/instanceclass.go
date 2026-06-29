@@ -22,8 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DVPInstanceClass is the CRD root type for DVP instance classes.
-//
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,categories=cloudinstanceclasses
 // +kubebuilder:metadata:labels="heritage=deckhouse"
@@ -47,6 +45,7 @@ type InstanceClassSpec struct {
 	// +deckhouse:ru:description:value="Для каждого диска необходимо задать параметры `size` и `storageClass`."
 	AdditionalDisks []InstanceClassDisk `json:"additionalDisks,omitempty"`
 	// Specifies settings for the etcd data disk.
+	// +deckhouse:ru:description:value="Параметры диска для etcd."
 	EtcdDisk InstanceClassDisk `json:"etcdDisk,omitempty"`
 }
 

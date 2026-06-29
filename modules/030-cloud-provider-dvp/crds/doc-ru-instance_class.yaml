@@ -35,6 +35,8 @@ spec:
                   type: object
                 type: array
               etcdDisk:
+                description: |
+                  Параметры диска для etcd.
                 properties:
                   size:
                     description: |
