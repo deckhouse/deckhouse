@@ -243,9 +243,6 @@ func (g *CRDGenerator) generateCRDDescriptionRuYAML(versions []VersionSpec) ([]b
 			return nil, fmt.Errorf("serialize ru spec schema for version %s: %w", versionName, err)
 		}
 
-		// Delete nodes that have neither a ru description nor surviving children.
-		stripNonRuPropertiesFromRawMap(ruSpecRaw)
-
 		// Replace openAPIV3Schema entirely: only spec with ru descriptions, no metav1 fields.
 		rootSchemaMap := map[string]any{
 			"type": "object",
@@ -408,36 +405,6 @@ func ensureMap(m map[string]any, key string) map[string]any {
 		m[key] = v
 	}
 	return v
-}
-
-// stripNonRuPropertiesFromRawMap deletes properties with no Russian content from m.
-// Recurse first, then delete: a property survives if it has a ru description OR has
-// surviving nested properties after recursion (container type with no self-description).
-// All descriptions in the ru-only schema are Russian by construction — no clearing needed.
-func stripNonRuPropertiesFromRawMap(m map[string]any) {
-	if props, ok := m["properties"].(map[string]any); ok {
-		for key, val := range props {
-			propMap, ok := val.(map[string]any)
-			if !ok {
-				continue
-			}
-			// Recurse first so nested state is settled before the delete check.
-			stripNonRuPropertiesFromRawMap(propMap)
-			_, hasDesc := propMap["description"]
-			nestedProps, _ := propMap["properties"].(map[string]any)
-			if !hasDesc && len(nestedProps) == 0 {
-				delete(props, key)
-			}
-		}
-	}
-
-	if items, ok := m["items"].(map[string]any); ok {
-		stripNonRuPropertiesFromRawMap(items)
-	}
-
-	if ap, ok := m["additionalProperties"].(map[string]any); ok {
-		stripNonRuPropertiesFromRawMap(ap)
-	}
 }
 
 // GenerateCRD generates a full Kubernetes CRD YAML with enriched openAPIV3Schema

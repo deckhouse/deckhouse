@@ -145,7 +145,38 @@ spec:
                     description: |
                       Позволяет назначить виртуальную машину на указанные узлы DVP.
                       [Аналогично](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) параметру `spec.nodeSelector` в Kubernetes Pods.
-                    properties: {}
+                    properties:
+                      nodeSelectorTerms:
+                        items:
+                          properties:
+                            matchExpressions:
+                              items:
+                                properties:
+                                  key:
+                                    type: string
+                                  operator:
+                                    type: string
+                                  values:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: array
+                            matchFields:
+                              items:
+                                properties:
+                                  key:
+                                    type: string
+                                  operator:
+                                    type: string
+                                  values:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: array
+                          type: object
+                        type: array
                     type: object
                   priorityClassName:
                     description: |
@@ -165,7 +196,19 @@ spec:
                       Позволяет задать tolerations для виртуальных машин на узле DVP.
                       [Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) параметру `spec.tolerations` в Kubernetes Pods.
                     items:
-                      properties: {}
+                      properties:
+                        effect:
+                          type: string
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        tolerationSeconds:
+                          format: int64
+                          nullable: true
+                          type: integer
+                        value:
+                          type: string
                       type: object
                     type: array
                   virtualMachineClassName:
