@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
@@ -54,6 +55,7 @@ type Constraints struct {
 	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Gate-only: never contributes edges to the topological graph, so fallback chains across packages do not produce cycles.
 	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Gate-only: "must not be installed" is an admission predicate, not an ordering relation.
 
+	Subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.
 	// Licensing carries the package's per-edition availability and bundle
 	// membership. It is the data the edition gate and bundle floor consume,
 	// resolved live against the active edition. The package supplies only the
@@ -61,9 +63,9 @@ type Constraints struct {
 	Licensing edition.Licensing
 
 	// Floor is the package's lowest-precedence rule: its default decision when no
-	// higher-precedence intent rule (bundle, user, script) has an opinion. Apps
-	// set rule.Static(rule.Enable) (on whenever loaded); modules set their
-	// bundle decision. It is the only behavior-carrying field here — admission
+	// higher-precedence intent rule (bundle, user, script) has an opinion. Apps and Global
+	// set rule.Static(rule.Enable) (on whenever loaded); modules set
+	// rule.Static(rule.Disable). It is the only behavior-carrying field here — admission
 	// (CheckConstraints) ignores it, since the floor is intent, not a
 	// requirement. A nil Floor means no floor: with gates-only the package
 	// resolves to Undefined and stays off, so every package must set one.
@@ -113,6 +115,11 @@ type node struct {
 
 	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and rule inputs.
 
+	subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.
+	subscribers   map[string]struct{} // Set of nodes that are subscribed to this node's state changes.
+
+	rescheduleOnEnable bool // If true, this node flipping to enabled triggers a full-graph reschedule in compute() (every node reverts to idle), not just the global node.
+
 	rules []rule.Rule // Ordered rule chain evaluated on each scheduling pass.
 }
 
@@ -130,11 +137,13 @@ func (s *Scheduler) addNode(pkg Package) {
 	constraints := pkg.GetConstraints()
 
 	n := &node{
-		name:         pkg.GetName(),
-		version:      pkg.GetVersion(),
-		state:        nodeStateIdle,
-		order:        constraints.Order,
-		dependencies: maps.Clone(constraints.Dependencies),
+		name:          pkg.GetName(),
+		version:       pkg.GetVersion(),
+		state:         nodeStateIdle,
+		order:         constraints.Order,
+		dependencies:  maps.Clone(constraints.Dependencies),
+		subscriptions: maps.Clone(constraints.Subscriptions),
+		subscribers:   make(map[string]struct{}),
 	}
 
 	// The package's floor sits first (lowest precedence): gates appended after
@@ -177,15 +186,54 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
 	}
 
-	// Only a package whose licensing actually names enabling bundles gets the
-	// bundle floor. Packages that carry editions purely for availability (e.g.
-	// applications) have no bundle membership, so adding the rule would soft-
-	// disable them and override their Enable floor.
-	if s.bundleChecker != nil && constraints.Licensing.HasBundles() {
-		n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
+	// Modules (floor = Static(Disable)) trigger a full-graph reschedule when they
+	// flip to enabled: a dynamically-enabled module may install CRDs that other
+	// packages render against, and those template-level deps are not tracked.
+	// Their intent rules are appended at the end of this method, after the floor
+	// and gates, so a soft Enable can override the floor (see rule.Resolve).
+	isModule := constraints.Floor != nil && constraints.Floor == rule.Static(rule.Disable)
+	if isModule {
+		n.rescheduleOnEnable = true
+	}
+
+	// Intent rules for modules, appended last so their soft Enable overrides the
+	// floor's Static(Disable) (gates still veto via Forbid from any position). The
+	// dynamic rule turns a module on at runtime (e.g. enabled by a script); the
+	// bundle rule applies the active bundle's membership for the package's edition.
+	if isModule {
+		if s.dynamicGetter != nil {
+			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
+		}
+
+		if s.bundleChecker != nil {
+			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
+		}
 	}
 
 	s.nodes[pkg.GetName()] = n
+
+	// Adding (or replacing) a node changes the subscription graph, so recompute
+	// the reverse index. Cheap relative to node churn and always correct on update.
+	s.rebuildSubscribers()
+}
+
+// rebuildSubscribers recomputes every node's subscribers set from the
+// subscriptions declared across the graph. A node lists the nodes it subscribes
+// to (subscriptions); the reverse index — who is subscribed to a given node
+// (subscribers) — is what Reschedule fans out to. Rebuilding wholesale keeps the
+// index correct after any add, update, or remove without per-edge bookkeeping.
+func (s *Scheduler) rebuildSubscribers() {
+	for _, n := range s.nodes {
+		n.subscribers = make(map[string]struct{})
+	}
+
+	for name, n := range s.nodes {
+		for target := range n.subscriptions {
+			if t, ok := s.nodes[target]; ok {
+				t.subscribers[name] = struct{}{}
+			}
+		}
+	}
 }
 
 // toAnyOfGroups translates schedule.AnyOfGroup values into the dependency
