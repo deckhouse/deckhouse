@@ -20,25 +20,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: DVPInstanceClass is the CRD root type for DVP instance classes.
         properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
           spec:
             properties:
               additionalDisks:
@@ -52,32 +34,25 @@ spec:
                     size:
                       description: |
                         Размер дополнительного диска.
-                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       type: string
                     storageClass:
                       description: |
                         Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
                       type: string
-                  required:
-                  - size
-                  - storageClass
                   type: object
                 type: array
               etcdDisk:
-                description: Specifies settings for the etcd data disk.
+                description: |
+                  Параметры диска для etcd.
                 properties:
                   size:
                     description: |
                       Размер дополнительного диска.
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     type: string
                   storageClass:
                     description: |
                       Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
                     type: string
-                required:
-                - size
-                - storageClass
                 type: object
               rootDisk:
                 description: |
@@ -90,24 +65,16 @@ spec:
                       kind:
                         description: |
                           Тип источника изображения.
-                        enum:
-                        - ClusterVirtualImage
-                        - VirtualImage
-                        - VirtualDisk
                         type: string
                       name:
                         description: |
                           Имя образа, который будет использоваться для создания корневого диска.
                           > Для установки требуются образы ОС Linux с предустановленным cloud-init.
                         type: string
-                    required:
-                    - kind
-                    - name
                     type: object
                   size:
                     description: |
                       Размер корневого диска.
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     type: string
                   storageClass:
                     description: |
@@ -115,9 +82,6 @@ spec:
 
                       Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
                     type: string
-                required:
-                - image
-                - size
                 type: object
               virtualMachine:
                 description: |
@@ -139,39 +103,27 @@ spec:
                       Дополнительные метки для ресурса виртуальной машины.
                     type: object
                   bootloader:
-                    default: EFI
                     description: |
                       Определяет загрузчик для виртуальной машины.
 
                       * `BIOS` — используется BIOS;
                       * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
                       * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
-                    enum:
-                    - BIOS
-                    - EFI
-                    - EFIWithSecureBoot
                     type: string
                   cpu:
                     description: |
                       Настройки процессора для виртуальной машины.
                     properties:
                       coreFraction:
-                        default: 100%
                         description: |
                           Процент гарантированной доли CPU, которая будет выделена виртуальной машине.
-                        pattern: ^100%$|^[1-9][0-9]?%$
                         type: string
                       cores:
                         description: |
                           Количество ядер процессора для виртуальной машины.
-                        format: int32
-                        minimum: 1
                         type: integer
-                    required:
-                    - cores
                     type: object
                   liveMigrationPolicy:
-                    default: PreferForced
                     description: |
                       Политика живой миграции виртуальной машины.
 
@@ -181,13 +133,6 @@ spec:
                       * `PreferSafe` — предпочитать безопасную миграцию, переключаться на forced при необходимости;
                       * `AlwaysForced` — всегда использовать forced-миграцию с замедлением ВМ;
                       * `PreferForced` — предпочитать forced-миграцию (рекомендуется для master-узлов из-за высокой активности памяти).
-                    enum:
-                    - Manual
-                    - Never
-                    - AlwaysSafe
-                    - PreferSafe
-                    - AlwaysForced
-                    - PreferForced
                     type: string
                   memory:
                     description: |
@@ -196,10 +141,7 @@ spec:
                       size:
                         description: |
                           Количество ресурсов памяти, разрешенных для виртуальной машины.
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         type: string
-                    required:
-                    - size
                     type: object
                   nodeSelector:
                     description: |
@@ -207,96 +149,42 @@ spec:
                       [Аналогично](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) параметру `spec.nodeSelector` в Kubernetes Pods.
                     properties:
                       nodeSelectorTerms:
-                        description: Required. A list of node selector terms. The
-                          terms are ORed.
                         items:
-                          description: |-
-                            A null or empty node selector term matches no objects. The requirements of
-                            them are ANDed.
-                            The TopologySelectorTerm type implements a subset of the NodeSelectorTerm.
                           properties:
                             matchExpressions:
-                              description: A list of node selector requirements by
-                                node's labels.
                               items:
-                                description: |-
-                                  A node selector requirement is a selector that contains values, a key, and an operator
-                                  that relates the key and values.
                                 properties:
                                   key:
-                                    description: The label key that the selector applies
-                                      to.
                                     type: string
                                   operator:
-                                    description: |-
-                                      Represents a key's relationship to a set of values.
-                                      Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
                                     type: string
                                   values:
-                                    description: |-
-                                      An array of string values. If the operator is In or NotIn,
-                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                      the values array must be empty. If the operator is Gt or Lt, the values
-                                      array must have a single element, which will be interpreted as an integer.
-                                      This array is replaced during a strategic merge patch.
                                     items:
                                       type: string
                                     type: array
-                                    x-kubernetes-list-type: atomic
-                                required:
-                                - key
-                                - operator
                                 type: object
                               type: array
-                              x-kubernetes-list-type: atomic
                             matchFields:
-                              description: A list of node selector requirements by
-                                node's fields.
                               items:
-                                description: |-
-                                  A node selector requirement is a selector that contains values, a key, and an operator
-                                  that relates the key and values.
                                 properties:
                                   key:
-                                    description: The label key that the selector applies
-                                      to.
                                     type: string
                                   operator:
-                                    description: |-
-                                      Represents a key's relationship to a set of values.
-                                      Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
                                     type: string
                                   values:
-                                    description: |-
-                                      An array of string values. If the operator is In or NotIn,
-                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                      the values array must be empty. If the operator is Gt or Lt, the values
-                                      array must have a single element, which will be interpreted as an integer.
-                                      This array is replaced during a strategic merge patch.
                                     items:
                                       type: string
                                     type: array
-                                    x-kubernetes-list-type: atomic
-                                required:
-                                - key
-                                - operator
                                 type: object
                               type: array
-                              x-kubernetes-list-type: atomic
                           type: object
-                          x-kubernetes-map-type: atomic
                         type: array
-                        x-kubernetes-list-type: atomic
-                    required:
-                    - nodeSelectorTerms
                     type: object
-                    x-kubernetes-map-type: atomic
                   priorityClassName:
                     description: |
                       [Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) параметру `spec.priorityClassName` в Kubernetes Pods.
                     type: string
                   runPolicy:
-                    default: AlwaysOnUnlessStoppedManually
                     description: |
                       Политика запуска виртуальной машины.
 
@@ -304,52 +192,24 @@ spec:
                       * `AlwaysOff` — виртуальная машина всегда должна быть остановлена;
                       * `Manual` — состояние виртуальной машины управляется вручную;
                       * `AlwaysOnUnlessStoppedManually` — виртуальную машину можно остановить вручную (например, для обслуживания), но она автоматически запустится после перезагрузки хоста.
-                    enum:
-                    - AlwaysOn
-                    - AlwaysOff
-                    - Manual
-                    - AlwaysOnUnlessStoppedManually
                     type: string
                   tolerations:
                     description: |
                       Позволяет задать tolerations для виртуальных машин на узле DVP.
                       [Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) параметру `spec.tolerations` в Kubernetes Pods.
                     items:
-                      description: |-
-                        The pod this Toleration is attached to tolerates any taint that matches
-                        the triple <key,value,effect> using the matching operator <operator>.
                       properties:
                         effect:
-                          description: |-
-                            Effect indicates the taint effect to match. Empty means match all taint effects.
-                            When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
                           type: string
                         key:
-                          description: |-
-                            Key is the taint key that the toleration applies to. Empty means match all taint keys.
-                            If the key is empty, operator must be Exists; this combination means to match all values and all keys.
                           type: string
                         operator:
-                          description: |-
-                            Operator represents a key's relationship to the value.
-                            Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
-                            Exists is equivalent to wildcard for value, so that a pod can
-                            tolerate all taints of a particular category.
-                            Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                           type: string
                         tolerationSeconds:
-                          description: |-
-                            TolerationSeconds represents the period of time the toleration (which must be
-                            of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
-                            it is not set, which means tolerate the taint forever (do not evict). Zero and
-                            negative values will be treated as 0 (evict immediately) by the system.
                           format: int64
                           nullable: true
                           type: integer
                         value:
-                          description: |-
-                            Value is the taint value the toleration matches to.
-                            If the operator is Exists, the value should be empty, otherwise just a regular string.
                           type: string
                       type: object
                     type: array
@@ -359,17 +219,8 @@ spec:
 
                       Ресурс VirtualMachineClass предназначен для централизованной конфигурации предпочтительных параметров виртуальных машин. Он позволяет задавать инструкции CPU, политики конфигурации ресурсов CPU и памяти для виртуальных машин, а также устанавливать соотношения этих ресурсов.
                     type: string
-                required:
-                - cpu
-                - memory
-                - virtualMachineClassName
                 type: object
-            required:
-            - rootDisk
-            - virtualMachine
             type: object
-        required:
-        - spec
         type: object
     served: true
     storage: true

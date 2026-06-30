@@ -20,7 +20,6 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: DVPInstanceClass is the CRD root type for DVP instance classes.
         properties:
           apiVersion:
             description: |-
