@@ -19,6 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 // Definition represents application metadata.
@@ -27,8 +28,9 @@ type Definition struct {
 	Version string `json:"version" yaml:"version"`
 	Stage   string `json:"stage" yaml:"stage"`
 
-	Requirements   Requirements   `json:"requirements" yaml:"requirements"`
-	DisableOptions DisableOptions `json:"disableOptions" yaml:"disableOptions"`
+	Requirements   Requirements      `json:"requirements" yaml:"requirements"`
+	Licensing      edition.Licensing `json:"licensing" yaml:"licensing"`
+	DisableOptions DisableOptions    `json:"disableOptions" yaml:"disableOptions"`
 }
 
 // Requirements specifies dependencies required by the application.
@@ -122,6 +124,7 @@ func (d Definition) Constraints() schedule.Constraints {
 		Dependencies: deps,
 		AnyOf:        anyOf,
 		NoneOf:       noneOf,
+		Licensing:    d.Licensing,
 		// Apps are enabled whenever they are loaded; gates may still veto.
 		Floor: rule.Static(rule.Enable),
 	}

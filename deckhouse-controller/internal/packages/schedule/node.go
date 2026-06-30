@@ -20,10 +20,12 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 const (
@@ -54,6 +56,11 @@ type Constraints struct {
 	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Gate-only: "must not be installed" is an admission predicate, not an ordering relation.
 
 	Subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.
+	// Licensing carries the package's per-edition availability and bundle
+	// membership. It is the data the edition gate and bundle floor consume,
+	// resolved live against the active edition. The package supplies only the
+	// data — resolution logic lives in the edition package.
+	Licensing edition.Licensing
 
 	// Floor is the package's lowest-precedence rule: its default decision when no
 	// higher-precedence intent rule (bundle, user, script) has an opinion. Apps and Global
@@ -191,6 +198,12 @@ func (s *Scheduler) addNode(pkg Package) {
 	// an enabled script), while gates still veto via Forbid from any position.
 	if s.dynamicGetter != nil {
 		n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
+	// Only a package whose licensing actually names enabling bundles gets the
+	// bundle floor. Packages that carry editions purely for availability (e.g.
+	// applications) have no bundle membership, so adding the rule would soft-
+	// disable them and override their Enable floor.
+	if s.bundleChecker != nil && constraints.Licensing.HasBundles() {
+		n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
 	}
 
 	s.nodes[pkg.GetName()] = n

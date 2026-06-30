@@ -324,6 +324,7 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 		},
 		DisableOptions: disableOptionsToCR(meta.definition.DisableOptions),
 		Requirements:   requirementsToCR(meta.definition.Requirements),
+		Licensing:      licensingToCR(meta.definition.Licensing),
 		Changelog: &v1alpha1.PackageChangelog{
 			Features: meta.changelog.Features,
 			Fixes:    meta.changelog.Fixes,
@@ -398,6 +399,20 @@ func requirementsToCR(r dto.Requirements) *v1alpha1.PackageRequirements {
 		Deckhouse:  deckhouse,
 		Modules:    modulesCR,
 	}
+}
+
+// licensingToCR projects dto.Licensing onto the v1alpha1 PackageLicensing CR shape.
+func licensingToCR(l dto.Licensing) *v1alpha1.PackageLicensing {
+	if len(l.Editions) == 0 {
+		return nil
+	}
+
+	editions := make(map[string]v1alpha1.PackageEditionLicense, len(l.Editions))
+	for name, e := range l.Editions {
+		editions[name] = v1alpha1.PackageEditionLicense{Available: e.Available}
+	}
+
+	return &v1alpha1.PackageLicensing{Editions: editions}
 }
 
 // versionConstraintToCR wraps a raw semver constraint string into the v1alpha1
