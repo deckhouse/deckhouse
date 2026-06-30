@@ -46,7 +46,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/platform"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
@@ -89,8 +88,8 @@ type Application struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
-	// globalValuesGetter returns the platform global values used to build the
-	// .Platform values exposed to helm templates.
+	// globalValuesGetter returns the platform global values exposed to helm
+	// templates under .Platform.
 	globalValuesGetter GlobalValuesGetter
 
 	logger *log.Logger
@@ -121,8 +120,8 @@ type Config struct {
 	// settings fields. When nil, grant defaulting/validation is disabled.
 	GrantResolver grants.Resolver
 
-	// GlobalValuesGetter returns the platform global values used to build the
-	// .Platform values. When nil, .Platform is built from empty global values.
+	// GlobalValuesGetter returns the platform global values exposed under
+	// .Platform. When nil, .Platform is empty.
 	GlobalValuesGetter GlobalValuesGetter
 }
 
@@ -243,25 +242,18 @@ func (a *Application) getRuntimeValues() RuntimeValues {
 	}
 }
 
-// getPlatformValues returns platform-wide values exposed under the .Platform prefix.
-// It mirrors the full global values tree (so global.<path> resolves as
-// .Platform.<path>) plus the structured EnabledModules/Capabilities fields.
-func (a *Application) getPlatformValues() addonutils.Values {
-	var global addonutils.Values
-	if a.globalValuesGetter != nil {
-		global = a.globalValuesGetter()
-	}
-
-	return platform.BuildValues(global)
-}
-
 // GetRuntimeValues returns runtime values in string format
 func (a *Application) GetRuntimeValues() string {
 	runtimeValues := a.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	platformValues := a.getPlatformValues()
-	marshalledPlatform, _ := json.Marshal(platformValues)
+	// .Platform exposes the platform global values as-is, so a chart can read
+	// global.<path> as .Platform.<path>.
+	var global addonutils.Values
+	if a.globalValuesGetter != nil {
+		global = a.globalValuesGetter()
+	}
+	marshalledPlatform, _ := json.Marshal(global)
 
 	return fmt.Sprintf("Application=%s,Platform=%s", marshalled, marshalledPlatform)
 }
