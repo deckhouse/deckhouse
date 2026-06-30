@@ -695,7 +695,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (component, tag) (istio_build{component!=\"\", tag!=\"\"})",
+          "expr": "sum by (component,tag) (istio_build)",
           "legendFormat": "{{component}} ({{tag}})"
         }
       ],
