@@ -24,6 +24,10 @@ entries:
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
       - title:
+          en: Advanced search
+          ru: Расширенный поиск
+        url: /code/documentation/admin/configuration/advanced-search.html
+      - title:
           en: Service account
           ru: Сервисный аккаунт
         url: /code/documentation/admin/service-account.html
@@ -104,8 +108,8 @@ entries:
           ru: Вебхуки
         url: /code/documentation/user/web-hooks.html
       - title:
-          en: Search
-          ru: Поиск
+          en: Advanced search
+          ru: Расширенный поиск
         url: /code/documentation/user/search.html
       - title:
           en: Push rules
