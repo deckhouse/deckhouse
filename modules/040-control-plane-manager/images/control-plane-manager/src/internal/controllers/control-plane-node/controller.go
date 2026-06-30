@@ -39,8 +39,8 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-	"control-plane-manager/internal/cpnplanner"
-	"control-plane-manager/internal/cpnreconcile"
+	"control-plane-manager/internal/cpn/cpnplanner"
+	"control-plane-manager/internal/cpn/cpnreconcile"
 )
 
 const (

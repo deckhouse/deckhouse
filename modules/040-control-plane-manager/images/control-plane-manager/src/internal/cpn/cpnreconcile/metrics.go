@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/cpnplanner"
+	"control-plane-manager/internal/cpn/cpnplanner"
 )
 
 const (
