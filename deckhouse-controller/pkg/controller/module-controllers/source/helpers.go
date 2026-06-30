@@ -252,6 +252,54 @@ func (r *reconciler) getConfiguredModuleSource(ctx context.Context, moduleName s
 	return moduleConfig.Spec.Source, nil
 }
 
+// defaultModuleSourceName is the name of the built-in OSS ModuleSource that ships
+// with Deckhouse. When a module is offered by it alongside mirrors (e.g. the EE
+// source), it is the canonical choice rather than an ambiguous conflict.
+const defaultModuleSourceName = "deckhouse"
+
+// resolveEmbeddedTargetSource decides which source an embedded module should be
+// pre-staged from while its embedded copy is still shipped, and whether the choice
+// is a genuine conflict.
+//
+// Being offered by several sources is not automatically a conflict:
+//   - an explicitly chosen source wins (if it still offers the module);
+//   - the "Embedded" sentinel is not a real source, so "Embedded" + one real source
+//     is not a conflict - the real source is used;
+//   - the built-in "deckhouse" source is the canonical default and wins over mirrors
+//     such as "deckhouse-upstream-ee".
+//
+// It is a conflict only when the chosen source no longer offers the module, or when
+// several real, non-default sources offer it and none is selected.
+func resolveEmbeddedTargetSource(chosenSource string, availableSources []string) (target string, conflict bool) {
+	if chosenSource != "" {
+		if slices.Contains(availableSources, chosenSource) {
+			return chosenSource, false
+		}
+		// the configured .spec.source does not (or no longer does) offer the module
+		return "", true
+	}
+
+	// "Embedded" is a sentinel for the built-in copy, not a selectable source.
+	candidates := make([]string, 0, len(availableSources))
+	for _, source := range availableSources {
+		if source != v1alpha1.ModuleSourceEmbedded {
+			candidates = append(candidates, source)
+		}
+	}
+
+	switch {
+	case len(candidates) == 0:
+		// nothing but the embedded copy is available - nothing to pre-stage, not a conflict
+		return "", false
+	case len(candidates) == 1:
+		return candidates[0], false
+	case slices.Contains(candidates, defaultModuleSourceName):
+		return defaultModuleSourceName, false
+	default:
+		return "", true
+	}
+}
+
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {
 	var requireResync bool
 

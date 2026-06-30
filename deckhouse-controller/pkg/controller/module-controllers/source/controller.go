@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -453,13 +452,14 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// Resolve which source an embedded module should be pre-staged from while
-		// its embedded copy is still shipped. The module keeps Source == "Embedded",
-		// so the choice is driven by the operator's ModuleConfig .spec.source, or by
-		// the only available source. When several sources offer the module and none
-		// is chosen, it is a conflict: fire the alert and skip release creation (the
-		// embedded copy keeps serving the module, so its phase/conditions are left
-		// untouched).
+		// Resolve which source an embedded module should be pre-staged from while its
+		// embedded copy is still shipped. The module keeps Source == "Embedded", so the
+		// choice is driven by the operator's ModuleConfig .spec.source, the only real
+		// source, or the canonical "deckhouse" source - see resolveEmbeddedTargetSource.
+		// Being offered by several sources is not automatically a conflict: "deckhouse"
+		// + a mirror like "deckhouse-upstream-ee", or "Embedded" + one real source, both
+		// resolve cleanly. A real conflict only arises from a stale .spec.source or from
+		// several non-default sources with no selection.
 		var embeddedTargetSource string
 		if module.IsEmbedded() {
 			chosenSource, err := r.getConfiguredModuleSource(ctx, moduleName)
@@ -472,39 +472,29 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				continue
 			}
 
-			switch {
-			case chosenSource != "" && slices.Contains(module.Properties.AvailableSources, chosenSource):
-				embeddedTargetSource = chosenSource
-			case chosenSource == "" && len(module.Properties.AvailableSources) == 1:
-				embeddedTargetSource = module.Properties.AvailableSources[0]
-			default:
-				// The release source is undecided, so the module cannot be pre-staged.
-				// Either several sources offer it and none is selected via ModuleConfig,
-				// or the selected .spec.source does not (or no longer does) offer this
-				// module - a stale or mistyped ModuleConfig that the admission webhook
-				// validated against an AvailableSources list which has since changed.
-				// Fire the conflict alert instead of silently never creating a release,
-				// which would block the Deckhouse upgrade with no diagnostic signal.
+			var conflict bool
+			embeddedTargetSource, conflict = resolveEmbeddedTargetSource(chosenSource, module.Properties.AvailableSources)
+			if conflict {
+				// Skip pre-staging with a diagnostic warning; do NOT raise a user-facing
+				// ModuleAtConflict alert. This branch is embedded-only (see the
+				// module.IsEmbedded() guard), and the embedded copy keeps serving the
+				// module regardless of which source a future release would come from, so
+				// this is a deferred pre-staging decision, not a runtime conflict. The
+				// module-config controller likewise skips embedded modules when setting the
+				// conflict metric; firing d8_module_at_conflict here would both contradict
+				// that and - because this runs once per source - register the same
+				// module-labelled series under several metric groups, making the whole self
+				// /metrics page fail to collect (up=0 -> D8DeckhouseSelfTargetDown).
 				if chosenSource != "" {
 					logger.Warn("embedded module's configured source does not offer the module, cannot pre-stage a release until the ModuleConfig .spec.source is fixed",
 						slog.String("name", moduleName),
 						slog.String("configured_source", chosenSource),
 						slog.Any("available_sources", module.Properties.AvailableSources))
 				} else {
-					logger.Warn("embedded module is available in several sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved",
-						slog.String("name", moduleName))
+					logger.Warn("embedded module is offered by several non-default sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved",
+						slog.String("name", moduleName),
+						slog.Any("available_sources", module.Properties.AvailableSources))
 				}
-				// The conflict metric is module-scoped (labelled only by module), but a
-				// conflict means the module is offered by several sources, so this branch
-				// runs once per source. Writing it into the per-(module,source) group
-				// metricModuleGroup would register the same d8_module_at_conflict{module=...}
-				// series under several groups; the grouped collector then emits it more than
-				// once and the whole /metrics page fails with "collected before with the same
-				// name and label values" (up=0 -> D8DeckhouseSelfTargetDown). Use the
-				// module-scoped conflict group (the same one the module-config controller
-				// uses) so repeated writes collapse onto a single series.
-				conflictMetricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleName)
-				r.metricStorage.Grouped().GaugeSet(conflictMetricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{"module": moduleName})
 
 				availableModule.Checksum = meta.Checksum
 				availableModule.Version = meta.ModuleVersion
