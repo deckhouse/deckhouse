@@ -86,6 +86,21 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 
 	sshCl := wrapper.Client()
 
+	sshConfig := c.SSHProviderInitializer.GetConfig()
+	if sshConfig != nil &&
+		sshConfig.Config != nil &&
+		len(sshConfig.Hosts) > 0 &&
+		sshConfig.Config.User != "root" {
+		cmd := sshCl.Command("sh", "-c", "command -v sudo >/dev/null 2>&1")
+		if err := cmd.Run(ctx); err != nil {
+			return fmt.Errorf(
+				"required command \"sudo\" is not installed on host %s for user %q. Install sudo or use root user for bootstrap",
+				sshConfig.Hosts[0].Host,
+				sshConfig.Config.User,
+			)
+		}
+	}
+
 	addr := strings.Join([]string{
 		net.JoinHostPort(localhost, strconv.Itoa(defaultTunnelLocalPort)),
 		net.JoinHostPort(localhost, strconv.Itoa(defaultTunnelRemotePort)),
