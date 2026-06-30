@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -1192,6 +1193,105 @@ apiserver:
 			testTerminatedPodGcThreshold(299, "3000")
 			testTerminatedPodGcThreshold(300, "6000")
 			testTerminatedPodGcThreshold(500, "6000")
+		})
+
+		Context("control-plane resource requests sizing", func() {
+			const testValuesTemplate = `
+internal:
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  nodesCount: %d
+  kubeSchedulerExtenders: []
+  authn: {}
+  selfSignedCA: {}
+  resourcesRequests:
+    milliCpuControlPlane: %d
+    memoryControlPlane: %d
+    maxMilliCpuControlPlane: %d
+    maxMemoryControlPlane: %d
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
+`
+			renderComponent := func(nodesCount, poolCPU, poolMem, maxCPU, maxMem int, manifestKey string) corev1.Pod {
+				f.ValuesSetFromYaml("controlPlaneManager", fmt.Sprintf(testValuesTemplate, nodesCount, poolCPU, poolMem, maxCPU, maxMem))
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+				raw, err := base64.StdEncoding.DecodeString(secret.Field("data." + manifestKey).String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var pod corev1.Pod
+				Expect(yaml.Unmarshal(raw, &pod)).ShouldNot(HaveOccurred())
+				return pod
+			}
+
+			assertRequests := func(pod corev1.Pod, expectCPU, expectMem string) {
+				req := pod.Spec.Containers[0].Resources.Requests
+				expCPU := resource.MustParse(expectCPU)
+				expMem := resource.MustParse(expectMem)
+				Expect(req.Cpu().MilliValue()).To(Equal(expCPU.MilliValue()))
+				Expect(req.Memory().Value()).To(Equal(expMem.Value()))
+			}
+
+			Context("auto mode (no override pool), 34 nodes (tier <100)", func() {
+				It("sizes each component by the node-count tier", func() {
+					assertRequests(renderComponent(34, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "750m", "5248Mi")
+					assertRequests(renderComponent(34, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "300m", "1408Mi")
+					assertRequests(renderComponent(34, 0, 0, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "90m", "768Mi")
+					assertRequests(renderComponent(34, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "40m", "384Mi")
+				})
+			})
+
+			Context("auto mode (no override pool), tiny cluster (tier <10)", func() {
+				It("uses the lowest tier at 0 nodes", func() {
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "150m", "2048Mi")
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "100m", "512Mi")
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "50m", "256Mi")
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "30m", "128Mi")
+				})
+			})
+
+			Context("auto mode (no override pool), small cluster (tier <25)", func() {
+				It("uses the <25 tier at 15 nodes", func() {
+					assertRequests(renderComponent(15, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "250m", "2944Mi")
+					assertRequests(renderComponent(15, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "150m", "768Mi")
+					assertRequests(renderComponent(15, 0, 0, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "50m", "384Mi")
+					assertRequests(renderComponent(15, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "30m", "256Mi")
+				})
+			})
+
+			Context("auto mode (no override pool), large cluster (top tier)", func() {
+				It("uses the top tier (per-component caps) at 1000 nodes", func() {
+					assertRequests(renderComponent(1000, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "3000m", "12288Mi")
+					assertRequests(renderComponent(1000, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "1500m", "4096Mi")
+					assertRequests(renderComponent(1000, 0, 0, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "300m", "1536Mi")
+					assertRequests(renderComponent(1000, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "120m", "1024Mi")
+				})
+			})
+
+			Context("auto mode with node safety cap (undersized master)", func() {
+				It("clamps the auto value to the component share of the cap", func() {
+					// 1000 nodes => apiserver top tier is 3000m / 12288Mi, but the
+					// hook reports a safety cap of 2000m / 6Gi, so apiserver is
+					// clamped to 33%: min(3000m, 660m) and min(12288Mi, 2126008811).
+					assertRequests(renderComponent(1000, 0, 0, 2000, 6442450944, "kube-apiserver\\.yaml\\.tpl"), "660m", "2126008811")
+				})
+			})
+
+			Context("override pool set", func() {
+				It("splits the pool by the historical component shares (ignores the safety cap)", func() {
+					// pool: 1500m CPU / 1Gi memory.
+					assertRequests(renderComponent(34, 1500, 1073741824, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "495m", "354334801")
+					assertRequests(renderComponent(34, 1500, 1073741824, 0, 0, "etcd\\.yaml\\.tpl"), "525m", "375809638")
+					assertRequests(renderComponent(34, 1500, 1073741824, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "300m", "214748364")
+					assertRequests(renderComponent(34, 1500, 1073741824, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "150m", "107374182")
+				})
+			})
 		})
 	})
 

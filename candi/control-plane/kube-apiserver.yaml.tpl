@@ -78,8 +78,53 @@
 {{- if and .settings .settings.resourcesRequests -}}
   {{- $resourcesRequests = .settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $nodesCount := .nodesCount | default 0 | int -}}
+{{- $maxMilliCPU := $resourcesRequests.maxMilliCPU | default 0 | int -}}
+{{- $maxMemoryBytes := $resourcesRequests.maxMemoryBytes | default 0 | int -}}
+{{- /*
+  Resource requests for the kube-apiserver static pod (component share: 33%).
+
+  Manual override (controlPlaneManager.resourcesRequests) arrives as a single
+  pool via settings.resourcesRequests and is split by the historical component
+  share. CPU and memory are overridden independently.
+
+  Otherwise requests are sized per-component in discrete tiers by the cluster
+  node count. Tiers (not a linear formula) keep the rendered manifest — and thus
+  the static pod — stable within a tier, so control-plane only restarts at rare
+  tier boundaries instead of on every node scale event. CPU tracks the median
+  real usage (no CPU limit, spikes burst onto spare master cores); memory is
+  sized more generously because it is incompressible.
+
+  $maxMilliCPU / $maxMemoryBytes is a node safety cap (a share of the smallest
+  master's allocatable) computed by the hook; the auto value is clamped to its
+  component share of that cap so control-plane requests never crowd out other
+  pods on a master that is undersized for the cluster.
+*/ -}}
+{{- $millicpu := 0 -}}
+{{- $memory := 0 -}}
+{{- if $resourcesRequests.milliCPU -}}
+  {{- $millicpu = div (mul $resourcesRequests.milliCPU 33) 100 -}}
+{{- else -}}
+  {{- if lt $nodesCount 10 -}}{{- $millicpu = 150 -}}
+  {{- else if lt $nodesCount 25 -}}{{- $millicpu = 250 -}}
+  {{- else if lt $nodesCount 100 -}}{{- $millicpu = 750 -}}
+  {{- else if lt $nodesCount 250 -}}{{- $millicpu = 1650 -}}
+  {{- else -}}{{- $millicpu = 3000 -}}
+  {{- end -}}
+  {{- if $maxMilliCPU -}}{{- $millicpu = min $millicpu (div (mul $maxMilliCPU 33) 100) -}}{{- end -}}
+{{- end -}}
+{{- if $resourcesRequests.memoryBytes -}}
+  {{- $memory = div (mul $resourcesRequests.memoryBytes 33) 100 -}}
+{{- else -}}
+  {{- if lt $nodesCount 10 -}}{{- $memory = 2048 -}}
+  {{- else if lt $nodesCount 25 -}}{{- $memory = 2944 -}}
+  {{- else if lt $nodesCount 100 -}}{{- $memory = 5248 -}}
+  {{- else if lt $nodesCount 250 -}}{{- $memory = 10112 -}}
+  {{- else -}}{{- $memory = 12288 -}}
+  {{- end -}}
+  {{- $memory = mul $memory 1048576 -}}
+  {{- if $maxMemoryBytes -}}{{- $memory = min $memory (div (mul $maxMemoryBytes 33) 100) -}}{{- end -}}
+{{- end }}
 {{- /* kube-apiserver */ -}}
 apiVersion: v1
 kind: Pod
@@ -248,8 +293,8 @@ spec:
       timeoutSeconds: 15
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 33) 100 }}m"
-        memory: "{{ div (mul $memory 33) 100 }}"
+        cpu: "{{ $millicpu }}m"
+        memory: "{{ $memory }}"
     securityContext:
       capabilities:
         drop:

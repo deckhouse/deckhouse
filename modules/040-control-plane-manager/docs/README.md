@@ -79,7 +79,11 @@ Note. This feature only takes effect in environments where the `--terminated-pod
 
 ## Configuring Control Plane Resource Requests
 
-The module allows you to configure the total CPU and memory resource requests for control plane components on each master node: `kube-apiserver`, `etcd`, `kube-controller-manager`, and `kube-scheduler`.
+By default DKP sizes the CPU and memory requests of every control plane static pod (`kube-apiserver`, `etcd`, `kube-controller-manager`, `kube-scheduler`) automatically and individually per component. Each request is selected from a set of discrete tiers based on the total number of nodes in the cluster. Tiers (rather than a continuous formula) keep the rendered static-pod manifests stable within a tier, so control plane pods only restart at rare tier boundaries instead of on every node scale event. This keeps requests close to real-world usage on small clusters while scaling them up as the cluster grows. Control plane pods have no CPU limit, so short spikes burst onto spare master cores.
+
+To make sure the control plane never consumes the whole master node, the total of the automatically sized requests is capped at 75% of the smallest master node's usable allocatable (allocatable minus the kubelet reservation and the per-node reservation). The remaining capacity is left for the other pods that run on master nodes (CNI, CSI, monitoring, control-plane-manager itself). If a master node is too small for the cluster's node count, the requests are clamped down to fit the cap and the `D8ControlPlaneMasterResourcesInsufficient` alert fires, signalling that the master nodes should be enlarged (or explicit requests set).
+
+You can override these automatically calculated values with a fixed total CPU and/or memory requests budget for control plane components on each master node.
 
 Use the [`resourcesRequests`](configuration.html#parameters-resourcesrequests) parameter in the `control-plane-manager` ModuleConfig:
 
@@ -97,7 +101,7 @@ spec:
       memory: 500Mi
 ```
 
-The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
+When set, the specified values are used as a common requests budget for control plane components on each master node, overriding the automatic per-component sizing. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests. CPU and memory can be overridden independently — if you set only one of them, the other keeps using the automatic per-component sizing.
 
 {% alert level="info" %}
 These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.
