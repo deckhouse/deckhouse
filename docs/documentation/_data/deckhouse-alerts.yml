@@ -3711,6 +3711,34 @@ alerts:
         Deckhouse memory usage is too high.
       severity: "3"
       markupFormat: markdown
+    - name: DeckhouseMigratedModuleNotDownloaded
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and is available in a ModuleSource registry, but it has not been downloaded yet (no Deployed ModuleRelease). DeckhouseRelease will be locked until the module is pre-downloaded.
+
+        This is usually transient: the module source controller needs time to pull the module from the registry. If the alert persists, this may indicate:
+        - The module's update policy or ModuleSource is misconfigured, so the module is never pulled.
+        - There is a network issue preventing the module download.
+
+        To investigate, run the following commands:
+
+        ```bash
+        # Check the ModuleRelease objects for the module
+        d8 k get mr -l module={{ $labels.module }}
+
+        # Check ModuleSource status
+        d8 k get modulesources
+
+        # Check Deckhouse logs for more details
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+      summary: |
+        Migrated module {{ $labels.module }} is not downloaded yet.
+      severity: "6"
+      markupFormat: markdown
     - name: DeckhouseMigratedModuleNotFound
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 002-deckhouse
@@ -3744,34 +3772,6 @@ alerts:
         ```
       summary: |
         Migrated module {{ $labels.module }} not found in registry.
-      severity: "6"
-      markupFormat: markdown
-    - name: DeckhouseMigratedModuleNotDownloaded
-      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 002-deckhouse
-      module: deckhouse
-      edition: ce
-      description: |
-        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and is available in a ModuleSource registry, but it has not been downloaded yet (no Deployed ModuleRelease). DeckhouseRelease will be locked until the module is pre-downloaded.
-
-        This is usually transient: the module source controller needs time to pull the module from the registry. If the alert persists, this may indicate:
-        - The module's update policy or ModuleSource is misconfigured, so the module is never pulled.
-        - There is a network issue preventing the module download.
-
-        To investigate, run the following commands:
-
-        ```bash
-        # Check the ModuleRelease objects for the module
-        d8 k get mr -l module={{ $labels.module }}
-
-        # Check ModuleSource status
-        d8 k get modulesources
-
-        # Check Deckhouse logs for more details
-        d8 k -n d8-system logs -f -l app=deckhouse
-        ```
-      summary: |
-        Migrated module {{ $labels.module }} is not downloaded yet.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
