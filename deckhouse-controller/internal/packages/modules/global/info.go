@@ -41,8 +41,8 @@ func (m *Module) GetInfo() Info {
 	dynamic := make(map[string]bool, len(m.dynamicEnabled))
 	maps.Copy(dynamic, m.dynamicEnabled)
 
-	for name := range m.configEnabled {
-		dynamic[name] = true
+	for name, enabled := range m.configEnabled {
+		dynamic[name] = enabled
 	}
 
 	return Info{

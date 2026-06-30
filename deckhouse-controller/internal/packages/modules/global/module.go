@@ -505,8 +505,6 @@ func (m *Module) SetConfigEnabled(moduleName string, enabled *bool) bool {
 	m.enabledMu.Lock()
 	defer m.enabledMu.Unlock()
 
-	moduleName = strcase.ToKebab(moduleName)
-
 	prev, had := m.configEnabled[moduleName]
 
 	if enabled == nil {
