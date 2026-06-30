@@ -493,6 +493,20 @@
       "ssdlc"
     ]
   },
+  "operator-helm": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/operator-helm/",
+    "tags": [
+      "delivery"
+    ]
+  },
   "operator-trivy": {
     "editions": [
       "ee",
