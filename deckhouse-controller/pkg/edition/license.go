@@ -37,21 +37,6 @@ type EditionLicense struct {
 	EnabledInBundles []string
 }
 
-// HasBundles reports whether any edition's license names at least one bundle
-// that enables the package. When false the bundle floor has no meaningful input
-// — every IsEnabled check would fail — so callers skip the bundle rule rather
-// than soft-disable a package (e.g. an application, whose licensing carries
-// availability but no bundle membership) and override its Enable floor.
-func (l Licensing) HasBundles() bool {
-	for _, e := range l.Editions {
-		if len(e.EnabledInBundles) > 0 {
-			return true
-		}
-	}
-
-	return false
-}
-
 // IsAvailable reports whether the package is available in this edition. The
 // edition's own entry wins, then the defaultEdition entry; with neither present
 // the package is treated as available, so it is banned only when its licensing

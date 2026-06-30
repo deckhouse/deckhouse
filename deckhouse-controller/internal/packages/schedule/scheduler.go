@@ -99,6 +99,9 @@ func WithDependencyGetter(getter dependency.Getter) Option {
 func WithDynamicGetter(getter dynamic.Getter) Option {
 	return func(s *Scheduler) {
 		s.dynamicGetter = getter
+	}
+}
+
 // WithBundleChecker sets the bundle checker function for the scheduler.
 func WithBundleChecker(getter bundle.BundleChecker) Option {
 	return func(s *Scheduler) {
