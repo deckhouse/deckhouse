@@ -28,7 +28,7 @@ function discover_internal_network_cidrs() {
     echo "Current IPv4 addresses:" >&2
     ip -o -4 addr show 2>/dev/null | awk '{print "  " $2 ": " $4}' >&2 || true
     echo "Current routes:" >&2
-    ip route 2>/dev/null >&2 || true
+    ip route 2>/dev/null | sed 's/^/  /' >&2 || true
     return 1
   fi
 }
