@@ -15,8 +15,15 @@
 // Package app is deckhouse's single entry point for application configuration:
 // constants, settings, CLI flags and environment variables.
 //
-// For now it is a thin facade over the upstream addon-operator and
-// shell-operator app packages. Deckhouse code imports this package instead of
-// reaching into flant/* directly; the facade delegates to addon-operator, which
-// in turn projects its config onto shell-operator.
+// The package plays two roles:
+//
+//   - It owns deckhouse's own well-known values: product identity, the
+//     d8-system and kube-system namespaces, image-layout paths, resource names,
+//     the runtime environment-variable contract, feature-gate flags and
+//     leader-election settings. These are centralized here instead of being
+//     scattered across the controller.
+//   - It is a thin facade over the upstream addon-operator and shell-operator
+//     app packages. Deckhouse code imports this package instead of reaching
+//     into flant/* directly; the facade delegates to addon-operator, which in
+//     turn projects its config onto shell-operator.
 package app
