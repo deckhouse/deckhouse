@@ -194,6 +194,110 @@ data:
 			classReference, ok := cloudInstances["classReference"].(map[string]any)
 			Expect(ok).To(BeTrue(), "NodeGroup spec.cloudInstances.classReference must be a map")
 			Expect(classReference["name"]).To(Equal(expectedInstanceClassName))
+
+			// Zones from the source PCC ("default") must be preserved through the
+			// migration pipeline — see State B (no zones) for the empty case.
+			Expect(cloudInstances["zones"]).To(Equal([]any{"default"}),
+				"zones from the source PCC must be preserved in the migrated NodeGroup")
+		})
+	})
+
+	clusterConfigNoZones := `
+apiVersion: deckhouse.io/v1
+kind: DVPClusterConfiguration
+layout: Standard
+masterNodeGroup:
+  instanceClass:
+    etcdDisk:
+      size: 15Gi
+      storageClass: ceph-pool-r2-csi-rbd-immediate
+    rootDisk:
+      image:
+        kind: ClusterVirtualImage
+        name: ubuntu-2204
+      size: 50Gi
+      storageClass: ceph-pool-r2-csi-rbd-immediate
+    virtualMachine:
+      virtualMachineClassName: superbe-class
+      bootloader: EFI
+      cpu:
+        coreFraction: 100%
+        cores: 4
+      memory:
+        size: 8Gi
+  replicas: 1
+provider:
+  kubeconfigDataBase64: YXBpVmV=
+  namespace: cloud-provider01
+sshPublicKey: ssh-rsa AAAAB3N
+region: ru-msk-1
+`
+
+	pccSecretNoZones := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+`, base64.StdEncoding.EncodeToString([]byte(clusterConfigNoZones)))
+
+	// ---- State B (no zones): PCC without zones — fallback must NOT add "default" ----
+	Context("State B (no zones): PCC without zones — NodeGroup must have empty zones", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			f.KubeStateSet(pccSecretNoZones)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should not add default zone to NodeGroup when PCC has no zones", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeTrue())
+
+			resourcesYAML := migrationSecret.Field("data.resources\\.yaml").String()
+			Expect(resourcesYAML).NotTo(BeEmpty())
+
+			rawBytes, err := base64.StdEncoding.DecodeString(resourcesYAML)
+			Expect(err).NotTo(HaveOccurred())
+
+			var nodeGroupDoc map[string]any
+			for _, doc := range splitYAMLDocuments(string(rawBytes)) {
+				var obj map[string]any
+				if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
+					continue
+				}
+				if obj["kind"] == "NodeGroup" {
+					nodeGroupDoc = obj
+					break
+				}
+			}
+			Expect(nodeGroupDoc).NotTo(BeNil(), "NodeGroup document must be present in resources.yaml")
+
+			spec, ok := nodeGroupDoc["spec"].(map[string]any)
+			Expect(ok).To(BeTrue(), "NodeGroup spec must be a map")
+			cloudInstances, ok := spec["cloudInstances"].(map[string]any)
+			Expect(ok).To(BeTrue(), "NodeGroup spec.cloudInstances must be a map")
+
+			// zones must NOT contain the synthetic "default" when the source PCC had
+			// no zones. The migration path returns nil so the rendered NodeGroup has
+			// zones: null (or the key is absent), letting node-manager apply its own
+			// fallback rather than forcing "default".
+			switch zones := cloudInstances["zones"].(type) {
+			case []any:
+				Expect(zones).To(BeEmpty(), "zones must be empty when PCC has no zones, not [default]")
+			case nil:
+				// zones: null or absent — acceptable, no synthetic default injected.
+			default:
+				Fail(fmt.Sprintf("unexpected zones type %T: %#v", zones, zones))
+			}
 		})
 	})
 
