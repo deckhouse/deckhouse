@@ -37,6 +37,21 @@ type EditionLicense struct {
 	EnabledInBundles []string
 }
 
+// HasBundles reports whether any edition's license names at least one bundle
+// that enables the package. When false the bundle floor has no meaningful input
+// — every IsEnabled check would fail — so callers skip the bundle rule rather
+// than soft-disable a package (e.g. an application, whose licensing carries
+// availability but no bundle membership) and override its Enable floor.
+func (l Licensing) HasBundles() bool {
+	for _, e := range l.Editions {
+		if len(e.EnabledInBundles) > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
 // IsAvailable reports whether the package is available in this edition. The
 // edition's own entry wins, then the defaultEdition entry; with neither present
 // the package is treated as available, so it is banned only when its licensing
@@ -54,10 +69,17 @@ func (e *Edition) IsAvailable(license Licensing) bool {
 }
 
 // IsEnabled reports whether the active bundle (e.Bundle) enables the package in
-// this edition. The bundle counts when EITHER the edition-specific licensing OR
-// the defaultEdition entry lists it (union), so either source can opt the active
-// bundle in.
+// this edition. The edition's own entry wins when present — its bundle list is
+// authoritative even when empty — and the defaultEdition entry is consulted only
+// when the edition has no entry of its own (mirrors IsAvailable's resolution).
 func (e *Edition) IsEnabled(license Licensing) bool {
-	return slices.Contains(license.Editions[e.Name].EnabledInBundles, e.Bundle) ||
-		slices.Contains(license.Editions[defaultEdition].EnabledInBundles, e.Bundle)
+	if entry, ok := license.Editions[e.Name]; ok {
+		return slices.Contains(entry.EnabledInBundles, e.Bundle)
+	}
+
+	if entry, ok := license.Editions[defaultEdition]; ok {
+		return slices.Contains(entry.EnabledInBundles, e.Bundle)
+	}
+
+	return false
 }

@@ -177,7 +177,11 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
 	}
 
-	if len(constraints.Licensing.Editions) > 0 && s.bundleChecker != nil {
+	// Only a package whose licensing actually names enabling bundles gets the
+	// bundle floor. Packages that carry editions purely for availability (e.g.
+	// applications) have no bundle membership, so adding the rule would soft-
+	// disable them and override their Enable floor.
+	if s.bundleChecker != nil && constraints.Licensing.HasBundles() {
 		n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
 	}
 

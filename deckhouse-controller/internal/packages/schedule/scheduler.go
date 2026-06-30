@@ -185,10 +185,6 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 		rules = append(rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
 	}
 
-	if len(constraints.Licensing.Editions) > 0 && s.bundleChecker != nil {
-		rules = append(rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
-	}
-
 	if d := rule.Resolve(rules...); d.Kind == rule.Forbid {
 		return errors.New(d.Message)
 	}

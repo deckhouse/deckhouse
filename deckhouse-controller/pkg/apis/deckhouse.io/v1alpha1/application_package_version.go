@@ -362,9 +362,10 @@ type PackageLicensing struct {
 	Editions map[string]PackageEditionLicense `json:"editions,omitempty"`
 }
 
-// PackageEditionLicense is a single edition's licensing for an application: whether the
-// edition is available. Applications have no bundles; modules use
-// ModulePackageEdition, which adds bundle membership.
+// PackageEditionLicense is a single edition's licensing, shared by applications
+// and modules: whether the edition is available and which bundles enable the
+// package by default. Bundle membership is meaningful for modules; applications
+// have no bundles and typically leave EnabledInBundles empty.
 type PackageEditionLicense struct {
 	// Whether this edition is available for use.
 	// +optional

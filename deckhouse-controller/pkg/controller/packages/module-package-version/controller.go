@@ -323,9 +323,10 @@ func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata
 
 // setFromPackageDefinition projects a parsed v2 package.yaml onto the MPV status.
 // Mirrors the APV controller: only fields present on dto.ModuleDefinition are
-// surfaced (stage, descriptions, requirements). Module-only status fields
-// (category, licensing, version-compatibility) are intentionally not populated
-// here — extend dto.ModuleDefinition if you need to surface them.
+// surfaced (stage, descriptions, disable options, licensing, requirements).
+// Remaining module-only status fields (category, version-compatibility) are
+// intentionally not populated here — extend dto.ModuleDefinition if you need to
+// surface them.
 func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.ModuleDefinition) {
 	mpv.Status.PackageMetadata = &v1alpha1.ModulePackageVersionStatusMetadata{
 		Stage: pd.Stage,
@@ -401,7 +402,10 @@ func licensingToCR(l dto.Licensing) *v1alpha1.PackageLicensing {
 
 	editions := make(map[string]v1alpha1.PackageEditionLicense, len(l.Editions))
 	for name, e := range l.Editions {
-		editions[name] = v1alpha1.PackageEditionLicense{Available: e.Available, EnabledInBundles: e.EnabledInBundles}
+		editions[name] = v1alpha1.PackageEditionLicense{
+			Available:        e.Available,
+			EnabledInBundles: slices.Clone(e.EnabledInBundles),
+		}
 	}
 
 	return &v1alpha1.PackageLicensing{Editions: editions}
