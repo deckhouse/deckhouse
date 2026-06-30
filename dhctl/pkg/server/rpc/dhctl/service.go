@@ -105,13 +105,22 @@ type serverStream[Request proto.Message, Response proto.Message] interface {
 	grpc.ServerStream
 }
 
+// internalErrChBufferSize is enough for the two goroutines that can report a
+// stream failure concurrently: receiver and sender. Keeping the buffer bounded
+// avoids blocking those goroutines after the main handler has already returned.
+const internalErrChBufferSize = 2
+
 func startReceiver[Request, Response proto.Message](
 	server serverStream[Request, Response],
 	receiveCh chan Request,
 	doneCh chan struct{},
 	internalErrCh chan error,
-) {
+) <-chan struct{} {
+	stoppedCh := make(chan struct{})
+
 	go func() {
+		defer close(stoppedCh)
+
 		for {
 			request, err := server.Recv()
 			if errors.Is(err, io.EOF) {
@@ -119,31 +128,77 @@ func startReceiver[Request, Response proto.Message](
 				return
 			}
 			if err != nil {
-				internalErrCh <- fmt.Errorf("receiving message: %w", err)
+				sendInternalErr(internalErrCh, fmt.Errorf("receiving message: %w", err))
 				return
 			}
-			receiveCh <- request
+			select {
+			case receiveCh <- request:
+			case <-server.Context().Done():
+				return
+			}
 		}
 	}()
+
+	return stoppedCh
 }
 
 func startSender[Request, Response proto.Message](
 	server serverStream[Request, Response],
 	sendCh chan Response,
 	internalErrCh chan error,
-) {
+) <-chan struct{} {
+	stoppedCh := make(chan struct{})
+
 	go func() {
-		for response := range sendCh {
+		defer close(stoppedCh)
+
+		for {
+			var response Response
+			select {
+			case received, ok := <-sendCh:
+				if !ok {
+					return
+				}
+				response = received
+			case <-server.Context().Done():
+				return
+			}
+
 			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
 			err := loop.Run(func() error {
 				return server.Send(response)
 			})
 			if err != nil {
-				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				sendInternalErr(internalErrCh, fmt.Errorf("sending message: %w", err))
 				return
 			}
 		}
 	}()
+
+	return stoppedCh
+}
+
+func sendInternalErr(internalErrCh chan<- error, err error) {
+	select {
+	case internalErrCh <- err:
+	default:
+	}
+}
+
+func sendResponse[T proto.Message](ctx context.Context, sendCh chan<- T, response T) error {
+	select {
+	case sendCh <- response:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func sendPhaseSwitch(ctx context.Context, next chan<- error, err error) {
+	select {
+	case next <- err:
+	case <-ctx.Done():
+	}
 }
 
 type fsmPhaseSwitcher[T proto.Message, OperationPhaseDataT any] struct {
@@ -167,7 +222,10 @@ func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(ctx context.Conte
 			return fmt.Errorf("switch phase data func error: %w", err)
 		}
 
-		b.sendCh <- data
+		err = sendResponse(ctx, b.sendCh, data)
+		if err != nil {
+			return fmt.Errorf("sending phase switch data: %w: %w", phases.ErrStopOperationCondition, err)
+		}
 
 		var (
 			switchErr error
@@ -243,11 +301,9 @@ type progressTracker[T proto.Message] struct {
 	dataFunc func(progress phases.Progress) T
 }
 
-func (p *progressTracker[T]) sendProgress() phases.OnProgressFunc {
+func (p *progressTracker[T]) sendProgress(ctx context.Context) phases.OnProgressFunc {
 	return func(progress phases.Progress) error {
-		p.sendCh <- p.dataFunc(progress)
-
-		return nil
+		return sendResponse(ctx, p.sendCh, p.dataFunc(progress))
 	}
 }
 
