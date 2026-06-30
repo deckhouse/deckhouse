@@ -1354,6 +1354,31 @@ alerts:
         Active Istio waypoint exists while ambient mesh is disabled.
       severity: "6"
       markupFormat: markdown
+    - name: D8InvalidEtcdDefragCronSchedule
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `controlPlaneManager.etcd.defrag.cronSchedule` value `{{ $labels.cron_schedule }}` is not a valid cron expression.
+
+        Deckhouse has fallen back to the default schedule (`0 1 * * *`) to keep defragmentation running.
+
+        **To fix this, set a valid 5-field cron expression:**
+
+        ```bash
+        d8 k patch moduleconfig control-plane-manager --type merge \
+          -p '{"spec":{"settings":{"etcd":{"defrag":{"cronSchedule":"0 1 * * *"}}}}}'
+        ```
+
+        Valid examples:
+        - `0 1 * * *` — daily at 01:00 UTC
+        - `0 */6 * * *` — every 6 hours
+        - `30 2 * * 0` — weekly on Sunday at 02:30 UTC
+      summary: |
+        Invalid etcd defragmentation cron schedule in ModuleConfig.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioActualDataPlaneVersionNotEqualDesired
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio

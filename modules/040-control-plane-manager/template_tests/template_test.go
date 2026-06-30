@@ -448,7 +448,7 @@ apiserver:
 
 				rule := f.KubernetesResource("PrometheusRule", "d8-system", "control-plane-manager-etcd-maintenance")
 
-				assertSpecDotGroupsArray(rule, 1)
+				assertSpecDotGroupsArray(rule, 2)
 			})
 
 			It("Not have prom rule for signature if sign mode not set", func() {
