@@ -449,6 +449,17 @@
     "external": "true",
     "path": "/modules/operator-argo/stable/"
   },
+  "operator-helm": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/operator-helm/"
+  },
   "operator-trivy": {
     "editions": [
       "ee",
