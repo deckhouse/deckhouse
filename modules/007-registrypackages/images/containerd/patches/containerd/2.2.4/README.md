@@ -117,3 +117,10 @@ password = "<my-registry-token>
 ```
 
 Any options supported by [deprecated `registry.configs.*.auth`](https://github.com/containerd/containerd/blob/main/docs/cri/registry.md#configure-registry-credentials) are supported in `[auth]` section
+
+
+## 005-erofs-image-mount.patch
+
+Upstream fix for image volume mounting on the `erofs` snapshotter https://github.com/containerd/containerd/pull/13542.
+
+Issue https://github.com/containerd/containerd/issues/13534.
