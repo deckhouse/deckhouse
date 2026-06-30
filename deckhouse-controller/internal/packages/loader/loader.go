@@ -583,9 +583,10 @@ func loadEmbeddedDigests(packageName string) (map[string]string, error) {
 // Returns nil if the directory does not exist (conversions are optional).
 func loadConversions(moduleDir string) (*conversion.Converter, error) {
 	conversionsDir := filepath.Join(moduleDir, "openapi", "conversions")
-	if _, err := os.Stat(conversionsDir); os.IsNotExist(err) {
-		return nil, nil
-	} else if err != nil {
+	if _, err := os.Stat(conversionsDir); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("stat conversions dir: %w", err)
 	}
 	return conversion.NewConverterFromDir(conversionsDir)
