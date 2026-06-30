@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -160,6 +161,12 @@ func (m *Module) addHooks(found ...hooks.GlobalHook) error {
 // GetName returns the full module identifier.
 func (m *Module) GetName() string {
 	return m.name
+}
+
+// GetConverter returns nil for the global module (no conversions supported yet).
+// Implemented to satisfy the configure.task packageI interface.
+func (m *Module) GetConverter() *conversion.Converter {
+	return nil
 }
 
 // GetVersion return the package version

@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -37,6 +38,9 @@ const (
 // packageI abstracts the package operations needed for settings management.
 type packageI interface {
 	GetName() string
+	// GetConverter returns the schema version converter for this package's settings.
+	// Returns nil if no conversions are defined.
+	GetConverter() *conversion.Converter
 	// ApplySettings updates the package's in-memory configuration.
 	ApplySettings(settings addonutils.Values) error
 	// ValidateSettings checks settings against package-defined constraints.
@@ -50,8 +54,9 @@ type packageI interface {
 // On success, sets ConditionSettingsValid to True.
 // On failure, wraps errors with appropriate status conditions.
 type task struct {
-	pkg      packageI
-	settings addonutils.Values
+	pkg             packageI
+	settings        addonutils.Values
+	settingsVersion int
 
 	status *status.Service
 
@@ -59,12 +64,14 @@ type task struct {
 }
 
 // NewTask creates a task that will validate and apply the given settings.
-func NewTask(pkg packageI, settings addonutils.Values, status *status.Service, logger *log.Logger) queue.Task {
+// settingsVersion is the schema version from ModuleConfig.Spec.Version (0 if unset).
+func NewTask(pkg packageI, settings addonutils.Values, settingsVersion int, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
-		pkg:      pkg,
-		settings: settings,
-		status:   status,
-		logger:   logger.Named(taskTracer).With(slog.String("name", pkg.GetName())),
+		pkg:             pkg,
+		settings:        settings,
+		settingsVersion: settingsVersion,
+		status:          status,
+		logger:          logger.Named(taskTracer).With(slog.String("name", pkg.GetName())),
 	}
 }
 
@@ -90,13 +97,32 @@ func (t *task) Execute(ctx context.Context) error {
 }
 
 // applySettings validates and applies settings to the package.
+// If the package has a converter and settingsVersion > 0, settings are
+// converted to the latest schema version before validation.
 func (t *task) applySettings(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "applySettings")
 	defer span.End()
 
 	t.logger.Debug("configure package")
 
-	res, err := t.pkg.ValidateSettings(ctx, t.settings)
+	settings := t.settings
+
+	// Convert settings to latest schema version if a converter is available
+	if conv := t.pkg.GetConverter(); conv != nil && t.settingsVersion > 0 {
+		newVersion, converted, err := conv.ConvertToLatest(t.settingsVersion, settings)
+		if err != nil {
+			t.logger.Error("failed to convert settings",
+				slog.Int("from_version", t.settingsVersion),
+				slog.String("error", err.Error()))
+			return status.NewError("ConversionFailed", err)
+		}
+		t.logger.Debug("settings converted to latest version",
+			slog.Int("from", t.settingsVersion),
+			slog.Int("to", newVersion))
+		settings = converted
+	}
+
+	res, err := t.pkg.ValidateSettings(ctx, settings)
 	if err != nil {
 		return status.NewError("ValidateFailed", err)
 	}
@@ -105,7 +131,7 @@ func (t *task) applySettings(ctx context.Context) error {
 		return status.NewError("ValidateFailed", errors.New(res.Message))
 	}
 
-	if err = t.pkg.ApplySettings(t.settings); err != nil {
+	if err = t.pkg.ApplySettings(settings); err != nil {
 		return status.NewError("ConfigureFailed", err)
 	}
 
