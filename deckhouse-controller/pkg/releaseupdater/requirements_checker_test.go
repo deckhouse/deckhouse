@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -75,6 +76,9 @@ func TestMigratedModulesCheck_DistinctErrors(t *testing.T) {
 		objects     []client.Object
 		wantErr     bool
 		wantErrText string
+		// wantMetric is the metric expected to be set to 1; the other migrated-module
+		// metric must stay unset. Empty means neither metric should be set.
+		wantMetric string
 	}{
 		{
 			name: "not available in any source -> not found in any ModuleSource registry",
@@ -84,6 +88,7 @@ func TestMigratedModulesCheck_DistinctErrors(t *testing.T) {
 			},
 			wantErr:     true,
 			wantErrText: "not found in any ModuleSource registry",
+			wantMetric:  metrics.MigratedModuleNotFoundMetricName,
 		},
 		{
 			name: "available with a pull error -> treated as not found",
@@ -93,6 +98,7 @@ func TestMigratedModulesCheck_DistinctErrors(t *testing.T) {
 			},
 			wantErr:     true,
 			wantErrText: "not found in any ModuleSource registry",
+			wantMetric:  metrics.MigratedModuleNotFoundMetricName,
 		},
 		{
 			name: "available in a source but not downloaded yet -> not pre-downloaded yet",
@@ -103,6 +109,7 @@ func TestMigratedModulesCheck_DistinctErrors(t *testing.T) {
 			},
 			wantErr:     true,
 			wantErrText: "is not pre-downloaded yet",
+			wantMetric:  metrics.MigratedModuleNotDownloadedMetricName,
 		},
 		{
 			name: "deployed release -> allowed",
@@ -155,6 +162,36 @@ func TestMigratedModulesCheck_DistinctErrors(t *testing.T) {
 
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.wantErrText)
+
+			// Exactly one of the two migrated-module metrics must fire, matching the
+			// error branch: the terminal "not found" metric must not be a false-positive
+			// for the transient "not downloaded yet" case and vice versa.
+			assertGaugeSet(t, metricStorage, metrics.MigratedModuleNotFoundMetricName,
+				tt.wantMetric == metrics.MigratedModuleNotFoundMetricName)
+			assertGaugeSet(t, metricStorage, metrics.MigratedModuleNotDownloadedMetricName,
+				tt.wantMetric == metrics.MigratedModuleNotDownloadedMetricName)
 		})
 	}
+}
+
+// assertGaugeSet asserts whether a grouped gauge metric is set to 1 for moduleName.
+func assertGaugeSet(t *testing.T, storage *metricstorage.MetricStorage, metricName string, want bool) {
+	t.Helper()
+
+	families, err := storage.Gather()
+	require.NoError(t, err)
+
+	set := false
+	for _, family := range families {
+		if family.GetName() != metricName {
+			continue
+		}
+		for _, metric := range family.GetMetric() {
+			if metric.GetGauge().GetValue() == 1 {
+				set = true
+			}
+		}
+	}
+
+	assert.Equalf(t, want, set, "metric %s set=%v, want %v", metricName, set, want)
 }

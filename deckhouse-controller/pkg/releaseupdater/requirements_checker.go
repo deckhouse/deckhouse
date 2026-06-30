@@ -406,6 +406,7 @@ func (c *migratedModulesCheck) GetName() string {
 
 func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotFoundGroup)
+	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotDownloadedGroup)
 	requirements := dr.GetRequirements()
 	migratedModules, exists := requirements[MigratedModulesRequirementFieldName]
 	if !exists || migratedModules == "" {
@@ -471,20 +472,22 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		}
 
 		// No Deployed ModuleRelease - the upgrade is blocked either way, but the two
-		// causes need different operator actions, so distinguish them:
-		c.setMigratedModuleNotFoundAlert(moduleName)
-
+		// causes need different operator actions, so distinguish them with separate
+		// metrics/alerts:
 		if !c.isAvailableInAnySource(moduleName, sourceList) {
 			// Terminal: no ModuleSource offers the module at all. Waiting will not
 			// help - the operator must publish it in a ModuleSource (or fix the
 			// module's configured source) before upgrading.
+			c.setMigratedModuleNotFoundAlert(moduleName)
 			c.logger.Warn("migrated module is not available in any ModuleSource registry", slog.String("module", moduleName))
 
 			return fmt.Errorf(`migrated module '%s' not found in any ModuleSource registry: publish it in a ModuleSource (or fix the module's source) before upgrading`, moduleName)
 		}
 
 		// Transient: a ModuleSource offers the module, but it has not been downloaded
-		// yet. Waiting for the source controller to pre-stage it resolves this.
+		// yet. Waiting for the source controller to pre-stage it resolves this, so this
+		// is not the terminal "not found" case and gets its own metric/alert.
+		c.setMigratedModuleNotDownloadedAlert(moduleName)
 		c.logger.Warn("migrated module has no Deployed ModuleRelease, it is not pre-downloaded yet", slog.String("module", moduleName))
 
 		return fmt.Errorf(`migrated module '%s' is not pre-downloaded yet: no Deployed ModuleRelease found, wait for the module to be downloaded from a ModuleSource before upgrading`, moduleName)
@@ -530,12 +533,27 @@ func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, sour
 	return false
 }
 
-// setMigratedModuleNotFoundAlert generates a Prometheus alert for missing migrated module
+// setMigratedModuleNotFoundAlert generates a Prometheus alert for a migrated module
+// that no ModuleSource offers at all (terminal case).
 func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string) {
 	// Set the metric value to 1 to trigger alert
 	c.metricStorage.Grouped().GaugeSet(
 		metrics.MigratedModuleNotFoundGroup,
 		metrics.MigratedModuleNotFoundMetricName,
+		1,
+		map[string]string{
+			metrics.LabelModule: moduleName,
+		})
+}
+
+// setMigratedModuleNotDownloadedAlert generates a Prometheus alert for a migrated
+// module that is available in a ModuleSource but has not been pre-downloaded yet
+// (transient case).
+func (c *migratedModulesCheck) setMigratedModuleNotDownloadedAlert(moduleName string) {
+	// Set the metric value to 1 to trigger alert
+	c.metricStorage.Grouped().GaugeSet(
+		metrics.MigratedModuleNotDownloadedGroup,
+		metrics.MigratedModuleNotDownloadedMetricName,
 		1,
 		map[string]string{
 			metrics.LabelModule: moduleName,
