@@ -19,6 +19,7 @@ package ephemeral
 import (
 	"context"
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/operations"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,34 +35,38 @@ func NewOperationExecutor(client client.Client) *OperationExecutor {
 	}
 }
 
-func (e *OperationExecutor) NeedsExecution(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (bool, string) {
-	if obsolete, reason := e.isObsolete(ctx, operation); obsolete {
-		return false, reason
-	}
-
-	return true, ""
-}
-
 func (e *OperationExecutor) Execute(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) operations.OperationResult {
+	steps := filterSteps(operation)
+
 	stepExecutor := StepExecutor{
-		client:         e.client,
-		operation:      operation,
-		tenantIdentity: tenantIdentityFromOperation(operation),
+		client:            e.client,
+		operation:         operation,
+		tenantIdentity:    tenantIdentityFromOperation(operation),
+		clusterDomain:     constants.DefaultTenantClusterDomain,
+		serviceSubnetCIDR: constants.DefaultTenantServiceSubnetCIDR,
 	}
 
-	var steps []operations.StepResult
-	for _, stepName := range operation.Spec.Steps {
+	var stepResults []operations.StepResult
+	for _, stepName := range steps {
 		stepResult := stepExecutor.Execute(ctx, stepName)
-		steps = append(steps, stepResult)
+		stepResults = append(stepResults, stepResult)
 
 		if stepResult.Status == operations.StepFailed || stepResult.Status == operations.StepProgressing {
 			break
 		}
 	}
 
-	return operations.NewOperationResult(steps)
+	return operations.NewOperationResult(stepResults)
 }
 
-func (e *OperationExecutor) isObsolete(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (bool, string) {
-	return false, ""
+func filterSteps(operation *controlplanev1alpha1.ControlPlaneOperation) []controlplanev1alpha1.StepName {
+	steps := make([]controlplanev1alpha1.StepName, 0)
+	for _, step := range operation.Spec.Steps {
+		if operation.IsStepCompleted(step) {
+			continue
+		}
+		steps = append(steps, step)
+	}
+
+	return steps
 }

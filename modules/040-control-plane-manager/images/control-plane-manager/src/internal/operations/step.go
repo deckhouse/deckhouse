@@ -35,18 +35,20 @@ const (
 )
 
 type StepResult struct {
-	Name         controlplanev1alpha1.StepName
-	Status       StepStatus
-	Message      string
-	RequeueAfter time.Duration
-	Error        error
+	Name           controlplanev1alpha1.StepName
+	Status         StepStatus
+	Message        string
+	RequeueAfter   time.Duration
+	Error          error
+	OperationFuncs []func(operation *controlplanev1alpha1.ControlPlaneOperation)
 }
 
-func StepIsCompleted(stepName controlplanev1alpha1.StepName, message string) StepResult {
+func StepIsCompleted(stepName controlplanev1alpha1.StepName, message string, operationFuncs ...func(operation *controlplanev1alpha1.ControlPlaneOperation)) StepResult {
 	return StepResult{
-		Name:    stepName,
-		Status:  StepCompleted,
-		Message: message,
+		Name:           stepName,
+		Status:         StepCompleted,
+		Message:        message,
+		OperationFuncs: operationFuncs,
 	}
 }
 func StepIsProgressing(stepName controlplanev1alpha1.StepName, message string, requeueAfter time.Duration) StepResult {

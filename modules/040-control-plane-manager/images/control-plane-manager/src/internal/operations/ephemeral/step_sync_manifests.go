@@ -19,6 +19,7 @@ package ephemeral
 import (
 	"context"
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/operations"
 	"fmt"
@@ -82,7 +83,21 @@ func (e *StepExecutor) buildTargetStatefulSet(ctx context.Context) (*appsv1.Stat
 		return nil, fmt.Errorf("get target statefulset: %w", err)
 	}
 
-	applyDesiredChecksums(sts, e.operation.Spec)
+	pkiSecret := &corev1.Secret{}
+	if err := e.client.Get(
+		ctx,
+		client.ObjectKey{Namespace: e.tenantIdentity.Namespace, Name: e.tenantIdentity.Namespace + "-pki"},
+		pkiSecret,
+	); err != nil {
+		return nil, fmt.Errorf("get pki secret: %w", err)
+	}
+
+	certsChecksum, err := checksum.ComponentCertsChecksum(pkiSecret.Data, e.operation.Spec.Component.PodComponentName())
+	if err != nil {
+		return nil, fmt.Errorf("calculate certs checksum: %w", err)
+	}
+
+	e.applyDesiredChecksums(sts, certsChecksum)
 
 	return sts, nil
 }
@@ -112,14 +127,15 @@ func (e *StepExecutor) loadTargetStatefulSet(ctx context.Context) (*appsv1.State
 	return sts, nil
 }
 
-func applyDesiredChecksums(sts *appsv1.StatefulSet, spec controlplanev1alpha1.ControlPlaneOperationSpec) {
+func (e *StepExecutor) applyDesiredChecksums(sts *appsv1.StatefulSet, certsChecksum string) {
 	if sts.Annotations == nil {
 		sts.Annotations = map[string]string{}
 	}
 	for k, v := range map[string]string{
-		constants.ConfigChecksumAnnotationKey: spec.DesiredConfigChecksum,
-		constants.PKIChecksumAnnotationKey:    spec.DesiredPKIChecksum,
-		constants.CAChecksumAnnotationKey:     spec.DesiredCAChecksum,
+		constants.ConfigChecksumAnnotationKey: e.operation.Spec.DesiredConfigChecksum,
+		constants.PKIChecksumAnnotationKey:    e.operation.Spec.DesiredPKIChecksum,
+		constants.CAChecksumAnnotationKey:     e.operation.Spec.DesiredCAChecksum,
+		constants.CertsChecksumAnnotationKey:  certsChecksum,
 	} {
 		if v != "" {
 			sts.Annotations[k] = v
@@ -130,6 +146,9 @@ func applyDesiredChecksums(sts *appsv1.StatefulSet, spec controlplanev1alpha1.Co
 func isStatefulSetInSync(current, target *appsv1.StatefulSet) bool {
 	for _, key := range []string{
 		constants.ConfigChecksumAnnotationKey,
+		constants.PKIChecksumAnnotationKey,
+		constants.CAChecksumAnnotationKey,
+		constants.CertsChecksumAnnotationKey,
 	} {
 		if target.Annotations[key] != "" && current.Annotations[key] != target.Annotations[key] {
 			return false

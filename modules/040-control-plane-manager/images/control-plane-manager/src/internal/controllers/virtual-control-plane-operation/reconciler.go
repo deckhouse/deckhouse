@@ -22,13 +22,16 @@ import (
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/operations"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -81,7 +84,12 @@ func (r *reconciler) reconcileStartedAt(ctx context.Context, operation *controlp
 func (r *reconciler) reconcileOperation(
 	ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation,
 ) (reconcile.Result, error) {
-	if needed, reason := r.operationExecutor.NeedsExecution(ctx, operation); !needed {
+	configSecret, pkiSecret, _, err := r.getSecrets(ctx, operation)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("get secrets: %w", err)
+	}
+
+	if obsolete, reason := r.isOperationObsolete(operation, configSecret, pkiSecret); obsolete {
 		return r.reconcileAbandonedOperation(ctx, operation, reason)
 	}
 
@@ -96,6 +104,46 @@ func (r *reconciler) reconcileOperation(
 	}
 }
 
+func (r *reconciler) isOperationObsolete(
+	operation *controlplanev1alpha1.ControlPlaneOperation,
+	configSecret *corev1.Secret,
+	pkiSecret *corev1.Secret,
+) (bool, string) {
+	freshConfig, err := checksum.ComponentChecksum(configSecret.Data, operation.Spec.Component.PodComponentName())
+	if err != nil {
+		return true, fmt.Sprintf("failed to calculate config checksum: %v", err)
+	}
+
+	if operation.Spec.DesiredConfigChecksum != "" && operation.Spec.DesiredConfigChecksum != freshConfig {
+		return true, fmt.Sprintf("config checksum changed: desired %s, current %s",
+			operation.Spec.DesiredConfigChecksum, freshConfig)
+	}
+
+	freshPKI, err := checksum.ComponentPKIChecksum(pkiSecret.Data, operation.Spec.Component.PodComponentName())
+	if err != nil {
+		return true, fmt.Sprintf("failed to calculate pki checksum: %v", err)
+	}
+
+	if operation.Spec.DesiredPKIChecksum != "" && operation.Spec.DesiredPKIChecksum != freshPKI {
+		return true, fmt.Sprintf("pki checksum changed: desired %s, current %s",
+			operation.Spec.DesiredPKIChecksum, freshPKI)
+	}
+
+	freshCA, err := checksum.PKIChecksum(pkiSecret.Data)
+	if err != nil {
+		return true, fmt.Sprintf("failed to calculate ca checksum: %v", err)
+	}
+
+	if operation.Spec.DesiredCAChecksum != "" && operation.Spec.DesiredCAChecksum != freshCA {
+		return true, fmt.Sprintf(
+			"ca checksum changed: desired %s, current %s",
+			operation.Spec.DesiredCAChecksum,
+			freshCA)
+	}
+
+	return false, ""
+}
+
 func (r *reconciler) reconcileAbandonedOperation(
 	ctx context.Context,
 	operation *controlplanev1alpha1.ControlPlaneOperation,
@@ -107,7 +155,6 @@ func (r *reconciler) reconcileAbandonedOperation(
 }
 
 func applyAbandonedOperation(operation *controlplanev1alpha1.ControlPlaneOperation, message string) {
-	//markCurrentInProgressStep(op, controlplanev1alpha1.CPOReasonStepAbandoned, "") возможно нужно будет удалить
 	setCondition(
 		operation,
 		controlplanev1alpha1.CPOConditionCompleted,
@@ -127,7 +174,7 @@ func (r *reconciler) reconcileFailedOperation(
 	applyOperationFailed(operation, result.Message)
 
 	if err := r.patchOperationStatus(ctx, operation, base); err != nil {
-		// TODO: log.FromContext(ctx).Error()
+		log.FromContext(ctx).Error(err, "failed to patch operation status")
 	}
 
 	return reconcile.Result{}, result.Error
@@ -176,9 +223,16 @@ func (r *reconciler) reconcileCompletedOperation(
 ) (reconcile.Result, error) {
 	base := operation.DeepCopy()
 	applyStepResults(operation, result.StepResults)
+	applyOperationFuncs(operation, result.OperationFuncs)
 	applyOperationCompleted(operation)
 
 	return reconcile.Result{}, r.patchOperationStatus(ctx, operation, base)
+}
+
+func applyOperationFuncs(operation *controlplanev1alpha1.ControlPlaneOperation, funcs []func(operation *controlplanev1alpha1.ControlPlaneOperation)) {
+	for _, fn := range funcs {
+		fn(operation)
+	}
 }
 
 func applyOperationCompleted(operation *controlplanev1alpha1.ControlPlaneOperation) {
@@ -260,4 +314,32 @@ func (r *reconciler) patchOperation(ctx context.Context, operation, base *contro
 
 func (r *reconciler) patchOperationStatus(ctx context.Context, operation, base *controlplanev1alpha1.ControlPlaneOperation) error {
 	return r.client.Status().Patch(ctx, operation, client.MergeFrom(base))
+}
+
+func (r *reconciler) getSecrets(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (*corev1.Secret, *corev1.Secret, *corev1.Secret, error) {
+	configSecret := &corev1.Secret{}
+	if err := r.client.Get(ctx, client.ObjectKey{
+		Namespace: operation.Namespace,
+		Name:      constants.VirtualControlPlaneConfigSecretName,
+	}, configSecret); err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get config secret: %v", err)
+	}
+
+	pkiSecret := &corev1.Secret{}
+	if err := r.client.Get(ctx, client.ObjectKey{
+		Namespace: operation.Namespace,
+		Name:      operation.Namespace + "-pki",
+	}, pkiSecret); err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get pki secret: %v", err)
+	}
+
+	kubeconfigSecret := &corev1.Secret{}
+	if err := r.client.Get(ctx, client.ObjectKey{
+		Namespace: operation.Namespace,
+		Name:      operation.Namespace + "-kubeconfig",
+	}, kubeconfigSecret); err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get kubeconfig secret: %v", err)
+	}
+
+	return configSecret, pkiSecret, kubeconfigSecret, nil
 }

@@ -26,9 +26,11 @@ import (
 )
 
 type StepExecutor struct {
-	client         client.Client
-	operation      *controlplanev1alpha1.ControlPlaneOperation
-	tenantIdentity tenantIdentity
+	client            client.Client
+	operation         *controlplanev1alpha1.ControlPlaneOperation
+	tenantIdentity    tenantIdentity
+	clusterDomain     string
+	serviceSubnetCIDR string
 }
 
 func (e *StepExecutor) Execute(ctx context.Context, stepName controlplanev1alpha1.StepName) (result operations.StepResult) {
@@ -39,10 +41,14 @@ func (e *StepExecutor) Execute(ctx context.Context, stepName controlplanev1alpha
 	}()
 
 	switch stepName {
+	case controlplanev1alpha1.StepRenewPKICerts:
+		return e.renewPKICerts(ctx)
 	case controlplanev1alpha1.StepSyncManifests:
 		return e.syncManifests(ctx)
 	case controlplanev1alpha1.StepWaitPodReady:
 		return e.waitPodReady(ctx)
+	case controlplanev1alpha1.StepCertObserve:
+		return e.certObserve(ctx)
 	default:
 		return operations.StepHasFailed(stepName, fmt.Errorf("unknown step %s", stepName))
 	}
@@ -51,4 +57,4 @@ func (e *StepExecutor) Execute(ctx context.Context, stepName controlplanev1alpha
 // TODO(virtual): шаги-кандидаты по мере роста ephemeral-пайплайна:
 //   - bootstrap-шаг для RBAC и т.п.
 //   - генерация bootstrap-скрипта для подключения внешней ноды
-//   - SyncCA / RenewPKICerts / RenewKubeconfigs / CertObserve (после решения по владельцу PKI)
+// для SyncManifests заполнять в STS (аннотация) имя операции, которая привела к изменению конфига (для обсервабилити)

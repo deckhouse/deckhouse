@@ -47,9 +47,6 @@ import (
 const (
 	requeueInterval                   = 5 * time.Minute
 	requeueIntervalOnReadingClusterIP = 5 * time.Second
-
-	defaultTenantClusterDomain     = "cluster.virtual"
-	defaultTenantServiceSubnetCIDR = "10.96.0.0/12"
 )
 
 var _ reconcile.Reconciler = (*reconciler)(nil)
@@ -287,9 +284,9 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 	nodeName := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 	if _, err := pki.CreatePKIBundle(
 		nodeName,
-		defaultTenantClusterDomain,
+		constants.DefaultTenantClusterDomain,
 		advertiseAddress,
-		defaultTenantServiceSubnetCIDR,
+		constants.DefaultTenantServiceSubnetCIDR,
 		pki.WithPKIDir(pkiDir),
 	); err != nil {
 		return nil, fmt.Errorf("create PKI bundle: %w", err)
@@ -316,8 +313,8 @@ func readPKIBundleSecretData(pkiDir string) (map[string][]byte, error) {
 		"etcd-server.key":              "etcd/server.key",
 		"etcd-peer.crt":                "etcd/peer.crt",
 		"etcd-peer.key":                "etcd/peer.key",
-		"etcd-healthcheck-client.crt":  "etcd/healthcheck-client.crt",
-		"etcd-healthcheck-client.key":  "etcd/healthcheck-client.key",
+		"etcd-healthcheck-client.crt":  "etcd/healthcheck-client.crt", // TODO: возможно откажемся
+		"etcd-healthcheck-client.key":  "etcd/healthcheck-client.key", // TODO: возможно откажемся
 		"apiserver-etcd-client.crt":    "apiserver-etcd-client.crt",
 		"apiserver-etcd-client.key":    "apiserver-etcd-client.key",
 		"sa.key":                       "sa.key",

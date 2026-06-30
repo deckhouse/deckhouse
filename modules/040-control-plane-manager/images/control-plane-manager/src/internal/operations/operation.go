@@ -86,7 +86,6 @@ func generateName(op *controlplanev1alpha1.ControlPlaneOperation) string {
 }
 
 type OperationExecutor interface {
-	NeedsExecution(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (bool, string)
 	Execute(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) OperationResult
 }
 
@@ -99,11 +98,12 @@ const (
 )
 
 type OperationResult struct {
-	Outcome      OperationOutcome
-	Message      string
-	RequeueAfter time.Duration
-	Error        error
-	StepResults  []StepResult
+	Outcome        OperationOutcome
+	Message        string
+	RequeueAfter   time.Duration
+	Error          error
+	StepResults    []StepResult
+	OperationFuncs []func(operation *controlplanev1alpha1.ControlPlaneOperation)
 }
 
 func NewOperationResult(steps []StepResult) OperationResult {
@@ -113,6 +113,12 @@ func NewOperationResult(steps []StepResult) OperationResult {
 	}
 	if len(steps) == 0 {
 		return result
+	}
+
+	for _, step := range steps {
+		for _, fn := range step.OperationFuncs {
+			result.OperationFuncs = append(result.OperationFuncs, fn)
+		}
 	}
 
 	switch last := steps[len(steps)-1]; last.Status {
