@@ -27,6 +27,7 @@ import (
 	"sync/atomic"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/ettle/strcase"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -411,7 +412,7 @@ func filterEnabledFromValuesPatch(valuesPatch *addonutils.ValuesPatch) map[strin
 		}
 
 		key := strings.TrimSuffix(pathParts[1], "Enabled")
-		enabled[addonutils.ModuleNameFromValuesKey(key)] = true
+		enabled[strcase.ToKebab(key)] = true
 	}
 
 	valuesPatch.Operations = kept
@@ -503,6 +504,8 @@ func (m *Module) IsEnabled(moduleName string) *bool {
 func (m *Module) SetConfigEnabled(moduleName string, enabled *bool) bool {
 	m.enabledMu.Lock()
 	defer m.enabledMu.Unlock()
+
+	moduleName = strcase.ToKebab(moduleName)
 
 	prev, had := m.configEnabled[moduleName]
 
