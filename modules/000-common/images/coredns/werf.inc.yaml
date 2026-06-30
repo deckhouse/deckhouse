@@ -50,6 +50,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "2026-06-29.1"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /coredns
