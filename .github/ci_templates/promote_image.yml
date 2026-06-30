@@ -31,6 +31,8 @@
         echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
         sleep 5
       done
+      echo "❌ [$(date -u)] regctl copy failed (attempt ${attempt}/5), exiting..."
+      return 1
     }
 
     REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
@@ -73,6 +75,8 @@
         echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
         sleep 5
       done
+      echo "❌ [$(date -u)] regctl copy failed (attempt ${attempt}/5), exiting..."
+      return 1
     }
 
 
