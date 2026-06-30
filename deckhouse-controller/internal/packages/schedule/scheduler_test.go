@@ -1041,3 +1041,122 @@ func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
 	s.Contains(scheduled, "dynamic-mod", "the newly enabled module must be scheduled")
 	s.Contains(scheduled, "bystander", "reschedule-on-enable must revert and re-schedule the whole graph")
 }
+
+// boolPtr returns a pointer to b, for the tri-state config/dynamic getters.
+func boolPtr(b bool) *bool { return &b }
+
+// useConfigScheduler replaces the suite scheduler with one wired to controllable
+// ModuleConfig and dynamic getters, backed by the returned maps: a *true/*false
+// entry is an explicit enable/disable, an absent entry is "no opinion" (nil).
+// Tests drive enablement by mutating the maps before a scheduling pass. The
+// original scheduler is stopped to avoid leaking its event goroutine.
+func (s *SchedulerSuite) useConfigScheduler() (configState, dynamicState map[string]*bool) {
+	configState = make(map[string]*bool)
+	dynamicState = make(map[string]*bool)
+
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		schedule.WithDependencyGetter(func(name string) *semver.Version {
+			return s.versions[name]
+		}),
+		schedule.WithConfigGetter(func(module string) *bool {
+			return configState[module]
+		}),
+		schedule.WithDynamicGetter(func(module string) *bool {
+			return dynamicState[module]
+		}),
+	)
+
+	return configState, dynamicState
+}
+
+// TestConfigRuleEnableOverridesFloorDisable verifies the config rule's Enable
+// vote: an explicit ModuleConfig enable turns on a module whose floor would
+// otherwise keep it off.
+func (s *SchedulerSuite) TestConfigRuleEnableOverridesFloorDisable() {
+	configState, _ := s.useConfigScheduler()
+	s.activateGlobal()
+
+	configState["mod"] = boolPtr(true)
+	// Order 0 (global tier): flipping a Disable-floored module on triggers a
+	// full-graph reschedule, which reverts global to idle; a higher-tier module
+	// would then be held by canSchedule until global re-completes. Same tier keeps
+	// the test focused on rule precedence, not order gating.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a ModuleConfig enable must override the module's Disable floor")
+}
+
+// TestConfigRuleDisableOverridesEnableFloor verifies the config rule's Disable
+// vote: an explicit ModuleConfig disable turns off a package whose floor would
+// otherwise enable it (config is appended after the floor, so it wins).
+func (s *SchedulerSuite) TestConfigRuleDisableOverridesEnableFloor() {
+	configState, _ := s.useConfigScheduler()
+	s.activateGlobal()
+
+	configState["app"] = boolPtr(false)
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "app",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder}, // default Enable floor
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "app",
+		"a ModuleConfig disable must override the Enable floor")
+}
+
+// TestConfigRuleDisableOverridesDynamicEnable verifies the config rule outranks
+// the dynamic rule: a module dynamically enabled at runtime is still turned off
+// by an explicit ModuleConfig disable, because config is appended last.
+func (s *SchedulerSuite) TestConfigRuleDisableOverridesDynamicEnable() {
+	configState, dynamicState := s.useConfigScheduler()
+	s.activateGlobal()
+
+	dynamicState["mod"] = boolPtr(true)
+	configState["mod"] = boolPtr(false)
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a ModuleConfig disable must override a dynamic enable")
+}
+
+// TestConfigRuleNilDefersToFloor verifies that with no ModuleConfig opinion the
+// config rule is Undefined and resolution falls through to the floor: a
+// Disable-floored module stays off, an Enable-floored package schedules.
+func (s *SchedulerSuite) TestConfigRuleNilDefersToFloor() {
+	s.useConfigScheduler() // every getter returns nil
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "app",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder}, // default Enable floor
+	}))
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.NotContains(scheduled, "mod", "no ModuleConfig opinion must defer to the Disable floor")
+	s.Contains(scheduled, "app", "no ModuleConfig opinion must defer to the Enable floor")
+}
