@@ -64,8 +64,8 @@ metadata:
     network.deckhouse.io/load-balancer-ips: 192.168.217.217
 spec:
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: nginx
   type: LoadBalancer
@@ -73,7 +73,7 @@ spec:
 
 ### Назначение IPAddressPool (режим BGP)
 
-В режиме BGP LoadBalancer получение IP-адреса возможно из определённого пула адресов через аннотацию `metallb.universe.tf/address-pool`.
+В режиме BGP LoadBalancer получение IP-адреса возможно из определённого пула адресов через аннотацию `network.deckhouse.io/load-balancer-pool`.
 Для режима L2 LoadBalancer необходимо использовать настройки [MetalLoadBalancerClass](../../../admin/configuration/network/ingress/nlb/metallb.html#пример-использования-metallb-в-режиме-l2-loadbalancer).
 
 Пример:
@@ -84,11 +84,11 @@ kind: Service
 metadata:
   name: nginx
   annotations:
-    metallb.universe.tf/address-pool: production-public-ips
+    network.deckhouse.io/load-balancer-pool: production-public-ips
 spec:
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: nginx
   type: LoadBalancer
