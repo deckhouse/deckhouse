@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal/v1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -202,6 +203,39 @@ metadata:
 			// Resources should NOT be created directly by the hook.
 			moduleConfig := b.KubernetesGlobalResource("ModuleConfig", "cloud-provider-dvp")
 			Expect(moduleConfig.Exists()).To(BeFalse())
+		})
+	})
+
+	// ---- setDefaultZones: direct unit test for the live-hook default-zone fallback ----
+	Context("setDefaultZones default-zone fallback", func() {
+		strPtr := func(s string) *string { return &s }
+		zonesPtr := func(z []string) *[]string { return &z }
+
+		It("injects [default] when PCC has object metadata and no zones", func() {
+			p := v1.DvpProviderClusterConfiguration{
+				APIVersion: strPtr("deckhouse.io/v1"),
+				Kind:       strPtr("DVPClusterConfiguration"),
+			}
+			setDefaultZones(&p)
+			Expect(p.Zones).NotTo(BeNil(), "zones must be set to the synthetic default")
+			Expect(*p.Zones).To(Equal([]string{"default"}))
+		})
+
+		It("preserves existing zones when PCC already has zones", func() {
+			p := v1.DvpProviderClusterConfiguration{
+				APIVersion: strPtr("deckhouse.io/v1"),
+				Kind:       strPtr("DVPClusterConfiguration"),
+				Zones:      zonesPtr([]string{"ru-msk-1", "ru-msk-2"}),
+			}
+			setDefaultZones(&p)
+			Expect(*p.Zones).To(Equal([]string{"ru-msk-1", "ru-msk-2"}),
+				"existing zones must not be overwritten")
+		})
+
+		It("does not inject default when PCC has no object metadata", func() {
+			p := v1.DvpProviderClusterConfiguration{}
+			setDefaultZones(&p)
+			Expect(p.Zones).To(BeNil(), "default zone must only apply to cluster-stored objects")
 		})
 	})
 

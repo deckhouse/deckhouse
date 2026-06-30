@@ -93,8 +93,11 @@ func handleDVPMigrationResources(_ context.Context, input *go_hook.HookInput) er
 	if err := json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration); err != nil {
 		return fmt.Errorf("parse module configuration: %w", err)
 	}
-	if err := overrideValues(&pcc, &moduleConfiguration); err != nil {
-		return fmt.Errorf("override values: %w", err)
+
+	overrideProviderClusterConfigValues(&pcc, &moduleConfiguration)
+
+	if err := validateProviderClusterConfig(pcc); err != nil {
+		return fmt.Errorf("validate provider cluster config: %w", err)
 	}
 
 	if err := createProviderClusterConfigurationResources(input, &pcc); err != nil {

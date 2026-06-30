@@ -282,15 +282,18 @@ func createNodeGroupResources(name string, nodeGroup map[string]any, master bool
 		return nil, fmt.Errorf("%s.replicas: %w", name, err)
 	}
 
-	zones := zonesFromNodeGroup(nodeGroup, clusterZones)
 	cloudInstances := map[string]any{
-		"zones":      zones,
 		"minPerZone": int64(replicas),
 		"maxPerZone": int64(replicas),
 		"classReference": map[string]any{
 			"kind": dvpInstanceClassKind,
 			"name": instanceClassName,
 		},
+	}
+
+	zones := zonesFromNodeGroup(nodeGroup, clusterZones)
+	if zones != nil {
+		cloudInstances["zones"] = zones
 	}
 
 	nodeGroupSpec := map[string]any{
@@ -369,7 +372,12 @@ func zonesFromNodeGroup(nodeGroup map[string]any, clusterZones *[]string) []any 
 		return stringsToAnySlice(*clusterZones)
 	}
 
-	return []any{"default"}
+	// Return nil (not an empty slice) so the rendered NodeGroup has zones: null.
+	// node-manager's get_crds.go distinguishes nil from []string{}: a nil Zones
+	// field engages its defaultZones fallback, while a non-nil empty slice does
+	// not. Returning nil keeps the migrated NodeGroup faithful to a source PCC
+	// that had no zones, and lets node-manager apply its own fallback.
+	return nil
 }
 
 func stringsToAnySlice(values []string) []any {
