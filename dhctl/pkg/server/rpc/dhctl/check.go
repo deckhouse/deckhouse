@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -73,7 +74,7 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	f := fsm.New("initial", s.checkServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.CheckRequest)
 	sendCh := make(chan *pb.CheckResponse)
 	pt := progressTracker[*pb.CheckResponse]{
@@ -113,10 +114,10 @@ connectionProcessor:
 				go func() {
 					result := s.checkSafe(ctx, &checkParams{
 						request:      message.Start,
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}})
 				}()
 
 			case *pb.CheckRequest_Cancel:
@@ -150,7 +151,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	loggerFor := initDhctlLogger(ctx, p)
+	ctx = initDhctlLoggerCtx(ctx, p)
 
 	opts := newRequestOptions(
 		s.params.CacheDir,
@@ -159,16 +160,16 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
 
-	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
+				infrastructureprovider.NewPreparatorProviderParams(),
 			),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
@@ -184,7 +185,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
 
 		var initialState phases.DhctlState
@@ -223,7 +224,6 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		TmpDir:           s.params.TmpDir,
 		GlobalOptions:    s.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
 	})
 
@@ -235,10 +235,9 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter).
 			WithUseTfCache(opts.Cache.UseTfCache).
 			WithDebug(s.params.IsDebug),
-		Logger:         loggerFor,
 		IsDebug:        s.params.IsDebug,
 		TmpDir:         s.params.TmpDir,
 		OnPhaseFunc:    func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
@@ -247,9 +246,9 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	}
 
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
-		_, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		_, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
@@ -269,7 +268,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	defer func() {
 		err := cleanProvider()
 		if err != nil {
-			loggerFor.LogErrorF("Error cleaning up checker: %v\n", err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Error cleaning up checker: %v", err))
 		}
 	}()
 

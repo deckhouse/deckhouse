@@ -45,6 +45,10 @@ message ConvergeStart {
   string state = 4;
   string approve_destruction_change_id = 5;
   ConvergeStartOptions options = 6;
+  // registry_config carries an InitConfiguration document and/or the deckhouse
+  // ModuleConfig so the server can resolve registry access for the external
+  // provider bundle download.
+  string registry_config = 7;
 }
 
 message ConvergePhaseEnd {

@@ -406,12 +406,43 @@ apiserver:
 				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
 				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
 				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:control-plane-proxy:rbac-proxy").Exists()).To(BeTrue())
+
+				// Don't render etcd-arbiter as it's disabled by default
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("With etcd arbiter node and prometheus enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.ValuesSet("controlPlaneManager.internal.hasEtcdArbiterNode", true)
+				f.HelmRender()
+			})
+
+			It("should render control-plane-proxy and control-plane-proxy-etcd-arbiter", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy-etcd-arbiter").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy-etcd-arbiter").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "d8-control-plane-manager-control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy-etcd-arbiter").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeTrue())
+
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:control-plane-proxy:rbac-proxy").Exists()).To(BeTrue())
 			})
 		})
 
 		Context("Prometheus module disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.ValuesSet("controlPlaneManager.internal.hasEtcdArbiterNode", true)
 				f.HelmRender()
 			})
 
@@ -421,6 +452,10 @@ apiserver:
 				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeFalse())
 				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeFalse())
+
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy-etcd-arbiter").Exists()).To(BeFalse())
 			})
 		})
 	})
@@ -448,7 +483,7 @@ apiserver:
 
 				rule := f.KubernetesResource("PrometheusRule", "d8-system", "control-plane-manager-etcd-maintenance")
 
-				assertSpecDotGroupsArray(rule, 1)
+				assertSpecDotGroupsArray(rule, 2)
 			})
 
 			It("Not have prom rule for signature if sign mode not set", func() {

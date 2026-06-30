@@ -609,7 +609,7 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.31.0
-DMT_VERSION ?= 0.1.84
+DMT_VERSION ?= 0.1.88
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
@@ -662,6 +662,15 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
+
+## Enrich the controller-gen CRDs in bin/crd/bases with custom x-doc-* fields
+## defined via markers next to the Go API structs.
+.PHONY: enrich-crds
+enrich-crds: ## Add custom x-doc-* fields to the generated CRDs in bin/crd/bases.
+	@echo "Enriching CRDs with custom x-doc-* fields..."
+	@go run ./pkg/crd-enricher/cmd/crd-enricher \
+		paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." \
+		crds=bin/crd/bases
 
 ## Generate clientset
 .PHONY: client-gen-generate

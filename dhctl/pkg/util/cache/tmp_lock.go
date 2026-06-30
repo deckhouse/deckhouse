@@ -15,13 +15,14 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -85,7 +86,7 @@ func TmpDirLockAlreadyAcquired(tmpDir string) error {
 	return getTmpLockedByErr(existsIn, tmpDir)
 }
 
-func AcquireTmpDirLock(tmpDir string, loggerProvider log.LoggerProvider, cmdName string) (ReleaseLockFunc, error) {
+func AcquireTmpDirLock(tmpDir string, cmdName string) (ReleaseLockFunc, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
@@ -106,9 +107,10 @@ func AcquireTmpDirLock(tmpDir string, loggerProvider log.LoggerProvider, cmdName
 	}
 
 	return func() {
+		ctx := context.Background()
 		err := os.Remove(lockFullPath)
 		if err != nil && !os.IsNotExist(err) {
-			log.SafeProvideLogger(loggerProvider).LogWarnF("Cannot remove tmp dir lock '%s': %v\n", lockFullPath, err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot remove tmp dir lock '%s': %v", lockFullPath, err))
 		}
 	}, nil
 }

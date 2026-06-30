@@ -15,6 +15,7 @@
 package manifests
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"os"
@@ -28,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 const (
@@ -155,7 +156,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 
 	initImage, err := getDeckhouseInitImage()
 	if err != nil {
-		log.ErrorF("Cannot get init image: %v\n", err)
+		ctx := context.Background()
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot get init image: %v", err))
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
 		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], initImage)

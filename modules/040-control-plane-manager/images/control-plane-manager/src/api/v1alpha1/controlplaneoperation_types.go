@@ -29,10 +29,11 @@ import (
 //   - RenewKubeconfigs — re-issues kubeconfig files used by the component to authenticate against the API.
 //   - SyncManifests    — updates the static pod manifest and accompanying files (/etc/kubernetes/manifests, extra-files) and records changes in /etc/kubernetes/deckhouse/diffs.
 //   - JoinEtcdCluster  — joins a new member to the etcd cluster.
+//   - DefragEtcd       — defragments the etcd data store on the target node to reclaim disk space.
 //   - WaitPodReady     — waits for the component static pod to become Ready after restart.
 //   - CertObserve      — collects current certificate expiration dates for the component and publishes them to status.observedState.
 //
-// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;CertObserve;RenewSignature
+// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;DefragEtcd;WaitPodReady;CertObserve;RenewSignature
 type StepName string
 
 const (
@@ -42,6 +43,7 @@ const (
 	StepRenewKubeconfigs StepName = "RenewKubeconfigs"
 	StepSyncManifests    StepName = "SyncManifests"
 	StepJoinEtcdCluster  StepName = "JoinEtcdCluster"
+	StepDefragEtcd       StepName = "DefragEtcd"
 	StepWaitPodReady     StepName = "WaitPodReady"
 	StepCertObserve      StepName = "CertObserve"
 	StepRenewSignature   StepName = "RenewSignature"

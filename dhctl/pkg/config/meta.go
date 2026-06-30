@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 )
 
@@ -117,14 +117,14 @@ var deprecatedClusterConfigFields = []struct {
 	},
 }
 
-func (m *MetaConfig) warnDeprecatedClusterConfigFields() {
+func (m *MetaConfig) warnDeprecatedClusterConfigFields(ctx context.Context) {
 	for _, d := range deprecatedClusterConfigFields {
 		if _, ok := m.ClusterConfig[d.field]; ok {
-			log.InteractiveWarnLn("=================================================================")
-			log.InteractiveWarnLn(fmt.Sprintf("DEPRECATED: %q in ClusterConfiguration is deprecated.", d.field))
-			log.InteractiveWarnLn(d.message)
-			log.InteractiveWarnLn("Support for this field in ClusterConfiguration will be removed in a future release.")
-			log.InteractiveWarnLn("=================================================================")
+			dhlog.FromContext(ctx).WarnContext(ctx, "=================================================================")
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("DEPRECATED: %q in ClusterConfiguration is deprecated.", d.field))
+			dhlog.FromContext(ctx).WarnContext(ctx, d.message)
+			dhlog.FromContext(ctx).WarnContext(ctx, "Support for this field in ClusterConfiguration will be removed in a future release.")
+			dhlog.FromContext(ctx).WarnContext(ctx, "=================================================================")
 		}
 	}
 }
@@ -132,7 +132,7 @@ func (m *MetaConfig) warnDeprecatedClusterConfigFields() {
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
-		m.warnDeprecatedClusterConfigFields()
+		m.warnDeprecatedClusterConfigFields(ctx)
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
 		}
@@ -141,7 +141,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		if err := json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
 		}
-		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
+		m.ClusterDNSAddress = getDNSAddress(ctx, serviceSubnet)
 
 		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
@@ -268,13 +268,13 @@ func (m *MetaConfig) GetClusterDomain() string {
 	return m.ClusterDomain
 }
 
-func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
+func (m *MetaConfig) FindTerraNodeGroup(ctx context.Context, nodeGroupName string) []byte {
 	for index, ng := range m.TerraNodeGroupSpecs {
 		if ng.Name == nodeGroupName {
 			var terraNodeGroups []json.RawMessage
 			err := json.Unmarshal(m.ProviderClusterConfig["nodeGroups"], &terraNodeGroups)
 			if err != nil {
-				log.ErrorLn(err)
+				dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 				return nil
 			}
 			return terraNodeGroups[index]
@@ -287,7 +287,7 @@ func (m *MetaConfig) IsStatic() bool {
 	return m.ClusterType == "Static"
 }
 
-func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]any {
+func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings(ctx context.Context) map[string]any {
 	static := make(map[string]any)
 
 	if len(m.StaticClusterConfig) == 0 {
@@ -298,7 +298,7 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]any {
 	if data, ok := m.StaticClusterConfig["internalNetworkCIDRs"]; ok {
 		err := json.Unmarshal(data, &internalNetworkCIDRs)
 		if err != nil {
-			log.DebugF("unmarshalling internalNetworkCIDRs: %v\n", err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("unmarshalling internalNetworkCIDRs: %v", err))
 			return static
 		}
 	}
@@ -384,7 +384,7 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 	return out, nil
 }
 
-func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]interface{}, error) {
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -421,7 +421,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 
 	if m.ClusterType == StaticClusterType {
 		nodeGroup["nodeType"] = "Static"
-		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
+		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings(ctx)
 	}
 
 	configForBashibleBundleTemplate := make(map[string]any)
@@ -457,7 +457,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	}
 	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
 
-	if tag := m.deckhouseImageTag(); tag != "" && registryContext.ImagesBase != "" {
+	if tag := m.deckhouseImageTag(ctx); tag != "" && registryContext.ImagesBase != "" {
 		configForBashibleBundleTemplate["deckhouseImageRef"] = fmt.Sprintf("%s:%s", registryContext.ImagesBase, tag)
 	}
 
@@ -469,7 +469,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppServerPort")
 	configForBashibleBundleTemplate["clusterMasterRPPBootstrapAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppBootstrapServerPort")
 
-	mingetBytes, err := minget.Bytes()
+	mingetBytes, err := minget.Bytes(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get minget bytes: %w", err)
 	}
@@ -732,9 +732,9 @@ func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
 
 // deckhouseImageTag returns the deckhouse-controller image tag for the bashible
 // prefetch: semver from the installer's version file, falling back to DevBranch.
-func (m *MetaConfig) deckhouseImageTag() string {
+func (m *MetaConfig) deckhouseImageTag(ctx context.Context) string {
 	if m.VersionFilePath != "" {
-		if tag, ok := ReadVersionTagFromInstallerContainer(m.VersionFilePath, m.DownloadRootDir); ok {
+		if tag, ok := ReadVersionTagFromInstallerContainer(ctx, m.VersionFilePath, m.DownloadRootDir); ok {
 			return tag
 		}
 	}
@@ -771,10 +771,10 @@ func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
 	return 0
 }
 
-func getDNSAddress(serviceCIDR string) string {
+func getDNSAddress(ctx context.Context, serviceCIDR string) string {
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
-		log.DebugLn("serviceSubnetCIDR is not a valid CIDR (should be validated with the openapi schema)")
+		dhlog.FromContext(ctx).DebugContext(ctx, "serviceSubnetCIDR is not a valid CIDR (should be validated with the openapi schema)")
 		return ""
 	}
 

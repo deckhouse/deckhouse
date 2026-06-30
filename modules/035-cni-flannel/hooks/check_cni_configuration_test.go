@@ -372,9 +372,7 @@ spec:
   settings:
     podNetworkMode: HostGW
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())
@@ -419,9 +417,7 @@ spec:
   settings:
     podNetworkMode: VXLAN
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())
@@ -717,9 +713,7 @@ spec:
   settings:
     podNetworkMode: HostGW
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())

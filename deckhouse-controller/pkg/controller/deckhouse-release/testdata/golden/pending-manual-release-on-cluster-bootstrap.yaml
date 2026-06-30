@@ -9,7 +9,6 @@ spec:
   version: v1.45.0
 status:
   approved: true
-  message: ""
   phase: Deployed
   transitionTime: "2023-04-20T10:10:30Z"
 ---

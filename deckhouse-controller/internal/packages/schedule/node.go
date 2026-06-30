@@ -19,10 +19,12 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/version"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 const (
@@ -48,9 +50,24 @@ type Constraints struct {
 	Order        Order                 // Scheduling priority; lower values run first.
 	Kubernetes   *semver.Constraints   // Kubernetes version constraint (e.g., ">=1.21")
 	Deckhouse    *semver.Constraints   // Deckhouse version constraint (e.g., ">=1.60")
-	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name. Source of topological ordering and checker inputs.
-	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Checker-only: never contributes edges to the topological graph, so fallback chains across packages do not produce cycles.
-	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Checker-only: "must not be installed" is an admission predicate, not an ordering relation.
+	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name. Source of topological ordering and gate-rule inputs.
+	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Gate-only: never contributes edges to the topological graph, so fallback chains across packages do not produce cycles.
+	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Gate-only: "must not be installed" is an admission predicate, not an ordering relation.
+
+	// Licensing carries the package's per-edition availability and bundle
+	// membership. It is the data the edition gate and bundle floor consume,
+	// resolved live against the active edition. The package supplies only the
+	// data — resolution logic lives in the edition package.
+	Licensing edition.Licensing
+
+	// Floor is the package's lowest-precedence rule: its default decision when no
+	// higher-precedence intent rule (bundle, user, script) has an opinion. Apps
+	// set rule.Static(rule.Enable) (on whenever loaded); modules set their
+	// bundle decision. It is the only behavior-carrying field here — admission
+	// (CheckConstraints) ignores it, since the floor is intent, not a
+	// requirement. A nil Floor means no floor: with gates-only the package
+	// resolves to Undefined and stays off, so every package must set one.
+	Floor rule.Rule
 }
 
 // Dependency describes a requirement on another package, with an optional
@@ -92,21 +109,23 @@ type node struct {
 	state nodeState // Lifecycle phase: idle → scheduled → active.
 	order Order     // Scheduling priority; lower values run before higher ones.
 
-	disabled bool // Explicit operator-driven disable; overrides a passing checker chain.
+	decision rule.Decision // Last computed decision from the rule chain; the node is enabled iff Kind == rule.Enable.
 
-	status checker.Result // Last computed enabled/disabled result from the checker chain.
+	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and rule inputs.
 
-	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and checker inputs.
-
-	checkers []checker.Checker // Ordered list of checkers to evaluate
+	rules []rule.Rule // Ordered rule chain evaluated on each scheduling pass.
 }
+
+// enabled reports whether the node's last resolved decision turns it on. Only
+// a soft Enable counts — Disable, Forbid, and Undefined all mean "not enabled".
+func (n *node) enabled() bool { return n.decision.Kind == rule.Enable }
 
 // addNode creates a node from a Package, attaches the checker chain, and
 // inserts the node into the graph. It does NOT trigger a scheduling pass —
 // the caller is responsible for that.
 //
 // Ordering is derived from n.dependencies by topoSort; enable state is
-// computed by the checker chain.
+// computed by the rule chain.
 func (s *Scheduler) addNode(pkg Package) {
 	constraints := pkg.GetConstraints()
 
@@ -118,16 +137,24 @@ func (s *Scheduler) addNode(pkg Package) {
 		dependencies: maps.Clone(constraints.Dependencies),
 	}
 
+	// The package's floor sits first (lowest precedence): gates appended after
+	// it still veto via Forbid, and future intent rules placed after the gates
+	// override the floor's soft vote. A nil Floor leaves the node with gates
+	// only, so it resolves to Undefined and stays off.
+	if constraints.Floor != nil {
+		n.rules = append(n.rules, constraints.Floor)
+	}
+
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		n.checkers = append(n.checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
+		n.rules = append(n.rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		n.checkers = append(n.checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
+		n.rules = append(n.rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		n.checkers = append(n.checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
+		n.rules = append(n.rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
@@ -139,15 +166,23 @@ func (s *Scheduler) addNode(pkg Package) {
 			}
 		}
 
-		n.checkers = append(n.checkers, dependency.NewChecker(s.dependencyGetter, deps))
+		n.rules = append(n.rules, dependency.NewRule(s.dependencyGetter, deps))
 	}
 
 	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
-		n.checkers = append(n.checkers, dependency.NewAnyOfChecker(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+		n.rules = append(n.rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
 	}
 
 	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
-		n.checkers = append(n.checkers, dependency.NewNoneOfChecker(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	}
+
+	// Only a package whose licensing actually names enabling bundles gets the
+	// bundle floor. Packages that carry editions purely for availability (e.g.
+	// applications) have no bundle membership, so adding the rule would soft-
+	// disable them and override their Enable floor.
+	if s.bundleChecker != nil && constraints.Licensing.HasBundles() {
+		n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
 	}
 
 	s.nodes[pkg.GetName()] = n

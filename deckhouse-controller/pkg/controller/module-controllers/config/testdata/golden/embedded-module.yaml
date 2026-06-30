@@ -9,7 +9,6 @@ metadata:
 spec:
   enabled: true
 status:
-  message: ""
   version: "1"
 ---
 apiVersion: deckhouse.io/v1alpha1

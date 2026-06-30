@@ -15,33 +15,37 @@
 package kubernetes
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
-func IsManifest(change plan.ChangeOp, kind string, logger log.Logger) bool {
-	return strings.EqualFold(extractManifestKind(change.After, logger), kind)
+func IsManifest(change plan.ChangeOp, kind string) bool {
+	return strings.EqualFold(extractManifestKind(change.After), kind)
 }
 
-func extractManifestKind(state map[string]any, logger log.Logger) string {
+func extractManifestKind(state map[string]any) string {
+	ctx := context.Background()
+
 	v, ok := state["manifest"]
 	if !ok || v == nil {
-		logger.LogDebugF("State does not have a manifest. Returning empty kind\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "State does not have a manifest. Returning empty kind")
 		return ""
 	}
 
 	mv, ok := v.(map[string]any)
 	if !ok {
-		logger.LogDebugF("manifest is not a map. Returning empty kind\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "manifest is not a map. Returning empty kind")
 		return ""
 	}
 	if kind, ok := mv["kind"].(string); ok {
-		logger.LogDebugF("extracted manifest kind: %s\n", kind)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("extracted manifest kind: %s", kind))
 		return kind
 	}
 
-	logger.LogDebugF("manifest does not have a kind. Returning empty kind\n")
+	dhlog.FromContext(ctx).DebugContext(ctx, "manifest does not have a kind. Returning empty kind")
 	return ""
 }

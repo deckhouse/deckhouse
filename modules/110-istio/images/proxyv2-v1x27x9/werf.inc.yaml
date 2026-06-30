@@ -6,9 +6,13 @@
 {{- $istioProxyDepsRev := "v1.27.9-3a854667d854d2d92f81b713431d17e830c94cc4-v1" }}
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersion := "7.7.1" }}
+{{- $llvmRev := "llvmorg-17.0.6" }}
+{{- $llvmCacheRev := "llvmorg-17.0.6-bookworm-gcc12-v1" }}
 {{- $iptables_image_version := "1.8.9" | replace "." "-" }}
 #  to force manual creation of fresh build cache. If false - /tmp/bazel-cache & /tmp/bazel-deps will stay in build-envoy-artifact image
 {{- $buildWithPreparedCacheAndDeps := true }}
+#  keep /tmp/ccache-dir in build-image-artifact to export llvm ccache into llvm/llvm-build-cache repo
+{{- $buildWithPreparedLlvmCache := true }}
 ---
 # Based on https://github.com/istio/istio/blob/1.27.9/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.27.9/pilot/docker/Dockerfile.proxyv2
@@ -224,28 +228,57 @@ shell:
   - |
     apt-get update
     apt-get install -y --no-install-recommends \
-      ca-certificates wget gnupg lsb-release
-    install -d -m 0755 /etc/apt/keyrings
-    wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
-      | gpg --dearmor -o /etc/apt/keyrings/llvm-snapshot.gpg
-    CODENAME=$(lsb_release -cs)
-    echo "deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${CODENAME}/ llvm-toolchain-${CODENAME}-17 main" \
-      > /etc/apt/sources.list.d/llvm-17.list
-    apt-get update
-  - |
-    apt-get install -y \
-    clang-17 lld-17 \
-    git git-lfs cmake ninja-build \
-    libtool automake autoconf make \
-    curl gnupg lsb-release \
-    python3 python3-pip python3-venv \
-    libc++-16-dev libc++abi-16-dev \
-    libssl-dev libz-dev unzip
+      ca-certificates \
+      git git-lfs cmake ninja-build ccache \
+      build-essential \
+      libtool automake autoconf make \
+      curl \
+      python3 python3-pip python3-venv \
+      libc++-16-dev libc++abi-16-dev \
+      libssl-dev libz-dev unzip
   # apt clean
   - apt-get autoclean && apt-get clean
   install:
+  # llvm
+{{- if $buildWithPreparedLlvmCache }}
+  - git clone --depth 1 --branch {{ $llvmCacheRev }} $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-build-cache.git /tmp/ccache-dir
+  - rm -rf /tmp/ccache-dir/.git
+{{- else }}
+  - mkdir -p /tmp/ccache-dir
+{{- end }}
+  - export CCACHE_DIR="/tmp/ccache-dir"
+  - git clone --depth 1 --branch "{{ $llvmRev }}" $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
+  - cd /src/llvm
+  - rm -rf clang-tools-extra/clangd/clients/clangd-vscode
+  - rm -rf llvm/utils/git/requirements.txt
+  - rm -rf mlir/utils/vscode/package-lock.json
+  - rm -rf third-party/benchmark/requirements.txt
+  - rm -rf .git
+  - mkdir -p /src/llvm/llvm/build
+  - cd /src/llvm/llvm/build
+  - |
+    cmake -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DLLVM_ENABLE_PROJECTS="clang;lld" \
+      -DLLVM_TARGETS_TO_BUILD="X86" \
+      -DCMAKE_INSTALL_PREFIX=/usr/lib/llvm-17 \
+      -DLLVM_INCLUDE_EXAMPLES=OFF \
+      -DLLVM_INCLUDE_TESTS=OFF \
+      -DLLVM_INCLUDE_BENCHMARKS=OFF \
+      -DLLVM_CCACHE_BUILD=ON \
+      -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
+{{- if $buildWithPreparedLlvmCache }}
+      -DLLVM_CCACHE_MAXSIZE="0" \
+{{- end }}
+      ..
+  - ninja install
   - ln -s -f /usr/lib/llvm-17/bin/clang /usr/bin/clang
   - ln -s -f /usr/lib/llvm-17/bin/clang++ /usr/bin/clang++
+  - cd /
+  - rm -rf /src/llvm
+{{- if $buildWithPreparedLlvmCache }}
+  - rm -rf /tmp/ccache-dir
+{{- end }}
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
@@ -276,8 +309,6 @@ shell:
 imageSpec:
   config:
     env: {"GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:${GOROOT}/bin:${GOPATH}/bin", "GOOS": "linux", "GOARCH": "amd64"}
----
-#=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

@@ -1324,6 +1324,31 @@ alerts:
         HuaweiCloudMachine {{ $labels.name }} is stuck in Deleting for more than 24h.
       severity: "6"
       markupFormat: markdown
+    - name: D8InvalidEtcdDefragCronSchedule
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `controlPlaneManager.etcd.defrag.cronSchedule` value `{{ $labels.cron_schedule }}` is not a valid cron expression.
+
+        Deckhouse has fallen back to the default schedule (`0 1 * * *`) to keep defragmentation running.
+
+        **To fix this, set a valid 5-field cron expression:**
+
+        ```bash
+        d8 k patch moduleconfig control-plane-manager --type merge \
+          -p '{"spec":{"settings":{"etcd":{"defrag":{"cronSchedule":"0 1 * * *"}}}}}'
+        ```
+
+        Valid examples:
+        - `0 1 * * *` — daily at 01:00 UTC
+        - `0 */6 * * *` — every 6 hours
+        - `30 2 * * 0` — weekly on Sunday at 02:30 UTC
+      summary: |
+        Invalid etcd defragmentation cron schedule in ModuleConfig.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioActiveWaypointsWithAmbientDisabled
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
       moduleUrl: 110-istio
@@ -1789,122 +1814,6 @@ alerts:
       summary: |
         Kubernetes version {{ $labels.k8s_version }} is deprecated.
       severity: "7"
-      markupFormat: markdown
-    - name: D8LogShipperAgentNotScheduledInCluster
-      sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
-      moduleUrl: 460-log-shipper
-      module: log-shipper
-      edition: ce
-      description: |
-        Deckhouse has detected that a number of `log-shipper-agent` pods are not scheduled.
-
-        To resolve this issue, do the following:
-
-        1. Check the state of the `d8-log-shipper/log-shipper-agent` DaemonSet:
-
-           ```shell
-           d8 k -n d8-log-shipper get daemonsets --selector=app=log-shipper
-           ```
-
-        1. Check the state of the `d8-log-shipper/log-shipper-agent` pods:
-
-           ```shell
-           d8 k -n d8-log-shipper get pods --selector=app=log-shipper-agent
-           ```
-
-        1. If you know where the DaemonSet should be scheduled, run the following command to identify the problematic nodes:
-
-           ```shell
-           d8 k -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-           ```
-      summary: |
-        The log-shipper-agent pods can't be scheduled in the cluster.
-      severity: "7"
-      markupFormat: markdown
-    - name: D8LogShipperClusterLogDestinationD8LokiAuthorizationRequired
-      sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/warnings.yaml
-      moduleUrl: 460-log-shipper
-      module: log-shipper
-      edition: ce
-      description: |-
-        Deckhouse has detected the ClusterLogDestination resource `{{$labels.resource_name}}` without authorization parameters.
-
-        Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).
-      summary: |
-        Authorization parameters required for the ClusterLogDestination resource.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8LogShipperCollectLogErrors
-      sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
-      moduleUrl: 460-log-shipper
-      module: log-shipper
-      edition: ce
-      description: |
-        Deckhouse has detected that the {{ $labels.host }} `log-shipper-agent` on the `{{ $labels.node }}` node has failed to collect metrics for more than 10 minutes.
-
-        This is caused by the `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while reading `{{ $labels.component_type }}`.
-
-        To resolve this, check the pod logs or follow advanced instructions:
-
-        ```bash
-        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
-        ```
-      summary: |
-        The log-shipper-agent pods can't collect logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
-      severity: "4"
-      markupFormat: markdown
-    - name: D8LogShipperConfigInvalid
-      sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
-      moduleUrl: 460-log-shipper
-      module: log-shipper
-      edition: ce
-      description: |
-        At least one Vector DaemonSet Pod is reporting an invalid configuration.
-
-        To resolve this, check the container logs or follow advanced instructions:
-
-        ```bash
-        d8 k -n d8-log-shipper logs {{ $labels.host }} -c vector-reloader
-        ```
-      summary: |
-        Vector configuration is invalid in the cluster.
-      severity: "4"
-      markupFormat: markdown
-    - name: D8LogShipperDestinationErrors
-      sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
-      moduleUrl: 460-log-shipper
-      module: log-shipper
-      edition: ce
-      description: |
-        Deckhouse has detected that the {{ $labels.host }} `log-shipper-agent` on the {{ $labels.node }} node has failed to send a log for more than 10 minutes.
-
-        This is caused by the `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while sending logs to `{{ $labels.component_type }}`.
-
-        To resolve this, check the pod logs or follow advanced instructions:
-
-        ```bash
-        d8 k -n d8-log-shipper logs {{ $labels.host }} -c vector
-        ```
-      summary: |
-        The log-shipper-agent pods can't send logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
-      severity: "4"
-      markupFormat: markdown
-    - name: D8LogShipperLogsDroppedByRateLimit
-      sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
-      moduleUrl: 460-log-shipper
-      module: log-shipper
-      edition: ce
-      description: |
-        Rate-limiting rules have been applied, and the `log-shipper-agent` on the `{{ $labels.node }}` node has been dropping logs for more than 10 minutes.
-
-        To resolve this, check the pod logs or follow advanced instructions:
-
-        ```bash
-        d8 k -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}
-        ```
-      summary: |
-        The log-shipper-agent pods are dropping logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
-      severity: "4"
       markupFormat: markdown
     - name: D8MachineControllerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/machine-controller-manager.tpl
@@ -4064,29 +3973,6 @@ alerts:
         Deployment is outdated.
       severity: "4"
       markupFormat: default
-    - name: EarlyOOMPodIsNotReady
-      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-      moduleUrl: 040-node-manager
-      module: node-manager
-      edition: ce
-      description: |-
-        The Pod {{$labels.pod}} detected that the Pressure Stall Information (PSI) subsystem is unavailable.
-
-        For details, check the logs:
-
-        ```shell
-        d8 k -n d8-cloud-instance-manager logs {{$labels.pod}}
-        ```
-
-        Troubleshooting options:
-
-        - Upgrade the Linux kernel to version 4.20 or higher.
-        - Enable the [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).
-        - [Disable early OOM](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/configuration.html#parameters-earlyoomenabled).
-      summary: |
-        Pod {{$labels.pod}} has detected an unavailable PSI subsystem.
-      severity: "8"
-      markupFormat: markdown
     - name: FdExhaustionClose
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
       moduleUrl: 340-monitoring-kubernetes
@@ -6222,7 +6108,6 @@ modules-having-alerts:
     - documentation
     - istio
     - kube-dns
-    - log-shipper
     - loki
     - metallb
     - monitoring-applications

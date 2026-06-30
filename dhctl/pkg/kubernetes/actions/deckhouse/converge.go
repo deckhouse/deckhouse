@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 )
 
@@ -41,7 +41,7 @@ func ConvergeDeckhouseConfigurationForCommander(ctx context.Context, kubeCl *cli
 		return err
 	}
 
-	return log.ProcessCtx(ctx, "default", "Converge deckhouse configuration", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Converge deckhouse configuration", func(ctx context.Context) error {
 		for _, task := range tasks {
 			err := task.CreateOrUpdate(ctx)
 			if err != nil {
@@ -209,7 +209,7 @@ func (t *taskProviderForCluster) Static(ctx context.Context, metaConfig *config.
 
 	if len(staticClusterConfig) == 0 {
 		// static cluster configuration can be empty because we have auto discovering interfaces
-		log.DebugLn("No static cluster configuration section found. Rewriting with empty data because we have auto discovery")
+		dhlog.FromContext(ctx).DebugContext(ctx, "No static cluster configuration section found. Rewriting with empty data because we have auto discovery")
 	}
 
 	const secretName = "d8-static-cluster-configuration"

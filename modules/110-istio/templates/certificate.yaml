@@ -8,9 +8,7 @@ metadata:
   name: istio
   namespace: d8-{{ $.Chart.Name }}
   annotations:
-    # Don't work readiness probe with NELM
-    werf.io/fail-mode: IgnoreAndContinueDeployProcess
-    werf.io/track-termination-mode: NonBlocking
+    werf.io/deploy-dependency-kiali: state=ready,kind=Deployment,name=kiali,namespace=d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "istio")) | nindent 2 }}
 spec:
   certificateOwnerRef: false
@@ -31,8 +29,7 @@ metadata:
   name: istio-httproute
   namespace: d8-{{ $.Chart.Name }}
   annotations:
-    werf.io/fail-mode: IgnoreAndContinueDeployProcess
-    werf.io/track-termination-mode: NonBlocking
+    werf.io/deploy-dependency-kiali: state=ready,kind=Deployment,name=kiali,namespace=d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "istio")) | nindent 2 }}
 spec:
   certificateOwnerRef: false
@@ -52,8 +49,7 @@ metadata:
   name: api-proxy-httproute
   namespace: d8-{{ $.Chart.Name }}
   annotations:
-    werf.io/fail-mode: IgnoreAndContinueDeployProcess
-    werf.io/track-termination-mode: NonBlocking
+    werf.io/deploy-dependency-api-proxy: state=ready,kind=Deployment,name=api-proxy,namespace=d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
 spec:
   certificateOwnerRef: false

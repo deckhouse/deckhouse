@@ -1,14 +1,25 @@
 {{- if (.Values.global.enabledModules | has "prometheus") }}
+{{- $profiles := list "main" }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
+  {{- $profiles = append $profiles "etcd-arbiter" }}
+{{- end }}
+
+{{- range $profile := $profiles }}
+{{- $appLabel := "control-plane-proxy" }}
+{{- if ne $profile "main" }}
+  {{- $appLabel = printf "%s-%s" $appLabel $profile }}
+{{- end }}
+---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: control-plane-proxy
+  name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "prometheus" "main")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
-      app: control-plane-proxy
+      app: {{ $appLabel }}
       heritage: deckhouse
   namespaceSelector:
     matchNames:
@@ -34,6 +45,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+  {{- if eq $profile "main" }}
   - scheme: https
     port: https-metrics
     path: /scheduler/metrics
@@ -71,4 +83,6 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+  {{- end }}
+{{- end }}
 {{- end }}
