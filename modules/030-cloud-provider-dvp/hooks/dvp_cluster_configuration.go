@@ -277,8 +277,20 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 	if err := json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration); err != nil {
 		return fmt.Errorf("parse module configuration: %w", err)
 	}
-	if err := overrideValues(&pcc, &moduleConfiguration); err != nil {
-		return fmt.Errorf("override values: %w", err)
+
+	overrideProviderClusterConfigValues(&pcc, &moduleConfiguration)
+
+	// setDefaultZones preserves the "default" zone fallback for the live
+	// cluster-configuration hook. node-manager's get_crds.go
+	// (modules/040-node-manager/hooks/get_crds.go) substitutes defaultZones for
+	// NodeGroups whose zones are nil; keeping a non-empty zone here preserves the
+	// historical behavior for clusters that relied on the synthetic "default"
+	// zone. The migration path (create_migration_resources.go) intentionally does
+	// NOT call this, so migrated NodeGroups faithfully reflect the source PCC.
+	setDefaultZones(&pcc)
+
+	if err := validateProviderClusterConfig(pcc); err != nil {
+		return fmt.Errorf("validate provider cluster config: %w", err)
 	}
 
 	return mergeAndSetDiscoveryData(input, discoveryData)
@@ -470,7 +482,7 @@ func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out any) error
 	return json.Unmarshal(b, out)
 }
 
-func overrideValues(p *v1.DvpProviderClusterConfiguration, m *v1.DvpModuleConfiguration) error {
+func overrideProviderClusterConfigValues(p *v1.DvpProviderClusterConfiguration, m *v1.DvpModuleConfiguration) {
 	if m.Provider != nil {
 		if p.Provider == nil {
 			p.Provider = &v1.DvpProvider{}
@@ -486,7 +498,9 @@ func overrideValues(p *v1.DvpProviderClusterConfiguration, m *v1.DvpModuleConfig
 	if m.Zones != nil {
 		p.Zones = m.Zones
 	}
+}
 
+func validateProviderClusterConfig(p v1.DvpProviderClusterConfiguration) error {
 	if p.Provider == nil {
 		return errors.New("provider section is required")
 	}
@@ -497,21 +511,27 @@ func overrideValues(p *v1.DvpProviderClusterConfiguration, m *v1.DvpModuleConfig
 		return errors.New("provider.namespace cannot be empty")
 	}
 
-	cloudManaged := p.APIVersion != nil || p.Kind != nil
-	if cloudManaged {
+	hasObjectMeta := p.APIVersion != nil || p.Kind != nil
+	if hasObjectMeta {
 		if p.APIVersion == nil || len(*p.APIVersion) == 0 {
 			return errors.New("apiVersion cannot be empty")
 		}
 		if p.Kind == nil || len(*p.Kind) == 0 {
 			return errors.New("kind cannot be empty")
 		}
+	}
+
+	return nil
+}
+
+func setDefaultZones(p *v1.DvpProviderClusterConfiguration) {
+	hasObjectMeta := p.APIVersion != nil || p.Kind != nil
+	if hasObjectMeta {
 		if p.Zones == nil || len(*p.Zones) == 0 {
 			def := []string{"default"}
 			p.Zones = &def
 		}
 	}
-
-	return nil
 }
 
 func mergeDiscoveryData(newValue cloudDataV1.DVPCloudProviderDiscoveryData, currentValue cloudDataV1.DVPCloudProviderDiscoveryData) cloudDataV1.DVPCloudProviderDiscoveryData {
