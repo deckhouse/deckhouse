@@ -21,7 +21,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
 // reasonAnyOfDependenciesUnmet is returned when no member of an AnyOf group is
@@ -37,52 +37,53 @@ type AnyOfGroup struct {
 	Members map[string]*semver.Constraints
 }
 
-// AnyOfChecker evaluates one or more AnyOf groups against the current
-// dependency graph. Each group is satisfied independently — for the package to
-// pass, every group must have ≥1 installed member that meets its constraint.
+// AnyOfRule evaluates one or more AnyOf groups against the current dependency
+// graph. Each group is satisfied independently — for the package to pass, every
+// group must have ≥1 installed member that meets its constraint. It is a gate:
+// it returns Undefined or Forbid only.
 //
-// AnyOf groups are checker-only and add no edges to the topological graph, so
-// fallback chains across packages (A any-of {B, C}; B any-of {A, D}) do not
-// produce cycles.
-type AnyOfChecker struct {
+// AnyOf groups add no edges to the topological graph, so fallback chains across
+// packages (A any-of {B, C}; B any-of {A, D}) do not produce cycles.
+type AnyOfRule struct {
 	getter Getter
 	groups []AnyOfGroup
 }
 
-// NewAnyOfChecker constructs an AnyOfChecker that resolves member versions
-// through the given Getter (shared with the regular dependency.Checker).
-func NewAnyOfChecker(getter Getter, groups []AnyOfGroup) *AnyOfChecker {
-	return &AnyOfChecker{
+// NewAnyOfRule constructs an AnyOfRule that resolves member versions through
+// the given Getter (shared with the regular dependency.Rule).
+func NewAnyOfRule(getter Getter, groups []AnyOfGroup) *AnyOfRule {
+	return &AnyOfRule{
 		getter: getter,
 		groups: groups,
 	}
 }
 
-// Check returns Enabled when every group has ≥1 installed member that
-// satisfies its constraint. The first failing group short-circuits the
-// result; the Reason is AnyOfDependenciesUnmet and the Message names the
-// group plus its members in sorted order so identical inputs produce
-// identical messages across reconciles.
-func (c *AnyOfChecker) Check() checker.Result {
-	for _, group := range c.groups {
-		if c.groupSatisfied(group) {
+// Decide returns Undefined when every group has ≥1 installed member that
+// satisfies its constraint. The first failing group short-circuits to Forbid;
+// the Reason is AnyOfDependenciesUnmet and the Message names the group plus its
+// members in sorted order so identical inputs produce identical messages across
+// reconciles.
+func (r *AnyOfRule) Decide() rule.Decision {
+	for _, group := range r.groups {
+		if r.groupSatisfied(group) {
 			continue
 		}
 
-		return checker.Result{
+		return rule.Decision{
+			Kind:    rule.Forbid,
 			Reason:  reasonAnyOfDependenciesUnmet,
 			Message: failureMessage(group),
 		}
 	}
 
-	return checker.Result{Enabled: true}
+	return rule.Decision{Kind: rule.Undefined}
 }
 
 // groupSatisfied reports whether at least one member of the group is installed
 // and satisfies its constraint. A nil constraint accepts any installed version.
-func (c *AnyOfChecker) groupSatisfied(group AnyOfGroup) bool {
+func (r *AnyOfRule) groupSatisfied(group AnyOfGroup) bool {
 	for name, constraint := range group.Members {
-		version := removePrereleaseAndMetadata(c.getter(name))
+		version := removePrereleaseAndMetadata(r.getter(name))
 		if version == nil {
 			continue
 		}

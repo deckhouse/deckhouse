@@ -19,59 +19,69 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
-// Reason constants for checker results.
+// Reason constants for rule decisions.
 // Must match Kubernetes condition reason pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
 const (
 	reasonDependencyNotEnabled      = "DependencyNotEnabled"
 	reasonDependencyVersionMismatch = "DependencyVersionMismatch"
 )
 
-type Checker struct {
+// Rule is a gate that vetoes a package whose declared dependencies are absent
+// or installed at an incompatible version. It only ever returns Undefined or
+// Forbid — it never turns a package on.
+type Rule struct {
 	getter       Getter
 	dependencies map[string]Dependency
 }
 
+// Dependency describes a requirement on another module's installed version.
 type Dependency struct {
 	Constraint *semver.Constraints
 	// if node not present, just skip check
 	Optional bool
 }
 
+// Getter returns the installed version of a module, or nil when it is absent.
 type Getter func(module string) *semver.Version
 
-func NewChecker(getter Getter, dependencies map[string]Dependency) *Checker {
-	return &Checker{
+// NewRule constructs a dependency rule resolving versions through the getter.
+func NewRule(getter Getter, dependencies map[string]Dependency) *Rule {
+	return &Rule{
 		getter:       getter,
 		dependencies: dependencies,
 	}
 }
 
-func (c *Checker) Check() checker.Result {
-	for name, dep := range c.dependencies {
-		version := removePrereleaseAndMetadata(c.getter(name))
+// Decide vetoes (Forbid) on the first dependency that is missing (and not
+// optional) or violates its constraint; otherwise it returns Undefined.
+func (r *Rule) Decide() rule.Decision {
+	for name, dep := range r.dependencies {
+		version := removePrereleaseAndMetadata(r.getter(name))
 		if version == nil {
 			if dep.Optional {
 				continue // Optional dependency - skip validation
 			}
 
-			return checker.Result{
+			return rule.Decision{
+				Kind:    rule.Forbid,
 				Reason:  reasonDependencyNotEnabled,
 				Message: fmt.Sprintf("dependency '%s' not enabled", name),
 			}
 		}
 
 		if dep.Constraint != nil && !dep.Constraint.Check(version) {
-			return checker.Result{
+			return rule.Decision{
+				Kind:    rule.Forbid,
 				Reason:  reasonDependencyVersionMismatch,
 				Message: fmt.Sprintf("dependency '%s' unmet requirements", name),
 			}
 		}
 	}
 
-	return checker.Result{Enabled: true}
+	return rule.Decision{Kind: rule.Undefined}
 }
 
 // removePrereleaseAndMetadata returns a version without prerelease and metadata parts
