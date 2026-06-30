@@ -84,9 +84,6 @@ import (
 const (
 	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
 
-	deckhouseNamespace  = app.NamespaceDeckhouse
-	kubernetesNamespace = app.NamespaceKubeSystem
-
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	defaultModuleVersion    = "v2.0.0"
 
@@ -160,7 +157,7 @@ func NewDeckhouseController(
 				// for ModuleDocumentation controller
 				&coordv1.Lease{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
 						},
 					},
@@ -168,10 +165,10 @@ func NewDeckhouseController(
 				// for ModuleRelease controller and DeckhouseRelease controller
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
 						},
-						kubernetesNamespace: {
+						app.NamespaceKubeSystem: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"name": "d8-cluster-configuration"}),
 						},
 					},
@@ -179,7 +176,7 @@ func NewDeckhouseController(
 				// for DeckhouseRelease controller
 				&corev1.Pod{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "deckhouse"}),
 						},
 					},
@@ -187,7 +184,7 @@ func NewDeckhouseController(
 				// for DeckhouseRelease controller
 				&corev1.ConfigMap{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
 						},
 					},
