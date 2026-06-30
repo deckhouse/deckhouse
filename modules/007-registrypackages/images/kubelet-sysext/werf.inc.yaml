@@ -1,0 +1,57 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /out
+  to: /
+  includePaths:
+  - '**/*'
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "dkp", "sysext_level": "1.0", "version": "all", "kubelet": "{{ printf "%s.%s" $version $patch }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kubelet
+  to: /kubelet
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /scripts
+  includePaths:
+  - extension-release.containerd
+  - sysext-containerd.service
+  stageDependencies:
+    install:
+    - extension-release.containerd
+    - sysext-containerd.service
+shell:
+  beforeInstall:
+  - pm install erofs-utils coreutils cryptsetup
+  - mkdir -p /out
+  install:
+  - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
+  - cp -f /scripts/sysext-kubelet.service /sysext/usr/lib/systemd/system/kubelet.service
+  - cp -f /scripts/extension-release.kubelet /sysext/usr/lib/extension-release.d/
+  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 kubelet.erofs sysext/
+  - veritysetup format kubelet.erofs kubelet.verity > verity.txt
+  - export ROOTHASH=$(awk '/^Root hash:/ {print $3}' verity.txt)
+  - cat kubelet.erofs kubelet.verity > /out/kubelet.raw
+  - printf '%s\n' "$ROOTHASH" > /out/kubelet.raw.roothash
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
+{{- end }}
