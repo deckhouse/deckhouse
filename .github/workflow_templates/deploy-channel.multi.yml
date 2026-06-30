@@ -455,6 +455,7 @@ stage:
       {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
       {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      {!{ tmpl.Exec "read_werf_version_step" . | strings.Indent 6 }!}
 
       - name: Download artifacts
         uses: {!{ index (ds "actions") "actions/download-artifact" }!}
