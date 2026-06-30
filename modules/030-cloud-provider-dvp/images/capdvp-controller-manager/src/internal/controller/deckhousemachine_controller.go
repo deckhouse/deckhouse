@@ -422,6 +422,22 @@ func (r *DeckhouseMachineReconciler) handleVMNotReady(
 	// due to potential conflict or unexpected actions
 	dvpMachine.Status.Initialization.Provisioned = ptr.To(false)
 
+	bootDiskName := dvpMachine.Name + "-boot"
+	if bootDisk, err := r.DVP.DiskService.GetDiskByName(ctx, bootDiskName); err == nil {
+		if termErr := dvpapi.TerminalDiskError(bootDisk); termErr != nil {
+			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.CreateMachineError))
+			dvpMachine.Status.FailureMessage = ptr.To(fmt.Sprintf("boot disk provisioning failed: %v", termErr))
+			conditions.Set(dvpMachine, metav1.Condition{
+				Type:               string(infrastructurev1a1.VMReadyCondition),
+				Status:             metav1.ConditionFalse,
+				Reason:             infrastructurev1a1.BootDiskProvisioningFailedReason,
+				Message:            fmt.Sprintf("boot disk provisioning failed: %v", termErr),
+				LastTransitionTime: metav1.Now(),
+			})
+			return ctrl.Result{}, nil
+		}
+	}
+
 	resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine)
 	message := fmt.Sprintf("VM is not ready, state is %s", vm.Status.Phase)
 	if resourceStatus != "" {
