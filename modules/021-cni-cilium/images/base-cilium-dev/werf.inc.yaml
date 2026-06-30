@@ -1,5 +1,5 @@
 {{- $protocVersion := "30.2" }}
-{{- $bazelVersions := "6.5.0" }}
+{{- $bazelVersions := "7.7.1" }}
 #
 ---
 # #####################################################################
@@ -83,9 +83,10 @@ shell:
     apt-get update && apt-get install -y \
     sudo \
     libcap-devel libpcap-devel \
-    clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
+    clang18.1 clang18.1-tools lldb18.1 lld18.1 llvm18.1-devel \
     libcxxabi-devel \
-    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
+    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static \
+    gcc13 gcc13-c++ libstdc++13-devel libstdc++13-devel-static
   - apt-get autoclean && apt-get clean
   install:
   # Install Go

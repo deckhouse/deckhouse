@@ -1,20 +1,20 @@
-{{- $ciliumProxyRev := "0f602c28cb2aa57b29078195049fb257d5b5246c" }}
-{{- $bazelVersions := "6.5.0" }}
-{{- $envoySHA := "93466adc53567315e3114d6d1774c56f8066d24e" }}
-{{- $ciliumProxyCacheRev := "v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c-alt-p11-llvm17-gcc11-v2" }}
-{{- $ciliumProxyDepsRev := "v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c-alt-p11-llvm17-gcc11-lfs-v2" }}
+{{- $ciliumProxyRev := "a7f42a3390781539911b5b9107881b35ecc4e752" }}
+{{- $bazelVersions := "7.7.1" }}
+{{- $envoySHA := "ee7784f95f506e2a606ae668f0d9f70f9d26af83" }}
+{{- $ciliumProxyCacheRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-v1" }}
+{{- $ciliumProxyDepsRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-lfs-v1" }}
 #  to force manual creation of fresh build cache
-{{- $buildWithPreparedCacheAndDeps := true }}
+{{- $buildWithPreparedCacheAndDeps := false }}
 #
 ---
 # #####################################################################
 # Build cilium-envoy binaries
-# Original IMAGE_TAG of cilium-envoy is v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c
-# Corresponding commit is 0f602c28cb2aa57b29078195049fb257d5b5246c
-# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile#L9
-# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/Dockerfile.builder
-# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/Dockerfile
-# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/.github/workflows/build-envoy-images-release.yaml
+# Original IMAGE_TAG of cilium-envoy is v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752
+# Corresponding commit is a7f42a3390781539911b5b9107881b35ecc4e752
+# Based on https://github.com/cilium/cilium/blob/v1.17.17/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/a7f42a3390781539911b5b9107881b35ecc4e752/Dockerfile.builder
+# and https://github.com/cilium/proxy/blob/a7f42a3390781539911b5b9107881b35ecc4e752/Dockerfile
+# and https://github.com/cilium/proxy/blob/a7f42a3390781539911b5b9107881b35ecc4e752/.github/workflows/build-envoy-images-release.yaml
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -96,7 +96,7 @@ shell:
   - chown -R 1337:1337 /home/cilium /cilium/proxy /src/envoy
   - chmod -R a+w /tmp
   setup:
-  - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
+  - ln -f -s llvm-18.1 "/usr/lib/llvm-18"
   #
   # cache
 {{- if $buildWithPreparedCacheAndDeps }}
@@ -109,7 +109,7 @@ shell:
 {{- end }}
   - chown -R 1337:1337 /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache
   #
-  - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
+  - export ALTWRAP_LLVM_VERSION=18.1 GCC_VERSION=13
   - export TARGETARCH=amd64 ARCH="x86_64"
   #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
@@ -125,27 +125,31 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
+  # Forward ALTWRAP_LLVM_VERSION into bazel actions: /usr/bin/clang is an ALT altwrap wrapper that
+  # selects the LLVM version from this env var (otherwise it falls back to the newest installed, e.g. 19.1).
+  # bazel runs compile actions in a sandbox that does not inherit the shell env, so it must be passed explicitly.
 {{- if $buildWithPreparedCacheAndDeps }}
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- else }}
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- end }}
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   #
   - cd /cilium/proxy
   - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
   #
-  - sudo -u cilium sed -i "30,56d" WORKSPACE
+  - sudo -u cilium sed -i "30,52d" WORKSPACE
   - sudo -u cilium sed -i '30i local_repository(' WORKSPACE
   - sudo -u cilium sed -i '31i \    name = "envoy",' WORKSPACE
   - sudo -u cilium sed -i '32i \    path = "/src/envoy",' WORKSPACE
   - sudo -u cilium sed -i '33i )' WORKSPACE
   #
-  - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
-  - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
-  #
-  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
-  - sudo -u cilium sed -i '134i \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
+  # Inject ALT-specific clang/gcc paths into the bazel cc_toolchain_config.
+  # Anchored on file content (not line numbers) because cilium/proxy reworked bazel/toolchains/BUILD
+  # (two cc_toolchain blocks: aarch64 + x86_64). The aarch64 block also gets these entries, but it is
+  # never built (target platform is //bazel:linux_x86_64), so the extra strings are harmless.
+  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-18.1/lib64/clang/18/include",' bazel/toolchains/BUILD
+  - sudo -u cilium sed -i '\#-Wno-deprecated-builtins#a \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/13",' bazel/toolchains/BUILD
   #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
