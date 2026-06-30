@@ -314,12 +314,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"metallbController": "imageHash-metallb-metallbController",
 		"metallbSpeaker":    "imageHash-metallb-metallbSpeaker",
 	},
-	"monitoringKubernetes": map[string]interface{}{
-		"kubeStateMetrics":                  "imageHash-monitoringKubernetes-kubeStateMetrics",
-		"kubeletEvictionThresholdsExporter": "imageHash-monitoringKubernetes-kubeletEvictionThresholdsExporter",
-		"nodeExporter":                      "imageHash-monitoringKubernetes-nodeExporter",
-		"oomKillsExporter":                  "imageHash-monitoringKubernetes-oomKillsExporter",
-	},
 	"multitenancyManager": map[string]interface{}{
 		"multitenancyManager": "imageHash-multitenancyManager-multitenancyManager",
 	},
