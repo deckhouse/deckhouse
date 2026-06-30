@@ -326,9 +326,6 @@ users:
   - system:serviceaccount:d8-metallb:l2lb-controller
   - system:serviceaccount:d8-metallb:l2lb-speaker
   - system:serviceaccount:d8-metallb:speaker
-  - system:serviceaccount:d8-monitoring:kube-state-metrics
-  - system:serviceaccount:d8-monitoring:node-exporter
-  - system:serviceaccount:d8-monitoring:oom-kills-exporter
   - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
   - system:serviceaccount:d8-openvpn:openvpn
   - system:serviceaccount:d8-service-with-healthchecks:agent
@@ -802,9 +799,6 @@ rules:
       - system:serviceaccount:d8-metallb:l2lb-controller
       - system:serviceaccount:d8-metallb:l2lb-speaker
       - system:serviceaccount:d8-metallb:speaker
-      - system:serviceaccount:d8-monitoring:kube-state-metrics
-      - system:serviceaccount:d8-monitoring:node-exporter
-      - system:serviceaccount:d8-monitoring:oom-kills-exporter
       - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
       - system:serviceaccount:d8-openvpn:openvpn
       - system:serviceaccount:d8-service-with-healthchecks:agent
