@@ -25,7 +25,7 @@ if [ -z "$(cat /var/lib/bashible/discovered-node-ip)" ] ; then
   bb-log-error "Current IPv4 addresses:"
   ip -o -4 addr show 2>/dev/null | awk '{print "  " $2 ": " $4}' >&2 || true
   bb-log-error "Current routes:"
-  ip route 2>/dev/null >&2 || true
+  ip route 2>/dev/null | sed 's/^/  /' >&2 || true
   exit 1
 fi
 {{- end }}
