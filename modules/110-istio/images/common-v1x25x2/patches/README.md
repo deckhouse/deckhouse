@@ -20,3 +20,7 @@ Enable Logout in Kiali for header auth (DexAuthenticator). The tab that clicks L
 ## 003-change-to-deckhouse-user.patch
 
 Change runAsUser from 1337 to 64535 in istio templates, changed istio-init.iptables user arg to both 1337 and 64535 UIDs in injection-template.yaml
+
+## 004-mark-interception.patch
+
+Add mark-based outbound interception as an opt-in alternative to --uid-owner, for pods where the sidecar must run with the same UID/GID as the application container (e.g. ingress-nginx under deckhouse, both UID 64535). With the dual-uid approach from 003 the app's own outbound traffic is also excluded from redirect, breaking interception. When `traffic.sidecar.istio.io/outboundSocketMark` is set, Envoy tags its outbound sockets with SO_MARK and iptables excludes marked packets via `-m mark --mark <mark> -j RETURN`, distinguishing Envoy from the app by socket mark. Applies on top of 003.
