@@ -102,7 +102,7 @@ func TestLogWriter(t *testing.T) {
 				},
 			})).With(slog.String("key", "value"))
 
-			w := logger.NewLogWriter(log, sendCh, tt.f)
+			w := logger.NewLogWriter(t.Context(), log, sendCh, tt.f)
 
 			wg := sync.WaitGroup{}
 			wg.Add(1)

@@ -73,7 +73,7 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	f := fsm.New("initial", s.checkServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.CheckRequest)
 	sendCh := make(chan *pb.CheckResponse)
 	pt := progressTracker[*pb.CheckResponse]{
@@ -113,10 +113,10 @@ connectionProcessor:
 				go func() {
 					result := s.checkSafe(ctx, &checkParams{
 						request:      message.Start,
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}})
 				}()
 
 			case *pb.CheckRequest_Cancel:

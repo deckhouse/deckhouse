@@ -47,7 +47,7 @@ func initLoggerOptions[T any](ctx context.Context, params *initLoggerOptionsPara
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
 
-	logWriter := logger.NewLogWriter(loggerDefault, params.sendCh, params.consumer)
+	logWriter := logger.NewLogWriter(ctx, loggerDefault, params.sendCh, params.consumer)
 
 	debugWriter := logger.NewDebugLogWriter(loggerDefault)
 
