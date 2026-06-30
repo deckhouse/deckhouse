@@ -270,7 +270,7 @@ const defaultModuleSourceName = "deckhouse"
 //
 // It is a conflict only when the chosen source no longer offers the module, or when
 // several real, non-default sources offer it and none is selected.
-func resolveEmbeddedTargetSource(chosenSource string, availableSources []string) (target string, conflict bool) {
+func resolveEmbeddedTargetSource(chosenSource string, availableSources []string) (string, bool) {
 	if chosenSource != "" {
 		if slices.Contains(availableSources, chosenSource) {
 			return chosenSource, false
