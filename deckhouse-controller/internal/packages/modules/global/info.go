@@ -15,6 +15,8 @@
 package global
 
 import (
+	"maps"
+
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 )
 
@@ -33,10 +35,11 @@ func (m *Module) GetInfo() Info {
 		hooks[idx] = hook.GetName()
 	}
 
+	m.enabledMu.RLock()
+	defer m.enabledMu.RUnlock()
+
 	dynamic := make(map[string]bool, len(m.dynamicEnabled))
-	for name, enabled := range m.dynamicEnabled {
-		dynamic[name] = enabled
-	}
+	maps.Copy(dynamic, m.dynamicEnabled)
 
 	for name := range m.configEnabled {
 		dynamic[name] = true
