@@ -1,4 +1,6 @@
-{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+
+{{- if .Values.global.clusterIsBootstrapped }}
+  {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -30,5 +32,5 @@ spec:
   namespaceSelector:
     matchNames:
     - d8-cloud-instance-manager
+  {{- end }}
 {{- end }}
-

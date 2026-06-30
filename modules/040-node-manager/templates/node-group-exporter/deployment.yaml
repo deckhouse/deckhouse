@@ -3,7 +3,8 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if .Values.global.clusterIsBootstrapped }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -27,7 +28,7 @@ spec:
         cpu: 20m
         memory: 100Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
-{{- end }}
+  {{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -103,9 +104,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "node_group_exporter_resources" . | nindent 12 }}
-{{- end }}
+          {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -160,6 +161,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+          {{- end }}
 {{- end }}
