@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
 func TestKubernetesVersionRequirement(t *testing.T) {
@@ -36,6 +37,29 @@ func TestKubernetesVersionRequirement(t *testing.T) {
 	t.Run("requirement failed", func(t *testing.T) {
 		requirements.SaveValue(minK8sVersionRequirementKey, "1.18.3")
 		ok, err := requirements.CheckRequirement("k8s", "1.19")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+}
+
+func TestAutoKubernetesVersionRequirement(t *testing.T) {
+	t.Run("requirement met", func(t *testing.T) {
+		requirements.SaveValue(hooks.K8sVersionsWithDeprecations, "1.22,1.23,1.24")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.21")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("requirement failed", func(t *testing.T) {
+		requirements.SaveValue(hooks.K8sVersionsWithDeprecations, "1.22,1.23,1.25")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.30")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
+	t.Run("requirement initial", func(t *testing.T) {
+		requirements.SaveValue(hooks.K8sVersionsWithDeprecations, "initial")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.30")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
