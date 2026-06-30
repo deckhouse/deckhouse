@@ -42,20 +42,20 @@ const (
 //     global.enabledModules for the new .Platform contract).
 //   - Capabilities.Has: the list of enabled platform capabilities (currently empty).
 func BuildValues(global addonutils.Values) addonutils.Values {
-	platform := make(addonutils.Values, len(global)+2)
+	out := make(addonutils.Values, len(global)+2)
 
 	// Mirror the full global values tree as-is (camelCase keys preserved),
 	// so global.<path> resolves identically as .Platform.<path>.
 	for key, value := range global {
-		platform[key] = value
+		out[key] = value
 	}
 
-	platform[EnabledModulesKey] = enabledModulesFrom(global)
-	platform[CapabilitiesKey] = addonutils.Values{
+	out[EnabledModulesKey] = enabledModulesFrom(global)
+	out[CapabilitiesKey] = addonutils.Values{
 		CapabilitiesHasKey: []string{},
 	}
 
-	return platform
+	return out
 }
 
 // enabledModulesFrom extracts the enabledModules list from global values,
