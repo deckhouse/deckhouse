@@ -105,9 +105,9 @@ func RenderNsToml(cfg *DesiredConfig) ([]byte, error) {
 }
 
 // Apply writes or removes configuration files on disk.
-func (w *Writer) Apply(config *DesiredConfig) error {
+func (w *Writer) Apply(logger logr.Logger, config *DesiredConfig) error {
 	if config == nil || len(config.Namespaces) == 0 {
-		return w.removeConfig()
+		return w.removeConfig(logger)
 	}
 
 	if err := os.MkdirAll(w.ConfigDir, 0o755); err != nil {
@@ -130,13 +130,21 @@ func (w *Writer) Apply(config *DesiredConfig) error {
 		return fmt.Errorf("write ns.toml: %w", err)
 	}
 
+	logger.Info("Updated containerd integrity config", "namespaces", config.Namespaces, "caCertsCount", len(config.CACerts))
+
 	return nil
 }
 
-func (w *Writer) removeConfig() error {
+func (w *Writer) removeConfig(logger logr.Logger) error {
 	path := filepath.Join(w.ConfigDir, NsTomlFileName)
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return fmt.Errorf("remove %q: %w", path, err)
 	}
+
+	logger.Info("Found no namespaces matching the policies' selectors, removing containerd integrity config")
+
 	return nil
 }
