@@ -57,12 +57,6 @@ if ! command -v ip >/dev/null 2>&1; then
   bb-log-error "Install the iproute2 package on Debian/Ubuntu or the iproute package on RHEL/CentOS-compatible systems and retry."
   exit 1
 fi
-
-if grep -q 'Ubuntu' /etc/os-release 2>/dev/null && ! command -v jq >/dev/null 2>&1; then
-  bb-log-error "Cannot discover node IP on Ubuntu: required command \"jq\" is not installed."
-  bb-log-error "Install the jq package and retry."
-  exit 1
-fi
 {{- end }}
 
 {{- if ne .nodeGroup.nodeType "Static" }}
