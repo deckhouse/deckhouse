@@ -1488,6 +1488,60 @@ metadata:
 
 Перезагрузка узла может потребоваться при изменении некоторых настроек sysctl, например, при изменении параметра `kernel.yama.ptrace_scope` (изменяется при использовании команды `astra-ptrace-lock enable/disable` в Astra Linux).
 
+## Как включить задержку выключения или перезагрузки узла, пока на нём работают критичные поды?
+
+{% alert level="info" %}
+Доступно в редакции **EE**.
+{% endalert %}
+
+{% alert level="warning" %}
+Обратите внимание на особенности работы механизма в кластере с единственным master-узлом.
+
+Для принятия решения о блокировке узла дополнительно опрашивается NodeGroup. Если текущий узел принадлежит к группе `master` и он единственный master-узел в кластере, блокировка выключения для него применена не будет.
+{% endalert %}
+
+Чтобы включить механизм задержки перезагрузки или выключения узла (shutdown), добавьте на под лейбл `pod.deckhouse.io/inhibit-node-shutdown` (для Deployment укажите лейбл в шаблоне пода).
+
+Пример манифеста пода с лейблом `pod.deckhouse.io/inhibit-node-shutdown`:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-stateful-app
+  labels:
+    app: my-stateful-app
+    pod.deckhouse.io/inhibit-node-shutdown: "true"
+spec:
+  containers:
+  - name: app
+    image: my-registry/my-app:1.0.0
+```
+
+{% alert level="warning" %}
+Блокировка срабатывает только для подов с лейблом `pod.deckhouse.io/inhibit-node-shutdown` в фазе `Running` на узле. Поды без лейбла завершаются по обычному сценарию graceful shutdown kubelet.
+{% endalert %}
+
+### Поиск подов, блокирующих shutdown, и диагностика на узле
+
+Для поиска подов, из-за которых блокируется shutdown, используйте команду:
+
+```shell
+d8 k get po -A -l pod.deckhouse.io/inhibit-node-shutdown -o wide
+```
+
+Для просмотра condition на узле используйте команду:
+
+```shell
+d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
+```
+
+Возможные значения `reason`:
+
+- `WaitingForShutdownSignal` — ингибитор работает на узле, блокировка ещё не начиналась.
+- `PodsWithLabelAreRunningOnNode` — блокировка началась, поды с лейблом `pod.deckhouse.io/inhibit-node-shutdown` ещё работают на узле.
+- `NoRunningPodsWithLabel` — блокировка снята, shutdown может продолжиться.
+
 ## Как механизм fencing обрабатывает разные типы узлов?
 
 Механизм fencing срабатывает, когда узел теряет связь с кластером, и защищает кластер от «зомби»-узлов с неопределённым состоянием. Чтобы кратковременные сбои не приводили к каскадному срабатыванию, механизм работает в два этапа: сначала помечает узел как подозрительный (на уровне gossip-протокола `memberlist/Lifeguard`), а затем изолирует его — выключает узел и (при необходимости) удаляет связанный объект Node.

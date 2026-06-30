@@ -1487,6 +1487,60 @@ You cannot create an Instance resource yourself, but you can delete it. In this 
 
 Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).
 
+## How to enable a delay before shutting down or restarting a node while critical pods are running on it?
+
+{% alert level="info" %}
+Available in the **EE** edition.
+{% endalert %}
+
+{% alert level="warning" %}
+Please note the specific behavior of this mechanism in a cluster with a single master node.
+
+To decide whether to block a node, the NodeGroup is additionally queried. If the current node belongs to the `master` group and is the only master node in the cluster, the shutdown block will not be applied to it.
+{% endalert %}
+
+To enable the mechanism that delays a pod's restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the pod (for a Deployment, specify the label in the pod template).
+
+Example of a pod manifest with the `pod.deckhouse.io/inhibit-node-shutdown` label:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-stateful-app
+  labels:
+    app: my-stateful-app
+    pod.deckhouse.io/inhibit-node-shutdown: "true"
+spec:
+  containers:
+  - name: app
+    image: my-registry/my-app:1.0.0
+```
+
+{% alert level="warning" %}
+The block only applies to pods labeled `pod.deckhouse.io/inhibit-node-shutdown` that are in the `Running` phase on the node. Pods without this label terminate according to the kubelet's standard graceful shutdown process.
+{% endalert %}
+
+### Searching pods that prevent shutdown and troubleshooting on the node
+
+To search the pods that are preventing shutdown, use the following command:
+
+```shell
+d8 k get po -A -l pod.deckhouse.io/inhibit-node-shutdown -o wide
+```
+
+To view the condition on a node, use the following command:
+
+```shell
+d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
+```
+
+Possible values for `reason`:
+
+- `WaitingForShutdownSignal`: The inhibitor is running on the node, but the lock has not yet begun.
+- `PodsWithLabelAreRunningOnNode`: The lock has begun. Pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are still running on the node.
+- `NoRunningPodsWithLabel`: The lock has been released. The shutdown can continue.
+
 ## How the fencing mechanism handles different node types?
 
 The fencing mechanism is triggered when a node loses connectivity with the cluster and protects it from "zombie" nodes in an undefined state. To prevent short-time failures from causing cascading actions, the mechanism operates in two stages: first, it marks the node as suspicious (at the `memberlist/Lifeguard` gossip protocol level), and then isolates it — shuts the node down and, if necessary, deletes the associated Node object.
