@@ -113,6 +113,14 @@ apiVersions:
           x-rules: [sshPublicKey]
           description: |
             A public key for accessing nodes.
+        additionalVMLabels:
+          type: object
+          description: |
+            Additional labels that will be added to all virtual machine pods in the created cluster: both master and worker nodes.
+
+            This parameter can be used to allow existing or custom [NetworkPolicy](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration-provider-networkpolicy) resources in the parent cluster to select VM pods by these labels. For example, you can add a label to VM pods and allow access to them only from a bastion pod or another trusted source.
+          additionalProperties:
+            type: string
         masterNodeGroup:
           type: object
           description: |
@@ -594,14 +602,6 @@ apiVersions:
                 type: integer
                 minimum: 1
                 maximum: 65535
-            additionalVMLabels:
-              type: object
-              description: |
-                Additional labels that will be added to all virtual machine pods in the created cluster: both master and worker nodes.
-
-                This parameter can be used to allow existing or custom [NetworkPolicy](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration-provider-networkpolicy) resources in the parent cluster to select VM pods by these labels. For example, you can add a label to VM pods and allow access to them only from a bastion pod or another trusted source.
-              additionalProperties:
-                type: string
           required:
             - kubeconfigDataBase64
             - namespace

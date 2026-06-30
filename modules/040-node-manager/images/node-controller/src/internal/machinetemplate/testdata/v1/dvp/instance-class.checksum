@@ -11,5 +11,6 @@
 {{- $_ := set $options "osImageRefKind" .nodeGroup.instanceClass.rootDisk.image.kind -}}
 {{- $_ := set $options "rootDiskImageName" .nodeGroup.instanceClass.rootDisk.image.name -}}
 {{- $_ := set $options "additionalDisks" .nodeGroup.instanceClass.additionalDisks -}}
+{{- $_ := set $options "additionalVMLabels" .Values.nodeManager.internal.cloudProvider.dvp.additionalVMLabels -}}
 
 {{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}
