@@ -146,28 +146,6 @@ func (s *Scheduler) addNode(pkg Package) {
 		subscribers:   make(map[string]struct{}),
 	}
 
-	// Modules (floor = Static(Disable)) trigger a full-graph reschedule when they
-	// flip to enabled: a dynamically-enabled module may install CRDs that other
-	// packages render against, and those template-level deps are not tracked.
-	if constraints.Floor != nil && constraints.Floor == rule.Static(rule.Disable) {
-		n.rescheduleOnEnable = true
-
-		// Intent rule, appended after the gates: a dynamic Enable is a soft vote that
-		// overrides the floor's bundle decision (e.g. a module enabled at runtime by
-		// an enabled script), while gates still veto via Forbid from any position.
-		if s.dynamicGetter != nil {
-			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
-		}
-
-		// Only a package whose licensing actually names enabling bundles gets the
-		// bundle floor. Packages that carry editions purely for availability (e.g.
-		// applications) have no bundle membership, so adding the rule would soft-
-		// disable them and override their Enable floor.
-		if s.bundleChecker != nil {
-			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
-		}
-	}
-
 	// The package's floor sits first (lowest precedence): gates appended after
 	// it still veto via Forbid, and future intent rules placed after the gates
 	// override the floor's soft vote. A nil Floor leaves the node with gates
@@ -206,6 +184,30 @@ func (s *Scheduler) addNode(pkg Package) {
 
 	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
 		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	}
+
+	// Modules (floor = Static(Disable)) trigger a full-graph reschedule when they
+	// flip to enabled: a dynamically-enabled module may install CRDs that other
+	// packages render against, and those template-level deps are not tracked.
+	// Their intent rules are appended at the end of this method, after the floor
+	// and gates, so a soft Enable can override the floor (see rule.Resolve).
+	isModule := constraints.Floor != nil && constraints.Floor == rule.Static(rule.Disable)
+	if isModule {
+		n.rescheduleOnEnable = true
+	}
+
+	// Intent rules for modules, appended last so their soft Enable overrides the
+	// floor's Static(Disable) (gates still veto via Forbid from any position). The
+	// dynamic rule turns a module on at runtime (e.g. enabled by a script); the
+	// bundle rule applies the active bundle's membership for the package's edition.
+	if isModule {
+		if s.dynamicGetter != nil {
+			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
+		}
+
+		if s.bundleChecker != nil {
+			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
+		}
 	}
 
 	s.nodes[pkg.GetName()] = n

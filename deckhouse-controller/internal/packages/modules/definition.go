@@ -134,7 +134,7 @@ func (d Definition) Constraints() schedule.Constraints {
 		Subscriptions: map[string]struct{}{
 			"global": {},
 		},
-		Licensing:    d.Licensing,
+		Licensing: d.Licensing,
 		// Modules are disabled by default; a higher-precedence intent rule
 		// (bundle membership, user config) turns them on.
 		Floor: rule.Static(rule.Disable),
