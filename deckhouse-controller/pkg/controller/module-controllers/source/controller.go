@@ -494,7 +494,17 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 					logger.Warn("embedded module is available in several sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved",
 						slog.String("name", moduleName))
 				}
-				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{"module": moduleName})
+				// The conflict metric is module-scoped (labelled only by module), but a
+				// conflict means the module is offered by several sources, so this branch
+				// runs once per source. Writing it into the per-(module,source) group
+				// metricModuleGroup would register the same d8_module_at_conflict{module=...}
+				// series under several groups; the grouped collector then emits it more than
+				// once and the whole /metrics page fails with "collected before with the same
+				// name and label values" (up=0 -> D8DeckhouseSelfTargetDown). Use the
+				// module-scoped conflict group (the same one the module-config controller
+				// uses) so repeated writes collapse onto a single series.
+				conflictMetricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleName)
+				r.metricStorage.Grouped().GaugeSet(conflictMetricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{"module": moduleName})
 
 				availableModule.Checksum = meta.Checksum
 				availableModule.Version = meta.ModuleVersion
