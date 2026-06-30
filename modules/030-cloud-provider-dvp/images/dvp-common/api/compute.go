@@ -471,6 +471,26 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 	return nil
 }
 
+func (c *ComputeService) EnsureCloudInitSecretImmutable(ctx context.Context, name string) error {
+	secret, err := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+
+	if !isDeckhouseManagedSecret(secret) || (secret.Immutable != nil && *secret.Immutable) {
+		return nil
+	}
+
+	secret.Immutable = ptr.To(true)
+	if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, secret, metav1.UpdateOptions{}); updateErr != nil {
+		return fmt.Errorf("patch immutable on '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
+	}
+	return nil
+}
+
 func (c *ComputeService) DeleteCloudInitProvisioningSecret(ctx context.Context, name string) error {
 	if err := c.clientset.CoreV1().Secrets(c.namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
 		if k8serrors.IsNotFound(err) {
