@@ -33,12 +33,12 @@ git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /scripts
   includePaths:
-  - extension-release.containerd
-  - sysext-containerd.service
+  - extension-release.kubelet
+  - sysext-kubelet.service
   stageDependencies:
     install:
-    - extension-release.containerd
-    - sysext-containerd.service
+    - extension-release.kubelet
+    - sysext-kubelet.service
 shell:
   beforeInstall:
   - pm install erofs-utils coreutils cryptsetup
