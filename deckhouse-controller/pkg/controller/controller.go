@@ -474,7 +474,12 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	return nil
 }
 
-// loadInitialConfiguration loads the initial configuration from the cluster state
+// loadInitialConfiguration seeds the runtime with the ModuleConfig state already
+// present in the cluster, before the module loader starts syncing packages. At
+// this point no package is tracked yet, so UpdateModulesSettings records only the
+// enabled/disabled intent (it lives in the global module and is read by the
+// scheduler's config rule the moment a package registers); the per-package
+// settings are dropped here and supplied later by the loader via UpdateModule.
 func (c *DeckhouseController) loadInitialConfiguration(ctx context.Context) error {
 	configs := new(v1alpha1.ModuleConfigList)
 	if err := c.runtimeManager.GetClient().List(ctx, configs); err != nil {

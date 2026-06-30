@@ -71,12 +71,12 @@ type Module struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
-	// enabledMu guards dynamicEnabled and configEnabled: global hooks and the
+	// dynamicMu guards dynamicEnabled and configEnabled: global hooks and the
 	// config controller write them while the scheduler reads the resolved state
 	// concurrently through IsEnabled. It is a leaf lock (no global method calls
 	// back into the scheduler or runtime), so it is safe to take under either
 	// r.mu (writer) or the scheduler's lock (reader) without ordering cycles.
-	enabledMu      sync.RWMutex
+	dynamicMu      sync.RWMutex
 	dynamicEnabled map[string]bool // Dynamic enabled state set by global hooks, keyed by kebab-case module name.
 	configEnabled  map[string]bool // Explicit ModuleConfig enabled intent, keyed by kebab-case module name; key present iff the user expressed an opinion.
 
@@ -380,9 +380,9 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 
-		m.enabledMu.Lock()
+		m.dynamicMu.Lock()
 		maps.Copy(m.dynamicEnabled, enabled)
-		m.enabledMu.Unlock()
+		m.dynamicMu.Unlock()
 	}
 
 	return nil
@@ -400,6 +400,13 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 // its module name (cni-cilium) and pulled out of the patch. Every remaining
 // operation is a real global value and stays in the patch for the caller to
 // apply.
+//
+// The signal is enable-only by contract: the patch value is intentionally
+// ignored (a "*Enabled" key always maps to true), and the caller merges the
+// result into dynamicEnabled with maps.Copy, which never removes keys. A hook
+// therefore cannot turn a module off — neither by emitting Enabled:false nor by
+// omitting a previously-signaled key. The disable direction comes solely from
+// ModuleConfig (configEnabled), which IsEnabled checks first.
 func filterEnabledFromValuesPatch(valuesPatch *addonutils.ValuesPatch) map[string]bool {
 	enabled := make(map[string]bool)
 	kept := valuesPatch.Operations[:0]
@@ -481,8 +488,8 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 // moduleName is the kebab-case module name. Safe for concurrent use: the
 // scheduler reads this while global hooks and the config controller write.
 func (m *Module) IsEnabled(moduleName string) *bool {
-	m.enabledMu.RLock()
-	defer m.enabledMu.RUnlock()
+	m.dynamicMu.RLock()
+	defer m.dynamicMu.RUnlock()
 
 	if enabled, ok := m.configEnabled[moduleName]; ok {
 		return &enabled
@@ -502,8 +509,8 @@ func (m *Module) IsEnabled(moduleName string) *bool {
 // a reschedule. It is the config-side counterpart to the dynamic enabled state
 // set by global hooks; both feed IsEnabled.
 func (m *Module) SetConfigEnabled(moduleName string, enabled *bool) bool {
-	m.enabledMu.Lock()
-	defer m.enabledMu.Unlock()
+	m.dynamicMu.Lock()
+	defer m.dynamicMu.Unlock()
 
 	prev, had := m.configEnabled[moduleName]
 

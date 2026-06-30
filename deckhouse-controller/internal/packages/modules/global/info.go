@@ -35,15 +35,12 @@ func (m *Module) GetInfo() Info {
 		hooks[idx] = hook.GetName()
 	}
 
-	m.enabledMu.RLock()
-	defer m.enabledMu.RUnlock()
+	m.dynamicMu.RLock()
+	defer m.dynamicMu.RUnlock()
 
 	dynamic := make(map[string]bool, len(m.dynamicEnabled))
 	maps.Copy(dynamic, m.dynamicEnabled)
-
-	for name, enabled := range m.configEnabled {
-		dynamic[name] = enabled
-	}
+	maps.Copy(dynamic, m.configEnabled)
 
 	return Info{
 		Name:    m.name,

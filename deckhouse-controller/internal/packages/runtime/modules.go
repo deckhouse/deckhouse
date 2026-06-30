@@ -62,9 +62,13 @@ type Module struct {
 // schedulePackage) with the new values. Any in-flight deploy or load for the
 // package keeps running untouched.
 //
-// If the package is not tracked yet, the change is dropped: there is nothing to
-// reschedule, and the eventual UpdateModule will register the package, which
-// then picks up settings and enabled on the next config event.
+// Settings and the enabled intent diverge when the package is not tracked yet.
+// The enabled intent is always recorded: it lives in the global module, which
+// has no notion of tracking, so the scheduler's config rule sees the user intent
+// the moment the package is registered. Pending settings, by contrast, are
+// dropped — there is no per-package store to stash them in yet; the eventual
+// UpdateModule registers the package and supplies its settings. Either way, an
+// untracked package has no node to reschedule, so no Reschedule happens here.
 func (r *Runtime) UpdateModulesSettings(name string, settings addonutils.Values, enabled *bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
