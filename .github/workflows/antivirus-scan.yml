@@ -115,23 +115,23 @@ jobs:
           fi
 
 
-    # <template: drweb_scan_job>
+  # <template: drweb_scan_job>
   drweb-scan:
-    name: Dr.Web Scan ${{ matrix.branch }}
+    name: Dr.Web Scan
     runs-on: [self-hosted, antivirus]
     if: github.repository == 'deckhouse/deckhouse'
     # Weekly/release mode: no changed_images upstream; full-scan every matrix entry.
-  needs: [get-tags]
-  strategy:
-    matrix:
-      branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
-    fail-fast: false
-  permissions:
-    id-token: write
-  outputs:
-    scan_id: ${{ steps.scan.outputs.scan_id }}
-    skipped: ${{ steps.scan.outputs.skipped }}
-  steps:
+    needs: [get-tags]
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+      fail-fast: false
+    permissions:
+      id-token: write
+    outputs:
+      scan_id: ${{ steps.scan.outputs.scan_id }}
+      skipped: ${{ steps.scan.outputs.skipped }}
+    steps:
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -244,27 +244,27 @@ jobs:
             rm -rf ${SCAN_DIR}/${SCAN_ID} || true
           fi
 
-    # </template: drweb_scan_job>
+  # </template: drweb_scan_job>
 
 
 
-    # <template: kaspersky_scan_job>
+  # <template: kaspersky_scan_job>
   kaspersky-scan:
-    name: Kaspersky Scan ${{ matrix.branch }}
+    name: Kaspersky Scan
     runs-on: [self-hosted, antivirus]
     if: github.repository == 'deckhouse/deckhouse'
     # Weekly/release mode: no changed_images upstream; full-scan every matrix entry.
-  needs: [get-tags]
-  strategy:
-    matrix:
-      branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
-    fail-fast: false
-  permissions:
-    id-token: write
-  outputs:
-    scan_id: ${{ steps.scan.outputs.scan_id }}
-    skipped: ${{ steps.scan.outputs.skipped }}
-  steps:
+    needs: [get-tags]
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+      fail-fast: false
+    permissions:
+      id-token: write
+    outputs:
+      scan_id: ${{ steps.scan.outputs.scan_id }}
+      skipped: ${{ steps.scan.outputs.skipped }}
+    steps:
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -377,11 +377,11 @@ jobs:
             rm -rf ${SCAN_DIR}/${SCAN_ID} || true
           fi
 
-    # </template: kaspersky_scan_job>
+  # </template: kaspersky_scan_job>
 
 
 
-    # <template: antivirus_notify_failure_job>
+  # <template: antivirus_notify_failure_job>
   notify-failure:
     name: Send failure notification
     runs-on: [self-hosted, regular]
@@ -415,37 +415,37 @@ jobs:
 
       # </template: import_secrets>
 
-  - name: Check which jobs failed
-    id: check-failures
-    run: |
-      FAILED_JOBS=""
-      if [[ "${{ needs.drweb-scan.result }}" == "failure" ]]; then
-        FAILED_JOBS="$FAILED_JOBS• Dr.Web Scan\n"
-      fi
-      if [[ "${{ needs.kaspersky-scan.result }}" == "failure" ]]; then
-        FAILED_JOBS="$FAILED_JOBS• Kaspersky Scan\n"
-      fi
+      - name: Check which jobs failed
+        id: check-failures
+        run: |
+          FAILED_JOBS=""
+          if [[ "${{ needs.drweb-scan.result }}" == "failure" ]]; then
+            FAILED_JOBS="$FAILED_JOBS• Dr.Web Scan\n"
+          fi
+          if [[ "${{ needs.kaspersky-scan.result }}" == "failure" ]]; then
+            FAILED_JOBS="$FAILED_JOBS• Kaspersky Scan\n"
+          fi
 
-      echo "failed_jobs=${FAILED_JOBS}" >> $GITHUB_OUTPUT
-      echo "Failed jobs:"
-      echo "${FAILED_JOBS}"
+          echo "failed_jobs=${FAILED_JOBS}" >> $GITHUB_OUTPUT
+          echo "Failed jobs:"
+          echo "${FAILED_JOBS}"
 
-  - name: Send notification
-    run: |
-      workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Send notification
+        run: |
+          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-      MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
-      MESSAGE+="**Failed jobs:**\n"
-      MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
-      PR_NUMBER="${{ github.event.pull_request.number }}"
-      if [ -n "$PR_NUMBER" ]; then
-        pr_url="https://github.com/${{ github.repository }}/pull/${PR_NUMBER}"
-        MESSAGE+="**PR:** [#${PR_NUMBER}]($pr_url)\n"
-      fi
-      MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
+          MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
+          MESSAGE+="**Failed jobs:**\n"
+          MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if [ -n "$PR_NUMBER" ]; then
+            pr_url="https://github.com/${{ github.repository }}/pull/${PR_NUMBER}"
+            MESSAGE+="**PR:** [#${PR_NUMBER}]($pr_url)\n"
+          fi
+          MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
 
-      curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
-        -H "Content-Type: application/json" \
-        --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"
-    # </template: antivirus_notify_failure_job>
+          curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"
+  # </template: antivirus_notify_failure_job>
 
