@@ -1,6 +1,6 @@
 ---
 title: "Модуль istio: примеры"
-description: "Практические примеры использования модуля istio: маршрутизация, балансировка, авторизация, ingress, телеметрия и обновление control plane."
+description: "Практические примеры использования модуля istio: маршрутизация, балансировка, авторизация, ingress, телеметрия, обновление control plane и автоматическое обновление сайдкаров data plane."
 ---
 
 ## Circuit Breaker
@@ -703,18 +703,18 @@ istio_response_bytes_bucket{...} 12
 
 ### Prometheus и Grafana
 
-При включённом модуле [`operator-prometheus`](/modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](/modules/prometheus/). Набор пространств имён под мониторинг вычисляется автоматически по членству в mesh (инъекция Istio); чтобы исключить пространство имён из сборщика метрик, на объект `Namespace` можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
+При включённом модуле [`operator-prometheus`](/modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](/modules/prometheus/). Набор неймспейсов под мониторинг вычисляется автоматически по членству в mesh (инъекция Istio); чтобы исключить неймспейс из сборщика метрик, на объект `Namespace` можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
 
 Если в Grafana пустые панели «workload», а control plane в порядке, необходимо определить причину отсутствия workload-метрик. Для этого проверьте:
 
 - у подов есть сайдкар и лейбл `service.istio.io/canonical-name`;
-- на пространстве имён приложения нет `istio.deckhouse.io/discard-metrics: "true"`.
+- на неймспейсе приложения нет `istio.deckhouse.io/discard-metrics: "true"`.
 
 ### Дополнительные политики `Telemetry` (по желанию)
 
 Дополнительные `Telemetry` удобно задавать с явным workload‑селектором или `targetRef`. Два объекта `Telemetry` в одном неймспейсе без селектора провайдеру применять нельзя: Istio выдаёт [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Модуль уже создаёт в `d8-istio` единственный объект без селектора (`d8-main`); второй там же без селектора не добавляйте без осознанной замены.
 
-Пример ограниченной политики в прикладном пространстве имён:
+Пример ограниченной политики в прикладном неймспейсе:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -734,10 +734,10 @@ spec:
 
 [`tracing.collector`](configuration.html#parameters-tracing-collector) — единая точка настройки mesh-wide экспорта (Zipkin или OpenTelemetry).
 
-- При `telemetryAPI.enabled: false` и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — только прежний режим: `meshConfig.defaultConfig.tracing.zipkin` из [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector). OTLP требует режима Telemetry API.
+- При `telemetryAPI.enabled: false` и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — только прежний режим: `meshConfig.defaultConfig.tracing.zipkin` из [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (`host:port`, порт Jaeger Zipkin `9411`). Экспорт по OTLP (OpenTelemetry Protocol) требует режима Telemetry API.
 - При `telemetryAPI.enabled: true` и `tracing.enabled: true` модуль создаёт `deckhouse-tracing`, если заданы [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) `service` и `port`, или при [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (при одновременной настройке приоритет у OpenTelemetry). `defaultConfig.tracing` не заполняется; в `Telemetry` `d8-main` добавляется `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, по умолчанию `1.0`).
 
-Нестандартные провайдеры — через `Telemetry` с `selector` в неймспейсе приложения, не второй CR без селектора в `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). См. [настройку трассировки через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+Нестандартные провайдеры — через `Telemetry` с `selector` в неймспейсе приложения, не второй CR без селектора в `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). В документации Istio описана [трассировка через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
 #### Пример — Telemetry API + Jaeger через Zipkin
 
@@ -794,9 +794,11 @@ spec:
 
 Для HTTP OTLP задайте `collector.opentelemetry.http.path` (и при необходимости `timeout`) в параметре [`tracing.collector.opentelemetry.http`](configuration.html#parameters-tracing-collector-opentelemetry).
 
-Точечные настройки по workload — `Telemetry` с `selector` в неймспейсе приложения, ссылаясь на `deckhouse-tracing`. В `d8-istio` не создавайте второй `Telemetry` без селектора ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)).
+Точечные настройки по workload — `Telemetry` с `selector` в неймспейсе приложения, ссылаясь на `deckhouse-tracing` (или на другой провайдер, который вы определите сами вне `d8-istio`). В `d8-istio` не создавайте второй `Telemetry` без селектора ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)).
 
 #### Пример — трассировка только для части приложений
+
+Используйте `selector` (или `targetRef`), чтобы Telemetry применялась только к подходящим подам — пример ниже безопасен с точки зрения IST0160. В одном неймспейсе без селектора может существовать не больше одного объекта `Telemetry`; не создавайте несколько манифестов без селектора в одном неймспейсе.
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -816,7 +818,7 @@ spec:
 
 #### Пример — отключить отправку спанов (например, у ingress)
 
-В Deckhouse при включённом модуле `ingress-nginx` модуль Istio дополнительно создаёт `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx` и выставляет `tracing.disableSpanReporting`, чтобы контроллер с `istio-proxy` не отправлял span'ы в бэкенд трассировки. Другие случаи — своим объектом:
+В Deckhouse при включённом модуле `ingress-nginx` модуль Istio дополнительно создаёт `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx` и выставляет `tracing.disableSpanReporting`, чтобы контроллер с `istio-proxy` не отправлял спаны в бэкенд трассировки. Другие случаи — своим объектом:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -882,11 +884,35 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 {% alert level="warning" %}Обновление до версии Istio 1.25 возможно только с версии 1.21.{% endalert %}
 
+<span id="auto-upgrading-istio-data-plane"></span>
+
 ### Автоматическое обновление data plane Istio
 
 {% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
 
 Для автоматизации обновления istio-сайдкаров установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
+
+Автоматическое обновление срабатывает, когда у пода с istio-сайдкаром текущая версия data plane отличается от желаемой. Добавление версии в параметр [additionalVersions](configuration.html#parameters-additionalversions) само по себе не перезапускает прикладные поды. Обычно расхождение появляется в следующих случаях:
+
+* изменился параметр [globalVersion](configuration.html#parameters-globalversion) для неймспейса, где используется глобальная версия Istio (`istio-injection=enabled` или `istio.io/rev=default`);
+* изменился лейбл `istio.io/rev` на `Namespace` или на поде;
+* обновилась патч-версия установленного control plane.
+
+Перед перезапуском рабочей нагрузки модуль проверяет, что соответствующий control plane установлен и готов к работе. Затем модуль добавляет или обновляет аннотацию `istio.deckhouse.io/full-version` в `spec.template.metadata.annotations`, а Kubernetes выполняет штатный rollout. В одном неймспейсе модуль не начинает обновлять следующую рабочую нагрузку, пока предыдущая обновляемая рабочая нагрузка не готова.
+
+Лейбл `istio.deckhouse.io/auto-upgrade="true"` должен быть установлен на той же сущности, которая определяет использование Istio для рабочей нагрузки:
+
+* Если инъекция включена на уровне неймспейса с помощью `istio-injection=enabled`, `istio.io/rev=<REVISION>` или `istio.io/rev=default`, лейбл `istio.deckhouse.io/auto-upgrade="true"` можно установить на этот же `Namespace`.
+* Если сайдкар включён на уровне рабочей нагрузки или pod template, например с помощью `sidecar.istio.io/inject="true"`, установите `istio.deckhouse.io/auto-upgrade="true"` на соответствующий `Deployment`, `DaemonSet` или `StatefulSet`.
+* Неймспейс с одним только лейблом `istio.deckhouse.io/auto-upgrade="true"` не включает автоматическое обновление рабочей нагрузки, если инъекция настроена только на уровне рабочей нагрузки или pod template.
+
+Автоматическое обновление поддерживается только для ресурсов `Deployment`, `DaemonSet` и `StatefulSet`. Ресурсы `Job`, `CronJob`, отдельные поды и кастомные контроллеры, в том числе Kruise `AdvancedDaemonSet`, не обрабатываются. Если ingress controller управляется через `AdvancedDaemonSet`, лейбл `istio.deckhouse.io/auto-upgrade="true"` на таком ресурсе будет проигнорирован. Обновляйте такие ingress controllers вручную по процедуре [обновления control plane Istio](#обновление-control-plane-istio) и в разделе [Ingress NGINX](#ingress-nginx).
+
+Для обнаружения подов, у которых патч-версия data plane отличается от версии control plane (сценарий, который закрывает автоматическое обновление), используйте алерт [`D8IstioDataPlaneVersionMismatch`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istiodataplaneversionmismatch). Алерт [`D8IstioActualDataPlaneVersionNotEqualDesired`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactualdataplaneversionnotequaldesired) сигнализирует о несовпадении ревизии Istio и обычно требует изменения лейблов неймспейса или пода перед обновлением сайдкаров.
+
+{% alert level="warning" %}
+Не удаляйте старый control plane Istio вручную во время обновления. Старый `istiod` и связанные с ним ресурсы удаляются автоматически после того, как в кластере не останется сайдкаров, подключённых к старой ревизии. Ручное удаление может нарушить штатную автоматику обновления.
+{% endalert %}
 
 ## Настройка ресурсов istio-proxy sidecar
 

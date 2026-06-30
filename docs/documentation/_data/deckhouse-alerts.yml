@@ -1501,7 +1501,7 @@ alerts:
            max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
            ```
 
-        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
+        1. Use the [automatic Istio data plane upgrade](https://deckhouse.io/modules/istio/examples.html#auto-upgrading-istio-data-plane).
       summary: |
         There are pods with data plane version different from the control plane version.
       severity: "8"

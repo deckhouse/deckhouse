@@ -1,6 +1,6 @@
 ---
 title: "The istio module: examples"
-description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, and control plane upgrades."
+description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, control plane upgrades, and automated data plane sidecar upgrades."
 ---
 
 ## Circuit Breaker
@@ -730,7 +730,7 @@ For tag removal, disabling specific metrics or modes, follow [Customizing Istio 
 
 [`tracing.collector`](configuration.html#parameters-tracing-collector) is the single ModuleConfig entry for mesh-wide trace export (Zipkin or OpenTelemetry).
 
-- `telemetryAPI.enabled: false` plus [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — legacy only: `meshConfig.defaultConfig.tracing.zipkin` from [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (`host:port`, Jaeger Zipkin port `9411`). OpenTelemetry needs Telemetry API mode.
+- `telemetryAPI.enabled: false` plus [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — legacy only: `meshConfig.defaultConfig.tracing.zipkin` from [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (`host:port`, Jaeger Zipkin port `9411`). OTLP (OpenTelemetry Protocol) export requires Telemetry API mode.
 - `telemetryAPI.enabled: true` plus `tracing.enabled: true` — the module registers `deckhouse-tracing` when [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) has `service` and `port`, or when [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) is set (OpenTelemetry wins if both are configured). Legacy `defaultConfig.tracing` is omitted; mesh-wide `Telemetry` `d8-main` gets `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, default `1.0`).
 
 Exporters the module does not model (SkyWalking, custom TLS stacks, extra provider names) still need namespace-scoped `Telemetry` with `selector`—not a second selector-less CR in `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). See [Distributed tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
@@ -880,11 +880,35 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 {% alert level="warning" %}Upgrading to Istio 1.25 is only possible from version 1.21.{% endalert %}
 
+<span id="auto-upgrading-istio-data-plane"></span>
+
 ### Auto upgrading istio data-plane
 
 {% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
+
+Automatic upgrading is triggered when the current data-plane version of a Pod with an istio-sidecar differs from the desired version. Adding a version to the [additionalVersions](configuration.html#parameters-additionalversions) parameter does not restart application Pods by itself. A mismatch usually appears in the following cases:
+
+* The [globalVersion](configuration.html#parameters-globalversion) parameter changed for a namespace that uses the global Istio version (`istio-injection=enabled` or `istio.io/rev=default`).
+* The `istio.io/rev` label changed on a `Namespace` or on a Pod.
+* The patch version of the installed control plane was updated.
+
+Before restarting a workload, the module checks that the corresponding control plane is installed and ready. Then the module adds or updates the `istio.deckhouse.io/full-version` annotation in `spec.template.metadata.annotations`, and Kubernetes performs a regular rollout. Within the same namespace, the module does not start upgrading the next workload until the previously upgraded workload is ready.
+
+The `istio.deckhouse.io/auto-upgrade="true"` label must be set on the same entity that defines Istio usage for the workload:
+
+* If injection is enabled at the namespace level with `istio-injection=enabled`, `istio.io/rev=<REVISION>`, or `istio.io/rev=default`, you can set `istio.deckhouse.io/auto-upgrade="true"` on the same `Namespace`.
+* If sidecar injection is enabled at the workload or pod template level, for example with `sidecar.istio.io/inject="true"`, set `istio.deckhouse.io/auto-upgrade="true"` on the corresponding `Deployment`, `DaemonSet`, or `StatefulSet`.
+* A namespace with only the `istio.deckhouse.io/auto-upgrade="true"` label does not enable automatic upgrading for a workload if injection is configured only at the workload or pod template level.
+
+Automatic upgrading is supported only for `Deployment`, `DaemonSet`, and `StatefulSet` resources. `Job`, `CronJob`, standalone `Pod`, and custom controllers, including Kruise `AdvancedDaemonSet`, are not handled. If an ingress controller is managed by an `AdvancedDaemonSet`, the `istio.deckhouse.io/auto-upgrade="true"` label on that resource is ignored. Upgrade such ingress controllers manually following the [Istio control plane upgrade](#upgrading-istio-control-plane) procedure and the [Ingress NGINX integration](#ingress-nginx) section.
+
+Use the [`D8IstioDataPlaneVersionMismatch`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istiodataplaneversionmismatch) alert to detect Pods whose patch data-plane version differs from the control plane version — the scenario that automatic upgrading addresses. The [`D8IstioActualDataPlaneVersionNotEqualDesired`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactualdataplaneversionnotequaldesired) alert indicates a revision mismatch and usually requires changing namespace or Pod labels before sidecars can be updated.
+
+{% alert level="warning" %}
+Do not delete the old Istio control plane manually during an upgrade. The old `istiod` and related resources are removed automatically after there are no sidecars connected to the old revision left in the cluster. Manual deletion can break the regular upgrade automation.
+{% endalert %}
 
 ## Customizing istio-proxy sidecar resource management
 
