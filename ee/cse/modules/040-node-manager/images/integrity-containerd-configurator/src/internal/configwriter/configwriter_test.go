@@ -173,7 +173,7 @@ func TestWriterApplyAndRemove(t *testing.T) {
 		CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
 	}
 
-	require.NoError(t, writer.Apply(config))
+	require.NoError(t, writer.Apply(logr.Discard(), config))
 
 	nsTomlPath := filepath.Join(dir, NsTomlFileName)
 	nsTomlData, err := os.ReadFile(nsTomlPath)
@@ -183,23 +183,23 @@ func TestWriterApplyAndRemove(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expected, nsTomlData)
 
-	require.NoError(t, writer.Apply(config))
+	require.NoError(t, writer.Apply(logr.Discard(), config))
 	unchanged, err := os.ReadFile(nsTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, unchanged)
 
 	require.NoError(t, os.WriteFile(nsTomlPath, []byte("stale"), 0o644))
-	require.NoError(t, writer.Apply(config))
+	require.NoError(t, writer.Apply(logr.Discard(), config))
 	restored, err := os.ReadFile(nsTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, restored)
 
-	require.NoError(t, writer.Apply(nil))
+	require.NoError(t, writer.Apply(logr.Discard(), nil))
 	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
 	require.True(t, os.IsNotExist(err))
 
-	require.NoError(t, writer.Apply(config))
-	require.NoError(t, writer.Apply(&DesiredConfig{}))
+	require.NoError(t, writer.Apply(logr.Discard(), config))
+	require.NoError(t, writer.Apply(logr.Discard(), &DesiredConfig{}))
 	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
 	require.True(t, os.IsNotExist(err))
 }
