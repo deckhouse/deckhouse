@@ -59,7 +59,7 @@ type ApplicationPackage struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Status of an ApplicationPackage.
+	// Application package status.
 	Status ApplicationPackageStatus `json:"status,omitempty"`
 }
 

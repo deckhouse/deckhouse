@@ -35,6 +35,7 @@ func TestRenderAndSavePreflightReverseTunnelReachableScript(t *testing.T) {
 	}
 
 	path, err := RenderAndSavePreflightReverseTunnelReachableScript(
+		t.Context(),
 		"http://127.0.0.1:4282/healthz",
 		&options.GlobalOptions{CandiDir: candiDir},
 	)

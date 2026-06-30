@@ -36,7 +36,7 @@ relatedLinks:
 Установить DKP можно следующими способами:
 
 - с помощью CLI-установщика (доступен в виде образа контейнера и основан на утилите [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>));
-- с помощью [графического установщика]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install) (находится в режиме бета-тестирования).
+- с помощью [графического установщика]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
 
 Далее рассмотрен процесс установки с помощью **CLI-установщика**.
 
@@ -222,8 +222,7 @@ metadata:
 spec:
   version: 1
   enabled: true
-  settings:
-    earlyOomEnabled: false
+  settings: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -375,8 +374,7 @@ metadata:
 spec:
   version: 1
   enabled: true
-  settings:
-    earlyOomEnabled: false
+  settings: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

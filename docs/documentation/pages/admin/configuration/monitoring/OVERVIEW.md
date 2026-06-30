@@ -95,7 +95,7 @@ To disable statistics collection, add the label `ingress.deckhouse.io/discard-me
 
 ## Control plane monitoring
 
-Control plane monitoring is performed using the [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) module, which organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
+Control plane monitoring is provided by the [`control-plane-manager`](/modules/control-plane-manager/) module. It organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
 
 - kube-apiserver
 - kube-controller-manager
@@ -117,7 +117,7 @@ DKP monitoring capabilities:
 - Monitoring cases of prolonged CPU steal exceeding.
 - Monitoring Conntrack table state on nodes.
 - Monitoring pods with incorrect state (as a possible consequence of kubelet issues).
-- Monitoring control plane components (implemented by the `monitoring-kubernetes-control-plane` module).
+- Monitoring control plane components (implemented by the `control-plane-manager` module).
 
 ## Extended monitoring mode
 

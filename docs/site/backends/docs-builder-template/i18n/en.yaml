@@ -10,7 +10,7 @@ modules2: modules
 module: module
 module_enabling_details_title: How to explicitly enable the module…
 module_enabling_details_content: |
-  You may explicitly enable or disable the module in one of the following ways:
+  <span id="enable"></span>You may explicitly enable or disable the module in one of the following ways:
   - **Via [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** In the "System" → "System Management" → "Deckhouse" → "Modules" section, open the `<ModuleName>` module and enable (or disable) the "Module enabled" toggle. Save changes.
 
     Example:
@@ -44,7 +44,7 @@ module_enabling_details_content: |
 module_settings: settings
 module_settings_details_title: How to configure the module...
 module_settings_details_content: |
-  You can configure the module in one of the following ways:
+  <span id="setup"></span>You can configure the module in one of the following ways:
 
   - **Via [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).**
 

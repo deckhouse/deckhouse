@@ -82,7 +82,7 @@ func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *test
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	data, err := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
+	data, err := metaConfig.ConfigForBashibleBundleTemplate(context.Background(), "10.0.0.2")
 	require.NoError(t, err)
 
 	tplContent, err := os.ReadFile("/deckhouse/candi/bashible/bashible.sh.tpl")

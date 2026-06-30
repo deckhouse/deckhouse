@@ -1,0 +1,27 @@
+version: "3"
+
+includes:
+  exclude-namespaces-from-processing:
+    taskfile: ./tests/exclude-namespaces-from-processing/Taskfile.yml
+    dir: ./tests/exclude-namespaces-from-processing
+  high-node-utilization:
+    taskfile: ./tests/high-node-utilization/Taskfile.yml
+    dir: ./tests/high-node-utilization
+  low-node-utilization:
+    taskfile: ./tests/low-node-utilization/Taskfile.yml
+    dir: ./tests/low-node-utilization
+
+tasks:
+  run:
+    desc: Run all descheduler e2e tests
+    cmds:
+      - task: exclude-namespaces-from-processing:run
+      - task: high-node-utilization:run
+      - task: low-node-utilization:run
+
+  dry-run:
+    desc: Dry-Run all descheduler e2e tests
+    cmds:
+      - task: exclude-namespaces-from-processing:dry-run
+      - task: high-node-utilization:dry-run
+      - task: low-node-utilization:dry-run

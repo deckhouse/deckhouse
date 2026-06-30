@@ -15,6 +15,7 @@
 package tomb
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -22,7 +23,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -57,7 +58,8 @@ func (c *teardownCallbacks) registerOnShutdown(name string, cb func()) {
 	defer c.mutex.Unlock()
 
 	c.data = append(c.data, &callback{Name: name, Do: cb})
-	log.DebugF("teardown callback '%s' added, callbacks in queue: %d\n", name, len(c.data))
+	ctx := context.Background()
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("teardown callback '%s' added, callbacks in queue: %d", name, len(c.data)))
 }
 
 func (c *teardownCallbacks) prependOnShutdown(name string, cb func()) {
@@ -65,22 +67,24 @@ func (c *teardownCallbacks) prependOnShutdown(name string, cb func()) {
 	defer c.mutex.Unlock()
 
 	c.data = append([]*callback{{Name: name, Do: cb}}, c.data...)
-	log.DebugF("teardown callback '%s' prepended, callbacks in queue: %d\n", name, len(c.data))
+	ctx := context.Background()
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("teardown callback '%s' prepended, callbacks in queue: %d", name, len(c.data)))
 }
 
 func (c *teardownCallbacks) replaceOnShutdown(name string, cb func()) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	ctx := context.Background()
 	for _, clb := range c.data {
 		if clb.Name == name {
 			clb.Do = cb
-			log.DebugF("teardown callback '%s' replaced, callbacks in queue: %d\n", name, len(c.data))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("teardown callback '%s' replaced, callbacks in queue: %d", name, len(c.data)))
 			return
 		}
 	}
 
-	log.DebugF("teardown callback '%s' not found, do nothing, callbacks in queue: %d\n", name, len(c.data))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("teardown callback '%s' not found, do nothing, callbacks in queue: %d", name, len(c.data)))
 }
 
 func (c *teardownCallbacks) shutdown(exitCode int) {
@@ -94,18 +98,19 @@ func (c *teardownCallbacks) shutdown(exitCode int) {
 
 	c.exitCode = exitCode
 
-	log.DebugF("teardown started, queue length: %d\n", len(c.data))
+	ctx := context.Background()
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("teardown started, queue length: %d", len(c.data)))
 
 	// Run callbacks in LIFO order to shutdown fundamental things last.
 	for i := len(c.data) - 1; i >= 0; i-- {
 		cb := c.data[i]
-		log.DebugF("teardown callback %d: '%s' started\n", i, cb.Name)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("teardown callback %d: '%s' started", i, cb.Name))
 		cb.Do()
 		c.data[i] = &callback{Name: "Stub", Do: func() {}}
-		log.DebugF("teardown callback %d: '%s' done\n", i, cb.Name)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("teardown callback %d: '%s' done", i, cb.Name))
 	}
 
-	log.DebugLn("teardown is finished")
+	dhlog.FromContext(ctx).DebugContext(ctx, "teardown is finished")
 	c.exhausted = true
 	close(c.waitCh)
 }
@@ -152,7 +157,8 @@ func printGorutinesStackTrace(shouldAlwaysPrint bool, msg string) {
 	l := runtime.Stack(buf, true)
 	buf = buf[:l]
 	if shouldAlwaysPrint || input.IsTerminal() {
-		log.InfoF("\n%sGoroutines stack for debug:\n%s\n", msg, string(buf))
+		ctx := context.Background()
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("\n%sGoroutines stack for debug:\n%s", msg, string(buf)))
 	}
 
 	buf = nil
@@ -220,7 +226,8 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 
 		printGorutinesStackTrace(false, "Killed by signal twice. Probably dhctl has problems. ")
 
-		log.ErrorLn("Killed by signal twice.")
+		ctx := context.Background()
+		dhlog.FromContext(ctx).ErrorContext(ctx, "Killed by signal twice.")
 		os.Exit(1)
 	}()
 
@@ -229,7 +236,8 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 
 	// Run all registered teardown callbacks and print an explanation at the end.
 	callbacks.prependOnShutdown("Shutdown message", func() {
-		log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))
+		ctx := context.Background()
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))
 	})
 	Shutdown(exitCode)
 }

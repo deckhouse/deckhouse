@@ -3,6 +3,8 @@
   {{- if not (get $versionInfo "supportsOperator") }}
   {{- $revision := get $versionInfo "revision" }}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{- $instance := printf "%s-istiod" $revision }}
   {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
   {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -21,7 +23,7 @@ kind: Deployment
 metadata:
   name: istiod-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot" "istio" "istiod")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot" "istio" "istiod" "app.kubernetes.io/name" "istiod" "app.kubernetes.io/instance" $instance "app.kubernetes.io/version" $fullVersion "app.kubernetes.io/part-of" "istio" "app.kubernetes.io/managed-by" "Helm")) | nindent 2 }}
 spec:
   {{- if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA" }}
   {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
@@ -42,6 +44,11 @@ spec:
     metadata:
       labels:
         app: istiod
+        app.kubernetes.io/name: istiod
+        app.kubernetes.io/instance: {{ $instance | quote }}
+        app.kubernetes.io/version: {{ $fullVersion | quote }}
+        app.kubernetes.io/part-of: istio
+        app.kubernetes.io/managed-by: Helm
         istio.io/rev: {{ $revision }}
         istio: istiod
         sidecar.istio.io/inject: "false"

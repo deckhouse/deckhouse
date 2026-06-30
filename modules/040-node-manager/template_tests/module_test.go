@@ -694,44 +694,6 @@ spec:
         matchLabels:
           node-group: worker
 `
-	nodeManagerStaticInstancesMachineDeployment = `
-apiVersion: cluster.x-k8s.io/v1beta1
-kind: MachineDeployment
-metadata:
-  namespace: d8-cloud-instance-manager
-  name: worker
-  labels:
-    app: caps-controller
-    heritage: deckhouse
-    module: node-manager
-    node-group: worker
-spec:
-  clusterName: static
-  replicas: 0
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-  template:
-    metadata:
-      labels:
-        cluster.x-k8s.io/cluster-name: static
-        cluster.x-k8s.io/deployment-name: worker
-    spec:
-      bootstrap:
-        dataSecretName: manual-bootstrap-for-worker
-      clusterName: static
-      infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-        kind: StaticMachineTemplate
-        namespace: d8-cloud-instance-manager
-        name: worker
-  selector:
-    matchLabels:
-      cluster.x-k8s.io/cluster-name: static
-      cluster.x-k8s.io/deployment-name: worker
-`
 )
 
 const (
@@ -819,6 +781,48 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
   - .*xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
 `))
 
+				})
+			})
+
+			Context("cluster auto-scaler split mode with MCM only", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscalerMCM", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerMCMNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-02320933"]`)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscaler", "false")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerNodes", `[]`)
+					setBashibleAPIServerTLSValues(f)
+					f.HelmRender()
+				})
+
+				It("renders MCM autoscaler target alerts against the MCM job", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
+					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{job=~"cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
+					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
+				})
+			})
+
+			Context("cluster auto-scaler split mode with MCM and CAPI", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscaler", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-02320933"]`)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscalerMCM", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerMCMNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-6bdb5b0d"]`)
+					setBashibleAPIServerTLSValues(f)
+					f.HelmRender()
+				})
+
+				It("renders target alerts for both autoscaler jobs", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
+					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{job=~"cluster-autoscaler|cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
+					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 1) or absent(up{job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
 				})
 			})
 		})
@@ -1544,6 +1548,7 @@ ccc: ddd
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
 			staticMachineTemplate := f.KubernetesResource("StaticMachineTemplate", "d8-cloud-instance-manager", "worker")
+			// MachineDeployment is created by the capi-machine-deployment controller, not helm.
 			staticMachineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "worker")
 
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -1585,7 +1590,7 @@ ccc: ddd
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
 			Expect(staticMachineTemplate.ToYaml()).To(MatchYAML(nodeManagerStaticInstancesStaticMachineTemplate))
-			Expect(staticMachineDeployment.ToYaml()).To(MatchYAML(nodeManagerStaticInstancesMachineDeployment))
+			Expect(staticMachineDeployment.Exists()).To(BeFalse())
 
 			assertBashibleAPIServerTLS(f)
 		})
@@ -1956,35 +1961,16 @@ internal:
 			It("Everything must render properly", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				assertAutoscalingAnnotations := func(md object_store.KubeObject, labels, taints string) {
-					Expect(md.Exists()).To(BeTrue())
-
-					annotations := md.Field("metadata.annotations").Map()
-
-					if labels != "" {
-						Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/labels"].String()).To(Equal(labels))
-					} else {
-						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/labels"))
-					}
-
-					if taints != "" {
-						Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/taints"].String()).To(Equal(taints))
-					} else {
-						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/taints"))
-					}
+				// MachineDeployments are created by the capi-machine-deployment controller, not helm.
+				for _, name := range []string{
+					"myprefix-without-labels-and-taints-02320933",
+					"myprefix-with-labels-only-02320933",
+					"myprefix-with-taints-only-02320933",
+					"myprefix-with-labels-and-taints-02320933",
+				} {
+					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", name)
+					Expect(md.Exists()).To(BeFalse())
 				}
-
-				md1 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-without-labels-and-taints-02320933")
-				assertAutoscalingAnnotations(md1, "", "")
-
-				md2 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-labels-only-02320933")
-				assertAutoscalingAnnotations(md2, "app=warp-drive-ai,environment=production", "")
-
-				md3 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-taints-only-02320933")
-				assertAutoscalingAnnotations(md3, "", "b=v:NoExecute,a,d:NoExecute,c=v1:")
-
-				md4 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-labels-and-taints-02320933")
-				assertAutoscalingAnnotations(md4, "app=warp-drive-ai,environment=production", "b=v:NoExecute,a,d:NoExecute,c=v1:")
 			})
 		})
 
@@ -2104,20 +2090,10 @@ internal:
 					templateName string
 				}
 
+				// MachineDeployment is created by the capi-machine-deployment controller, not helm.
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
-					Expect(md.Exists()).To(BeTrue())
-
-					Expect(md.Field("spec.clusterName").String()).To(Equal("app"))
-					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("app"))
-					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
-					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
-
-					annotations := md.Field("metadata.annotations").Map()
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
-					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"].String()).To(Equal("2"))
-					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/memory"].String()).To(Equal("2Gi"))
+					Expect(md.Exists()).To(BeFalse())
 
 					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
 					Expect(secret.Exists()).To(BeTrue())
@@ -2132,7 +2108,6 @@ internal:
 					Expect(vcdTemplate.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
 
 					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 				}
 				//
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2244,18 +2219,10 @@ internal:
 					templateName string
 				}
 
+				// MachineDeployment is created by the capi-machine-deployment controller, not helm.
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
-					Expect(md.Exists()).To(BeTrue())
-
-					Expect(md.Field("spec.clusterName").String()).To(Equal("dvp"))
-					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("dvp"))
-					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
-					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
-
-					annotations := md.Field("metadata.annotations").Map()
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
+					Expect(md.Exists()).To(BeFalse())
 
 					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
 					Expect(secret.Exists()).To(BeTrue())
@@ -2274,7 +2241,6 @@ internal:
 					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
 
 					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")

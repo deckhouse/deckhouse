@@ -18,8 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -43,7 +44,7 @@ type (
 		CompletePhase(ctx context.Context, stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) error
 		CompletePipeline(ctx context.Context, stateCache dstate.Cache) error
 		SwitchPhase(ctx context.Context, phase OperationPhase, isCritical bool, stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) (bool, error)
-		CompleteSubPhase(completedSubPhase OperationSubPhase)
+		CompleteSubPhase(ctx context.Context, completedSubPhase OperationSubPhase)
 		CompletePhaseAndPipeline(ctx context.Context, stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) error
 		GetLastState() DhctlState
 		SetClusterConfig(cfg ClusterConfig)
@@ -98,7 +99,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(ctx context.
 
 	err := pec.progressTracker.Progress(lastCompletedPhase, nextPhase, "", opts)
 	if err != nil {
-		log.ErrorF("Failed to write progress for phase %v: %v", completedPhase, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to write progress for phase %v: %v", completedPhase, err), "\n"))
 	}
 
 	if pec.onPhaseFunc == nil {
@@ -157,7 +158,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) Finalize(ctx context.Con
 
 	err := pec.progressTracker.Complete(pec.completedPhase)
 	if err != nil {
-		log.ErrorF("Failed to complete progress: %v", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to complete progress: %v", err), "\n"))
 	}
 
 	return pec.setLastState(ctx, stateCache)
@@ -189,10 +190,10 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) CompletePhase(ctx contex
 }
 
 // CompleteSubPhase completes specified sub phase.
-func (pec *phasedExecutionContext[OperationPhaseDataT]) CompleteSubPhase(completedSubPhase OperationSubPhase) {
+func (pec *phasedExecutionContext[OperationPhaseDataT]) CompleteSubPhase(ctx context.Context, completedSubPhase OperationSubPhase) {
 	err := pec.progressTracker.Progress("", "", completedSubPhase, ProgressOpts{})
 	if err != nil {
-		log.ErrorF("Failed to write progress for sub phase %v: %v", completedSubPhase, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to write progress for sub phase %v: %v", completedSubPhase, err), "\n"))
 	}
 }
 

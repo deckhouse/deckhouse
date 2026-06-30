@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
-func TestConversions(t *testing.T) {
+func TestConversionsV2(t *testing.T) {
 	conversions := "."
 	cases := []struct {
 		name            string
@@ -38,13 +38,46 @@ allowedKubernetesVersions:
   - 1.32
 allowedBundles:
   - ubuntu-lts
-earlyOomEnabled: false
+instancePrefix: kube
 `,
 			expected: `
-earlyOomEnabled: false
+instancePrefix: kube
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := conversion.TestConvert(c.settings, c.expected, conversions, c.currentVersion, c.expectedVersion)
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestConversionsV3(t *testing.T) {
+	conversions := "."
+	cases := []struct {
+		name            string
+		settings        string
+		expected        string
+		currentVersion  int
+		expectedVersion int
+	}{
+		{
+			name: "should convert from 2 to 3 version",
+			settings: `
+earlyOomEnabled: false
+instancePrefix: kube
+`,
+			expected: `
+instancePrefix: kube
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
 		},
 	}
 

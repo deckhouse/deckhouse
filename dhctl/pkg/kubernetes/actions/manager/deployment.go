@@ -26,7 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -57,7 +57,7 @@ func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.Ku
 	}
 
 	if !hasDeployment {
-		log.InfoF("Deployment %s/%s does not exist. Skip restarting.\n", global.D8SystemNamespace, deploymentName)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Deployment %s/%s does not exist. Skip restarting.", global.D8SystemNamespace, deploymentName))
 		return nil
 	}
 

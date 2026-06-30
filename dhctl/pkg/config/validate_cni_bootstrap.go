@@ -16,11 +16,12 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -33,7 +34,7 @@ func validateCNIBootstrap(ctx context.Context, payload string, _ *SchemaStore, _
 	if filtered == "" {
 		return nil
 	}
-	meta, err := ParseClusterPayload(filtered)
+	meta, err := ParseClusterPayload(ctx, filtered)
 	if err != nil {
 		// Filtered payload that does not parse structurally — nothing to
 		// analyze. Layer 1/2 already saw the original payload.
@@ -44,7 +45,7 @@ func validateCNIBootstrap(ctx context.Context, payload string, _ *SchemaStore, _
 		// Installer-side error (missing/broken cni-bootstrap.yml, missing
 		// cni-* schema, recommended MC failing OpenAPI). Log and skip — not
 		// a user-input failure.
-		log.WarnF("cni-bootstrap analysis skipped: %v\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("cni-bootstrap analysis skipped: %v", err))
 		return nil
 	}
 	if analysis.SkipReason != "" || analysis.Matches {

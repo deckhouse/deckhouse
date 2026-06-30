@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -32,7 +33,7 @@ import (
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -50,7 +51,7 @@ type DestroyerParams struct {
 	SSHClientProvider    libcon.SSHProvider
 	KubeProvider         kube.ClientProviderWithCleanup
 	State                *State
-	LoggerProvider       log.LoggerProvider
+	Logger               *slog.Logger
 	PhasedActionProvider phases.DefaultActionProvider
 
 	TmpDir string
@@ -100,8 +101,8 @@ func NewDestroyer(params *DestroyerParams) *Destroyer {
 func (d *Destroyer) Prepare(ctx context.Context) error {
 	logger := d.logger()
 
-	logger.LogDebugLn("Starting prepare static destroyer")
-	defer logger.LogDebugLn("Finished prepare static destroyer")
+	logger.DebugContext(ctx, "Starting prepare static destroyer")
+	defer logger.DebugContext(ctx, "Finished prepare static destroyer")
 
 	var err error
 
@@ -117,7 +118,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 			return err
 		}
 	} else {
-		logger.LogDebugLn("Found existing nodes with credentials. Saved to destroyer and skipping creation")
+		logger.DebugContext(ctx, "Found existing nodes with credentials. Saved to destroyer and skipping creation")
 	}
 
 	return d.waitNodeUserExists(ctx)
@@ -161,13 +162,17 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
-	logger.LogDebugLn("Starting static cluster destroy process")
+	logger.DebugContext(ctx, "Starting static cluster destroy process")
 	masterHosts := sshClient.Session().AvailableHosts()
 	stdOutErrHandler := func(l string) {
-		logger.LogWarnLn(l)
+		// Cleanup script streams its own `[INFO] ...`/`[ERROR] ...` lines; keep the WARN severity
+		// but tag FileOnly so they stay in the debug log and never flood the compact terminal.
+		// lib-connection already echoes every streamed line to the debug file (`ssh: <line>`), so
+		// this handler is debug-only by design — keep it non-nil or that echo disappears too.
+		logger.LogAttrs(ctx, slog.LevelWarn, l, dhlog.FileOnly())
 	}
 
-	logger.LogDebugLn("Discovering additional master nodes")
+	logger.DebugContext(ctx, "Discovering additional master nodes")
 	hostToExclude := ""
 
 	ips := make([]entity.NodeIP, 0)
@@ -177,7 +182,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	}
 
 	if len(ips) > 0 {
-		err := logger.LogProcessCtx(ctx, "default", "Get internal node IP for passed control-plane host", func(ctx context.Context) error {
+		err := dhlog.RunProcess(ctx, logger, "Get internal node IP for passed control-plane host", func(ctx context.Context) error {
 			file := sshClient.File()
 
 			bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
@@ -186,7 +191,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 			}
 
 			hostToExclude = strings.TrimSpace(string(bytes))
-			logger.LogDebugF("Got internal node IP for passed control-plane host: %s\n", hostToExclude)
+			logger.DebugContext(ctx, fmt.Sprintf("Got internal node IP for passed control-plane host: %s", hostToExclude))
 
 			return nil
 		})
@@ -213,12 +218,12 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 		}
 	}
 
-	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
+	cmd := `test -f /var/lib/bashible/cleanup_static_node.sh || { echo "ERROR: cleanup_static_node.sh not found"; exit 1; }; bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing`
 
 	userPassedSSHSetting := sshClient.Session().Copy()
 
 	if len(additionalMastersHosts) > 0 {
-		logger.LogDebugF("Found %d additional masters, destroying them\n", len(additionalMastersHosts))
+		logger.DebugContext(ctx, fmt.Sprintf("Found %d additional masters, destroying them", len(additionalMastersHosts)))
 		settings := userPassedSSHSetting.Copy()
 		// if bastion passed - use user bastion, because master passed by user and another masters in one network
 		// else connect over passed host, because additional masters will have private network address
@@ -230,7 +235,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 
 		for _, host := range additionalMastersHosts {
 			if d.hostProcessed(host) {
-				logger.LogInfoF("Skipping additional master host: '%s'. Host already processed\n", host.String())
+				logger.InfoContext(ctx, fmt.Sprintf("Skipping additional master host: '%s'. Host already processed", host.String()))
 				continue
 			}
 			settings.SetAvailableHosts([]session.Host{host})
@@ -244,7 +249,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 				return err
 			}
 
-			logger.LogDebugF("Host %s was cleaned up successfully\n", host.Host)
+			logger.DebugContext(ctx, fmt.Sprintf("Host %s was cleaned up successfully", host.Host))
 		}
 	}
 
@@ -276,7 +281,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 }
 
 func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
-	d.logger().LogDebugF("Starting cleanup process for host %s\n", host)
+	d.logger().DebugContext(ctx, fmt.Sprintf("Starting cleanup process for host %s", host))
 
 	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
 		c := sshClient.Command(cmd)
@@ -316,18 +321,18 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSH
 
 	logger := d.logger()
 
-	logger.LogInfoF("Switch to node user for next control-plane host\n")
+	logger.InfoContext(ctx, "Switch to node user for next control-plane host")
 
 	tmpDir := filepath.Join(d.params.TmpDir, "destroy")
 
-	logger.LogDebugF("Starting replacing SSH client. Key directory: %s\n", tmpDir)
+	logger.DebugContext(ctx, fmt.Sprintf("Starting replacing SSH client. Key directory: %s", tmpDir))
 
 	err := os.MkdirAll(tmpDir, 0o755)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cache directory for NodeUser: %w", err)
 	}
 
-	logger.LogDebugF("Tempdir '%s' created for SSH client\n", tmpDir)
+	logger.DebugContext(ctx, fmt.Sprintf("Tempdir '%s' created for SSH client", tmpDir))
 
 	privateKeyPrefixPathWithoutSuffix := filepath.Join(tmpDir, "id_rsa_destroyer.key")
 
@@ -344,7 +349,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSH
 		return nil, fmt.Errorf("Failed to write private key for NodeUser: %w", err)
 	}
 
-	logger.LogDebugLn("Private key written")
+	logger.DebugContext(ctx, "Private key written")
 
 	sess := session.NewSession(session.Input{
 		User: d.nodesWithCredentials.NodeUser.Name,
@@ -386,7 +391,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSH
 		return nil, err
 	}
 
-	logger.LogDebugF("New SSH Client: %-v\n", newSSHClient)
+	logger.DebugContext(ctx, fmt.Sprintf("New SSH Client: %-v", newSSHClient))
 	err = newSSHClient.Start()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to start SSH client: %w", err)
@@ -396,7 +401,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSH
 		return nil, fmt.Errorf("Failed to refresh private keys: %w", err)
 	}
 
-	logger.LogDebugLn("Private keys refreshed for replacing kube client")
+	logger.DebugContext(ctx, "Private keys refreshed for replacing kube client")
 
 	return newSSHClient, nil
 }
@@ -417,7 +422,7 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 	logger := d.logger()
 
 	if d.params.State.IsNodeUserExists(ctx) {
-		logger.LogDebugLn("NodeUser for static destroyer exists getting from cache")
+		logger.DebugContext(ctx, "NodeUser for static destroyer exists getting from cache")
 		return nil
 	}
 
@@ -431,16 +436,16 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 				return nil, err
 			}
 		} else {
-			logger.LogDebugLn("No wait NodeUser for single-master cluster")
+			logger.DebugContext(ctx, "No wait NodeUser for single-master cluster")
 		}
 
 		return nil, d.params.State.SetNodeUserExists(ctx)
 	})
 }
 
-func (d *Destroyer) createNodeUserCredentials(ctx context.Context, ips []entity.NodeIP, logger log.Logger) (*v1.NodeUserCredentials, error) {
+func (d *Destroyer) createNodeUserCredentials(ctx context.Context, ips []entity.NodeIP, logger *slog.Logger) (*v1.NodeUserCredentials, error) {
 	if isSingleMaster(ips) {
-		logger.LogDebugLn("Has single master. Skip creating node user and returns empty credentials for save")
+		logger.DebugContext(ctx, "Has single master. Skip creating node user and returns empty credentials for save")
 		return &v1.NodeUserCredentials{}, nil
 	}
 
@@ -454,12 +459,12 @@ func (d *Destroyer) createNodeUserCredentials(ctx context.Context, ips []entity.
 		return nil, err
 	}
 
-	logger.LogDebugF("Node user created via API %s\n", nodeUserCredentials.Name)
+	logger.DebugContext(ctx, fmt.Sprintf("Node user created via API %s", nodeUserCredentials.Name))
 
 	return nodeUserCredentials, nil
 }
 
-func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Logger) (*NodesWithCredentials, error) {
+func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger *slog.Logger) (*NodesWithCredentials, error) {
 	if d.params.PhasedActionProvider == nil {
 		return nil, fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you tried to destroy when an abort was needed")
 	}
@@ -473,7 +478,7 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 		return nil, fmt.Errorf("Failed to get master nodes IPs: got empty nodes")
 	}
 
-	logger.LogDebugF("Found master node IPs: %+v\n", nodeIPs)
+	logger.DebugContext(ctx, fmt.Sprintf("Found master node IPs: %+v", nodeIPs))
 
 	// always create node user creds so we have only master
 	var nodesWithCredentials *NodesWithCredentials
@@ -493,7 +498,7 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 			return nil, err
 		}
 
-		logger.LogDebugF("Node user '%s' saved to cache and to destroyer. Empty is correct for single master \n", nodeUserCredentials.Name)
+		logger.DebugContext(ctx, fmt.Sprintf("Node user '%s' saved to cache and to destroyer. Empty is correct for single master ", nodeUserCredentials.Name))
 
 		return nil, nil
 	})
@@ -526,14 +531,14 @@ func (d *Destroyer) addHostAsProcessed(ctx context.Context, host session.Host) e
 			return nil, err
 		}
 
-		d.logger().LogDebugF("Host %+v saved as processed to cache. Have processed hosts %+v\n", host, d.nodesWithCredentials.ProcessedIPS)
+		d.logger().DebugContext(ctx, fmt.Sprintf("Host %+v saved as processed to cache. Have processed hosts %+v", host, d.nodesWithCredentials.ProcessedIPS))
 
 		return nil, nil
 	})
 }
 
-func (d *Destroyer) logger() log.Logger {
-	return log.SafeProvideLogger(d.params.LoggerProvider)
+func (d *Destroyer) logger() *slog.Logger {
+	return d.params.Logger
 }
 
 var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(75, 1*time.Second)

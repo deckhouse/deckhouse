@@ -11,8 +11,9 @@ The table below shows Istio versions and their support status in Deckhouse Kuber
 
 | Istio version | [Kubernetes versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in DKP          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
-|     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                                          | Supported |
-|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                        | Deprecated and will be deleted |
+|     1.27      |                                                1.29, 1.30, 1.31, 1.32, 1.34, 1.35, 1.36                                                | Supported |
+|     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                          | Supported |
+|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                        | Deprecated and will be deleted |
 
 ## Problems Istio helps to solve
 

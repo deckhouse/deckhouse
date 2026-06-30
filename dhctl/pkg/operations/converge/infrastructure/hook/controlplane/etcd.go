@@ -28,7 +28,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -53,7 +53,7 @@ func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName s
 		}
 
 		if attempt == 1 || hasMember {
-			log.InfoF("Current members: [%s]\n", strings.Join(names, ", "))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Current members: [%s]", strings.Join(names, ", ")))
 		}
 
 		if hasMember {

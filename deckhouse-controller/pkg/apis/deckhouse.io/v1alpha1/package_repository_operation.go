@@ -83,10 +83,10 @@ type PackageRepositoryOperation struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of a PackageRepositoryOperation.
+	// Defines parameters for the package repository operation.
 	Spec PackageRepositoryOperationSpec `json:"spec"`
 
-	// Status of a PackageRepositoryOperation.
+	// Package repository operation status.
 	Status PackageRepositoryOperationStatus `json:"status,omitempty"`
 }
 
@@ -128,7 +128,10 @@ type PackageRepositoryOperationStatus struct {
 	// +optional
 	Packages *PackageRepositoryOperationStatusPackages `json:"packages,omitempty"`
 
-	// Conditions represent the latest available observations of the operation's state.
+	// Conditions reflecting the latest observations of the operation state.
+	// The operation phase is determined by the `Completed` condition: while its status is `False`,
+	// the operation is in one of the intermediate phases (`Discover`, `Processing`);
+	// when the status is `True`, the operation has finished with reason `Succeeded` or `Failed`.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -159,6 +162,7 @@ type PackageRepositoryOperationStatusPackages struct {
 	Total int `json:"total,omitempty"`
 
 	// Total number of newly found versions across all packages in this operation.
+	//
 	// A version is counted as new if its ApplicationPackageVersion or
 	// ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
 	// only) existed with the "not in registry" mark and its image was found in the
@@ -201,6 +205,7 @@ type PackageRepositoryOperationStatusPackage struct {
 	FoundVersions int `json:"foundVersions,omitempty"`
 
 	// Number of newly found versions during this operation.
+	//
 	// A version is counted as new if its ApplicationPackageVersion or
 	// ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
 	// only) existed with the "not in registry" mark and its image was found in the

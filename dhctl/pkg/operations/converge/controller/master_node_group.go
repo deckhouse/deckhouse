@@ -15,6 +15,7 @@
 package controller
 
 import (
+	gocontext "context"
 	"errors"
 	"fmt"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
@@ -111,7 +112,7 @@ func (c *MasterNodeGroupController) Run(ctx *context.Context) error {
 
 	c.desiredReplicas = metaConfig.GetReplicasByNodeGroupName(c.name)
 
-	log.DebugF("Desired replicas for masters %v\n", c.desiredReplicas)
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Desired replicas for masters %v", c.desiredReplicas))
 
 	c.convergeState, err = ctx.ConvergeState()
 	if err != nil {
@@ -119,11 +120,11 @@ func (c *MasterNodeGroupController) Run(ctx *context.Context) error {
 	}
 
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		log.DebugF("AutoDismissDestructive run normal\n")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "AutoDismissDestructive run normal")
 		return c.runWithReplicas(ctx, metaConfig.MasterNodeGroupSpec.Replicas)
 	}
 
-	log.DebugF("run with destructive changes\n")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "run with destructive changes")
 
 	return c.run(ctx)
 }
@@ -135,7 +136,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 	}
 
 	if c.convergeState.Phase == phases.ScaleToMultiMasterPhase {
-		log.DebugF("Scale to multi master\n")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Scale to multi master")
 
 		replicas := 3
 
@@ -144,7 +145,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 			return fmt.Errorf("failed to converge with 3 replicas: %w", err)
 		}
 
-		log.DebugF("scaled to multi-master, saving state...\n")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "scaled to multi-master, saving state...")
 
 		c.convergeState.Phase = phases.ScaleToSingleMasterPhase
 
@@ -155,7 +156,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 	}
 
 	if c.convergeState.Phase == phases.ScaleToSingleMasterPhase {
-		log.DebugF("Scale to single master\n")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Scale to single master")
 
 		if err := c.switchClientToFirstMaster(ctx); err != nil {
 			return err
@@ -170,14 +171,14 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 
 		c.convergeState.Phase = ""
 
-		log.DebugF("scaled to single-master, saving state...\n")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "scaled to single-master, saving state...")
 
 		err = ctx.SetConvergeState(c.convergeState)
 		if err != nil {
 			return fmt.Errorf("failed to set converge state: %w", err)
 		}
 
-		log.DebugF("converge master nodegroup finished\n")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "converge master nodegroup finished")
 
 		return nil
 	}
@@ -188,7 +189,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 func (c *MasterNodeGroupController) switchClientToNotFirstMaster(ctx *context.Context) error {
 	clientSwitcher := ctx.ClientSwitcher()
 	if govalue.IsNil(clientSwitcher) {
-		log.DebugF("Skipping switch of client to not-first master. Got empty client switcher")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Skipping switch of client to not-first master. Got empty client switcher")
 		return nil
 	}
 
@@ -203,7 +204,7 @@ func (c *MasterNodeGroupController) switchClientToNotFirstMaster(ctx *context.Co
 func (c *MasterNodeGroupController) switchClientToFirstMaster(ctx *context.Context) error {
 	clientSwitcher := ctx.ClientSwitcher()
 	if govalue.IsNil(clientSwitcher) {
-		log.DebugF("Skipping switch of client to first master. Got empty client switcher")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Skipping switch of client to first master. Got empty client switcher")
 		return nil
 	}
 
@@ -216,7 +217,7 @@ func (c *MasterNodeGroupController) switchClientToFirstMaster(ctx *context.Conte
 }
 
 func (c *MasterNodeGroupController) runWithReplicas(ctx *context.Context, replicas int) error {
-	log.DebugF("run with replicas %v\n", c.desiredReplicas)
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("run with replicas %v", c.desiredReplicas))
 
 	c.desiredReplicas = replicas
 	c.nodeToHost = nil
@@ -282,7 +283,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		}
 
 		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
+		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
 		if err != nil {
 			return err
 		}
@@ -297,7 +298,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 func (c *MasterNodeGroupController) beforeUpdateNodes(ctx *context.Context) error {
 	noScaleToMultiMaster := c.convergeState.Phase != phases.ScaleToMultiMasterPhase
 
-	log.DebugF("Master ng. beforeUpdateNodes: has phase %s; noScaleToMultiMaster %v\n", c.convergeState.Phase, noScaleToMultiMaster)
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Master ng. beforeUpdateNodes: has phase %s; noScaleToMultiMaster %v", c.convergeState.Phase, noScaleToMultiMaster))
 
 	if noScaleToMultiMaster {
 		return nil
@@ -330,13 +331,13 @@ func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, maste
 }
 
 func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, masterIPForSSHList []session.Host) {
-	log.DebugF("Updating master hosts cache with %d new masters\n", len(masterIPForSSHList))
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache with %d new masters", len(masterIPForSSHList)))
 
 	// Get current master hosts from cache
 	stateCache := ctx.StateCache()
 	currentHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
 	if err != nil {
-		log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not load current master hosts from cache (this is OK for first master): %v", err))
 		currentHosts = []session.Host{}
 	}
 
@@ -347,14 +348,14 @@ func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, mas
 
 	for _, newHost := range masterIPForSSHList {
 		hostsMap[newHost.Name] = newHost.Host
-		log.DebugF("Adding new master to cache: %s -> %s\n", newHost.Name, newHost.Host)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Adding new master to cache: %s -> %s", newHost.Name, newHost.Host))
 	}
 
-	log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Saving updated master hosts to cache: %v", hostsMap))
 
 	state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
 
-	log.DebugF("Successfully updated master hosts cache with %d new masters. hostsMap: %v\n", len(masterIPForSSHList), hostsMap)
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache with %d new masters. hostsMap: %v", len(masterIPForSSHList), hostsMap))
 }
 
 func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
@@ -371,7 +372,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, nodeName)
+		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeName))
 		return nil
 	}
 
@@ -402,11 +403,11 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		if errors.Is(err, controlplane.ErrSingleMasterClusterInfrastructurePlanHasDestructiveChanges) {
 			confirmation := input.NewConfirmation().WithMessage("A single-master cluster has disruptive changes in the infrastructure plan. Trying to migrate to a multi-master cluster and back to a single-master cluster. Do you want to continue?")
 			if !ctx.ChangesSettings().AutoApprove && !confirmation.Ask() {
-				log.InfoLn("Aborted")
+				dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Aborted")
 				return nil
 			}
 
-			log.DebugF("Destructive change single master. Scale to multimaster and converge\n")
+			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Destructive change single master. Scale to multimaster and converge")
 
 			c.convergeState.Phase = phases.ScaleToMultiMasterPhase
 
@@ -423,7 +424,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 			return nil
 		}
 
-		log.ErrorF("Infrastructure utility exited with an error:\n%s\n", err.Error())
+		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("Infrastructure utility exited with an error:\n%s", err.Error()))
 
 		return err
 	}
@@ -446,13 +447,13 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	// Update master hosts IP cache after successful master node creation/update
 	if outputs.MasterIPForSSH != "" {
-		log.DebugF("Updating master hosts cache: node %s got IP %s\n", nodeName, outputs.MasterIPForSSH)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache: node %s got IP %s", nodeName, outputs.MasterIPForSSH))
 
 		// Get current master hosts from cache
 		stateCache := ctx.StateCache()
 		currentHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
 		if err != nil {
-			log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
+			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not load current master hosts from cache (this is OK for first master): %v", err))
 			currentHosts = []session.Host{}
 		}
 
@@ -464,13 +465,13 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 		hostsMap[nodeName] = outputs.MasterIPForSSH
 
-		log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Saving updated master hosts to cache: %v", hostsMap))
 
 		state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
 
-		log.DebugF("Successfully updated master hosts cache with node %s IP %s. hostsMap: %v\n", nodeName, outputs.MasterIPForSSH, hostsMap)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache with node %s IP %s. hostsMap: %v", nodeName, outputs.MasterIPForSSH, hostsMap))
 	} else {
-		log.WarnF("No SSH IP received for master node %s, cache not updated\n", nodeName)
+		dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), fmt.Sprintf("No SSH IP received for master node %s, cache not updated", nodeName))
 	}
 
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
@@ -521,7 +522,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 	}
 
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", global.MasterNodeGroupName, c.desiredReplicas)
-	return log.Process("converge", title, func() error {
+	return dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), title, func(gocontext.Context) error {
 		// Collect names of nodes to be deleted for cache cleanup
 		nodesToDelete := make([]string, 0, len(nodesToDeleteInfo))
 		for _, nodeInfo := range nodesToDeleteInfo {
@@ -539,13 +540,13 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 		// If deletion was successful, update master hosts cache
 		if err == nil && len(nodesToDelete) > 0 {
-			log.DebugF("Updating master hosts cache after deleting %d masters: %v\n", len(nodesToDelete), nodesToDelete)
+			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache after deleting %d masters: %v", len(nodesToDelete), nodesToDelete))
 
 			// Get current master hosts from cache
 			stateCache := ctx.StateCache()
 			currentHosts, cacheErr := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
 			if cacheErr != nil {
-				log.DebugF("Could not load current master hosts from cache: %v\n", cacheErr)
+				dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not load current master hosts from cache: %v", cacheErr))
 				return err
 			}
 
@@ -557,15 +558,15 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 			for _, deletedNode := range nodesToDelete {
 				if _, exists := hostsMap[deletedNode]; exists {
 					delete(hostsMap, deletedNode)
-					log.DebugF("Removed deleted master from cache: %s\n", deletedNode)
+					dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Removed deleted master from cache: %s", deletedNode))
 				}
 			}
 
-			log.DebugF("Saving updated master hosts to cache after deletion: %v\n", hostsMap)
+			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Saving updated master hosts to cache after deletion: %v", hostsMap))
 
 			state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
 
-			log.DebugF("Successfully updated master hosts cache after deleting %d masters. hostsMap: %v\n", len(nodesToDelete), hostsMap)
+			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache after deleting %d masters. hostsMap: %v", len(nodesToDelete), hostsMap))
 		}
 
 		return err

@@ -8,10 +8,6 @@ properties:
     properties:
       apiServerIp:
         type: string
-      cniSecretData:
-        type: string
-        x-examples:
-        - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lrUnBjbVZqZEZkcGRHaE9iMlJsVW05MWRHVnpJbjA9Cg=="
       providerClusterConfiguration:
         type: object
         additionalProperties: false

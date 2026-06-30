@@ -26,7 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
@@ -45,7 +45,7 @@ var globalCache state.Cache = &cache.DummyCache{}
 func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state.Cache, error) {
 	cacheOpts := opts.Cache
 	tmpDir := filepath.Join(cacheOpts.Dir, stringsutil.Sha256Encode(identity))
-	log.InfoF("State cache directory: %s\n", tmpDir)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("State cache directory: %s", tmpDir))
 
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return nil, fmt.Errorf("Cannot create cache directory: %w", err)
@@ -53,15 +53,15 @@ func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state
 
 	if cacheOpts.KubeNamespace == "" {
 		if opts.ResetInitialState {
-			return cache.NewStateCacheWithInitialState(tmpDir, opts.InitialState)
+			return cache.NewStateCacheWithInitialState(ctx, tmpDir, opts.InitialState)
 		}
 		return cache.NewStateCache(tmpDir)
 	}
 
-	log.DebugLn("Using Kubernetes state cache")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Using Kubernetes state cache")
 
 	kubeCl := client.NewKubernetesClient()
-	err := kubeCl.Init(&client.KubernetesInitParams{
+	err := kubeCl.InitContext(ctx, &client.KubernetesInitParams{
 		KubeConfig:          cacheOpts.KubeConfig,
 		KubeConfigContext:   cacheOpts.KubeConfigContext,
 		KubeConfigInCluster: cacheOpts.KubeConfigInCluster,
@@ -89,7 +89,7 @@ func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state
 	}
 
 	if hasTombstone {
-		log.InfoF("Tombstone found in Kubernetes cache - cluster may have already been bootstrapped\n")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Tombstone found in Kubernetes cache - cluster may have already been bootstrapped")
 		return nil, fmt.Errorf("Cache exhausted")
 	}
 

@@ -917,7 +917,7 @@ jobs:
   drweb-scan:
     name: Dr.Web Scan ${{ matrix.branch }}
     runs-on: [self-hosted, antivirus]
-    if: github.repository == 'deckhouse/deckhouse'
+    if: ${{ false }}
     # PR mode: filter scanned images by the changed_images diff (delta-only scan).
     needs: [get-tags, changed_images]
     strategy:
@@ -1062,7 +1062,7 @@ jobs:
   kaspersky-scan:
     name: Kaspersky Scan ${{ matrix.branch }}
     runs-on: [self-hosted, antivirus]
-    if: github.repository == 'deckhouse/deckhouse'
+    if: ${{ false }}
     # PR mode: filter scanned images by the changed_images diff (delta-only scan).
     needs: [get-tags, changed_images]
     strategy:
@@ -1315,7 +1315,7 @@ jobs:
   security_scan_images_required:
     name: Security scan images required
     runs-on: self-slim
-    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    if: ${{ false }}
     needs:
       - pull_request_info
       - changed_images

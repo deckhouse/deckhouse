@@ -15,13 +15,14 @@
 package controller
 
 import (
+	gocontext "context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
@@ -79,7 +80,7 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = log.Process("infrastructure", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, metaConfig.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
+	err = dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, metaConfig.ClusterPrefix, c.name, nodesIndexToCreate), func(gocontext.Context) error {
 		var err error
 		nodesToWait, err = operations.ParallelBootstrapAdditionalNodes(
 			ctx.Ctx(),
@@ -90,7 +91,6 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 			c.name,
 			c.cloudConfig,
 			ctx.InfrastructureContext(metaConfig),
-			log.GetDefaultLogger(),
 			false,
 			c.globalOptions,
 		)
@@ -120,7 +120,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, nodeName)
+		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeName))
 		return nil
 	}
 
@@ -132,7 +132,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	nodeGroupName := c.name
 
 	// Node group settings are only for the static node.
-	nodeGroupSettingsFromConfig := metaConfig.FindTerraNodeGroup(c.name)
+	nodeGroupSettingsFromConfig := metaConfig.FindTerraNodeGroup(ctx.Ctx(), c.name)
 
 	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
 		NodeName:        nodeName,
@@ -154,7 +154,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 
 	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, c.globalOptions, infrastructure.OnlyState)
 	if err != nil {
-		log.ErrorF("Infrastructure utility exited with an error:\n%s\n", err.Error())
+		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("Infrastructure utility exited with an error:\n%s", err.Error()))
 		return err
 	}
 
@@ -162,7 +162,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		return global.ErrConvergeInterrupted
 	}
 
-	err = infrastructurestate.SaveNodeInfrastructureState(ctx.Ctx(), kubeClient, nodeName, c.name, outputs.InfrastructureState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
+	err = infrastructurestate.SaveNodeInfrastructureState(ctx.Ctx(), kubeClient, nodeName, c.name, outputs.InfrastructureState, nodeGroupSettingsFromConfig)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 
 func (c *CloudPermanentNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas)
-	return log.Process("converge", title, func() error {
+	return dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), title, func(gocontext.Context) error {
 		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
 			return NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
 		})

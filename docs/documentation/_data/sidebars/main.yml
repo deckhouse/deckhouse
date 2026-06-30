@@ -1036,6 +1036,10 @@ entries:
                 en: Using TLS certificates
                 ru: Использование TLS-сертификатов
               url: /user/security/tls.html
+            - title:
+                en: Pod and container security settings
+                ru: Параметры безопасности подов и контейнеров
+              url: /user/security/pod-settings.html
         - title:
             en: Interfaces
             ru: Интерфейсы
@@ -1278,6 +1282,10 @@ entries:
                 en: Web interface modules
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
+            - title:
+                en: Registry module
+                ru: Модуль registry
+              url: /architecture/deckhouse/registry.html
             - title:
                 en: Direct mode of registry module
                 ru: Режим Direct модуля registry

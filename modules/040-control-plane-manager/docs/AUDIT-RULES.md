@@ -256,7 +256,6 @@ users:
   - system:serviceaccount:d8-chrony:chrony-exporter-master
   - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
-  - system:serviceaccount:d8-cloud-instance-manager:early-oom
   - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
   - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:node-controller
@@ -311,12 +310,6 @@ users:
   - system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge
   - system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer
   - system:serviceaccount:d8-descheduler:descheduler
-  - system:serviceaccount:d8-ingress-nginx:failover-cleaner
-  - system:serviceaccount:d8-ingress-nginx:geoproxy
-  - system:serviceaccount:d8-ingress-nginx:ingress-nginx
-  - system:serviceaccount:d8-ingress-nginx:kruise
-  - system:serviceaccount:d8-ingress-nginx:validator
-  - system:serviceaccount:d8-ingress-nginx:validator-full
   - system:serviceaccount:d8-istio:alliance-healthcheck
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
@@ -328,22 +321,23 @@ users:
   - system:serviceaccount:d8-istio:waypoint-controller
   - system:serviceaccount:d8-istio:ztunnel
   - system:serviceaccount:d8-local-path-provisioner:local-path-provisioner
-  - system:serviceaccount:d8-log-shipper:log-shipper
   - system:serviceaccount:d8-metallb:controller
   - system:serviceaccount:d8-metallb:l2lb-controller
   - system:serviceaccount:d8-metallb:l2lb-speaker
   - system:serviceaccount:d8-metallb:speaker
-  - system:serviceaccount:d8-monitoring:control-plane-proxy
-  - system:serviceaccount:d8-monitoring:events-exporter
-  - system:serviceaccount:d8-monitoring:extended-monitoring-exporter
-  - system:serviceaccount:d8-monitoring:image-availability-exporter
+  - system:serviceaccount:d8-monitoring:aggregating-proxy
+  - system:serviceaccount:d8-monitoring:alertmanager-internal
+  - system:serviceaccount:d8-monitoring:alerts-receiver
+  - system:serviceaccount:d8-monitoring:grafana
   - system:serviceaccount:d8-monitoring:kube-state-metrics
-  - system:serviceaccount:d8-monitoring:monitoring-ping
+  - system:serviceaccount:d8-monitoring:loki
   - system:serviceaccount:d8-monitoring:node-exporter
   - system:serviceaccount:d8-monitoring:oom-kills-exporter
-  - system:serviceaccount:d8-monitoring:x509-certificate-exporter
+  - system:serviceaccount:d8-monitoring:prometheus
+  - system:serviceaccount:d8-monitoring:trickster
   - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
   - system:serviceaccount:d8-openvpn:openvpn
+  - system:serviceaccount:d8-operator-prometheus:operator-prometheus
   - system:serviceaccount:d8-service-with-healthchecks:agent
   - system:serviceaccount:d8-service-with-healthchecks:controller
   - system:serviceaccount:d8-system:deckhouse
@@ -361,6 +355,7 @@ users:
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
   - system:serviceaccount:d8-user-authz:webhook
   - system:serviceaccount:kube-system:d8-control-plane-manager
+  - system:serviceaccount:kube-system:d8-control-plane-manager-control-plane-proxy
   - system:serviceaccount:kube-system:d8-kube-dns
   - system:serviceaccount:kube-system:d8-kube-proxy
   - system:serviceaccount:kube-system:d8-node-local-dns
@@ -428,17 +423,16 @@ namespaces:
   - d8-cni-simple-bridge
   - d8-csi-vsphere
   - d8-descheduler
-  - d8-ingress-nginx
   - d8-istio
   - d8-keepalived
   - d8-local-path-provisioner
-  - d8-log-shipper
   - d8-metallb
   - d8-monitoring
   - d8-multitenancy-manager
   - d8-network-gateway
   - d8-okmeter
   - d8-openvpn
+  - d8-operator-prometheus
   - d8-service-with-healthchecks
   - d8-system
   - d8-upmeter
@@ -750,7 +744,6 @@ rules:
       - system:serviceaccount:d8-chrony:chrony-exporter-master
       - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
-      - system:serviceaccount:d8-cloud-instance-manager:early-oom
       - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
       - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:node-controller
@@ -805,12 +798,6 @@ rules:
       - system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge
       - system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer
       - system:serviceaccount:d8-descheduler:descheduler
-      - system:serviceaccount:d8-ingress-nginx:failover-cleaner
-      - system:serviceaccount:d8-ingress-nginx:geoproxy
-      - system:serviceaccount:d8-ingress-nginx:ingress-nginx
-      - system:serviceaccount:d8-ingress-nginx:kruise
-      - system:serviceaccount:d8-ingress-nginx:validator
-      - system:serviceaccount:d8-ingress-nginx:validator-full
       - system:serviceaccount:d8-istio:alliance-healthcheck
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter
@@ -822,22 +809,23 @@ rules:
       - system:serviceaccount:d8-istio:waypoint-controller
       - system:serviceaccount:d8-istio:ztunnel
       - system:serviceaccount:d8-local-path-provisioner:local-path-provisioner
-      - system:serviceaccount:d8-log-shipper:log-shipper
       - system:serviceaccount:d8-metallb:controller
       - system:serviceaccount:d8-metallb:l2lb-controller
       - system:serviceaccount:d8-metallb:l2lb-speaker
       - system:serviceaccount:d8-metallb:speaker
-      - system:serviceaccount:d8-monitoring:control-plane-proxy
-      - system:serviceaccount:d8-monitoring:events-exporter
-      - system:serviceaccount:d8-monitoring:extended-monitoring-exporter
-      - system:serviceaccount:d8-monitoring:image-availability-exporter
+      - system:serviceaccount:d8-monitoring:aggregating-proxy
+      - system:serviceaccount:d8-monitoring:alertmanager-internal
+      - system:serviceaccount:d8-monitoring:alerts-receiver
+      - system:serviceaccount:d8-monitoring:grafana
       - system:serviceaccount:d8-monitoring:kube-state-metrics
-      - system:serviceaccount:d8-monitoring:monitoring-ping
+      - system:serviceaccount:d8-monitoring:loki
       - system:serviceaccount:d8-monitoring:node-exporter
       - system:serviceaccount:d8-monitoring:oom-kills-exporter
-      - system:serviceaccount:d8-monitoring:x509-certificate-exporter
+      - system:serviceaccount:d8-monitoring:prometheus
+      - system:serviceaccount:d8-monitoring:trickster
       - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
       - system:serviceaccount:d8-openvpn:openvpn
+      - system:serviceaccount:d8-operator-prometheus:operator-prometheus
       - system:serviceaccount:d8-service-with-healthchecks:agent
       - system:serviceaccount:d8-service-with-healthchecks:controller
       - system:serviceaccount:d8-system:deckhouse
@@ -855,6 +843,7 @@ rules:
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
       - system:serviceaccount:d8-user-authz:webhook
       - system:serviceaccount:kube-system:d8-control-plane-manager
+      - system:serviceaccount:kube-system:d8-control-plane-manager-control-plane-proxy
       - system:serviceaccount:kube-system:d8-kube-dns
       - system:serviceaccount:kube-system:d8-kube-proxy
       - system:serviceaccount:kube-system:d8-node-local-dns
@@ -914,17 +903,16 @@ rules:
       - d8-cni-simple-bridge
       - d8-csi-vsphere
       - d8-descheduler
-      - d8-ingress-nginx
       - d8-istio
       - d8-keepalived
       - d8-local-path-provisioner
-      - d8-log-shipper
       - d8-metallb
       - d8-monitoring
       - d8-multitenancy-manager
       - d8-network-gateway
       - d8-okmeter
       - d8-openvpn
+      - d8-operator-prometheus
       - d8-service-with-healthchecks
       - d8-system
       - d8-upmeter

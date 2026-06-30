@@ -82,6 +82,7 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	}
 	// Inject Reconciler-level deps into steps that need them.
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
+	r.steps[controlplanev1alpha1.StepDefragEtcd].(*defragEtcdStep).defragEtcd = r.defragEtcd
 
 	if constants.SignatureEnabled() {
 		kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
