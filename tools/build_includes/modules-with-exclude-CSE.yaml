@@ -612,11 +612,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/be/modules/040-node-manager/openapi/values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
   excludePaths:
@@ -1265,6 +1260,16 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/containerdintegritypolicies.yaml
+  to: /deckhouse/modules/040-node-manager/crds/containerdintegritypolicies.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/doc-ru-containerdintegritypolicies.yaml
+  to: /deckhouse/modules/040-node-manager/crds/doc-ru-containerdintegritypolicies.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/040-node-manager/crds/mcm.yaml
   to: /deckhouse/modules/040-node-manager/crds/mcm.yaml
   stageDependencies:
@@ -1345,6 +1350,49 @@
     - .build.yaml
   stageDependencies:
     setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/images/integrity-containerd-configurator
+  to: /deckhouse/modules/040-node-manager/images/integrity-containerd-configurator
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/images/integrity-controller
+  to: /deckhouse/modules/040-node-manager/images/integrity-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/openapi/values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+  stageDependencies:
+    install:
         - '**/*'
 - add: /ee/cse/modules/101-cert-manager/openapi/config-values.yaml
   to: /deckhouse/modules/101-cert-manager/openapi/config-values.yaml
