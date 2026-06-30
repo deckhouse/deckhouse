@@ -256,11 +256,6 @@ func (g *CRDGenerator) generateCRDDescriptionRuYAML(versions []VersionSpec) ([]b
 		versionsRaw[i] = vMap
 	}
 
-	delete(crdRaw, "apiVersion")
-	delete(crdRaw, "kind")
-	delete(crdRaw, "metadata")
-	delete(crdRaw, "status")
-
 	out, err := yaml.Marshal(crdRaw)
 	if err != nil {
 		return nil, fmt.Errorf("marshal CRD: %w", err)
