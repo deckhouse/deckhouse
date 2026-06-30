@@ -15,38 +15,39 @@
 package fs
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
-func CreateFileBackup(fName string) {
+func CreateFileBackup(ctx context.Context, fName string) {
 	suffix := time.Now().Format("150405-000")
 
 	// Make copies of intermediate states.
 	outName := fmt.Sprintf("%s-%s", fName, suffix)
-	log.DebugF("save to: %s\n", outName)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("save to: %s", outName))
 
 	in, err := os.Open(fName)
 	if err != nil {
-		log.DebugF("open '%s': %v\n", fName, err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("open '%s': %v", fName, err))
 		return
 	}
 	defer in.Close()
 
 	out, err := os.Create(outName)
 	if err != nil {
-		log.DebugF("create copy '%s': %v\n", outName, err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("create copy '%s': %v", outName, err))
 		return
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, in)
 	if err != nil {
-		log.DebugF("save copy: %v\n", err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("save copy: %v", err))
 		return
 	}
 	_ = out.Close()

@@ -121,6 +121,16 @@ func isPodCrashLooping(pod *corev1.Pod) bool {
 	return false
 }
 
+// isPodReady returns true if the pod has the Ready condition set to True.
+func isPodReady(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
 // isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
 func isPodReadyWithChecksums(pod *corev1.Pod, expected checksumAnnotations) bool {
 	if pod == nil {
@@ -134,13 +144,7 @@ func isPodReadyWithChecksums(pod *corev1.Pod, expected checksumAnnotations) bool
 		}
 	}
 
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-
-	return false
+	return isPodReady(pod)
 }
 
 func findContainerByName(pod *corev1.Pod, name string) *corev1.Container {

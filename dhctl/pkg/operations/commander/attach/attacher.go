@@ -32,7 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -53,7 +53,6 @@ type Params struct {
 	AttachResources       AttachResources
 	ScanOnly              *bool
 	TmpDir                string
-	Logger                log.Logger
 	IsDebug               bool
 
 	// Options carries the per-operation parsed configuration. RPC handlers
@@ -100,11 +99,10 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 		TmpDir:           i.Params.TmpDir,
 		GlobalOptions:    &i.Params.Options.Global,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           i.Params.Logger,
 		IsDebug:          i.Params.IsDebug,
 	})
 
-	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, i.Params.Logger).
+	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter).
 		WithUseTfCache(i.Params.Options.Cache.UseTfCache).
 		WithDebug(i.Params.IsDebug)
 
@@ -116,7 +114,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	defer func() {
 		err = provider.Cleanup()
 		if err != nil {
-			i.Params.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot cleanup provider: %v", err))
 			return
 		}
 	}()
@@ -182,7 +180,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	checkResult, err := i.check(ctx, i.Params.KubeProvider, scanResult)
 	if err != nil {
 		// check is optional
-		log.WarnF("Can't check attached cluster: %s\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't check attached cluster: %s", err))
 	}
 
 	if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(ctx, stateCache, PhaseData{
@@ -204,7 +202,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		metaConfig *config.MetaConfig
 	)
 
-	return kubeClient, metaConfig, log.ProcessCtx(ctx, "attach", "Prepare cluster attach", func(ctx context.Context) error {
+	return kubeClient, metaConfig, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare cluster attach", func(ctx context.Context) error {
 		var err error
 
 		kubeCl, err := i.Params.KubeProvider.Client(ctx)
@@ -217,7 +215,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			ctx,
 			kubeClient,
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger),
+				infrastructureprovider.NewPreparatorProviderParams(),
 			),
 			nil,
 		)
@@ -250,7 +248,7 @@ func (i *Attacher) scan(
 ) (*ScanResult, error) {
 	var res *ScanResult
 
-	return res, log.ProcessCtx(ctx, "commander/attach", "Scan cluster", func(ctx context.Context) error {
+	return res, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Scan cluster", func(ctx context.Context) error {
 		var err error
 		stateCache := cache.Global()
 
@@ -351,8 +349,9 @@ func (i *Attacher) capture(
 	ctx context.Context,
 	kubeClient *client.KubernetesClient,
 ) error {
-	return log.ProcessCtx(ctx, "commander/attach", "Capture cluster", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Capture cluster", func(ctx context.Context) error {
 		attachResources, err := template.ParseResourcesContent(
+			ctx,
 			i.Params.AttachResources.Template,
 			i.Params.AttachResources.Values,
 		)
@@ -360,7 +359,7 @@ func (i *Attacher) capture(
 			return fmt.Errorf("unable to parse resources: %w", err)
 		}
 
-		checkers, err := resources.GetCheckers(kubeClient, attachResources, nil)
+		checkers, err := resources.GetCheckers(ctx, kubeClient, attachResources, nil)
 		if err != nil {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
@@ -381,7 +380,7 @@ func (i *Attacher) check(
 ) (*check.CheckResult, error) {
 	var res *check.CheckResult
 
-	return res, log.ProcessCtx(ctx, "commander/attach", "Check cluster", func(ctx context.Context) error {
+	return res, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Check cluster", func(ctx context.Context) error {
 		var err error
 
 		checker := check.NewChecker(&check.Params{
@@ -395,7 +394,6 @@ func (i *Attacher) check(
 			InfrastructureContext: i.Params.InfrastructureContext,
 			TmpDir:                i.Params.TmpDir,
 			IsDebug:               i.Params.IsDebug,
-			Logger:                i.Params.Logger,
 			Embedded:              true,
 			Options:               i.Params.Options,
 		})

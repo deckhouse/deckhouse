@@ -183,7 +183,6 @@ apiVersions:
         - "RSA-3072"
         - "RSA-4096"
         - "ECDSA-P256"
-        default: "RSA-2048"
       proxy:
         x-doc-d8Editions:
           - be

@@ -15,6 +15,7 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -24,15 +25,16 @@ import (
 
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 const testLockFileToCheck = ".TestFileExistsInDirAndParentsDirs"
 
 var testFileExistsInDirAndParentsDirsRoot = path.Join(os.TempDir(), "dhctl-test-file-exists-in-parents")
 
-func cleanupTestFileExistsInDirAndParentsDirs(logger log.Logger) {
+func cleanupTestFileExistsInDirAndParentsDirs(logger *slog.Logger) {
 	incorrect := []string{"", ".", ".."}
 	if slices.Contains(incorrect, testFileExistsInDirAndParentsDirsRoot) {
 		return
@@ -49,15 +51,15 @@ func cleanupTestFileExistsInDirAndParentsDirs(logger log.Logger) {
 	err := os.RemoveAll(testFileExistsInDirAndParentsDirsRoot)
 
 	if err != nil {
-		logger.LogErrorF("Error cleaning up test dir '%s': %v\n", testFileExistsInDirAndParentsDirsRoot, err)
+		logger.Error(fmt.Sprintf("Error cleaning up test dir '%s': %v\n", testFileExistsInDirAndParentsDirsRoot, err))
 		return
 	}
 
-	logger.LogInfoF("Test dir '%s' was removed\n", testFileExistsInDirAndParentsDirsRoot)
+	logger.Info(fmt.Sprintf("Test dir '%s' was removed\n", testFileExistsInDirAndParentsDirsRoot))
 }
 
 func TestFileExistsInDirAndParentsDirs(t *testing.T) {
-	logger := log.GetDefaultLogger()
+	logger := dhlog.Discard()
 
 	defer func() {
 		cleanupTestFileExistsInDirAndParentsDirs(logger)
@@ -183,7 +185,7 @@ func TestFileExistsInDirAndParentsDirsInGlobalRootExists(t *testing.T) {
 		t.Skip("Use TEST_PARENTS_EXISTS_IN_GLOBAL_ROOT env for enable")
 	}
 
-	logger := log.GetDefaultLogger()
+	logger := dhlog.Discard()
 
 	testGlobalRootExists := testFileExistsInDirAndParentsDirs{
 		testFileExistsInDirAndParentsDirsBase: testFileExistsInDirAndParentsDirsBase{
@@ -215,7 +217,7 @@ type testFileExistsInDirAndParentsDirsParams struct {
 type testFileExistsInDirAndParentsDirs struct {
 	testFileExistsInDirAndParentsDirsBase
 
-	logger log.Logger
+	logger *slog.Logger
 }
 
 func (tt *testFileExistsInDirAndParentsDirs) do(t *testing.T) {
@@ -229,11 +231,11 @@ func (tt *testFileExistsInDirAndParentsDirs) do(t *testing.T) {
 	}
 
 	require.NoError(t, err, tt.dirToCheck)
-	tt.logger.LogInfoF("FileExistsInDirAndParentsDirs returns: '%s'\n", existsIn)
+	tt.logger.Info(fmt.Sprintf("FileExistsInDirAndParentsDirs returns: '%s'\n", existsIn))
 	require.Equal(t, tt.existsIn, existsIn)
 }
 
-func testCreateFileExistsInDirAndParentsDirsTest(t *testing.T, params testFileExistsInDirAndParentsDirsParams, logger log.Logger) *testFileExistsInDirAndParentsDirs {
+func testCreateFileExistsInDirAndParentsDirsTest(t *testing.T, params testFileExistsInDirAndParentsDirsParams, logger *slog.Logger) *testFileExistsInDirAndParentsDirs {
 	t.Helper()
 
 	assertFromRoot := func(t *testing.T, p string) {
@@ -255,18 +257,18 @@ func testCreateFileExistsInDirAndParentsDirsTest(t *testing.T, params testFileEx
 	rootDir, err := RandomTmpDirWithNRunes(testFileExistsInDirAndParentsDirsRoot, params.title, 8)
 	require.NoError(t, err)
 
-	logger.LogInfoF("Test root dir '%s' for test '%s' was created\n", rootDir, params.title)
+	logger.Info(fmt.Sprintf("Test root dir '%s' for test '%s' was created\n", rootDir, params.title))
 
 	fullTestDirChain := filepath.Join(rootDir, params.dirToCreate)
 	err = os.MkdirAll(fullTestDirChain, 0o777)
 	require.NoError(t, err)
 
-	logger.LogInfoF("Full dir '%s' for test '%s' was created\n", fullTestDirChain, params.title)
+	logger.Info(fmt.Sprintf("Full dir '%s' for test '%s' was created\n", fullTestDirChain, params.title))
 
 	if writeFileIn != "" {
 		fullPath := filepath.Join(rootDir, writeFileIn, testLockFileToCheck)
 		testMkFile(t, fullPath)
-		logger.LogInfoF("File '%s' for test '%s' was created\n", fullPath, params.title)
+		logger.Info(fmt.Sprintf("File '%s' for test '%s' was created\n", fullPath, params.title))
 	}
 
 	existsIn := ""

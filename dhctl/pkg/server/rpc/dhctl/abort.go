@@ -27,6 +27,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -68,7 +69,7 @@ func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 	f := fsm.New("initial", s.abortServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.AbortRequest)
 	sendCh := make(chan *pb.AbortResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.AbortResponse, any]{
@@ -112,10 +113,10 @@ connectionProcessor:
 					result := s.abortSafe(ctx, &abortParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}})
 				}()
 
 			case *pb.AbortRequest_Continue:
@@ -127,13 +128,13 @@ connectionProcessor:
 				}
 				switch message.Continue.Continue {
 				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New("bad continue message"))
 				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
+					sendPhaseSwitch(ctx, phaseSwitcher.next, nil)
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.ErrStopOperationCondition
+					sendPhaseSwitch(ctx, phaseSwitcher.next, phases.ErrStopOperationCondition)
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New(message.Continue.Err))
 				}
 
 			case *pb.AbortRequest_Cancel:
@@ -168,7 +169,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	loggerFor := initDhctlLogger(ctx, p)
+	ctx = initDhctlLoggerCtx(ctx, p)
 
 	opts := newRequestOptions(
 		s.params.CacheDir,
@@ -177,7 +178,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
 
-	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
 
 	var (
@@ -186,7 +187,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		cleanup     func() error
 	)
 
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing configuration", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing configuration", func(ctx context.Context) error {
 		for _, cfg := range []string{
 			p.request.ClusterConfig,
 			p.request.InitConfig,
@@ -214,7 +215,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 	}
 
 	var initialState phases.DhctlState
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing DHCTL state", func(ctx context.Context) error {
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
@@ -229,8 +230,8 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
 		if err != nil {
 			return fmt.Errorf("preparing providers: %w", err)
 		}
@@ -252,14 +253,13 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 
 	opts.Global.ConfigPaths = configPaths
 
-	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+	bootstrapper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 		InitialState:           initialState,
 		ResetInitialState:      true,
 		OnPhaseFunc:            p.switchPhase,
 		OnProgressFunc:         p.sendProgress,
 		CommanderMode:          p.request.Options.CommanderMode,
 		CommanderUUID:          commanderUUID,
-		Logger:                 loggerFor,
 		IsDebug:                s.params.IsDebug,
 		TmpDir:                 s.params.TmpDir,
 		SSHProviderInitializer: sshProviderInitializer,

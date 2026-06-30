@@ -62,6 +62,18 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
+  - export VERSION={{ $istioVersion }}
+  - export BUILDINFO=$(mktemp)
+  - |
+    cat > "${BUILDINFO}" <<EOF
+    istio.io/istio/pkg/version.buildVersion={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildGitRevision={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildStatus=Clean
+    istio.io/istio/pkg/version.buildTag={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildHub=docker.io/istio
+    istio.io/istio/pkg/version.buildOS=linux
+    istio.io/istio/pkg/version.buildArch=amd64
+    EOF
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod download

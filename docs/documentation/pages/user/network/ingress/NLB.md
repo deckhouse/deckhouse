@@ -61,8 +61,8 @@ metadata:
     network.deckhouse.io/load-balancer-ips: 192.168.217.217
 spec:
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: nginx
   type: LoadBalancer
@@ -71,7 +71,7 @@ spec:
 ### Assigning an IPAddressPool (BGP mode)
 
 In BGP LoadBalancer mode, an IP address can be allocated from a specific address pool
-using the `metallb.universe.tf/address-pool` annotation.
+using the `network.deckhouse.io/load-balancer-pool` annotation.
 For L2 LoadBalancer mode, you need to use the [MetalLoadBalancerClass](../../../admin/configuration/network/ingress/nlb/metallb.html#example-of-using-metallb-in-l2-loadbalancer-mode) configuration.
 
 Example:
@@ -82,11 +82,11 @@ kind: Service
 metadata:
   name: nginx
   annotations:
-    metallb.universe.tf/address-pool: production-public-ips
+    network.deckhouse.io/load-balancer-pool: production-public-ips
 spec:
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: nginx
   type: LoadBalancer

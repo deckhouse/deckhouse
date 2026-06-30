@@ -2,6 +2,7 @@
   {{- range $version := .Values.istio.internal.versionsToInstall }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
     {{- $revision := get $versionInfo "revision" }}
+    {{- $fullVersion := get $versionInfo "fullVersion" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -31,6 +32,13 @@ spec:
       sourceLabels:
       - __meta_kubernetes_pod_label_app
       targetLabel: app
+    - sourceLabels:
+      - __meta_kubernetes_pod_label_istio_io_rev
+      targetLabel: istio_io_rev
+      action: replace
+    - targetLabel: version
+      replacement: {{ $fullVersion | quote }}
+      action: replace
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
@@ -28,7 +29,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -50,7 +51,7 @@ func Bootstrap(ctx context.Context) error {
 	if _, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT"); ok {
 		tracesExporter, metricsExporter, logsExporter, err = configureRemoteExporter(ctx)
 	} else {
-		tracesExporter, metricsExporter, logsExporter, err = configureLocalExporter()
+		tracesExporter, metricsExporter, logsExporter, err = configureLocalExporter(ctx)
 	}
 
 	if err != nil {
@@ -80,7 +81,7 @@ func Bootstrap(ctx context.Context) error {
 		),
 	)
 	if err != nil {
-		log.WarnF("failed to initialize OTel resource completely: %v", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to initialize OTel resource completely: %v", err), "\n"))
 	}
 
 	tracesShutdown := initTraces(tracesExporter, otelResource)
@@ -95,19 +96,19 @@ func Bootstrap(ctx context.Context) error {
 	tomb.RegisterOnShutdown("OTel: traces", func() {
 		err := tracesShutdown(ctx)
 		if err != nil {
-			log.WarnF("failed to shutdown traces: %v", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to shutdown traces: %v", err), "\n"))
 		}
 	})
 	tomb.RegisterOnShutdown("OTel: metrics", func() {
 		err := metricsShutdown(ctx)
 		if err != nil {
-			log.WarnF("failed to shutdown metrics: %v", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to shutdown metrics: %v", err), "\n"))
 		}
 	})
 	tomb.RegisterOnShutdown("OTel: logs", func() {
 		err := logsShutdown(ctx)
 		if err != nil {
-			log.WarnF("failed to shutdown logs: %v", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to shutdown logs: %v", err), "\n"))
 		}
 	})
 

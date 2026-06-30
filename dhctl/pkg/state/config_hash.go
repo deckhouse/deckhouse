@@ -15,16 +15,18 @@
 package state
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"sort"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-func ConfigHash(paths []string) string {
+func ConfigHash(ctx context.Context, paths []string) string {
 	const hashLen = 8
 
 	resolvedPaths := fs.RevealWildcardPaths(paths)
@@ -34,11 +36,11 @@ func ConfigHash(paths []string) string {
 	for _, path := range resolvedPaths {
 		data, err := os.ReadFile(path)
 		if err != nil {
-			log.WarnF("cannot read config file %s for preflight cache hash: %v\n", path, err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("cannot read config file %s for preflight cache hash: %v", path, err))
 			continue
 		}
 		if _, err := h.Write(data); err != nil {
-			log.WarnF("cannot hash config file %s for preflight cache hash: %v\n", path, err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("cannot hash config file %s for preflight cache hash: %v", path, err))
 		}
 	}
 	hash := hex.EncodeToString(h.Sum(nil))

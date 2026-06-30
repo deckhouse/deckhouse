@@ -21,7 +21,7 @@ import (
 )
 
 func preparatorProvider(_ string) config.MetaConfigPreparator {
-	return vcd.NewMetaConfigPreparatorWithoutLogger(
+	return vcd.NewMetaConfigPreparator(
 		vcd.MetaConfigPreparatorParams{
 			// todo it was bad idea patch metaconfig during installation
 			// we need to prepare meta config in dhctl during installation

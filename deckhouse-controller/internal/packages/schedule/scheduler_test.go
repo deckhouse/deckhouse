@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
 // globalName is the literal sentinel used by Scheduler internally; it lives
@@ -42,8 +43,17 @@ func (p *testPackage) GetName() string { return p.name }
 // GetVersion returns the parsed package version.
 func (p *testPackage) GetVersion() *semver.Version { return p.version }
 
-// GetConstraints returns the package's scheduler constraints.
-func (p *testPackage) GetConstraints() schedule.Constraints { return p.constraints }
+// GetConstraints returns the package's scheduler constraints, defaulting the
+// Floor to an always-Enable rule so cases that don't care about enablement keep
+// the legacy "enabled once loaded" behavior. Cases exercising disablement set
+// their own Floor.
+func (p *testPackage) GetConstraints() schedule.Constraints {
+	if p.constraints.Floor == nil {
+		p.constraints.Floor = rule.Static(rule.Enable)
+	}
+
+	return p.constraints
+}
 
 // mustVersion parses s into a *semver.Version or panics; tests use known-good values.
 func mustVersion(s string) *semver.Version {
@@ -155,6 +165,25 @@ func (s *SchedulerSuite) TestAddNodeAndSchedule() {
 	}))
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha")
+}
+
+// TestFloorDisableKeepsNodeOff confirms the package-supplied floor governs
+// enablement: a node whose Floor resolves to Disable is never scheduled, even
+// though no gate vetoes it.
+func (s *SchedulerSuite) TestFloorDisableKeepsNodeOff() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha",
+		"a node with a Disable floor must not be scheduled")
 }
 
 // TestOrderTierGate confirms that canSchedule's order-tier check holds a
@@ -900,94 +929,115 @@ func (s *SchedulerSuite) TestNoneOfMemberInstallTriggersDisable() {
 	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
 }
 
-// TestDisableFlipsEnabledNode confirms an explicit Disable forces an otherwise
-// eligible node off, emitting an EventDisable with the PackageDisabled reason.
-func (s *SchedulerSuite) TestDisableFlipsEnabledNode() {
+// TestRescheduleFansOutToDirectSubscribers verifies that Reschedule reverts the
+// named node AND its direct subscribers to idle — re-emitting EventSchedule for
+// both — while leaving unrelated nodes and second-level subscribers untouched.
+// The cascade is one level deep: a subscriber's own subscribers are not reverted.
+func (s *SchedulerSuite) TestRescheduleFansOutToDirectSubscribers() {
 	s.activateGlobal()
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:        "alpha",
+		name:        "publisher",
 		version:     mustVersion("1.0.0"),
-		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+		constraints: schedule.Constraints{Order: 0},
 	}))
+	s.sched.Complete("publisher")
 
-	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha")
-
-	s.sched.Disable("alpha")
-
-	disabled := s.collectEvents()
-	s.Contains(eventNames(disabled, schedule.EventDisable), "alpha")
-	for _, e := range disabled {
-		if e.Kind == schedule.EventDisable && e.Name == "alpha" {
-			s.Equal("PackageDisabled", e.Reason)
-		}
-	}
-}
-
-// TestEnableReschedulesDisabledNode confirms that clearing an explicit disable
-// lets a node with passing checkers be scheduled again.
-func (s *SchedulerSuite) TestEnableReschedulesDisabledNode() {
-	s.activateGlobal()
-
+	// Direct subscriber of publisher — must be reverted on Reschedule.
 	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:        "alpha",
-		version:     mustVersion("1.0.0"),
-		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
-	}))
-	s.drainEvents()
-
-	s.sched.Disable("alpha")
-	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "alpha")
-
-	s.sched.Enable("alpha")
-	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha")
-}
-
-// TestDisableIsIdempotent confirms a repeated Disable on an already-disabled
-// node performs no enabled→disabled flip and therefore emits no further event.
-func (s *SchedulerSuite) TestDisableIsIdempotent() {
-	s.activateGlobal()
-
-	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:        "alpha",
-		version:     mustVersion("1.0.0"),
-		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
-	}))
-	s.drainEvents()
-
-	s.sched.Disable("alpha")
-	s.drainEvents()
-
-	s.sched.Disable("alpha")
-	s.Empty(s.collectEvents(), "redundant Disable must be a no-op")
-}
-
-// TestDisablePreservesCheckerReason confirms that when a node is both explicitly
-// disabled and failing a checker, the checker's specific reason wins over the
-// generic PackageDisabled reason.
-func (s *SchedulerSuite) TestDisablePreservesCheckerReason() {
-	s.activateGlobal()
-
-	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:    "consumer",
+		name:    "subscriber",
 		version: mustVersion("1.0.0"),
 		constraints: schedule.Constraints{
-			Order: schedule.FunctionalOrder,
-			Dependencies: map[string]schedule.Dependency{
-				"parent": {},
-			},
+			Order:         0,
+			Subscriptions: map[string]struct{}{"publisher": {}},
+		},
+	}))
+	s.sched.Complete("subscriber")
+
+	// Subscribes to subscriber, not publisher — the one-level-deep cascade must
+	// not reach it.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "second-level",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order:         0,
+			Subscriptions: map[string]struct{}{"subscriber": {}},
+		},
+	}))
+	s.sched.Complete("second-level")
+
+	// No subscription relationship at all — must stay active.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "unrelated",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.sched.Complete("unrelated")
+	s.drainEvents()
+
+	s.sched.Reschedule("publisher")
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "publisher", "the rescheduled node must be re-scheduled")
+	s.Contains(scheduled, "subscriber", "a direct subscriber must be reverted and re-scheduled")
+	s.NotContains(scheduled, "second-level", "the cascade must stop at one level — a subscriber's subscribers are untouched")
+	s.NotContains(scheduled, "unrelated", "a node with no subscription must not be rescheduled")
+}
+
+// TestRescheduleOnEnableRevertsEntireGraph verifies the full-graph reschedule
+// path: when a module (Floor = Static(Disable)) flips to enabled, compute()
+// reverts every node to idle, not just the module. A module turning on may
+// install CRDs other packages render against, and those template-level deps are
+// untracked, so the whole graph must re-converge. An already-active, unrelated
+// bystander being re-scheduled is the observable signal of that reconverge.
+func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
+	dynamicState := make(map[string]bool)
+
+	// Replace the suite scheduler with one wired to a controllable dynamic getter
+	// so a module can be flipped on at runtime. Stop the original to avoid leaking
+	// its event goroutine.
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		schedule.WithDependencyGetter(func(name string) *semver.Version {
+			return s.versions[name]
+		}),
+		schedule.WithDynamicGetter(func(module string) *bool {
+			if v, ok := dynamicState[module]; ok {
+				return &v
+			}
+
+			return nil
+		}),
+	)
+
+	s.activateGlobal()
+
+	// An always-on bystander, unrelated to the module, driven to active. Its
+	// re-schedule after the module enables proves the whole graph reconverged.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "bystander",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.sched.Complete("bystander")
+
+	// A module that is off (floor disables it) until dynamically enabled.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "dynamic-mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
 		},
 	}))
 	s.drainEvents()
 
-	// consumer is already checker-disabled (parent absent). Explicitly disabling
-	// it must not be scheduled once parent appears.
-	s.sched.Disable("consumer")
-	s.drainEvents()
-
-	s.versions["parent"] = mustVersion("1.0.0")
+	// Flip the module on and run a pass: it enables, triggering a full-graph
+	// reschedule that reverts and re-schedules the bystander too.
+	dynamicState["dynamic-mod"] = true
 	s.sched.Schedule()
 
-	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer",
-		"explicitly disabled node must stay off even when its checkers pass")
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "dynamic-mod", "the newly enabled module must be scheduled")
+	s.Contains(scheduled, "bystander", "reschedule-on-enable must revert and re-schedule the whole graph")
 }

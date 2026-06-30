@@ -305,7 +305,7 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 	addr := fmt.Sprintf("%s:%s:%s:%s", listenAddress, localPort, listenAddress, remotePort)
 
 	// Kill script is needed both for the pre-bind reaper and as the health-monitor killer.
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, remotePort, p.opts)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(ctx, listenAddress, remotePort, p.opts)
 	if err != nil {
 		return nil, fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}
@@ -327,9 +327,9 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 	var checkScript string
 	switch check {
 	case checkReachable:
-		checkScript, err = template.RenderAndSavePreflightReverseTunnelReachableScript(checkURL, p.opts)
+		checkScript, err = template.RenderAndSavePreflightReverseTunnelReachableScript(ctx, checkURL, p.opts)
 	default:
-		checkScript, err = template.RenderAndSavePreflightReverseTunnelOpenScript(checkURL, p.opts)
+		checkScript, err = template.RenderAndSavePreflightReverseTunnelOpenScript(ctx, checkURL, p.opts)
 	}
 	if err != nil {
 		tun.Stop()

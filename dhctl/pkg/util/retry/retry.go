@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,11 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -189,10 +190,12 @@ type Loop struct {
 	attemptsQuantity int
 	waitTime         time.Duration
 	breakPredicate   BreakPredicate
-	logger           log.Logger
 	interruptable    bool
 	showError        bool
 	prefix           string
+	// silent keeps the loop off the compact terminal entirely: no framed process box and a
+	// Debug-level (file-only) success line, so internal retries don't clutter the live logbox.
+	silent bool
 }
 
 // NewLoop create Loop with features:
@@ -203,7 +206,6 @@ func NewLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
 		name:             name,
 		attemptsQuantity: attemptsQuantity,
 		waitTime:         wait,
-		logger:           log.GetDefaultLogger(),
 		interruptable:    true,
 		showError:        true,
 	}
@@ -230,11 +232,11 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		name:             name,
 		attemptsQuantity: attemptsQuantity,
 		waitTime:         wait,
-		logger:           log.GetSilentLogger(),
 		// - this loop is not interruptable by the signal watcher in tomb package.
 		interruptable: false,
 		showError:     true,
 		prefix:        fmt.Sprintf("[%s][%d] ", name, rand.Int()),
+		silent:        true,
 	}
 }
 
@@ -258,11 +260,6 @@ func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
 
 func (l *Loop) WithInterruptable(flag bool) *Loop {
 	l.interruptable = flag
-	return l
-}
-
-func (l *Loop) WithLogger(logger log.Logger) *Loop {
-	l.logger = logger
 	return l
 }
 
@@ -298,21 +295,30 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 			// Run task and return if everything is ok.
 			err = task()
 			if err == nil {
-				l.logger.LogSuccess(l.prefix + "Succeeded!\n")
+				// A silent loop keeps its success file-only (Debug); a verbose loop surfaces it.
+				if l.silent {
+					dhlog.FromContext(ctx).DebugContext(ctx, l.prefix+"Succeeded!")
+				} else {
+					dhlog.FromContext(ctx).InfoContext(ctx, l.prefix+"Succeeded!")
+				}
 				return nil
 			}
 
 			if l.breakPredicate != nil && l.breakPredicate(err) {
-				l.logger.LogDebugF(l.prefix+"Client broke the loop with %v\n", err)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(l.prefix+"Client broke the loop with %v", err))
 				return err
 			}
 
-			l.logger.LogFailRetry(fmt.Sprintf(l.prefix+attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
+			// Per-attempt diagnostics are logged at Debug: they enrich the debug file but never reach
+			// the terminal — not even with -v (the terminal floor is Info, which -v does not lower).
+			// The terminal stays quiet during retries; the final exhaustion error (returned below) is
+			// what the caller surfaces if every attempt fails.
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(l.prefix+attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
 			errorMsg := "\t%v\n\n"
 			if l.showError {
 				errorMsg = "\tStatus: %v\n\n"
 			}
-			l.logger.LogInfoF(l.prefix+errorMsg, err)
+			dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf(l.prefix+errorMsg, err), "\n"))
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
@@ -327,5 +333,11 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 		return fmt.Errorf("Timeout while %q: last error: %w", l.name, err)
 	}
 
-	return l.logger.LogProcessCtx(ctx, "default", l.name, loopBody)
+	// A silent loop runs without a process block: no framed box and nothing on the compact terminal
+	// (every per-attempt line is Debug → file-only). A verbose loop wraps the body in a process block
+	// so its start/finish renders a framed box.
+	if l.silent {
+		return loopBody(ctx)
+	}
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), l.name, loopBody)
 }

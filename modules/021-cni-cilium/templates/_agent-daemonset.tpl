@@ -360,7 +360,7 @@ spec:
         command:
         - cilium-dbg
         - build-config
-        - --allow-config-keys=debug,single-cluster-route,mtu,bpf-map-dynamic-size-ratio,monitor-aggregation,monitor-aggregation-flags,monitor-aggregation-interval,bpf-events-trace-enabled
+        - --allow-config-keys=debug,single-cluster-route,mtu,bpf-map-dynamic-size-ratio,monitor-aggregation,monitor-aggregation-flags,monitor-aggregation-interval,bpf-events-trace-enabled,enable-host-firewall
         env:
         - name: K8S_NODE_NAME
           valueFrom:

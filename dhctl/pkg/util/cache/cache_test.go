@@ -21,12 +21,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
 
 func TestNewTempStateCache(t *testing.T) {
-	log.InitLogger("json", false)
 
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-cache-*")
 	require.NoError(t, err)
