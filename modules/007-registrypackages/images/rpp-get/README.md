@@ -46,3 +46,19 @@ rpp-get/
 4. kube-apiserver via bootstrap token (`/var/lib/bashible/bootstrap-token`) + `--kube-apiserver-endpoints`
 
 If neither endpoints nor token are supplied explicitly (flags or env), the tool queries kube-apiserver to obtain them. It first attempts to use the kubelet kubeconfig (`/etc/kubernetes/kubelet.conf`). If that file is absent, it falls back to the bootstrap token (`/var/lib/bashible/bootstrap-token`); in that case the kube-apiserver address must be provided via `--kube-apiserver-endpoints`, as there is no other source for it at that stage.
+
+## Direct registry mode
+
+By default `rpp-get` downloads package archives from RPP. With `--registry-direct` it instead pulls them straight from the container registry over the OCI Distribution v2 protocol, bypassing RPP entirely. This removes the dependency on the rpp server (and, during bootstrap, on the SSH tunnel to the dhctl machine).
+
+Direct mode requires the registry connection parameters. It does not query kube-apiserver and does not resolve RPP endpoints.
+
+| Flag                  | Env                | Description                              |
+|-----------------------|--------------------|------------------------------------------|
+| `--registry-direct`   | `REGISTRY_DIRECT`  | enable direct mode                       |
+| `--registry-repo`     | `REGISTRY_REPO`    | full registry repository (`host/path`)   |
+| `--registry-auth`     | `REGISTRY_AUTH`    | `base64(user:password)` registry auth    |
+| `--registry-ca-file`  | `REGISTRY_CA_FILE` | path to a PEM CA bundle (optional)       |
+| `--registry-scheme`   | `REGISTRY_SCHEME`  | `https` (default) or `http`              |
+
+`rpp-get` fetches the image manifest by digest, selects its last layer, and streams that layer's blob — the same gzipped tar archive RPP would return. Image signatures are not verified in direct mode; integrity is guaranteed by the manifest digest.

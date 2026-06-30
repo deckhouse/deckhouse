@@ -37,8 +37,15 @@ type Config struct {
 	Retries        int
 	RetryDelay     time.Duration
 	Force          bool
+	Extract        bool
 	TempDir        string
 	InstalledStore string
+
+	RegistryDirect bool
+	RegistryRepo   string
+	RegistryAuth   string
+	RegistryCA     string
+	RegistryScheme string
 }
 
 type packageRef struct {
@@ -46,6 +53,7 @@ type packageRef struct {
 	name         string
 	digest       string
 	archivePath  string
+	extractDir   string
 	installedDir string
 }
 
@@ -62,7 +70,7 @@ func (r packageRef) errorf(msg string, args ...any) error {
 
 type Client struct {
 	cfg            Config
-	httpClient     *httpClient
+	fetcher        fetcher
 	logger         *log.Logger
 	resultRecorder *ResultRecorder
 }
@@ -70,7 +78,7 @@ type Client struct {
 func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client {
 	return &Client{
 		cfg:            cfg,
-		httpClient:     newHTTPClient(cfg),
+		fetcher:        newFetcher(cfg),
 		logger:         logger,
 		resultRecorder: recorder,
 	}
@@ -104,9 +112,12 @@ func (c *Client) Classify(packages []string) ([]InstallStatus, error) {
 }
 
 func (c *Client) UpdateAuth(endpoints []string, token string) {
+	if c.cfg.RegistryDirect {
+		return
+	}
 	c.cfg.Endpoints = endpoints
 	c.cfg.Token = token
-	c.httpClient = newHTTPClient(c.cfg)
+	c.fetcher = newHTTPClient(c.cfg)
 }
 
 // installWorkerCount caps install parallelism at runtime.NumCPU because install
@@ -214,6 +225,7 @@ func (c *Client) newPackageRef(packageWithDigest string) (packageRef, error) {
 		name:         name,
 		digest:       digest,
 		archivePath:  filepath.Join(defaultFetchedStore(c.cfg.TempDir), name, digest+".tar.gz"),
+		extractDir:   filepath.Join(defaultFetchedStore(c.cfg.TempDir), name, digest+".extracted"),
 		installedDir: filepath.Join(c.cfg.InstalledStore, name),
 	}, nil
 }
@@ -270,23 +282,41 @@ func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
 	}
 	skipCheckDur := time.Since(t)
 
-	t = time.Now()
-	if err := c.ensureFetchedArchive(ctx, ref); err != nil {
-		return err
-	}
-	fetchDur := time.Since(t)
-
-	workDir, err := c.createWorkDir(ref)
+	preExtracted, err := c.isExtracted(ref)
 	if err != nil {
 		return err
 	}
-	defer c.cleanupWorkDir(ref, workDir)
 
-	t = time.Now()
-	if err := c.extractArchive(ctx, ref, workDir); err != nil {
-		return err
+	var (
+		workDir    string
+		fetchDur   time.Duration
+		extractDur time.Duration
+	)
+	if preExtracted && !c.cfg.Force {
+		// Prefetch (`fetch --extract`) already downloaded and decompressed this
+		// package; install straight from that directory and skip the download
+		// and extraction on the critical path.
+		workDir = ref.extractDir
+		c.logf(ref, "using pre-extracted package at %s", workDir)
+	} else {
+		t = time.Now()
+		if err := c.ensureFetchedArchive(ctx, ref); err != nil {
+			return err
+		}
+		fetchDur = time.Since(t)
+
+		workDir, err = c.createWorkDir(ref)
+		if err != nil {
+			return err
+		}
+
+		t = time.Now()
+		if err := c.extractArchive(ctx, ref, workDir); err != nil {
+			return err
+		}
+		extractDur = time.Since(t)
 	}
-	extractDur := time.Since(t)
+	defer c.cleanupWorkDir(ref, workDir)
 
 	t = time.Now()
 	if err := c.runInstallScript(ctx, ref, workDir); err != nil {
@@ -332,17 +362,17 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 
 func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 	start := time.Now()
-	response, err := c.httpClient.Get(ctx, ref.digest)
+	body, source, err := c.fetcher.Get(ctx, ref.digest)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer body.Close()
 	httpDur := time.Since(start)
 
 	bodyStart := time.Now()
-	n, err := writeResponseBody(ref.archivePath, response.Body)
+	n, err := writeResponseBody(ref.archivePath, body)
 	if err != nil {
-		return fmt.Errorf("write response body from %s: %w", response.Request.URL.String(), err)
+		return fmt.Errorf("write response body from %s: %w", source, err)
 	}
 	bodyDur := time.Since(bodyStart)
 
@@ -352,7 +382,7 @@ func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 		throughput = fmt.Sprintf(", %.2f MB/s", mbps)
 	}
 	c.logf(ref, "archive downloaded from %s: %d bytes, http=%s body=%s%s",
-		response.Request.URL.Host, n, httpDur.Truncate(time.Millisecond), bodyDur.Truncate(time.Millisecond), throughput)
+		source, n, httpDur.Truncate(time.Millisecond), bodyDur.Truncate(time.Millisecond), throughput)
 	return nil
 }
 
@@ -365,7 +395,66 @@ func (c *Client) fetchPackage(ctx context.Context, ref packageRef) error {
 		return nil
 	}
 
+	if c.cfg.Extract {
+		return c.ensureExtracted(ctx, ref)
+	}
+
 	return c.ensureFetchedArchive(ctx, ref)
+}
+
+func (c *Client) ensureExtracted(ctx context.Context, ref packageRef) error {
+	if !c.cfg.Force {
+		extracted, err := c.isExtracted(ref)
+		if err != nil {
+			return err
+		}
+		if extracted {
+			c.logf(ref, "'%s' package already extracted", ref.raw)
+			return nil
+		}
+	}
+
+	c.logf(ref, "downloading and extracting '%s' to %s", ref.raw, ref.extractDir)
+	if err := c.retry(ctx, ref, c.cfg.Retries, shouldRetryFetch, func() error {
+		return c.downloadAndExtractOnce(ctx, ref)
+	}); err != nil {
+		return ref.errorf("download+extract %s: %w", ref.digest, err)
+	}
+	return nil
+}
+
+func (c *Client) isExtracted(ref packageRef) (bool, error) {
+	entries, err := os.ReadDir(ref.extractDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, ref.wrapErr("read extract dir", err)
+	}
+	return len(entries) > 0, nil
+}
+
+func (c *Client) downloadAndExtractOnce(ctx context.Context, ref packageRef) error {
+	if err := os.RemoveAll(ref.extractDir); err != nil {
+		return ref.wrapErr("clean extract dir", err)
+	}
+	if err := os.MkdirAll(ref.extractDir, 0o755); err != nil {
+		return ref.wrapErr("create extract dir", err)
+	}
+
+	start := time.Now()
+	body, source, err := c.fetcher.Get(ctx, ref.digest)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
+	if err := extractTarGzStream(ctx, body, ref.extractDir); err != nil {
+		return ref.errorf("stream extract %s: %w", ref.digest, err)
+	}
+
+	c.logf(ref, "downloaded+extracted from %s in %s", source, time.Since(start).Truncate(time.Millisecond))
+	return nil
 }
 
 func (c *Client) shouldSkipInstalled(ref packageRef) (bool, error) {

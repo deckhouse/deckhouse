@@ -194,7 +194,7 @@ func TestInstallPackageRetriesAndSucceeds(t *testing.T) {
 	client.cfg.Token = token
 	client.cfg.RetryDelay = 0
 	client.cfg.Retries = 1
-	client.httpClient = newHTTPClient(client.cfg)
+	client.fetcher = newHTTPClient(client.cfg)
 	ref := mustPackageRef(t, client, "zeta:sha256:retrysuccess")
 
 	if err := client.installPackage(context.Background(), ref); err != nil {
@@ -230,7 +230,7 @@ func TestInstallPackageFailsAfterRetriesAndCleansUp(t *testing.T) {
 	client.cfg.Token = token
 	client.cfg.RetryDelay = 0
 	client.cfg.Retries = 1
-	client.httpClient = newHTTPClient(client.cfg)
+	client.fetcher = newHTTPClient(client.cfg)
 	ref := mustPackageRef(t, client, "eta:sha256:retryfail")
 
 	err := client.installPackage(context.Background(), ref)
@@ -319,7 +319,7 @@ func TestInstallAllReturnsErrorWhenOnePackageFails(t *testing.T) {
 	client.cfg.Token = token
 	client.cfg.RetryDelay = 0
 	client.cfg.Retries = 1
-	client.httpClient = newHTTPClient(client.cfg)
+	client.fetcher = newHTTPClient(client.cfg)
 
 	goodRef := mustPackageRef(t, client, "kappa:sha256:allgood3")
 	badRef := mustPackageRef(t, client, "lambda:sha256:allbad1")
@@ -395,6 +395,29 @@ func TestUninstallAllWritesResultFile(t *testing.T) {
 		resultRemoved + " " + removedRef.name,
 		resultSkipped + " omicron",
 	})
+}
+
+func TestInstallUsesPreExtracted(t *testing.T) {
+	client := newTestClient(t, nil) // no endpoints: any network fetch would fail
+	ref := mustPackageRef(t, client, "pre:sha256:abcdef")
+
+	marker := filepath.Join(t.TempDir(), "install-ran")
+
+	// Simulate `fetch --extract`: populate the extract dir directly, no archive.
+	assertNoError(t, os.MkdirAll(ref.extractDir, 0o755))
+	assertNoError(t, os.WriteFile(filepath.Join(ref.extractDir, "install"),
+		[]byte("#!/usr/bin/env bash\nset -e\necho ok > "+marker+"\n"), 0o755))
+	assertNoError(t, os.WriteFile(filepath.Join(ref.extractDir, "uninstall"),
+		[]byte("#!/usr/bin/env bash\nexit 0\n"), 0o755))
+
+	if err := client.installPackage(context.Background(), ref); err != nil {
+		t.Fatalf("installPackage() error = %v", err)
+	}
+
+	assertPathExists(t, marker)
+	assertFileContent(t, filepath.Join(ref.installedDir, "digest"), ref.digest+"\n")
+	assertPathExists(t, filepath.Join(ref.installedDir, "install"))
+	assertPathExists(t, filepath.Join(ref.installedDir, "uninstall"))
 }
 
 func newTestClient(t *testing.T, endpoints []string) *Client {

@@ -80,20 +80,24 @@ func newBaseHTTPClient() *http.Client {
 	return &http.Client{Transport: transport}
 }
 
-func (c *httpClient) Get(ctx context.Context, digest string) (*http.Response, error) {
+func (c *httpClient) Get(ctx context.Context, digest string) (io.ReadCloser, string, error) {
 	if err := validateDigest(digest); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	digest = strings.TrimSpace(digest)
 
 	if len(c.endpoints) == 0 {
-		return nil, errNoEndpoints
+		return nil, "", errNoEndpoints
 	}
 
 	endpoint := c.endpoints[rand.IntN(len(c.endpoints))]
 
 	packageURL := buildPackageURL(endpoint, digest, c.repository, c.path)
-	return c.doGet(ctx, packageURL, c.token)
+	response, err := c.doGet(ctx, packageURL, c.token)
+	if err != nil {
+		return nil, "", err
+	}
+	return response.Body, response.Request.URL.Host, nil
 }
 
 func (c *httpClient) doGet(ctx context.Context, packageURL, token string) (*http.Response, error) {

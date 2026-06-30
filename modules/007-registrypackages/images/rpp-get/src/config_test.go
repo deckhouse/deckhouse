@@ -17,7 +17,9 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -88,6 +90,109 @@ func TestParseConfig(t *testing.T) {
 			t.Error("force = false, want true when --force passed")
 		}
 	})
+}
+
+func TestParseConfigRegistryDirectRequiresRepo(t *testing.T) {
+	t.Setenv("REGISTRY_REPO", "")
+	t.Setenv("REGISTRY_AUTH", "")
+
+	_, err := parseConfig([]string{"fetch", "--registry-direct", "pkg:sha256:abc"})
+	if err == nil {
+		t.Fatal("parseConfig() error = nil, want error for missing --registry-repo")
+	}
+}
+
+func TestParseConfigRegistryDirectRequiresAuth(t *testing.T) {
+	t.Setenv("REGISTRY_REPO", "")
+	t.Setenv("REGISTRY_AUTH", "")
+
+	_, err := parseConfig([]string{"fetch", "--registry-direct", "--registry-repo", "registry.local/repo", "pkg:sha256:abc"})
+	if err == nil {
+		t.Fatal("parseConfig() error = nil, want error for missing --registry-auth")
+	}
+}
+
+func TestParseConfigRegistryDirectValid(t *testing.T) {
+	t.Setenv("REGISTRY_REPO", "")
+	t.Setenv("REGISTRY_AUTH", "")
+
+	cli, err := parseConfig([]string{"fetch", "--registry-direct", "--registry-repo", "registry.local/repo", "--registry-auth", "YXV0aA==", "pkg:sha256:abc"})
+	if err != nil {
+		t.Fatalf("parseConfig() error = %v", err)
+	}
+	if !cli.registryDirect {
+		t.Error("registryDirect = false, want true")
+	}
+	if cli.registryRepo != "registry.local/repo" {
+		t.Errorf("registryRepo = %q, want %q", cli.registryRepo, "registry.local/repo")
+	}
+	if cli.registryAuth != "YXV0aA==" {
+		t.Errorf("registryAuth = %q, want %q", cli.registryAuth, "YXV0aA==")
+	}
+}
+
+func TestParseConfigRegistryDirectInvalidScheme(t *testing.T) {
+	t.Setenv("REGISTRY_REPO", "")
+	t.Setenv("REGISTRY_AUTH", "")
+
+	_, err := parseConfig([]string{"fetch", "--registry-direct", "--registry-repo", "registry.local/repo", "--registry-auth", "YXV0aA==", "--registry-scheme", "ftp", "pkg:sha256:abc"})
+	if err == nil {
+		t.Fatal("parseConfig() error = nil, want error for invalid scheme")
+	}
+}
+
+func TestParseConfigRegistryDirectFromEnv(t *testing.T) {
+	t.Setenv("REGISTRY_DIRECT", "true")
+	t.Setenv("REGISTRY_REPO", "registry.local/repo")
+	t.Setenv("REGISTRY_AUTH", "YXV0aA==")
+
+	cli, err := parseConfig([]string{"fetch", "pkg:sha256:abc"})
+	if err != nil {
+		t.Fatalf("parseConfig() error = %v", err)
+	}
+	if !cli.registryDirect {
+		t.Error("registryDirect = false, want true from REGISTRY_DIRECT env")
+	}
+	if cli.registryRepo != "registry.local/repo" {
+		t.Errorf("registryRepo = %q, want from env", cli.registryRepo)
+	}
+}
+
+func TestParseConfigRegistryCAFileIsRead(t *testing.T) {
+	t.Setenv("REGISTRY_REPO", "")
+	t.Setenv("REGISTRY_AUTH", "")
+
+	dir := t.TempDir()
+	caPath := filepath.Join(dir, "ca.pem")
+	const pem = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
+	if err := os.WriteFile(caPath, []byte(pem), 0o600); err != nil {
+		t.Fatalf("write ca file: %v", err)
+	}
+
+	cli, err := parseConfig([]string{"fetch", "--registry-direct", "--registry-repo", "registry.local/repo", "--registry-auth", "YXV0aA==", "--registry-ca-file", caPath, "pkg:sha256:abc"})
+	if err != nil {
+		t.Fatalf("parseConfig() error = %v", err)
+	}
+	if cli.registryCA != pem {
+		t.Errorf("registryCA = %q, want %q", cli.registryCA, pem)
+	}
+}
+
+func TestParseConfigNonDirectUnaffected(t *testing.T) {
+	cli, err := parseConfig([]string{"fetch", "pkg:sha256:abc"})
+	if err != nil {
+		t.Fatalf("parseConfig() error = %v", err)
+	}
+	if cli.registryDirect {
+		t.Error("registryDirect = true, want false by default")
+	}
+}
+
+func TestResolveSkipsWhenRegistryDirect(t *testing.T) {
+	cli := cliConfig{config: config{mode: modeFetch, registryDirect: true}}
+	if err := cli.resolve(context.Background()); err != nil {
+		t.Fatalf("resolve() error = %v, want nil in direct mode", err)
+	}
 }
 
 func TestParseEndpoints(t *testing.T) {

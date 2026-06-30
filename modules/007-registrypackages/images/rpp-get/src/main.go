@@ -93,8 +93,14 @@ func run(ctx context.Context, logger *log.Logger) error {
 		Retries:        cfg.retries,
 		RetryDelay:     cfg.retryDelay,
 		Force:          cfg.force,
+		Extract:        cfg.extract,
 		TempDir:        cfg.tempDir,
 		InstalledStore: cfg.installedStore,
+		RegistryDirect: cfg.registryDirect,
+		RegistryRepo:   cfg.registryRepo,
+		RegistryAuth:   cfg.registryAuth,
+		RegistryCA:     cfg.registryCA,
+		RegistryScheme: cfg.registryScheme,
 	}
 
 	client := rpp.NewClient(rppCfg, logger, recorder)
