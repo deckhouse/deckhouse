@@ -37,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -198,6 +199,12 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		return nil, fmt.Errorf("load digests: %w", err)
 	}
 
+	conversions, err := loadConversions(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load conversions: %w", err)
+	}
+
 	return &modules.Config{
 		Path:       moduleDir,
 		Definition: moduleDef,
@@ -207,6 +214,8 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
+
+		Conversions: conversions,
 
 		Hooks: hooks,
 	}, nil
@@ -300,6 +309,12 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		return nil, fmt.Errorf("load digests: %w", err)
 	}
 
+	conversions, err := loadConversions(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load conversions: %w", err)
+	}
+
 	return &modules.Config{
 		Path:       moduleDir,
 		Definition: moduleDef,
@@ -309,6 +324,8 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
+
+		Conversions: conversions,
 
 		Hooks: hooks.hooks,
 
@@ -560,6 +577,18 @@ func loadEmbeddedDigests(packageName string) (map[string]string, error) {
 	}
 
 	return nil, nil
+}
+
+// loadConversions reads conversion rules from the module's openapi/conversions directory.
+// Returns nil if the directory does not exist (conversions are optional).
+func loadConversions(moduleDir string) (*conversion.Converter, error) {
+	conversionsDir := filepath.Join(moduleDir, "openapi", "conversions")
+	if _, err := os.Stat(conversionsDir); os.IsNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("stat conversions dir: %w", err)
+	}
+	return conversion.NewConverterFromDir(conversionsDir)
 }
 
 // getModuleVersion returns the version of the package at moduleDir.
