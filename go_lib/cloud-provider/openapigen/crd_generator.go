@@ -179,6 +179,90 @@ func (g *CRDGenerator) GenerateYAML(meta CRDMeta, versions []VersionSpec) ([]byt
 	return append([]byte(defaultHeader), out...), nil
 }
 
+// generateCRDDescriptionRuYAML builds a ru-overlay CRD YAML using only the ru-markers
+// schema — no kubebuilder validation pipeline. CRD identity metadata (group, kind,
+// names, scope, served, storage) is still derived from kubebuilder markers on root types,
+// but the openAPIV3Schema is replaced entirely with a minimal ru-only spec schema.
+func (g *CRDGenerator) generateCRDDescriptionRuYAML(versions []VersionSpec) ([]byte, error) {
+	if err := validateVersionSpecs(versions); err != nil {
+		return nil, err
+	}
+
+	reg := g.cfg.DeckhouseRegistry
+	var err error
+	if reg == nil {
+		reg, err = markers.BuildDeckhouseDescriptionRuOpenAPIMarkerRegistry()
+		if err != nil {
+			return nil, fmt.Errorf("build ru marker registry: %w", err)
+		}
+	}
+
+	// Use kubebuilder pipeline only for CRD identity (group/kind/names/scope/versions).
+	roots := versionSpecRoots(versions)
+	crdObj, err := kube.GetCRDFromRoots(roots, nil)
+	if err != nil {
+		return nil, fmt.Errorf("kubebuilder CRD skeleton: %w", err)
+	}
+
+	crdRaw, err := anyToRawMap(crdObj)
+	if err != nil {
+		return nil, fmt.Errorf("serialize CRD skeleton: %w", err)
+	}
+
+	rootByPkg, err := buildRootByPkgMap(versions)
+	if err != nil {
+		return nil, fmt.Errorf("build root by package basename: %w", err)
+	}
+
+	versionsRaw := crdRawVersions(crdRaw)
+	for i, versionRaw := range versionsRaw {
+		vMap, ok := versionRaw.(map[string]any)
+		if !ok {
+			continue
+		}
+		versionName, _ := vMap["name"].(string)
+
+		root, ok := rootByPkg[versionName]
+		if !ok {
+			return nil, fmt.Errorf("version not found: version %q not found in roots", versionName)
+		}
+
+		specVal, specFieldName, err := extractSpecField(root)
+		if err != nil {
+			return nil, fmt.Errorf("extract spec field for version %s: %w", versionName, err)
+		}
+
+		// Build spec schema from ru-markers only — no kubebuilder validation constraints.
+		ruSpecSchema, err := deckhouse.BuildSchema(specVal, reg)
+		if err != nil {
+			return nil, fmt.Errorf("ru schema for version %s: %w", versionName, err)
+		}
+
+		ruSpecRaw, err := anyToRawMap(ruSpecSchema)
+		if err != nil {
+			return nil, fmt.Errorf("serialize ru spec schema for version %s: %w", versionName, err)
+		}
+
+		// Replace openAPIV3Schema entirely: only spec with ru descriptions, no metav1 fields.
+		rootSchemaMap := map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				specFieldName: ruSpecRaw,
+			},
+		}
+		schemaMap := ensureMap(vMap, "schema")
+		schemaMap["openAPIV3Schema"] = rootSchemaMap
+
+		versionsRaw[i] = vMap
+	}
+
+	out, err := yaml.Marshal(crdRaw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal CRD: %w", err)
+	}
+	return append([]byte(defaultHeader), out...), nil
+}
+
 // reflectPkgPath returns the package path of the given value's type.
 func reflectPkgPath(v any) string {
 	t := reflect.TypeOf(v)
@@ -343,8 +427,9 @@ func GenerateCRD(versions []VersionSpec) ([]byte, error) {
 	return gen.GenerateYAML(CRDMeta{}, versions)
 }
 
-// GenerateCRDDescriptionRu generates a full Kubernetes CRD YAML (identical structure to GenerateCRD),
-// but with description fields populated from deckhouse ru:description markers instead of English.
+// GenerateCRDDescriptionRu generates a full Kubernetes CRD YAML with only Russian descriptions.
+// Uses the ru-markers schema directly — no kubebuilder validation pipeline.
+// Fields without +deckhouse:ru:description markers are absent from the output.
 func GenerateCRDDescriptionRu(versions []VersionSpec) ([]byte, error) {
 	reg, err := markers.BuildDeckhouseDescriptionRuOpenAPIMarkerRegistry()
 	if err != nil {
@@ -358,5 +443,5 @@ func GenerateCRDDescriptionRu(versions []VersionSpec) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gen.GenerateYAML(CRDMeta{}, versions)
+	return gen.generateCRDDescriptionRuYAML(versions)
 }

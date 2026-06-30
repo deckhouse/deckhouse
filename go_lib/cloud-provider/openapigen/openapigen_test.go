@@ -21,6 +21,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
+	"sigs.k8s.io/yaml"
+
 	crdmodelv1alpha1 "openapigen/internal/test/crdmodel/v1alpha1"
 	ambigv1alpha1a "openapigen/internal/test/dupversion/a/v1alpha1"
 	ambigv1alpha1b "openapigen/internal/test/dupversion/b/v1alpha1"
@@ -31,11 +36,6 @@ import (
 	multiv1alpha1 "openapigen/internal/test/multiversioncrd/v1alpha1"
 	rucrdv1alpha1 "openapigen/internal/test/rucrd/v1alpha1"
 	"openapigen/internal/test/usermodel"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/format"
-	"sigs.k8s.io/yaml"
 )
 
 func TestOpenapigen(t *testing.T) {
@@ -282,6 +282,44 @@ var _ = Describe("OpenAPIGen", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(m).To(HaveKey("apiVersion"))
 			Expect(m).To(HaveKey("spec"))
+		})
+
+		It("strips descriptions from fields and types with no ru:description marker", func() {
+			got, err := GenerateCRDDescriptionRu([]VersionSpec{{Root: &rucrdv1alpha1.RUCRDResource{}}})
+			Expect(err).NotTo(HaveOccurred())
+
+			var crd map[string]any
+			Expect(yaml.Unmarshal(got, &crd)).To(Succeed())
+
+			openAPISchema := crd["spec"].(map[string]any)["versions"].([]any)[0].(map[string]any)["schema"].(map[string]any)["openAPIV3Schema"].(map[string]any)
+			props := openAPISchema["properties"].(map[string]any)
+
+			// Root schema has no description (ru-only schema, no metav1 root marker).
+			Expect(openAPISchema).NotTo(HaveKey("description"))
+
+			// metav1 fields (apiVersion, kind, metadata) are absent — ru-only schema
+			// builds only the spec subtree, not the full CRD root properties.
+			Expect(props).NotTo(HaveKey("apiVersion"))
+			Expect(props).NotTo(HaveKey("kind"))
+			Expect(props).NotTo(HaveKey("metadata"))
+
+			// spec-level description (no ru marker on RUCRDResourceSpec) must be absent.
+			Expect(props["spec"]).NotTo(HaveKey("description"))
+
+			specProps := props["spec"].(map[string]any)["properties"].(map[string]any)
+
+			// Fields with +deckhouse:ru:description markers must keep Russian descriptions.
+			Expect(specProps["host"].(map[string]any)["description"]).To(ContainSubstring("Целевой хост"))
+			Expect(specProps["port"].(map[string]any)["description"]).To(ContainSubstring("Целевой порт"))
+			Expect(specProps["protocol"].(map[string]any)["description"]).To(ContainSubstring("Протокол"))
+
+			// Fields without ru markers must be absent entirely from properties.
+			Expect(specProps).NotTo(HaveKey("weight"))
+
+			// No kubebuilder validation constraints in ru overlay.
+			Expect(specProps["host"]).NotTo(HaveKey("pattern"))
+			Expect(specProps["host"]).NotTo(HaveKey("enum"))
+			Expect(specProps["host"]).NotTo(HaveKey("default"))
 		})
 	})
 })

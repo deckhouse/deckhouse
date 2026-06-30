@@ -258,7 +258,7 @@ func jsonNameFromTag(tag reflect.StructTag) (string, bool) {
 	if s == "" || s == "-" {
 		return "", false
 	}
-	name := strings.Split(s, ",")[0]
+	name, _, _ := strings.Cut(s, ",")
 	if name == "" {
 		return "", false
 	}
@@ -266,7 +266,7 @@ func jsonNameFromTag(tag reflect.StructTag) (string, bool) {
 }
 
 func normalizeStructType(t reflect.Type) reflect.Type {
-	for t != nil && t.Kind() == reflect.Ptr {
+	for t != nil && t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	return t
