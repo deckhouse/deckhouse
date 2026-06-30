@@ -16,7 +16,6 @@ localPathProvisionerEnabled: true
 monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
-monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
 multitenancyManagerEnabled: true
 namespaceConfiguratorEnabled: true
