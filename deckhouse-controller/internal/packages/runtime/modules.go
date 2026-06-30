@@ -42,9 +42,10 @@ const (
 // Module represents a module instance as received from the module controller.
 // Unlike App, modules always run in the d8-system namespace.
 type Module struct {
-	Name       string
-	Definition modules.Definition
-	Settings   addonutils.Values
+	Name            string
+	Definition      modules.Definition
+	Settings        addonutils.Values
+	SettingsVersion int // schema version from ModuleConfig.Spec.Version
 }
 
 // UpdateModulesSettings applies a settings-and-enabled change to an
@@ -69,14 +70,14 @@ type Module struct {
 // dropped — there is no per-package store to stash them in yet; the eventual
 // UpdateModule registers the package and supplies its settings. Either way, an
 // untracked package has no node to reschedule, so no Reschedule happens here.
-func (r *Runtime) UpdateModulesSettings(name string, settings addonutils.Values, enabled *bool) {
+func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, enabled *bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	// Settings live in the per-package store; the ModuleConfig enabled intent
 	// lives in the global module (thread-safe for the scheduler's enabled getter).
 	// Reschedule if either actually changed.
-	settingsChanged := r.packages.UpdateSettings(name, settings)
+	settingsChanged := r.packages.UpdateSettings(name, settingsVersion, settings)
 	enabledChanged := r.global.SetConfigEnabled(name, enabled)
 
 	if settingsChanged || enabledChanged {
@@ -105,7 +106,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.Settings)
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
