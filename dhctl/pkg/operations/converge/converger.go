@@ -25,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
@@ -35,6 +34,7 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*

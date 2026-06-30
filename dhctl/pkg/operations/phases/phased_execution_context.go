@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type OnPhaseFuncData[OperationPhaseDataT any] struct {

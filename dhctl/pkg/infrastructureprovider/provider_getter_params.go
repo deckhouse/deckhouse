@@ -25,8 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type CloudProviderGetterParams struct {

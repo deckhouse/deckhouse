@@ -34,9 +34,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type (

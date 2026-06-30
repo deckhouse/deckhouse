@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // newRequestOptions returns a per-request *options.Options seeded with the

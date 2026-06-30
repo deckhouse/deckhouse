@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

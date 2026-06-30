@@ -28,8 +28,8 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {

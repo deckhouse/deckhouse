@@ -36,8 +36,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type MetaConfig struct {

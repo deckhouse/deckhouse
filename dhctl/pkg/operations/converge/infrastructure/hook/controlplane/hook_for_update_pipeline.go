@@ -35,10 +35,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type ClientSwitcher interface {

@@ -26,8 +26,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx, deploymentName string) error {

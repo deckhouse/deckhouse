@@ -26,9 +26,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"

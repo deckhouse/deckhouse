@@ -28,8 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // ConvergeDeckhouseConfigurationForCommander – reconciles deckhouse in-cluster configmaps and secrets.

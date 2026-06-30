@@ -22,8 +22,8 @@ import (
 	"os"
 	"sort"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func ConfigHash(ctx context.Context, paths []string) string {

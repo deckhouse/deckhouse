@@ -22,7 +22,7 @@ import (
 	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // EnsureModuleConfigCRD applies the ModuleConfig CRD shipped in the installer

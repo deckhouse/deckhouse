@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type Checker struct {

@@ -23,7 +23,7 @@ import (
 	terminal "golang.org/x/term"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // AskBecomePassword reads a sudo/become password from stdin and stores it in o.BecomePass

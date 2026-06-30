@@ -23,7 +23,7 @@ import (
 	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const InternalBootstrapNodeGroupConfigurationName = "d8-early-node-bootstrap-internal.sh"

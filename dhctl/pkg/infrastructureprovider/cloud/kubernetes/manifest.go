@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func IsManifest(change plan.ChangeOp, kind string) bool {

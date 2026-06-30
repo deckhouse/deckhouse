@@ -24,7 +24,7 @@ import (
 	"syscall"
 
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type RunExecutorParams struct {

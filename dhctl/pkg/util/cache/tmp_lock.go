@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

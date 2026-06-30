@@ -23,10 +23,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type AutoConverger struct {

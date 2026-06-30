@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func RestartStateExporter(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx) error {

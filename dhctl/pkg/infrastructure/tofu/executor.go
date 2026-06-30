@@ -26,8 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type ExecutorParams struct {

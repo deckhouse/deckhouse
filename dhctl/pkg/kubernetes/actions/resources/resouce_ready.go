@@ -23,8 +23,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources/readiness"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type apiResourcesGetter func(kubeCl *client.KubernetesClient, apiVersion, kind string) (*metav1.APIResource, error)

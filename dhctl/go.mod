@@ -18,7 +18,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/deckhouse/lib-connection v0.11.0
-	github.com/deckhouse/lib-dhctl v0.18.2
+	github.com/deckhouse/lib-dhctl v0.19.0
 	github.com/deckhouse/lib-gossh v0.3.0
 	github.com/deckhouse/module-sdk v0.10.4
 	github.com/flant/kube-client v1.6.0
@@ -34,7 +34,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
-	github.com/mattn/go-isatty v0.0.20
+	github.com/mattn/go-isatty v0.0.22
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9
 	github.com/name212/govalue v1.1.0

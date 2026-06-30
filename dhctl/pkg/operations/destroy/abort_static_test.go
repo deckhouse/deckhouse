@@ -33,13 +33,13 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var rootTmpDirStaticAbort = path.Join(os.TempDir(), "dhctl-test-static-abort")

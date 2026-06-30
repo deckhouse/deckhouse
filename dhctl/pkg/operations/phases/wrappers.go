@@ -23,8 +23,8 @@ import (
 
 	"github.com/name212/govalue"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var (

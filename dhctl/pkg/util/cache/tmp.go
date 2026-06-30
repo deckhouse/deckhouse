@@ -27,8 +27,8 @@ import (
 
 	"github.com/name212/govalue"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const cleanupErrorPrefix = "Error during cleanup tmp dir:"
