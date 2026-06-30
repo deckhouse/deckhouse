@@ -106,7 +106,7 @@ func RenderNsToml(cfg *DesiredConfig) ([]byte, error) {
 
 // Apply writes or removes configuration files on disk.
 func (w *Writer) Apply(config *DesiredConfig) error {
-	if config == nil || (len(config.Namespaces) == 0 && len(config.CACerts) == 0) {
+	if config == nil || len(config.Namespaces) == 0 {
 		return w.removeConfig()
 	}
 
