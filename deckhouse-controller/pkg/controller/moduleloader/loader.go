@@ -46,7 +46,6 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/app"
@@ -58,8 +57,6 @@ const (
 
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
-
-	embeddedModulesDir = app.PathEmbeddedModules
 )
 
 var (
@@ -123,9 +120,9 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		logger:               logger,
 		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		downloadedModulesDir: app.DownloadedModulesDir(),
 		installer:            installer.New(dc, logger),
-		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		symlinksDir:          filepath.Join(app.DownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
 		registries:           make(map[string]*addonmodules.Registry),
 		embeddedPolicy:       embeddedPolicy,
@@ -347,7 +344,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 
 			l.logger.Debug("ensure module", slog.String("name", def.Name))
-			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
+			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, app.EmbeddedModulesDir)); err != nil {
 				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
 			}
 

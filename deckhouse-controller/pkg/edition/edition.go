@@ -24,13 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
-const (
-	editionPath = app.PathEdition
-
-	defaultBundle = "Default"
-
-	bundleEnv = app.EnvBundle
-)
+const defaultBundle = "Default"
 
 type Edition struct {
 	Name    string
@@ -39,15 +33,15 @@ type Edition struct {
 }
 
 func Parse(version string) (*Edition, error) {
-	content, err := os.ReadFile(editionPath)
+	content, err := os.ReadFile(app.PathEdition)
 	if err != nil {
-		return nil, fmt.Errorf("read the '%s' edition file: %w", editionPath, err)
+		return nil, fmt.Errorf("read the '%s' edition file: %w", app.PathEdition, err)
 	}
 
 	edition := new(Edition)
 	edition.Version = version
 	edition.Name = strings.ToLower(strings.TrimSpace(string(content)))
-	edition.Bundle = strings.TrimSpace(os.Getenv(bundleEnv))
+	edition.Bundle = strings.TrimSpace(os.Getenv(app.EnvBundle))
 	if edition.Bundle == "" {
 		edition.Bundle = defaultBundle
 	}

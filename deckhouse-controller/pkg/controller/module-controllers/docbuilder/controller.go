@@ -45,7 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docsbuilder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
@@ -72,7 +71,7 @@ type reconciler struct {
 func RegisterController(mgr manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	r := &reconciler{
 		client:               mgr.GetClient(),
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		downloadedModulesDir: app.DownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		docsBuilder:          docsbuilder.NewClient(dc.GetHTTPClient()),
 		logger:               logger,

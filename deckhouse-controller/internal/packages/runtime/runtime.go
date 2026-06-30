@@ -67,7 +67,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -157,7 +156,7 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	r.edition = edition
 
 	reg := registry.NewService(dc, logger)
-	downloadedDir := d8env.GetDownloadedModulesDir()
+	downloadedDir := app.DownloadedModulesDir()
 
 	appsDir := filepath.Join(downloadedDir, "apps")
 	modulesDir := filepath.Join(downloadedDir, "modules")

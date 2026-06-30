@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
@@ -88,6 +89,9 @@ const (
 
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	defaultModuleVersion    = "v2.0.0"
+
+	// gracefulShutdownTimeout bounds the controller-runtime manager shutdown.
+	gracefulShutdownTimeout = 10 * time.Second
 )
 
 type DeckhouseController struct {
@@ -150,7 +154,7 @@ func NewDeckhouseController(
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
 		},
-		GracefulShutdownTimeout: ptr.To(app.GracefulShutdownTimeout),
+		GracefulShutdownTimeout: ptr.To(gracefulShutdownTimeout),
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// for ModuleDocumentation controller

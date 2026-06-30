@@ -61,16 +61,12 @@ const (
 	deckhouseControllerBinaryPath         = "/usr/bin/deckhouse-controller"
 	deckhouseControllerWithCapsBinaryPath = "/usr/bin/caps-deckhouse-controller"
 
-	deckhouseBundleEnv = app.EnvBundle
-	chrootDirEnv       = app.EnvShellChrootDir
-	modulesDirEnv      = app.EnvModulesDir
-	skipEntrypointEnv  = app.EnvSkipEntrypoint
-
-	leaseName        = app.LeaseName
-	defaultNamespace = app.NamespaceDeckhouse
-	leaseDuration    = app.LeaseDurationSeconds
-	renewalDeadline  = app.RenewDeadlineSeconds
-	retryPeriod      = app.RetryPeriodSeconds
+	// Leader-election lease for the deckhouse-controller HA lock.
+	// Durations are in seconds to match the leaderelection API call sites.
+	leaseName       = "deckhouse-leader-election"
+	leaseDuration   = 35
+	renewalDeadline = 30
+	retryPeriod     = 10
 )
 
 type reaperMutex struct {
@@ -86,7 +82,7 @@ func (r *reaperMutex) Release() {
 
 func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
 	return func(_ *cobra.Command, _ []string) error {
-		if os.Getenv(skipEntrypointEnv) != "true" {
+		if os.Getenv(app.EnvSkipEntrypoint) != "true" {
 			if err := entrypoint(logger); err != nil {
 				logger.Error("entrypoint run", log.Err(err))
 				os.Exit(1)
@@ -125,7 +121,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 
 		operator.StartAPIServer()
 
-		versionFile := app.PathVersion
+		versionFile := app.VersionFilePath
 
 		version := "unknown"
 		content, err := os.ReadFile(versionFile)
@@ -135,7 +131,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 			version = strings.TrimSuffix(string(content), "\n")
 		}
 
-		if version == "dev" && app.HADisabled() {
+		if version == "dev" && !app.EnabledHA() {
 			if err := run(ctx, operator, logger); err != nil {
 				logger.Error("run", log.Err(err))
 				os.Exit(1)
@@ -151,7 +147,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 
 func entrypoint(logger *log.Logger) error {
 	var possibleBundles = []string{"Default", "Minimal", "Managed"}
-	bundleEnvValue, found := os.LookupEnv(deckhouseBundleEnv)
+	bundleEnvValue, found := os.LookupEnv(app.EnvBundle)
 	if !found || len(bundleEnvValue) == 0 {
 		bundleEnvValue = "Default"
 	}
@@ -160,7 +156,7 @@ func entrypoint(logger *log.Logger) error {
 		logger.Fatal(fmt.Sprintf("Deckhouse bundle %q doesn't exist! -- Possible bundles: %s", bundleEnvValue, strings.Join(possibleBundles, ", ")))
 	}
 
-	chrootDirEnvValue, found := os.LookupEnv(chrootDirEnv)
+	chrootDirEnvValue, found := os.LookupEnv(app.EnvShellChrootDir)
 	if found && len(chrootDirEnvValue) > 0 {
 		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, app.DefaultTempDir)
 		if err := os.MkdirAll(chrootedTmpDirPath, 0750); err != nil {
@@ -178,9 +174,9 @@ func entrypoint(logger *log.Logger) error {
 		}
 	}
 
-	modulesDirEnvValue, found := os.LookupEnv(modulesDirEnv)
+	modulesDirEnvValue, found := os.LookupEnv(app.EnvModulesDir)
 	if !found || len(modulesDirEnvValue) == 0 {
-		return fmt.Errorf("%q env not set", modulesDirEnv)
+		return fmt.Errorf("%q env not set", app.EnvModulesDir)
 	}
 
 	coreModulesDir := strings.Split(modulesDirEnvValue, ":")[0]
@@ -213,7 +209,7 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 
 	podNs := app.PodNamespace()
 	if len(podNs) == 0 {
-		podNs = defaultNamespace
+		podNs = app.NamespaceDeckhouse
 	}
 
 	clusterDomain := app.ClusterDomain()
@@ -275,7 +271,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	operatorStarted := false
 	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
 
-	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathCRDs); err != nil {
+	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathDeckhouseCRDs); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
@@ -330,7 +326,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 			switch sig {
 			case syscall.SIGUSR1, syscall.SIGUSR2:
 				environ := os.Environ()
-				skipEntrypointKeyValue := fmt.Sprintf("%s=true", skipEntrypointEnv)
+				skipEntrypointKeyValue := fmt.Sprintf("%s=true", app.EnvSkipEntrypoint)
 				if !slices.Contains(environ, skipEntrypointKeyValue) {
 					environ = append(environ, skipEntrypointKeyValue)
 				}
@@ -348,7 +344,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					}
 				}
 				deckhouseBinaryToRun := deckhouseControllerBinaryPath
-				chrootDirEnvValue, found := os.LookupEnv(chrootDirEnv)
+				chrootDirEnvValue, found := os.LookupEnv(app.EnvShellChrootDir)
 				if found && len(chrootDirEnvValue) > 0 {
 					deckhouseBinaryToRun = deckhouseControllerWithCapsBinaryPath
 				}
@@ -425,10 +421,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 	}
 }
 
-const (
-	cmLockName  = app.BootstrapLockName
-	cmNamespace = app.NamespaceDeckhouse
-)
+const cmLockName = "deckhouse-bootstrap-lock"
 
 func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {
 	bk := wait.Backoff{
@@ -444,7 +437,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		// retry on any error
 		return true
 	}, func() error {
-		if _, err := client.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
+		if _, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
@@ -457,7 +450,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 			FieldSelector: "metadata.name=" + cmLockName,
 			Watch:         true,
 		}
-		wch, err := client.CoreV1().ConfigMaps(cmNamespace).Watch(ctx, listOpts)
+		wch, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Watch(ctx, listOpts)
 		if err != nil {
 			return fmt.Errorf("watch configmaps: %w", err)
 		}

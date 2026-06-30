@@ -16,14 +16,12 @@ package app
 
 // Filesystem paths baked into the deckhouse image layout.
 const (
-	// PathVersion is the file holding the deckhouse version.
-	PathVersion = "/deckhouse/version"
-	// PathCRDs is the glob for deckhouse-controller CRD manifests.
-	PathCRDs = "/deckhouse/deckhouse-controller/crds/*.yaml"
+	// VersionFilePath is the file holding the deckhouse version.
+	VersionFilePath = "/deckhouse/version"
+	// PathDeckhouseCRDs is the glob for deckhouse-controller CRD manifests.
+	PathDeckhouseCRDs = "/deckhouse/deckhouse-controller/crds/*.yaml"
 	// PathEdition is the file holding the deckhouse edition.
 	PathEdition = "/deckhouse/edition"
-	// PathEmbeddedModules is the directory with modules shipped in the image.
-	PathEmbeddedModules = "/deckhouse/modules"
 )
 
 // Chroot mount sources for shell hooks and enabled scripts.

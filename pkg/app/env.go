@@ -90,9 +90,9 @@ func EnvBoolOr(name string, defaultValue bool) bool {
 	return parsed
 }
 
-// HADisabled reports whether HA is explicitly turned off (DECKHOUSE_HA="false").
-// The caller applies this only to dev builds; production always runs HA.
-func HADisabled() bool { return os.Getenv(EnvHA) == "false" }
+// EnabledHA reports whether HA is enabled. HA is the default; it is off only when
+// DECKHOUSE_HA is explicitly "false". The caller honors "off" only in dev builds.
+func EnabledHA() bool { return os.Getenv(EnvHA) != "false" }
 
 // PodName is the controller pod name, used as the leader-election identity.
 func PodName() string { return os.Getenv(EnvPod) }
