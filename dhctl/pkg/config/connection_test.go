@@ -160,6 +160,20 @@ func TestParseConnectionConfig(t *testing.T) {
 
 `,
 		},
+		"valid config: force use ssh agent (no inline keys)": {
+			config: validSSHConfigAgentOnly,
+			expected: &ConnectionConfig{
+				SSHConfig: &SSHConfig{
+					SSHUser:          "ubuntu",
+					SSHPort:          new(int32(22)),
+					ForceUseSSHAgent: true,
+				},
+				SSHHosts: []SSHHost{
+					{Host: "10.0.0.1"},
+				},
+			},
+			opts: []ValidateOption{ValidateOptionValidateExtensions(true)},
+		},
 		"invalid config: empty host": {
 			config: configFunc(
 				invalidSSHConfigNoHosts,
@@ -285,4 +299,16 @@ sshAgentPrivateKeys:
 ---
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHHost
+`
+
+var validSSHConfigAgentOnly = `
+apiVersion: dhctl.deckhouse.io/v1
+kind: SSHConfig
+sshUser: ubuntu
+sshPort: 22
+forceUseSSHAgent: true
+---
+apiVersion: dhctl.deckhouse.io/v1
+kind: SSHHost
+host: 10.0.0.1
 `
