@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 17,
+  "version": 18,
   "statements": [
     {
       "vulnerability": {
@@ -624,6 +624,20 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-45570"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Уязвимость github.com/go-git/go-git/v5 v5.16.2 проявляется при обработке вредоносных Git-данных из недоверенного источника, недостижимых в штатных операциях d8.",
+      "timestamp": "2026-06-30T12:00:00Z"
+    },
+    {
+      "vulnerability": {
         "name": "GHSA-w5pp-99ch-qj29"
       },
       "products": [
@@ -638,5 +652,5 @@
     }
   ],
   "timestamp": "2025-10-09T14:21:14Z",
-  "last_updated": "2026-06-24T12:00:00Z"
+  "last_updated": "2026-06-30T12:00:00Z"
 }
