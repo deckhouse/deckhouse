@@ -23,5 +23,5 @@
     expr: |-
       max by (namespace, pod, container) (
         kube_pod_container_info * on (uid) group_left
-        max by (uid) (label_replace(ebpf_exporter_oom_kills{cgroup_path=~".*burstable.*"}, "uid", "$1", "cgroup_path", ".+burstable/pod(.*)"))
+        max by (uid) (label_replace(ebpf_exporter_oom_kills{cgroup_path=~".*burstable.*"}, "uid", "$1", "cgroup_path", ".+burstable/pod([a-f0-9-]+)"))
       )
