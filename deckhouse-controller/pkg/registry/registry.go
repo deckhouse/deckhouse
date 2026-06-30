@@ -404,8 +404,9 @@ func getDeckhouseRegistry(ctx context.Context) (string, string, *utils.RegistryC
 	}
 
 	secret := new(corev1.Secret)
-	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.SecretRegistry}, secret); err != nil {
-		return "", "", nil, fmt.Errorf("list ModuleSource got an error: %w", err)
+	registryKey := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.SecretRegistry}
+	if err := k8sClient.Get(ctx, registryKey, secret); err != nil {
+		return "", "", nil, fmt.Errorf("get registry secret %s: %w", registryKey, err)
 	}
 
 	drs, err := utils.ParseDeckhouseRegistrySecret(secret.Data)
@@ -414,14 +415,14 @@ func getDeckhouseRegistry(ctx context.Context) (string, string, *utils.RegistryC
 	}
 
 	var discoverySecret corev1.Secret
-	key := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.SecretDiscovery}
-	if err := k8sClient.Get(ctx, key, &discoverySecret); err != nil {
-		return "", "", nil, fmt.Errorf("get deckhouse discovery sectret got an error: %w", err)
+	discoveryKey := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.SecretDiscovery}
+	if err := k8sClient.Get(ctx, discoveryKey, &discoverySecret); err != nil {
+		return "", "", nil, fmt.Errorf("get discovery secret %s: %w", discoveryKey, err)
 	}
 
 	clusterUUID, ok := discoverySecret.Data["clusterUUID"]
 	if !ok {
-		return "", "", nil, fmt.Errorf("not found clusterUUID in discovery secret: %w", err)
+		return "", "", nil, fmt.Errorf("clusterUUID not found in discovery secret %s", discoveryKey)
 	}
 
 	releaseChannel := string(discoverySecret.Data["releaseChannel"])
