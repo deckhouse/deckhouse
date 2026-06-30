@@ -49,6 +49,7 @@
 038-registry/                                                    @nabokihms @vadimartynov
 039-registry-packages-proxy/                                     @borg-z @090809
 040-control-plane-manager/                                       @sprait
+**/040-control-plane-manager/hooks/audit_policy*                 @AlwxSin
 040-node-manager/                                                @borg-z @090809
 **/040-node-manager/images/builder-cuda                          @serg-su
 **/040-node-manager/images/nvidia-container-toolkit              @serg-su
