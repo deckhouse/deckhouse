@@ -242,7 +242,6 @@ jobs:
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
-          set -euo pipefail
           if [[ -z "${WERF_VERSION:-}" ]]; then
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
@@ -558,7 +557,6 @@ jobs:
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
-          set -euo pipefail
           if [[ -z "${WERF_VERSION:-}" ]]; then
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
@@ -723,7 +721,6 @@ jobs:
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
-          set -euo pipefail
           if [[ -z "${WERF_VERSION:-}" ]]; then
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
@@ -1773,7 +1770,6 @@ jobs:
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
-          set -euo pipefail
           if [[ -z "${WERF_VERSION:-}" ]]; then
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
