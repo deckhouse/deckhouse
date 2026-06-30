@@ -18,10 +18,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"sort"
+	"strings"
+	"sync"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -31,6 +36,7 @@ import (
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
+	"github.com/goccy/go-yaml"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -39,6 +45,8 @@ import (
 	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -61,6 +69,11 @@ type Module struct {
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	// dynamicMu guards dynamicEnabled: global hooks write it during execution
+	// while the scheduler reads it concurrently through IsDynamicEnabled.
+	dynamicMu      sync.RWMutex
+	dynamicEnabled map[string]bool // Dynamic enabled state set by global hooks, keyed by kebab-case module name.
 
 	logger *log.Logger
 }
@@ -89,6 +102,7 @@ func NewModuleByConfig(cfg *Config, logger *log.Logger) (*Module, error) {
 
 	m.name = "global"
 	m.running = atomic.Bool{}
+	m.dynamicEnabled = make(map[string]bool)
 
 	m.path = cfg.Path
 	m.patcher = cfg.Patcher
@@ -143,13 +157,38 @@ func (m *Module) GetName() string {
 }
 
 // GetVersion return the package version
-func (m *Module) GetVersion() string {
-	return "v0.0.0"
+func (m *Module) GetVersion() *semver.Version {
+	return semver.MustParse("v0.0.0")
+}
+
+// GetConstraints returns the scheduler constraints for the global module: it
+// sits at order 0 (the barrier ahead of every other package) and is always
+// enabled. Not registered with the scheduler yet — see the global-node wiring
+// in runtime.
+func (m *Module) GetConstraints() schedule.Constraints {
+	return schedule.Constraints{
+		Order: 0,
+		Floor: rule.Static(rule.Enable),
+	}
 }
 
 // GetPath returns path to the package dir
 func (m *Module) GetPath() string {
 	return m.path
+}
+
+// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
+// If include is provided, only hooks matching those names are included.
+func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
+	d := make(map[string]any)
+	for _, h := range m.hooks.GetHooks() {
+		if len(include) == 0 || slices.Contains(include, h.GetName()) {
+			d[h.GetName()] = h.GetHookController().SnapshotsDump()
+		}
+	}
+
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -199,6 +238,12 @@ func (m *Module) ValidateSettings(_ context.Context, settings addonutils.Values)
 // ApplySettings apply settings values
 func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplySettings(settings)
+}
+
+// GetSettings returns the effective settings: user config merged with
+// config-schema defaults. Same payload exposed to templates as .Module.Settings.
+func (m *Module) GetSettings() addonutils.Values {
+	return m.values.GetSettings()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
@@ -299,7 +344,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
 	hookConfigValues := m.values.GetSettings()
-	hookValues := m.values.GetValues()
+	hookValues := m.GetValues()
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
@@ -322,12 +367,51 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = m.values.ApplyValuesPatch(*valuesPatch); err != nil {
+		// filterEnabledFromValuesPatch strips the dynamic-enable signals from the
+		// patch in place, so the apply below sees only real global values.
+		enabled := filterEnabledFromValuesPatch(valuesPatch)
+		if err = m.values.ApplyValuesPatchWithLegacyRoot(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
+
+		m.dynamicMu.Lock()
+		maps.Copy(m.dynamicEnabled, enabled)
+		m.dynamicMu.Unlock()
 	}
 
 	return nil
+}
+
+// filterEnabledFromValuesPatch extracts dynamic module-enable signals from a
+// global hook's values patch and removes them from the patch in place, returning
+// a map of kebab-case module name to enabled state.
+//
+// Global hooks enable other modules by patching a virtual "/<moduleKey>Enabled"
+// key (e.g. "/cniCiliumEnabled") in global values. These keys are not part of
+// the global values schema, so they must not reach the values storage: every
+// operation whose first path segment ends in "Enabled" is treated as an enable
+// signal (mapped to true) — regardless of its Op or Value — then translated to
+// its module name (cni-cilium) and pulled out of the patch. Every remaining
+// operation is a real global value and stays in the patch for the caller to
+// apply.
+func filterEnabledFromValuesPatch(valuesPatch *addonutils.ValuesPatch) map[string]bool {
+	enabled := make(map[string]bool)
+	kept := valuesPatch.Operations[:0]
+
+	for _, op := range valuesPatch.Operations {
+		pathParts := strings.Split(op.Path, "/")
+		if len(pathParts) < 2 || !strings.HasSuffix(pathParts[1], "Enabled") {
+			kept = append(kept, op)
+			continue
+		}
+
+		key := strings.TrimSuffix(pathParts[1], "Enabled")
+		enabled[addonutils.ModuleNameFromValuesKey(key)] = true
+	}
+
+	valuesPatch.Operations = kept
+
+	return enabled
 }
 
 // SetEnabledModules inject enabledModules to the global values
@@ -377,4 +461,24 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 	if err := m.values.ApplyValuesPatch(patch); err != nil {
 		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
 	}
+}
+
+// IsDynamicEnabled reports a module's dynamic enabled state, as set by global
+// hooks, as the tri-state the scheduler's dynamic rule consumes:
+//   - non-nil true  - a hook dynamically enabled the module;
+//   - non-nil false - a hook dynamically disabled the module;
+//   - nil           - no hook has expressed an opinion about the module.
+//
+// moduleName is the kebab-case module name. Safe for concurrent use: the
+// scheduler reads this while global hooks may be writing.
+func (m *Module) IsDynamicEnabled(moduleName string) *bool {
+	m.dynamicMu.RLock()
+	defer m.dynamicMu.RUnlock()
+
+	enabled, ok := m.dynamicEnabled[moduleName]
+	if !ok {
+		return nil
+	}
+
+	return &enabled
 }

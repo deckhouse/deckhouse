@@ -15,7 +15,7 @@
 package condition
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
 // Condition is a function that evaluates a boolean condition.
@@ -26,27 +26,29 @@ import (
 //   - Feature flag evaluation
 type Condition func() bool
 
-// Checker wraps a condition function as a checker.Checker implementation.
-type Checker struct {
+// Rule wraps a condition function as a rule.Rule. It is a gate: a false
+// condition vetoes (Forbid), a true condition has no opinion (Undefined).
+type Rule struct {
 	condition Condition // Function to evaluate
 	reason    string
 }
 
-// NewChecker creates a condition checker.
-func NewChecker(condition Condition, reason string) *Checker {
-	ch := new(Checker)
+// NewRule creates a condition rule.
+func NewRule(condition Condition, reason string) *Rule {
+	r := new(Rule)
 
-	ch.condition = condition
-	ch.reason = reason
+	r.condition = condition
+	r.reason = reason
 
-	return ch
+	return r
 }
 
-// Check evaluates the condition function and returns the result.
-// Reason is always empty - condition functions don't provide reasons.
-func (c *Checker) Check() checker.Result {
-	return checker.Result{
-		Enabled: c.condition(),
-		Reason:  c.reason,
+// Decide evaluates the condition function: an unmet condition is a hard veto
+// (Forbid) carrying the configured reason; a met condition yields Undefined.
+func (r *Rule) Decide() rule.Decision {
+	if !r.condition() {
+		return rule.Decision{Kind: rule.Forbid, Reason: r.reason}
 	}
+
+	return rule.Decision{Kind: rule.Undefined}
 }

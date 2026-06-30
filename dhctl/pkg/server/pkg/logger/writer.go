@@ -15,6 +15,7 @@
 package logger
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 )
@@ -22,6 +23,7 @@ import (
 type LogConsumer[T any] func(lines []string) T
 
 type LogWriter[T any] struct {
+	ctx    context.Context
 	l      *slog.Logger
 	sendCh chan T
 	f      func([]string) T
@@ -30,8 +32,9 @@ type LogWriter[T any] struct {
 	prev []byte
 }
 
-func NewLogWriter[T any](l *slog.Logger, sendCh chan T, f LogConsumer[T]) *LogWriter[T] {
+func NewLogWriter[T any](ctx context.Context, l *slog.Logger, sendCh chan T, f LogConsumer[T]) *LogWriter[T] {
 	return &LogWriter[T]{
+		ctx:    ctx,
 		l:      l,
 		sendCh: sendCh,
 		f:      f,
@@ -61,7 +64,10 @@ func (w *LogWriter[T]) Write(p []byte) (int, error) {
 		for _, line := range lines {
 			w.l.Info(line)
 		}
-		w.sendCh <- w.f(lines)
+		select {
+		case w.sendCh <- w.f(lines):
+		case <-w.ctx.Done():
+		}
 	}
 
 	return len(p), nil
