@@ -114,9 +114,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
             {{- include "capi_controller_resources" . | nindent 12 }}
-  {{- end }}
         env:
       # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CAPI work without kube-proxy
   {{- if not .Values.global.clusterIsBootstrapped }}
@@ -199,9 +197,7 @@ spec:
         resources:
           requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
-  {{- end }}
       volumes:
       - name: cert
         secret:

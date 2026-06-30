@@ -101,9 +101,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
-            {{- include "bashible_apiserver_resources" . | nindent 12 }}
-{{- end }}
+            {{- include "bashible_apiserver_resources" . | nindent 12 }}  
       volumes:
         - name: certs
           secret:

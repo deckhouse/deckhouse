@@ -93,9 +93,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-    {{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
               {{- include "controller_resources" . | nindent 14 }}
-    {{- end }}
           env:
           - name: LEADER_ELECTION_NAMESPACE
             valueFrom:
@@ -148,8 +146,6 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-    {{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
-    {{- end }}
   {{- end }}
 {{- end }}
