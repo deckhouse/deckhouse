@@ -19,6 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 // Definition represents module metadata.
@@ -29,8 +30,9 @@ type Definition struct {
 	Critical bool   `json:"critical,omitempty" yaml:"critical,omitempty"`
 	Weight   uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 
-	Requirements   Requirements   `json:"requirements" yaml:"requirements"`
-	DisableOptions DisableOptions `json:"disableOptions" yaml:"disableOptions"`
+	Requirements   Requirements      `json:"requirements" yaml:"requirements"`
+	Licensing      edition.Licensing `json:"licensing" yaml:"licensing"`
+	DisableOptions DisableOptions    `json:"disableOptions" yaml:"disableOptions"`
 }
 
 // Requirements specifies dependencies required by the module.
@@ -129,6 +131,7 @@ func (d Definition) Constraints() schedule.Constraints {
 		Dependencies: deps,
 		AnyOf:        anyOf,
 		NoneOf:       noneOf,
+		Licensing:    d.Licensing,
 		// Modules are disabled by default; a higher-precedence intent rule
 		// (bundle membership, user config) turns them on.
 		Floor: rule.Static(rule.Disable),

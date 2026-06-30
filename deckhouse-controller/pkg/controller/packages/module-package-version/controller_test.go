@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -275,4 +276,31 @@ func TestDeleteSucceedsWhenUnused(t *testing.T) {
 	var updated v1alpha1.ModulePackageVersion
 	err = kubeClient.Get(ctx, client.ObjectKey{Name: mpvName}, &updated)
 	assert.True(t, apierrors.IsNotFound(err), "object should be deleted after finalizer removal")
+}
+
+func TestSetFromModuleDefinitionMapsLegacyAccessibilityToLicensing(t *testing.T) {
+	mpv := new(v1alpha1.ModulePackageVersion)
+	def := &moduletypes.Definition{
+		Accessibility: &moduletypes.ModuleAccessibility{
+			Editions: map[string]moduletypes.ModuleEdition{
+				"_default": {
+					Available:        true,
+					EnabledInBundles: []string{"Default"},
+				},
+				"ee": {
+					Available:        false,
+					EnabledInBundles: []string{"Minimal", "Managed"},
+				},
+			},
+		},
+	}
+
+	setFromModuleDefinition(mpv, def)
+
+	require.NotNil(t, mpv.Status.PackageMetadata)
+	require.NotNil(t, mpv.Status.PackageMetadata.Licensing)
+	assert.True(t, mpv.Status.PackageMetadata.Licensing.Editions["_default"].Available)
+	assert.Equal(t, []string{"Default"}, mpv.Status.PackageMetadata.Licensing.Editions["_default"].EnabledInBundles)
+	assert.False(t, mpv.Status.PackageMetadata.Licensing.Editions["ee"].Available)
+	assert.Equal(t, []string{"Minimal", "Managed"}, mpv.Status.PackageMetadata.Licensing.Editions["ee"].EnabledInBundles)
 }

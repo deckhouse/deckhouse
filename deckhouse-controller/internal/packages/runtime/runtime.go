@@ -63,6 +63,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -105,7 +106,8 @@ type Runtime struct {
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
 
-	global *global.Module
+	edition *edition.Edition
+	global  *global.Module
 
 	grantResolver grants.Resolver // Resolves cluster resource grants for x-deckhouse-grantable-resource fields
 
@@ -134,7 +136,7 @@ type moduleManagerI interface {
 
 // New creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
+func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -148,6 +150,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
+	r.edition = edition
 
 	reg := registry.NewService(dc, logger)
 	downloadedDir := d8env.GetDownloadedModulesDir()
@@ -573,6 +576,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	}
 
 	r.scheduler = schedule.NewScheduler(
+		schedule.WithBundleChecker(r.edition.IsEnabled),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),

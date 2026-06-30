@@ -359,13 +359,21 @@ type PackageDescription struct {
 type PackageLicensing struct {
 	// Licensing information for different package editions.
 	// +optional
-	Editions map[string]PackageEdition `json:"editions,omitempty"`
+	Editions map[string]PackageEditionLicense `json:"editions,omitempty"`
 }
 
-type PackageEdition struct {
+// PackageEditionLicense is a single edition's licensing, shared by applications
+// and modules: whether the edition is available and which bundles enable the
+// package by default. Bundle membership is meaningful for modules; applications
+// have no bundles and typically leave EnabledInBundles empty.
+type PackageEditionLicense struct {
 	// Whether this edition is available for use.
 	// +optional
 	Available bool `json:"available,omitempty"`
+
+	// Bundles that enable the module by default in this edition.
+	// +optional
+	EnabledInBundles []string `json:"enabledInBundles,omitempty"`
 }
 
 type PackageChangelog struct {

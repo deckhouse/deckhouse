@@ -20,9 +20,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 const (
@@ -51,6 +53,12 @@ type Constraints struct {
 	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name. Source of topological ordering and gate-rule inputs.
 	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Gate-only: never contributes edges to the topological graph, so fallback chains across packages do not produce cycles.
 	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Gate-only: "must not be installed" is an admission predicate, not an ordering relation.
+
+	// Licensing carries the package's per-edition availability and bundle
+	// membership. It is the data the edition gate and bundle floor consume,
+	// resolved live against the active edition. The package supplies only the
+	// data — resolution logic lives in the edition package.
+	Licensing edition.Licensing
 
 	// Floor is the package's lowest-precedence rule: its default decision when no
 	// higher-precedence intent rule (bundle, user, script) has an opinion. Apps
@@ -167,6 +175,14 @@ func (s *Scheduler) addNode(pkg Package) {
 
 	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
 		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	}
+
+	// Only a package whose licensing actually names enabling bundles gets the
+	// bundle floor. Packages that carry editions purely for availability (e.g.
+	// applications) have no bundle membership, so adding the rule would soft-
+	// disable them and override their Enable floor.
+	if s.bundleChecker != nil && constraints.Licensing.HasBundles() {
+		n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
 	}
 
 	s.nodes[pkg.GetName()] = n

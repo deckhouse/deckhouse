@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
@@ -50,6 +51,7 @@ type Scheduler struct {
 
 	eventCh chan Event
 
+	bundleChecker          bundle.BundleChecker
 	dependencyGetter       dependency.Getter
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
@@ -86,6 +88,13 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 func WithDependencyGetter(getter dependency.Getter) Option {
 	return func(s *Scheduler) {
 		s.dependencyGetter = getter
+	}
+}
+
+// WithBundleChecker sets the bundle checker function for the scheduler.
+func WithBundleChecker(getter bundle.BundleChecker) Option {
+	return func(s *Scheduler) {
+		s.bundleChecker = getter
 	}
 }
 
