@@ -190,7 +190,6 @@ locals {
         "priorityClassName" = var.priority_class_name
         "ipAddress"         = var.ipv4_address.address
         "sshPublicKeyHash"  = sha256(jsonencode(var.ssh_public_key))
-        "additionalLabels"  = var.additional_labels
       }
     },
     {
