@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace-capability:kubernetes:access_terminal
+  annotations:
+    en.meta.deckhouse.io/title: "Terminal access"
+    ru.meta.deckhouse.io/title: "Доступ к терминалу"
+    en.meta.deckhouse.io/description: "Exec into pod containers."
+    ru.meta.deckhouse.io/description: "Выполнение команд в контейнерах подов (exec)."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.kubernetes.access_terminal"
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: user
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods/attach
+      - pods/exec
+    verbs:
+      - create
+      - get

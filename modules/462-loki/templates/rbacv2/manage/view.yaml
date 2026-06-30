@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: loki
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.loki.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-monitoring
-  name: d8:manage:permission:module:loki:view
+  name: d8:system-capability:loki:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module loki: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль loki: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the loki module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля loki."
 rules:
 - apiGroups:
   - deckhouse.io

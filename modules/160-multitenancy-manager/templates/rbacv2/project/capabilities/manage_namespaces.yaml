@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:project-capability:multitenancy-manager:manage_namespaces
+  annotations:
+    en.meta.deckhouse.io/title: "Project: manage namespaces"
+    ru.meta.deckhouse.io/title: "Проект: управление пространствами имён"
+    en.meta.deckhouse.io/description: "Create, update and delete project namespaces (ProjectNamespace)."
+    ru.meta.deckhouse.io/description: "Создание, изменение и удаление пространств имён проекта (ProjectNamespace)."
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "project-capability.multitenancy-manager.manage_namespaces"
+    rbac.deckhouse.io/scope: project
+    rbac.deckhouse.io/aggregate-to-project-as: manager
+rules:
+  - apiGroups:
+      - deckhouse.io
+    resources:
+      - projectnamespaces
+    verbs:
+      - create
+      - update
+      - patch
+      - delete

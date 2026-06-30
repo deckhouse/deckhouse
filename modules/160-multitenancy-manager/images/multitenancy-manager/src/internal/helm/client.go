@@ -41,7 +41,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
 )
 
@@ -53,6 +53,12 @@ const (
 
 	ResourceLabelManagedBy = "app.kubernetes.io/managed-by"
 )
+
+// structs.DefaultTagName is a process-wide global in fatih/structs. Set it once at package load so
+// buildValues stays read-only and free of data races under concurrent reconciles.
+func init() {
+	structs.DefaultTagName = "yaml"
+}
 
 type Client struct {
 	conf      *action.Configuration
@@ -71,7 +77,7 @@ func New(namespace, templatesPath string, logger logr.Logger) (*Client, error) {
 	cli := &Client{
 		opts: &options{
 			HistoryMax: 3,
-			Timeout:    time.Duration(15 * float64(time.Second)),
+			Timeout:    15 * time.Second,
 		},
 		conf: &action.Configuration{
 			Capabilities: chartutil.DefaultCapabilities,
@@ -131,22 +137,37 @@ func (c *Client) initActionConfig(namespace string) error {
 	return c.conf.Init(kubeConfig, namespace, helmDriver, c.DebugLog)
 }
 
-func (c *Client) DebugLog(format string, args ...interface{}) {
+func (c *Client) DebugLog(format string, args ...any) {
 	c.logger.Info(fmt.Sprintf(format, args...))
 }
 
-// Upgrade upgrades resources
-func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	ch := buildChart(c.templates, project.Name)
+// Upgrade renders a legacy resourcesTemplate (helm-string) template and installs/upgrades the project
+// release from it. It returns whether any controller-managed resource (ResourceQuota,
+// AuthorizationRule) was filtered out of the rendered template.
+func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (bool, error) {
+	values := buildValues(project, template)
+	return c.release(ctx, project, buildChart(c.templates, project.Name), values, hashMD5(c.templates, values), "")
+}
 
+// UpgradeManifests installs/upgrades the project release from manifests rendered natively from a
+// schema-based (v1alpha2) ProjectTemplate. The Helm chart is a no-op (empty) template: the concrete
+// objects are supplied to the post-renderer, so no user data passes through the Helm template engine
+// while Helm still drives the release lifecycle (install/upgrade/prune/history). The hash is taken
+// over the rendered manifests so a structural or parameter change re-applies the release.
+func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string) (bool, error) {
+	return c.release(ctx, project, buildEmptyChart(project.Name), map[string]any{}, hashString(manifests), manifests)
+}
+
+// release runs the shared install/upgrade machinery: discovery, history lookup, up-to-date short
+// circuit, pending-release rollback and the post-renderer. manifestsOverride is empty for the legacy
+// helm-string path and set to the natively rendered objects for the schema-based path.
+func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *chart.Chart, values map[string]any, hash, manifestsOverride string) (bool, error) {
 	versions, err := c.discoverAPI()
 	if err != nil {
-		return fmt.Errorf("discover api: %w", err)
+		return false, fmt.Errorf("discover api: %w", err)
 	}
 
-	values := buildValues(project, template)
-	hash := hashMD5(c.templates, values)
-
+	// action.History exposes no context or timeout; the lookup is a single, bounded API read.
 	releases, err := action.NewHistory(c.conf).Run(project.Name)
 	isFirstInstall := false
 	if err != nil {
@@ -154,56 +175,60 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			isFirstInstall = true
 			c.logger.Info("the release not found, install it", "release", project.Name, "namespace", project.Name)
 			post := newPostRenderer(project, versions, c.logger, isFirstInstall)
+			post.manifests = manifestsOverride
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = project.Name
 			install.Timeout = c.opts.Timeout
 			install.UseReleaseName = true
 			install.Labels = map[string]string{
-				v1alpha2.ReleaseLabelHashsum: hash,
+				v1alpha3.ReleaseLabelHashsum: hash,
 			}
 			install.PostRenderer = post
 			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
-				return fmt.Errorf("install the release: %w", err)
+				return false, fmt.Errorf("install the release: %w", err)
 			}
 			c.logger.Info("the release installed", "release", project.Name, "namespace", project.Name)
-			return nil
+			return post.filtered, nil
 		}
-		return fmt.Errorf("retrieve history for the release: %w", err)
+		return false, fmt.Errorf("retrieve history for the release: %w", err)
 	}
 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
-	if releaseHash, ok := releases[0].Labels[v1alpha2.ReleaseLabelHashsum]; ok {
+	if releaseHash, ok := releases[0].Labels[v1alpha3.ReleaseLabelHashsum]; ok {
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
 			c.logger.Info("the release is up to date", "release", project.Name, "namespace", project.Name)
-			return nil
+			return false, nil
 		}
 	}
 
 	if releases[0].Info.Status.IsPending() {
 		if err = c.rollbackLatestRelease(releases); err != nil {
-			return fmt.Errorf("rollback latest release: %w", err)
+			return false, fmt.Errorf("rollback latest release: %w", err)
 		}
 	}
 
 	post := newPostRenderer(project, versions, c.logger, isFirstInstall)
+	post.manifests = manifestsOverride
 	upgrade := action.NewUpgrade(c.conf)
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
 	upgrade.Labels = map[string]string{
-		v1alpha2.ReleaseLabelHashsum: hash,
+		v1alpha3.ReleaseLabelHashsum: hash,
 	}
 	upgrade.PostRenderer = post
 
 	if _, err = upgrade.RunWithContext(ctx, project.Name, ch, values); err != nil {
-		return fmt.Errorf("upgrade the release: %w", err)
+		return false, fmt.Errorf("upgrade the release: %w", err)
 	}
 
 	c.logger.Info("the release upgraded", "release", project.Name, "namespace", project.Name)
-	return nil
+	return post.filtered, nil
 }
 
-// discoverAPI returns api versions, they will be used in the post renderer
+// discoverAPI returns api versions, they will be used in the post renderer. The discovery client API
+// (ServerGroupsAndResources) accepts neither a context nor a deadline, so this call cannot be bound
+// by ctx; it is limited only by the REST client's own transport timeout.
 func (c *Client) discoverAPI() (map[string]struct{}, error) {
 	dc, err := c.conf.RESTClientGetter.ToDiscoveryClient()
 	if err != nil {
@@ -249,75 +274,56 @@ func buildChart(templates map[string][]byte, releaseName string) *chart.Chart {
 	return ch
 }
 
-func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
-	// to handle empty template
-	if len(template.Spec.ResourcesTemplate) == 0 {
-		template.Spec.ResourcesTemplate = " "
+// buildEmptyChart builds a chart whose only template renders to nothing. It is used by the
+// schema-based render path: the real objects are supplied to the post-renderer, so the chart exists
+// only to drive Helm's release machinery and must not template any user data.
+func buildEmptyChart(releaseName string) *chart.Chart {
+	return &chart.Chart{
+		Metadata: &chart.Metadata{
+			Name:    releaseName,
+			Version: "0.0.1",
+		},
+		Templates: []*chart.File{
+			{
+				Name: "templates/manifests.yaml",
+				Data: []byte("# rendered natively by the controller; see internal/render\n"),
+			},
+		},
+	}
+}
+
+func buildValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) map[string]any {
+	// Work on a copy of the spec so the empty-template placeholder below does not mutate the
+	// caller's template (a cache-shared object reused across reconciles).
+	templateSpec := template.Spec
+	if len(templateSpec.ResourcesTemplate) == 0 {
+		templateSpec.ResourcesTemplate = " "
 	}
 
 	// skip error, invalid template cannot be here due to validation
-	schema, _ := validate.LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
+	schema, _ := validate.LoadSchema(templateSpec.ParametersSchema.OpenAPIV3Schema)
 
 	preparedProject := struct {
-		Name         string                 `json:"projectName" yaml:"projectName"`
-		TemplateName string                 `json:"projectTemplateName" yaml:"projectTemplateName"`
-		Parameters   map[string]interface{} `json:"parameters" yaml:"parameters"`
+		Name         string         `json:"projectName" yaml:"projectName"`
+		TemplateName string         `json:"projectTemplateName" yaml:"projectTemplateName"`
+		Parameters   map[string]any `json:"parameters" yaml:"parameters"`
 	}{
 		Name:         project.Name,
 		TemplateName: project.Spec.ProjectTemplateName,
 		Parameters:   mergeWithDefaults(schema, project.Spec.Parameters),
 	}
 
-	structs.DefaultTagName = "yaml"
-	return map[string]interface{}{
-		"projectTemplate": structs.Map(template.Spec),
+	return map[string]any{
+		"projectTemplate": structs.Map(templateSpec),
 		"project":         structs.Map(preparedProject),
 	}
 }
 
-func mergeWithDefaults(schema *spec.Schema, projectValues map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-
-	for property, propertySchema := range schema.Properties {
-		if projectValue, exists := projectValues[property]; exists {
-			// use project value
-			result[property] = projectValue
-
-			// recursively handle nested objects
-			if propertySchema.Type.Contains("object") {
-				if valueMap, ok := projectValue.(map[string]interface{}); ok {
-					result[property] = mergeWithDefaults(&propertySchema, valueMap)
-				}
-			}
-		} else if propertySchema.Default != nil {
-			// use default value from schema
-			result[property] = propertySchema.Default
-		}
-
-		// recursively apply defaults to nested objects
-		if propertySchema.Type.Contains("object") {
-			if _, ok := result[property]; !ok {
-				result[property] = mergeWithDefaults(&propertySchema, nil)
-			}
-		}
-	}
-
-	// handle additionalProperties (map types)
-	if schema.AdditionalProperties != nil {
-		mapResult := make(map[string]interface{})
-		for key, value := range projectValues {
-			// skip keys that are already handled as properties
-			if _, exists := schema.Properties[key]; exists {
-				continue
-			}
-
-			mapResult[key] = value
-		}
-
-		result = mapResult
-	}
-
-	return result
+// mergeWithDefaults overlays the schema's property defaults onto the project values. It delegates to
+// validate.MergeDefaults, the single implementation shared with the structured render path; it is kept
+// as a thin wrapper so the helm package tests (TestMergeWithDefaults_*) keep their entry point.
+func mergeWithDefaults(schema *spec.Schema, projectValues map[string]any) map[string]any {
+	return validate.MergeDefaults(schema, projectValues)
 }
 
 func (c *Client) rollbackLatestRelease(releases []*release.Release) error {
@@ -345,22 +351,84 @@ func (c *Client) rollbackLatestRelease(releases []*release.Release) error {
 	return rollback.Run(latestRelease.Name)
 }
 
-// Delete deletes resources
-func (c *Client) Delete(_ context.Context, releaseName string) error {
+// Delete deletes resources. The Helm uninstall API does not accept a context, so ctx is honoured by
+// bailing out before starting a teardown that is already cancelled, and an explicit Timeout bounds
+// the uninstall wait (mirroring the install/upgrade timeout) so a slow API server cannot stall it.
+func (c *Client) Delete(ctx context.Context, releaseName string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("uninstall the '%s' release: %w", releaseName, err)
+	}
+
 	uninstall := action.NewUninstall(c.conf)
 	uninstall.KeepHistory = false
 	uninstall.IgnoreNotFound = true
+	uninstall.Timeout = c.opts.Timeout
 
 	if _, err := uninstall.Run(releaseName); err != nil {
-		return fmt.Errorf("uninstall the '%s' release: %v", releaseName, err)
+		return fmt.Errorf("uninstall the '%s' release: %w", releaseName, err)
 	}
 
 	c.logger.Info("the release deleted", "release", releaseName)
 	return nil
 }
 
+// RenderedRoleRefs renders the project template and returns the roleRefs of every binding object it
+// declares (RoleBinding, ClusterRoleBinding, ProjectRoleBinding, ClusterProjectRoleBinding). It runs
+// on a copy of the project so collecting the refs does not mutate the caller's status.
+func (c *Client) RenderedRoleRefs(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) ([]BindingRoleRef, error) {
+	ch := buildChart(c.templates, project.Name)
+
+	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
+		Name:      project.Name,
+		Namespace: project.Name,
+	}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("render values: %w", err)
+	}
+
+	rendered, err := engine.Render(ch, values)
+	if err != nil {
+		return nil, fmt.Errorf("render chart: %w", err)
+	}
+
+	buf := bytes.NewBuffer(nil)
+	for _, file := range rendered {
+		buf.WriteString(file)
+	}
+
+	renderer := newPostRenderer(project.DeepCopy(), nil, c.logger, false)
+	if _, err = renderer.Run(buf); err != nil {
+		return nil, fmt.Errorf("post render: %w", err)
+	}
+
+	return renderer.referencedRoles, nil
+}
+
+// RenderedManifestRoleRefs returns the binding roleRefs declared by natively rendered manifests
+// (the schema-based equivalent of RenderedRoleRefs). It runs the post-renderer on a copy of the
+// project so it does not mutate the caller's status.
+func (c *Client) RenderedManifestRoleRefs(project *v1alpha3.Project, manifests string) ([]BindingRoleRef, error) {
+	renderer := newPostRenderer(project.DeepCopy(), nil, c.logger, false)
+	renderer.manifests = manifests
+	if _, err := renderer.Run(bytes.NewBuffer(nil)); err != nil {
+		return nil, fmt.Errorf("post render: %w", err)
+	}
+	return renderer.referencedRoles, nil
+}
+
+// ValidateManifests checks natively rendered manifests for the namespace-override warning (the
+// schema-based equivalent of ValidateRender).
+func (c *Client) ValidateManifests(project *v1alpha3.Project, manifests string) error {
+	renderer := newPostRenderer(project, nil, c.logger, false)
+	renderer.manifests = manifests
+	if _, err := renderer.Run(bytes.NewBuffer(nil)); err != nil {
+		return fmt.Errorf("post render: %w", err)
+	}
+	return renderer.warning
+}
+
 // ValidateRender tests project render
-func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+func (c *Client) ValidateRender(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) error {
 	ch := buildChart(c.templates, project.Name)
 
 	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{

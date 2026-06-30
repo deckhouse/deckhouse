@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -23,20 +24,30 @@ import (
 	"permission-browser-apiserver/pkg/resolver"
 )
 
-// GetStorage returns the storage map for the authorization API group (legacy, without namespace resolver)
-func GetStorage(auth authorizer.Authorizer) map[string]rest.Storage {
-	return map[string]rest.Storage{
+// GetStorage returns the storage map for the authorization API group (legacy, without namespace resolver).
+// whoCan may be nil, in which case the WhoCan resource is not registered.
+func GetStorage(auth authorizer.Authorizer, whoCan WhoCanResolver) map[string]rest.Storage {
+	storage := map[string]rest.Storage{
 		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
 	}
+	if whoCan != nil {
+		storage["whocans"] = NewWhoCanStorage(whoCan)
+	}
+	return storage
 }
 
-// GetStorageWithResolver returns the storage map including the AccessibleNamespace resource.
+// GetStorageWithResolver returns the storage map including the AccessibleNamespace and WhoCan resources.
 // This requires a NamespaceResolver for resolving user-accessible namespaces.
-func GetStorageWithResolver(auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver) map[string]rest.Storage {
-	return map[string]rest.Storage{
+// whoCan may be nil, in which case the WhoCan resource is not registered.
+func GetStorageWithResolver(auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver, whoCan WhoCanResolver) map[string]rest.Storage {
+	storage := map[string]rest.Storage{
 		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
 		"accessiblenamespaces":     NewAccessibleNamespaceStorage(nsResolver),
 	}
+	if whoCan != nil {
+		storage["whocans"] = NewWhoCanStorage(whoCan)
+	}
+	return storage
 }
 
 // BulkSARStorage implements the REST storage for BulkSubjectAccessReview
@@ -78,13 +89,21 @@ func (s *BulkSARStorage) GetSingularName() string {
 func (s *BulkSARStorage) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
 	bsar, ok := obj.(*v1alpha1.BulkSubjectAccessReview)
 	if !ok {
-		return nil, fmt.Errorf("object is not a BulkSubjectAccessReview")
+		return nil, apierrors.NewBadRequest("object is not a BulkSubjectAccessReview")
+	}
+
+	if createValidation != nil {
+		if err := createValidation(ctx, obj); err != nil {
+			return nil, err
+		}
 	}
 
 	// Get the authenticated user from context
 	userInfo, ok := request.UserFrom(ctx)
 	if !ok {
-		return nil, fmt.Errorf("no user info in context")
+		// The generic apiserver always populates the user; its absence is a
+		// server-side invariant violation, not a client input error.
+		return nil, apierrors.NewInternalError(fmt.Errorf("no user info in context"))
 	}
 
 	// Resolve subject: if spec.user is set, use non-self mode; otherwise use self mode

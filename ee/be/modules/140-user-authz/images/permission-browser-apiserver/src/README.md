@@ -112,6 +112,105 @@ status:
       reason: "user has no access to the namespace"
 ```
 
+### Resource: `WhoCan`
+
+- **Group**: `authorization.deckhouse.io`
+- **Version**: `v1alpha1`
+- **Kind**: `WhoCan`
+- **Endpoint**: `POST /apis/authorization.deckhouse.io/v1alpha1/whocans`
+
+`WhoCan` is the reverse-RBAC query, analogous to OpenShift's `oc policy who-can`.
+Given an action (a verb on a resource, optionally scoped to a namespace / name /
+subresource, or a non-resource URL), it returns the list of subjects (Users,
+Groups, ServiceAccounts) that RBAC grants that action to.
+
+This resource is ephemeral - it is not stored, only created.
+
+#### Request/Response Schema
+
+```yaml
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: WhoCan
+spec:
+  resourceAttributes:
+    namespace: "myproject"
+    verb: "create"
+    group: "networking.k8s.io"
+    resource: "networkpolicies"
+    # Optional:
+    version: ""
+    subresource: ""
+    name: ""
+  # Alternatively, a non-resource URL:
+  # nonResourceAttributes:
+  #   path: "/metrics"
+  #   verb: "get"
+
+status:
+  users:
+    - "alice"
+  groups:
+    - "netops"
+  serviceAccounts:
+    - namespace: "kube-system"
+      name: "controller"
+```
+
+#### How It Works
+
+The server scans the informer-backed RBAC caches (no live API calls):
+
+1. **ClusterRoleBindings**: for each binding whose referenced ClusterRole grants
+   the requested action, all of the binding's subjects are collected. These apply
+   cluster-wide (and therefore to the requested namespace, if any).
+2. **RoleBindings** (only when `namespace` is set): for each RoleBinding in the
+   target namespace whose referenced Role *or* ClusterRole grants the action, the
+   binding's subjects are collected. ServiceAccount subjects with an empty
+   namespace default to the RoleBinding's namespace.
+
+Rule matching reuses the same logic as the forward authorizer, so verb / resource
+/ apiGroup wildcards (`*`), subresources and `resourceNames` are handled
+identically. **Aggregated ClusterRoles** are resolved transparently: the
+aggregation controller populates `ClusterRole.Rules`, and the engine reads those
+already-aggregated rules from the lister.
+
+#### Security
+
+- **Elevated capability**: `WhoCan` discloses who is granted an action, so the
+  ability to call it must be restricted. It is gated by the same delegated
+  authorization as every other resource here - the caller must be granted
+  `create` on `whocans` in `authorization.deckhouse.io`. Unlike
+  `accessiblenamespaces`, the bundled `d8:user-authz:who-can-checker` ClusterRole
+  is **not** bound to `system:authenticated`; it must be granted explicitly to
+  trusted UIs/administrators.
+
+#### Multi-tenancy
+
+The result reflects **RBAC grants only**. The multi-tenancy layer (which can only
+*deny* a subject's own forward requests) is not applied to filter the returned
+subjects, because the query is already namespace-scoped and reverse filtering each
+returned subject through multi-tenancy would be expensive. A returned subject may
+still be further restricted by multi-tenancy at actual request time. This is a
+documented limitation (see Limitations below).
+
+#### Example Usage
+
+```bash
+# Who can create networkpolicies in namespace "myproject"?
+cat <<EOF | kubectl create -f - -o yaml
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: WhoCan
+metadata:
+  name: who-can-create-netpol
+spec:
+  resourceAttributes:
+    namespace: myproject
+    verb: create
+    group: networking.k8s.io
+    resource: networkpolicies
+EOF
+```
+
 ## Modes of Operation
 
 ### Self Mode
@@ -195,6 +294,11 @@ make test
 - **Watch NOT supported**: The `resourceVersion` is always empty (`""`). Clients must poll.
 - **Computed resource**: The list is calculated at request time, not stored. There's no etcd persistence.
 - **Best-effort discovery**: If the API discovery cannot determine whether a resource is namespaced, it assumes namespaced for safety.
+
+### WhoCan
+- **RBAC-only result**: Subjects are derived from (Cluster)RoleBindings. Multi-tenancy restrictions are NOT applied to filter the returned subjects (a returned subject may still be denied by multi-tenancy at actual request time).
+- **Role explainability not included**: The result lists subjects but not which specific (Cluster)Role/(Cluster)RoleBinding granted each one (kept out for simplicity; may be added later).
+- **Computed resource**: Results are calculated at request time from informer caches, not stored. Changes propagate after informer cache sync (up to 30 minutes).
 
 ### General
 - The server caches RBAC rules and namespace information; changes may take up to 30 minutes to propagate

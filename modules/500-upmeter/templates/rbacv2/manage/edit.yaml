@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: upmeter
     rbac.deckhouse.io/aggregate-to-observability-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.upmeter.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-upmeter
-  name: d8:manage:permission:module:upmeter:edit
+  name: d8:system-capability:upmeter:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module upmeter: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль upmeter: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the upmeter module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля upmeter."
 rules:
 - apiGroups:
   - deckhouse.io

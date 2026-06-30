@@ -759,21 +759,27 @@ func writeConfigJSON(t *testing.T, body string) string {
 	return path
 }
 
-// TestEngine_RenewDirectories_AuthorizationRules verifies that AuthorizationRules
-// (namespaced) are parsed from config.json and translated into per-namespace
-// grants in the engine's directory. This is the regression test for the
-// deny-by-default bug where AR-only users lost access to their namespaces.
-func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
+// TestEngine_RenewDirectories_IgnoresAuthorizationRules verifies that the engine
+// builds its directory from ClusterAuthorizationRules (CARs) ONLY and ignores
+// namespaced AuthorizationRules ("ars") entirely, mirroring the real
+// kube-apiserver user-authz webhook authorizer (images/webhook), whose config
+// parses "crds" and never "ars".
+//
+// Because the engine is deny-only, ignoring ARs means an AR-only user:
+//   - gets NO directory entry (so the engine never treats the AR as a deny-filter),
+//   - has Authorize return NoOpinion (the engine defers to RBAC, which honors the
+//     RoleBinding each AR creates),
+//   - is classified NoNamespacesAllowed for discovery filtering (no CAR), so the
+//     AccessibleNamespaces list comes from the RBAC candidate path, not the engine.
+func TestEngine_RenewDirectories_IgnoresAuthorizationRules(t *testing.T) {
 	tests := []struct {
-		name             string
-		config           string
-		userInfo         *mockUserInfo
-		namespace        string
-		expectedDecision authorizer.Decision
-		expectedAllowed  bool
+		name      string
+		config    string
+		userInfo  *mockUserInfo
+		namespace string
 	}{
 		{
-			name: "AR-only user gets access to AR's namespace",
+			name: "AR with Group subject is ignored",
 			config: `{
 				"crds": [],
 				"ars": [
@@ -784,30 +790,11 @@ func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
 					}
 				]
 			}`,
-			userInfo:         &mockUserInfo{name: "alice", groups: []string{"developers"}},
-			namespace:        "team-foo",
-			expectedDecision: authorizer.DecisionNoOpinion,
-			expectedAllowed:  true,
+			userInfo:  &mockUserInfo{name: "alice", groups: []string{"developers"}},
+			namespace: "team-foo",
 		},
 		{
-			name: "AR-only user is still denied outside AR's namespace",
-			config: `{
-				"crds": [],
-				"ars": [
-					{
-						"name": "ar0",
-						"namespace": "team-foo",
-						"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
-					}
-				]
-			}`,
-			userInfo:         &mockUserInfo{name: "alice", groups: []string{"developers"}},
-			namespace:        "team-bar",
-			expectedDecision: authorizer.DecisionDeny,
-			expectedAllowed:  false,
-		},
-		{
-			name: "AR with User subject grants namespace access",
+			name: "AR with User subject is ignored",
 			config: `{
 				"crds": [],
 				"ars": [
@@ -818,13 +805,11 @@ func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
 					}
 				]
 			}`,
-			userInfo:         &mockUserInfo{name: "alice"},
-			namespace:        "team-foo",
-			expectedAllowed:  true,
-			expectedDecision: authorizer.DecisionNoOpinion,
+			userInfo:  &mockUserInfo{name: "alice"},
+			namespace: "team-foo",
 		},
 		{
-			name: "AR with ServiceAccount subject defaults SA namespace to AR's namespace",
+			name: "AR with ServiceAccount subject is ignored",
 			config: `{
 				"crds": [],
 				"ars": [
@@ -835,30 +820,11 @@ func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
 					}
 				]
 			}`,
-			userInfo:         &mockUserInfo{name: "system:serviceaccount:team-foo:my-sa"},
-			namespace:        "team-foo",
-			expectedAllowed:  true,
-			expectedDecision: authorizer.DecisionNoOpinion,
+			userInfo:  &mockUserInfo{name: "system:serviceaccount:team-foo:my-sa"},
+			namespace: "team-foo",
 		},
 		{
-			name: "AR with explicit SA namespace is honoured",
-			config: `{
-				"crds": [],
-				"ars": [
-					{
-						"name": "ar0",
-						"namespace": "team-foo",
-						"spec": {"subjects": [{"kind": "ServiceAccount", "name": "my-sa", "namespace": "other-ns"}]}
-					}
-				]
-			}`,
-			userInfo:         &mockUserInfo{name: "system:serviceaccount:other-ns:my-sa"},
-			namespace:        "team-foo",
-			expectedAllowed:  true,
-			expectedDecision: authorizer.DecisionNoOpinion,
-		},
-		{
-			name: "AR in a system namespace grants access only to that exact namespace",
+			name: "AR in a system namespace is ignored",
 			config: `{
 				"crds": [],
 				"ars": [
@@ -869,35 +835,8 @@ func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
 					}
 				]
 			}`,
-			userInfo:         &mockUserInfo{name: "alice"},
-			namespace:        "d8-monitoring",
-			expectedAllowed:  true,
-			expectedDecision: authorizer.DecisionNoOpinion,
-		},
-		{
-			name: "AR + CAR: namespaces are unioned",
-			config: `{
-				"crds": [
-					{
-						"name": "car0",
-						"spec": {
-							"limitNamespaces": ["ns-a"],
-							"subjects": [{"kind": "Group", "name": "developers"}]
-						}
-					}
-				],
-				"ars": [
-					{
-						"name": "ar0",
-						"namespace": "ns-b",
-						"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
-					}
-				]
-			}`,
-			userInfo:         &mockUserInfo{name: "alice", groups: []string{"developers"}},
-			namespace:        "ns-b",
-			expectedAllowed:  true,
-			expectedDecision: authorizer.DecisionNoOpinion,
+			userInfo:  &mockUserInfo{name: "alice"},
+			namespace: "d8-monitoring",
 		},
 	}
 
@@ -909,27 +848,44 @@ func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
 			}
 			e.renewDirectories()
 
-			assert.Equal(t, tt.expectedAllowed, e.IsNamespaceAllowed(tt.userInfo, tt.namespace),
-				"IsNamespaceAllowed: namespace=%s", tt.namespace)
+			// The AR must not create any directory entry for the subject.
+			assert.Empty(t, e.affectedDirs(tt.userInfo.GetName(), tt.userInfo.GetGroups()),
+				"AR must not produce a directory entry (CAR-only directory)")
 
-			attrs := &mockAttrs{
-				userInfo:   tt.userInfo,
-				namespace:  tt.namespace,
-				resource:   "pods",
-				verb:       "get",
-				isResource: true,
+			// Authorize must defer to RBAC (NoOpinion), not treat the AR as a deny-filter.
+			for _, ns := range []string{tt.namespace, "some-other-ns"} {
+				attrs := &mockAttrs{
+					userInfo:   tt.userInfo,
+					namespace:  ns,
+					resource:   "pods",
+					verb:       "get",
+					isResource: true,
+				}
+				decision, _, err := e.Authorize(context.Background(), attrs)
+				require.NoError(t, err)
+				assert.Equal(t, authorizer.DecisionNoOpinion, decision,
+					"Authorize must be NoOpinion for AR-only user (namespace=%s)", ns)
 			}
-			decision, _, err := e.Authorize(context.Background(), attrs)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expectedDecision, decision,
-				"Authorize: namespace=%s", tt.namespace)
+
+			// For discovery filtering, a non-privileged AR-only user (no CAR) is
+			// NoNamespacesAllowed: the namespaces come from RBAC candidates, not the engine.
+			accessType, filter := e.GetNamespaceAccessType(tt.userInfo)
+			assert.Equal(t, NoNamespacesAllowed, accessType,
+				"AR-only user must be NoNamespacesAllowed (engine ignores ARs)")
+			assert.Nil(t, filter)
 		})
 	}
 }
 
+// TestEngine_RenewDirectories_CARSystemGateIgnoresARs verifies the directory is
+// CAR-only: a CAR with a wildcard limitNamespaces keeps gating system namespaces,
+// and a co-located AR for the same subject changes nothing. Previously the AR was
+// translated into a literal LimitNamespaces grant that punched a hole in the system
+// gate for its own namespace; the engine now ignores it, matching the webhook.
+//
 // CAR: limitNamespaces = ["d8-.*", "team-.*"], allowAccessToSystemNamespaces = false
-// AR:  namespace       = "d8-monitoring"
-func TestEngine_RenewDirectories_AR_DoesNotLiftSystemGateForCAR(t *testing.T) {
+// AR:  namespace       = "d8-monitoring" (ignored)
+func TestEngine_RenewDirectories_CARSystemGateIgnoresARs(t *testing.T) {
 	config := `{
 		"crds": [
 			{
@@ -961,14 +917,12 @@ func TestEngine_RenewDirectories_AR_DoesNotLiftSystemGateForCAR(t *testing.T) {
 	assert.True(t, e.IsNamespaceAllowed(userInfo, "team-foo"),
 		"non-system namespace matched by CAR must remain accessible")
 
-	// AR explicitly punches a hole only for its own system namespace.
-	assert.True(t, e.IsNamespaceAllowed(userInfo, "d8-monitoring"),
-		"AR-granted system namespace must be allowed")
-
-	// The priv-esc the reviewer flagged: every other d8-* (and any system NS)
-	// matched by CAR's wildcard must stay behind the system gate.
+	// The AR is ignored: it must NOT unlock its own (system) namespace. This mirrors
+	// the webhook, which would deny a namespaced request to d8-monitoring under this CAR.
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "d8-monitoring"),
+		"AR must not unlock a system namespace; the engine ignores ARs")
 	assert.False(t, e.IsNamespaceAllowed(userInfo, "d8-system"),
-		"other d8-* system namespaces matched by CAR must NOT be unlocked by the AR")
+		"other d8-* system namespaces matched by CAR must stay behind the system gate")
 	assert.False(t, e.IsNamespaceAllowed(userInfo, "kube-system"),
 		"unrelated system namespaces must remain denied")
 	assert.False(t, e.IsNamespaceAllowed(userInfo, "default"),
@@ -976,59 +930,28 @@ func TestEngine_RenewDirectories_AR_DoesNotLiftSystemGateForCAR(t *testing.T) {
 
 	// Sanity check: namespaces matched by neither CAR nor AR are denied.
 	assert.False(t, e.IsNamespaceAllowed(userInfo, "random-ns"),
-		"namespaces outside CAR and AR scope must be denied")
+		"namespaces outside CAR scope must be denied")
 }
 
-// TestEngine_RenewDirectories_NamespaceRegexMetacharsAreEscaped is a
-// defense-in-depth check: even if a string with regex metacharacters slipped
-// through Kubernetes' DNS-1123 validation into config.json, the engine must
-// match it literally rather than as a wildcard pattern.
-func TestEngine_RenewDirectories_NamespaceRegexMetacharsAreEscaped(t *testing.T) {
-	// "te.am" contains '.' which is a regex wildcard; the literal namespace
-	// "teXam" must NOT be allowed by an AR scoped to "te.am".
+// TestEngine_RenewDirectories_CAROnlyUser_ResolverScenario covers the resolver's
+// path for the accessiblenamespaces API: a user with a CAR that limits namespaces
+// is classified FilteredAccess, and the returned filter honors only the CAR's
+// namespaces (ARs are ignored).
+func TestEngine_RenewDirectories_CAROnlyUser_ResolverScenario(t *testing.T) {
 	config := `{
-		"crds": [],
-		"ars": [
+		"crds": [
 			{
-				"name": "ar-meta",
-				"namespace": "te.am",
-				"spec": {"subjects": [{"kind": "User", "name": "alice"}]}
+				"name": "car0",
+				"spec": {
+					"limitNamespaces": ["team-foo", "team-bar"],
+					"subjects": [{"kind": "Group", "name": "developers"}]
+				}
 			}
-		]
-	}`
-
-	e := &Engine{
-		configPath: writeConfigJSON(t, config),
-		directory:  map[string]map[string]DirectoryEntry{},
-	}
-	e.renewDirectories()
-
-	userInfo := &mockUserInfo{name: "alice"}
-
-	assert.True(t, e.IsNamespaceAllowed(userInfo, "te.am"),
-		"literal namespace must still match")
-	assert.False(t, e.IsNamespaceAllowed(userInfo, "teXam"),
-		"regex metacharacters must be escaped: 'te.am' must not match 'teXam'")
-	assert.False(t, e.IsNamespaceAllowed(userInfo, "team"),
-		"regex metacharacters must be escaped: 'te.am' must not match 'team'")
-}
-
-// TestEngine_RenewDirectories_AROnlyUser_ResolverScenario simulates the resolver's
-// path for the accessiblenamespaces API: the user has only ARs and the engine
-// must classify them as FilteredAccess (not NoNamespacesAllowed) so that the
-// AR-derived RoleBinding candidates pass through.
-func TestEngine_RenewDirectories_AROnlyUser_ResolverScenario(t *testing.T) {
-	config := `{
-		"crds": [],
+		],
 		"ars": [
 			{
 				"name": "ar0",
-				"namespace": "team-foo",
-				"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
-			},
-			{
-				"name": "ar1",
-				"namespace": "team-bar",
+				"namespace": "team-baz",
 				"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
 			}
 		]
@@ -1043,12 +966,13 @@ func TestEngine_RenewDirectories_AROnlyUser_ResolverScenario(t *testing.T) {
 	userInfo := &mockUserInfo{name: "alice", groups: []string{"developers"}}
 
 	accessType, filter := e.GetNamespaceAccessType(userInfo)
-	require.Equal(t, FilteredAccess, accessType, "AR-only user must be FilteredAccess, not NoNamespacesAllowed")
+	require.Equal(t, FilteredAccess, accessType, "user with a namespace-limited CAR must be FilteredAccess")
 	require.NotNil(t, filter, "filter must be returned for FilteredAccess")
 
-	assert.True(t, e.IsNamespaceAllowedWithFilter("team-foo", filter), "AR namespace must be allowed")
-	assert.True(t, e.IsNamespaceAllowedWithFilter("team-bar", filter), "second AR namespace must be allowed")
-	assert.False(t, e.IsNamespaceAllowedWithFilter("team-baz", filter), "namespaces outside ARs must be denied")
+	assert.True(t, e.IsNamespaceAllowedWithFilter("team-foo", filter), "CAR namespace must be allowed")
+	assert.True(t, e.IsNamespaceAllowedWithFilter("team-bar", filter), "second CAR namespace must be allowed")
+	assert.False(t, e.IsNamespaceAllowedWithFilter("team-baz", filter),
+		"AR-only namespace must NOT be in the engine filter; the engine ignores ARs")
 }
 
 func TestEngine_GetAllowedNamespaces(t *testing.T) {
