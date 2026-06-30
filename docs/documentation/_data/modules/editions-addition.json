@@ -71,6 +71,7 @@
     "operator-prometheus",
     "operator-trivy",
     "prometheus",
+    "prompp",
     "registry",
     "registry-packages-proxy",
     "registrypackages",
