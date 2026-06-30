@@ -9,3 +9,5 @@ import:
 shell:
   beforeInstall:
   - pm install python@3.12 gnu-glibc grep sed coreutils bash
+  install:
+  - rm -rf /usr/local/bin/pm /var/lib/pm

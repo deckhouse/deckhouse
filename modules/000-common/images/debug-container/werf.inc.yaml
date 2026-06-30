@@ -51,6 +51,7 @@ shell:
   install:
     - pm install curl bash jq yq sed grep gawk procps iproute2 findutils coreutils openssl vim less ethtool pwru util-linux
     - pm install gnu-glibc-locale -1
+    - rm -rf /out/usr/local/bin/pm /var/lib/pm
     - /usr/bin/ln -fs /var/run /run
     - /usr/bin/ln -fs /bin/bash /bin/sh
 imageSpec:

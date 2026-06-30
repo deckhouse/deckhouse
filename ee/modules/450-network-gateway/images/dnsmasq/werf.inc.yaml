@@ -14,6 +14,7 @@ import:
 shell:
   beforeInstall:
   - pm install dnsmasq sqlite python@3.12 gnu-glibc python-wheel
+  - rm -rf /usr/local/bin/pm /var/lib/pm
   install:
   - pip3 install -f file:///wheels --no-index --upgrade pip
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
