@@ -6,10 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      cniSecretData:
-        type: string
-        x-examples:
-        - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lsWllURUZPSW4wPQo="
       providerClusterConfiguration:
         type: object
         additionalProperties: false
