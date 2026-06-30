@@ -17,7 +17,7 @@ Description=kubelet
 # Immutable OS: config.toml is generated at boot by the runtime controller
 # into tmpfs /run (not /etc, which is stateless/templated). Refuse to start
 # until it exists.
-ConditionPathExists=/run/etc/kubelet/
+ConditionPathExists=/etc/kubernetes/kubelet-config.yaml
 
 [Service]
 # Immutable OS: runc and containerd-shim-runc-vN live in /opt/deckhouse/bin
