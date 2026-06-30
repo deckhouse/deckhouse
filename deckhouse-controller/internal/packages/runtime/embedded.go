@@ -49,7 +49,9 @@ var dummyModules = []string{
 	"007-registrypackages",
 }
 
-// loadGlobal loads the global module from the embedded directory and registers it to status service and scheduler.
+// loadGlobal loads the global module from the embedded directory and registers
+// it in the status service and the package store. Scheduler wiring happens
+// later in buildScheduler/AddNode, not here.
 func (r *Runtime) loadGlobal(ctx context.Context) error {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadGlobal")
 	defer span.End()

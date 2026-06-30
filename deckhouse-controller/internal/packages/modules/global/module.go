@@ -384,15 +384,16 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 
 // filterEnabledFromValuesPatch extracts dynamic module-enable signals from a
 // global hook's values patch and removes them from the patch in place, returning
-// a map of kebab-case module name to the requested enabled state.
+// a map of kebab-case module name to enabled state.
 //
-// Global hooks toggle other modules by patching a virtual "/<moduleKey>Enabled"
+// Global hooks enable other modules by patching a virtual "/<moduleKey>Enabled"
 // key (e.g. "/cniCiliumEnabled") in global values. These keys are not part of
-// the global values schema, so they must not reach the values storage; each is
-// translated to its module name (cni-cilium) and pulled out of the patch. Every
-// remaining operation is a real global value and stays in the patch for the
-// caller to apply. Operations whose "/<key>Enabled" value is not a boolean are
-// left in the patch untouched.
+// the global values schema, so they must not reach the values storage: every
+// operation whose first path segment ends in "Enabled" is treated as an enable
+// signal (mapped to true) — regardless of its Op or Value — then translated to
+// its module name (cni-cilium) and pulled out of the patch. Every remaining
+// operation is a real global value and stays in the patch for the caller to
+// apply.
 func filterEnabledFromValuesPatch(valuesPatch *addonutils.ValuesPatch) map[string]bool {
 	enabled := make(map[string]bool)
 	kept := valuesPatch.Operations[:0]

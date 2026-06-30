@@ -928,3 +928,116 @@ func (s *SchedulerSuite) TestNoneOfMemberInstallTriggersDisable() {
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
 }
+
+// TestRescheduleFansOutToDirectSubscribers verifies that Reschedule reverts the
+// named node AND its direct subscribers to idle — re-emitting EventSchedule for
+// both — while leaving unrelated nodes and second-level subscribers untouched.
+// The cascade is one level deep: a subscriber's own subscribers are not reverted.
+func (s *SchedulerSuite) TestRescheduleFansOutToDirectSubscribers() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "publisher",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.sched.Complete("publisher")
+
+	// Direct subscriber of publisher — must be reverted on Reschedule.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "subscriber",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order:         0,
+			Subscriptions: map[string]struct{}{"publisher": {}},
+		},
+	}))
+	s.sched.Complete("subscriber")
+
+	// Subscribes to subscriber, not publisher — the one-level-deep cascade must
+	// not reach it.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "second-level",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order:         0,
+			Subscriptions: map[string]struct{}{"subscriber": {}},
+		},
+	}))
+	s.sched.Complete("second-level")
+
+	// No subscription relationship at all — must stay active.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "unrelated",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.sched.Complete("unrelated")
+	s.drainEvents()
+
+	s.sched.Reschedule("publisher")
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "publisher", "the rescheduled node must be re-scheduled")
+	s.Contains(scheduled, "subscriber", "a direct subscriber must be reverted and re-scheduled")
+	s.NotContains(scheduled, "second-level", "the cascade must stop at one level — a subscriber's subscribers are untouched")
+	s.NotContains(scheduled, "unrelated", "a node with no subscription must not be rescheduled")
+}
+
+// TestRescheduleOnEnableRevertsEntireGraph verifies the full-graph reschedule
+// path: when a module (Floor = Static(Disable)) flips to enabled, compute()
+// reverts every node to idle, not just the module. A module turning on may
+// install CRDs other packages render against, and those template-level deps are
+// untracked, so the whole graph must re-converge. An already-active, unrelated
+// bystander being re-scheduled is the observable signal of that reconverge.
+func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
+	dynamicState := make(map[string]bool)
+
+	// Replace the suite scheduler with one wired to a controllable dynamic getter
+	// so a module can be flipped on at runtime. Stop the original to avoid leaking
+	// its event goroutine.
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		schedule.WithDependencyGetter(func(name string) *semver.Version {
+			return s.versions[name]
+		}),
+		schedule.WithDynamicGetter(func(module string) *bool {
+			if v, ok := dynamicState[module]; ok {
+				return &v
+			}
+
+			return nil
+		}),
+	)
+
+	s.activateGlobal()
+
+	// An always-on bystander, unrelated to the module, driven to active. Its
+	// re-schedule after the module enables proves the whole graph reconverged.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "bystander",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.sched.Complete("bystander")
+
+	// A module that is off (floor disables it) until dynamically enabled.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "dynamic-mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+	s.drainEvents()
+
+	// Flip the module on and run a pass: it enables, triggering a full-graph
+	// reschedule that reverts and re-schedules the bystander too.
+	dynamicState["dynamic-mod"] = true
+	s.sched.Schedule()
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "dynamic-mod", "the newly enabled module must be scheduled")
+	s.Contains(scheduled, "bystander", "reschedule-on-enable must revert and re-schedule the whole graph")
+}

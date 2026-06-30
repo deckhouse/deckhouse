@@ -57,8 +57,8 @@ type Constraints struct {
 
 	// Floor is the package's lowest-precedence rule: its default decision when no
 	// higher-precedence intent rule (bundle, user, script) has an opinion. Apps and Global
-	// set rule.Static(rule.Enable) (on whenever loaded); modules set their
-	// rule.Disabled. It is the only behavior-carrying field here — admission
+	// set rule.Static(rule.Enable) (on whenever loaded); modules set
+	// rule.Static(rule.Disable). It is the only behavior-carrying field here — admission
 	// (CheckConstraints) ignores it, since the floor is intent, not a
 	// requirement. A nil Floor means no floor: with gates-only the package
 	// resolves to Undefined and stays off, so every package must set one.
@@ -111,7 +111,7 @@ type node struct {
 	subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.
 	subscribers   map[string]struct{} // Set of nodes that are subscribed to this node's state changes.
 
-	rescheduleOnEnable bool // If true, the node will reschedule global node when it enables.
+	rescheduleOnEnable bool // If true, this node flipping to enabled triggers a full-graph reschedule in compute() (every node reverts to idle), not just the global node.
 
 	rules []rule.Rule // Ordered rule chain evaluated on each scheduling pass.
 }
@@ -139,7 +139,9 @@ func (s *Scheduler) addNode(pkg Package) {
 		subscribers:   make(map[string]struct{}),
 	}
 
-	// modules should reschedule global node when they enable
+	// Modules (floor = Static(Disable)) trigger a full-graph reschedule when they
+	// flip to enabled: a dynamically-enabled module may install CRDs that other
+	// packages render against, and those template-level deps are not tracked.
 	if constraints.Floor != nil && constraints.Floor == rule.Static(rule.Disable) {
 		n.rescheduleOnEnable = true
 	}
