@@ -46,6 +46,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/platform"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
@@ -88,6 +89,10 @@ type Application struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
+	// globalValuesGetter returns the platform global values used to build the
+	// .Platform values exposed to helm templates.
+	globalValuesGetter GlobalValuesGetter
+
 	logger *log.Logger
 }
 
@@ -115,7 +120,15 @@ type Config struct {
 	// GrantResolver resolves cluster resource grants for x-deckhouse-grantable-resource
 	// settings fields. When nil, grant defaulting/validation is disabled.
 	GrantResolver grants.Resolver
+
+	// GlobalValuesGetter returns the platform global values used to build the
+	// .Platform values. When nil, .Platform is built from empty global values.
+	GlobalValuesGetter GlobalValuesGetter
 }
+
+// GlobalValuesGetter returns the platform global values (the bare global values
+// tree, without a wrapping "global" key).
+type GlobalValuesGetter func() addonutils.Values
 
 // NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -147,6 +160,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	if a.grantResolver == nil {
 		a.grantResolver = grants.NoopResolver{}
 	}
+	a.globalValuesGetter = cfg.GlobalValuesGetter
 	a.logger = logger
 
 	parsed, err := semver.NewVersion(a.definition.Version)
@@ -229,12 +243,27 @@ func (a *Application) getRuntimeValues() RuntimeValues {
 	}
 }
 
+// getPlatformValues returns platform-wide values exposed under the .Platform prefix.
+// It mirrors the full global values tree (so global.<path> resolves as
+// .Platform.<path>) plus the structured EnabledModules/Capabilities fields.
+func (a *Application) getPlatformValues() addonutils.Values {
+	var global addonutils.Values
+	if a.globalValuesGetter != nil {
+		global = a.globalValuesGetter()
+	}
+
+	return platform.BuildValues(global)
+}
+
 // GetRuntimeValues returns runtime values in string format
 func (a *Application) GetRuntimeValues() string {
 	runtimeValues := a.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	return fmt.Sprintf("Application=%s", marshalled)
+	platformValues := a.getPlatformValues()
+	marshalledPlatform, _ := json.Marshal(platformValues)
+
+	return fmt.Sprintf("Application=%s,Platform=%s", marshalled, marshalledPlatform)
 }
 
 // GetName returns the full application identifier in format "namespace.name".
