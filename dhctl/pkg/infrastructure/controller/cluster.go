@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -25,7 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type StateLoader interface {

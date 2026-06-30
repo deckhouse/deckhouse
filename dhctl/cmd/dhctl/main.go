@@ -23,6 +23,8 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -32,7 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	"github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

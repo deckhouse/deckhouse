@@ -26,13 +26,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

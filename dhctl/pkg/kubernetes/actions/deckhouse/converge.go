@@ -24,12 +24,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // ConvergeDeckhouseConfigurationForCommander – reconciles deckhouse in-cluster configmaps and secrets.

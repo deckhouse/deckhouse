@@ -22,11 +22,11 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type CreateProvidersOptions struct {

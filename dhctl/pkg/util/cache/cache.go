@@ -22,9 +22,10 @@ import (
 	"os"
 	"path/filepath"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // NewTempStateCache creates new cache instance under baseDir, namespaced by identity.

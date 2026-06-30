@@ -32,6 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -39,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func prepareDeckhouseDeploymentForUpdate(

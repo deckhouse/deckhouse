@@ -26,10 +26,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

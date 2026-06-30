@@ -19,10 +19,11 @@ import (
 	"fmt"
 	"path/filepath"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const bootstrapDir = "/bootstrap"

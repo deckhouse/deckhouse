@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -36,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type (

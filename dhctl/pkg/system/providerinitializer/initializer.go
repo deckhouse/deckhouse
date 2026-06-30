@@ -27,10 +27,10 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var (

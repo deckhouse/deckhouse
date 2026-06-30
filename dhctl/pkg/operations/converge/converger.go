@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -34,7 +35,6 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*

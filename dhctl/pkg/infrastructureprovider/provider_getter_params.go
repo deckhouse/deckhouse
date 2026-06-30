@@ -22,11 +22,12 @@ import (
 
 	"github.com/name212/govalue"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type CloudProviderGetterParams struct {

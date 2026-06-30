@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -39,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type bootstrapParams struct {

@@ -27,13 +27,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

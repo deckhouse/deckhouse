@@ -24,10 +24,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx, deploymentName string) error {

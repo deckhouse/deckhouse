@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -29,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func BootstrapTerraNodes(

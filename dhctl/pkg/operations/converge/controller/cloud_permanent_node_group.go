@@ -18,6 +18,8 @@ import (
 	gocontext "context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -26,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type CloudPermanentNodeGroupController struct {

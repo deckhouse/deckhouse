@@ -20,6 +20,8 @@ import (
 
 	"github.com/name212/govalue"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -32,7 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {

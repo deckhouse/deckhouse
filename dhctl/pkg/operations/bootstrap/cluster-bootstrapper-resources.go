@@ -18,13 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {

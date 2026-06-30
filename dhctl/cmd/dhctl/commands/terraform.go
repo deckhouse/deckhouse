@@ -19,6 +19,8 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -31,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {

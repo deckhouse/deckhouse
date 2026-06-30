@@ -23,12 +23,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // NewClusterStateSaver returns StateSaver that saves intermediate infrastructure state to Secret.

@@ -28,6 +28,7 @@ import (
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -54,7 +55,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

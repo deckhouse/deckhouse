@@ -20,6 +20,7 @@ import (
 	"time"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -27,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type Params struct {

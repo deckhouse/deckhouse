@@ -23,6 +23,7 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -37,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type MasterNodeGroupController struct {

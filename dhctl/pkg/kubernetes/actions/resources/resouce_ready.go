@@ -21,10 +21,11 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources/readiness"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type apiResourcesGetter func(kubeCl *client.KubernetesClient, apiVersion, kind string) (*metav1.APIResource, error)

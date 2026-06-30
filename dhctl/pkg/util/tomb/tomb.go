@@ -23,8 +23,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 var callbacks teardownCallbacks

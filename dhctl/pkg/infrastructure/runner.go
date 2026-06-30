@@ -29,6 +29,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
@@ -37,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

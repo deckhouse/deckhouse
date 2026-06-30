@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -36,7 +37,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type attachParams struct {

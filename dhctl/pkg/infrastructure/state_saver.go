@@ -23,8 +23,9 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 type SaverDestination interface {

@@ -30,6 +30,7 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
@@ -38,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type staticInstance struct {

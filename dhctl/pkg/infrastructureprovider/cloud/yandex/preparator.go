@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"regexp"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")

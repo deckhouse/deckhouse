@@ -28,6 +28,8 @@ import (
 	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -38,7 +40,6 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type NodeGroupController struct {

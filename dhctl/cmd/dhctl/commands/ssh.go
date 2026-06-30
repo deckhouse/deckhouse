@@ -23,13 +23,13 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	"github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {

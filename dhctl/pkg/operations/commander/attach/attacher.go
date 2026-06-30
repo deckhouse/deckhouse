@@ -24,6 +24,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -38,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type Params struct {

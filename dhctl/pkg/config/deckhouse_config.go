@@ -24,10 +24,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/uuid"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

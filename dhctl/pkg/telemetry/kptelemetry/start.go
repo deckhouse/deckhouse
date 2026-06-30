@@ -26,9 +26,10 @@ import (
 	ottrace "go.opentelemetry.io/otel/trace"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // todo: dirty hack - we cannot clearly destroy span in kingpin, so we need to use global variable

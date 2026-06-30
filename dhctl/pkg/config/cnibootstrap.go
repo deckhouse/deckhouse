@@ -26,9 +26,10 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // resolveCandiDir mirrors NewSchemaStore: prefer the value from

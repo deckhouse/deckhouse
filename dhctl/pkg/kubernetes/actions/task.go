@@ -22,8 +22,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 type ManifestTask struct {

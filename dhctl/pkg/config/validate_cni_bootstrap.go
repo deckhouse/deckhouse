@@ -21,8 +21,9 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 // validateCNIBootstrap is the Layer-3 (domain) validator for CNI: filter the

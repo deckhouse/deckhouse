@@ -30,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
@@ -41,7 +42,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var (

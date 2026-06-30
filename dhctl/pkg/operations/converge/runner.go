@@ -21,6 +21,8 @@ import (
 
 	"github.com/google/uuid"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -37,7 +39,6 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

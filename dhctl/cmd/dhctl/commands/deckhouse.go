@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -32,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	"github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {

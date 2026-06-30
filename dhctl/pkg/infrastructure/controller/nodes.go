@@ -19,10 +19,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type NodeGroupInfrastructureController struct {

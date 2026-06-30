@@ -21,6 +21,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -32,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {

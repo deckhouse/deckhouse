@@ -20,6 +20,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -29,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	"github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {

@@ -20,8 +20,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 const opentofuConvertationMsg = "Terraform state detected while opentofu state was expected. Do you want to apply the migration? Use with caution, and only if there are no changes in the execution plan!"

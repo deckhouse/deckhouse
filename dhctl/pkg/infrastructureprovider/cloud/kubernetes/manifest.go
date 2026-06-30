@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 )
 
 func IsManifest(change plan.ChangeOp, kind string) bool {

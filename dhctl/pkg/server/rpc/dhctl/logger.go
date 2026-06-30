@@ -18,8 +18,9 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 )
 
 type logAttributesProvider interface {

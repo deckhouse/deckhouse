@@ -27,13 +27,13 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type HookForDestroyPipeline struct {

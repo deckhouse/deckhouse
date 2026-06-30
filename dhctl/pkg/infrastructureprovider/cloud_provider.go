@@ -20,11 +20,12 @@ import (
 
 	"github.com/name212/govalue"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudProviderGetter {

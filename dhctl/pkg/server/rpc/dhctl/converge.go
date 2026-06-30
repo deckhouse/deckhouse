@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -46,7 +47,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type convergeParams struct {

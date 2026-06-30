@@ -23,11 +23,12 @@ import (
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type ExecutorParams struct {

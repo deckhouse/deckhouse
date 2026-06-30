@@ -31,6 +31,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -45,7 +46,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type BashiblePipelineParams struct {

@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"os/exec"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type Step string
