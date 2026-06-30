@@ -76,3 +76,17 @@
         - use bazel build options `--config=release` and target `//:envoy`. We found this method in ProwCI in repository istio/proxy. ([Original build job from Istio ProwCI](https://prow.istio.io/view/gs/istio-prow/pr-logs/pull/istio_release-builder/1944/build-warning_release-builder_release-1.21/1837269285437706240))
       - binaries envoy *(built from src)*
 
+### Mark variant of proxyv2 (proxyv2-v1xXxY-mark)
+
+  - standalone image rebuilt from `common/distroless` with the same import list as
+    `proxyv2-v1xXxY`, except the `envoy` binary is taken from a dedicated
+    `-envoy-marked-artifact` stage that bakes in `cap_net_raw=ep` via `setcap`.
+  - used **only** by the sidecar injection template for pods annotated with
+    `traffic.sidecar.istio.io/outboundSocketMark` (deckhouse-internal workloads that
+    share the sidecar UID and rely on mark-based outbound interception instead of
+    iptables `--uid-owner`). The default `proxyv2` image stays clean (no file
+    capabilities) so it does not trip security scanners or leak ambient caps into
+    end-user workloads.
+  - requires kernel >= 5.17 on the node (`CAP_NET_RAW` is sufficient for
+    `setsockopt(SO_MARK)`; older kernels would need `CAP_NET_ADMIN`).
+

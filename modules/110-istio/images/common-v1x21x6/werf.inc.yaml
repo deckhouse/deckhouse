@@ -35,6 +35,8 @@ shell:
   - cd /src/istio/ && git apply --verbose /patches/002-istio-gomod_gosum.patch
   - cd /src/istio/ && git apply --verbose /patches/003-istio-server_fmtText.patch
   - cd /src/istio/ && git apply --verbose /patches/004-istio-multicluster_regenerate_token_timeout.patch
+  - cd /src/istio/ && git apply --verbose /patches/005-change-to-deckhouse-user.patch
+  - cd /src/istio/ && git apply --verbose /patches/006-mark-interception.patch
   - cd /src/kiali/ && git apply --verbose /patches/001-kiali-go-mod.patch
   - cd /src/kiali/ && git apply --verbose /patches/002-kiali-logout.patch
 ---

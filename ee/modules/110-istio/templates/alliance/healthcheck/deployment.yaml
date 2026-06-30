@@ -6,6 +6,7 @@ memory: 25Mi
 {{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
   {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
   {{- $revision := get $versionInfo "revision" }}
+  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -49,6 +50,9 @@ spec:
         app: alliance-healthcheck
         sidecar.istio.io/inject: "true"
         istio.io/rev: default
+      annotations:
+        traffic.sidecar.istio.io/outboundSocketMark: "1338"
+        # Triggers the CAP_NET_RAW-baked markImage variant of the proxy in the injector.
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}

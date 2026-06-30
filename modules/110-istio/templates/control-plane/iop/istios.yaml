@@ -71,6 +71,7 @@ spec:
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
       proxy:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
+        markImage: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%sMark" $imageSuffix )) }}
         clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
   {{- if $.Values.istio.sidecar.resourcesManagement }}
     {{- if and (eq $.Values.istio.sidecar.resourcesManagement.mode "Static") ($.Values.istio.sidecar.resourcesManagement.static) }}

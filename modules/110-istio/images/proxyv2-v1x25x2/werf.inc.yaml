@@ -68,7 +68,7 @@ import:
 imageSpec:
   config:
     user: "64535:64535"
-    env: 
+    env:
       ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
       ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     workingDir: "/"
