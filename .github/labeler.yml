@@ -61,9 +61,6 @@ area/kubernetes:
   - modules/007-registrypackages/images/kube*/**
   - modules/036-kube-proxy/**
 
-area/logs:
-  - modules/462-loki/**
-
 area/monitoring:
   - modules/300-prometheus/**
   - modules/340-extended-monitoring/**

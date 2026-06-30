@@ -89,7 +89,6 @@
 402-ingress-nginx/                                               @miklezzzz @apolovov
 450-keepalived/                                                  @AndreyPavlovFlant @apolovov
 450-network-gateway/                                             @AndreyPavlovFlant @apolovov
-462-loki/                                                        @vladimirGuryanov @lazovskiy @maksimmadzhuga
 470-chrony/                                                      @borg-z @090809
 491-containerized-data-importer                                  @fl64
 500-basic-auth/                                                  @nabokihms @AlwxSin
