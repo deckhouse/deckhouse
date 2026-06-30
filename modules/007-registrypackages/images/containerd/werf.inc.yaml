@@ -22,7 +22,7 @@
 
     {{- $namespaces := get $namespacesSettings "namespaces_for_integrity" | join "," -}}
     {{- if $namespaces -}}
-INTEGRITY_NAMESPACES="{{ $namespaces }}"
+# INTEGRITY_NAMESPACES="{{ $namespaces }}"
     {{- end }}
   {{- end }}
 {{- end }}
