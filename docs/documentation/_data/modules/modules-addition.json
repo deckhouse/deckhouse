@@ -91,7 +91,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/code/stable/"
+    "path": "/modules/code/"
   },
   "development-platform": {
     "editions": [
@@ -99,6 +99,32 @@
     ],
     "external": "true",
     "path": "/modules/development-platform/"
+  },
+  "extended-monitoring": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/extended-monitoring/"
+  },
+  "ingress-nginx": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/ingress-nginx/"
   },
   "gpu": {
     "editions": [
@@ -120,6 +146,19 @@
       "ml/ai"
     ]
   },
+  "loki": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/loki/"
+  },
   "managed-cassandra": {
     "editions": [
       "ee"
@@ -130,25 +169,36 @@
       "managed services"
     ]
   },
+  "managed-clickhouse": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/managed-clickhouse/",
+    "tags": [
+      "managed services"
+    ]
+  },
   "managed-hive-metastore": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/managed-hive-metastore/",
-    "tags": [
-      "managed services"
-    ]
+    "path": "/modules/managed-hive-metastore/"
   },
   "managed-kafka": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/managed-kafka/",
-    "tags": [
-      "managed services"
-    ]
+    "path": "/modules/managed-kafka/"
+  },
+  "managed-opensearch": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/managed-opensearch/"
   },
   "managed-postgres": {
     "editions": [
@@ -157,10 +207,7 @@
       "se-plus"
     ],
     "external": "true",
-    "path": "/modules/managed-postgres/",
-    "tags": [
-      "managed services"
-    ]
+    "path": "/modules/managed-postgres/"
   },
   "managed-memcached": {
     "editions": [
@@ -169,20 +216,14 @@
       "se-plus"
     ],
     "external": "true",
-    "path": "/modules/managed-memcached/",
-    "tags": [
-      "managed services"
-    ]
+    "path": "/modules/managed-memcached/"
   },
   "managed-trino": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/managed-trino/",
-    "tags": [
-      "managed services"
-    ]
+    "path": "/modules/managed-trino/"
   },
   "managed-valkey": {
     "editions": [
@@ -191,10 +232,33 @@
       "se-plus"
     ],
     "external": "true",
-    "path": "/modules/managed-valkey/",
-    "tags": [
-      "managed services"
-    ]
+    "path": "/modules/managed-valkey/"
+  },
+  "monitoring-custom": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/monitoring-custom/"
+  },
+  "monitoring-ping": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/monitoring-ping/"
   },
   "commander": {
     "editions": [
@@ -216,7 +280,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/commander/stable/"
+    "path": "/modules/commander/"
   },
   "commander-agent": {
     "editions": [
@@ -248,7 +312,7 @@
       "ee"
     ],
     "external": "true",
-    "path": "/modules/csi-ceph/stable/"
+    "path": "/modules/csi-ceph/"
   },
   "csi-netapp": {
     "editions": [
@@ -265,7 +329,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/csi-netapp/stable/"
+    "path": "/modules/csi-netapp/"
   },
   "csi-hpe": {
     "editions": [
@@ -282,7 +346,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/csi-hpe/stable/"
+    "path": "/modules/csi-hpe/"
   },
   "csi-huawei": {
     "editions": [
@@ -299,7 +363,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/csi-huawei/stable/"
+    "path": "/modules/csi-huawei/"
   },
   "csi-nfs": {
     "editions": [
@@ -311,14 +375,14 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/csi-nfs/stable/"
+    "path": "/modules/csi-nfs/"
   },
   "csi-s3": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/csi-s3/stable/"
+    "path": "/modules/csi-s3/"
   },
   "csi-scsi-generic": {
     "editions": [
@@ -327,7 +391,7 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/csi-scsi-generic/stable/"
+    "path": "/modules/csi-scsi-generic/"
   },
   "csi-yadro-tatlin-unified": {
     "editions": [
@@ -336,7 +400,7 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/csi-yadro-tatlin-unified/stable/"
+    "path": "/modules/csi-yadro-tatlin-unified/"
   },
   "dashboard": {
     "editions": [
@@ -403,7 +467,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/neuvector/stable/"
+    "path": "/modules/neuvector/"
   },
   "observability": {
     "editions": [
@@ -430,7 +494,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/observability-platform/stable/"
+    "path": "/modules/observability-platform/"
   },
   "operator-argo": {
     "editions": [
@@ -447,7 +511,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/operator-argo/stable/"
+    "path": "/modules/operator-argo/"
   },
   "operator-helm": {
     "editions": [
@@ -474,7 +538,7 @@
       "ee"
     ],
     "external": "true",
-    "path": "/modules/payload-registry/stable/"
+    "path": "/modules/payload-registry/"
   },
   "pod-reloader": {
     "editions": [
@@ -485,7 +549,31 @@
       "ee"
     ],
     "external": "true",
-    "path": "/modules/pod-reloader/stable/"
+    "path": "/modules/pod-reloader/"
+  },
+  "prometheus-metrics-adapter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/prometheus-metrics-adapter/"
+  },
+  "prometheus-pushgateway": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/prometheus-pushgateway/"
   },
   "runtime-audit-engine": {
     "editions": [
@@ -494,14 +582,36 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/runtime-audit-engine/stable/"
+    "path": "/modules/runtime-audit-engine/"
+  },
+  "security-events-manager": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/security-events-manager/",
+    "tags": [
+      "security",
+      "ssdlc"
+    ]
   },
   "sdn": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/sdn/stable/"
+    "path": "/modules/sdn/"
+  },
+  "sds-elastic": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/sds-elastic/"
   },
   "sds-local-volume": {
     "editions": [
@@ -522,7 +632,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/sds-local-volume/stable/"
+    "path": "/modules/sds-local-volume/"
   },
   "sds-node-configurator": {
     "editions": [
@@ -534,7 +644,7 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/sds-node-configurator/stable/"
+    "path": "/modules/sds-node-configurator/"
   },
   "sds-replicated-volume": {
     "editions": [
@@ -554,7 +664,7 @@
       }
     },
     "external": "true",
-    "path": "/modules/sds-replicated-volume/stable/"
+    "path": "/modules/sds-replicated-volume/"
   },
   "secrets-store-integration": {
     "editions": [
@@ -567,7 +677,7 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/secrets-store-integration/stable/"
+    "path": "/modules/secrets-store-integration/"
   },
   "state-snapshotter": {
     "editions": [
@@ -591,14 +701,14 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/snapshot-controller/stable/"
+    "path": "/modules/snapshot-controller/"
   },
   "static-routing-manager": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/static-routing-manager/stable/"
+    "path": "/modules/static-routing-manager/"
   },
   "storage-foundation": {
     "editions": [
@@ -616,7 +726,7 @@
       "ee"
     ],
     "external": "true",
-    "path": "/modules/storage-volume-data-manager/stable/"
+    "path": "/modules/storage-volume-data-manager/"
   },
   "stronghold": {
     "editions": [
@@ -670,6 +780,23 @@
     },
     "path": "modules/user-authz/"
   },
+  "upmeter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/upmeter/",
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
   "virtualization": {
     "editions": [
       "ce",
@@ -681,6 +808,6 @@
       "ce"
     ],
     "external": "true",
-    "path": "/modules/virtualization/stable/"
+    "path": "/modules/virtualization/"
   }
 }

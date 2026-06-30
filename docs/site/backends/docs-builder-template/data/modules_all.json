@@ -29,8 +29,6 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/ai-models/",
     "tags": [
       "ml/ai",
       "ssdlc"
@@ -56,9 +54,7 @@
     "tags": [
       "application",
       "web ui"
-    ],
-    "external": "true",
-    "path": "/modules/code/"
+    ]
   },
   "commander": {
     "editions": [
@@ -79,8 +75,6 @@
         "ru": "Требуется отдельная лицензия"
       }
     },
-    "external": "true",
-    "path": "/modules/commander/",
     "tags": [
       "managing",
       "application",
@@ -96,7 +90,6 @@
       "se-plus",
       "ee"
     ],
-    "path": "/modules/commander-agent/",
     "tags": [
       "helper",
       "ssdlc"
@@ -112,8 +105,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/console/",
     "tags": [
       "managing",
       "observability",
@@ -130,8 +121,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/csi-ceph/",
     "tags": [
       "storage",
       "ssdlc"
@@ -151,8 +140,6 @@
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
-    "external": "true",
-    "path": "/modules/csi-hpe/",
     "tags": [
       "storage",
       "ssdlc"
@@ -172,8 +159,6 @@
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
-    "external": "true",
-    "path": "/modules/csi-huawei/",
     "tags": [
       "storage",
       "ssdlc"
@@ -193,8 +178,6 @@
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
-    "external": "true",
-    "path": "/modules/csi-netapp/",
     "tags": [
       "storage",
       "ssdlc"
@@ -209,8 +192,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/csi-nfs/",
     "tags": [
       "storage",
       "ssdlc"
@@ -220,8 +201,6 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/csi-s3/",
     "tags": [
       "storage",
       "ssdlc"
@@ -233,8 +212,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/csi-scsi-generic/",
     "tags": [
       "storage",
       "ssdlc"
@@ -246,8 +223,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/csi-yadro-tatlin-unified/",
     "tags": [
       "storage",
       "ssdlc"
@@ -258,8 +233,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "",
     "tags": [
       "delivery",
       "ssdlc"
@@ -289,6 +262,36 @@
       "ssdlc"
     ]
   },
+  "extended-monitoring": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
+  "ingress-nginx": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "network",
+      "ssdlc"
+    ]
+  },
   "gpu": {
     "editions": [
       "ee"
@@ -303,10 +306,24 @@
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
-    "external": "true",
-    "path": "/modules/gpu/",
     "tags": [
       "ml/ai",
+      "ssdlc"
+    ]
+  },
+  "loki": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "logging",
       "ssdlc"
     ]
   },
@@ -314,8 +331,15 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/managed-cassandra/",
+    "tags": [
+      "managed services",
+      "ssdlc"
+    ]
+  },
+  "managed-clickhouse": {
+    "editions": [
+      "ee"
+    ],
     "tags": [
       "managed services",
       "ssdlc"
@@ -325,8 +349,6 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/managed-hive-metastore/",
     "tags": [
       "managed services",
       "ssdlc"
@@ -336,8 +358,6 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/managed-kafka/",
     "tags": [
       "managed services",
       "ssdlc"
@@ -349,8 +369,15 @@
       "se",
       "se-plus"
     ],
-    "external": "true",
-    "path": "/modules/managed-memcached/",
+    "tags": [
+      "managed services",
+      "ssdlc"
+    ]
+  },
+  "managed-opensearch": {
+    "editions": [
+      "ee"
+    ],
     "tags": [
       "managed services",
       "ssdlc"
@@ -362,8 +389,6 @@
       "se",
       "se-plus"
     ],
-    "external": "true",
-    "path": "/modules/managed-postgres/",
     "tags": [
       "managed services",
       "ssdlc"
@@ -373,8 +398,6 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/managed-trino/",
     "tags": [
       "managed services",
       "ssdlc"
@@ -386,10 +409,54 @@
       "se",
       "se-plus"
     ],
-    "external": "true",
-    "path": "/modules/managed-valkey/",
     "tags": [
       "managed services",
+      "ssdlc"
+    ]
+  },
+  "monitoring-custom": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
+  "monitoring-ping": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
+  "log-shipper": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "logging",
       "ssdlc"
     ]
   },
@@ -407,8 +474,6 @@
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
-    "external": "true",
-    "path": "/modules/neuvector/",
     "tags": [
       "security"
     ]
@@ -422,7 +487,6 @@
       "ee",
       "cse-pro"
     ],
-    "external": "true",
     "tags": [
       "observability",
       "ssdlc"
@@ -441,8 +505,6 @@
         "ru": "Требуется отдельная лицензия"
       }
     },
-    "external": "true",
-    "path": "/modules/observability-platform/",
     "tags": [
       "observability",
       "web ui",
@@ -464,8 +526,6 @@
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
-    "external": "true",
-    "path": "/modules/operator-argo/",
     "tags": [
       "delivery",
       "ssdlc"
@@ -479,8 +539,6 @@
       "se-plus",
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/operator-helm/",
     "tags": [
       "delivery"
     ]
@@ -491,8 +549,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/operator-trivy/",
     "tags": [
       "security",
       "ssdlc"
@@ -502,8 +558,6 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/payload-registry/",
     "tags": [
       "registry",
       "ssdlc"
@@ -517,10 +571,36 @@
       "se-plus",
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/pod-reloader/",
     "tags": [
       "core",
+      "ssdlc"
+    ]
+  },
+  "prometheus-metrics-adapter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
+  "prometheus-pushgateway": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "observability",
       "ssdlc"
     ]
   },
@@ -530,8 +610,15 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/runtime-audit-engine/",
+    "tags": [
+      "security",
+      "ssdlc"
+    ]
+  },
+  "security-events-manager": {
+    "editions": [
+      "ee"
+    ],
     "tags": [
       "security",
       "ssdlc"
@@ -541,10 +628,21 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/sdn/",
     "tags": [
       "network",
+      "ssdlc"
+    ]
+  },
+  "sds-elastic": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "storage",
       "ssdlc"
     ]
   },
@@ -566,8 +664,6 @@
         "ru": "Ограничение на возможность создания снимков и затирание томов"
       }
     },
-    "external": "true",
-    "path": "/modules/sds-local-volume/",
     "tags": [
       "storage",
       "ssdlc"
@@ -582,8 +678,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/sds-node-configurator/",
     "tags": [
       "storage",
       "ssdlc"
@@ -606,8 +700,6 @@
         "ru": "Ограничение на возможность создания снимков"
       }
     },
-    "external": "true",
-    "path": "/modules/sds-replicated-volume/",
     "tags": [
       "storage",
       "ssdlc"
@@ -623,8 +715,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/secrets-store-integration/",
     "tags": [
       "security",
       "ssdlc"
@@ -640,8 +730,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "external": "true",
-    "path": "/modules/snapshot-controller/",
     "tags": [
       "storage",
       "ssdlc"
@@ -651,8 +739,6 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/static-routing-manager/",
     "tags": [
       "network",
       "ssdlc"
@@ -675,8 +761,6 @@
     "editions": [
       "ee"
     ],
-    "external": "true",
-    "path": "/modules/storage-volume-data-manager/",
     "tags": [
       "storage",
       "ssdlc"
@@ -711,11 +795,24 @@
         "ru": "Некоторые функции доступны в зависимости от выбранной лицензии Deckhouse Stronghold. Подробнее можно ознакомиться в разделе <a href='/products/stronghold/documentation/about/editions/'>«Редакции»</a> документации Deckhouse Stronghold."
       }
     },
-    "external": "true",
-    "path": "/modules/stronghold/",
     "tags": [
       "security",
       "web ui",
+      "ssdlc"
+    ]
+  },
+  "upmeter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
       "ssdlc"
     ]
   },
@@ -729,8 +826,6 @@
     "editionsWithRestrictions": [
       "ce"
     ],
-    "external": "true",
-    "path": "/modules/virtualization/",
     "tags": [
       "virtualization",
       "ssdlc"
