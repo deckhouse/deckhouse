@@ -73,12 +73,12 @@ spec:
 
 При использовании селекторов пригодятся два специальных лейбла, которые Cilium автоматически проставляет на эндпоинт каждого пода:
 
-- `io.kubernetes.pod.namespace` — имя namespace, в котором запущен под. Используется в `fromEndpoints` и `toEndpoints` для ссылки на поды из конкретного namespace.
+- `io.kubernetes.pod.namespace` — имя неймспейса, в котором запущен под. Используется в `fromEndpoints` и `toEndpoints` для ссылки на поды из конкретного namespace.
 - `k8s-app`, `app`, обычные лейблы пода — доступны без префикса.
 
 ### Egress на Kubernetes-сервис
 
-Поле `toServices` позволяет описать egress на Kubernetes-сервис, а не на группу подов. Сервис выбирают по имени и namespace (`k8sService`) либо по лейблам (`k8sServiceSelector`):
+Поле `toServices` позволяет описать egress на Kubernetes-сервис, а не на группу подов. Сервис выбирают по имени и неймспейсу (`k8sService`) либо по лейблам (`k8sServiceSelector`):
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -113,7 +113,7 @@ spec:
 - `unmanaged` — поды без управления Cilium;
 - `all` — любая сущность.
 
-Пример ingress-правила, разрешающего обращения от API-сервера к подам с лейблом `app: webhook`:
+Пример ingress-правила, разрешающего обращения от API-сервера (сущность `kube-apiserver`) к подам с лейблом `app: webhook`:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -327,11 +327,11 @@ spec:
 
 Deny-правила применяются раньше allow-правил, поэтому они приоритетнее любых разрешений из других политик.
 
-## Default-политики через CiliumNetworkPolicy
+## Политики по умолчанию через CiliumNetworkPolicy
 
 Как и в стандартном `NetworkPolicy`, наличие политики с пустыми списками правил переводит выбранные эндпоинты в режим deny по умолчанию.
 
-Чтобы перевести namespace в режим default-deny, создайте `CiliumNetworkPolicy` с пустым списком правил:
+Чтобы перевести неймспейс в режим default-deny, создайте `CiliumNetworkPolicy` с пустым списком правил:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -378,7 +378,7 @@ spec:
 В режиме аудита никакая сетевая политика не блокирует трафик. Не используйте режим аудита как постоянную настройку, оставляйте его включённым только на время внедрения.
 {% endalert %}
 
-Рекомендуемый порядок:
+Рекомендуемый порядок действий:
 
 1. Включите параметр `policyAuditMode: true` в [настройках модуля `cni-cilium`](/modules/cni-cilium/configuration.html#parameters-policyauditmode).
 1. Примените набор политик. Политики для узлов применяйте отдельно по процедуре из раздела [Host firewall на узлах](host_firewall.html).

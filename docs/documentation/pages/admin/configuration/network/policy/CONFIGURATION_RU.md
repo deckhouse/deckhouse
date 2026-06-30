@@ -11,10 +11,10 @@ search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, Ci
 
 ## Реализация сетевых политик в DKP
 
-Доступные форматы политик и движок их обработки определяются включённым модулем CNI:
+Доступные форматы политик и движок их обработки зависят от используемого в кластере модуля CNI:
 
 - В кластерах с модулем [`cni-cilium`](/modules/cni-cilium/) реализация встроена в Cilium и поддерживает три формата политик:
-  - стандартный [`NetworkPolicy`](https://kubernetes.io/docs/concepts/services-networking/network-policies/) уровней L3 и L4;
+  - стандартный [`NetworkPolicy`](https://kubernetes.io/docs/concepts/services-networking/network-policies/) — namespaced-ресурс с правилами для уровней L3 и L4;
   - [`CiliumNetworkPolicy`](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumnetworkpolicy) — namespaced-ресурс с правилами L3–L7;
   - [`CiliumClusterwideNetworkPolicy`](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumclusterwidenetworkpolicy) — cluster-scoped-ресурс, дополнительно поддерживает `nodeSelector` для защиты узлов (host firewall).
 - В кластерах с модулем `cni-flannel` или другим CNI без поддержки политик обработку обеспечивает модуль [`network-policy-engine`](/modules/network-policy-engine/) на базе [kube-router](https://github.com/cloudnativelabs/kube-router). Поддерживается только стандартный `NetworkPolicy` уровней L3 и L4. Политики транслируются в правила `iptables` и `ipset` на каждом узле.

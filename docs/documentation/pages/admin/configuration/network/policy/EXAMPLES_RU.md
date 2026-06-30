@@ -10,9 +10,9 @@ lang: ru
 
 Для конструкций самих ресурсов используйте описание из [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html) и [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html).
 
-## Запретить весь входящий трафик в namespace, но разрешить взаимодействие внутри
+## Запретить весь входящий трафик в неймспейс, но разрешить взаимодействие внутри него
 
-Подходит как baseline для namespace, в котором поды должны работать друг с другом, но не быть доступны извне:
+Подходит как baseline для неймспейса, в котором поды должны взаимодействовать друг с другом, но не быть доступны извне:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -32,11 +32,11 @@ spec:
     - {}
 ```
 
-Все egress-соединения остаются разрешёнными благодаря пустому правилу `egress: [{}]`; ingress разрешён только от подов того же namespace.
+Все egress-соединения остаются разрешёнными благодаря пустому правилу `egress: [{}]`; ingress разрешён только от подов того же неймспейса.
 
-## Разрешить ingress из конкретного namespace
+## Разрешить входящий трафик из конкретного неймспейса
 
-Разрешает поды из namespace с лейблом `kubernetes.io/metadata.name: frontend` обращаться к подам с лейблом `app: api`:
+Разрешает подам из неймспейса с лейблом `kubernetes.io/metadata.name: frontend` обращаться к подам с лейблом `app: api`:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -60,9 +60,9 @@ spec:
           port: 8080
 ```
 
-Лейбл `kubernetes.io/metadata.name` Kubernetes устанавливает на каждый namespace автоматически.
+Лейбл `kubernetes.io/metadata.name` Kubernetes устанавливает на каждый неймспейс автоматически.
 
-## Разрешить egress только к DNS и заданному CIDR
+## Разрешить исходящий трафик только к DNS и заданному CIDR
 
 Default-deny egress + точечное разрешение DNS и одного внешнего сервиса:
 
@@ -152,7 +152,7 @@ spec:
 
 ## Разрешить egress только к указанным DNS-именам (FQDN)
 
-Для FQDN-правил Cilium должен видеть DNS-запросы, поэтому в той же политике обязательно разрешите egress на DNS-сервер кластера с инспекцией DNS:
+Для FQDN-правил Cilium должен видеть DNS-запросы, поэтому в той же политике обязательно разрешите исходящий трафик на DNS-сервер кластера с инспекцией DNS:
 
 ```yaml
 apiVersion: cilium.io/v2
