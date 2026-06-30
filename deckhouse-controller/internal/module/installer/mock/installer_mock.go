@@ -27,9 +27,13 @@ type Installer struct {
 	InstallFunc           func(ctx context.Context, module, version, tempModulePath string) error
 	StageFunc             func(ctx context.Context, module, version, tempModulePath string) error
 	StageFromRegistryFunc func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	RestoreFunc           func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
 	IsEmbeddedPresentFunc func(module string) bool
 	UninstallFunc         func(ctx context.Context, module string) error
 	DownloadFunc          func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error)
+	GetImageDigestFunc    func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error)
+	GetInstalledFunc      func() (map[string]struct{}, error)
+	SetClusterUUIDFunc    func(id string)
 }
 
 func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
@@ -53,6 +57,13 @@ func (i *Installer) StageFromRegistry(ctx context.Context, source *v1alpha1.Modu
 	return nil
 }
 
+func (i *Installer) Restore(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error {
+	if i.RestoreFunc != nil {
+		return i.RestoreFunc(ctx, source, module, version)
+	}
+	return nil
+}
+
 func (i *Installer) IsEmbeddedPresent(module string) bool {
 	if i.IsEmbeddedPresentFunc != nil {
 		return i.IsEmbeddedPresentFunc(module)
@@ -72,4 +83,24 @@ func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource,
 		return i.DownloadFunc(ctx, source, module, version)
 	}
 	return "testdata/validation/module", nil
+}
+
+func (i *Installer) GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error) {
+	if i.GetImageDigestFunc != nil {
+		return i.GetImageDigestFunc(ctx, source, module, version)
+	}
+	return "", nil
+}
+
+func (i *Installer) GetInstalled() (map[string]struct{}, error) {
+	if i.GetInstalledFunc != nil {
+		return i.GetInstalledFunc()
+	}
+	return map[string]struct{}{}, nil
+}
+
+func (i *Installer) SetClusterUUID(id string) {
+	if i.SetClusterUUIDFunc != nil {
+		i.SetClusterUUIDFunc(id)
+	}
 }
