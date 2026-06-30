@@ -41,10 +41,7 @@
       "ee"
     ],
     "external": "true",
-    "path": "/modules/ai-models/",
-    "tags": [
-      "ml/ai"
-    ]
+    "path": "/modules/ai-models/"
   },
   "cloud-provider-vsphere": {
     "editionFullyAvailable": [
