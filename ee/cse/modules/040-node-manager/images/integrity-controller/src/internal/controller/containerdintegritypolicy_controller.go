@@ -18,7 +18,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
@@ -111,28 +110,11 @@ func (r *ContainerdIntegrityPolicyReconciler) enqueueAllPolicies(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ContainerdIntegrityPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(mgr).
 		For(&deckhousev1alpha1.ContainerdIntegrityPolicy{}).
 		Watches(
 			&corev1.Namespace{},
 			handler.EnqueueRequestsFromMapFunc(r.enqueueAllPolicies),
 		).
-		Complete(r); err != nil {
-		return err
-	}
-
-	return mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		if !mgr.GetCache().WaitForCacheSync(ctx) {
-			return fmt.Errorf("wait for cache sync")
-		}
-
-		logger := ctrl.LoggerFrom(ctx)
-		for _, req := range r.enqueueAllPolicies(ctx, nil) {
-			if _, err := r.Reconcile(ctx, req); err != nil {
-				logger.Error(err, "failed to reconcile ContainerdIntegrityPolicy on startup", "request", req)
-			}
-		}
-
-		return nil
-	}))
+		Complete(r)
 }
