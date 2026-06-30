@@ -70,6 +70,13 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 	cmd.Flag("dynamic-probe-nodegroup", "Node Group name tracked by probes").
 		StringsVar(&config.DynamicProbes.NodeGroups)
 
+	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
+	cmd.Flag("virtualization-probe-virtualmachine-class-name", "VirtualMachineClass name for virtualization VM lifecycle probes").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALMACHINE_CLASS_NAME").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualMachineClassName)
+
 	// User-Agent
 	// TODO generate from CI?
 	cmd.Flag("user-agent", "User Agent for HTTP client").
@@ -136,6 +143,13 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 	// Zone prefix that can be used in some cloud providers
 	cmd.Flag("dynamic-probe-known-zoneprefix", "A known zone prefix for current cloud provider").
 		StringVar(&config.DynamicProbes.ZonePrefix)
+
+	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
+	cmd.Flag("virtualization-probe-virtualmachine-class-name", "VirtualMachineClass name for virtualization VM lifecycle probes").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALMACHINE_CLASS_NAME").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualMachineClassName)
 
 	// User-Agent
 	// TODO generate from CI?

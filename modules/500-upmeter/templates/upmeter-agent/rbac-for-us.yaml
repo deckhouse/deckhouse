@@ -35,6 +35,13 @@ rules:
     resources: ["services"]
     verbs: ["get"]
     resourceNames: ["deckhouse-leader"]
+  # Virtualization check: expose VM guest HTTP endpoint.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "delete", "get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["create", "delete", "get", "list", "watch"]
   # Deckhouse hooks checked via the CR change sync, and nodegroup probes
   - apiGroups: ["deckhouse.io"]
     resources: ["upmeterhookprobes" , "nodegroups"]
@@ -51,6 +58,13 @@ rules:
   - apiGroups: ["alerts.observability.deckhouse.io"]
     resources: ["observabilityalerts"]
     verbs: ["get", "list"]
+  # Virtualization check: VM lifecycle probe
+  - apiGroups: ["virtualization.deckhouse.io"]
+    resources: ["virtualimages", "virtualdisks", "virtualmachines", "virtualmachineoperations", "virtualmachineblockdeviceattachments"]
+    verbs: ["create", "delete", "get", "list", "watch", "update"]
+  - apiGroups: ["virtualization.deckhouse.io"]
+    resources: ["virtualmachineclasses"]
+    verbs: ["get", "list", "watch"]
   # Metrics Adapter API
   - apiGroups: ["custom.metrics.k8s.io"]
     resources: ["metrics"]

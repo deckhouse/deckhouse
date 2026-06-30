@@ -56,6 +56,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			&deployRepo{k},
 			&podRepo{k},
 			&namespaceRepo{k},
+			&serviceRepo{k},
+			&networkPolicyRepo{k},
+			&virtualMachineRepo{k},
+			&virtualMachineBlockDeviceAttachmentRepo{k},
+			&virtualDiskRepo{k},
+			&virtualImageRepo{k},
 			&upmeterHookProbeRepo{k},
 		}
 
@@ -206,6 +212,212 @@ func (r *namespaceRepo) List(ctx context.Context) ([]metav1.Object, error) {
 
 func (r *namespaceRepo) Delete(ctx context.Context, name string) error {
 	return r.k.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type serviceRepo struct {
+	k k8s.Client
+}
+
+func (r *serviceRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.CoreV1().
+		Services(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		return nil, err
+	}
+	objects := make([]metav1.Object, 0, len(list.Items))
+	for i := range list.Items {
+		service := list.Items[i].DeepCopy()
+		service.SetName(service.GetNamespace() + "/" + service.GetName())
+		objects = append(objects, service.GetObjectMeta())
+	}
+	return objects, nil
+}
+
+func (r *serviceRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type networkPolicyRepo struct {
+	k k8s.Client
+}
+
+func (r *networkPolicyRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.NetworkingV1().
+		NetworkPolicies(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		return nil, err
+	}
+	objects := make([]metav1.Object, 0, len(list.Items))
+	for i := range list.Items {
+		networkPolicy := list.Items[i].DeepCopy()
+		networkPolicy.SetName(networkPolicy.GetNamespace() + "/" + networkPolicy.GetName())
+		objects = append(objects, networkPolicy.GetObjectMeta())
+	}
+	return objects, nil
+}
+
+func (r *networkPolicyRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+var virtualMachineGVR = schema.GroupVersionResource{
+	Group:    "virtualization.deckhouse.io",
+	Version:  "v1alpha2",
+	Resource: "virtualmachines",
+}
+
+var virtualDiskGVR = schema.GroupVersionResource{
+	Group:    "virtualization.deckhouse.io",
+	Version:  "v1alpha2",
+	Resource: "virtualdisks",
+}
+
+var virtualImageGVR = schema.GroupVersionResource{
+	Group:    "virtualization.deckhouse.io",
+	Version:  "v1alpha2",
+	Resource: "virtualimages",
+}
+
+var virtualMachineBlockDeviceAttachmentGVR = schema.GroupVersionResource{
+	Group:    "virtualization.deckhouse.io",
+	Version:  "v1alpha2",
+	Resource: "virtualmachineblockdeviceattachments",
+}
+
+type virtualMachineRepo struct {
+	k k8s.Client
+}
+
+func (r *virtualMachineRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(virtualMachineGVR).
+		Namespace(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
+	}
+	return qualifiedGarbageObjects(list.Items), nil
+}
+
+func (r *virtualMachineRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.Dynamic().
+		Resource(virtualMachineGVR).
+		Namespace(namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type virtualMachineBlockDeviceAttachmentRepo struct {
+	k k8s.Client
+}
+
+func (r *virtualMachineBlockDeviceAttachmentRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(virtualMachineBlockDeviceAttachmentGVR).
+		Namespace(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
+	}
+	return qualifiedGarbageObjects(list.Items), nil
+}
+
+func (r *virtualMachineBlockDeviceAttachmentRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.Dynamic().
+		Resource(virtualMachineBlockDeviceAttachmentGVR).
+		Namespace(namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type virtualDiskRepo struct {
+	k k8s.Client
+}
+
+func (r *virtualDiskRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(virtualDiskGVR).
+		Namespace(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
+	}
+	return qualifiedGarbageObjects(list.Items), nil
+}
+
+func (r *virtualDiskRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.Dynamic().
+		Resource(virtualDiskGVR).
+		Namespace(namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type virtualImageRepo struct {
+	k k8s.Client
+}
+
+func (r *virtualImageRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(virtualImageGVR).
+		Namespace(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
+	}
+	return qualifiedGarbageObjects(list.Items), nil
+}
+
+func (r *virtualImageRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.Dynamic().
+		Resource(virtualImageGVR).
+		Namespace(namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+func qualifiedGarbageObjects(items []unstructured.Unstructured) []metav1.Object {
+	objects := make([]metav1.Object, 0, len(items))
+	for i := range items {
+		item := items[i].DeepCopy()
+		item.SetName(item.GetNamespace() + "/" + item.GetName())
+		objects = append(objects, item)
+	}
+	return objects
+}
+
+func splitQualifiedName(qualifiedName string) (string, string, error) {
+	parts := strings.SplitN(qualifiedName, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", fmt.Errorf("invalid qualified name %q", qualifiedName)
+	}
+	return parts[0], parts[1], nil
 }
 
 type podRepo struct {

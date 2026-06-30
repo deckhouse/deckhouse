@@ -74,8 +74,14 @@ type Config struct {
 }
 
 type DynamicProbesConfig struct {
-	IngressControllers []string
-	NodeGroups         []string
+	IngressControllers  []string
+	NodeGroups          []string
+	VirtualizationProbe VirtualizationProbeConfig
+}
+
+type VirtualizationProbeConfig struct {
+	VirtualImageURL         string
+	VirtualMachineClassName string
 }
 
 func NewConfig() *Config {
@@ -261,6 +267,10 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 	dynamicConfig := probe.DynamicConfig{
 		IngressNginxControllers: dynamic.IngressControllers,
 		NodeGroups:              dynamic.NodeGroups,
+		VirtualizationProbe: probe.VirtualizationProbeConfig{
+			VirtualImageURL:         dynamic.VirtualizationProbe.VirtualImageURL,
+			VirtualMachineClassName: dynamic.VirtualizationProbe.VirtualMachineClassName,
+		},
 	}
 	dummyDoer := checker.NoopDoer{}
 	runLoader := probe.NewLoader(noFilter, noAccess, nil, dynamicConfig, dummyDoer, noLogger)

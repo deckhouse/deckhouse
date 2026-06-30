@@ -27,6 +27,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
+const (
+	defaultStorageClassAnnotation = "storageclass.kubernetes.io/is-default-class"
+	defaultVMClassAnnotation      = "virtualmachineclass.virtualization.deckhouse.io/is-default-class"
+)
+
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -71,6 +76,27 @@ var _ = sdk.RegisterFunc(
 				}},
 				FilterFunc: filterName,
 			},
+			{
+				Name:       "default_vmclasses",
+				ApiVersion: "virtualization.deckhouse.io/v1alpha3",
+				Kind:       "VirtualMachineClass",
+				FilterFunc: filterDefaultVMClass,
+			},
+			{
+				Name:       "default_storage_classes",
+				ApiVersion: "storage.k8s.io/v1",
+				Kind:       "StorageClass",
+				FilterFunc: filterDefaultStorageClass,
+			},
+			{
+				Name:       "virtualization_module_config",
+				ApiVersion: "deckhouse.io/v1alpha1",
+				Kind:       "ModuleConfig",
+				NameSelector: &types.NameSelector{MatchNames: []string{
+					"virtualization",
+				}},
+				FilterFunc: filterVirtualizationDiskStorageClassName,
+			},
 		},
 	},
 	collectDisabledProbes,
@@ -81,6 +107,9 @@ type appPresence struct {
 	smokeMini                      bool
 	grafanaV10                     bool
 	prometheusLongterm             bool
+	virtualImageURL                bool
+	virtualMachineClass            bool
+	diskStorageClass               bool
 }
 
 // collectDisabledProbes collects the references of probes (or probe groups) depending on enabled modules
@@ -88,8 +117,11 @@ type appPresence struct {
 func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 	// Input
 	var (
-		deplyments   = set.NewFromSnapshot(input.Snapshots.Get("deployments"))
-		statefulsets = set.NewFromSnapshot(input.Snapshots.Get("statefulsets"))
+		deplyments                         = set.NewFromSnapshot(input.Snapshots.Get("deployments"))
+		statefulsets                       = set.NewFromSnapshot(input.Snapshots.Get("statefulsets"))
+		defaultVMClasses                   = set.NewFromSnapshot(input.Snapshots.Get("default_vmclasses"))
+		defaultStorageClasses              = set.NewFromSnapshot(input.Snapshots.Get("default_storage_classes"))
+		virtualizationModuleDiskStorageCfg = set.NewFromSnapshot(input.Snapshots.Get("virtualization_module_config"))
 	)
 	presence := appPresence{
 		ccm:                deplyments.Has("cloud-controller-manager"),
@@ -99,6 +131,10 @@ func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 		smokeMini:          !input.Values.Get("upmeter.smokeMiniDisabled").Bool(),
 		grafanaV10:         deplyments.Has("grafana-v10"),
 		prometheusLongterm: statefulsets.Has("prometheus-longterm"),
+		virtualImageURL:    input.Values.Get("upmeter.virtualizationProbe.virtualImageURL").String() != "",
+		virtualMachineClass: input.Values.Get("upmeter.virtualizationProbe.virtualMachineClassName").String() != "" ||
+			len(defaultVMClasses.Slice()) > 0,
+		diskStorageClass: len(defaultStorageClasses.Slice()) > 0 || len(virtualizationModuleDiskStorageCfg.Slice()) > 0,
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	manuallyDisabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
@@ -191,6 +227,10 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 		disabledProbes.Add("extensions/label-enforcer")
 		disabledProbes.Add("extensions/observability-webhook")
 	}
+
+	if !enabledModules.Has("virtualization") || !presence.virtualImageURL || !presence.virtualMachineClass || !presence.diskStorageClass {
+		disabledProbes.Add("virtualization/")
+	}
 }
 
 func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Set) {
@@ -218,4 +258,32 @@ func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Se
 
 func filterName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetName(), nil
+}
+
+func filterDefaultVMClass(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	if obj.GetAnnotations()[defaultVMClassAnnotation] != "true" {
+		return nil, nil
+	}
+	return obj.GetName(), nil
+}
+
+func filterDefaultStorageClass(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	if obj.GetAnnotations()[defaultStorageClassAnnotation] != "true" {
+		return nil, nil
+	}
+	return obj.GetName(), nil
+}
+
+func filterVirtualizationDiskStorageClassName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	storageClassName, ok, err := unstructured.NestedString(
+		obj.UnstructuredContent(),
+		"spec", "settings", "virtualDisks", "defaultStorageClassName",
+	)
+	if err != nil {
+		return nil, err
+	}
+	if !ok || storageClassName == "" {
+		return nil, nil
+	}
+	return storageClassName, nil
 }
