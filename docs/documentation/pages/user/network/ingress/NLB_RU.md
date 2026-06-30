@@ -73,7 +73,7 @@ spec:
 
 ### Назначение IPAddressPool (режим BGP)
 
-В режиме BGP LoadBalancer получение IP-адреса возможно из определённого пула адресов через аннотацию `metallb.universe.tf/address-pool`.
+В режиме BGP LoadBalancer получение IP-адреса возможно из определённого пула адресов через аннотацию `network.deckhouse.io/load-balancer-pool`.
 Для режима L2 LoadBalancer необходимо использовать настройки [MetalLoadBalancerClass](../../../admin/configuration/network/ingress/nlb/metallb.html#пример-использования-metallb-в-режиме-l2-loadbalancer).
 
 Пример:
