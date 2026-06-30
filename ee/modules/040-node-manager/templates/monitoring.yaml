@@ -14,10 +14,6 @@
   {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/cluster-autoscaler.tpl" }}
 {{- end }}
 
-{{- if .Values.nodeManager.earlyOomEnabled }}
-  {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/early-oom.tpl" }}
-{{- end }}
-
 {{- if include "machine_controller_manager_enabled" . }}
   {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/machine-controller-manager.tpl" }}
 {{- end }}

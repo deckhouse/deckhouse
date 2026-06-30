@@ -17,14 +17,13 @@ package context
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/name212/govalue"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -36,7 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
@@ -46,27 +45,22 @@ type KubeClientSwitcher struct {
 	lockRunner *lock.InLockRunner
 	params     KubeClientSwitcherParams
 
-	logger log.Logger
+	// slogger is used for this switcher's own logging output.
+	slogger *slog.Logger
 }
 
 type KubeClientSwitcherParams struct {
 	TmpDir        string
 	GlobalOptions *options.GlobalOptions
 	IsDebug       bool
-	Logger        log.Logger
 	DisableSwitch bool
 }
 
 func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params KubeClientSwitcherParams) *KubeClientSwitcher {
-	logger := params.Logger
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
-	}
-
 	return &KubeClientSwitcher{
 		ctx:        ctx,
 		lockRunner: lockRunner,
-		logger:     logger,
+		slogger:    dhlog.FromContext(ctx.Ctx()),
 		params:     params,
 	}
 }
@@ -80,7 +74,7 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 		return nil
 	}
 
-	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
 		convergeState, err := s.createNodeUser(ctx)
 		if err != nil {
 			return err
@@ -100,7 +94,7 @@ func (s *KubeClientSwitcher) CleanupNodeUser() error {
 	}
 
 	// todo(ctx): does it's real need to use s.ctx.Ctx() instead of param context?
-	return s.logger.LogProcessCtx(s.ctx.Ctx(), "default", action, func(ctx context.Context) error {
+	return dhlog.RunProcess(s.ctx.Ctx(), s.slogger, action, func(ctx context.Context) error {
 		err := s.ctx.deleteConvergeState()
 		if err != nil {
 			return err
@@ -121,7 +115,7 @@ func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 		return nil
 	}
 
-	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -163,7 +157,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 		return nil
 	}
 
-	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -222,7 +216,7 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 		return nil
 	}
 
-	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -298,7 +292,7 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
-	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -629,13 +623,11 @@ func (s *KubeClientSwitcher) extractSSHClient(ctx context.Context) (libcon.SSHCl
 }
 
 func (s *KubeClientSwitcher) debug(f string, args ...any) {
-	// todo remove new line after migrate to lib-dhctl
-	s.logger.LogDebugF(f+"\n", args...)
+	s.slogger.DebugContext(s.ctx.Ctx(), strings.TrimRight(fmt.Sprintf(f, args...), "\n"))
 }
 
 func (s *KubeClientSwitcher) warn(f string, args ...any) {
-	// todo remove new line after migrate to lib-dhctl
-	s.logger.LogWarnF(f+"\n", args...)
+	s.slogger.WarnContext(s.ctx.Ctx(), strings.TrimRight(fmt.Sprintf(f, args...), "\n"))
 }
 
 func (s *KubeClientSwitcher) debugStartOperation(action string) {
@@ -728,13 +720,10 @@ func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractor
 		return nil, fmt.Errorf("failed to get meta config for node %s: %w", nodeName, err)
 	}
 
-	logger := e.switcher.logger
-
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           e.tmpDir,
 		GlobalOptions:    e.switcher.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           logger,
 		IsDebug:          e.switcher.params.IsDebug,
 	})
 
@@ -744,7 +733,7 @@ func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractor
 		return nil, fmt.Errorf("Failed to create executor for node %s: %w", nodeName, err)
 	}
 
-	executor, err := provider.OutputExecutor(ctx, logger)
+	executor, err := provider.OutputExecutor(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get output executor for node %s: %w", nodeName, err)
 	}

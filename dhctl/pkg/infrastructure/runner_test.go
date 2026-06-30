@@ -27,7 +27,6 @@ import (
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -266,7 +265,6 @@ func mustReadFile(t *testing.T, path string) []byte {
 }
 
 type sleepExecutor struct {
-	logger   log.Logger
 	cancelCh chan struct{}
 }
 
@@ -317,13 +315,7 @@ func (e *sleepExecutor) Show(ctx context.Context, opts ShowOpts) (result []byte,
 }
 
 func (e *sleepExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
-	e.logger.LogWarnLn("Call GetActions on dummy executor")
-
 	return nil, nil
-}
-
-func (e *sleepExecutor) SetExecutorLogger(logger log.Logger) {
-	e.logger = logger
 }
 
 func (e *sleepExecutor) Stop() {

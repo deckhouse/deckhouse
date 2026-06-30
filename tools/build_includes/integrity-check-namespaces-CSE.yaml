@@ -19,7 +19,6 @@ namespaces_for_integrity:
     - d8-ingress-nginx
     - d8-istio
     - d8-local-path-provisioner
-    - d8-log-shipper
     - d8-metallb
     - d8-monitoring
     - d8-multitenancy-manager
@@ -35,6 +34,7 @@ namespaces_for_integrity:
     - d8-sds-local-volume
     - d8-sds-node-configurator
     - d8-secrets-store-integration
+    - d8-security-events-manager
     - d8-service-with-healthchecks
     - d8-snapshot-controller
     - d8-static-routing-manager

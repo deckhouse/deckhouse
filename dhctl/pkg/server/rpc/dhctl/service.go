@@ -30,7 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -196,8 +196,8 @@ func onCheckResult(ctx context.Context, checkRes *check.CheckResult) error {
 		return fmt.Errorf("unable to encode check result json: %w", err)
 	}
 
-	_ = log.ProcessCtx(ctx, "default", "Check result", func(ctx context.Context) error {
-		log.InfoF("%s\n", printableCheckResDump)
+	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Check result", func(ctx context.Context) error {
+		dhlog.FromContext(ctx).InfoContext(ctx, string(printableCheckResDump))
 		return nil
 	})
 

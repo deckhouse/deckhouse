@@ -15,30 +15,31 @@
 package fs
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type CheckLinkSource func(string) error
 
-func CreateLinkIfNotExists(source string, check CheckLinkSource, destination string, logger log.Logger) error {
-	logger.LogDebugF("Create link from %s to %s\n", source, destination)
+func CreateLinkIfNotExists(ctx context.Context, source string, check CheckLinkSource, destination string) error {
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create link from %s to %s", source, destination))
 
 	link, err := os.Readlink(destination)
 	if err == nil {
 		if link == source {
-			logger.LogDebugF("Link %s exists and have valid source %s\n", destination, source)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Link %s exists and have valid source %s", destination, source))
 			return nil
 		}
 
-		logger.LogDebugF("Link %s exists, but do not have source %s, source is %s Remove and recreate\n",
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Link %s exists, but do not have source %s, source is %s Remove and recreate",
 			destination,
 			source,
 			link,
-		)
+		))
 
 		err = os.Remove(destination)
 		if err != nil {

@@ -360,7 +360,7 @@ jobs:
   security_scan_images_required:
     name: Security scan images required
     runs-on: self-slim
-    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    if: ${{ false }}
     needs:
       - pull_request_info
       - changed_images

@@ -1,0 +1,114 @@
+
+{{- define "control_plane_proxy_resources" }}
+cpu: 10m
+memory: 15Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+{{- $profiles := list "main" }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
+  {{- $profiles = append $profiles "etcd-arbiter" }}
+{{- end }}
+
+{{- range $profile := $profiles }}
+  {{- $appLabel := "control-plane-proxy" }}
+  {{- if ne $profile "main" }}
+    {{- $appLabel = printf "%s-%s" $appLabel $profile }}
+  {{- end }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
+  updatePolicy:
+    updateMode: "InPlaceOrRecreate"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: kube-rbac-proxy
+      minAllowed:
+        {{- include "control_plane_proxy_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 30Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ $appLabel }}
+  template:
+    metadata:
+      labels:
+        app: {{ $appLabel }}
+    spec:
+      serviceAccountName: d8-control-plane-manager-control-plane-proxy
+      automountServiceAccountToken: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | nindent 6 }}
+      {{- if eq $profile "main" }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- else }}
+      nodeSelector:
+        node.deckhouse.io/etcd-arbiter: ""
+      {{- end }}
+      {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4209"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        ports:
+        - containerPort: 4209
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4209
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4209
+            scheme: HTTPS
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            {{- if eq $profile "main" }}
+            - upstream: https://127.0.0.1:10257/metrics
+              upstreamInsecureSkipVerify: true
+              path: /controller-manager/metrics
+            - upstream: https://127.0.0.1:10259/metrics
+              upstreamInsecureSkipVerify: true
+              path: /scheduler/metrics
+            {{- end }}
+            - upstream: http://127.0.0.1:2381/metrics
+              path: /etcd/metrics
+{{- end }}
+{{- end }}

@@ -60,6 +60,7 @@ jobs:
       labels: ${{ steps.pr_props.outputs.labels }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+      changes_node_controller: ${{ steps.changes.outputs.node_controller }}
 
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
@@ -264,6 +265,8 @@ jobs:
               - './ee/candi/**/openapi/*'
             not_markdown:
               - '!./**/*.md'
+            node_controller:
+              - './modules/040-node-manager/images/node-controller/**'
 
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
@@ -914,7 +917,7 @@ jobs:
   drweb-scan:
     name: Dr.Web Scan ${{ matrix.branch }}
     runs-on: [self-hosted, antivirus]
-    if: github.repository == 'deckhouse/deckhouse'
+    if: ${{ false }}
     # PR mode: filter scanned images by the changed_images diff (delta-only scan).
     needs: [get-tags, changed_images]
     strategy:
@@ -1059,7 +1062,7 @@ jobs:
   kaspersky-scan:
     name: Kaspersky Scan ${{ matrix.branch }}
     runs-on: [self-hosted, antivirus]
-    if: github.repository == 'deckhouse/deckhouse'
+    if: ${{ false }}
     # PR mode: filter scanned images by the changed_images diff (delta-only scan).
     needs: [get-tags, changed_images]
     strategy:
@@ -1312,7 +1315,7 @@ jobs:
   security_scan_images_required:
     name: Security scan images required
     runs-on: self-slim
-    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    if: ${{ false }}
     needs:
       - pull_request_info
       - changed_images

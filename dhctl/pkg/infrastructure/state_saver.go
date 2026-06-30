@@ -17,12 +17,13 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -50,9 +51,9 @@ func NewStateSaver(destinations []SaverDestination) *StateSaver {
 
 // Start creates a new file watcher for r.statePath and
 // a chan to stop it.
-func (s *StateSaver) Start(runner *Runner) error {
+func (s *StateSaver) Start(ctx context.Context, runner *Runner) error {
 	if runner == nil {
-		log.ErrorF("Possible bug!!! The state watcher runner is nil!\n")
+		dhlog.FromContext(ctx).ErrorContext(ctx, "Possible bug!!! The state watcher runner is nil!")
 		return nil
 	}
 
@@ -62,17 +63,17 @@ func (s *StateSaver) Start(runner *Runner) error {
 	s.runnerName = fmt.Sprintf("[StateSaver runner='%s' state='%s'] ", runner.name, runner.statePath)
 
 	if s.stopped {
-		s.debug("Saver state saver has not been started. Already stopped.")
+		s.debug(ctx, "Saver state saver has not been started. Already stopped.")
 		return nil
 	}
 
 	if len(s.saversDestinations) == 0 {
-		s.debug("Saver state saver has not been started. Empty destinations")
+		s.debug(ctx, "Saver state saver has not been started. Empty destinations")
 		return nil
 	}
 
 	if s.watcher != nil {
-		s.debug("Saver state saver already started")
+		s.debug(ctx, "Saver state saver already started")
 		return nil
 	}
 
@@ -84,7 +85,7 @@ func (s *StateSaver) Start(runner *Runner) error {
 
 	var err error
 	s.doneCh = make(chan struct{})
-	s.watcher, err = fs.StartFileWatcher(s.runner.statePath, s.FsEventHandler, s.doneCh, s.runner.logger)
+	s.watcher, err = fs.StartFileWatcher(ctx, s.runner.statePath, s.FsEventHandler, s.doneCh)
 	if err != nil {
 		return fmt.Errorf("fs watcher for intermediate infrastructure state file: %s: %v", s.runner.statePath, err)
 	}
@@ -93,9 +94,9 @@ func (s *StateSaver) Start(runner *Runner) error {
 }
 
 // Stop is blocked until doneCh is closed.
-func (s *StateSaver) Stop() {
+func (s *StateSaver) Stop(ctx context.Context) {
 	if s.stopped {
-		s.debug("Already been stopped")
+		s.debug(ctx, "Already been stopped")
 		return
 	}
 
@@ -103,13 +104,13 @@ func (s *StateSaver) Stop() {
 	if s.watcher != nil {
 		err := s.watcher.Close()
 		if err != nil {
-			s.debug("State file watcher did not close: %v", err)
+			s.debug(ctx, "State file watcher did not close: %v", err)
 		}
 		// Wait until saves are completed.
 		<-s.doneCh
 	}
 
-	s.debug("Stopped successfully")
+	s.debug(ctx, "Stopped successfully")
 }
 
 func (s *StateSaver) IsStarted() bool {
@@ -127,29 +128,29 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	ctx := context.TODO()
 
 	if s.runner == nil {
-		log.ErrorF("Possible bug!!! The state watcher got fs event while not started!\n")
+		dhlog.FromContext(ctx).ErrorContext(ctx, "Possible bug!!! The state watcher got fs event while not started!")
 	}
 
 	if event.Op&fsnotify.Write != fsnotify.Write {
 		return
 	}
-	s.debug("State file modified: %s", event.Name)
+	s.debug(ctx, "State file modified: %s", event.Name)
 	if s.runner != nil && s.runner.isDebug {
-		fs.CreateFileBackup(event.Name)
+		fs.CreateFileBackup(ctx, event.Name)
 	}
 
 	if len(s.saversDestinations) == 0 {
-		s.debug("Not found state saversDestinations. Skip. %s", event.Name)
+		s.debug(ctx, "Not found state saversDestinations. Skip. %s", event.Name)
 		return
 	}
 
 	outputs, err := OnlyState(ctx, s.runner, nil)
 	if err != nil {
-		log.ErrorF("Parse intermediate state: %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Parse intermediate state: %v", err))
 		return
 	}
 
-	s.debug("Save intermediate state...")
+	s.debug(ctx, "Save intermediate state...")
 	wg := &sync.WaitGroup{}
 	hasError := int32(0)
 	for _, saver := range s.saversDestinations {
@@ -157,7 +158,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		wg.Go(func() {
 			err = svr.SaveState(ctx, outputs)
 			if err != nil {
-				log.ErrorF("Save intermediate state error: %v\n", err)
+				dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Save intermediate state error: %v", err))
 				atomic.StoreInt32(&hasError, 1)
 				return
 			}
@@ -167,12 +168,12 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	wg.Wait()
 
 	if (s.stopped || s.runner.stopped) && hasError == 0 {
-		s.debug("Infrastructure state is saved.")
+		s.debug(ctx, "Infrastructure state is saved.")
 	}
 }
 
-func (s *StateSaver) debug(f string, args ...any) {
-	debugStateSaver(s.runnerName+f, args...)
+func (s *StateSaver) debug(ctx context.Context, f string, args ...any) {
+	debugStateSaver(ctx, s.runnerName+f, args...)
 }
 
 func (s *StateSaver) addDestinations(destinations ...SaverDestination) {
@@ -190,17 +191,17 @@ type cacheDestination struct {
 
 func (d *cacheDestination) SaveState(ctx context.Context, outputs *PipelineOutputs) error {
 	if len(outputs.InfrastructureState) == 0 {
-		debugStateSaver("State is empty. Skip")
+		debugStateSaver(ctx, "State is empty. Skip")
 		return nil
 	}
 	name := d.runner.stateName()
-	debugStateSaver("Intermediate save state %s in cache...\n", name)
+	debugStateSaver(ctx, "Intermediate save state %s in cache...\n", name)
 	err := d.runner.stateCache.Save(ctx, name, outputs.InfrastructureState)
 	msg := fmt.Sprintf("Intermediate state %s in cache was saved\n", name)
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate state %s in cache was not saved: %v\n", name, err)
 	}
-	debugStateSaver(msg)
+	debugStateSaver(ctx, msg)
 	return err
 }
 
@@ -214,6 +215,6 @@ func getCacheDestination(runner *Runner) *cacheDestination {
 	}
 }
 
-func debugStateSaver(f string, args ...any) {
-	log.DebugF(f+"\n", args...)
+func debugStateSaver(ctx context.Context, f string, args ...any) {
+	dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf(f+"\n", args...), "\n"))
 }

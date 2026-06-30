@@ -15,17 +15,18 @@
 package registryutil
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
-func NewRegistryClient(scheme, ca string) (*http.Client, error) {
-	transport, err := NewRegistryTransport(scheme, ca)
+func NewRegistryClient(ctx context.Context, scheme, ca string) (*http.Client, error) {
+	transport, err := NewRegistryTransport(ctx, scheme, ca)
 	if err != nil {
 		return nil, fmt.Errorf("creating registry transport: %w", err)
 	}
@@ -33,7 +34,7 @@ func NewRegistryClient(scheme, ca string) (*http.Client, error) {
 	return &http.Client{Transport: transport}, nil
 }
 
-func NewRegistryTransport(scheme, ca string) (*http.Transport, error) {
+func NewRegistryTransport(ctx context.Context, scheme, ca string) (*http.Transport, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if strings.EqualFold(scheme, "http") {
@@ -47,7 +48,7 @@ func NewRegistryTransport(scheme, ca string) (*http.Transport, error) {
 
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
-		log.WarnF("Cannot get system CAs pool, falling back to custom CA pool only: %v\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot get system CAs pool, falling back to custom CA pool only: %v", err))
 		certPool = x509.NewCertPool()
 	}
 	if certPool == nil {

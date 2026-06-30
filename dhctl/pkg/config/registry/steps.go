@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -67,7 +67,7 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	if !config.LegacyMode {
 		if err := checkInit(ctx, kubeClient); err != nil {
-			log.DebugF("Error while checking registry init: %v\n", err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry init: %v", err))
 			return ErrIsNotReady
 		}
 
@@ -75,17 +75,17 @@ func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClie
 		if err != nil {
 			if msg != "" {
 				err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
-				log.DebugF("Error while checking registry ready: %v\n", err)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
 				return err
 			}
 
-			log.DebugF("Error while checking registry ready: %v\n", err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
 			return ErrIsNotReady
 		}
 	}
 
 	if err := removeInitSecret(ctx, kubeClient); err != nil {
-		log.DebugF("Error while removing registry init secret: %v\n", err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while removing registry init secret: %v", err))
 		return ErrIsNotReady
 	}
 

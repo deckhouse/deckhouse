@@ -334,22 +334,15 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- url: {{ .SOURCE_REPO }}/llvm/llvm-project.git
-  tag: {{ $llvmRev }}
-  add: /
-  to: /src/llvm
-  excludePaths:
-  - llvm/utils/git
-  - mlir/utils/vscode
-  - third-party/benchmark
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  - git clone --depth 1 --branch {{ $llvmRev }} $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
+  - rm -r /src/llvm/llvm/utils/git
+  - rm -r /src/llvm/mlir/utils/vscode
+  - rm -r /src/llvm/third-party/benchmark
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
   - git apply --verbose /patches/*.patch

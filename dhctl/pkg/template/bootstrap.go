@@ -16,11 +16,12 @@ package template
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -36,7 +37,7 @@ func PrepareBootstrap(
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBootstrap")
 	defer span.End()
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP)
 	if err != nil {
 		return err
 	}
@@ -59,10 +60,10 @@ func PrepareBootstrap(
 		},
 	}
 
-	return log.ProcessCtx(ctx, "default", "Render bootstrap templates", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Render bootstrap templates", func(ctx context.Context) error {
 		for _, info := range saveInfo {
-			log.InfoF("From %q to %q\n", info.from, info.to)
-			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("From %q to %q", info.from, info.to))
+			if err := templateController.RenderAndSaveTemplates(ctx, info.from, info.to, info.data, info.ignorePaths); err != nil {
 				return err
 			}
 		}

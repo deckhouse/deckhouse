@@ -27,9 +27,10 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libcon_config "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type providerOptions struct {
@@ -95,7 +96,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	}
 
 	if options.requireKubeProvider && cfg.OverSSH() {
-		if sshProviderInitializer == nil || !sshProviderInitializer.CheckHosts() {
+		if sshProviderInitializer == nil || !sshProviderInitializer.CheckHosts(ctx) {
 			return sshProviderInitializer, nil, ErrSSHHostRequiredForKubernetesConnection
 		}
 	}
@@ -152,16 +153,22 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 	} else {
 		// loggerProvider should be forced to non-interactive to ask for password, because our wrapper hides all Info* and Warn* output
 		sett := baseProviderSettings.Clone()
-		loggerProvider := log.NonInteractiveLoggerProvider()
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewAdapter(dhlog.Discard()))
 		sett.WithLogger(loggerProvider)
 		parser := libcon_config.NewFlagsParser(sett)
 		parser.WithEnvsPrefix(global.SSHEnvsPrefix)
-		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
-		flags, err := parser.InitFlags(fset)
+
+		flags, err := parser.InitFlags(
+			flag.NewFlagSet("my-set", flag.ExitOnError),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("init flags: %w", err)
 		}
-		config, err = flags.ExtractConfig(os.Args[1:])
+
+		config, err = flags.ExtractConfig(
+			os.Args[1:],
+			libcon_config.ParseWithRequiredSSHHost(false),
+		)
 		if err != nil {
 			if strings.Contains(err.Error(), "Failed to read private keys from flags") && options.kubeFlagsDefined {
 				return nil, nil

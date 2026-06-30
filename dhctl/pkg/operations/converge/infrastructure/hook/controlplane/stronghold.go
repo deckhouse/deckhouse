@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 const (
@@ -52,7 +52,7 @@ func (c *StrongholdReadinessChecker) IsReady(ctx context.Context, _ string) (boo
 	_, err = kubeClient.CoreV1().Namespaces().Get(ctx, strongholdNamespace, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.DebugLn("Namespace d8-stronghold not found, skipping Stronghold readiness check")
+			dhlog.FromContext(ctx).DebugContext(ctx, "Namespace d8-stronghold not found, skipping Stronghold readiness check")
 			return true, nil
 		}
 		return false, fmt.Errorf("failed to check d8-stronghold namespace: %w", err)
@@ -61,7 +61,7 @@ func (c *StrongholdReadinessChecker) IsReady(ctx context.Context, _ string) (boo
 	sts, err := kubeClient.AppsV1().StatefulSets(strongholdNamespace).Get(ctx, strongholdStatefulSet, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.DebugLn("StatefulSet stronghold not found in d8-stronghold namespace, skipping readiness check")
+			dhlog.FromContext(ctx).DebugContext(ctx, "StatefulSet stronghold not found in d8-stronghold namespace, skipping readiness check")
 			return true, nil
 		}
 		return false, fmt.Errorf("failed to get Stronghold StatefulSet: %w", err)
@@ -74,11 +74,11 @@ func (c *StrongholdReadinessChecker) IsReady(ctx context.Context, _ string) (boo
 	ready := sts.Status.ReadyReplicas
 
 	if ready < desired {
-		log.InfoF("Stronghold StatefulSet: %d/%d replicas ready\n", ready, desired)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Stronghold StatefulSet: %d/%d replicas ready", ready, desired))
 		return false, nil
 	}
 
-	log.InfoF("Stronghold StatefulSet is ready (%d/%d replicas)\n", ready, desired)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Stronghold StatefulSet is ready (%d/%d replicas)", ready, desired))
 	return true, nil
 }
 

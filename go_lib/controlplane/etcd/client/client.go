@@ -53,6 +53,8 @@ type Interface interface {
 	WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error)
 	MemberAddAsLearner(ctx context.Context, peerAddrs string) (*clientv3.MemberAddResponse, error)
 	MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error)
+	CheckClusterHealthy(ctx context.Context, timeout time.Duration) error
+	Defragment(ctx context.Context, endpoint string) error
 	Raw() *clientv3.Client
 	Close() error
 }
@@ -414,6 +416,32 @@ func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error)
 		clusterStatus[ep] = resp
 	}
 	return clusterStatus, nil
+}
+
+// CheckClusterHealthy verifies that every known etcd member is reachable,
+// has an elected leader, and reports no internal errors.
+// Each member status call is bounded by the given timeout.
+func (c *Client) CheckClusterHealthy(ctx context.Context, timeout time.Duration) error {
+	for _, ep := range c.Endpoints() {
+		statusCtx, cancel := context.WithTimeout(ctx, timeout)
+		resp, err := c.Status(statusCtx, ep)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("member %s unreachable: %w", ep, err)
+		}
+		if resp.Leader == 0 {
+			return fmt.Errorf("member %s has no leader (cluster has no quorum)", ep)
+		}
+		if len(resp.Errors) > 0 {
+			return fmt.Errorf("member %s reported errors: %v", ep, resp.Errors)
+		}
+	}
+	return nil
+}
+
+func (c *Client) Defragment(ctx context.Context, endpoint string) error {
+	_, err := c.client.Defragment(ctx, endpoint)
+	return err
 }
 
 func (c *Client) WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error) {

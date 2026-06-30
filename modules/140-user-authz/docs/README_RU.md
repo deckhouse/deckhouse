@@ -24,7 +24,7 @@ description: "Авторизация и управление доступом п
   Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в `ClusterRoleBinding` роль `d8:manage:networking:manager`.
 - Управлять доступом к *пользовательским* ресурсам модулей в рамках пространства имён.
 
-  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](../log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](../log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
+  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
 
 Роли, создаваемые модулем, делятся на два класса:
 
@@ -193,15 +193,7 @@ read:
     - deckhouse.io/applications
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
-    - deckhouse.io/clusterdaemonsetmetrics
-    - deckhouse.io/clusterdeploymentmetrics
-    - deckhouse.io/clusteringressmetrics
-    - deckhouse.io/clusterpodmetrics
-    - deckhouse.io/clusterservicemetrics
-    - deckhouse.io/clusterstatefulsetmetrics
-    - deckhouse.io/daemonsetmetrics
     - deckhouse.io/deckhousereleases
-    - deckhouse.io/deploymentmetrics
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -210,7 +202,6 @@ read:
     - deckhouse.io/gcpinstanceclasses
     - deckhouse.io/huaweicloudinstanceclasses
     - deckhouse.io/hubblemonitoringconfigs
-    - deckhouse.io/ingressmetrics
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/localpathprovisioners
@@ -220,19 +211,15 @@ read:
     - deckhouse.io/modules
     - deckhouse.io/modulesources
     - deckhouse.io/moduleupdatepolicies
-    - deckhouse.io/namespacemetrics
     - deckhouse.io/nodegroups
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/podmetrics
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
     - deckhouse.io/securitypolicyexceptions
-    - deckhouse.io/servicemetrics
-    - deckhouse.io/statefulsetmetrics
     - deckhouse.io/vcdaffinityrules
     - deckhouse.io/vcdinstanceclasses
     - deckhouse.io/vsphereinstanceclasses
@@ -347,13 +334,9 @@ read:
 
 ```text
 read:
-    - deckhouse.io/clusterlogdestinations
-    - deckhouse.io/clusterloggingconfigs
     - deckhouse.io/customprometheusrules
     - deckhouse.io/grafanaadditionaldatasources
     - deckhouse.io/grafanadashboarddefinitions
-read-write:
-    - deckhouse.io/podloggingconfigs
 write:
     - apps/deployments
     - apps/statefulsets
@@ -364,15 +347,8 @@ write:
     - cert-manager.io/certificates
     - cert-manager.io/issuers
     - configmaps
-    - deckhouse.io/daemonsetmetrics
-    - deckhouse.io/deploymentmetrics
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
-    - deckhouse.io/ingressmetrics
-    - deckhouse.io/namespacemetrics
-    - deckhouse.io/podmetrics
-    - deckhouse.io/servicemetrics
-    - deckhouse.io/statefulsetmetrics
     - discovery.k8s.io/endpointslices
     - endpoints
     - extensions/deployments
@@ -454,7 +430,6 @@ patch,update:
     - nodes
 read:
     - deckhouse.io/ingressistiocontrollers
-    - deckhouse.io/ingressnginxcontrollers/status
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -469,9 +444,7 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
-    - apps.kruise.io/daemonsets
     - deckhouse.io/downtimes
-    - deckhouse.io/ingressnginxcontrollers
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - deckhouse.io/upmeterremotewrites
@@ -484,14 +457,6 @@ write:
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
-    - deckhouse.io/clusterdaemonsetmetrics
-    - deckhouse.io/clusterdeploymentmetrics
-    - deckhouse.io/clusteringressmetrics
-    - deckhouse.io/clusterlogdestinations
-    - deckhouse.io/clusterloggingconfigs
-    - deckhouse.io/clusterpodmetrics
-    - deckhouse.io/clusterservicemetrics
-    - deckhouse.io/clusterstatefulsetmetrics
     - deckhouse.io/customprometheusrules
     - deckhouse.io/deckhousereleases
     - deckhouse.io/grafanaadditionaldatasources

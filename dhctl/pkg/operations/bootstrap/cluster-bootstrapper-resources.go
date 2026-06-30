@@ -20,19 +20,18 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	resourcesToCreate := make(template.Resources, 0)
 	if b.Options.Bootstrap.ResourcesPath != "" {
-		log.WarnLn("--resources flag is deprecated. Please use the --config flag multiple times for logical resource separation")
-		parsedResources, err := template.ParseResources(b.Options.Bootstrap.ResourcesPath, nil)
+		dhlog.FromContext(ctx).WarnContext(ctx, "--resources flag is deprecated. Please use the --config flag multiple times for logical resource separation")
+		parsedResources, err := template.ParseResources(ctx, b.Options.Bootstrap.ResourcesPath, nil)
 		if err != nil {
 			return err
 		}
@@ -41,7 +40,7 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	} else {
 		paths := fs.RevealWildcardPaths(b.Options.Global.ConfigPaths)
 		for _, cfg := range paths {
-			ress, err := template.ParseResources(cfg, nil)
+			ress, err := template.ParseResources(ctx, cfg, nil)
 			if err != nil {
 				return err
 			}
@@ -50,41 +49,33 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		}
 	}
 
-	log.DebugF("Resources: %s\n", resourcesToCreate.String())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resources: %s", resourcesToCreate.String()))
 
 	if len(resourcesToCreate) == 0 {
-		log.WarnLn("No resources to create were found.")
+		dhlog.FromContext(ctx).WarnContext(ctx, "No resources to create were found.")
 		return nil
+	}
+
+	body := func(_ chan phases.Progress) error {
+		return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create resources", func(ctx context.Context) error {
+			kubeCl, err := b.KubeProvider.Client(ctx)
+			if err != nil {
+				return err
+			}
+
+			checkers, err := resources.GetCheckers(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, nil)
+			if err != nil {
+				return err
+			}
+
+			return resources.CreateResourcesLoop(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, checkers, nil, b.Options.Bootstrap.ResourcesTimeout)
+		})
 	}
 
 	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
-		intLogger, ok := b.logger.(*log.InteractiveLogger)
-		if !ok {
-			return fmt.Errorf("logger is not interactive")
-		}
-		labelChan := intLogger.GetPhaseChan()
-		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Create resources", labelChan, phasesChan, intLogger.GetLogChan())
-
-		if err := progressbar.InitProgressBar(pbParam); err != nil {
-			return err
-		}
-
-		defer progressbar.FinishDefaultProgressBar()
+		return runProgress(ctx, dhlog.FromContext(ctx), "Create resources", body)
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Create resources", func(ctx context.Context) error {
-		kubeCl, err := b.KubeProvider.Client(ctx)
-		if err != nil {
-			return err
-		}
-
-		checkers, err := resources.GetCheckers(&client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, nil)
-		if err != nil {
-			return err
-		}
-
-		return resources.CreateResourcesLoop(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, checkers, nil, b.Options.Bootstrap.ResourcesTimeout)
-	})
+	return body(nil)
 }

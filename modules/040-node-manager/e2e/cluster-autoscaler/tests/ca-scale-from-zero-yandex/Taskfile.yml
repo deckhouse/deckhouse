@@ -8,22 +8,31 @@ tasks:
     desc: Run e2e test with JUNIT report
     cmds:
       - mkdir -p ./reports
-      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/
 
   run:quiet:
     desc: Run e2e test with suppressed output (only errors, failures, summary)
     cmds:
       - mkdir -p ./reports
-      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --quiet
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ --quiet
 
-  dry-run:
-    desc: Validate test and configuration YAML against the chainsaw schema (no cluster needed)
+  lint:test:
+    desc: Validate test YAML against the chainsaw schema
     cmds:
       - chainsaw lint test -f chainsaw-test.yaml
+
+  lint:configuration:
+    desc: Validate configuration YAML against the chainsaw schema
+    cmds:
       - chainsaw lint configuration -f {{.CONFIG}}
+
+  dry-run:
+    desc: Validate test YAML without a cluster
+    cmds:
+      - chainsaw test --test-dir . --config {{.CONFIG}} --no-cluster
 
   run:debug:
     desc: Run test with pause on failure and fail-fast
     cmds:
       - mkdir -p ./reports
-      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --pause-on-failure --fail-fast
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ --pause-on-failure --fail-fast

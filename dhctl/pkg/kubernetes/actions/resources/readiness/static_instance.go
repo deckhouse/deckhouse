@@ -16,20 +16,18 @@ package readiness
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type StaticInstanceChecker struct {
-	loggerProvider log.LoggerProvider
 }
 
-func NewStaticInstanceChecker(loggerProvider log.LoggerProvider) *StaticInstanceChecker {
-	return &StaticInstanceChecker{
-		loggerProvider: loggerProvider,
-	}
+func NewStaticInstanceChecker() *StaticInstanceChecker {
+	return &StaticInstanceChecker{}
 }
 
 func (s *StaticInstanceChecker) WaitAttemptsBeforeCheck() int {
@@ -37,10 +35,8 @@ func (s *StaticInstanceChecker) WaitAttemptsBeforeCheck() int {
 	return 1
 }
 
-func (s *StaticInstanceChecker) IsReady(_ context.Context, resource *unstructured.Unstructured, resourceName string) (bool, error) {
-	logger := log.SafeProvideLogger(s.loggerProvider)
-
-	logNotReady := notFoundFuncDebugLogNotReady(logger, resourceName)
+func (s *StaticInstanceChecker) IsReady(ctx context.Context, resource *unstructured.Unstructured, resourceName string) (bool, error) {
+	logNotReady := notFoundFuncDebugLogNotReady(ctx, resourceName)
 	castError := castErrorFuncForResource(resourceName, "")
 
 	status := castKey[map[string]any](resource.Object, "status", logNotReady, castError)
@@ -61,7 +57,7 @@ func (s *StaticInstanceChecker) IsReady(_ context.Context, resource *unstructure
 	phase := phaseRes.value
 	res := phase == "Running"
 
-	logger.LogDebugF("Found for %s currentStatus.phase '%s', result is %v.\n", resourceName, phase, res)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found for %s currentStatus.phase '%s', result is %v.", resourceName, phase, res))
 
 	return res, nil
 }

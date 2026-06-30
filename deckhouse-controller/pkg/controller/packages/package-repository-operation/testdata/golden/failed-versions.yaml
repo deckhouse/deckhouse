@@ -92,5 +92,4 @@ status:
   - name: test-package
     type: Application
   packagesCount: 1
-  partialScanAvailable: false
   phase: Active
