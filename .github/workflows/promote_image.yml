@@ -230,6 +230,15 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
           IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -250,7 +259,7 @@ jobs:
             DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
             if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
-              regctl image copy "${SRC_ATT}" "${DST_ATT}"
+              regctl_copy "${SRC_ATT}" "${DST_ATT}"
             fi
           done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
 
@@ -263,6 +272,16 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
+
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
@@ -285,12 +304,12 @@ jobs:
             SRC="${REPO_SRC}:${IMAGE_TAG}"
             DST="${REPO_DST}:${IMAGE_TAG}"
             echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
-            regctl image copy "${SRC}" "${DST}"
+            regctl_copy "${SRC}" "${DST}"
             local DIGEST
             DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
             if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+              regctl_copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
             else
               echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
             fi
@@ -312,7 +331,7 @@ jobs:
               SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
               DST_REF="${PROD_PATH}@${IMG_DIGEST}"
               echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
-              regctl image copy "${SRC_REF}" "${DST_REF}"
+              regctl_copy "${SRC_REF}" "${DST_REF}"
             done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
             rm -rf ${DIGESTS_JSON}
           else
@@ -461,6 +480,15 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
           IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -481,7 +509,7 @@ jobs:
             DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
             if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
-              regctl image copy "${SRC_ATT}" "${DST_ATT}"
+              regctl_copy "${SRC_ATT}" "${DST_ATT}"
             fi
           done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
 
@@ -494,6 +522,16 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
+
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
@@ -516,12 +554,12 @@ jobs:
             SRC="${REPO_SRC}:${IMAGE_TAG}"
             DST="${REPO_DST}:${IMAGE_TAG}"
             echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
-            regctl image copy "${SRC}" "${DST}"
+            regctl_copy "${SRC}" "${DST}"
             local DIGEST
             DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
             if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+              regctl_copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
             else
               echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
             fi
@@ -543,7 +581,7 @@ jobs:
               SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
               DST_REF="${PROD_PATH}@${IMG_DIGEST}"
               echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
-              regctl image copy "${SRC_REF}" "${DST_REF}"
+              regctl_copy "${SRC_REF}" "${DST_REF}"
             done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
             rm -rf ${DIGESTS_JSON}
           else
@@ -692,6 +730,15 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
           IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -712,7 +759,7 @@ jobs:
             DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
             if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
-              regctl image copy "${SRC_ATT}" "${DST_ATT}"
+              regctl_copy "${SRC_ATT}" "${DST_ATT}"
             fi
           done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
 
@@ -725,6 +772,16 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
+
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
@@ -747,12 +804,12 @@ jobs:
             SRC="${REPO_SRC}:${IMAGE_TAG}"
             DST="${REPO_DST}:${IMAGE_TAG}"
             echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
-            regctl image copy "${SRC}" "${DST}"
+            regctl_copy "${SRC}" "${DST}"
             local DIGEST
             DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
             if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+              regctl_copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
             else
               echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
             fi
@@ -774,7 +831,7 @@ jobs:
               SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
               DST_REF="${PROD_PATH}@${IMG_DIGEST}"
               echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
-              regctl image copy "${SRC_REF}" "${DST_REF}"
+              regctl_copy "${SRC_REF}" "${DST_REF}"
             done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
             rm -rf ${DIGESTS_JSON}
           else
@@ -923,6 +980,15 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
           IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -943,7 +1009,7 @@ jobs:
             DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
             if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
-              regctl image copy "${SRC_ATT}" "${DST_ATT}"
+              regctl_copy "${SRC_ATT}" "${DST_ATT}"
             fi
           done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
 
@@ -956,6 +1022,16 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
+
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
@@ -978,12 +1054,12 @@ jobs:
             SRC="${REPO_SRC}:${IMAGE_TAG}"
             DST="${REPO_DST}:${IMAGE_TAG}"
             echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
-            regctl image copy "${SRC}" "${DST}"
+            regctl_copy "${SRC}" "${DST}"
             local DIGEST
             DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
             if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+              regctl_copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
             else
               echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
             fi
@@ -1005,7 +1081,7 @@ jobs:
               SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
               DST_REF="${PROD_PATH}@${IMG_DIGEST}"
               echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
-              regctl image copy "${SRC_REF}" "${DST_REF}"
+              regctl_copy "${SRC_REF}" "${DST_REF}"
             done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
             rm -rf ${DIGESTS_JSON}
           else
@@ -1154,6 +1230,15 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
           IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -1174,7 +1259,7 @@ jobs:
             DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
             if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
-              regctl image copy "${SRC_ATT}" "${DST_ATT}"
+              regctl_copy "${SRC_ATT}" "${DST_ATT}"
             fi
           done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
 
@@ -1187,6 +1272,16 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
+
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
@@ -1209,12 +1304,12 @@ jobs:
             SRC="${REPO_SRC}:${IMAGE_TAG}"
             DST="${REPO_DST}:${IMAGE_TAG}"
             echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
-            regctl image copy "${SRC}" "${DST}"
+            regctl_copy "${SRC}" "${DST}"
             local DIGEST
             DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
             if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+              regctl_copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
             else
               echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
             fi
@@ -1236,7 +1331,7 @@ jobs:
               SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
               DST_REF="${PROD_PATH}@${IMG_DIGEST}"
               echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
-              regctl image copy "${SRC_REF}" "${DST_REF}"
+              regctl_copy "${SRC_REF}" "${DST_REF}"
             done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
             rm -rf ${DIGESTS_JSON}
           else
@@ -1385,6 +1480,15 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
           IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -1405,7 +1509,7 @@ jobs:
             DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
             if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
-              regctl image copy "${SRC_ATT}" "${DST_ATT}"
+              regctl_copy "${SRC_ATT}" "${DST_ATT}"
             fi
           done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
 
@@ -1418,6 +1522,16 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           set -euo pipefail
+          function regctl_copy() {
+            local attempt
+            for attempt in $(seq 1 5); do
+              regctl image copy "$@" && return 0
+              [[ $attempt -eq 5 ]] && return 1
+              echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+              sleep 5
+            done
+          }
+
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
@@ -1440,12 +1554,12 @@ jobs:
             SRC="${REPO_SRC}:${IMAGE_TAG}"
             DST="${REPO_DST}:${IMAGE_TAG}"
             echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
-            regctl image copy "${SRC}" "${DST}"
+            regctl_copy "${SRC}" "${DST}"
             local DIGEST
             DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
             if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
               echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+              regctl_copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
             else
               echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
             fi
@@ -1467,7 +1581,7 @@ jobs:
               SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
               DST_REF="${PROD_PATH}@${IMG_DIGEST}"
               echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
-              regctl image copy "${SRC_REF}" "${DST_REF}"
+              regctl_copy "${SRC_REF}" "${DST_REF}"
             done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
             rm -rf ${DIGESTS_JSON}
           else
