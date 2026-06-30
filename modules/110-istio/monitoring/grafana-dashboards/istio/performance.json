@@ -1175,11 +1175,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (label_istio_io_rev) (container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"} * on (namespace, pod) group_left (label_istio_io_rev) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\"})",
+          "expr": "sum by (label_app_kubernetes_io_version) (container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"} * on (namespace, pod) group_left (label_app_kubernetes_io_version) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\", label_app_kubernetes_io_version!=\"\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{label_istio_io_rev}} - Total (k8s)",
+          "legendFormat": "{{label_app_kubernetes_io_version}} - Total (k8s)",
           "refId": "C",
           "step": 2
         },
@@ -1188,11 +1188,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (label_istio_io_rev, container) (container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"} * on (namespace, pod) group_left (label_istio_io_rev) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\"})",
+          "expr": "sum by (label_app_kubernetes_io_version, container) (container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"} * on (namespace, pod) group_left (label_app_kubernetes_io_version) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\", label_app_kubernetes_io_version!=\"\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{label_istio_io_rev}} - {{container}} (k8s)",
+          "legendFormat": "{{label_app_kubernetes_io_version}} - {{container}} (k8s)",
           "refId": "B",
           "step": 2
         }
@@ -1286,11 +1286,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (label_istio_io_rev) (rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"}[$__rate_interval]) * on (namespace, pod) group_left (label_istio_io_rev) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\"})",
+          "expr": "sum by (label_app_kubernetes_io_version) (rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"}[$__rate_interval]) * on (namespace, pod) group_left (label_app_kubernetes_io_version) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\", label_app_kubernetes_io_version!=\"\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{label_istio_io_rev}} - Total (k8s)",
+          "legendFormat": "{{label_app_kubernetes_io_version}} - Total (k8s)",
           "refId": "A",
           "step": 2
         },
@@ -1299,11 +1299,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (label_istio_io_rev, container) (rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"}[$__rate_interval]) * on (namespace, pod) group_left (label_istio_io_rev) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\"})",
+          "expr": "sum by (label_app_kubernetes_io_version, container) (rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"}[$__rate_interval]) * on (namespace, pod) group_left (label_app_kubernetes_io_version) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\", label_app_kubernetes_io_version!=\"\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{label_istio_io_rev}} - {{container}} (k8s)",
+          "legendFormat": "{{label_app_kubernetes_io_version}} - {{container}} (k8s)",
           "refId": "B",
           "step": 2
         },
