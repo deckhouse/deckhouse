@@ -506,7 +506,7 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/prompp/stable/"
+    "path": "/modules/prompp/"
   },
   "runtime-audit-engine": {
     "editions": [
