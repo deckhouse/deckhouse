@@ -87,18 +87,25 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 	sshCl := wrapper.Client()
 
 	sshConfig := c.SSHProviderInitializer.GetConfig()
-	if sshConfig != nil &&
-		sshConfig.Config != nil &&
-		len(sshConfig.Hosts) > 0 &&
-		sshConfig.Config.User != "root" {
-		cmd := sshCl.Command("sh", "-c", "command -v sudo >/dev/null 2>&1")
-		if err := cmd.Run(ctx); err != nil {
-			return fmt.Errorf(
-				"required command \"sudo\" is not installed on host %s for user %q. Install sudo or use root user for bootstrap",
-				sshConfig.Hosts[0].Host,
-				sshConfig.Config.User,
-			)
+
+	sshHost := "unknown"
+	sshUser := "unknown"
+	if sshConfig != nil {
+		if len(sshConfig.Hosts) > 0 {
+			sshHost = sshConfig.Hosts[0].Host
 		}
+		if sshConfig.Config != nil {
+			sshUser = sshConfig.Config.User
+		}
+	}
+
+	cmd := sshCl.Command("sh", "-c", "id -u | grep -qx 0 || command -v sudo >/dev/null 2>&1")
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf(
+			"required command \"sudo\" is not installed on host %s for user %q. Install sudo or use root user for bootstrap",
+			sshHost,
+			sshUser,
+		)
 	}
 
 	addr := strings.Join([]string{
