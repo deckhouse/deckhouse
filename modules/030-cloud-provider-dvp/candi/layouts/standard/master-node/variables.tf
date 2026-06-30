@@ -95,7 +95,7 @@ locals {
 
   additional_labels = merge(
     lookup(local.instance_class.virtualMachine, "additionalLabels", {}),
-    lookup(var.providerClusterConfiguration.provider, "additionalVMLabels", {}),
+    lookup(var.providerClusterConfiguration, "additionalVMLabels", {}),
   )
   additional_annotations = lookup(local.instance_class.virtualMachine, "additionalAnnotations", {})
   priority_class_name    = lookup(local.instance_class.virtualMachine, "priorityClassName", null)

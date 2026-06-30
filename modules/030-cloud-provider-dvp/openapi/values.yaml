@@ -81,6 +81,14 @@ properties:
           sshPublicKey:
             type: string
             description: A public key for accessing nodes.
+          additionalVMLabels:
+            type: object
+            description: |
+              Additional labels to apply to all VM pods in the cluster (both master and worker nodes).
+
+              Can be used to map existing NetworkPolicies in the parent cluster project to VM pods by label.
+            additionalProperties:
+              type: string
           masterNodeGroup:
             type: object
             additionalProperties: false
@@ -486,14 +494,6 @@ properties:
                   type: integer
                   minimum: 1
                   maximum: 65535
-              additionalVMLabels:
-                type: object
-                description: |
-                  Additional labels to apply to all VM pods in the cluster (both master and worker nodes).
-
-                  Can be used to map existing NetworkPolicies in the parent cluster project to VM pods by label.
-                additionalProperties:
-                  type: string
             required:
               - kubeconfigDataBase64
               - namespace
