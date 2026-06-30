@@ -49,7 +49,6 @@ const (
 type Package struct {
 	version  string            // package version, cleared on remove
 	settings addonutils.Values // pending settings, updated by Update, consumed by GetPendingSettings
-	enabled  *bool             // explicit ModuleConfig enabled intent: *true/*false set by config, nil when unset
 
 	ctx    context.Context    // root context, cancelled on version change or remove
 	cancel context.CancelFunc // cancels root and all children

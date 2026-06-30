@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 // globalName is the literal sentinel used by Scheduler internally; it lives
@@ -991,24 +992,7 @@ func (s *SchedulerSuite) TestRescheduleFansOutToDirectSubscribers() {
 // untracked, so the whole graph must re-converge. An already-active, unrelated
 // bystander being re-scheduled is the observable signal of that reconverge.
 func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
-	dynamicState := make(map[string]bool)
-
-	// Replace the suite scheduler with one wired to a controllable dynamic getter
-	// so a module can be flipped on at runtime. Stop the original to avoid leaking
-	// its event goroutine.
-	s.sched.Stop()
-	s.sched = schedule.NewScheduler(
-		schedule.WithDependencyGetter(func(name string) *semver.Version {
-			return s.versions[name]
-		}),
-		schedule.WithDynamicGetter(func(module string) *bool {
-			if v, ok := dynamicState[module]; ok {
-				return &v
-			}
-
-			return nil
-		}),
-	)
+	enabledState := s.useDynamicScheduler()
 
 	s.activateGlobal()
 
@@ -1034,7 +1018,7 @@ func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
 
 	// Flip the module on and run a pass: it enables, triggering a full-graph
 	// reschedule that reverts and re-schedules the bystander too.
-	dynamicState["dynamic-mod"] = true
+	enabledState["dynamic-mod"] = boolPtr(true)
 	s.sched.Schedule()
 
 	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
@@ -1042,43 +1026,39 @@ func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
 	s.Contains(scheduled, "bystander", "reschedule-on-enable must revert and re-schedule the whole graph")
 }
 
-// boolPtr returns a pointer to b, for the tri-state config/dynamic getters.
+// boolPtr returns a pointer to b, for the tri-state dynamic getter.
 func boolPtr(b bool) *bool { return &b }
 
-// useConfigScheduler replaces the suite scheduler with one wired to controllable
-// ModuleConfig and dynamic getters, backed by the returned maps: a *true/*false
-// entry is an explicit enable/disable, an absent entry is "no opinion" (nil).
-// Tests drive enablement by mutating the maps before a scheduling pass. The
-// original scheduler is stopped to avoid leaking its event goroutine.
-func (s *SchedulerSuite) useConfigScheduler() (configState, dynamicState map[string]*bool) {
-	configState = make(map[string]*bool)
-	dynamicState = make(map[string]*bool)
+// useDynamicScheduler replaces the suite scheduler with one wired to a
+// controllable dynamic getter, backed by the returned map: a *true/*false entry
+// is an explicit enable/disable intent (as the global module would resolve from
+// ModuleConfig and dynamic hooks), an absent entry is "no opinion" (nil). Tests
+// drive enablement by mutating the map before a scheduling pass. The original
+// scheduler is stopped to avoid leaking its event goroutine.
+func (s *SchedulerSuite) useDynamicScheduler() map[string]*bool {
+	enabledState := make(map[string]*bool)
 
 	s.sched.Stop()
 	s.sched = schedule.NewScheduler(
 		schedule.WithDependencyGetter(func(name string) *semver.Version {
 			return s.versions[name]
 		}),
-		schedule.WithConfigGetter(func(module string) *bool {
-			return configState[module]
-		}),
 		schedule.WithDynamicGetter(func(module string) *bool {
-			return dynamicState[module]
+			return enabledState[module]
 		}),
 	)
 
-	return configState, dynamicState
+	return enabledState
 }
 
-// TestConfigRuleEnableOverridesFloorDisable verifies the config rule's Enable
-// vote: an explicit ModuleConfig enable turns on a module whose floor would
-// otherwise keep it off.
-func (s *SchedulerSuite) TestConfigRuleEnableOverridesFloorDisable() {
-	configState, _ := s.useConfigScheduler()
+// TestDynamicRuleEnablesOverFloor verifies the dynamic rule's Enable vote turns
+// on a module whose Disable floor would otherwise keep it off.
+func (s *SchedulerSuite) TestDynamicRuleEnablesOverFloor() {
+	enabledState := s.useDynamicScheduler()
 	s.activateGlobal()
 
-	configState["mod"] = boolPtr(true)
-	// Order 0 (global tier): flipping a Disable-floored module on triggers a
+	enabledState["mod"] = boolPtr(true)
+	// Order 0 (global tier): enabling a Disable-floored module triggers a
 	// full-graph reschedule, which reverts global to idle; a higher-tier module
 	// would then be held by canSchedule until global re-completes. Same tier keeps
 	// the test focused on rule precedence, not order gating.
@@ -1092,36 +1072,16 @@ func (s *SchedulerSuite) TestConfigRuleEnableOverridesFloorDisable() {
 	}))
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
-		"a ModuleConfig enable must override the module's Disable floor")
+		"an enable intent must override the module's Disable floor")
 }
 
-// TestConfigRuleDisableOverridesEnableFloor verifies the config rule's Disable
-// vote: an explicit ModuleConfig disable turns off a package whose floor would
-// otherwise enable it (config is appended after the floor, so it wins).
-func (s *SchedulerSuite) TestConfigRuleDisableOverridesEnableFloor() {
-	configState, _ := s.useConfigScheduler()
+// TestDynamicRuleNilDefersToFloor verifies that with no intent the dynamic rule
+// is Undefined and resolution falls through to the floor: a Disable-floored
+// module stays off.
+func (s *SchedulerSuite) TestDynamicRuleNilDefersToFloor() {
+	s.useDynamicScheduler() // getter returns nil for everything
 	s.activateGlobal()
 
-	configState["app"] = boolPtr(false)
-	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:        "app",
-		version:     mustVersion("1.0.0"),
-		constraints: schedule.Constraints{Order: schedule.FunctionalOrder}, // default Enable floor
-	}))
-
-	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "app",
-		"a ModuleConfig disable must override the Enable floor")
-}
-
-// TestConfigRuleDisableOverridesDynamicEnable verifies the config rule outranks
-// the dynamic rule: a module dynamically enabled at runtime is still turned off
-// by an explicit ModuleConfig disable, because config is appended last.
-func (s *SchedulerSuite) TestConfigRuleDisableOverridesDynamicEnable() {
-	configState, dynamicState := s.useConfigScheduler()
-	s.activateGlobal()
-
-	dynamicState["mod"] = boolPtr(true)
-	configState["mod"] = boolPtr(false)
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "mod",
 		version: mustVersion("1.0.0"),
@@ -1132,31 +1092,44 @@ func (s *SchedulerSuite) TestConfigRuleDisableOverridesDynamicEnable() {
 	}))
 
 	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
-		"a ModuleConfig disable must override a dynamic enable")
+		"no intent must defer to the Disable floor")
 }
 
-// TestConfigRuleNilDefersToFloor verifies that with no ModuleConfig opinion the
-// config rule is Undefined and resolution falls through to the floor: a
-// Disable-floored module stays off, an Enable-floored package schedules.
-func (s *SchedulerSuite) TestConfigRuleNilDefersToFloor() {
-	s.useConfigScheduler() // every getter returns nil
+// TestDynamicRuleDisableOverridesBundle verifies the dynamic rule outranks the
+// bundle vote: a module the active bundle would enable is still turned off by an
+// explicit disable intent, because the dynamic rule is appended after bundle.
+func (s *SchedulerSuite) TestDynamicRuleDisableOverridesBundle() {
+	enabledState := make(map[string]*bool)
+
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		schedule.WithDependencyGetter(func(name string) *semver.Version {
+			return s.versions[name]
+		}),
+		// Bundle enables every module it is asked about.
+		schedule.WithBundleChecker(func(edition.Licensing) bool { return true }),
+		schedule.WithDynamicGetter(func(module string) *bool {
+			return enabledState[module]
+		}),
+	)
 	s.activateGlobal()
 
+	// No intent: the bundle enable stands → module scheduled.
 	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:    "mod",
-		version: mustVersion("1.0.0"),
-		constraints: schedule.Constraints{
-			Order: schedule.FunctionalOrder,
-			Floor: rule.Static(rule.Disable),
-		},
-	}))
-	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:        "app",
+		name:        "bundle-on",
 		version:     mustVersion("1.0.0"),
-		constraints: schedule.Constraints{Order: schedule.FunctionalOrder}, // default Enable floor
+		constraints: schedule.Constraints{Order: 0, Floor: rule.Static(rule.Disable)},
 	}))
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "bundle-on",
+		"with no intent, a bundle enable must turn the module on")
 
-	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
-	s.NotContains(scheduled, "mod", "no ModuleConfig opinion must defer to the Disable floor")
-	s.Contains(scheduled, "app", "no ModuleConfig opinion must defer to the Enable floor")
+	// Explicit disable: overrides the bundle enable → module stays off.
+	enabledState["bundle-off"] = boolPtr(false)
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "bundle-off",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0, Floor: rule.Static(rule.Disable)},
+	}))
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "bundle-off",
+		"a disable intent must override the bundle enable")
 }

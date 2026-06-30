@@ -97,34 +97,29 @@ func (s *Store) Update(name, version string, settings addonutils.Values) context
 	return nil
 }
 
-// UpdateSettings stores new pending settings and the explicit ModuleConfig
-// enabled intent for an already-tracked package without touching its version or
-// context tree. Returns true if either the settings checksum or the enabled
-// tri-state changed and the caller should Reschedule, false if nothing changed
-// or the package is not tracked yet.
+// UpdateSettings stores new pending settings for an already-tracked package
+// without touching its version or context tree. Returns true if the settings
+// checksum changed and the caller should Reschedule, false if nothing changed or
+// the package is not tracked yet.
 //
 // Unlike Update, this never creates or cancels a context: in-flight deploy and
 // load tasks are left running. It is the settings-only counterpart to Update,
-// used when settings change independently of a version change.
-func (s *Store) UpdateSettings(name string, settings addonutils.Values, enabled *bool) bool {
+// used when settings change independently of a version change. The ModuleConfig
+// enabled intent is tracked separately by the global module (see
+// global.Module.SetConfigEnabled), not here.
+func (s *Store) UpdateSettings(name string, settings addonutils.Values) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return false
 	}
 
-	changed := false
-
-	if pkg.settings.Checksum() != settings.Checksum() {
-		pkg.settings = settings
-		changed = true
+	if pkg.settings.Checksum() == settings.Checksum() {
+		return false
 	}
 
-	if !equalBool(pkg.enabled, enabled) {
-		pkg.enabled = enabled
-		changed = true
-	}
+	pkg.settings = settings
 
-	return changed
+	return true
 }
 
 // HandleEvent renews the context for the given event type and returns it.
@@ -153,29 +148,6 @@ func (s *Store) HandleEvent(event int, name string) context.Context {
 // and schedule are automatically picked up.
 func (s *Store) GetPendingSettings(name string) addonutils.Values {
 	return s.packages[name].settings
-}
-
-// GetConfigEnabled returns the explicit ModuleConfig enabled intent for a
-// package as a tri-state (*true/*false set by config, nil when unset or the
-// package is untracked). It backs the scheduler's config rule getter, read at
-// decision time on every scheduling pass.
-func (s *Store) GetConfigEnabled(name string) *bool {
-	pkg, ok := s.packages[name]
-	if !ok {
-		return nil
-	}
-
-	return pkg.enabled
-}
-
-// equalBool reports whether two *bool tri-states are equivalent: both nil, or
-// both non-nil with the same value.
-func equalBool(a, b *bool) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-
-	return *a == *b
 }
 
 // Delete removes a package entry from the store if it still exists and is in

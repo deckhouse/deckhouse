@@ -19,11 +19,12 @@ import (
 )
 
 type Info struct {
-	Name    string            `json:"name" yaml:"name"`
-	Running bool              `json:"running" yaml:"running"`
-	Path    string            `json:"path" yaml:"path"`
-	Values  addonutils.Values `json:"values,omitempty" yaml:"values,omitempty"`
-	Hooks   []string          `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+	Name         string            `json:"name" yaml:"name"`
+	Running      bool              `json:"running" yaml:"running"`
+	Path         string            `json:"path" yaml:"path"`
+	Values       addonutils.Values `json:"values,omitempty" yaml:"values,omitempty"`
+	Hooks        []string          `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+	DynamicState map[string]bool   `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
 }
 
 func (m *Module) GetInfo() Info {
@@ -32,11 +33,17 @@ func (m *Module) GetInfo() Info {
 		hooks[idx] = hook.GetName()
 	}
 
+	dynamic := make(map[string]bool, len(m.dynamicEnabled))
+	for name, enabled := range m.dynamicEnabled {
+		dynamic[name] = enabled
+	}
+
 	return Info{
-		Name:    m.name,
-		Running: m.running.Load(),
-		Path:    m.path,
-		Values:  m.values.GetValues(),
-		Hooks:   hooks,
+		Name:         m.name,
+		Running:      m.running.Load(),
+		Path:         m.path,
+		Values:       m.values.GetValues(),
+		Hooks:        hooks,
+		DynamicState: dynamic,
 	}
 }

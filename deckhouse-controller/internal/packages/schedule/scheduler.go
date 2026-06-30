@@ -22,7 +22,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/config"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
@@ -60,8 +59,7 @@ type Scheduler struct {
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
-	dynamicGetter          dynamic.Getter      // Reports a module's dynamic enabled state
-	configGetter           config.Getter       // Reports a module's ModuleConfig enabled intent
+	dynamicGetter          dynamic.Getter      // Reports a module's resolved enablement intent (ModuleConfig + dynamic), answered by the global module
 
 	pause atomic.Bool // When true, no state changes are processed
 }
@@ -97,7 +95,8 @@ func WithDependencyGetter(getter dependency.Getter) Option {
 	}
 }
 
-// WithDynamicGetter sets the provider for a module's dynamic enabled state.
+// WithDynamicGetter sets the provider for a module's resolved enablement intent
+// (ModuleConfig plus dynamic hook state), answered by the global module.
 func WithDynamicGetter(getter dynamic.Getter) Option {
 	return func(s *Scheduler) {
 		s.dynamicGetter = getter
@@ -108,13 +107,6 @@ func WithDynamicGetter(getter dynamic.Getter) Option {
 func WithBundleChecker(getter bundle.BundleChecker) Option {
 	return func(s *Scheduler) {
 		s.bundleChecker = getter
-	}
-}
-
-// WithConfigGetter sets the provider for a module's ModuleConfig enabled intent.
-func WithConfigGetter(getter config.Getter) Option {
-	return func(s *Scheduler) {
-		s.configGetter = getter
 	}
 }
 

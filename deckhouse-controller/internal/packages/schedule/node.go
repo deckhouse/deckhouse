@@ -22,7 +22,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/config"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
@@ -197,27 +196,22 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.rescheduleOnEnable = true
 	}
 
-	// Intent rules for modules, appended last so their soft Enable overrides the
-	// floor's Static(Disable) (gates still veto via Forbid from any position). The
-	// dynamic rule turns a module on at runtime (e.g. enabled by a script); the
-	// bundle rule applies the active bundle's membership for the package's edition.
+	// Module intent rules, appended after the floor and gates so their soft votes
+	// override the floor's Static(Disable) (gates still veto via Forbid from any
+	// position). Order within is least-to-most authoritative:
+	//   - bundle: enable-only; turns the module on for its edition/bundle.
+	//   - dynamic: the resolved ModuleConfig + dynamic intent. It is last, so an
+	//     explicit user disable overrides the bundle's enable, and a user enable
+	//     turns on a module the bundle ignores. Hooks are enable-only; the disable
+	//     direction comes solely from ModuleConfig.
 	if isModule {
-		if s.dynamicGetter != nil {
-			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
-		}
-
 		if s.bundleChecker != nil {
 			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
 		}
-	}
 
-	// Highest-precedence intent rule, appended last: explicit user intent from a
-	// ModuleConfig overrides every other soft vote (floor, bundle, dynamic), so a
-	// user can both enable a module the bundle ignores and disable one it turns
-	// on. Gates still veto via Forbid, so an Enable cannot override an unmet
-	// requirement.
-	if s.configGetter != nil {
-		n.rules = append(n.rules, config.NewRule(s.configGetter, pkg.GetName()))
+		if s.dynamicGetter != nil {
+			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
+		}
 	}
 
 	s.nodes[pkg.GetName()] = n

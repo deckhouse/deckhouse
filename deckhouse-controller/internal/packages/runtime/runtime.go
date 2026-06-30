@@ -574,9 +574,8 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	}
 
 	r.scheduler = schedule.NewScheduler(
-		schedule.WithDynamicGetter(r.global.IsDynamicEnabled),
+		schedule.WithDynamicGetter(r.global.IsEnabled),
 		schedule.WithBundleChecker(r.edition.IsEnabled),
-		schedule.WithConfigGetter(r.packages.GetConfigEnabled),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),

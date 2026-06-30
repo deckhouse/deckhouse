@@ -69,7 +69,13 @@ func (r *Runtime) UpdateModulesSettings(name string, settings addonutils.Values,
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.packages.UpdateSettings(name, settings, enabled) {
+	// Settings live in the per-package store; the ModuleConfig enabled intent
+	// lives in the global module (thread-safe for the scheduler's enabled getter).
+	// Reschedule if either actually changed.
+	settingsChanged := r.packages.UpdateSettings(name, settings)
+	enabledChanged := r.global.SetConfigEnabled(name, enabled)
+
+	if settingsChanged || enabledChanged {
 		r.scheduler.Reschedule(name)
 	}
 }
