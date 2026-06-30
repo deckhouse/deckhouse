@@ -31,6 +31,13 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+// hasConverter is an optional interface for packages that support schema version
+// conversion of their settings. Only a subset of packages (module packages with
+// openapi/conversions) implement this.
+type hasConverter interface {
+	GetConverter() *conversion.Converter
+}
+
 const (
 	taskTracer = "configure"
 )
@@ -38,9 +45,6 @@ const (
 // packageI abstracts the package operations needed for settings management.
 type packageI interface {
 	GetName() string
-	// GetConverter returns the schema version converter for this package's settings.
-	// Returns nil if no conversions are defined.
-	GetConverter() *conversion.Converter
 	// ApplySettings updates the package's in-memory configuration.
 	ApplySettings(settings addonutils.Values) error
 	// ValidateSettings checks settings against package-defined constraints.
@@ -107,19 +111,21 @@ func (t *task) applySettings(ctx context.Context) error {
 
 	settings := t.settings
 
-	// Convert settings to latest schema version if a converter is available
-	if conv := t.pkg.GetConverter(); conv != nil && t.settingsVersion > 0 {
-		newVersion, converted, err := conv.ConvertToLatest(t.settingsVersion, settings)
-		if err != nil {
-			t.logger.Error("failed to convert settings",
-				slog.Int("from_version", t.settingsVersion),
-				slog.String("error", err.Error()))
-			return status.NewError("ConversionFailed", err)
+	// Convert settings to latest schema version if the package supports it
+	if p, ok := t.pkg.(hasConverter); ok && t.settingsVersion > 0 {
+		if conv := p.GetConverter(); conv != nil {
+			newVersion, converted, err := conv.ConvertToLatest(t.settingsVersion, settings)
+			if err != nil {
+				t.logger.Error("failed to convert settings",
+					slog.Int("from_version", t.settingsVersion),
+					slog.String("error", err.Error()))
+				return status.NewError("ConversionFailed", err)
+			}
+			t.logger.Debug("settings converted to latest version",
+				slog.Int("from", t.settingsVersion),
+				slog.Int("to", newVersion))
+			settings = converted
 		}
-		t.logger.Debug("settings converted to latest version",
-			slog.Int("from", t.settingsVersion),
-			slog.Int("to", newVersion))
-		settings = converted
 	}
 
 	res, err := t.pkg.ValidateSettings(ctx, settings)

@@ -50,7 +50,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -262,12 +261,6 @@ func (a *Application) GetRuntimeValues() string {
 // GetName returns the full application identifier in format "namespace.name".
 func (a *Application) GetName() string {
 	return a.name
-}
-
-// GetConverter returns nil for apps (conversions are module-only for now).
-// Implemented to satisfy the configure.task packageI interface.
-func (a *Application) GetConverter() *conversion.Converter {
-	return nil
 }
 
 // BuildName returns the full application identifier in format "namespace.name".
