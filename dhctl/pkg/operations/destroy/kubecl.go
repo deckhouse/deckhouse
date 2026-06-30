@@ -17,11 +17,12 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type kubeClientProvider struct {
@@ -38,7 +39,7 @@ func newKubeClientProvider(kubeProvider libcon.KubeProvider, sshProvider libcon.
 
 func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
 	if p.kubeProvider == nil {
-		return nil, fmt.Errorf("kube provider in nil")
+		return nil, fmt.Errorf("kube provider is nil")
 	}
 	kubeCl, err := p.kubeProvider.Client(ctx)
 	if err != nil {
@@ -50,13 +51,13 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
 	err := p.kubeProvider.Cleanup(ctx)
 	if err != nil {
-		log.WarnF("failed to cleanup kube provider: %v", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to clean up kube provider: %v", err), "\n"))
 	}
 
 	if stopSSH {
 		err := p.sshProvider.Cleanup(ctx)
 		if err != nil {
-			log.WarnF("failed to cleanup ssh provider: %v", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to clean up ssh provider: %v", err))
 		}
 	}
 }

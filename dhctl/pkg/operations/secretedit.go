@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -35,7 +35,7 @@ const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
 // editFunc allows tests to swap the editor with a deterministic mock without
 // reaching for package-level state (see secretedit_test.go).
-type editFunc func([]byte, *options.GlobalOptions, EditOptions) ([]byte, error)
+type editFunc func(context.Context, []byte, *options.GlobalOptions, EditOptions) ([]byte, error)
 
 var abstractEditing editFunc = Edit
 
@@ -59,7 +59,7 @@ func SecretEdit(
 	config, err := kubeCl.CoreV1().Secrets(namespace).Get(ctx, secret, metav1.GetOptions{})
 	switch {
 	case errors.IsNotFound(err):
-		log.DebugF("Secret %s in namespace %s was not found, and will be created\n", secret, namespace)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Secret %s in namespace %s was not found, and will be created", secret, namespace))
 		config = emptySecret.DeepCopy()
 		config.ObjectMeta.Name, config.ObjectMeta.Namespace = secret, namespace
 	case err != nil:
@@ -77,11 +77,11 @@ func SecretEdit(
 	configData := config.Data[dataKey]
 
 	var modifiedData []byte
-	err = dh_config.PrepareCandiDir(ctx, kubeCl, log.GetDefaultLogger(), globalOptions)
+	err = dh_config.PrepareCandiDir(ctx, kubeCl, globalOptions)
 	if err != nil {
 		return err
 	}
-	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData, globalOptions, editOpts) })
+	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(ctx, configData, globalOptions, editOpts) })
 	if err != nil {
 		return err
 	}
@@ -91,13 +91,13 @@ func SecretEdit(
 		addUnsafeAnnotation(config)
 	}
 
-	return log.ProcessCtx(
+	return dhlog.RunProcess(
 		ctx,
-		"common",
+		dhlog.FromContext(ctx),
 		fmt.Sprintf("Save %s to the Kubernetes cluster", name),
 		func(ctx context.Context) error {
 			if string(configData) == string(modifiedData) {
-				log.InfoLn("Configurations are equal. Nothing to update.")
+				dhlog.FromContext(ctx).InfoContext(ctx, "Configurations are equal. Nothing to update.")
 				return nil
 			}
 
@@ -109,7 +109,7 @@ func SecretEdit(
 					_, err = kubeCl.CoreV1().Secrets(namespace).Update(ctx, config, metav1.UpdateOptions{})
 					switch {
 					case errors.IsNotFound(err):
-						log.DebugF("Creating new Secret %s in namespace %s\n", secret, namespace)
+						dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating new Secret %s in namespace %s", secret, namespace))
 						if _, err = kubeCl.CoreV1().Secrets(namespace).Create(ctx, config, metav1.CreateOptions{}); err != nil {
 							return err
 						}
@@ -118,7 +118,7 @@ func SecretEdit(
 					}
 
 					if editOpts.SanityCheck {
-						log.InfoLn("Remove allow-unsafe annotation")
+						dhlog.FromContext(ctx).InfoContext(ctx, "Removing allow-unsafe annotation")
 						removeUnsafeAnnotation(config)
 
 						_, err = kubeCl.CoreV1().

@@ -27,12 +27,12 @@ import (
 
 //nolint:musttag
 func (s *Service) ParseConnectionConfig(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.ParseConnectionConfigRequest,
 ) (*pb.ParseConnectionConfigResponse, error) {
 	var errResponse string
 
-	connectionConfig, err := config.ParseConnectionConfig(request.Config, s.schemaStore, optionsFromRequest(request.Opts)...)
+	connectionConfig, err := config.ParseConnectionConfig(ctx, request.Config, s.schemaStore, optionsFromRequest(request.Opts)...)
 	if errResponse, err = errorToResponse(err); err != nil {
 		return nil, status.Errorf(codes.Internal, "%s", err)
 	}

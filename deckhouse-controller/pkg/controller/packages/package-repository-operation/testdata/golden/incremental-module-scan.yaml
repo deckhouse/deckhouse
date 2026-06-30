@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/operation-trigger: manual
     packages.deckhouse.io/operation-type: Update
@@ -42,7 +41,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
@@ -61,7 +59,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
@@ -84,7 +81,6 @@ status: {}
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackage
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
   name: test-package
@@ -102,7 +98,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "3"
 spec:
@@ -122,5 +117,4 @@ status:
   - name: test-package
     type: Module
   packagesCount: 1
-  partialScanAvailable: false
   phase: Active

@@ -21,12 +21,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestLoop_Run_SuccessOnFirstAttempt(t *testing.T) {
-	log.InitLogger("json", false)
 	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.Run(func() error {
 		return nil
@@ -35,7 +32,6 @@ func TestLoop_Run_SuccessOnFirstAttempt(t *testing.T) {
 }
 
 func TestLoop_Run_SuccessAfterRetries(t *testing.T) {
-	log.InitLogger("json", false)
 	attempt := 0
 	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.Run(func() error {
@@ -50,7 +46,6 @@ func TestLoop_Run_SuccessAfterRetries(t *testing.T) {
 }
 
 func TestLoop_Run_BreakIfPredicate(t *testing.T) {
-	log.InitLogger("json", false)
 	loop := NewLoop("test loop", 3, 10*time.Millisecond).BreakIf(IsErr(errors.New("break error")))
 	err := loop.Run(func() error {
 		return errors.New("break error")
@@ -60,10 +55,8 @@ func TestLoop_Run_BreakIfPredicate(t *testing.T) {
 }
 
 func TestLoop_RunContext_SuccessOnFirstAttempt(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
-	log.InitLogger("json", false)
 	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.RunContext(ctx, func() error {
 		return nil
@@ -72,10 +65,8 @@ func TestLoop_RunContext_SuccessOnFirstAttempt(t *testing.T) {
 }
 
 func TestLoop_RunContext_SuccessAfterRetries(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
-	log.InitLogger("json", false)
 	attempt := 0
 	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.RunContext(ctx, func() error {
@@ -93,7 +84,6 @@ func TestLoop_Run_Cancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log.InitLogger("json", false)
 	attempt := 0
 	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.RunContext(ctx, func() error {
@@ -111,7 +101,6 @@ func TestLoop_Run_DeadlineExceeded(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()
 
-	log.InitLogger("json", false)
 	attempt := 0
 	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.RunContext(ctx, func() error {

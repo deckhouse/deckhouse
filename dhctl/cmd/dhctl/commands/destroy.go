@@ -16,14 +16,17 @@ package commands
 
 import (
 	"fmt"
+	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -31,17 +34,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 const (
-	destroyApprovalsMessage = `You will be asked for approve multiple times.
-If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
+	destroyApprovalsMessage = `You will be asked for approval multiple times.
+If you understand what you are doing, you can use the flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
 `
 	destroyCacheErrorMessage = `Create cache:
 	Error: %v
 
-	Probably that Kubernetes cluster was already deleted.
+	The Kubernetes cluster was probably already deleted.
 	If you want to continue, please delete the cache folder manually.
 `
 )
@@ -56,13 +58,12 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
@@ -70,15 +71,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
-
-		if !opts.Global.SanityCheck {
-			log.InteractiveWarnLn(destroyApprovalsMessage)
-
-			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
-				return fmt.Errorf("Cleanup cluster resources disallow")
-			}
-		}
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -95,29 +88,36 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		destroyerParams := &destroy.Params{
-			SSHProvider:    sshProvider,
-			KubeProvider:   kubeProvider,
-			StateCache:     cache.Global(),
-			SkipResources:  opts.Destroy.SkipResources,
-			LoggerProvider: log.SimpleLoggerProvider(logger),
-			IsDebug:        opts.Global.IsDebug,
-			TmpDir:         opts.Global.TmpDir,
-			Options:        opts,
+			SSHProvider:   sshProvider,
+			KubeProvider:  kubeProvider,
+			StateCache:    cache.Global(),
+			SkipResources: opts.Destroy.SkipResources,
+			Logger:        logger.FromContext(ctx),
+			IsDebug:       opts.Global.IsDebug,
+			TmpDir:        opts.Global.TmpDir,
+			Options:       opts,
 		}
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
-			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
-			if err != nil {
-				return err
-			}
+			progressCh, finishProgress := phases.InitProgress(ctx, logger.FromContext(ctx), "Destroy cluster")
+			defer finishProgress()
 
 			onUpdateFunc := func(progress phases.Progress) error {
-				phasesChan <- progress
+				progressCh <- progress
 				return nil
 			}
 			destroyerParams.OnProgressFunc = onUpdateFunc
 
-			defer onComplete()
+			// TODO: add sync to make sure progress UI is started
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		if !opts.Global.SanityCheck {
+			l.Warn(fmt.Sprint(destroyApprovalsMessage))
+
+			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
+				return fmt.Errorf("Cluster resource cleanup was not approved")
+			}
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(ctx, destroyerParams)

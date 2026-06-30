@@ -54,7 +54,7 @@ spec:
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
             description: |-
@@ -62,12 +62,13 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+
             type: string
           metadata:
             type: object
           spec:
-            description: Spec defines the behavior of an Application.
+            description: Defines the application configuration.
             properties:
               packageName:
                 description: Name of the application package to install.
@@ -92,14 +93,12 @@ spec:
             - packageVersion
             type: object
           status:
-            description: Status of an Application.
+            description: Application status.
             properties:
               conditions:
-                description: Conditions represent the latest available observations
-                  of the application's state.
+                description: Conditions reflecting the latest observations of the application state.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition describing one aspect of the current application state.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -181,8 +180,7 @@ spec:
                   before the first status computation.
                 properties:
                   message:
-                    description: Message is a human-readable description of the current
-                      state.
+                    description: Message is a human-readable description of the current state.
                     type: string
                   state:
                     description: |-

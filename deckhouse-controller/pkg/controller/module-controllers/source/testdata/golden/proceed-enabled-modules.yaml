@@ -4,21 +4,18 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/default-source: "true"
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-  creationTimestamp: null
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
   finalizers:
   - modules.deckhouse.io/module-exists
   name: test-source-1
   resourceVersion: "1001"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
   scanInterval: 6h30m0s
 status:
-  message: ""
   modules:
   - checksum: 'sha256:'
     name: bundlenabledmodule
@@ -46,7 +43,6 @@ metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"
     modules.deckhouse.io/change-cause: check release (no releases in cluster)
-  creationTimestamp: null
   labels:
     module: bundlenabledmodule
     modules.deckhouse.io/update-policy: ""
@@ -68,9 +64,7 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -79,7 +73,6 @@ metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"
     modules.deckhouse.io/change-cause: check release (no releases in cluster)
-  creationTimestamp: null
   labels:
     module: enabledmodule
     modules.deckhouse.io/update-policy: ""
@@ -101,9 +94,7 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -112,7 +103,6 @@ metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"
     modules.deckhouse.io/change-cause: check release (no releases in cluster)
-  creationTimestamp: null
   labels:
     module: withpolicymodule
     modules.deckhouse.io/update-policy: test-alpha
@@ -134,7 +124,5 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   pullDuration: 0s
-  size: 0
   transitionTime: null

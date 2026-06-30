@@ -17,13 +17,14 @@ package deckhouse
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
@@ -35,7 +36,7 @@ type DestroyerParams struct {
 
 	State *State
 
-	LoggerProvider       log.LoggerProvider
+	Logger               *slog.Logger
 	KubeProvider         kubernetes.KubeClientProviderWithCtx
 	PhasedActionProvider phases.DefaultActionProvider
 }
@@ -54,11 +55,11 @@ func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
 	logger := d.logger()
 
 	if !d.CommanderMode {
-		logger.LogDebugF("Check commander UUID skipped. No in commander mode\n")
+		logger.DebugContext(ctx, "Check commander UUID skipped. No in commander mode")
 		return nil
 	}
 
-	if d.isSkipResources("CheckCommanderUUID") {
+	if d.isSkipResources(ctx, "CheckCommanderUUID") {
 		return nil
 	}
 
@@ -71,7 +72,7 @@ func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
 
 	if uuidInCache != "" {
 		if uuidInCache == passedUUID {
-			logger.LogDebugF("Commander UUID found and correct. Skipping commander UUID check\n")
+			logger.DebugContext(ctx, "Commander UUID found and correct. Skipping commander UUID check")
 			return nil
 		}
 
@@ -96,7 +97,7 @@ func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
 func (d *Destroyer) CheckAndDeleteResources(ctx context.Context) error {
 	logger := d.logger()
 
-	if d.isSkipResources("DeleteResources") {
+	if d.isSkipResources(ctx, "DeleteResources") {
 		return nil
 	}
 
@@ -106,7 +107,7 @@ func (d *Destroyer) CheckAndDeleteResources(ctx context.Context) error {
 }
 
 func (d *Destroyer) Finalize(ctx context.Context) error {
-	if d.isSkipResources("Finalize") {
+	if d.isSkipResources(ctx, "Finalize") {
 		return nil
 	}
 
@@ -118,7 +119,7 @@ func (d *Destroyer) Finalize(ctx context.Context) error {
 	logger := d.logger()
 
 	if alreadyDestroyed {
-		logger.LogDebugLn("Resources already destroyed. Skip set as destroyed")
+		logger.DebugContext(ctx, "Resources already destroyed. Skip set as destroyed")
 		return nil
 	}
 
@@ -130,18 +131,18 @@ func (d *Destroyer) Finalize(ctx context.Context) error {
 		return err
 	}
 
-	logger.LogDebugLn("Resources were destroyed set")
+	logger.DebugContext(ctx, "Resources were destroyed set")
 	return nil
 }
 
-func (d *Destroyer) deleteResources(ctx context.Context, logger log.Logger) error {
+func (d *Destroyer) deleteResources(ctx context.Context, logger *slog.Logger) error {
 	resourcesDestroyed, err := d.State.IsResourcesDestroyed(ctx)
 	if err != nil {
 		return err
 	}
 
 	if resourcesDestroyed {
-		logger.LogWarnLn("Resources was destroyed. Skip it")
+		logger.WarnContext(ctx, "Resources was destroyed. Skip it")
 		return nil
 	}
 
@@ -150,7 +151,7 @@ func (d *Destroyer) deleteResources(ctx context.Context, logger log.Logger) erro
 		return err
 	}
 
-	return logger.LogProcessCtx(ctx, "common", "Delete resources from the Kubernetes cluster", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, logger, "Delete resources from the Kubernetes cluster", func(ctx context.Context) error {
 		return d.deleteEntities(ctx, kubeCl)
 	})
 }
@@ -216,7 +217,27 @@ func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.Kubernete
 		return err
 	}
 
+	err = deckhouse.DeleteNodeControllerDeployment(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForNodeControllerDeploymentDeletion(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
 	err = deckhouse.DeleteMachinesIfResourcesExist(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteClusters(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForClustersDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
@@ -229,15 +250,15 @@ func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.Kubernete
 	return nil
 }
 
-func (d *Destroyer) isSkipResources(phase string) bool {
+func (d *Destroyer) isSkipResources(ctx context.Context, phase string) bool {
 	if d.SkipResources {
-		d.logger().LogInfoF("Deckhouse resources destroyer '%s': skipped by flag\n", phase)
+		d.logger().InfoContext(ctx, fmt.Sprintf("Deckhouse resources destroyer '%s': skipped by flag", phase))
 		return true
 	}
 
 	return false
 }
 
-func (d *Destroyer) logger() log.Logger {
-	return log.SafeProvideLogger(d.LoggerProvider)
+func (d *Destroyer) logger() *slog.Logger {
+	return d.Logger
 }

@@ -21,7 +21,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type Preflight struct {
@@ -78,19 +78,17 @@ func (p *Preflight) Run(ctx context.Context, phase Phase) error {
 		return err
 	}
 
-	phaseLabel := fmt.Sprintf("(%s)", phase)
-
 	runFunc := func(ctx context.Context) error {
 		return p.runChecks(ctx, checks)
 	}
 
-	return log.ProcessCtx(ctx, log.ProcessPreflight, phaseLabel, runFunc)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), phase.FormatString(), runFunc)
 }
 
 func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {
 	for _, check := range checks {
 		if check.Disabled {
-			log.InfoF("✓ %s: %s (skipped)\n", check.Name, check.Description)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("✓ %s: %s (skipped)", check.Name, check.Description))
 			continue
 		}
 		if err := p.runCheck(ctx, check); err != nil {
@@ -104,7 +102,7 @@ func (p *Preflight) runCheck(ctx context.Context, check Check) error {
 	if p.cache != nil {
 		key := p.cacheKey(check.Name)
 		if ok, err := p.cache.InCache(ctx, key); err == nil && ok {
-			log.InfoF("✓ %s: %s (cached)\n", check.Name, check.Description)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("✓ %s: %s (cached)", check.Name, check.Description))
 			return nil
 		}
 	}
@@ -112,11 +110,11 @@ func (p *Preflight) runCheck(ctx context.Context, check Check) error {
 	if err := p.retry(ctx, check); err != nil {
 		return fmt.Errorf("preflight check %q failed.\nreason: %w", check.Name, err)
 	}
-	log.InfoF("✓ %s: %s\n", check.Name, check.Description)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("✓ %s: %s", check.Name, check.Description))
 
 	if p.cache != nil {
 		if err := p.cache.Save(ctx, p.cacheKey(check.Name), []byte("yes")); err != nil {
-			log.WarnF("cannot cache result of %s: %v\n", check.Name, err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("cannot cache result of %s: %v", check.Name, err))
 		}
 	}
 	return nil
@@ -163,11 +161,15 @@ func (p *Preflight) retry(ctx context.Context, check Check) error {
 		func() error { attempt++; return check.Run(ctx) },
 		bo,
 		func(err error, next time.Duration) {
+			// Per-attempt retry diagnostics stay at Debug: they enrich the .log file but never reach
+			// the terminal — not even with -v (the terminal floor is Info, which -v does not lower).
+			// The terminal stays quiet while a check is retrying; if every attempt fails, the returned
+			// error is what surfaces.
 			if !printedHeader {
-				log.WarnF("%s: %s\n\n", check.Name, check.Description)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s: %s", check.Name, check.Description))
 				printedHeader = true
 			}
-			log.InfoF("retry %d/%d in %s\nreason: %v\n", attempt, attempts, next, err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("retry %d/%d in %s\nreason: %v", attempt, attempts, next, err))
 		},
 	)
 }

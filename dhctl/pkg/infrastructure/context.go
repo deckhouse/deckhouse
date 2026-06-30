@@ -18,10 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/name212/govalue"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -31,7 +28,6 @@ type Context struct {
 	infrastructureRunnerByName map[string]RunnerInterface
 	provider                   CloudProviderGetter
 	stateChecker               StateChecker
-	logger                     log.Logger
 
 	// useTfCache and isDebug are propagated to every Runner this Context
 	// constructs (see applyRunnerDefaults). Empty/false means "use Runner
@@ -70,26 +66,16 @@ func (f *Context) newImmutableRunner(metaConfig *config.MetaConfig, executor Exe
 		WithDebug(f.isDebug)
 }
 
-func NewContextWithProvider(provider CloudProviderGetter, logger log.Logger) *Context {
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
-	}
-
+func NewContextWithProvider(provider CloudProviderGetter) *Context {
 	return &Context{
 		infrastructureRunnerByName: make(map[string]RunnerInterface),
 		provider:                   provider,
-		logger:                     logger,
 	}
 }
 
-func NewContext(logger log.Logger) *Context {
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
-	}
-
+func NewContext() *Context {
 	return &Context{
 		infrastructureRunnerByName: make(map[string]RunnerInterface),
-		logger:                     logger,
 	}
 }
 
@@ -114,7 +100,7 @@ func (f *Context) getCloudProvider(ctx context.Context, metaConfig *config.MetaC
 	getter := f.CloudProviderGetter()
 	if getter == nil {
 		return nil, fmt.Errorf(
-			"Failed to get cloud provider for %s/%s/%s. Cloud providerGetter should set",
+			"Failed to get cloud provider for %s/%s/%s. Cloud provider getter must be set",
 			metaConfig.ClusterPrefix,
 			uuid,
 			metaConfig.ProviderName,
@@ -173,7 +159,7 @@ func applyAutomaticApproveSettings(r *Runner, settings AutoApproveSettings, stat
 
 func addProviderAfterCleanupFuncForRunner(cloudProvider CloudProvider, group string, r RunnerInterface) {
 	targetGroup := fmt.Sprintf("stopExecutorFor:%s", group)
-	cloudProvider.AddAfterCleanupFunc(targetGroup, func(log.Logger) {
+	cloudProvider.AddAfterCleanupFunc(targetGroup, func() {
 		r.Stop()
 	})
 }
@@ -186,7 +172,7 @@ func (f *Context) GetCheckBaseInfraRunner(ctx context.Context, metaConfig *confi
 
 	const group = "base-infrastructure"
 
-	executor, err := cloudProvider.Executor(ctx, BaseInfraStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, BaseInfraStep)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +203,7 @@ func (f *Context) GetCheckNodeRunner(ctx context.Context, metaConfig *config.Met
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +237,7 @@ func (f *Context) GetCheckNodeDeleteRunner(ctx context.Context, metaConfig *conf
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, opts.LayoutStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, opts.LayoutStep)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +278,7 @@ func (f *Context) GetConvergeBaseInfraRunner(ctx context.Context, metaConfig *co
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, BaseInfraStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, BaseInfraStep)
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +316,7 @@ func (f *Context) GetConvergeNodeRunner(ctx context.Context, metaConfig *config.
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +357,7 @@ func (f *Context) GetConvergeNodeDeleteRunner(ctx context.Context, metaConfig *c
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, opts.LayoutStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, opts.LayoutStep)
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +385,7 @@ func (f *Context) GetBootstrapBaseInfraRunner(ctx context.Context, metaConfig *c
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, BaseInfraStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, BaseInfraStep)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +405,6 @@ type BootstrapNodeRunnerOptions struct {
 	NodeIndex                        int
 	NodeCloudConfig                  string
 	AdditionalStateSaverDestinations []SaverDestination
-	RunnerLogger                     log.Logger
 	AllowUseStateCache               bool
 }
 
@@ -429,7 +414,7 @@ func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep)
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +424,6 @@ func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config
 	r := f.newRunner(metaConfig, stateCache, executor).
 		WithVariables(nodeConfig).
 		WithName(opts.NodeName).
-		WithLogger(opts.RunnerLogger).
 		WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
 	addProviderAfterCleanupFuncForRunner(cloudProvider, opts.NodeName, r)
@@ -461,7 +445,7 @@ func (f *Context) GetDestroyBaseInfraRunner(ctx context.Context, metaConfig *con
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, BaseInfraStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, BaseInfraStep)
 	if err != nil {
 		return nil, err
 	}
@@ -489,7 +473,7 @@ func (f *Context) GetDestroyNodeRunner(ctx context.Context, metaConfig *config.M
 		return nil, err
 	}
 
-	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep, f.logger)
+	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep)
 	if err != nil {
 		return nil, err
 	}

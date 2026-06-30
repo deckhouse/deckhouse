@@ -15,14 +15,9 @@
 package source
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -35,12 +30,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"helm.sh/helm/v3/pkg/releaseutil"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -54,30 +46,20 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
 
-var (
-	generateGolden     bool
-	manifestsDelimiter *regexp.Regexp
-	manifestStub       = func() (*crv1.Manifest, error) {
-		return &crv1.Manifest{
-			Layers: []crv1.Descriptor{},
-		}, nil
-	}
-)
-
-func init() {
-	flag.BoolVar(&generateGolden, "golden", false, "generate golden files")
-	manifestsDelimiter = regexp.MustCompile("(?m)^---$")
+var manifestStub = func() (*crv1.Manifest, error) {
+	return &crv1.Manifest{
+		Layers: []crv1.Descriptor{},
+	}, nil
 }
 
 type ControllerTestSuite struct {
-	suite.Suite
+	reconcilertest.Suite
 
-	client client.Client
-	r      *reconciler
+	r *reconciler
 
-	goldenFile    string
 	source        string
 	compareGolden bool
 }
@@ -94,29 +76,28 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	}
 }
 
-func (suite *ControllerTestSuite) setupTestController(raw string, options ...reconcilerOption) {
-	manifests := releaseutil.SplitManifests(raw)
+func (suite *ControllerTestSuite) setupTestController(filename string, options ...reconcilerOption) {
+	suite.Seed(filename)
+	suite.buildReconciler(options...)
+}
 
-	var objects = make([]client.Object, 0, len(manifests))
-	for _, manifest := range manifests {
-		obj := suite.parseKubernetesObject([]byte(manifest))
-		objects = append(objects, obj)
+func (suite *ControllerTestSuite) setupTestControllerRaw(raw string, options ...reconcilerOption) {
+	suite.SeedRaw("inline.yaml", []byte(raw))
+	suite.buildReconciler(options...)
+}
+
+func (suite *ControllerTestSuite) buildReconciler(options ...reconcilerOption) {
+	var sources v1alpha1.ModuleSourceList
+	require.NoError(suite.T(), suite.Client().List(context.TODO(), &sources))
+	if len(sources.Items) > 0 {
+		suite.source = sources.Items[0].Name
 	}
-
-	sc := runtime.NewScheme()
-	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
-	_ = v1alpha2.SchemeBuilder.AddToScheme(sc)
-	suite.client = fake.NewClientBuilder().
-		WithScheme(sc).
-		WithObjects(objects...).
-		WithStatusSubresource(&v1alpha1.Module{}, &v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).
-		Build()
 
 	metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
 
 	rec := &reconciler{
 		init:                 new(sync.WaitGroup),
-		client:               suite.client,
+		client:               suite.Client(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		logger:               log.NewNop(),
@@ -131,6 +112,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 				DisruptionApprovalMode string                            `json:"disruptionApprovalMode"`
 				Windows                update.Windows                    `json:"windows"`
 				NotificationConfig     releaseUpdater.NotificationConfig `json:"notification"`
+				BlockOnAlerts          releaseUpdater.BlockOnAlerts      `json:"blockOnAlerts"`
 			}{},
 			ReleaseChannel:           "",
 			AllowExperimentalModules: true,
@@ -150,46 +132,19 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 	suite.r = rec
 }
 
-func (suite *ControllerTestSuite) parseKubernetesObject(raw []byte) client.Object {
-	metaType := new(runtime.TypeMeta)
-	err := yaml.Unmarshal(raw, metaType)
-	require.NoError(suite.T(), err)
-
-	var obj client.Object
-
-	switch metaType.Kind {
-	case v1alpha1.ModuleSourceGVK.Kind:
-		source := new(v1alpha1.ModuleSource)
-		err = yaml.Unmarshal(raw, source)
-		require.NoError(suite.T(), err)
-		obj = source
-		suite.source = source.Name
-
-	case v1alpha1.ModuleReleaseGVK.Kind:
-		release := new(v1alpha1.ModuleRelease)
-		err = yaml.Unmarshal(raw, release)
-		require.NoError(suite.T(), err)
-		obj = release
-
-	case v1alpha2.ModuleUpdatePolicyGVK.Kind:
-		policy := new(v1alpha2.ModuleUpdatePolicy)
-		err = yaml.Unmarshal(raw, policy)
-		require.NoError(suite.T(), err)
-		obj = policy
-
-	case v1alpha1.ModuleGVK.Kind:
-		module := new(v1alpha1.Module)
-		err = yaml.Unmarshal(raw, module)
-		require.NoError(suite.T(), err)
-		obj = module
-	}
-
-	return obj
-}
-
 func (suite *ControllerTestSuite) SetupSuite() {
-	flag.Parse()
-	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+	suite.Init(reconcilertest.Config{
+		StatusSubresources: []client.Object{
+			&v1alpha1.Module{},
+			&v1alpha1.ModuleSource{},
+			&v1alpha1.ModuleRelease{},
+		},
+		SnapshotKinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
+		},
+		GoldenMode: reconcilertest.PerDocument,
+	})
 }
 
 func (suite *ControllerTestSuite) BeforeTest(suiteName, testName string) {
@@ -206,73 +161,29 @@ func (suite *ControllerTestSuite) SetupSubTest() {
 	dependency.TestDC.CRClient = cr.NewClientMock(suite.T())
 }
 
+// TearDownSubTest only asserts the golden snapshot for the golden-driven test
+// (TestCreateReconcile); the other tests make explicit assertions instead.
 func (suite *ControllerTestSuite) TearDownSubTest() {
-	if !suite.compareGolden {
-		return
-	}
-
-	currentObjects := suite.fetchResults()
-
-	if generateGolden {
-		err := os.WriteFile(suite.goldenFile, currentObjects, 0666)
-		require.NoError(suite.T(), err)
-		return
-	}
-
-	raw, err := os.ReadFile(suite.goldenFile)
-	require.NoError(suite.T(), err)
-
-	exp := splitManifests(raw)
-	got := splitManifests(currentObjects)
-
-	require.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
-	for i := range got {
-		assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
+	if suite.compareGolden {
+		suite.AssertGolden()
 	}
 }
 
 func (suite *ControllerTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
-
-	sources := new(v1alpha1.ModuleSourceList)
-	err := suite.client.List(context.TODO(), sources)
+	got, err := reconcilertest.Snapshot(context.TODO(), suite.Client(), suite.Scheme(), reconcilertest.SnapshotSpec{
+		Kinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
+		},
+	})
 	require.NoError(suite.T(), err)
 
-	for _, source := range sources.Items {
-		got, _ := yaml.Marshal(source)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	releases := new(v1alpha1.ModuleReleaseList)
-	err = suite.client.List(context.TODO(), releases)
-	require.NoError(suite.T(), err)
-
-	for _, release := range releases.Items {
-		got, _ := yaml.Marshal(release)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	return result.Bytes()
-}
-
-func splitManifests(doc []byte) []string {
-	splits := manifestsDelimiter.Split(string(doc), -1)
-
-	result := make([]string, 0, len(splits))
-	for i := range splits {
-		if splits[i] != "" {
-			result = append(result, splits[i])
-		}
-	}
-
-	return result
+	return got
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("empty source", func() {
-		suite.setupTestController(string(suite.parseTestdata("empty.yaml")))
+		suite.setupTestController("empty.yaml")
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -283,7 +194,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			[]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule", "bundlenabledmodule"},
 			// versions differ only in patch and we don't have requests to registry
 			[]string{})
-		suite.setupTestController(string(suite.parseTestdata("proceed-enabled-modules.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("proceed-enabled-modules.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -294,7 +205,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			[]string{"enabledmodule", "notthissourcemodule", "bundlenabledmodule"},
 			// versions differ only in patch and we don't have requests to registry
 			[]string{})
-		suite.setupTestController(string(suite.parseTestdata("proceed-enabled-modules-without-default.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("proceed-enabled-modules-without-default.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -317,7 +228,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil
 		})
 
-		suite.setupTestController(string(suite.parseTestdata("module-pull-error.yaml")))
+		suite.setupTestController("module-pull-error.yaml")
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -328,7 +239,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			[]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"},
 			// versions differ only in patch and we don't have requests to registry
 			[]string{})
-		suite.setupTestController(string(suite.parseTestdata("proceed-enabled-modules-with-old-version.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("proceed-enabled-modules-with-old-version.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -338,7 +249,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.4.2",
 			[]string{"enabledmodule"},
 			[]string{})
-		suite.setupTestController(string(suite.parseTestdata("without-module-releases.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("without-module-releases.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -349,7 +260,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			[]string{"parca"},
 			[]string{"v1.4.1", "v1.4.2", "v1.4.3", "v1.4.4"},
 		)
-		suite.setupTestController(string(suite.parseTestdata("existing-module-releases-without-listing-registry.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("existing-module-releases-without-listing-registry.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -359,7 +270,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.7.1",
 			[]string{"parca"},
 			[]string{"v1.3.1", "v1.4.1", "v1.5.2", "v1.5.3", "v1.6.1", "v1.6.2", "v1.7.1", "v1.7.2"})
-		suite.setupTestController(string(suite.parseTestdata("existing-module-releases-with-listing-registry.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("existing-module-releases-with-listing-registry.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -369,7 +280,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v0.25.0",
 			[]string{"testmodule"},
 			[]string{"v0.5.0", "v0.25.0"})
-		suite.setupTestController(string(suite.parseTestdata("module-lts-channel-minor-jump.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("module-lts-channel-minor-jump.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 
@@ -388,7 +299,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.0.0",
 			[]string{"testmodule"},
 			[]string{"v0.8.0", "v1.0.0"})
-		suite.setupTestController(string(suite.parseTestdata("module-lts-channel-major-jump.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("module-lts-channel-major-jump.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 
@@ -407,7 +318,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v0.7.0",
 			[]string{"testmodule"},
 			[]string{"v0.3.0", "v0.5.0", "v0.7.0"})
-		suite.setupTestController(string(suite.parseTestdata("module-lts-channel-multiple-versions.yaml")), withDependencyContainer(dc))
+		suite.setupTestController("module-lts-channel-multiple-versions.yaml", withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 
@@ -422,16 +333,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		// Should NOT contain intermediate version
 		assert.NotContains(suite.T(), releasesStr, "testmodule-v0.5.0")
 	})
-}
-
-func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
-	dir := "./testdata"
-	data, err := os.ReadFile(filepath.Join(dir, filename))
-	require.NoError(suite.T(), err)
-
-	suite.goldenFile = filepath.Join("./testdata", "golden", filename)
-
-	return data
 }
 
 func (suite *ControllerTestSuite) TestDeleteReconcile() {
@@ -449,7 +350,7 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 `
-		suite.setupTestController(m)
+		suite.setupTestControllerRaw(m)
 
 		result, err := suite.r.deleteModuleSource(context.TODO(), suite.moduleSource("test-source"))
 		require.NoError(suite.T(), err)
@@ -498,7 +399,7 @@ status:
   message: ""
   phase: Deployed
 `
-		suite.setupTestController(m)
+		suite.setupTestControllerRaw(m)
 
 		result, err := suite.r.deleteModuleSource(context.TODO(), suite.moduleSource("test-source-2"))
 		require.NoError(suite.T(), err)
@@ -551,7 +452,7 @@ status:
   message: ""
   phase: Deployed
 `
-		suite.setupTestController(m)
+		suite.setupTestControllerRaw(m)
 
 		result, err := suite.r.deleteModuleSource(context.TODO(), suite.moduleSource("test-source-3"))
 		require.NoError(suite.T(), err)
@@ -575,7 +476,7 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 `
-	suite.setupTestController(invalidSource)
+	suite.setupTestControllerRaw(invalidSource)
 
 	_, err := suite.r.handleModuleSource(context.Background(), suite.moduleSource("test-source"))
 	require.NoError(suite.T(), err)
@@ -587,7 +488,7 @@ spec:
 
 func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSource {
 	source := new(v1alpha1.ModuleSource)
-	err := suite.client.Get(context.TODO(), types.NamespacedName{Name: name}, source)
+	err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, source)
 	require.NoError(suite.T(), err)
 
 	return source
@@ -683,7 +584,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   annotations:
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
     modules.deckhouse.io/default-source: "true"
   name: test-source
 spec:
@@ -750,7 +651,7 @@ status:
 			},
 		)
 
-		suite.setupTestController(initialManifest, withDependencyContainer(dc))
+		suite.setupTestControllerRaw(initialManifest, withDependencyContainer(dc))
 
 		// Execute
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source"))
@@ -805,7 +706,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   annotations:
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
     modules.deckhouse.io/default-source: "true"
   name: test-source
 spec:
@@ -874,7 +775,7 @@ status:
 			},
 		)
 
-		suite.setupTestController(initialManifest, withDependencyContainer(dc))
+		suite.setupTestControllerRaw(initialManifest, withDependencyContainer(dc))
 
 		// Execute
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source"))
@@ -993,7 +894,7 @@ func newMockedContainerWithModuleDefinition(
 // module helper to get module by name
 func (suite *ControllerTestSuite) module(name string) *v1alpha1.Module {
 	module := new(v1alpha1.Module)
-	err := suite.client.Get(context.TODO(), types.NamespacedName{Name: name}, module)
+	err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, module)
 	require.NoError(suite.T(), err)
 
 	return module
@@ -1071,7 +972,7 @@ spec:
     scheme: HTTPS
 `
 
-	suite.setupTestController(sourceYAML)
+	suite.setupTestControllerRaw(sourceYAML)
 
 	pulledModules := []string{
 		"modules",               // reserved

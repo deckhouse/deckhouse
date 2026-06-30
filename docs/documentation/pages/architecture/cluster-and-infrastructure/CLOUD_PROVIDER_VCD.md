@@ -21,7 +21,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Cloud-provider-vcd architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vcd.png)
+![Cloud-provider-vcd architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vcd.png)
 
 ## Module components
 
@@ -66,7 +66,7 @@ The module consists of the following components:
 
    * **infra-controller-manager**.
 
-1. **CSI driver (VCD)**: It is an implementation of the CSI driver for VMware Cloud Director. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../infrastructure/csi-driver.html) section. `Cloud-provider-vcd` module uses [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
+1. **CSI driver (VCD)**: It is an implementation of the CSI driver for VMware Cloud Director. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver.html) section. `Cloud-provider-vcd` module uses [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
 
    CSI driver (VCD) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) sidecar container.
 

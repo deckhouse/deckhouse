@@ -1,0 +1,6 @@
+version: '3'
+
+includes:
+  modules:
+    taskfile: modules/Taskfile.yaml
+    optional: true

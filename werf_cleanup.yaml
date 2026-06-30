@@ -2,7 +2,6 @@ project: deckhouse
 configVersion: 1
 cleanup:
   # All date calculations are based on the dates of the last commits in the branches.
-  keepImagesBuiltWithinLastNHours: 24 # don't touch fresh builds for 24h
   disableKubernetesBasedPolicy: true
   keepPolicies:
   # keep 6 days dev builds

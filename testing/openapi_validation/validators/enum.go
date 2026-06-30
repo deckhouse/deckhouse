@@ -92,6 +92,10 @@ var (
 			// encryptionAlgorithm
 			"apiVersions[0].openAPISpec.properties.encryptionAlgorithm",
 		},
+		// Cryptographic algorithm names use technical format (RSA-2048, ECDSA-P256), not CamelCase.
+		"modules/040-control-plane-manager/openapi/config-values.yaml": {
+			"properties.encryptionAlgorithm",
+		},
 		"global-hooks/openapi/values.yaml": {
 			// from openapispec
 			"properties.clusterConfiguration.properties.apiVersion",

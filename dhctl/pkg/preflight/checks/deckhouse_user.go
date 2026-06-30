@@ -48,7 +48,7 @@ func (DeckhouseUserCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c DeckhouseUserCheck) Run(ctx context.Context) error {
-	file, err := template.RenderAndSavePreflightCheckDeckhouseUserScript(c.globalOptions)
+	file, err := template.RenderAndSavePreflightCheckDeckhouseUserScript(ctx, c.globalOptions)
 	if err != nil {
 		return err
 	}
@@ -60,8 +60,7 @@ func (c DeckhouseUserCheck) Run(ctx context.Context) error {
 		if outMsg != "" {
 			return fmt.Errorf("Deckhouse user check failed: %s", outMsg)
 		}
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			return fmt.Errorf("Deckhouse user check failed: %w, %s", err, string(ee.Stderr))
 		}
 		return fmt.Errorf("Could not execute a script to check deckhouse user and group aren't present on the node: %w", err)

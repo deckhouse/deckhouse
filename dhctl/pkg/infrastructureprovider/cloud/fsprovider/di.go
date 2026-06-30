@@ -15,12 +15,12 @@
 package fsprovider
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -37,7 +37,7 @@ func isDir(dir, errPrefix string) error {
 	}
 
 	if !fs.IsDirExists(dir) {
-		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix, dir)
+		return fmt.Errorf("%s dir '%s' is empty or does not exist", errPrefix, dir)
 	}
 
 	return nil
@@ -62,17 +62,17 @@ func isFile(file, errPrefix string) error {
 
 	stat, err := os.Stat(file)
 	if err != nil {
-		return fmt.Errorf("%s file '%s' does not exist or got another fs error: %w", errPrefix, file, err)
+		return fmt.Errorf("%s file '%s' does not exist or another fs error occurred: %w", errPrefix, file, err)
 	}
 
 	if stat.IsDir() {
-		return fmt.Errorf("%s '%s' is not file", errPrefix, file)
+		return fmt.Errorf("%s '%s' is not a file", errPrefix, file)
 	}
 
 	return nil
 }
 
-func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
+func GetDi(ctx context.Context, params *DIParams) (*cloud.ProviderDI, error) {
 	if params == nil {
 		return nil, fmt.Errorf("no fs.DI params provided")
 	}
@@ -94,9 +94,9 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 	}
 
 	return &cloud.ProviderDI{
-		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile, loadOrGetStore),
-		InfraUtilProvider:   newInfrastructureUtilProvider(logger, params.BinariesDir),
-		InfraPluginProvider: newPluginsProvider(logger, params.PluginsDir),
-		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir),
+		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, loadOrGetStore),
+		InfraUtilProvider:   newInfrastructureUtilProvider(params.BinariesDir),
+		InfraPluginProvider: newPluginsProvider(params.PluginsDir),
+		ModulesProvider:     newModulesProvider(params.CloudProviderDir),
 	}, nil
 }

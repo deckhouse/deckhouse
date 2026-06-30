@@ -51,7 +51,7 @@ type DependenciesChecker struct {
 }
 
 var (
-	ErrMissingDeps    = errors.New("Have missing dependencies")
+	ErrMissingDeps    = errors.New("Some dependencies are missing")
 	ErrShellIsNotBash = errors.New(
 		"Bashible requires /bin/bash as the user's login shell. Please change the user's shell",
 	)
@@ -223,10 +223,10 @@ func (c *DependenciesChecker) runBinariesCheckScript(ctx context.Context) ([]byt
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
-			logger.DebugF("SSH exit code: %v\n", ee.ExitCode())
+			logger.DebugF("SSH exit code: %v", ee.ExitCode())
 		}
 		e := fmt.Errorf("remote dependency check failed: %w - %s", err, string(output))
-		logger.DebugF("Dependency check error: %v\n", e)
+		logger.DebugF("Dependency check error: %v", e)
 		return nil, e
 	}
 
@@ -239,7 +239,7 @@ func (c *DependenciesChecker) depsErrorBreakPredicate(err error) bool {
 	}
 
 	if errors.Is(err, ErrMissingDeps) {
-		c.loggerProvider().DebugF("Has missing deps error. Break cycle")
+		c.loggerProvider().DebugF("Has a missing-dependencies error. Breaking the loop")
 		return true
 	}
 
@@ -252,7 +252,7 @@ func (c *DependenciesChecker) shellErrorBreakPredicate(err error) bool {
 	}
 
 	if errors.Is(err, ErrShellIsNotBash) {
-		c.loggerProvider().DebugF("Has not bash error. Break cycle")
+		c.loggerProvider().DebugF("Has a non-bash shell error. Breaking the loop")
 		return true
 	}
 
@@ -264,9 +264,8 @@ func (c *DependenciesChecker) sshErrorBreakPredicate(err error) bool {
 	if err == nil {
 		return true
 	}
-	var ee *exec.ExitError
-	if errors.As(err, &ee) && ee.ExitCode() == 255 {
-		c.loggerProvider().WarnF("SSH connection failed (exit 255), retrying in 5 seconds...")
+	if ee, ok := errors.AsType[*exec.ExitError](err); ok && ee.ExitCode() == 255 {
+		c.loggerProvider().WarnF("SSH connection failed (exit 255), retrying in 1 second...")
 		return false
 	}
 

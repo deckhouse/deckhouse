@@ -6,14 +6,12 @@ metadata:
   annotations:
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "true"
-  creationTimestamp: null
   name: v1.70.17
   resourceVersion: "1000"
 spec:
   version: v1.70.17
 status:
   approved: true
-  message: ""
   phase: Deployed
   transitionTime: "2021-12-08T08:34:01Z"
 ---
@@ -21,14 +19,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.71.5
   resourceVersion: "999"
 spec:
   version: v1.71.5
 status:
   approved: false
-  message: ""
   phase: Suspended
   transitionTime: null
 ---
@@ -36,14 +32,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.71.7
   resourceVersion: "999"
 spec:
   version: v1.71.7
 status:
   approved: false
-  message: ""
   phase: Pending
   transitionTime: null
 ---
@@ -51,7 +45,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.72.10
   resourceVersion: "1000"
 spec:
@@ -66,21 +59,18 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.72.5
   resourceVersion: "999"
 spec:
   version: v1.72.5
 status:
   approved: false
-  message: ""
   phase: Suspended
   transitionTime: null
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: null
   labels:
     app: deckhouse
   name: deckhouse-6f46df5bd7-nk4j7
@@ -105,7 +95,6 @@ status:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   name: deckhouse
   namespace: d8-system
   resourceVersion: "999"
@@ -113,8 +102,7 @@ spec:
   selector: null
   strategy: {}
   template:
-    metadata:
-      creationTimestamp: null
+    metadata: {}
     spec:
       containers:
       - image: my.registry.com/deckhouse:v1.26.2

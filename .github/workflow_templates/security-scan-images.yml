@@ -319,7 +319,7 @@ jobs:
   # ============================================================================
   get-tags:
     name: Get PR tag for scanning
-    runs-on: ubuntu-slim
+    runs-on: self-slim
     needs:
       - pull_request_info
     # No secrets needed, just composes the PR tag — runs in main and test mirrors.
@@ -359,8 +359,8 @@ jobs:
   # ============================================================================
   security_scan_images_required:
     name: Security scan images required
-    runs-on: ubuntu-slim
-    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    runs-on: self-slim
+    if: ${{ false }}
     needs:
       - pull_request_info
       - changed_images

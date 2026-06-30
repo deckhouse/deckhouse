@@ -84,7 +84,7 @@ func FileExistsInDirAndParentsDirs(dir, fileName string) (string, error) {
 	}
 
 	if !IsDirExists(dir) {
-		return "", fmt.Errorf("'%s' is not a directory or does not exists", dir)
+		return "", fmt.Errorf("'%s' is not a directory or does not exist", dir)
 	}
 
 	parentDir := dir

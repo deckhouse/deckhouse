@@ -45,8 +45,13 @@ memory: 10Mi
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "scheduler" dict }}
-{{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
-{{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
+{{- $_ := set $tpl_context "settings" dict }}
+{{- with .Values.controlPlaneManager.internal.resourcesRequests }}
+  {{- $_ := set $tpl_context.settings "resourcesRequests" (dict
+    "milliCPU" .milliCpuControlPlane
+    "memoryBytes" .memoryControlPlane
+  ) }}
+{{- end }}
 
 {{- $allowedKubernetesVersions := list }}
 {{- $automaticVersion := ""}}
@@ -135,6 +140,9 @@ memory: 10Mi
 {{- if hasKey .Values.controlPlaneManager.internal "allowedFeatureGates" }}
 {{- $_ := set $tpl_context "allowedFeatureGates" .Values.controlPlaneManager.internal.allowedFeatureGates }}
 {{- end }}
+{{- if .Values.controlPlaneManager.encryptionAlgorithm }}
+  {{- $_ := set $tpl_context "encryptionAlgorithm" .Values.controlPlaneManager.encryptionAlgorithm }}
+{{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
 {{- /*
@@ -150,7 +158,9 @@ in modules/040-control-plane-manager/images/control-plane-manager/src/internal/c
   {{- if hasKey $tpl_context.apiserver "certSANs" }}
 cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
   {{- end }}
-  {{- if $tpl_context.clusterConfiguration.encryptionAlgorithm }}
+  {{- if and $tpl_context.encryptionAlgorithm (ne $tpl_context.encryptionAlgorithm "RSA-2048") }}
+encryption-algorithm: {{ $tpl_context.encryptionAlgorithm | b64enc }}
+  {{- else if $tpl_context.clusterConfiguration.encryptionAlgorithm }}
 encryption-algorithm: {{ $tpl_context.clusterConfiguration.encryptionAlgorithm | b64enc }}
   {{- end }}
   {{- if $tpl_context.apiserver.oidcCA }}
@@ -272,7 +282,7 @@ spec:
       containers:
       - name: control-plane-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list $ (list "SYS_CHROOT")) | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list $ (printf "controlPlaneManager%s" $kubeImageTagSuffix)) }}
+        image: {{ include "helm_lib_module_image" (list $ "controlPlaneManager" ) }}
         volumeMounts:
         - mountPath: /var/lib/etcd
           name: etcd

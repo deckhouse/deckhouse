@@ -65,7 +65,7 @@ The following describes the conversion of a single-master cluster into a multi-m
 > It is important to have an odd number of masters to ensure a quorum.
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
@@ -135,7 +135,7 @@ The steps described below must be performed from the first in order of the maste
 {% endalert %}
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
@@ -346,7 +346,7 @@ The following steps must be performed starting from the first master node (`mast
 {% endalert %}
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
@@ -556,16 +556,18 @@ This method may be necessary if the `--force-new-cluster` option doesn't restore
 
 When the database volume of etcd reaches the limit set by the `quota-backend-bytes` parameter, it switches to "read-only" mode. This means that the etcd database stops accepting new entries but remains available for reading data. You can tell that you are facing a similar situation by executing the command:
 
-   ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
-   ```
+```shell
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+  etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ \
+  endpoint status -w table --cluster
+```
 
 If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to take the following steps:
 
-1. Make change to `/etc/kubernetes/manifests/etcd.yaml` — find the line with `--quota-backend-bytes` and edit it. If there is no such line — add, for example: `- --quota-backend-bytes=8589934592` - this sets the limit to 8 GB.
+1. On **each master node** (from the list of the etcd cluster members obtained earlier), find the line with `--quota-backend-bytes` in the etcd pod manifest at `/etc/kubernetes/manifests/etcd.yaml` and double the value. If there is no such line, add one, for example: `- --quota-backend-bytes=8589934592`. This sets the limit to 8 GB.
 
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
@@ -598,6 +600,7 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 
 Output example (the size of the etcd database on the node is specified in the `DB SIZE` column):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -609,6 +612,8 @@ Output example (the size of the etcd database on the node is specified in the `D
 | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 <div id='how-to-defragment-an-etcd-node-in-a-single-master-cluster'></div>
 
@@ -651,12 +656,15 @@ To compact etcd storage in a cluster with multiple master nodes:
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
    etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
    etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
    etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Identify the leader master node. To do this, contact any etcd pod and get a list of nodes participating in the etcd cluster using the command (where `NODE_NAME` is the name of the master node):
 
@@ -670,6 +678,7 @@ To compact etcd storage in a cluster with multiple master nodes:
 
    Output example (the leader in the `IS LEADER` column will have the value `true`):
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -681,6 +690,8 @@ To compact etcd storage in a cluster with multiple master nodes:
    | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Compact etcd storage on the etcd cluster member nodes one by one. Use the following command (where `NODE_NAME` is the name of the master node):
 
@@ -712,7 +723,7 @@ The control-plane-manager module maintains several kubeconfig files on master no
 
 | File | Identity | Purpose |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for control-plane-manager operations (kubeconfig renewal, cluster administration). With the [user-authz](/modules/user-authz/) module enabled, RBAC uses `user-authz:cluster-admin` plus an additional ClusterRole; with `user-authz` disabled, the group is bound to the built-in `cluster-admin` role. |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for control-plane-manager operations (kubeconfig renewal, cluster administration). The group is bound to the built-in wildcard `cluster-admin` role. |
 | `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (`system:masters` group) | Break-glass emergency credential. Bypasses RBAC entirely. Restrict access to this file to trusted recovery scenarios. |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Used by kube-controller-manager. |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Used by kube-scheduler. |
@@ -721,9 +732,7 @@ The control-plane-manager module maintains several kubeconfig files on master no
 
 `admin.conf` is generated with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the RBAC binding objects for `kubeadm:cluster-admins`.
 
-When the [user-authz](/modules/user-authz/) module is **disabled**, Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a standard Kubernetes cluster without extra RBAC).
-
-When **user-authz** is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second RBAC binding adds the ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
+Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (the same effective model as a standard Kubernetes cluster without extra RBAC), regardless of whether the [user-authz](/modules/user-authz/) module is enabled. For full unrestricted access that also bypasses RBAC, use `super-admin.conf`.
 
 ### Recommended admin access
 
@@ -1047,10 +1056,13 @@ Follow these steps to restore a single-master cluster on master node:
 
    Output example:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
    4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Restart the master node.
 
@@ -1421,92 +1433,116 @@ To enable field protection, do the following:
 
 A complete configuration example and results are available in the [Examples](examples.html#protecting-resources-with-sensitive-fields) section.
 
-## How to Verify the Data Integrity Control Functionality Stored in etcd?
+<!--- Hidden because the feature is currently available in CSE Lite and CSE Pro only.
+
+## How to verify the integrity control mechanism for data stored in etcd?
 
 {% alert level="warning" %}
-Verify the Data Integrity Control Stored in etcd functionality available only for CSE-lite and CSE-pro editions.
+The integrity control of the data stored in etcd is available only in the EE edition.
 {% endalert %}
 
-### Verifying the Format of Stored Data
+### Verifying the format of data stored in etcd
 
-To verify the type of data stored in etcd, you need to create an object and then query its contents using etcdctl. The following commands should be executed from a control-plane node of the cluster.
+To verify the format of data stored in etcd, create a test object and retrieve its contents using `etcdctl`.
 
-Create a test object:
+The following commands should be executed from a master node of the cluster.
 
-```bash
-kubectl create secret generic test-secret --from-literal=foo=bar
-```
+1. Create a test object:
 
-Query the contents using etcdctl:
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
 
-```bash
-ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
-$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
-```
+1. Retrieve the contents of the secret using `etcdctl`:
 
-Command output examples:
-1. Integrity control mode `Enforce` or `Migrate`:
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
 
-```bash
-/registry/secrets/default/test-secret
-{"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
-```
+   Command output examples:
 
-1. Integrity control mode `Rollback`:
+   - Integrity control mode [`Enforce` or `Migrate`](configuration.html#parameters-apiserver-signature):
 
-```bash
-/registry/secrets/default/test-secret
-k8s
-v1Secret
-test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
-kubectl-createUpdatevFieldsV1:,
-*{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
-foobarOpaque"
-```
+     ```console
+     /registry/secrets/default/test-secret
+     {"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
+     ```
 
-1. Secret encryption enabled (`apiserver.encryptionEnabled`), integrity control mode `Rollback`:
+   - Integrity control mode [`Rollback`](configuration.html#parameters-apiserver-signature):
 
-```bash
-/registry/secrets/default/test-secret
-k8s:enc:aescbc:v1:secretbox: <binary data>
-```
+     ```console
+     /registry/secrets/default/test-secret
+     k8s
+     v1Secret
+     test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
+     kubectl-createUpdatevFieldsV1:,
+     *{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
+     foobarOpaque"
+     ```
 
-### Verifying the Prohibition of Processing Data Not Passing Signature Verification
+   - Secret encryption enabled ([`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled)), integrity control mode [`Rollback`](configuration.html#parameters-apiserver-signature):
 
-The following commands should be executed from a control-plane node of the cluster.
+     ```console
+     /registry/secrets/default/test-secret
+     k8s:enc:aescbc:v1:secretbox: <binary data>
+     ```
 
-Create a test object:
+### Verifying the prohibition of processing data with an invalid signature
 
-```bash
-kubectl create secret generic test-secret --from-literal=foo=bar
-```
+To verify the mechanism that rejects processing of data with an invalid signature, modify the value of the `signature` field.
 
-Query the contents using etcdctl:
+The following commands should be executed from a master node of the cluster.
 
-```bash
-ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
-$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
-```
+1. Create a test object:
 
-Intentionally change the `signature` field in the secret:
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
 
-```bash
-etcdctl put /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
-```
+1. Retrieve the contents of the secret using `etcdctl`:
 
-Query the contents using kubectl:
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
 
-```bash
-kubectl get secret test-secret 
-```
+1. Change the `signature` field in the secret:
 
-Example output (only in integrity control mode `Enforce`):
+   ```bash
+   etcdctl put /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ \
+     '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
+   ```
 
-```bash
-Error from server (InternalError): Internal error occurred: bad signature, record rejected
-```
+1. Retrieve the contents of the secret:
 
-View the audit log of the request (in any integrity control mode):
+   ```bash
+   d8 k get secret test-secret 
+   ```
+
+   Example output (only in the [`Enforce`](configuration.html#parameters-apiserver-signature) integrity control mode, which allows working only with records that have a valid signature):
+
+   ```console
+   Error from server (InternalError): Internal error occurred: bad signature, record rejected
+   ```
+
+#### Verifying audit log event recording
+
+When an invalid or missing signature is detected, information about it is recorded in the Kubernetes audit log regardless of the selected integrity control mode.
+
+To view the audit log records, run the following command:
 
 ```bash
 jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
@@ -1514,7 +1550,7 @@ jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.lo
 
 Example output:
 
-```bash
+```console
 {
   "kind": "Event",
   "apiVersion": "audit.k8s.io/v1",
@@ -1552,3 +1588,4 @@ Example output:
   }
 }
 ```
+--->

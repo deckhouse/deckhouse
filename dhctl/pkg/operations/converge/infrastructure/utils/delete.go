@@ -23,25 +23,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func DeleteNodeObjectFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
 	return retry.NewLoop(
 		fmt.Sprintf("Delete node %s", nodeName),
-		10,
-		5*time.Second,
+		50,
+		1*time.Second,
 	).RunContext(ctx, func() error {
 		err := kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' already deleted. Skip\n", nodeName)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node '%s' already deleted. Skipping", nodeName))
 				return nil
 			}
 			return err
 		}
-		log.InfoF("Node '%s' successfully deleted from cluster\n", nodeName)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node '%s' successfully deleted from cluster", nodeName))
 		return nil
 	})
 }

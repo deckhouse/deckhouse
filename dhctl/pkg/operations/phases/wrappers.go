@@ -18,11 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -40,7 +41,7 @@ type (
 		// Run
 		// if action should stop run should return ErrShouldStop
 		Run(ctx context.Context, phase OperationPhase, isCritical bool, action ActionFunc[OperationPhaseDataT]) error
-		CompleteSub(phase OperationSubPhase) error
+		CompleteSub(ctx context.Context, phase OperationSubPhase) error
 	}
 
 	ActionProvider[OperationPhaseDataT any] func() PhaseAction[OperationPhaseDataT]
@@ -91,8 +92,8 @@ func (a *PhaseActionWithStateCache[OperationPhaseDataT]) Run(ctx context.Context
 	return a.phaseContext.CompletePhase(ctx, a.stateCache, completeData)
 }
 
-func (a *PhaseActionWithStateCache[OperationPhaseDataT]) CompleteSub(phase OperationSubPhase) error {
-	a.phaseContext.CompleteSubPhase(phase)
+func (a *PhaseActionWithStateCache[OperationPhaseDataT]) CompleteSub(ctx context.Context, phase OperationSubPhase) error {
+	a.phaseContext.CompleteSubPhase(ctx, phase)
 	return nil
 }
 
@@ -103,7 +104,7 @@ func (a *dummyPhaseAction[OperationPhaseDataT]) Run(_ context.Context, _ Operati
 	return err
 }
 
-func (a *dummyPhaseAction[OperationPhaseDataT]) CompleteSub(OperationSubPhase) error {
+func (a *dummyPhaseAction[OperationPhaseDataT]) CompleteSub(context.Context, OperationSubPhase) error {
 	return nil
 }
 
@@ -121,8 +122,8 @@ func (a *phaseActionWithError[OperationPhaseDataT]) Run(ctx context.Context, pha
 	return fmt.Errorf("Phase '%s' cannot be run: %w", phase, a.err)
 }
 
-func (a *phaseActionWithError[OperationPhaseDataT]) CompleteSub(phase OperationSubPhase) error {
-	return fmt.Errorf("SubPhase '%s' cannot be complete: %w", phase, a.err)
+func (a *phaseActionWithError[OperationPhaseDataT]) CompleteSub(ctx context.Context, phase OperationSubPhase) error {
+	return fmt.Errorf("SubPhase '%s' cannot be completed: %w", phase, a.err)
 }
 
 type (
@@ -154,8 +155,7 @@ type (
 )
 
 type PipelineOpts struct {
-	LoggerProvider log.LoggerProvider
-	PipelineName   string
+	PipelineName string
 }
 
 type PipelineWithStateCache[OperationPhaseDataT any] struct {
@@ -169,12 +169,6 @@ type PipelineWithStateCache[OperationPhaseDataT any] struct {
 }
 
 type PipelineOptsFunc func(*PipelineOpts)
-
-func WithPipelineLoggerProvider(provider log.LoggerProvider) PipelineOptsFunc {
-	return func(opts *PipelineOpts) {
-		opts.LoggerProvider = provider
-	}
-}
 
 func WithPipelineName(name string) PipelineOptsFunc {
 	return func(opts *PipelineOpts) {
@@ -229,10 +223,10 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(ctx context.Context, a
 	}
 
 	if errors.Is(err, ErrShouldStop) {
-		log.SafeProvideLogger(p.opts.LoggerProvider).LogDebugF(
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf(
 			"Pipeline '%s' with phase execution context: got should stop. Returns without complete\n",
 			p.opts.PipelineName,
-		)
+		), "\n"))
 		return nil
 	}
 
@@ -295,7 +289,7 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) finalize(ctx context.Conte
 	}
 
 	if err := p.phaseContext.Finalize(ctx, p.stateCache); err != nil {
-		log.SafeProvideLogger(p.opts.LoggerProvider).LogWarnF("Cannot finalize pipeline '%s': %v\n", p.opts.PipelineName, err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot finalize pipeline '%s': %v", p.opts.PipelineName, err))
 	}
 }
 
@@ -305,7 +299,7 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) initPipeline(ctx context.C
 	}
 
 	if err := p.phaseContext.InitPipeline(ctx, p.stateCache); err != nil {
-		return p.wrapError(fmt.Errorf("cannot init pipline: %w", err))
+		return p.wrapError(fmt.Errorf("cannot init pipeline: %w", err))
 	}
 
 	return nil

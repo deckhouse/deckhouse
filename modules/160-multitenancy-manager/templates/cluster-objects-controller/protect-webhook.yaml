@@ -1,0 +1,35 @@
+{{- if .Values.multitenancyManager.internal.admissionWebhookCert.ca }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: cluster-objects-grants-protect
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=multitenancy-manager,namespace=d8-multitenancy-manager
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=multitenancy-manager,namespace=d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-objects-controller")) | nindent 2 }}
+webhooks:
+  # Keep the controller-owned catalog (AvailableClusterResource) read-only to everyone but the controller.
+  - name: protect.cluster-objects-grants.multitenancy.deckhouse.io
+    rules:
+      - apiGroups: ["multitenancy.deckhouse.io"]
+        apiVersions: ["v1alpha1"]
+        resources:
+          - availableclusterresources
+          - availableclusterresources/status
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        scope: Namespaced
+    admissionReviewVersions: ["v1"]
+    matchPolicy: Equivalent
+    sideEffects: None
+    # Ignore so an unavailable webhook never blocks the controller's own reconciliation.
+    failurePolicy: Ignore
+    timeoutSeconds: 5
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-{{ .Chart.Name }}
+        port: 9443
+        path: /protect
+{{- end }}

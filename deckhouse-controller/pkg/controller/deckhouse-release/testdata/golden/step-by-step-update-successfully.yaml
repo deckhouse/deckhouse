@@ -3,14 +3,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.31.0
   resourceVersion: "999"
 spec:
   version: v1.31.0
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
@@ -22,7 +20,6 @@ metadata:
     release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   name: v1.31.1
   resourceVersion: "1"
 spec:
@@ -30,7 +27,6 @@ spec:
   version: v1.31.1
 status:
   approved: false
-  message: ""
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -41,7 +37,6 @@ metadata:
     release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   name: v1.32.3
   resourceVersion: "1"
 spec:
@@ -49,7 +44,6 @@ spec:
   version: v1.32.3
 status:
   approved: false
-  message: ""
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -60,7 +54,6 @@ metadata:
     release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   name: v1.33.1
   resourceVersion: "1"
 spec:
@@ -68,5 +61,4 @@ spec:
   version: v1.33.1
 status:
   approved: false
-  message: ""
   transitionTime: null

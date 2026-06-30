@@ -29,7 +29,7 @@ kind: ClusterConfiguration
 clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 clusterDomain: "cluster.local"
 ---
 apiVersion: deckhouse.io/v1
@@ -64,18 +64,18 @@ internalNetworkCIDRs:
 {{- end }}
 `
 
-func assertModuleConfig(t *testing.T, mc *ModuleConfig, enabled bool, version int, setting map[string]interface{}) {
+func assertModuleConfig(t *testing.T, mc *ModuleConfig, enabled bool, version int, setting map[string]any) {
 	require.NotNil(t, mc.Spec.Enabled)
 	require.Equal(t, *mc.Spec.Enabled, enabled)
 	require.Equal(t, mc.Spec.Version, version)
 	require.Equal(t, mc.Spec.Settings, SettingsValues(setting))
 }
 
-func generateMetaConfigForDeckhouseConfigTest(t *testing.T, data map[string]interface{}) *MetaConfig {
+func generateMetaConfigForDeckhouseConfigTest(t *testing.T, data map[string]any) *MetaConfig {
 	return generateMetaConfig(t, configOverridesTemplate, data, false)
 }
 
-func generateMetaConfigForDeckhouseConfigTestWithErr(t *testing.T, data map[string]interface{}) *MetaConfig {
+func generateMetaConfigForDeckhouseConfigTestWithErr(t *testing.T, data map[string]any) *MetaConfig {
 	return generateMetaConfig(t, configOverridesTemplate, data, true)
 }
 
@@ -87,7 +87,7 @@ kind: ClusterConfiguration
 clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 clusterDomain: "cluster.local"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -230,7 +230,7 @@ spec:
 
 func TestModuleDeckhouseConfigOverridesAndMc(t *testing.T) {
 	t.Run("Use default bundle and logLevel", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -258,7 +258,7 @@ spec:
 	})
 
 	t.Run("Use bundle and logLevel from module config", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -283,7 +283,7 @@ spec:
 	})
 
 	t.Run("Forbid to use configOverrides", func(t *testing.T) {
-		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]any{
 			"configOverrides": `
 configOverrides:
   istioEnabled: false
@@ -300,25 +300,25 @@ configOverrides:
 	})
 
 	t.Run("Forbid to use releaseChannel", func(t *testing.T) {
-		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]any{
 			"releaseChannel": "Beta",
 		})
 	})
 
 	t.Run("Forbid to use bundle", func(t *testing.T) {
-		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]any{
 			"bundle": "Default",
 		})
 	})
 
 	t.Run("Forbid to use logLevel", func(t *testing.T) {
-		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]any{
 			"logLevel": "Info",
 		})
 	})
 
 	t.Run("Correct parse module configs", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -345,12 +345,12 @@ spec:
 
 		require.Len(t, iCfg.ModuleConfigs, 2)
 
-		assertModuleConfig(t, iCfg.ModuleConfigs[0], true, 1, map[string]interface{}{
+		assertModuleConfig(t, iCfg.ModuleConfigs[0], true, 1, map[string]any{
 			"bundle":   "Minimal",
 			"logLevel": "Debug",
-			"registry": map[string]interface{}{
+			"registry": map[string]any{
 				"mode": "Direct",
-				"direct": map[string]interface{}{
+				"direct": map[string]any{
 					"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
 					"scheme":     "HTTPS",
 				},
@@ -361,7 +361,7 @@ spec:
 	})
 
 	t.Run("Fail settings without version", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -381,7 +381,7 @@ spec:
 	})
 
 	t.Run("Fail with incorrect settings", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -402,7 +402,7 @@ spec:
 	})
 
 	t.Run("Module without spec file should ok without settings", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -422,7 +422,7 @@ spec:
 	})
 
 	t.Run("Module without spec file should fail with settings", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

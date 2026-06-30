@@ -21,12 +21,10 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/name212/govalue"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type ExecutorParams struct {
@@ -61,22 +59,16 @@ func (p *ExecutorParams) validate() error {
 type Executor struct {
 	params ExecutorParams
 
-	logger log.Logger
-	cmd    *exec.Cmd
+	cmd *exec.Cmd
 }
 
-func NewExecutor(params ExecutorParams, logger log.Logger) (*Executor, error) {
+func NewExecutor(params ExecutorParams) (*Executor, error) {
 	if err := params.validate(); err != nil {
 		return nil, err
 	}
 
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
-	}
-
 	return &Executor{
 		params: params,
-		logger: logger,
 	}, nil
 }
 
@@ -108,7 +100,7 @@ func (e *Executor) Init(ctx context.Context) error {
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
+	_, err := infraexec.Exec(ctx, e.cmd, e.params.IsDebug)
 
 	return err
 }
@@ -134,14 +126,14 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
+	_, err := infraexec.Exec(ctx, e.cmd, e.params.IsDebug)
 
 	return err
 }
 
 func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int, error) {
 	if opts.Target != "" {
-		return 1, fmt.Errorf("Cannot run plan with target '%s' for terraform. It does not support", opts.Target)
+		return 1, fmt.Errorf("Cannot run plan with target '%s' for terraform: targets are not supported", opts.Target)
 	}
 
 	args := []string{
@@ -172,7 +164,7 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int,
 		e.cmd.Stdout = io.Discard
 		e.cmd.Stderr = io.Discard
 	}
-	return infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
+	return infraexec.Exec(ctx, e.cmd, e.params.IsDebug)
 }
 
 func (e *Executor) Output(ctx context.Context, opts infrastructure.OutputOpts) ([]byte, error) {
@@ -193,7 +185,7 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
+	_, err := infraexec.Exec(ctx, e.cmd, e.params.IsDebug)
 
 	return err
 }
@@ -210,12 +202,9 @@ func (e *Executor) Show(ctx context.Context, opts infrastructure.ShowOpts) ([]by
 	return e.cmd.Output()
 }
 
-func (e *Executor) SetExecutorLogger(logger log.Logger) {
-	e.logger = logger
-}
-
 func (e *Executor) Stop() {
-	log.DebugF("Interrupt terraform process by pid: %d\n", e.cmd.Process.Pid)
+	ctx := context.Background()
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Interrupting terraform process with pid: %d", e.cmd.Process.Pid))
 
 	// 1. Terraform exits immediately on SIGTERM, so SIGINT is used here
 	//    to interrupt it gracefully even when main process caught the SIGTERM.

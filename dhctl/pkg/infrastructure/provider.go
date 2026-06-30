@@ -16,18 +16,19 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
-type AfterCleanupProviderFunc func(logger log.Logger)
+type AfterCleanupProviderFunc func()
 
 type CloudProvider interface {
 	NeedToUseTofu() bool
-	OutputExecutor(ctx context.Context, logger log.Logger) (OutputExecutor, error)
-	Executor(ctx context.Context, step Step, logger log.Logger) (Executor, error)
+	OutputExecutor(ctx context.Context) (OutputExecutor, error)
+	Executor(ctx context.Context, step Step) (Executor, error)
 	// AddAfterCleanupFunc provider should sort groups before execution
 	AddAfterCleanupFunc(group string, f AfterCleanupProviderFunc)
 	Cleanup() error
@@ -37,55 +38,56 @@ type CloudProvider interface {
 }
 
 type DummyCloudProvider struct {
-	logger log.Logger
-
 	cleanuper *AfterCleanupProviderRunner
 }
 
-func NewDummyCloudProvider(logger log.Logger) *DummyCloudProvider {
+func NewDummyCloudProvider() *DummyCloudProvider {
 	return &DummyCloudProvider{
-		logger:    logger,
 		cleanuper: NewAfterCleanupRunner("DummyCloudProvider"),
 	}
 }
 
 func (p *DummyCloudProvider) Name() string {
-	p.logger.LogWarnLn("Call Name on DummyCloudProvider")
+	ctx := context.Background()
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Name on DummyCloudProvider")
 
 	return "dummy"
 }
 
 func (p *DummyCloudProvider) NeedToUseTofu() bool {
-	p.logger.LogWarnLn("Call NeedToUseTofu on DummyCloudProvider")
+	ctx := context.Background()
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call NeedToUseTofu on DummyCloudProvider")
 
 	return false
 }
 
-func (p *DummyCloudProvider) OutputExecutor(ctx context.Context, logger log.Logger) (OutputExecutor, error) {
-	p.logger.LogWarnLn("Call OutputExecutor on DummyCloudProvider")
+func (p *DummyCloudProvider) OutputExecutor(ctx context.Context) (OutputExecutor, error) {
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call OutputExecutor on DummyCloudProvider")
 
-	return NewDummyOutputExecutor(p.logger), nil
+	return NewDummyOutputExecutor(), nil
 }
 
-func (p *DummyCloudProvider) Executor(ctx context.Context, step Step, logger log.Logger) (Executor, error) {
-	p.logger.LogWarnLn("Call Executor on DummyCloudProvider")
+func (p *DummyCloudProvider) Executor(ctx context.Context, step Step) (Executor, error) {
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Executor on DummyCloudProvider")
 
-	return NewDummyExecutor(logger), nil
+	return NewDummyExecutor(), nil
 }
 
 func (p *DummyCloudProvider) Cleanup() error {
-	p.cleanuper.Cleanup(p.logger)
+	p.cleanuper.Cleanup()
 	return nil
 }
 
 func (p *DummyCloudProvider) RootDir() string {
-	p.logger.LogWarnLn("Call RootDir on DummyCloudProvider")
+	ctx := context.Background()
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call RootDir on DummyCloudProvider")
 
 	return ""
 }
 
 func (p *DummyCloudProvider) String() string {
-	p.logger.LogWarnLn("Call String on DummyCloudProvider")
+	ctx := context.Background()
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call String on DummyCloudProvider")
 
 	return "dummy"
 }
@@ -121,9 +123,11 @@ func (r *AfterCleanupProviderRunner) Add(group string, f AfterCleanupProviderFun
 	r.afterCleanup[group] = list
 }
 
-func (r *AfterCleanupProviderRunner) Cleanup(logger log.Logger) {
+func (r *AfterCleanupProviderRunner) Cleanup() {
 	r.afterCleanupMutex.Lock()
 	defer r.afterCleanupMutex.Unlock()
+
+	ctx := context.Background()
 
 	groups := make([]string, 0, len(r.afterCleanup))
 	for group := range r.afterCleanup {
@@ -132,19 +136,19 @@ func (r *AfterCleanupProviderRunner) Cleanup(logger log.Logger) {
 
 	sort.Strings(groups)
 
-	logger.LogDebugF("Call AfterCleanupProviderRunner on %s. AfterCleanup functions groups %d %v in sorted order\n", r.providerName, len(r.afterCleanup), groups)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Call AfterCleanupProviderRunner on %s. AfterCleanup functions groups %d %v in sorted order", r.providerName, len(r.afterCleanup), groups))
 	for _, group := range groups {
 		funcs := r.afterCleanup[group]
-		logger.LogDebugF("Call cleanup functions %d on %s for group %s\n", len(funcs), r.providerName, group)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Call cleanup functions %d on %s for group %s", len(funcs), r.providerName, group))
 		for i, f := range funcs {
-			logger.LogDebugF("Call cleanup function %d on %s for group %s\n", i, r.providerName, group)
-			f(logger)
-			logger.LogDebugF("Cleanup function %d on %s for group %s called\n", i, r.providerName, group)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Call cleanup function %d on %s for group %s", i, r.providerName, group))
+			f()
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cleanup function %d on %s for group %s called", i, r.providerName, group))
 		}
 
-		logger.LogDebugF("Cleanup functions on %s for group %s called\n", r.providerName, group)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cleanup functions on %s for group %s called", r.providerName, group))
 	}
 
 	r.afterCleanup = make(map[string][]AfterCleanupProviderFunc)
-	logger.LogDebugF("Call AfterCleanupProviderRunner on %s. AfterCleanup map was cleaned\n", r.providerName)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Call AfterCleanupProviderRunner on %s. AfterCleanup map was cleaned", r.providerName))
 }

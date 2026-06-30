@@ -17,6 +17,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/name212/govalue"
 
@@ -24,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
@@ -34,7 +34,7 @@ import (
 
 type infraDestroyerProvider struct {
 	stateCache           dhctlstate.Cache
-	loggerProvider       log.LoggerProvider
+	logger               *slog.Logger
 	kubeProvider         kube.ClientProviderWithCleanup
 	phasesActionProvider phases.DefaultActionProvider
 
@@ -54,7 +54,7 @@ func (f *infraDestroyerProvider) Cloud(context.Context, *config.MetaConfig) (inf
 	}
 
 	if govalue.IsNil(f.cloudStateProvider) {
-		return nil, fmt.Errorf("Cloud state provider should provided to infraDestroyerProvider")
+		return nil, fmt.Errorf("Cloud state provider should be provided to infraDestroyerProvider")
 	}
 
 	stateLoader, clusterInfra, err := f.cloudStateProvider()
@@ -63,17 +63,17 @@ func (f *infraDestroyerProvider) Cloud(context.Context, *config.MetaConfig) (inf
 	}
 
 	if govalue.IsNil(stateLoader) {
-		return nil, fmt.Errorf("Cloud state loader should provided from cloudStateProvider")
+		return nil, fmt.Errorf("Cloud state loader should be provided by cloudStateProvider")
 	}
 
 	if govalue.IsNil(clusterInfra) {
-		return nil, fmt.Errorf("Cluster infrastructure should provided from cloudStateProvider")
+		return nil, fmt.Errorf("Cluster infrastructure should be provided by cloudStateProvider")
 	}
 
 	return cloud.NewDestroyer(&cloud.DestroyerParams{
-		LoggerProvider: f.loggerProvider,
-		KubeProvider:   f.kubeProvider,
-		State:          cloud.NewDestroyState(f.stateCache),
+		Logger:       f.logger,
+		KubeProvider: f.kubeProvider,
+		State:        cloud.NewDestroyState(f.stateCache),
 
 		ClusterInfra: clusterInfra,
 		StateLoader:  stateLoader,
@@ -90,14 +90,14 @@ func (f *infraDestroyerProvider) Static(context.Context, *config.MetaConfig) (in
 	}
 
 	if govalue.IsNil(f.sshClientProvider) {
-		return nil, fmt.Errorf("SSH client provider should provided to infraDestroyerProvider")
+		return nil, fmt.Errorf("SSH client provider should be provided to infraDestroyerProvider")
 	}
 
 	return static.NewDestroyer(&static.DestroyerParams{
 		SSHClientProvider:    f.sshClientProvider,
 		KubeProvider:         f.kubeProvider,
 		State:                static.NewDestroyState(f.stateCache),
-		LoggerProvider:       f.loggerProvider,
+		Logger:               f.logger,
 		PhasedActionProvider: f.phasesActionProvider,
 
 		TmpDir: f.tmpDir,
@@ -112,19 +112,19 @@ func (f *infraDestroyerProvider) Incorrect(_ context.Context, metaConfig *config
 
 func (f *infraDestroyerProvider) checkGeneralParams() error {
 	if govalue.IsNil(f.stateCache) {
-		return fmt.Errorf("State cache should provided to infraDestroyerProvider")
+		return fmt.Errorf("State cache should be provided to infraDestroyerProvider")
 	}
 
 	if govalue.IsNil(f.kubeProvider) {
-		return fmt.Errorf("Kubernetes provider should provided to infraDestroyerProvider")
+		return fmt.Errorf("Kubernetes provider should be provided to infraDestroyerProvider")
 	}
 
 	if govalue.IsNil(f.phasesActionProvider) {
-		return fmt.Errorf("Phases action provider should provided to infraDestroyerProvider")
+		return fmt.Errorf("Phases action provider should be provided to infraDestroyerProvider")
 	}
 
 	if f.tmpDir == "" {
-		return fmt.Errorf("Temp directory should provided to infraDestroyerProvider")
+		return fmt.Errorf("Temp directory should be provided to infraDestroyerProvider")
 	}
 
 	// wait params can be nil

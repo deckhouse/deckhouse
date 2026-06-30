@@ -25,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -44,13 +43,12 @@ data:
 `
 )
 
-func EditMock(data []byte, _ *options.GlobalOptions, _ EditOptions) ([]byte, error) {
+func EditMock(_ context.Context, data []byte, _ *options.GlobalOptions, _ EditOptions) ([]byte, error) {
 	newData := string(data) + "test: \"25\"\n"
 	return []byte(newData), nil
 }
 
 func TestSecretEdit(t *testing.T) {
-	log.InitLogger("json", false)
 
 	f := client.NewFakeKubernetesClient()
 	retry.InTestEnvironment = true

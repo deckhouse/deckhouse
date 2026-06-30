@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
   finalizers:
   - applicationpackageversion.deckhouse.io/used-by-application
   labels:
@@ -25,12 +24,16 @@ status:
     description:
       en: Test package
       ru: Ru Test package
+    disableOptions:
+      confirmation: true
+      messages:
+        en: EN disable message
+        ru: RU disable message
     stage: Preview
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -39,6 +42,4 @@ spec:
     dockerCfg: test-docker-cfg
     repo: registry.example.com/test
     scheme: https
-status:
-  lastNewVersions: 0
-  partialScanAvailable: false
+status: {}

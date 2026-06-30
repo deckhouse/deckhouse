@@ -305,8 +305,6 @@ properties:
                 isDefault:
                   type: boolean
             description: List of storage classes.
-      cniSecretData:
-        type: string
       storageClasses:
         type: array
         items:

@@ -1,0 +1,109 @@
+{{- define "alliance_healthcheck_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
+  {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: alliance-healthcheck
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "alliance-healthcheck")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: alliance-healthcheck
+  updatePolicy:
+    updateMode: "InPlaceOrRecreate"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: healthcheck
+      minAllowed:
+        {{- include "alliance_healthcheck_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alliance-healthcheck
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "alliance-healthcheck")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: alliance-healthcheck
+  template:
+    metadata:
+      labels:
+        app: alliance-healthcheck
+        sidecar.istio.io/inject: "true"
+        istio.io/rev: default
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "alliance-healthcheck")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: alliance-healthcheck
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: healthcheck
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "allianceHealthcheck") }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CLUSTER_UUID
+          value: {{ .Values.global.discovery.clusterUUID }}
+        - name: CLUSTER_DOMAIN
+          value: {{ $.Values.global.discovery.clusterDomain | quote }}
+  {{- if .Values.istio.federation.enabled }}
+        - name: FEDERATION_ENABLED
+          value: "true"
+  {{- end }}
+  {{- if .Values.istio.multicluster.enabled }}
+        - name: MULTICLUSTER_ENABLED
+          value: "true"
+  {{- end }}
+        ports:
+        - name: http
+          containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 60
+          successThreshold: 1
+          timeoutSeconds: 5
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 60
+          successThreshold: 1
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "alliance_healthcheck_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}

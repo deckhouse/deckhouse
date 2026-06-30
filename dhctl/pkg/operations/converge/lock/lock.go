@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,7 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -44,8 +45,8 @@ type InLockRunner struct {
 	unlockConverge func(fullUnlock bool)
 }
 
-func NewInLockRunner(getter kubernetes.KubeClientProviderWithCtx, identity, sshUser string) *InLockRunner {
-	lockConfig := GetLockLeaseConfig(identity, sshUser)
+func NewInLockRunner(ctx context.Context, getter kubernetes.KubeClientProviderWithCtx, identity, sshUser string) *InLockRunner {
+	lockConfig := GetLockLeaseConfig(ctx, identity, sshUser)
 	return &InLockRunner{
 		getter:     getter,
 		lockConfig: lockConfig,
@@ -56,7 +57,7 @@ func NewInLockRunner(getter kubernetes.KubeClientProviderWithCtx, identity, sshU
 
 func NewInLockLocalRunner(ctx context.Context, getter kubernetes.KubeClientProviderWithCtx, identity, sshUser string) *InLockRunner {
 	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
-	return NewInLockRunner(getter, localIdentity, sshUser)
+	return NewInLockRunner(ctx, getter, localIdentity, sshUser)
 }
 
 func (r *InLockRunner) WithForceLock(f bool) *InLockRunner {
@@ -90,16 +91,16 @@ func (r *InLockRunner) Run(ctx context.Context, action func() error) error {
 	}
 
 	defer func() {
-		log.DebugLn("Start unlock converge from Run")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Starting converge unlock from Run")
 		if r.unlockConverge != nil {
 			r.unlockConverge(true)
 			return
 		}
 
-		log.DebugLn("unlockConverge is nil. Skip")
+		dhlog.FromContext(ctx).DebugContext(ctx, "unlockConverge is nil. Skipping")
 	}()
 
-	log.DebugLn("lock for Run method was set. Start action")
+	dhlog.FromContext(ctx).DebugContext(ctx, "lock for Run method was set. Start action")
 
 	return action()
 }
@@ -110,7 +111,7 @@ func (r *InLockRunner) ResetLock(ctx context.Context) error {
 		return err
 	}
 
-	log.DebugLn("lock was reset")
+	dhlog.FromContext(ctx).DebugContext(ctx, "lock was reset")
 
 	return nil
 }
@@ -121,7 +122,7 @@ func (r *InLockRunner) Stop() {
 
 func LockConverge(ctx context.Context, provider kubernetes.KubeClientProviderWithCtx, identity, sshUser string) (func(bool), error) {
 	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
-	lockConfig := GetLockLeaseConfig(localIdentity, sshUser)
+	lockConfig := GetLockLeaseConfig(ctx, localIdentity, sshUser)
 	return LockConvergeWithConfig(ctx, provider, lockConfig)
 }
 
@@ -144,7 +145,7 @@ func IsConvergeLocked(ctx context.Context, getter kubernetes.KubeClientProviderW
 	return leaseLock.IsLocked(ctx, checkIsStillLocked)
 }
 
-func GetLockLeaseConfig(identity, sshUser string) *lease.LeaseLockConfig {
+func GetLockLeaseConfig(ctx context.Context, identity, sshUser string) *lease.LeaseLockConfig {
 	additionalInfo := ""
 	if sshUser != "" {
 		info := struct {
@@ -168,16 +169,16 @@ func GetLockLeaseConfig(identity, sshUser string) *lease.LeaseLockConfig {
 		RetryWaitDuration:    3 * time.Second,
 		AdditionalUserInfo:   additionalInfo,
 		OnRenewError: func(renewErr error) {
-			log.WarnF("Lease renew was failed. Send SIGINT and shutdown: %v\n", renewErr)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Lease renewal failed. Sending SIGINT and shutting down: %v", renewErr))
 			p, err := os.FindProcess(os.Getpid())
 			if err != nil {
-				log.ErrorF("Cannot find pid: %v", err)
+				dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Cannot find pid: %v", err), "\n"))
 				return
 			}
 
 			err = p.Signal(os.Interrupt)
 			if err != nil {
-				log.ErrorF("Cannot send interrupt signal: %v", err)
+				dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Cannot send interrupt signal: %v", err), "\n"))
 				return
 			}
 		},
@@ -210,11 +211,11 @@ func lockLease(
 	config *lease.LeaseLockConfig,
 	forceLock bool,
 ) (func(fullUnlock bool), error) {
-	log.DebugLn("Create converge lock and mutex")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Creating converge lock and mutex")
 	mutex := &sync.Mutex{}
 	leaseLock := lease.NewLeaseLock(getter, *config)
 
-	log.DebugLn("Try to lock converge")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Trying to lock converge")
 	err := leaseLock.Lock(ctx, forceLock)
 	if err != nil {
 		return nil, err
@@ -225,25 +226,25 @@ func lockLease(
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		log.DebugLn("Try to release converge lock. Is it %v", leaseLock == nil)
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Trying to release converge lock. Is it %v", leaseLock == nil), "\n"))
 
 		if leaseLock == nil {
-			log.DebugLn("Lock was released. Skip")
+			dhlog.FromContext(ctx).DebugContext(ctx, "Lock was already released. Skipping")
 			return
 		}
 
 		if fullUnlock {
-			log.DebugLn("Try to full release...")
+			dhlog.FromContext(ctx).DebugContext(ctx, "Trying to fully release...")
 			leaseLock.Unlock(ctx)
 		} else {
-			log.DebugLn("Try to stop autorenew only...")
+			dhlog.FromContext(ctx).DebugContext(ctx, "Trying to stop auto-renew only...")
 			leaseLock.StopAutoRenew()
 		}
 
 		leaseLock = nil
-		log.DebugLn("Lock was released")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Lock was released")
 	}
 
-	log.DebugLn("Lock converge successful")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Converge locked successfully")
 	return unlockConverge, nil
 }

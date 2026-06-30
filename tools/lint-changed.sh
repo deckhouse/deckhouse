@@ -43,6 +43,7 @@ mapfile -t MODULE_DIRS < <(
   find . -name go.mod -type f \
     -not -path '*/.git/*' \
     -not -path '*/node_modules/*' \
+    -not -path './tools/*' \
     -exec dirname {} \; \
     | sed -e 's|^\./||' \
     | awk '{ print length, $0 }' \

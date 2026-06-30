@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/draft: "true"
   name: deckhouse-test-v1.0.0
@@ -22,7 +21,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -31,6 +29,4 @@ spec:
     dockerCfg: test-docker-cfg
     repo: registry.example.com/test
     scheme: https
-status:
-  lastNewVersions: 0
-  partialScanAvailable: false
+status: {}

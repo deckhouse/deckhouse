@@ -81,7 +81,7 @@ func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	}
 
 	logger := params.Logger
-	logger.DebugF("Up bundle registry tunnel...")
+	logger.DebugF("Starting bundle registry tunnel...")
 
 	tunnel := newTunnel(params.GlobalOpts, wrapper.Client())
 	if err := tunnel.start(ctx); err != nil {
@@ -124,12 +124,12 @@ func (t *tunnel) start(ctx context.Context) error {
 		net.JoinHostPort(t.address, t.port),
 	)
 
-	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, t.globalOptions)
+	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(ctx, preflightURL, t.globalOptions)
 	if err != nil {
 		return fmt.Errorf("cannot render reverse tunnel checking script: %w", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(t.address, t.port, t.globalOptions)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(ctx, t.address, t.port, t.globalOptions)
 	if err != nil {
 		return fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}

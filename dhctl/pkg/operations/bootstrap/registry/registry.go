@@ -73,7 +73,7 @@ func Init(ctx context.Context, params Params) (Stop, error) {
 	}
 
 	logger := params.Logger
-	logger.DebugF("Up bundle registry...")
+	logger.DebugF("Starting bundle registry...")
 
 	reg := newRegistry(bundlePath)
 	if err = reg.start(ctx, logger); err != nil {
@@ -100,7 +100,7 @@ func InitFromConfig(
 	nop := func() {}
 
 	configProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-		return config.FetchDocuments(configPaths)
+		return config.FetchDocuments(ctx, configPaths)
 	})
 	if err != nil {
 		return nop, err
@@ -108,7 +108,7 @@ func InitFromConfig(
 
 	bundlePathProvider := func() (string, error) {
 		if imgBundlePath == "" {
-			return "", errors.New("--img-bundle-path is required in Local registry mode, please specify the flag")
+			return "", errors.New("--img-bundle-path is required in Local registry mode; please specify the flag")
 		}
 		return imgBundlePath, nil
 	}

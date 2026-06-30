@@ -370,6 +370,8 @@ lint-doc-spellcheck-pr:
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
 	@echo "Sorting wordlist..."
 	@sort ./tools/docs/spelling/wordlist -o ./tools/docs/spelling/wordlist
+	@echo "Validating wordlist..."
+	@./tools/docs/spelling/validate_wordlist.sh
 	@echo "Generating dictionary..."
 	@test -f ./tools/docs/spelling/dictionaries/dev_OPS.dic && rm ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@touch ./tools/docs/spelling/dictionaries/dev_OPS.dic
@@ -606,10 +608,10 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.30.12
-DMT_VERSION ?= 0.1.75
-CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CODE_GENERATOR_VERSION ?= v0.33.8
+DECKHOUSE_CLI_VERSION ?= v0.31.0
+DMT_VERSION ?= 0.1.88
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
+CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
 GOTESTSUM_VERSION ?= v1.13.0
 
@@ -629,7 +631,7 @@ generate-werf: yq ## Generate changes in werf files.
 .PHONY: dmt-gen
 dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
   ##~ Options: DMT_VERSION=X.Y.Z
-	@sed -i 's/DMT_VERSION=[0-9.]\+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh
+	@sed -i.bak -E 's/DMT_VERSION=[0-9.]+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh && rm -f tools/dmt-lint.sh.bak
 	@echo "Updated DMT_VERSION to $(DMT_VERSION) in tools/dmt-lint.sh"
 
 ## Generate tools documentation
@@ -660,6 +662,15 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
+
+## Enrich the controller-gen CRDs in bin/crd/bases with custom x-doc-* fields
+## defined via markers next to the Go API structs.
+.PHONY: enrich-crds
+enrich-crds: ## Add custom x-doc-* fields to the generated CRDs in bin/crd/bases.
+	@echo "Enriching CRDs with custom x-doc-* fields..."
+	@go run ./pkg/crd-enricher/cmd/crd-enricher \
+		paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." \
+		crds=bin/crd/bases
 
 ## Generate clientset
 .PHONY: client-gen-generate

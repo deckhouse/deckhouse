@@ -344,17 +344,15 @@ properties:
       #   type: string
       #   default: Rollback
       #   description: |
-      #     Enables signature verification by the api-server for all records.
-      #     Transforms all records in etcd to new format with signature.
+      #     Enables signature verification of records by the API server.
+
+      #     Depending on the selected mode, records in etcd may be converted to the signed format or reverted to the standard etcd format.
 
       #     Possible values:
-      #     - Migrate
-      #       Allow read records without signature or with invalid signature.
-      #     - Enforce
-      #       Reject records without signature, with invalid signature or in wrong format.
-      #     - Rollback
-      #       Transform records to standard format (default format for etcd) when modify records.
-      #       Allows use records without signature or with invalid signature.
+
+      #     - `Migrate`: Allows reading records without a signature or with an invalid signature. Modified records are converted to the signed format.
+      #     - `Enforce`: Allows working only with records that have a valid signature. Records without a signature, with an invalid signature, or in an unsupported format are rejected.
+      #     - `Rollback`: Converts records to the standard etcd format when they are modified. Allows reading records without a signature or with an invalid signature.
       #   x-examples: ["Migrate"]
       #   enum:
       #     - Migrate
@@ -371,6 +369,32 @@ properties:
           Enabling this parameter automatically enables the `CRDSensitiveData` feature gate for `kube-apiserver`, which protects custom resource fields marked with `x-kubernetes-sensitive-data: true` via encryption in etcd, RBAC-based field filtering with the `<resource>/sensitive` subresource and hiding values from the audit log.
 
           > **Warning.** Once enabled, this parameter can't be disabled.
+  encryptionAlgorithm:
+    type: string
+    default: "RSA-2048"
+    description: |
+      Asymmetric encryption algorithm used when generating keys and certificates for the following control-plane components:
+
+      - `apiserver`;
+      - `apiserver-kubelet-client`;
+      - `apiserver-etcd-client`;
+      - `front-proxy-client`;
+      - `etcd-server`;
+      - `etcd-peer`;
+      - `etcd-healthcheck-client`.
+
+      Certificates for the components listed above will be reissued using the selected algorithm and key length.
+
+      If parameter not set, the value from `ClusterConfiguration.encryptionAlgorithm` is used (defaults to `RSA-2048`).
+
+      > **Warning.** When reissuing certificates, the root certificate (**CA**) is not rotated. The root certificate is created with the selected algorithm only during the initial cluster bootstrap. 
+    enum:
+      - "RSA-2048"
+      - "RSA-3072"
+      - "RSA-4096"
+      - "ECDSA-P256"
+    x-examples:
+      - "ECDSA-P256"
   rootKubeconfigSymlink:
     type: boolean
     default: true
@@ -412,6 +436,32 @@ properties:
             default: /var/lib/etcd
             description: |
               Host path on masters nodes for etcd backup.
+      defrag:
+        type: object
+        default:
+          cronSchedule: "0 1 * * *"
+        description: |
+          etcd defragmentation parameters.
+        properties:
+          enabled:
+            type: boolean
+            description: |
+              Enable periodic etcd defragmentation.
+
+              Defaults to `true` when the cluster has three or more etcd members (masters ≥ 3, or
+              masters = 2 with an etcd-arbiter node); otherwise defaults to `false`.
+              An explicit value always takes priority over the computed default.
+
+              > **Warning.** Enabling defragmentation on a single-master cluster will cause a brief
+              > control plane unavailability while etcd is being defragmented.
+          cronSchedule:
+            type: string
+            default: "0 1 * * *"
+            pattern: '^(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)\s+(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)\s+(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)\s+(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)\s+(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)$'
+            x-examples:
+            - "0 1 * * *"
+            description: |
+              Defragmentation schedule in cron format (UTC).
       maxDbSize:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) parameter.

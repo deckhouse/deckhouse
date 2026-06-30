@@ -1,9 +1,9 @@
 ---
-title: Ядро модуля
+title: Ядро виртуализации
 permalink: ru/architecture/virtualization/core.html
 lang: ru
 search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, субресурсы, kubevirt, virt-operator, core
-description: Архитектура ядра (CORE) модуля virtualization в Deckhouse Kubernetes Platform.
+description: Архитектура ядра модуля virtualization в Deckhouse Kubernetes Platform.
 ---
 
 Ядро модуля [`virtualization`](/modules/virtualization/) непосредственно отвечает за работу с виртуальными машинами (ВМ). Ядро основано на проекте KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления. В модуле [`virtualization`](/modules/virtualization/) используется [форк KubeVirt](https://github.com/deckhouse/3p-kubevirt) от компании «Флант».
@@ -48,7 +48,7 @@ description: Архитектура ядра (CORE) модуля virtualization 
 Архитектура ядра модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура ядра модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-core.ru.png)
+![Архитектура ядра модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-core.ru.png)
 
 ## Компоненты ядра модуля
 
@@ -85,7 +85,7 @@ description: Архитектура ядра (CORE) модуля virtualization 
    - **virt-launcher** — init-контейнер, запускающий через virt-launcher скрипт `node-labeller.sh`. Этот скрипт подготавливает данные по характеристикам процессоров, их функциям и типам машин, которые virt-handler будет использовать для установки соответствующих лейблов на ресурсах Node. Эти лейблы в свою очередь будут использоваться для планирования ВМ на узлах, которые поддерживают соответствующие параметры;
    - **virt-handler** — основной контейнер;
    - **virt-launcher-image-holder** — служебный сайдкар-контейнер для предварительного скачивания образа virt-launcher. Контейнер стоит на паузе и выполняет только функцию хранения образа;
-   - **pr-helper** — [QEMU persistent reservation helper](https://www.qemu.org/docs/master/tools/qemu-pr-helper.html), служебный сайдкар-контейнер, создаёт сокет-слушатель, который принимает входящие соединения для коммуникации с QEMU. Это необходимо, поскольку операционная система ограничивает отправку команд SCSI с постоянным резервированием непривилегированным программам, что не позволяет совместно использовать блочные SCSI-устройства несколькими ВМ, например в случае кластеризации. [QEMU](https://www.qemu.org/) — Open Source-проект для эмуляции аппаратного обеспечения различных платформ, который используется для запуска ВМ в поде.
+   - **pr-helper** — [QEMU persistent reservation helper](https://www.qemu.org/docs/master/tools/qemu-pr-helper.html), служебный сайдкар-контейнер, создаёт сокет-слушатель, который принимает входящие соединения для коммуникации с QEMU. Это необходимо, поскольку операционная система ограничивает отправку команд SCSI с постоянным резервированием непривилегированным программам, что не позволяет совместно использовать блочные SCSI-устройства несколькими ВМ, например, в случае кластеризации. [QEMU](https://www.qemu.org/) — Open Source-проект для эмуляции аппаратного обеспечения различных платформ, который используется для запуска ВМ в поде.
 
 1. **Virt-operator** — оператор Kubernetes, управляющий жизненным циклом компонентов KubeVirt при помощи кастомного ресурса InternalVirtualizationKubeVirt. Virt-operator устанавливает в кластере virt-api, virt-controller и virt-handler, а также выполняет их настройку.
 
@@ -94,7 +94,7 @@ description: Архитектура ядра (CORE) модуля virtualization 
    - **virt-operator** — основной контейнер;
    - **proxy** (он же **kube-api-rewriter**) — сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API. Подробно описан выше.
 
-1. **Virt-launcher-[имя VMI]** — под, в котором запускается ВМ (точнее VirtualMachineInstance).
+1. **Virt-launcher-\<имя VMI\>** — под, в котором запускается ВМ (точнее VirtualMachineInstance).
 
    Состоит из одного контейнера:
 

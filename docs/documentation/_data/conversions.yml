@@ -33,14 +33,6 @@ descheduler:
         ru: Удалите `settings`.
       conversions:
         - del(.)
-extended-monitoring:
-    - version: 2
-      description:
-        en: If the `.imageAvailability.skipRegistryCertVerification` field is set to `true`, add `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. Then, delete the `skipRegistryCertVerification` field from the object. If the `.imageAvailability` object becomes empty after this change, delete it.
-        ru: Если для поля `.imageAvailability.skipRegistryCertVerification` установлено значение `true`, добавьте поле `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта. Если в результате объект `.imageAvailability` становится пуст, удалите его.
-      conversions:
-        - if .imageAvailability.skipRegistryCertVerification == true then .imageAvailability.registry.tlsConfig.insecureSkipVerify=true end
-        - del(.imageAvailability.skipRegistryCertVerification) | if .imageAvailability == {} then del(.imageAvailability) end
 global:
     - version: 2
       description:
@@ -76,7 +68,21 @@ metallb:
         en: Remove all `addressPool` elements with the `layer2` protocol.
         ru: Удалите все элементы `addressPool` с протоколом `layer2`.
       conversions:
-        - .
+        - del(.addressPools[]? | select(.protocol == "layer2"))
+    - version: 3
+      description:
+        en: |
+            Address pools and BGP settings have been moved to separate Custom Resources. Please remove the following fields from the `metallb` `ModuleConfig`:
+              - `.settings.addressPools`
+              - `.settings.bgpPeers`
+              - `.settings.bgpCommunities`
+        ru: |
+            Настройки пулов и BGP вынесены в отдельные Custom Resources. Пожалуйста, удалите следующие поля из `ModuleConfig` `metallb`:
+              - `.settings.addressPools`
+              - `.settings.bgpPeers`
+              - `.settings.bgpCommunities`
+      conversions:
+        - del(.bgpPeers, .bgpCommunities, .addressPools)
 monitoring-kubernetes:
     - version: 2
       description:
@@ -92,6 +98,12 @@ node-manager:
         ru: Удалите `allowedKubernetesVersions` и `allowedBundles`.
       conversions:
         - del(.allowedKubernetesVersions, .allowedBundles)
+    - version: 3
+      description:
+        en: Delete `earlyOomEnabled`.
+        ru: Удалите `earlyOomEnabled`.
+      conversions:
+        - del(.earlyOomEnabled)
 openvpn:
     - version: 2
       conversions:

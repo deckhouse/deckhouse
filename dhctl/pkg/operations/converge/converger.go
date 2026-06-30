@@ -25,7 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
@@ -35,7 +35,6 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
@@ -58,7 +57,6 @@ type Params struct {
 	ProviderGetter        infrastructure.CloudProviderGetter
 
 	TmpDir  string
-	Logger  log.Logger
 	IsDebug bool
 
 	NoSwitchToNodeUser bool
@@ -112,7 +110,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 
 	if !c.CommanderMode {
 		if c.CacheID == "" {
-			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+			return fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")
 		}
 
 		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{Cache: c.Options.Cache})
@@ -139,7 +137,6 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			Cache:                  stateCache,
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.Params.ProviderGetter,
-			Logger:                 c.Logger,
 			Opts:                   &c.Options.Global,
 		}, c.Params.CommanderModeParams)
 	} else {
@@ -149,7 +146,6 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			Cache:                  stateCache,
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.Params.ProviderGetter,
-			Logger:                 c.Logger,
 			Opts:                   &c.Options.Global,
 		})
 	}
@@ -167,7 +163,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	defer func() {
 		err := provider.Cleanup()
 		if err != nil {
-			c.Logger.LogErrorF("Error cleaning up provider: %v\n", err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Error cleaning up provider: %v", err))
 		}
 	}()
 
@@ -183,7 +179,6 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, nil, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
 		GlobalOptions: &c.Options.Global,
-		Logger:        c.Logger,
 		DisableSwitch: true,
 	})
 
@@ -216,7 +211,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	if !c.CommanderMode {
 		if c.CacheID == "" {
-			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+			return nil, fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")
 		}
 
 		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{Cache: c.Options.Cache})
@@ -227,13 +222,16 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	interactive := input.IsTerminal() && !c.Options.Global.ShowProgress
 	if interactive {
-		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Converge", c.Logger)
-		if err != nil {
-			return nil, err
-		}
+		progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Converge")
+		defer finishProgress()
 
 		onUpdateFunc := func(progress phases.Progress) error {
-			phasesChan <- progress
+			// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
+			// stopped and the channel is no longer drained; never block or panic on it.
+			select {
+			case progressCh <- progress:
+			default:
+			}
 			if c.OnProgressFunc != nil {
 				return c.OnProgressFunc(progress)
 			}
@@ -264,7 +262,6 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			Cache:                  stateCache,
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.ProviderGetter,
-			Logger:                 c.Logger,
 			Opts:                   &c.Options.Global,
 		}, c.Params.CommanderModeParams)
 	} else {
@@ -274,7 +271,6 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			Cache:                  stateCache,
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.ProviderGetter,
-			Logger:                 c.Logger,
 			Opts:                   &c.Options.Global,
 		})
 	}
@@ -300,10 +296,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		cleanWithLog := func(err error) error {
 			cleanErr := cleaner()
 			if cleanErr != nil {
-				c.Logger.LogWarnF("Cannot cleanup after check: %v; prev error: %v\n", cleanErr, err)
+				dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot cleanup after check: %v; prev error: %v", cleanErr, err))
 				return fmt.Errorf("%v: %v", err, cleanErr)
 			}
-			c.Logger.LogDebugF("Cleaning up after check succeeded: %v\n", err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cleaning up after check succeeded: %v", err))
 			return err
 		}
 
@@ -313,7 +309,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 		hasTerraformState = checkRes.HasTerraformState
 
-		log.InfoF("Has terraform state: %v\n", hasTerraformState)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Has terraform state: %v", hasTerraformState))
 
 		if c.Params.OnCheckResult != nil {
 			if err := c.Params.OnCheckResult(ctx, checkRes); err != nil {
@@ -358,7 +354,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	defer func() {
 		err := provider.Cleanup()
 		if err != nil {
-			c.Logger.LogWarnF("Cannot cleanup provider after converge: %v\n", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot cleanup provider after converge: %v", err))
 		}
 	}()
 
@@ -381,7 +377,6 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
 		GlobalOptions: &c.Options.Global,
-		Logger:        c.Logger,
 		IsDebug:       c.IsDebug,
 		DisableSwitch: c.NoSwitchToNodeUser,
 	})
@@ -398,11 +393,11 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		WithSkipPhases(phasesToSkip)
 
 	if c.CommanderMode {
-		log.InfoF("Need automatic migration for commander: %v\n", needAutomaticTofuMigrationForCommander)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Need automatic migration for commander: %v", needAutomaticTofuMigrationForCommander))
 	}
 
 	if needAutomaticTofuMigrationForCommander {
-		log.WarnF("Need migrate to opentofu. Switch to migrator\n")
+		dhlog.FromContext(ctx).WarnContext(ctx, "Need to migrate to opentofu. Switching to migrator")
 		err = r.RunConvergeMigration(convergeCtx, true)
 	} else {
 		err = r.RunConverge(convergeCtx)
@@ -416,15 +411,6 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		return nil, err
 	}
 
-	if interactive {
-		pb := progressbar.GetDefaultPb()
-		pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-		_, err := pb.MultiPrinter.Stop()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return &ConvergeResult{
 		Status: ConvergeStatusConverged,
 	}, nil
@@ -432,15 +418,16 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, checkInterval time.Duration) error {
 	if c.Options == nil || c.Options.AutoConverge.RunningNodeName == "" {
-		return fmt.Errorf("Need to pass running node name. It is may taints infrastructure state while converge")
+		return fmt.Errorf("Need to pass the running node name. It may taint the infrastructure state during converge")
 	}
 
-	convergeCtx := convergectx.NewContext(context.Background(), convergectx.Params{
+	// Preserve the non-cancelable base for the long-running auto-converge loop, but carry the
+	// slog root from the request ctx so logging keeps its file + TTY sinks.
+	convergeCtx := convergectx.NewContext(dhlog.ToContext(context.Background(), dhlog.FromContext(ctx)), convergectx.Params{
 		KubeProvider:           c.KubeProvider,
 		SSHProviderInitializer: c.SSHProviderInitializer,
 		Cache:                  cache.Global(),
 		ChangeParams:           c.Params.ChangesSettings,
-		Logger:                 c.Logger,
 		ProviderGetter:         c.ProviderGetter,
 		Opts:                   &c.Options.Global,
 	})
@@ -470,7 +457,7 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
 		WithInfrastructureContext(c.Params.InfrastructureContext)
 
-	inLockRunner := lock.NewInLockRunner(convergeCtx, lock.AutoConvergerIdentity, c.Options.SSH.User).
+	inLockRunner := lock.NewInLockRunner(convergeCtx.Ctx(), convergeCtx, lock.AutoConvergerIdentity, c.Options.SSH.User).
 		// never force lock
 		WithForceLock(false)
 
@@ -479,7 +466,6 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
 		GlobalOptions: &c.Options.Global,
-		Logger:        c.Logger,
 		IsDebug:       c.IsDebug,
 	})
 
@@ -494,7 +480,6 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 		ListenAddress: listenAddress,
 		CheckInterval: checkInterval,
 		TmpDir:        c.TmpDir,
-		Logger:        c.Logger,
 	})
 
 	return converger.Start(convergeCtx)

@@ -29,7 +29,7 @@ var clusterConfig = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 proxy:
@@ -59,7 +59,7 @@ func TestRenderBashBooster(t *testing.T) {
 	}
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(context.Background(), "10.0.0.2")
 	if err != nil {
 		t.Fatalf("ConfigForBashibleBundleTemplate error: %v", err)
 	}

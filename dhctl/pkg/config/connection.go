@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -22,13 +23,12 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -66,6 +66,7 @@ type ConnectionConfig struct {
 }
 
 func ParseConnectionConfig(
+	ctx context.Context,
 	configData string,
 	schemaStore *SchemaStore,
 	opts ...ValidateOption,
@@ -79,7 +80,7 @@ func ParseConnectionConfig(
 
 	appendValidationError := func(msg string, docNumber int, gvk *schema.GroupVersionKind, obj *unstructured.Unstructured) {
 		err := Error{
-			Index:    ptr.To(docNumber),
+			Index:    new(docNumber),
 			Messages: []string{msg},
 		}
 
@@ -97,10 +98,10 @@ func ParseConnectionConfig(
 	}
 
 	unmarshallError := func(err error, kind string, docNumber int) string {
-		return fmt.Sprintf("Cannot unmarshal to %s document %d: %v", kind, docNumber, err)
+		return fmt.Sprintf("Cannot unmarshal %s document %d: %v", kind, docNumber, err)
 	}
 
-	log.DebugF("Parsing connection config has %d documents\n", len(docs))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Connection config has %d documents", len(docs)))
 
 	config := &ConnectionConfig{}
 
@@ -114,7 +115,7 @@ func ParseConnectionConfig(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Messages: []string{unmarshallError(err, "Unstructured", i)},
 			})
 			continue
@@ -126,7 +127,7 @@ func ParseConnectionConfig(
 			Version: gvk.GroupVersion().String(),
 		}
 
-		log.DebugF("Process validate and parse connection config document %d for index %v\n", i, index)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Validating and parsing connection config document %d for index %v", i, index))
 
 		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
@@ -143,7 +144,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHConfig = &sshConfig
-			log.DebugF("SSHConfig added in result config\n")
+			dhlog.FromContext(ctx).DebugContext(ctx, "SSHConfig added to the result config")
 		case SSHConfigHostKind:
 			sshHostConfigDocsCount++
 			var sshHost SSHHost
@@ -152,7 +153,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHHosts = append(config.SSHHosts, sshHost)
-			log.DebugF("SSHHost added in result config, host in result config %d\n", len(config.SSHHosts))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("SSHHost added to the result config, hosts in result config %d", len(config.SSHHosts)))
 		default:
 			msg := fmt.Sprintf("Unknown kind, expected one of (%q, %q)", SSHConfigKind, SSHConfigHostKind)
 			appendValidationError(msg, i, &gvk, &obj)
@@ -200,9 +201,10 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 	connectionConfigPath := p.opts.SSH.ConnectionConfigPath
 
-	log.DebugF("Connection config path: %s\n", connectionConfigPath)
+	ctx := context.Background()
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Connection config path: %s", connectionConfigPath))
 
-	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, &p.opts.Global)
+	cfg, err := parseConnectionConfigFromFile(ctx, connectionConfigPath, &p.opts.Global)
 	if err != nil {
 		return fmt.Errorf("Parsing ssh config from file: %w", err)
 	}
@@ -224,7 +226,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 		keysPaths = append(keysPaths, fullPath)
 		if len(key.Passphrase) > 0 {
-			log.DebugF("Passphrase for key %s added in map\n", fullPath)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Passphrase for key %s added to the map", fullPath))
 			pathToPassPhrase[fullPath] = key.Passphrase
 		}
 	}
@@ -262,13 +264,14 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	return nil
 }
 
-func parseConnectionConfigFromFile(path string, globalOptions *options.GlobalOptions) (*ConnectionConfig, error) {
+func parseConnectionConfigFromFile(ctx context.Context, path string, globalOptions *options.GlobalOptions) (*ConnectionConfig, error) {
 	configData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading connection config file: %v", err)
 	}
 
 	return ParseConnectionConfig(
+		ctx,
 		string(configData),
 		NewSchemaStore(globalOptions),
 		ValidateOptionValidateExtensions(true),

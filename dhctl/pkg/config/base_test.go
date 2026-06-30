@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -40,7 +41,7 @@ func TestParseConfigFromData(t *testing.T) {
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 `
@@ -503,7 +504,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -521,7 +522,7 @@ podSubnetNodeCIDRPrefix: "24"
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: ""
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -539,7 +540,7 @@ podSubnetNodeCIDRPrefix: "24"
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: "invalid"
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -573,7 +574,7 @@ podSubnetNodeCIDRPrefix: "24"
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -679,7 +680,7 @@ clusterType: Cloud
 cloud:
   provider: Yandex
   prefix: "test"
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -913,7 +914,7 @@ deckhouse:
 func TestRegistryConfigProvider(t *testing.T) {
 	t.Run("Parse mocks config paths with wildcard", func(t *testing.T) {
 		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+			return FetchDocuments(context.Background(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
 		})
 		require.NoError(t, err)
 
@@ -1007,7 +1008,7 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce`
 
-		docs, err := FetchDocuments([]string{"./mocks/1-Init*.yml"})
+		docs, err := FetchDocuments(context.Background(), []string{"./mocks/1-Init*.yml"})
 		require.NoError(t, err)
 		require.Len(t, docs, 2)
 
@@ -1016,7 +1017,7 @@ deckhouse:
 	})
 
 	t.Run("Parse all yml config paths", func(t *testing.T) {
-		docs, err := FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+		docs, err := FetchDocuments(context.Background(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
 		require.NoError(t, err)
 		require.Len(t, docs, 6)
 		require.Equal(t, "", docs[0])

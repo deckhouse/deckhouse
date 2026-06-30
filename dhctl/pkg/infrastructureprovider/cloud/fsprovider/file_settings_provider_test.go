@@ -29,11 +29,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var terraformProviders = []string{
-	"openstack",
 	"aws",
 	gcp.ProviderName,
 	"azure",
@@ -47,10 +45,11 @@ var tofuProviders = []string{
 	dvp.ProviderName,
 	"vsphere",
 	"huaweicloud",
+	"openstack",
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(options.DefaultInfrastructureVersions, log.GetDefaultLogger())
+	s, err := loadTerraformVersionFileSettings(context.Background(), options.DefaultInfrastructureVersions)
 	require.NoError(t, err)
 
 	all := append(make([]string, 0), tofuProviders...)
@@ -60,7 +59,7 @@ func TestAllProviderPresentInStore(t *testing.T) {
 }
 
 func TestProvidersSettings(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(options.DefaultInfrastructureVersions, log.GetDefaultLogger())
+	s, err := loadTerraformVersionFileSettings(context.Background(), options.DefaultInfrastructureVersions)
 	require.NoError(t, err)
 
 	assertSettings := func(t *testing.T, s settingsStore, p string, assertProvider func(t *testing.T, settings settings.ProviderSettings)) {
@@ -94,7 +93,7 @@ func TestProvidersSettings(t *testing.T) {
 
 func TestProviderSettingsLoadError(t *testing.T) {
 	// settings store returns error on not exists file
-	sFailed := newSettingsProvider(log.GetDefaultLogger(), "/not/exists/file-aakjdiejfuefuefjej", func(_ log.Logger, _ string) (settingsStore, error) {
+	sFailed := newSettingsProvider(context.Background(), "/not/exists/file-aakjdiejfuefuefjej", func(_ context.Context, _ string) (settingsStore, error) {
 		return nil, fmt.Errorf("file does not exist")
 	})
 	require.Error(t, sFailed.initError)
@@ -108,7 +107,6 @@ func TestProviderSettingsLoadError(t *testing.T) {
 
 func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 	file := options.DefaultInfrastructureVersions
-	logger := log.GetDefaultLogger()
 
 	assertOneStoreInCache := func(t *testing.T, store *SettingsProvider) {
 		require.NoError(t, store.initError)
@@ -124,10 +122,10 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 		require.Len(t, store.store, len(allProviders))
 	}
 
-	sFirst := newSettingsProvider(logger, file, loadOrGetStore)
+	sFirst := newSettingsProvider(context.Background(), file, loadOrGetStore)
 	assertOneStoreInCache(t, sFirst)
 
-	sSecond := newSettingsProvider(logger, file, loadOrGetStore)
+	sSecond := newSettingsProvider(context.Background(), file, loadOrGetStore)
 	assertOneStoreInCache(t, sSecond)
 
 	require.Equal(t, sFirst.store, sSecond.store)

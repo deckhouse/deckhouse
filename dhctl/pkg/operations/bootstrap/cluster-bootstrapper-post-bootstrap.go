@@ -20,12 +20,11 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
@@ -44,41 +43,33 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 	}
 
 	if err := cache.InitWithOptions(ctx, wrapper.Client().Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
-		return fmt.Errorf("Can not init cache: %w", err)
+		return fmt.Errorf("Cannot init cache: %w", err)
 	}
 
 	bootstrapState := NewBootstrapState(cache.Global())
 
-	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
-	if interactive {
-		intLogger, ok := b.logger.(*log.InteractiveLogger)
-		if !ok {
-			return fmt.Errorf("logger is not interactive")
-		}
-		labelChan := intLogger.GetPhaseChan()
-		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Executing post-bootstrap script", labelChan, phasesChan, intLogger.GetLogChan())
+	body := func(_ chan phases.Progress) error {
+		postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).
+			WithTimeout(b.Options.Bootstrap.PostBootstrapScriptTimeout)
 
-		if err := progressbar.InitProgressBar(pbParam); err != nil {
+		if err := postScriptExecutor.Execute(ctx); err != nil {
 			return err
 		}
 
-		defer progressbar.FinishDefaultProgressBar()
+		out, err := bootstrapState.PostBootstrapScriptResult(ctx)
+		if err != nil {
+			return err
+		}
+
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Output from post-bootstrap script:\n%s", string(out)))
+
+		return nil
 	}
 
-	postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).
-		WithTimeout(b.Options.Bootstrap.PostBootstrapScriptTimeout)
-
-	if err := postScriptExecutor.Execute(ctx); err != nil {
-		return err
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	if interactive {
+		return runProgress(ctx, dhlog.FromContext(ctx), "Executing post-bootstrap script", body)
 	}
 
-	out, err := bootstrapState.PostBootstrapScriptResult(ctx)
-	if err != nil {
-		return err
-	}
-
-	log.InfoF("Output from post-bootstrap script:\n%s", string(out))
-
-	return nil
+	return body(nil)
 }

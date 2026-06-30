@@ -15,22 +15,23 @@
 package image
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
-func PrepareFiles(path string) error {
+func PrepareFiles(ctx context.Context, path string) error {
 	pathStat, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
 	if !pathStat.IsDir() {
-		return fmt.Errorf("%s isn't directory", path)
+		return fmt.Errorf("%s isn't a directory", path)
 	}
 
 	bashiblePath := filepath.Join(path, "candi", "bashible")
@@ -56,7 +57,7 @@ func PrepareFiles(path string) error {
 			return nil
 		}
 
-		log.DebugF("found and patched file %s\n", fullPath)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("found and patched file %s", fullPath))
 
 		return nil
 	}

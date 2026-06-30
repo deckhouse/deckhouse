@@ -3,21 +3,18 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   annotations:
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-  creationTimestamp: null
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
   finalizers:
   - modules.deckhouse.io/module-exists
   name: test-source-1
   resourceVersion: "1001"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
   scanInterval: 6h30m0s
 status:
-  message: ""
   modules:
   - checksum: 'sha256:'
     name: testmodule
@@ -32,7 +29,6 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/change-cause: check release (LTS channel - direct release)
-  creationTimestamp: null
   labels:
     module: testmodule
     modules.deckhouse.io/update-policy: test-lts
@@ -54,15 +50,12 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   labels:
     module: testmodule
     modules.deckhouse.io/update-policy: test-lts
@@ -79,8 +72,6 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   phase: Deployed
   pullDuration: 0s
-  size: 0
   transitionTime: "2024-05-03T20:55:49Z"

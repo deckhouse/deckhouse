@@ -21,7 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -55,7 +55,7 @@ func getNgMetaConfig(ctx context.Context, clusterMetaConfig *config.MetaConfig, 
 	if settings != nil {
 		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
 		if err != nil {
-			log.ErrorLn(err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		} else {
 			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
 		}
@@ -72,7 +72,7 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 
 	nodeIndex, err := config.GetIndexFromNodeName(name)
 	if err != nil {
-		log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, name)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, name))
 		return nil
 	}
 
@@ -90,7 +90,7 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 	}
 
 	if err := infrastructure.DestroyPipeline(ctx, nodeRunner, name); err != nil {
-		return fmt.Errorf("destroing of node %s failed: %v", name, err)
+		return fmt.Errorf("destruction of node %s failed: %v", name, err)
 	}
 
 	return nil

@@ -93,7 +93,7 @@ func TestStaticClusterClusterManifestConverge(t *testing.T) {
 	require.NotEqual(t, kubeVersionBefore, kubeVersionAfter)
 
 	paramsBefore := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -102,7 +102,7 @@ internalNetworkCIDRs:
 `),
 	}
 	paramsAfter := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionAfter)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionAfter),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -180,11 +180,11 @@ func TestCloudClusterManifestConverge(t *testing.T) {
 	require.NotEqual(t, kubeVersionBefore, kubeVersionAfter)
 
 	paramsBefore := commander.CommanderModeParams{
-		ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+		ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 		ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 	}
 	paramsAfter := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionAfter)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionAfter),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
@@ -280,10 +280,10 @@ func TestErrorConvergeManifests(t *testing.T) {
 
 	staticClusterConvergeParams := testConvergeManifestsParams{
 		commanderStateBefore: commander.CommanderModeParams{
-			ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+			ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		},
 		commanderStateAfter: commander.CommanderModeParams{
-			ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+			ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		},
 	}
 
@@ -294,11 +294,11 @@ func TestErrorConvergeManifests(t *testing.T) {
 
 	yandexClusterConvergeParams := testConvergeManifestsParams{
 		commanderStateBefore: commander.CommanderModeParams{
-			ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+			ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 			ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 		},
 		commanderStateAfter: commander.CommanderModeParams{
-			ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+			ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 			ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 		},
 	}

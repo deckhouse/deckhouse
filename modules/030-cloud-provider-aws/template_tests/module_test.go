@@ -59,7 +59,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -71,7 +71,7 @@ const globalValues = `
       master:
         __ConstantChoices__: "3"
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.31.0
+    kubernetesVersion: 1.32.0
 `
 
 const moduleValues = `
@@ -181,8 +181,6 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 
 			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 
-			cniSecret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(userAuthzUser.Exists()).To(BeTrue())
@@ -207,15 +205,6 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
   - deletecollection
   - patch
   - update`))
-
-			Expect(cniSecret.Exists()).To(BeTrue())
-			Expect(cniSecret.Field("data.cni").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("cilium"))))
-			actualCiliumConfig, err := base64.StdEncoding.DecodeString(cniSecret.Field("data.cilium").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(actualCiliumConfig)).To(MatchJSON(`{
-  "mode": "VXLAN",
-  "masqueradeMode": "BPF"
-}`))
 
 			// user story #1
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
@@ -435,28 +424,4 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
-	Context("AWS with existing CNI secret data", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
-			f.ValuesSet("cloudProviderAws.internal.cniSecretData", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`cni: %s
-flannel: %s
-`,
-				base64.StdEncoding.EncodeToString([]byte("flannel")),
-				base64.StdEncoding.EncodeToString([]byte(`{"podNetworkMode":"host-gw"}`)),
-			))))
-			f.HelmRender()
-		})
-
-		It("Should render CNI secret from internal value", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cniSecret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-			Expect(cniSecret.Exists()).To(BeTrue())
-			Expect(cniSecret.Field("data.cni").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("flannel"))))
-			Expect(cniSecret.Field("data.flannel").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(`{"podNetworkMode":"host-gw"}`))))
-			Expect(cniSecret.Field("data.cilium").Exists()).To(BeFalse())
-		})
-	})
 })

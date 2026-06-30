@@ -41,7 +41,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -52,13 +52,12 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.31.0
+    kubernetesVersion: 1.32.0
     clusterUUID: cluster
 `
 
 const moduleValuesA = `
 internal:
-  cniSecretData: "base64-encoded-string-or-placeholder"
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: HuaweiCloudClusterConfiguration

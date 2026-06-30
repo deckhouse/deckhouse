@@ -15,6 +15,7 @@
 package template
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -22,7 +23,7 @@ import (
 )
 
 func TestExecuteTemplate_DefineAndInclude(t *testing.T) {
-	var data map[string]interface{}
+	var data map[string]any
 
 	err := yaml.Unmarshal([]byte(`
 nodeIP: "127.0.0.1"
@@ -31,7 +32,7 @@ nodeIP: "127.0.0.1"
 		t.Errorf("Loading templates error: %v", err)
 	}
 
-	rendered, err := RenderTemplatesDir("testdata/execute", data, nil)
+	rendered, err := RenderTemplatesDir(context.Background(), "testdata/execute", data, nil)
 	if err != nil {
 		t.Errorf("Rendering templates error: %v", err)
 	}

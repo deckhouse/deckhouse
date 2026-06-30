@@ -27,9 +27,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
-func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
+func prepareAuthHTTPClient(ctx context.Context, metaConfig *config.MetaConfig) (*http.Client, error) {
 	registry := metaConfig.Registry.Settings.RemoteData
-	return registryutil.NewRegistryClient(string(registry.Scheme), registry.CA)
+	return registryutil.NewRegistryClient(ctx, string(registry.Scheme), registry.CA)
 }
 
 type registryAuthCheck struct {
@@ -57,7 +57,7 @@ func (c registryAuthCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("meta config is required")
 	}
 
-	client, err := prepareAuthHTTPClient(c.MetaConfig)
+	client, err := prepareAuthHTTPClient(ctx, c.MetaConfig)
 	if err != nil {
 		return err
 	}
@@ -125,12 +125,12 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return authURL, registryService, fmt.Errorf("cannot auth in registry. %w", err)
+		return authURL, registryService, fmt.Errorf("cannot authenticate in registry. %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-		return authURL, registryService, fmt.Errorf("%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\nCheck if container registry address is correct", ErrAuthRegistryFailed)
+		return authURL, registryService, fmt.Errorf("%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\nCheck that the container registry address is correct", ErrAuthRegistryFailed)
 	}
 	wwwAuthHeader := resp.Header.Get("WWW-Authenticate")
 
@@ -140,7 +140,7 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 
 	realmMatches := realmRe.FindStringSubmatch(wwwAuthHeader)
 	if len(realmMatches) == 0 {
-		return authURL, registryService, fmt.Errorf("couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header:%s. %w", wwwAuthHeader, ErrAuthRegistryFailed)
+		return authURL, registryService, fmt.Errorf("couldn't find the bearer realm parameter; consider enabling bearer token auth in your registry. Returned header: %s. %w", wwwAuthHeader, ErrAuthRegistryFailed)
 	}
 	authURL = realmMatches[1]
 
@@ -171,12 +171,12 @@ func checkBasicRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, 
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("cannot request to registry. %w", err)
+		return fmt.Errorf("cannot send request to registry. %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-		return fmt.Errorf("%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\nCheck if container registry address is correct", ErrAuthRegistryFailed)
+		return fmt.Errorf("%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\nCheck that the container registry address is correct", ErrAuthRegistryFailed)
 	}
 
 	return checkResponseError(resp)
@@ -195,7 +195,7 @@ func checkTokenRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, 
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("cannot auth in registry. %w", err)
+		return fmt.Errorf("cannot authenticate in registry. %w", err)
 	}
 	defer resp.Body.Close()
 

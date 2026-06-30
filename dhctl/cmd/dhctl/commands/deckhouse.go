@@ -21,6 +21,8 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
 
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -28,7 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
@@ -40,9 +42,9 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
-		logger := log.GetDefaultLogger()
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
@@ -60,13 +62,13 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 
-		return log.ProcessCtx(ctx, "default", "Remove Deckhouse️", func(ctx context.Context) error {
+		return logger.RunProcess(ctx, l, "Remove Deckhouse", func(ctx context.Context) error {
 			kube, err := kubeProvider.Client(ctx)
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %w", err)
@@ -86,17 +88,16 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	var dryRun bool
-	cmd.Flag("dry-run", "Output deployment yaml").BoolVar(&dryRun)
+	cmd.Flag("dry-run", "Output the deployment YAML").BoolVar(&dryRun)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
@@ -109,7 +110,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
@@ -119,7 +120,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			ctx,
 			opts.Global.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(logger),
+				infrastructureprovider.NewPreparatorProviderParams(),
 			),
 			&opts.Global,
 		)
@@ -133,7 +134,10 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		}
 
 		if dryRun {
-			manifest := deckhouse.CreateDeckhouseDeploymentManifest(installConfig)
+			manifest, err := deckhouse.CreateDeckhouseDeploymentManifest(installConfig)
+			if err != nil {
+				return err
+			}
 			out, err := yaml.Marshal(manifest)
 			if err != nil {
 				return err
@@ -143,7 +147,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			return nil
 		}
 
-		return log.ProcessCtx(ctx, "bootstrap", "Create Deckhouse Deployment", func(ctx context.Context) error {
+		return logger.RunProcess(ctx, l, "Create Deckhouse Deployment", func(ctx context.Context) error {
 			kube, err := kubeProvider.Client(ctx)
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %w", err)

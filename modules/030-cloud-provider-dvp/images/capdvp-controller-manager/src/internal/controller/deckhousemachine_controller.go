@@ -19,6 +19,7 @@ package controller
 
 import (
 	"context"
+	"crypto/sha1" //nolint:gosec
 	"errors"
 	"fmt"
 	"strings"
@@ -60,6 +61,8 @@ const (
 	OrphanedVMAnnotation = "dvp.deckhouse.io/orphaned-vm"
 	// OrphanedVMTimestampAnnotation records when VM became orphaned
 	OrphanedVMTimestampAnnotation = "dvp.deckhouse.io/orphaned-vm-timestamp"
+	// OrphanedDiskAnnotationPrefix is the prefix for annotations marking timed-out disk deletions
+	OrphanedDiskAnnotationPrefix = "dvp.deckhouse.io/orphaned-disk-"
 )
 
 type ownedResourceCreator struct {
@@ -94,6 +97,30 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 	logger = logger.WithValues("dvp_machine", dvpMachine.Name, "dvp_machine_ns", dvpMachine.Namespace)
 
+	// Initialize the patch helper before branching into delete flow so we can
+	// persist finalizer/annotation updates even if related Cluster resources are already gone.
+	patchHelper, err := patch.NewHelper(dvpMachine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Migrate old CR's to v1beta2 conditions and always patch the dvpMachine when exiting this function,
+	// so we can persist any DeckhouseMachine changes.
+	defer func() {
+		normalizeLegacyConditions(dvpMachine)
+		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
+			result = ctrl.Result{}
+			reterr = err
+		}
+	}()
+
+	// Handle deleted machines before resolving owner Cluster/DeckhouseCluster.
+	// During destroy the infrastructure cluster object may already be gone, but
+	// we still must delete the backing VM and remove the machine finalizer.
+	if !dvpMachine.DeletionTimestamp.IsZero() {
+		return r.reconcileDeleteOperation(ctx, logger, dvpMachine)
+	}
+
 	machine, err := capiutil.GetOwnerMachine(ctx, r.Client, dvpMachine.ObjectMeta)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -127,27 +154,6 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if annotations.IsPaused(cluster, dvpMachine) {
 		logger.Info("DeckhouseMachine or linked Cluster is marked as paused. Will not reconcile.")
 		return ctrl.Result{}, nil
-	}
-
-	// Initialize the patch helper
-	patchHelper, err := patch.NewHelper(dvpMachine, r.Client)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Migrate old CR's to v1beta2 conditions and always patch the dvpMachine when exiting this function,
-	// so we can persist any DeckhouseMachine changes.
-	defer func() {
-		normalizeLegacyConditions(dvpMachine)
-		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
-			result = ctrl.Result{}
-			reterr = err
-		}
-	}()
-
-	// Handle deleted machines
-	if !dvpMachine.DeletionTimestamp.IsZero() {
-		return r.reconcileDeleteOperation(ctx, logger, dvpMachine)
 	}
 
 	// Handle other kinds of changes
@@ -554,12 +560,40 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	for _, disk := range disksToDelete {
 		logger.Info("Removing VirtualDisk", "disk_name", disk)
 		if err = r.DVP.DiskService.RemoveDiskByName(ctx, disk); err != nil {
+			if errors.Is(err, dvpapi.ErrNotFound) {
+				logger.Info("VirtualDisk already gone, skipping", "disk_name", disk)
+				continue
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				logger.Error(err, "VirtualDisk deletion timed out, marking as orphaned and continuing",
+					"disk_name", disk,
+				)
+				if dvpMachine.Annotations == nil {
+					dvpMachine.Annotations = make(map[string]string)
+				}
+				h := sha1.Sum([]byte(disk)) //nolint:gosec
+				key := fmt.Sprintf("%s%x", OrphanedDiskAnnotationPrefix, h[:8])
+				dvpMachine.Annotations[key] = disk
+				continue
+			}
 			merr = multierror.Append(merr, fmt.Errorf("delete VirtualDisk %s: %w", disk, err))
 		}
 	}
 
 	if err = merr.ErrorOrNil(); err != nil {
 		return ctrl.Result{}, fmt.Errorf("delete VirtualDisks: %w", err)
+	}
+
+	var orphanedDisks []string
+	for k, v := range dvpMachine.Annotations {
+		if strings.HasPrefix(k, OrphanedDiskAnnotationPrefix) {
+			orphanedDisks = append(orphanedDisks, v)
+		}
+	}
+	if len(orphanedDisks) > 0 {
+		logger.Info("VirtualDisks timed out and were not deleted — manual cleanup required in parent DVP cluster",
+			"orphaned_disks", orphanedDisks,
+		)
 	}
 
 	controllerutil.RemoveFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer)
@@ -1152,7 +1186,7 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 ) (bool, error) {
 	disk, err := r.DVP.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
-		if errors.Is(err, cloudprovider.DiskNotFound) {
+		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.DiskNotFound) {
 			if required {
 				return false, fmt.Errorf("disk %q not found", diskName)
 			}
@@ -1203,7 +1237,7 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 		return true, nil
 	case diskSCStepApplyPatch:
 		if _, err := r.DVP.DiskService.GetStorageClass(ctx, desiredStorageClass); err != nil {
-			if errors.Is(err, cloudprovider.DiskNotFound) {
+			if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.DiskNotFound) {
 				return false, fmt.Errorf("storage class %q not found", desiredStorageClass)
 			}
 			return false, err

@@ -20,20 +20,18 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type PhasesForCheck map[string]struct{}
 
 type ByPhaseChecker struct {
-	loggerProvider log.LoggerProvider
-	phaseValues    PhasesForCheck
+	phaseValues PhasesForCheck
 }
 
-func NewByPhaseChecker(phaseValues PhasesForCheck, loggerProvider log.LoggerProvider) *ByPhaseChecker {
+func NewByPhaseChecker(phaseValues PhasesForCheck) *ByPhaseChecker {
 	return &ByPhaseChecker{
-		loggerProvider: loggerProvider,
-		phaseValues:    phaseValues,
+		phaseValues: phaseValues,
 	}
 }
 
@@ -42,14 +40,12 @@ func (s *ByPhaseChecker) WaitAttemptsBeforeCheck() int {
 	return 3
 }
 
-func (s *ByPhaseChecker) IsReady(_ context.Context, resource *unstructured.Unstructured, resourceName string) (bool, error) {
+func (s *ByPhaseChecker) IsReady(ctx context.Context, resource *unstructured.Unstructured, resourceName string) (bool, error) {
 	if len(s.phaseValues) == 0 {
-		return false, fmt.Errorf("Internal error. No phase for check defined for resource %s", resourceName)
+		return false, fmt.Errorf("Internal error. No check phase defined for resource %s", resourceName)
 	}
 
-	logger := log.SafeProvideLogger(s.loggerProvider)
-
-	logNotReady := notFoundFuncDebugLogNotReady(logger, resourceName)
+	logNotReady := notFoundFuncDebugLogNotReady(ctx, resourceName)
 	castError := castErrorFuncForResource(resourceName, "")
 
 	status := castKey[map[string]any](resource.Object, "status", logNotReady, castError)
@@ -65,7 +61,7 @@ func (s *ByPhaseChecker) IsReady(_ context.Context, resource *unstructured.Unstr
 	phase := phaseRes.value
 	_, res := s.phaseValues[phase]
 
-	logger.LogDebugF("Found for %s currentStatus.phase '%s', result is %v.\n", resourceName, phase, res)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found for %s currentStatus.phase '%s', result is %v.", resourceName, phase, res))
 
 	return res, nil
 }

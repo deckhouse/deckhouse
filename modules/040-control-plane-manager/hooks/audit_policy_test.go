@@ -65,12 +65,14 @@ data:
 		policyA = `
 apiVersion: audit.k8s.io/v1
 kind: Policy
+metadata: {}
 rules:
 - level: Metadata
 `
 		policyB = `
 apiVersion: audit.k8s.io/v1
 kind: Policy
+metadata: {}
 rules:
 - level: Metadata
   omitStages:
@@ -193,9 +195,9 @@ rules:
 				},
 			}
 
-			appendBasicPolicyRules(&expectPolicy, extraData)
-			appendVirtualizationPolicyRules(&expectPolicy)
-			appendUnauthenticatedRules(&expectPolicy)
+			appendBasicPolicyRules(&expectPolicy, extraData, nil)
+			appendVirtualizationPolicyRules(&expectPolicy, nil)
+			appendUnauthenticatedRules(&expectPolicy, nil)
 
 			for i, actualRule := range policy.Rules {
 				// Note: Equal() is not working here as Rule contains array fields with "omitempty" directive and an empty array is not equal to nil.
@@ -211,10 +213,7 @@ rules:
 
 			hasKubectlLogsRule := false
 			for _, rule := range policy.Rules {
-				if rule.Level != audit.LevelRequest {
-					continue
-				}
-				if len(rule.Verbs) != 1 || rule.Verbs[0] != "get" {
+				if rule.Level != audit.LevelMetadata {
 					continue
 				}
 				for _, resource := range rule.Resources {
@@ -232,8 +231,59 @@ rules:
 					break
 				}
 			}
-			Expect(hasKubectlLogsRule).To(BeTrue(), "audit policy should contain request-level get rule for pods/log (kubectl get logs)")
+			Expect(hasKubectlLogsRule).To(BeTrue(), "audit policy should contain metadata-level rule for pods/log (kubectl logs)")
 		})
+
+		It("must contain explicit kubectl logs audit rule", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			data, _ := base64.StdEncoding.DecodeString(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String())
+			var policy audit.Policy
+			_ = yaml.UnmarshalStrict(data, &policy)
+
+			found := false
+			for _, r := range policy.Rules {
+				if r.Level != audit.LevelMetadata {
+					continue
+				}
+				for _, gr := range r.Resources {
+					if gr.Group != "" {
+						continue
+					}
+					for _, res := range gr.Resources {
+						if res == "pods/log" {
+							found = true
+							break
+						}
+					}
+					if found {
+						break
+					}
+				}
+				if found {
+					break
+				}
+			}
+
+			Expect(found).To(BeTrue(), "explicit kubectl logs audit rule was not found")
+		})
+	})
+
+	It("must have RU/EN descriptions for all built-in audit policy rules", func() {
+		rules, err := BuiltInAuditPolicyRulesForDocumentation()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(len(rules)).To(BeNumerically(">", 0))
+
+		var expectedPolicy audit.Policy
+		appendBasicPolicyRules(&expectedPolicy, nil, nil)
+		appendVirtualizationPolicyRules(&expectedPolicy, nil)
+		appendUnauthenticatedRules(&expectedPolicy, nil)
+
+		Expect(len(rules)).To(Equal(len(expectedPolicy.Rules)), "each built-in rule must have a description")
+
+		for i, r := range rules {
+			Expect(r.Description.EN).ToNot(BeEmpty(), "missing EN description for rule %d", i)
+			Expect(r.Description.RU).ToNot(BeEmpty(), "missing RU description for rule %d", i)
+		}
 	})
 
 })

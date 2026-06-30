@@ -15,6 +15,7 @@
 package registryutil
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
@@ -99,14 +100,14 @@ AwEHoUQDQgAEXQXf/yuPsQnhJ/I1Zan+c7/9jLcilqqrXxJkrv6vZawQfrJkUV8t
 `
 
 func TestNewRegistryTransport_HTTP(t *testing.T) {
-	transport, err := NewRegistryTransport("HTTP", "")
+	transport, err := NewRegistryTransport(context.Background(), "HTTP", "")
 	require.NoError(t, err)
 	require.NotNil(t, transport.TLSClientConfig)
 	require.True(t, transport.TLSClientConfig.InsecureSkipVerify)
 }
 
 func TestNewRegistryTransport_InvalidCA(t *testing.T) {
-	_, err := NewRegistryTransport("HTTPS", "-----BEGIN CERTIFICATE-----")
+	_, err := NewRegistryTransport(context.Background(), "HTTPS", "-----BEGIN CERTIFICATE-----")
 	require.EqualError(t, err, "invalid cert in CA PEM")
 }
 
@@ -116,7 +117,7 @@ func TestNewRegistryClient_WithCA(t *testing.T) {
 
 	server := newTestTLSServer(t, serverTLSCert)
 
-	client, err := NewRegistryClient("HTTPS", testCA)
+	client, err := NewRegistryClient(context.Background(), "HTTPS", testCA)
 	require.NoError(t, err)
 
 	resp, err := client.Get(server.URL)
@@ -131,7 +132,7 @@ func TestNewRegistryClient_WithChainCA(t *testing.T) {
 
 	server := newTestTLSServer(t, serverTLSCert)
 
-	client, err := NewRegistryClient("HTTPS", testRootCA+testIntermediateCA)
+	client, err := NewRegistryClient(context.Background(), "HTTPS", testRootCA+testIntermediateCA)
 	require.NoError(t, err)
 
 	resp, err := client.Get(server.URL)

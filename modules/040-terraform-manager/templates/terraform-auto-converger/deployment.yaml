@@ -4,7 +4,7 @@ memory: 100Mi
 {{- end }}
 
 {{- if (.Values.terraformManager.autoConvergerEnabled) }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -59,7 +59,7 @@ spec:
       - name: deckhouse-registry
       automountServiceAccountToken: true
       serviceAccountName: terraform-auto-converger
-      {{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex" "Zvirt" "vSphere" "Huaweicloud") }}
+      {{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex" "Zvirt" "vSphere" "Huaweicloud" "OpenStack") }}
       initContainers:
       - name: to-tofu-migrator
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true) | nindent 8 }}
@@ -124,9 +124,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "converger_resources" . | nindent 12 }}
-  {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -172,9 +170,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
-  {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}

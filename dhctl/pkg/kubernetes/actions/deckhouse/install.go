@@ -37,7 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -49,7 +49,7 @@ func prepareDeckhouseDeploymentForUpdate(
 	manifestForUpdate *appsv1.Deployment,
 ) (*appsv1.Deployment, error) {
 	resDeployment := manifestForUpdate
-	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get deployment", 30, 1*time.Second).RunContext(ctx, func() error {
 		currentManifestInCluster, err := kubeCl.AppsV1().
 			Deployments(manifestForUpdate.GetNamespace()).
 			Get(ctx, manifestForUpdate.GetName(), metav1.GetOptions{})
@@ -64,7 +64,10 @@ func prepareDeckhouseDeploymentForUpdate(
 		// It helps to reduce wait time on bootstrap process restarting,
 		// and prevents a race condition when deckhouse's Pod is scheduled
 		// on the non-approved node, so the bootstrap process never finishes.
-		params := deckhouseDeploymentParamsFromCfg(cfg)
+		params, err := deckhouseDeploymentParamsFromCfg(cfg)
+		if err != nil {
+			return err
+		}
 		params.DeployTime = manifests.GetDeckhouseDeployTime(currentManifestInCluster)
 
 		resDeployment = manifests.ParameterizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
@@ -78,17 +81,24 @@ func prepareDeckhouseDeploymentForUpdate(
 func controllerDeploymentTask(
 	kubeCl *client.KubernetesClient,
 	cfg *config.DeckhouseInstaller,
-) actions.ManifestTask {
+) (actions.ManifestTask, error) {
+	// Build the manifest up front so the image-tag error surfaces here instead of inside the
+	// Manifest callback (which has no way to return an error).
+	deployment, err := CreateDeckhouseDeploymentManifest(cfg)
+	if err != nil {
+		return actions.ManifestTask{}, err
+	}
+
 	return actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
-		Manifest: func() interface{} {
-			return CreateDeckhouseDeploymentManifest(cfg)
+		Manifest: func() any {
+			return deployment
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(ctx, manifest.(*appsv1.Deployment), metav1.CreateOptions{})
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			preparedManifest, err := prepareDeckhouseDeploymentForUpdate(ctx, kubeCl, cfg, manifest.(*appsv1.Deployment))
 			if err != nil {
 				return err
@@ -98,7 +108,7 @@ func controllerDeploymentTask(
 
 			return err
 		},
-	}
+	}, nil
 }
 
 func LockDeckhouseQueueBeforeCreatingModuleConfigs(
@@ -107,7 +117,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 ) (*actions.ManifestTask, error) {
 	deckhouseDeploymentPresent := false
 
-	err := retry.NewLoop("Get deckhouse manifest", 10, 5*time.Second).RunContext(ctx, func() error {
+	err := retry.NewLoop("Get deckhouse manifest", 50, 1*time.Second).RunContext(ctx, func() error {
 		_, err := kubeCl.AppsV1().Deployments("d8-system").Get(ctx, "deckhouse", metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -132,7 +142,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 
 	return &actions.ManifestTask{
 		Name: `ConfigMap "deckhouse-bootstrap-lock"`,
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return &apiv1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ConfigMap",
@@ -144,7 +154,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 				},
 			}
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			cm := manifest.(*apiv1.ConfigMap)
 
 			_, err := kubeCl.
@@ -152,14 +162,14 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 				Create(ctx, cm, metav1.CreateOptions{})
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			return nil
 		},
 	}, nil
 }
 
 func UnlockDeckhouseQueueAfterCreatingModuleConfigs(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Unlock Deckhouse controller queue", 15, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Unlock Deckhouse controller queue", 75, 1*time.Second).RunContext(ctx, func() error {
 		err := kubeCl.CoreV1().ConfigMaps("d8-system").
 			Delete(ctx, "deckhouse-bootstrap-lock", metav1.DeleteOptions{})
 
@@ -204,8 +214,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `Admin ClusterRole "cluster-admin"`,
-			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRole() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseAdminClusterRole() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoles().
 					Get(ctx, manifest.(*rbacv1.ClusterRole).GetName(), metav1.GetOptions{})
@@ -214,12 +224,12 @@ func CreateDeckhouseManifests(
 						_, err = kubeCl.RbacV1().ClusterRoles().Create(ctx, manifest.(*rbacv1.ClusterRole), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoles().
 					Update(ctx, manifest.(*rbacv1.ClusterRole), metav1.UpdateOptions{})
@@ -229,8 +239,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `ClusterRoleBinding "deckhouse"`,
-			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRoleBinding() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseAdminClusterRoleBinding() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoleBindings().
 					Get(ctx, manifest.(*rbacv1.ClusterRoleBinding).GetName(), metav1.GetOptions{})
@@ -239,12 +249,12 @@ func CreateDeckhouseManifests(
 						_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, manifest.(*rbacv1.ClusterRoleBinding), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoleBindings().
 					Update(ctx, manifest.(*rbacv1.ClusterRoleBinding), metav1.UpdateOptions{})
@@ -254,8 +264,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `ServiceAccount "deckhouse"`,
-			Manifest: func() interface{} { return manifests.DeckhouseServiceAccount() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseServiceAccount() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ServiceAccounts("d8-system").
 					Get(ctx, manifest.(*apiv1.ServiceAccount).GetName(), metav1.GetOptions{})
@@ -264,12 +274,12 @@ func CreateDeckhouseManifests(
 						_, err = kubeCl.CoreV1().ServiceAccounts("d8-system").Create(ctx, manifest.(*apiv1.ServiceAccount), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ServiceAccounts("d8-system").
 					Update(ctx, manifest.(*apiv1.ServiceAccount), metav1.UpdateOptions{})
@@ -279,7 +289,7 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name: `ConfigMap "install-data"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return &apiv1.ConfigMap{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ConfigMap",
@@ -294,7 +304,7 @@ func CreateDeckhouseManifests(
 					},
 				}
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				cm := manifest.(*apiv1.ConfigMap)
 
 				_, err := kubeCl.
@@ -303,7 +313,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				cm := manifest.(*apiv1.ConfigMap)
 
 				_, err := kubeCl.
@@ -338,7 +348,7 @@ func CreateDeckhouseManifests(
 				Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 
 			if err != nil && apierrors.IsAlreadyExists(err) {
-				log.InfoLn("Already exists. Skip!")
+				dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				return nil
 			}
 			return err
@@ -375,7 +385,7 @@ func CreateDeckhouseManifests(
 					Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 
 				if err != nil && apierrors.IsAlreadyExists(err) {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 					return nil
 				}
 
@@ -394,8 +404,8 @@ func CreateDeckhouseManifests(
 	if len(cfg.InfrastructureState) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-terraform-state"`,
-			Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -406,12 +416,12 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -422,13 +432,13 @@ func CreateDeckhouseManifests(
 	}
 
 	for nodeName, tfState := range cfg.NodesInfrastructureState {
-		getManifest := func() interface{} {
+		getManifest := func() any {
 			return manifests.SecretWithNodeInfrastructureState(nodeName, "master", tfState, nil)
 		}
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -440,12 +450,12 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -458,8 +468,8 @@ func CreateDeckhouseManifests(
 	if len(cfg.ClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-configuration"`,
-			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -470,12 +480,12 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -488,12 +498,12 @@ func CreateDeckhouseManifests(
 	if len(cfg.ProviderClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "d8-provider-cluster-configuration"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.SecretWithProviderClusterConfig(
 					cfg.ProviderClusterConfig, cfg.CloudDiscovery,
 				)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -504,12 +514,12 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*apiv1.Secret))
 				if err != nil {
 					return err
@@ -532,10 +542,10 @@ func CreateDeckhouseManifests(
 	if len(cfg.StaticClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "d8-static-cluster-configuration"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.SecretWithStaticClusterConfig(cfg.StaticClusterConfig)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -546,12 +556,12 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*apiv1.Secret))
 				if err != nil {
 					return err
@@ -574,17 +584,17 @@ func CreateDeckhouseManifests(
 	if len(cfg.UUID) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `ConfigMap "d8-cluster-uuid"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.ClusterUUIDConfigMap(cfg.UUID)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).
 					Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).
 					Update(ctx, manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
@@ -601,10 +611,10 @@ func CreateDeckhouseManifests(
 	if cfg.KubeDNSAddress != "" {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Service "kube-dns"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.KubeDNSService(cfg.KubeDNSAddress)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Services("kube-system").
 					Get(ctx, manifest.(*apiv1.Service).GetName(), metav1.GetOptions{})
@@ -614,17 +624,17 @@ func CreateDeckhouseManifests(
 							CoreV1().Services("kube-system").
 							Create(ctx, manifest.(*apiv1.Service), metav1.CreateOptions{})
 						if err != nil && strings.Contains(err.Error(), "provided IP is already allocated") {
-							log.InfoLn("Service for DNS already exists. Skip!")
+							dhlog.FromContext(ctx).InfoContext(ctx, "Service for DNS already exists. Skip!")
 							return nil
 						}
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Services("kube-system").
 					Update(ctx, manifest.(*apiv1.Service), metav1.UpdateOptions{})
@@ -650,7 +660,11 @@ func CreateDeckhouseManifests(
 		tasks = append(tasks, *lockCmTask)
 	}
 
-	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
+	deploymentTask, err := controllerDeploymentTask(kubeCl, cfg)
+	if err != nil {
+		return nil, err
+	}
+	tasks = append(tasks, deploymentTask)
 
 	result := &ManifestsResult{}
 
@@ -664,7 +678,7 @@ func CreateDeckhouseManifests(
 		}
 	}
 
-	err = log.ProcessCtx(ctx, "default", "Create Manifests", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Manifests", func(ctx context.Context) error {
 		if len(tasks) == 0 {
 			return nil
 		}
@@ -714,7 +728,7 @@ func CreateDeckhouseManifests(
 				}
 				if err := runTask(task); err != nil {
 					logMu.Lock()
-					log.ErrorF("manifest task %q failed: %v\n", task.Name, err)
+					dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("manifest task %q failed: %v", task.Name, err))
 					logMu.Unlock()
 					return err
 				}
@@ -736,7 +750,7 @@ func WaitForReadiness(ctx context.Context, kubeCl *client.KubernetesClient, time
 }
 
 func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesClient, excludeNode string, timeout time.Duration) error {
-	return log.ProcessCtx(ctx, "default", "Waiting for Deckhouse to become Ready", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Waiting for Deckhouse to become Ready", func(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
@@ -754,44 +768,55 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 					if errors.Is(err, ErrTimedOut) {
 						return err
 					}
-					log.InfoLn(err.Error())
+					dhlog.FromContext(ctx).InfoContext(ctx, err.Error())
 				}
 
 				if ok {
-					log.Success("Deckhouse pod is Ready!\n")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse pod is Ready!\n")
 					return nil
 				}
 
-				time.Sleep(5 * time.Second)
+				time.Sleep(1 * time.Second)
 			}
 		}
 	})
 }
 
 func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
-	task := controllerDeploymentTask(kubeCl, cfg)
+	task, err := controllerDeploymentTask(kubeCl, cfg)
+	if err != nil {
+		return err
+	}
 
-	return log.ProcessCtx(ctx, "default", "Create Deployment", task.CreateOrUpdate)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Deployment", task.CreateOrUpdate)
 }
 
-func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
+func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) (manifests.DeckhouseDeploymentParams, error) {
+	image, err := cfg.GetInclusterImage(context.Background(), true)
+	if err != nil {
+		return manifests.DeckhouseDeploymentParams{}, err
+	}
+
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetInclusterImage(true),
+		Registry:           image,
 		LogLevel:           cfg.LogLevel,
 		Bundle:             cfg.Bundle,
 		KubeadmBootstrap:   cfg.KubeadmBootstrap,
 		MasterNodeSelector: cfg.MasterNodeSelector,
-	}
+	}, nil
 }
 
-func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.Deployment {
-	params := deckhouseDeploymentParamsFromCfg(cfg)
+func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) (*appsv1.Deployment, error) {
+	params, err := deckhouseDeploymentParamsFromCfg(cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	return manifests.DeckhouseDeployment(params)
+	return manifests.DeckhouseDeployment(params), nil
 }
 
 func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 45, 5*time.Second).
+	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 225, 1*time.Second).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.Discovery().ServerVersion()
 			if err == nil {

@@ -289,6 +289,14 @@ rules:
       - bootstrap
     verbs:
       - get
+  - apiGroups:
+      - deckhouse.io
+    resources:
+      - modulereleases
+      - deckhousereleases
+    verbs:
+      - get
+      - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -103,8 +103,6 @@ properties:
               type: string
             name:
               type: string
-      cniSecretData:
-        type: string
       discoveryData:
         type: object
         description: |

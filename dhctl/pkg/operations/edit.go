@@ -15,6 +15,8 @@
 package operations
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -22,7 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 // EditOptions bundles the values Edit/SecretEdit used to read from the
@@ -35,7 +37,7 @@ type EditOptions struct {
 	SanityCheck bool
 }
 
-func Edit(data []byte, globalOptions *options.GlobalOptions, opts EditOptions) ([]byte, error) {
+func Edit(ctx context.Context, data []byte, globalOptions *options.GlobalOptions, opts EditOptions) ([]byte, error) {
 	schemaStore := config.NewSchemaStore(globalOptions)
 
 	editor := opts.Editor
@@ -48,13 +50,13 @@ func Edit(data []byte, globalOptions *options.GlobalOptions, opts EditOptions) (
 
 	tmpFile, err := os.CreateTemp(opts.TmpDir, "dhctl-editor.*.yaml")
 	if err != nil {
-		log.ErrorF("can't save cluster configuration: %s\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't save cluster configuration: %s", err))
 		return nil, err
 	}
 
 	err = os.WriteFile(tmpFile.Name(), data, 0o600)
 	if err != nil {
-		log.ErrorF("can't write write cluster configuration to the file %s: %s\n", tmpFile.Name(), err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't write cluster configuration to the file %s: %s", tmpFile.Name(), err))
 		return nil, err
 	}
 

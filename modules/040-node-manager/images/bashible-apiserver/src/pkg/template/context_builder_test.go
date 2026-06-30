@@ -144,7 +144,7 @@ kubelet:
   containerLogMaxFiles: 4
   containerLogMaxSize: 50Mi
   maxPods: 13
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 manualRolloutID: ""
 name: stage
 nodeTemplate:
@@ -232,6 +232,16 @@ updateEpoch: "1680009541"
 		if expectedHash != newHash {
 			t.Errorf("%s != %s", expectedHash, newHash)
 			return
+		}
+	})
+
+	t.Run("changing kubelet seccompDefault affects checksum", func(t *testing.T) {
+		bc.NodeGroup["kubelet"].(map[string]interface{})["seccompDefault"] = true
+
+		newHash := hash(t, &bc)
+
+		if expectedHash == newHash {
+			t.Fatalf("expected checksum to change when seccompDefault changes")
 		}
 	})
 }

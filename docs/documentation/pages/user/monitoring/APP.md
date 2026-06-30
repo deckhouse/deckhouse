@@ -197,6 +197,9 @@ To connect an application to the monitoring system using one of these resources,
 1. Create a PodMonitor or ServiceMonitor resource,
    specifying the required `prometheus: main` label and the target endpoint parameters.
 
+   The `spec.selector.matchLabels` field defines the objects to use for metrics collection.
+   For [PodMonitor](/modules/operator-prometheus/cr.html#podmonitor-v1-spec-selector-matchlabels), these are target pod labels and for [ServiceMonitor](/modules/operator-prometheus/cr.html#servicemonitor-v1-spec-selector-matchlabels), these are target service labels.
+
    PodMonitor example:
 
    ```yaml
@@ -210,6 +213,7 @@ To connect an application to the monitoring system using one of these resources,
    spec:
      selector:
        matchLabels:
+         # Label of pods targeted for metrics collection.
          app: example-app
      podMetricsEndpoints:
        - port: metrics
@@ -230,6 +234,7 @@ To connect an application to the monitoring system using one of these resources,
    spec:
      selector:
        matchLabels:
+         # Label of a service that exposes application metrics.
          app: example-app
      endpoints:
        - port: web

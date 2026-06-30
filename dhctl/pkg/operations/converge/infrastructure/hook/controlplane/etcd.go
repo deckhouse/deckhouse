@@ -28,14 +28,14 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
 	attempt := 0
 
-	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 2000, 1*time.Second).RunContext(ctx, func() error {
 		attempt++
 
 		members, err := getEtcdMembers(ctx, client, "")
@@ -53,7 +53,7 @@ func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName s
 		}
 
 		if attempt == 1 || hasMember {
-			log.InfoF("Current members: [%s]\n", strings.Join(names, ", "))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Current members: [%s]", strings.Join(names, ", ")))
 		}
 
 		if hasMember {
@@ -65,10 +65,10 @@ func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName s
 }
 
 func waitEtcdHasNoMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
-	const maxAttempts = 45
+	const maxAttempts = 225
 	attempt := 0
 
-	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to leave etcd", nodeName), maxAttempts, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to leave etcd", nodeName), maxAttempts, 1*time.Second).RunContext(ctx, func() error {
 		attempt++
 		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
 

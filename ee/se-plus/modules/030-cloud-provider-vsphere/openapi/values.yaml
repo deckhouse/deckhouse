@@ -441,5 +441,3 @@ properties:
                   type: string
                   minLength: 1
             description: List of storage policies
-      cniSecretData:
-        type: string

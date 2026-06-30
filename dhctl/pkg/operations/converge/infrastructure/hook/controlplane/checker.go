@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 )
 
@@ -46,17 +46,17 @@ func NewChecker(nodeToHostForChecks map[string]string, checkers []hook.NodeCheck
 
 func (c *Checker) IsAllNodesReady(ctx context.Context) error {
 	if c.checkers == nil {
-		log.DebugF("Not passed checkers. Skip. Nodes for check: %v", c.nodeToHostForChecks)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("No checkers passed. Skipping. Nodes to check: %v", c.nodeToHostForChecks))
 
 		return nil
 	}
 
 	if len(c.nodeToHostForChecks) == 0 {
-		return fmt.Errorf("do not have nodes for control plane nodes are readinss check")
+		return fmt.Errorf("no nodes provided for the control-plane nodes readiness check")
 	}
 
 	for nodeName := range c.nodeToHostForChecks {
-		if !c.confirm(fmt.Sprintf("Do you want to wait node %s will be ready?", nodeName)) {
+		if !c.confirm(fmt.Sprintf("Do you want to wait for node %s to become ready?", nodeName)) {
 			continue
 		}
 

@@ -6,8 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      cniSecretData:
-        type: string
       storageClasses:
         type: array
         additionalProperties:

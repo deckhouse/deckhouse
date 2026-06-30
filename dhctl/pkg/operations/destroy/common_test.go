@@ -15,8 +15,10 @@
 package destroy
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -48,7 +50,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -230,7 +231,6 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 		},
 	})
 
-	minAvailable := intstr.FromString("25%")
 	pdb := policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -242,7 +242,7 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 					"app": "test",
 				},
 			},
-			MaxUnavailable: &minAvailable,
+			MaxUnavailable: new(intstr.FromString("25%")),
 		},
 	}
 	_, err = kubeCl.PolicyV1().PodDisruptionBudgets(pdb.GetNamespace()).Create(ctx, &pdb, metav1.CreateOptions{})
@@ -460,7 +460,6 @@ spec:
 		createdResources = append(createdResources, testAddDeckhouseStorageClass(t, ctx, kubeCl, sc.gvr, sc.resourceYAML))
 	}
 
-	reclame := corev1.PersistentVolumeReclaimDelete
 	scDefault := storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "default",
@@ -470,7 +469,7 @@ spec:
 		Parameters: map[string]string{
 			"type": "__DEFAULT__",
 		},
-		ReclaimPolicy: &reclame,
+		ReclaimPolicy: new(corev1.PersistentVolumeReclaimDelete),
 	}
 
 	_, err = kubeCl.StorageV1().StorageClasses().Create(ctx, &scDefault, metav1.CreateOptions{})
@@ -801,7 +800,8 @@ func assertClusterDestroyError(t *testing.T, shouldReturnError bool, err error) 
 type baseTest struct {
 	stateCache   dhctlstate.Cache
 	tmpDir       string
-	logger       *log.InMemoryLogger
+	logger       *slog.Logger
+	logBuf       *bytes.Buffer
 	kubeProvider kube.ClientProviderWithCleanup
 	metaConfig   *config.MetaConfig
 }
@@ -829,11 +829,11 @@ func (ts *baseTest) clean(t *testing.T) {
 
 	err := os.RemoveAll(tmpDir)
 	if err != nil {
-		logger.LogErrorF("Couldn't remove tmp dir '%s': %v\n", tmpDir, err)
+		logger.Error(fmt.Sprintf("Couldn't remove tmp dir '%s': %v\n", tmpDir, err))
 		return
 	}
 
-	logger.LogInfoF("tmp dir '%s' removed\n", tmpDir)
+	logger.Info(fmt.Sprintf("tmp dir '%s' removed\n", tmpDir))
 }
 
 func (ts *baseTest) setResourcesDestroyed(t *testing.T) {
@@ -991,7 +991,11 @@ func assertOverDefaultBastion(t *testing.T, overBastion bool, bastion testssh.Ba
 }
 
 func testIsCleanCommand(scriptPath string) bool {
-	return strings.HasPrefix(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh")
+	return strings.Contains(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh") &&
+		strings.Contains(scriptPath, `echo "ERROR: cleanup_static_node.sh not found"`) &&
+		strings.Contains(scriptPath, "exit 1") &&
+		strings.Contains(scriptPath, "bash /var/lib/bashible/cleanup_static_node.sh") &&
+		strings.Contains(scriptPath, "--yes-i-am-sane-and-i-understand-what-i-am-doing")
 }
 
 func assertStringSliceContainsUniqVals(t *testing.T, list []string, msg string) {

@@ -56,7 +56,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: check_cni_configuration", f
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   name: desired-cni-moduleconfig
   namespace: d8-system
 data:
@@ -64,7 +63,6 @@ data:
     apiVersion: deckhouse.io/v1alpha1
     kind: ModuleConfig
     metadata:
-      creationTimestamp: null
       name: cni-flannel
     spec:
       enabled: true
@@ -368,16 +366,13 @@ data:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  creationTimestamp: null
   name: cni-flannel
 spec:
   enabled: true
   settings:
     podNetworkMode: HostGW
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())
@@ -416,16 +411,13 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  creationTimestamp: null
   name: cni-flannel
 spec:
   enabled: true
   settings:
     podNetworkMode: VXLAN
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())
@@ -715,16 +707,13 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  creationTimestamp: null
   name: cni-flannel
 spec:
   enabled: true
   settings:
     podNetworkMode: HostGW
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())

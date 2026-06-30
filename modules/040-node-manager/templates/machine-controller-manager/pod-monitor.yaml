@@ -1,5 +1,5 @@
 {{- if include "machine_controller_manager_enabled" . }}
-  {{- if and (hasKey $.Values.nodeManager.internal "cloudProvider") (.Values.global.enabledModules | has "operator-prometheus") }}
+  {{- if and (hasKey $.Values.nodeManager.internal "cloudProvider") (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor

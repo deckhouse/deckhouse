@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleDocumentation
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/documentation-exists
   name: testmodule
@@ -16,7 +15,6 @@ status:
   - address: http://10-111-2-176.d8-system.pod.cluster.local:8081
     checksum: abc
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: ""
     type: Rendered
     version: v1.0.0
   result: Rendered

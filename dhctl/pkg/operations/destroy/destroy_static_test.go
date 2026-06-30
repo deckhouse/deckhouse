@@ -15,9 +15,11 @@
 package destroy
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"os"
 	"path"
@@ -44,7 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -57,12 +59,12 @@ var rootTmpDirStatic = path.Join(os.TempDir(), "dhctl-test-static-destroy")
 
 func TestStaticDestroy(t *testing.T) {
 	defer func() {
-		logger := log.GetDefaultLogger()
+		logger := dhlog.Discard()
 		if err := os.RemoveAll(rootTmpDirStatic); err != nil {
-			logger.LogErrorF("Couldn't remove temp dir '%s': %v\n", rootTmpDirStatic, err)
+			logger.Error(fmt.Sprintf("Couldn't remove temp dir '%s': %v\n", rootTmpDirStatic, err))
 			return
 		}
-		logger.LogInfoF("Tmp dir '%s' removed\n", rootTmpDirStatic)
+		logger.Info(fmt.Sprintf("Tmp dir '%s' removed\n", rootTmpDirStatic))
 	}()
 
 	defaultHostBastion := testssh.Bastion{
@@ -1267,10 +1269,8 @@ func (w *testNodeUserWaiter) waitAll() {
 }
 
 func (w *testNodeUserWaiter) goWaitNodeUserAddUserToNodes(ctx context.Context, kubeCl *client.KubernetesClient, hosts []session.Host) {
-	w.wg.Add(1)
 
-	go func() {
-		defer w.wg.Done()
+	w.wg.Go(func() {
 		err := retry.NewSilentLoop("wait node user", 20, 500*time.Millisecond).RunContext(ctx, func() error {
 			_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(ctx, global.ConvergeNodeUserName, metav1.GetOptions{})
 			return err
@@ -1300,7 +1300,7 @@ func (w *testNodeUserWaiter) goWaitNodeUserAddUserToNodes(ctx context.Context, k
 		}
 
 		w.setErr(nil)
-	}()
+	})
 }
 
 type testStaticDestroyTest struct {
@@ -1625,13 +1625,13 @@ func (ts *testStaticDestroyTest) addDiscoveryIPFileDownload(sshProvider *testssh
 	})
 }
 
-func (ts *testStaticDestroyTest) runCleanCommand(hostIP string, bastion testssh.Bastion, msg string, logger log.Logger) {
+func (ts *testStaticDestroyTest) runCleanCommand(hostIP string, bastion testssh.Bastion, msg string, logger *slog.Logger) {
 	testAddRunToMap(ts.cleanCommandsRanOnHosts, hostIP, struct{}{})
 	testAddRunToMap(ts.cleanCommandsRanOverBastion, hostIP, bastion)
-	logger.LogInfoLn(msg)
+	logger.Info(msg)
 }
 
-func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger log.Logger) {
+func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger *slog.Logger) {
 	sshProvider.AddCommandProvider(forHost.Host, func(bastion testssh.Bastion, scriptPath string, args ...string) *testssh.Command {
 		if !testIsCleanCommand(scriptPath) {
 			return nil
@@ -1655,7 +1655,8 @@ func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvide
 }
 
 func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParams) *testStaticDestroyTest {
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
+	var logBuf bytes.Buffer
+	logger := dhlog.NewBufferLogger(&logBuf)
 
 	stateCache := cache.NewTestCache()
 
@@ -1679,7 +1680,6 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 		commanderMode:   commanderMode,
 		commanderParams: nil,
 		stateCache:      stateCache,
-		logger:          logger,
 		skipResources:   params.skipResources,
 		forceFromCache:  true,
 	}
@@ -1687,10 +1687,8 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	loader, kubeProviderForInfraDestroyer, err := initStateLoader(ctx, loaderParams, kubeClProvider)
 	require.NoError(t, err)
 
-	loggerProvider := log.SimpleLoggerProvider(logger)
 	pipeline := phases.NewDummyDefaultPipelineProviderOpts(
 		phases.WithPipelineName("static destroy"),
-		phases.WithPipelineLoggerProvider(loggerProvider),
 	)()
 
 	phaseActionProvider := phases.NewPhaseActionProviderFromPipeline(pipeline)
@@ -1703,7 +1701,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 
 		State: d8State,
 
-		LoggerProvider:       loggerProvider,
+		Logger:               dhlog.Discard(),
 		KubeProvider:         kubeClProvider,
 		PhasedActionProvider: phaseActionProvider,
 	})
@@ -1714,11 +1712,11 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	tmpDir, err := fs.RandomTmpDirWithNRunes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)
 	require.NoError(t, err)
 
-	logger.LogInfoF("Tmp dir: '%s'\n", tmpDir)
+	logger.Info(fmt.Sprintf("Tmp dir: '%s'\n", tmpDir))
 
 	infraProvider := &infraDestroyerProvider{
 		stateCache:           stateCache,
-		loggerProvider:       loggerProvider,
+		logger:               dhlog.Discard(),
 		kubeProvider:         kubeProviderForInfraDestroyer,
 		phasesActionProvider: phaseActionProvider,
 		commanderMode:        commanderMode,
@@ -1759,6 +1757,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	tst := &testStaticDestroyTest{
 		baseTest: &baseTest{
 			logger:       logger,
+			logBuf:       &logBuf,
 			stateCache:   stateCache,
 			tmpDir:       tmpDir,
 			kubeProvider: kubeProviderForInfraDestroyer,

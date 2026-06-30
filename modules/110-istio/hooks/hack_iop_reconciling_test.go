@@ -106,6 +106,7 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 
 	Context("Empty cluster and minimal settings.", func() {
 		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {

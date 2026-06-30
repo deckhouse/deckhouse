@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -61,7 +61,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	// in restart operation we will get error with strict getting
 	outputs, err := infrastructure.GetMasterNodeResultNoStrict(ctx, runner)
 	if err != nil {
-		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
+		return false, fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
 
 	// no need to switch client because we try to switch before delete nodes
@@ -69,7 +69,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
-		log.InfoF("Got empty master IP for ssh for node %s. Skip removing control-plane from node.\n", h.nodeToDestroy)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.", h.nodeToDestroy))
 		return false, nil
 	}
 
@@ -87,7 +87,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 
 	err = infra_utils.DeleteNodeObjectFromCluster(ctx, kubeClient, h.nodeToDestroy)
 	if err != nil {
-		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
+		return false, fmt.Errorf("failed to delete node object '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
 
 	return false, nil
@@ -100,7 +100,7 @@ func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrast
 
 	cl, err := h.sshProvider.Client(ctx)
 	if err != nil {
-		log.DebugLn("Node interface is not ssh")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Node interface is not ssh")
 		return nil
 	}
 
@@ -127,7 +127,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 
 	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(libcon.KubeClient), nodeName)
 	if err != nil {
-		return fmt.Errorf("failed to check etcd has no member '%s': %v", nodeName, err)
+		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
 	}
 
 	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true})
@@ -139,11 +139,11 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 }
 
 func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, labels []string) error {
-	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 45, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 225, 1*time.Second).RunContext(ctx, func() error {
 		node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node '%s' has been deleted. Skipping", nodeName))
 				return nil
 			}
 			return err
@@ -151,7 +151,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 
 		nodeLabels := node.GetLabels()
 
-		patchOperations := make([]map[string]interface{}, 0, len(labels))
+		patchOperations := make([]map[string]any, 0, len(labels))
 
 		for _, label := range labels {
 			// Check if the label exists on the node before trying to remove it
@@ -160,7 +160,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 				continue
 			}
 
-			patchOperations = append(patchOperations, map[string]interface{}{
+			patchOperations = append(patchOperations, map[string]any{
 				"op": "remove",
 				// JSON patch requires slashes to be escaped with ~1
 				"path": fmt.Sprintf("/metadata/labels/%s", strings.ReplaceAll(label, "/", "~1")),

@@ -2,29 +2,24 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: test-source
   resourceVersion: "1000"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io
     scheme: HTTPS
 status:
-  message: ""
   modules:
   - name: demo
   modulesCount: 1
-  phase: ""
   syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -41,16 +36,13 @@ spec:
   weight: 900
 status:
   approved: true
-  message: ""
   phase: Deployed
   pullDuration: 0s
-  size: 0
   transitionTime: "2021-12-08T08:34:01Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -72,7 +64,6 @@ status:
   message: minor version is greater than deployed 1.67.5 by one
   phase: Pending
   pullDuration: 0s
-  size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -80,7 +71,6 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -102,7 +92,6 @@ status:
   message: awaiting for v1.75.1 release to be deployed
   phase: Pending
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -111,7 +100,6 @@ metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -133,13 +121,11 @@ status:
   message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
   pullDuration: 0s
-  size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
-  creationTimestamp: null
   name: demo
   resourceVersion: "1005"
 properties: {}
