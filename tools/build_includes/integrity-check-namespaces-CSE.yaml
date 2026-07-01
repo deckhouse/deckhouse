@@ -11,6 +11,8 @@ namespaces_for_integrity:
     - d8-commander-agent
     - d8-console
     - d8-csi-ceph
+    - d8-csi-huawei
+    - d8-csi-netapp
     - d8-csi-nfs
     - d8-csi-scsi-generic
     - d8-csi-yadro-tatlin-unified
@@ -20,10 +22,12 @@ namespaces_for_integrity:
     - d8-istio
     - d8-local-path-provisioner
     - d8-log-shipper
+    - d8-managed-postgres
     - d8-metallb
     - d8-monitoring
     - d8-multitenancy-manager
     - d8-neuvector
+    - d8-nvidia-gpu
     - d8-observability
     - d8-operator-argo
     - d8-operator-prometheus
