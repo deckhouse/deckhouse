@@ -4,20 +4,24 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
+  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: foxtrot
   resourceVersion: "999"
 spec:
   registry:
+    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/team/foxtrot/modules
     scheme: HTTPS
 status:
+  message: ""
   modules:
   - name: parca
     policy: foxtrot-alpha
   modulesCount: 1
+  phase: ""
   syncTime: "2024-05-03T21:05:05Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -26,6 +30,7 @@ metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "true"
+  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -52,13 +57,16 @@ spec:
   weight: 900
 status:
   approved: false
+  message: ""
   phase: Deployed
   pullDuration: 0s
+  size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
+  creationTimestamp: null
   name: parca
   resourceVersion: "1000"
 properties:

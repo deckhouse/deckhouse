@@ -3929,7 +3929,7 @@ alerts:
     - name: DeckhouseMigratedModuleNotDownloaded
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
-      module: deckhouse
+      module: monitoring-deckhouse
       edition: ce
       description: |
         Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and is available in a ModuleSource registry, but it has not been downloaded yet (no Deployed ModuleRelease). DeckhouseRelease will be locked until the module is pre-downloaded.
