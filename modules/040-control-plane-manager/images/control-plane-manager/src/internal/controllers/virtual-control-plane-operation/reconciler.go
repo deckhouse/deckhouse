@@ -320,7 +320,7 @@ func (r *reconciler) getSecrets(ctx context.Context, operation *controlplanev1al
 	configSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Namespace: operation.Namespace,
-		Name:      constants.VirtualControlPlaneConfigSecretName,
+		Name:      operation.Namespace + constants.VirtualControlPlaneConfigSecretSuffix,
 	}, configSecret); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get config secret: %v", err)
 	}
