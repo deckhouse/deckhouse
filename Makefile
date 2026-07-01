@@ -643,7 +643,7 @@ generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
-generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate
+generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate manifests
 
 ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 .PHONY: controller-gen-generate
