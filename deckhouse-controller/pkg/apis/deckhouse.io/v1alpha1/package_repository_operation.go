@@ -92,6 +92,7 @@ type PackageRepositoryOperation struct {
 
 type PackageRepositoryOperationSpec struct {
 	// Name of the package repository to operate on.
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName"`
 
 	// Type of operation to perform.
@@ -112,6 +113,7 @@ type PackageRepositoryOperationUpdate struct {
 
 	// Timeout for the operation.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=5m
 	Timeout string `json:"timeout,omitempty"`
 }
 

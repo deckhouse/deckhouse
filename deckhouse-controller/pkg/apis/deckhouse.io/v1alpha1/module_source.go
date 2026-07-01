@@ -94,6 +94,7 @@ type ModuleSourceSpec struct {
 	// Interval for registry scan.
 	//
 	// Defines the frequency of checking the container registry for new modules and their versions.
+	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
 	// +crd-enricher:deckhouse:documentation:default=3m
 	// +crd-enricher:deckhouse:documentation:examples=5m
@@ -115,6 +116,7 @@ type ModuleSourceSpecRegistry struct {
 	Repo string `json:"repo"`
 
 	// Container registry access token in Base64. If using anonymous access to the container registry, do not fill in this field.
+	// +crd-enricher:deckhouse:sensitive-data
 	DockerCFG string `json:"dockerCfg,omitempty"`
 
 	// Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used).

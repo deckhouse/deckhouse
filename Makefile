@@ -643,7 +643,7 @@ generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
-generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate
+generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate manifests
 
 ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 .PHONY: controller-gen-generate
@@ -651,11 +651,7 @@ controller-gen-generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	@echo "Removing old CRDs..."
-	@rm -rf ./bin/crd
-	@echo "Generating CRDs..."
-	@-$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases 2>&1
+manifests: controller-gen enrich-crds ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@echo "Copying CRDs to deckhouse-controller/crds..."
 	@cp bin/crd/bases/deckhouse.io_applications.yaml deckhouse-controller/crds/application.yaml
 	@cp bin/crd/bases/deckhouse.io_packagerepositoryoperations.yaml deckhouse-controller/crds/packagerepositoryoperation.yaml
@@ -663,14 +659,22 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
 
+.PHONY: generate-crds
+generate-crds: controller-gen
+	@echo "Removing old CRDs..."
+	@rm -rf ./bin/crd
+	@echo "Generating CRDs..."
+	@-$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases 2>&1
+
 ## Enrich the controller-gen CRDs in bin/crd/bases with custom x-doc-* fields
 ## defined via markers next to the Go API structs.
 .PHONY: enrich-crds
-enrich-crds: ## Add custom x-doc-* fields to the generated CRDs in bin/crd/bases.
+enrich-crds: generate-crds ## Add custom x-doc-* fields to the generated CRDs in bin/crd/bases.
 	@echo "Enriching CRDs with custom x-doc-* fields..."
-	@go run ./pkg/crd-enricher/cmd/crd-enricher \
+	@go run -C pkg/crd-enricher ./cmd/crd-enricher \
 		paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." \
-		crds=bin/crd/bases
+		crds=$(CURDIR)/bin/crd/bases \
+		dir=$(CURDIR)
 
 ## Generate clientset
 .PHONY: client-gen-generate
