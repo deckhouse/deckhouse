@@ -42,11 +42,9 @@
 
     img {
       display: block;
-      max-width: 100%;
-      width: auto;
       height: auto;
       max-height: 700px;
-      margin: 0 auto;
+      margin: auto;
       border: 1px solid #E7E9F5;
 
       @include breakpoints.max-w(xxl) {
@@ -76,7 +74,10 @@
   }
 
   &__figure {
+    display: flex;
+    flex-direction: column;
     margin: 0;
+    height: 100%;
   }
 
   &__caption {
