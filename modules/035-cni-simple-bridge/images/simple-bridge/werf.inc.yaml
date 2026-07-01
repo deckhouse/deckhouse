@@ -9,6 +9,7 @@ import:
 shell:
   beforeInstall:
     - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl
+    - rm -rf /out/usr/local/bin/pm /var/lib/pm
   install:
     # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
     - unlink /sbin
