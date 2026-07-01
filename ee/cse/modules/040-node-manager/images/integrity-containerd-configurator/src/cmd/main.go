@@ -10,8 +10,9 @@ import (
 	"flag"
 	"os"
 
-	"github.com/go-logr/logr"
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
+
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -41,7 +42,7 @@ func main() {
 	var debugging bool
 
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.StringVar(&configDir, "config-dir", configwriter.DefaultConfigDir, "Directory for containerd integrity config files.")
+	flag.StringVar(&configDir, "config-dir", configwriter.IntegrityNSConfigDir, "Directory for containerd integrity config files.")
 	flag.BoolVar(&debugging, "debug", false, "If set, enables debug logging.")
 
 	flag.Parse()
