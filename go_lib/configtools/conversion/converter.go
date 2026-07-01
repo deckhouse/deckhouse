@@ -34,7 +34,11 @@ type Converter struct {
 	conversions map[int]string
 }
 
-func newConverter(pathToConversions string) (*Converter, error) {
+// NewConverterFromDir reads conversion files from the given directory
+// and builds a Converter that can transform settings between schema versions.
+// Each file must be named v<N>.yaml and contain a "version" field and
+// a "conversions" list of jq expressions.
+func NewConverterFromDir(pathToConversions string) (*Converter, error) {
 	c := &Converter{conversions: make(map[int]string), latest: 1}
 	conversionsDir, err := os.ReadDir(pathToConversions)
 	if err != nil {
@@ -52,9 +56,6 @@ func newConverter(pathToConversions string) (*Converter, error) {
 			c.latest = v
 		}
 		c.conversions[v] = conversion
-	}
-	if err != nil {
-		return nil, fmt.Errorf("read dir: %w", err)
 	}
 	return c, nil
 }
@@ -142,7 +143,7 @@ func (c *Converter) convert(version int, settings map[string]interface{}) (map[s
 }
 
 func TestConvert(rawSettings, rawExpected, pathToConversions string, currentVersion, version int) error {
-	converter, err := newConverter(pathToConversions)
+	converter, err := NewConverterFromDir(pathToConversions)
 	if err != nil {
 		return err
 	}

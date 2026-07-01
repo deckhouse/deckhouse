@@ -44,6 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -67,6 +68,7 @@ type Module struct {
 	definition Definition        // Module definition
 	digests    map[string]string // Package digests
 	repository registry.Remote   // Module repository
+	converter   *conversion.Converter // Schema version converter for settings
 
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
@@ -97,6 +99,7 @@ type Config struct {
 	Hooks []hooks.Hook // Discovered hooks
 
 	SettingsCheck *kind.SettingsCheck
+	Conversions   *conversion.Converter // Schema version converter
 
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
@@ -122,6 +125,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.digests = cfg.Digests
 	m.repository = cfg.Repository
 	m.settingsCheck = cfg.SettingsCheck
+	m.converter = cfg.Conversions
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
@@ -270,6 +274,12 @@ func (m *Module) GetValuesChecksum() string {
 // Used to detect if settings changed.
 func (m *Module) GetSettingsChecksum() string {
 	return m.values.GetSettingsChecksum()
+}
+
+// GetConverter returns the schema version converter for this module's settings.
+// Returns nil if no conversions directory was present in the module package.
+func (m *Module) GetConverter() *conversion.Converter {
+	return m.converter
 }
 
 // ValidateSettings validates settings against openAPI and call setting check if exists

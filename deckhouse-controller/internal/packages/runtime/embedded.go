@@ -76,7 +76,7 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionRequirementsMet)
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionReadyOnFilesystem)
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionLoaded)
-	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), make(addonutils.Values))
+	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), 0, make(addonutils.Values))
 
 	return nil
 }
@@ -147,7 +147,7 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 			r.status.SetConditionTrue(module.GetName(), status.ConditionReadyOnFilesystem)
 			r.status.SetConditionTrue(module.GetName(), status.ConditionLoaded)
 			r.status.UpdateVersion(module.GetName(), module.GetVersion().String())
-			r.packages.Update(module.GetName(), module.GetVersion().String(), make(addonutils.Values))
+			r.packages.Update(module.GetName(), module.GetVersion().String(), 0, make(addonutils.Values))
 
 			return nil
 		})
