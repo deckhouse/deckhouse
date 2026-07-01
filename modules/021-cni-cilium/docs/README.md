@@ -39,7 +39,7 @@ To extend the capabilities, the module allows [selectable mode of operation](con
   It is important to take into account the following features:
     * if the target pods are on other nodes, then the source IP address will be preserved when incoming traffic is sent to them;
     * outgoing traffic will go directly from the node on which the target pod was launched;
-    * the source IP address will be replaced with the external IP address of the node to which the incoming request **originally** came.
+    * the source IP address will be replaced with the external IP address of the node to which the incoming request originally came.
 
    ![DSR data flow diagram](images/dsr.png)
 
@@ -56,7 +56,7 @@ Network equipment must be ready for asymmetric traffic flow: IP address anti-spo
 Applying CiliumClusterwideNetworkPolicy without [`policyAuditMode`](configuration.html#parameters-policyauditmode) enabled may break control plane operation or cut SSH access to all cluster nodes.
 {% endalert %}
 
-The safe rollout procedure for `CiliumClusterwideNetworkPolicy`, including mandatory control plane and host firewall rules, is described in the [Network policies](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html) section of the documentation. For details on the Cilium policy formats, refer to [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/cilium_networkpolicy.html).
+The safe rollout procedure for CiliumClusterwideNetworkPolicy, including mandatory control plane and host firewall rules, is described in the [Network policies](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html) section of the documentation. For details on the Cilium policy formats, refer to [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/cilium_networkpolicy.html).
 
 ## Changing Cilium Operation Mode
 
@@ -74,7 +74,7 @@ In Deckhouse Kubernetes Platform, you can apply the following algorithms to load
 * `Maglev`: Uses consistent hashing to distribute traffic evenly, suitable for large-scale services.
 * `Least Connections`: Directs traffic to the backend with the lowest number of active connections, optimizing load for applications with long-lived connections.
 
-By default, the **Random** balancing algorithm is set for all services. However, Deckhouse allows you to override the algorithm for individual services. To use a selective balancing algorithm for a specific service, follow these steps:
+By default, the Random balancing algorithm is set for all services. However, Deckhouse allows you to override the algorithm for individual services. To use a selective balancing algorithm for a specific service, follow these steps:
 
 * Edit the `cni-cilium` module configuration in Deckhouse by enabling the [`extraLoadBalancerAlgorithmsEnabled`](configuration.html#parameters-extraloadbalanceralgorithmsenabled) parameter. This activates support for service annotations for selective algorithms.
 * In the service manifest, specify the `service.cilium.io/lb-algorithm` annotation with one of the values: `random`, `maglev`, or `least-conn`.
@@ -105,9 +105,9 @@ The ability to dynamically assign additional IP addresses to nodes is implemente
 
 ## Exporting data from Hubble
 
-Deckhouse Kubernetes Platform allows to configure data export from Hubble running inside Cilium agents using the cluster-scoped custom resource [`HubbleMonitoringConfig`](cr.html#hubblemonitoringconfig).
+Deckhouse Kubernetes Platform allows to configure data export from Hubble running inside Cilium agents using the cluster-scoped custom resource [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig).
 To enable export, [create a HubbleMonitoringConfig resource](examples.html#hubblemonitoringconfig).
 
 {% alert level="warning" %}
-Creating or modifying the HubbleMonitoringConfig resource will **restart all Cilium agents** in the cluster.
+Creating or modifying the HubbleMonitoringConfig resource will restart all Cilium agents in the cluster.
 {% endalert %}

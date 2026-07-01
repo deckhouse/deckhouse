@@ -5,11 +5,11 @@ description: |
   Kubernetes NetworkPolicy model, selectors, default policies, and API limitations in Deckhouse Kubernetes Platform.
 ---
 
-The standard [`NetworkPolicy`](https://kubernetes.io/docs/concepts/services-networking/network-policies/) resource (`networking.k8s.io/v1`) defines L3/L4 traffic rules for pods (TCP, UDP, optionally SCTP). In DKP, these policies are enforced by the [`cni-cilium`](/modules/cni-cilium/) module or the [`network-policy-engine`](/modules/network-policy-engine/) module, depending on the CNI in use; the mapping between CNI and engine is described in [Network policy implementation in DKP](configuration.html#network-policy-implementation-in-dkp).
+The standard [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) resource (`networking.k8s.io/v1`) defines L3/L4 traffic rules for pods (TCP, UDP, optionally SCTP). In DKP, these policies are enforced by the [`cni-cilium`](/modules/cni-cilium/) module or the [`network-policy-engine`](/modules/network-policy-engine/) module, depending on the CNI in use; the mapping between CNI and engine is described in [Network policy implementation in DKP](configuration.html#network-policy-implementation-in-dkp).
 
 ## Isolation model
 
-`NetworkPolicy` describes **what is allowed** — there are no deny rules. By default, a pod is not isolated: all ingress and egress traffic is allowed. A pod becomes isolated as soon as any policy selects it via `spec.podSelector` and lists the matching direction in `spec.policyTypes`:
+NetworkPolicy describes what is allowed — there are no deny rules. By default, a pod is not isolated: all ingress and egress traffic is allowed. A pod becomes isolated as soon as any policy selects it via `spec.podSelector` and lists the matching direction in `spec.policyTypes`:
 
 - A pod is isolated for ingress when a policy with `policyTypes: [Ingress]` selects it. Only the traffic listed in `ingress` is then allowed.
 - A pod is isolated for egress when a policy with `policyTypes: [Egress]` selects it. Only the traffic listed in `egress` is then allowed.
@@ -106,7 +106,7 @@ ingress:
             role: client
 ```
 
-This allows traffic from pods labeled `role=client` in the local namespace, **or** from any pod in namespaces labeled `user=alice`.
+This allows traffic from pods labeled `role=client` in the local namespace, or from any pod in namespaces labeled `user=alice`.
 
 ### Selecting a namespace by name
 
@@ -178,11 +178,11 @@ A default deny-egress policy blocks DNS too. If the pods use DNS, add a separate
 
 ### `hostNetwork` pods
 
-`NetworkPolicy` behavior for pods with `hostNetwork: true` is not defined by the API. Most engines, including Cilium and kube-router, treat such traffic as node traffic; `podSelector` and `namespaceSelector` do not match these pods. To filter such traffic, use `ipBlock` with the node IP or the [host firewall on nodes](host_firewall.html).
+NetworkPolicy behavior for pods with `hostNetwork: true` is not defined by the API. Most engines, including Cilium and kube-router, treat such traffic as node traffic; `podSelector` and `namespaceSelector` do not match these pods. To filter such traffic, use `ipBlock` with the node IP or the [host firewall on nodes](host_firewall.html).
 
 ### Pod lifecycle
 
-After a `NetworkPolicy` is created, the engine applies it asynchronously. A newly started pod selected by the policy may run for a short time without isolation rules or with partial rules. For critical dependencies, use init containers that wait for the required endpoints.
+After a NetworkPolicy is created, the engine applies it asynchronously. A newly started pod selected by the policy may run for a short time without isolation rules or with partial rules. For critical dependencies, use init containers that wait for the required endpoints.
 
 ### Existing connections
 
@@ -190,7 +190,7 @@ Behavior on policy changes during an open connection is implementation-defined: 
 
 ### L4 only
 
-`NetworkPolicy` is defined for L4 (TCP, UDP, optionally SCTP). Behavior for other protocols (ICMP, ARP) depends on the engine and may differ.
+NetworkPolicy is defined for L4 (TCP, UDP, optionally SCTP). Behavior for other protocols (ICMP, ARP) depends on the engine and may differ.
 
 ## Enforcement without Cilium: the `network-policy-engine` module
 
@@ -200,13 +200,13 @@ In clusters without Cilium, the [`network-policy-engine`](/modules/network-polic
 - each isolated pod gets a `KUBE-POD-SPECIFIC-FW-*` chain;
 - source and destination pod IPs are stored in ipsets, which keeps large rule sets compact and updates fast.
 
-Only the standard Kubernetes formats are supported: `networking.k8s.io/NetworkPolicy API`, V1/GA, and beta semantics. Cilium extensions (`CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy`, L7 rules, FQDN, deny rules) are not supported by this engine.
+Only the standard Kubernetes formats are supported: `networking.k8s.io/NetworkPolicy API`, V1/GA, and beta semantics. Cilium extensions (CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, L7 rules, FQDN, deny rules) are not supported by this engine.
 
 Ready-to-use standard policy examples that work with both `network-policy-engine` and `cni-cilium` are available on the [Common policy examples](examples.html) page.
 
 ## API limitations
 
-The Kubernetes `NetworkPolicy` API does not support the following scenarios (these are API-level limitations, not engine-level):
+The Kubernetes NetworkPolicy API does not support the following scenarios (these are API-level limitations, not engine-level):
 
 - L7 rules (HTTP, gRPC, Kafka, DNS-name filtering);
 - deny rules — the model is "default deny + explicit allow";
@@ -216,9 +216,9 @@ The Kubernetes `NetworkPolicy` API does not support the following scenarios (the
 - logging — which connections were allowed or denied;
 - blocking loopback or traffic from the pod's own node.
 
-Some of these tasks are addressed by [`CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy`](cilium_networkpolicy.html), available in clusters with `cni-cilium`.
+Some of these tasks are addressed by [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html), available in clusters with `cni-cilium`.
 
-## Additional documentation
+## Additional resources
 
 - [Network Policies — Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
 - [Kube-router: Enforcing Kubernetes network policies with iptables and ipset](https://cloudnativelabs.github.io/post/2017-05-1-kube-network-policies/)

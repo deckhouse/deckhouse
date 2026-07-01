@@ -50,18 +50,18 @@ d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --ve
 d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --from-pod my-app/client --to-pod my-app/api
 ```
 
-Каждый агент видит события только своего узла. Для общего сбора событий по кластеру используйте Hubble UI или экспорт через [`HubbleMonitoringConfig`](/modules/cni-cilium/cr.html#hubblemonitoringconfig).
+Каждый агент видит события только своего узла. Для общего сбора событий по кластеру используйте Hubble UI или экспорт через [HubbleMonitoringConfig](/modules/cni-cilium/cr.html#hubblemonitoringconfig).
 
 В выводе указаны идентификаторы политик, селекторов и сами поля ingress/egress, которые сработали. Это позволяет быстро понять, какое именно правило блокирует или пропускает соединение.
 
 ## Сбор flow logs на постоянной основе
 
-Для постоянного сбора flow logs включите экспорт через ресурс [`HubbleMonitoringConfig`](/modules/cni-cilium/cr.html#hubblemonitoringconfig). Конфигурация описана в [примерах модуля cni-cilium](/modules/cni-cilium/examples.html#hubblemonitoringconfig).
+Для постоянного сбора flow logs включите экспорт через ресурс [HubbleMonitoringConfig](/modules/cni-cilium/cr.html#hubblemonitoringconfig). Конфигурация описана в [примерах модуля cni-cilium](/modules/cni-cilium/examples.html#hubblemonitoringconfig).
 
-После включения экспорта `cilium-agent` пишет события в файл `/var/log/cilium/hubble/flow.log` на каждом узле. Для централизованного сбора используйте модуль [`log-shipper`](/modules/log-shipper/) с ресурсом `ClusterLoggingConfig` типа `File`, читающим этот файл.
+После включения экспорта `cilium-agent` пишет события в файл `/var/log/cilium/hubble/flow.log` на каждом узле. Для централизованного сбора используйте модуль [`log-shipper`](/modules/log-shipper/) с ресурсом ClusterLoggingConfig типа `File`, читающим этот файл.
 
 {% alert level="warning" %}
-Изменение `HubbleMonitoringConfig` приводит к перезапуску всех агентов Cilium в кластере.
+Изменение HubbleMonitoringConfig приводит к перезапуску всех агентов Cilium в кластере.
 {% endalert %}
 
 ## Диагностика FQDN-правил
@@ -106,16 +106,16 @@ Cilium должен видеть DNS-запросы, чтобы поддержи
 
 Если ресурс создан, но трафик не ведёт себя ожидаемо, последовательно проверьте:
 
-1. Какой движок включён. Стандартный `NetworkPolicy` поддерживается обоими движками; `CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy`, L7 и FQDN — только в кластерах с `cni-cilium`. Возможности движков перечислены в разделе [«Что доступно в зависимости от движка»](configuration.html#что-доступно-в-зависимости-от-движка).
+1. Какой движок включён. Стандартный NetworkPolicy поддерживается обоими движками; CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, L7 и FQDN — только в кластерах с `cni-cilium`. Возможности движков перечислены в разделе [«Что доступно в зависимости от движка»](configuration.html#что-доступно-в-зависимости-от-движка).
 1. Selector действительно выбирает поды: `d8 k get pods -n <namespace> -l <key>=<value>` должен вернуть ожидаемый список.
 1. `policyTypes` указан корректно. Если перечислен только `Ingress`, egress не ограничен; если только `Egress`, ingress не ограничен.
 1. AND vs OR в селекторах. Проверьте структуру массива — частая причина «слишком широкого» или «слишком узкого» правила.
 1. Режим аудита. Если включён [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode), политики не блокируют трафик. В `cilium-dbg endpoint list` это видно как `Disabled (Audit)`.
 1. Eventual consistency. После создания политики Cilium и kube-router применяют её асинхронно. Подождите несколько секунд и повторите проверку.
-1. Статус политики (только для `CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy`). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` покажет в `status` ошибки парсинга или применения.
+1. Статус политики (только для CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` покажет в `status` ошибки парсинга или применения.
 1. Конфликт с deny-правилом. Deny-правила Cilium имеют приоритет над любыми allow-правилами. Найдите политики с `ingressDeny` и `egressDeny`, выбирающие тот же эндпоинт.
 
-## Дополнительная документация
+## Дополнительные ресурсы
 
 - [HubbleMonitoringConfig — модуль cni-cilium](/modules/cni-cilium/cr.html#hubblemonitoringconfig)
 - [Troubleshooting Policy — документация Cilium](https://docs.cilium.io/en/v1.17/security/policy/#troubleshooting)

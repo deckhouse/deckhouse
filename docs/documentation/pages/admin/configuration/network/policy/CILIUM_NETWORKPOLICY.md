@@ -5,15 +5,15 @@ description: |
   Cilium extensions for network policies in Deckhouse Kubernetes Platform: entities, L7 rules, FQDN rules, deny rules, and policyAuditMode.
 ---
 
-In clusters with the [`cni-cilium`](/modules/cni-cilium/) module enabled, two Cilium-specific formats are available in addition to the standard `NetworkPolicy`:
+In clusters with the [`cni-cilium`](/modules/cni-cilium/) module enabled, two Cilium-specific formats are available in addition to the standard NetworkPolicy:
 
-- `CiliumNetworkPolicy` — a namespaced resource with L3–L7 rules;
-- `CiliumClusterwideNetworkPolicy` — a cluster-scoped resource with the same rule language and `nodeSelector` support.
+- CiliumNetworkPolicy — a namespaced resource with L3–L7 rules;
+- CiliumClusterwideNetworkPolicy — a cluster-scoped resource with the same rule language and `nodeSelector` support.
 
 Cilium can enforce all three formats at the same time.
 
 {% alert level="warning" %}
-When `NetworkPolicy`, `CiliumNetworkPolicy`, and `CiliumClusterwideNetworkPolicy` are all in use, the resulting allow set is harder to reason about. Roll out new policies in audit mode and verify the behavior in Hubble.
+When NetworkPolicy, CiliumNetworkPolicy, and CiliumClusterwideNetworkPolicy are all in use, the resulting allow set is harder to reason about. Roll out new policies in audit mode and verify the behavior in Hubble.
 {% endalert %}
 
 ## How rules are evaluated
@@ -21,13 +21,13 @@ When `NetworkPolicy`, `CiliumNetworkPolicy`, and `CiliumClusterwideNetworkPolicy
 When evaluating a connection, Cilium follows these principles:
 
 - deny rules take priority over allow rules;
-- allow rules from `NetworkPolicy`, `CiliumNetworkPolicy`, and `CiliumClusterwideNetworkPolicy` are merged;
+- allow rules from NetworkPolicy, CiliumNetworkPolicy, and CiliumClusterwideNetworkPolicy are merged;
 - if at least one policy applies to an endpoint (pod), the default-deny model takes effect for the corresponding traffic direction;
 - L7 rules are evaluated only after L3/L4 checks pass.
 
 ## What CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy add
 
-Compared to the standard `NetworkPolicy`:
+Compared to the standard NetworkPolicy:
 
 - L7 rules — HTTP, gRPC, Kafka, and DNS protocols;
 - FQDN rules in egress — filtering by DNS names;
@@ -36,12 +36,12 @@ Compared to the standard `NetworkPolicy`:
 - references to Kubernetes services by name or labels (`toServices`) — egress rules without specifying a CIDR;
 - ICMP and ICMPv6 filtering by packet type;
 - TLS filtering by Server Name Indication (SNI);
-- `nodeSelector` (`CiliumClusterwideNetworkPolicy` only) — applies a rule to nodes themselves and is the basis for the [host firewall on nodes](host_firewall.html);
+- `nodeSelector` (CiliumClusterwideNetworkPolicy only) — applies a rule to nodes themselves and is the basis for the [host firewall on nodes](host_firewall.html);
 - audit mode via [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) — log policy verdicts without enforcing them.
 
 ## Resource structure
 
-`CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` share the same `spec` shape. A minimal example:
+CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy share the same `spec` shape. A minimal example:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -65,8 +65,8 @@ spec:
 
 Key fields:
 
-- `endpointSelector` — selects pods the policy applies to. Counterpart of `podSelector` in the standard `NetworkPolicy`.
-- `nodeSelector` — selects nodes (`CiliumClusterwideNetworkPolicy` only). A single policy must use either `endpointSelector` or `nodeSelector`, not both.
+- `endpointSelector` — selects pods the policy applies to. Counterpart of `podSelector` in the standard NetworkPolicy.
+- `nodeSelector` — selects nodes (CiliumClusterwideNetworkPolicy only). A single policy must use either `endpointSelector` or `nodeSelector`, not both.
 - `ingress` and `egress` — rule arrays. Each rule has a peer field (`fromEndpoints`, `fromEntities`, `fromCIDR`, `fromCIDRSet`, `toEndpoints`, `toEntities`, `toCIDR`, `toCIDRSet`, `toFQDNs`, `toServices`) and an optional `toPorts` filter for protocols and ports.
 - `ingressDeny` and `egressDeny` — deny rules. They are evaluated before allow rules.
 
@@ -193,7 +193,7 @@ When `serverNames` is set, only TLS connections with the listed names are allowe
 
 ## L7 rules
 
-`CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` can describe allowed application-level operations. L7 rules go inside `toPorts[].rules`:
+CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy can describe allowed application-level operations. L7 rules go inside `toPorts[].rules`:
 
 {% alert level="warning" %}
 L7 inspection is performed by the Envoy proxy embedded in the Cilium agent on each node. It adds per-connection latency and node CPU load. Avoid L7 rules on hot paths unless they are required — basic L3/L4 rules are sufficient for the common case.
@@ -310,7 +310,7 @@ The DNS egress rule uses `toEntities: cluster` rather than a label selector targ
 
 ## Deny rules
 
-Unlike the standard `NetworkPolicy`, `CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` can explicitly deny traffic without removing broader allow rules:
+Unlike the standard NetworkPolicy, CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy can explicitly deny traffic without removing broader allow rules:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -328,9 +328,9 @@ Deny rules are evaluated before allow rules and override permissions from any ot
 
 ## Default policies via CiliumNetworkPolicy
 
-As with the standard `NetworkPolicy`, a policy with empty rule lists places the selected endpoints into default-deny mode.
+As with the standard NetworkPolicy, a policy with empty rule lists places the selected endpoints into default-deny mode.
 
-To put a namespace into default-deny mode, create a `CiliumNetworkPolicy` with empty rule lists:
+To put a namespace into default-deny mode, create a CiliumNetworkPolicy with empty rule lists:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -374,7 +374,7 @@ The DNS egress rule uses `toEntities: cluster` rather than a label selector targ
 The module parameter [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) puts Cilium into a mode where policies do not block traffic; they only log verdicts. This makes it safe to roll out large policy sets and verify them in Hubble UI before enforcement.
 
 {% alert level="warning" %}
-In audit mode, **no** network policy blocks traffic. Do not keep audit mode on permanently — turn it off after the rollout is done.
+In audit mode, no network policy blocks traffic. Do not keep audit mode on permanently — turn it off after the rollout is done.
 {% endalert %}
 
 Recommended order:
@@ -387,7 +387,7 @@ Recommended order:
 
 Once audit mode is off, policies start blocking traffic that is not allowed by any rule.
 
-## Additional documentation
+## Additional resources
 
 - [Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/)
 - [Overview of Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/security/policy/)

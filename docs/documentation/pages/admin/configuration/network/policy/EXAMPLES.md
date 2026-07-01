@@ -5,7 +5,7 @@ description: |
   Ready-to-use network policy recipes for Deckhouse Kubernetes Platform: deny external ingress, namespace and pod selectors, DNS egress, API server access, L7 and FQDN rules.
 ---
 
-This page collects common scenarios for network policies. Standard `NetworkPolicy` examples work in any cluster that supports network policies; `CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` examples require the [`cni-cilium`](/modules/cni-cilium/) module.
+This page collects common scenarios for network policies. Standard NetworkPolicy examples work in any cluster that supports network policies; CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy examples require the [`cni-cilium`](/modules/cni-cilium/) module.
 
 The resource shape itself is documented in [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html) and [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html).
 
@@ -204,7 +204,7 @@ spec:
         - 169.254.169.254/32
 ```
 
-## Additional documentation
+## Additional resources
 
 - [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html)
 - [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)

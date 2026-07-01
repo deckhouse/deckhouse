@@ -49,18 +49,18 @@ d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --ve
 d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --from-pod my-app/client --to-pod my-app/api
 ```
 
-Each agent sees events only for its own node. For cluster-wide event collection, use Hubble UI or export via [`HubbleMonitoringConfig`](/modules/cni-cilium/cr.html#hubblemonitoringconfig).
+Each agent sees events only for its own node. For cluster-wide event collection, use Hubble UI or export via [HubbleMonitoringConfig](/modules/cni-cilium/cr.html#hubblemonitoringconfig).
 
 The output includes policy and selector identifiers and the specific ingress/egress fields that matched, which makes it easy to find the rule that blocked or allowed the connection.
 
 ## Continuous flow logs collection
 
-For continuous flow log collection, enable export through the [`HubbleMonitoringConfig`](/modules/cni-cilium/cr.html#hubblemonitoringconfig) resource. Configuration is described in the [cni-cilium examples](/modules/cni-cilium/examples.html#hubblemonitoringconfig).
+For continuous flow log collection, enable export through the [HubbleMonitoringConfig](/modules/cni-cilium/cr.html#hubblemonitoringconfig) resource. Configuration is described in the [cni-cilium examples](/modules/cni-cilium/examples.html#hubblemonitoringconfig).
 
-Once export is on, `cilium-agent` writes events to `/var/log/cilium/hubble/flow.log` on every node. For central collection, use the [`log-shipper`](/modules/log-shipper/) module with a `ClusterLoggingConfig` of type `File` that reads this file.
+Once export is on, `cilium-agent` writes events to `/var/log/cilium/hubble/flow.log` on every node. For central collection, use the [`log-shipper`](/modules/log-shipper/) module with a ClusterLoggingConfig of type `File` that reads this file.
 
 {% alert level="warning" %}
-Updating `HubbleMonitoringConfig` restarts every Cilium agent in the cluster.
+Updating HubbleMonitoringConfig restarts every Cilium agent in the cluster.
 {% endalert %}
 
 ## Diagnosing FQDN rules
@@ -105,16 +105,16 @@ Behavior for in-flight connections is not defined by the standard — some engin
 
 If a policy is created but traffic does not behave as expected, walk through these checks:
 
-1. Which engine is enabled. The standard `NetworkPolicy` is supported by both engines; `CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy`, L7, and FQDN require `cni-cilium`. The engine capabilities are listed in [What is available in each engine](configuration.html#what-is-available-in-each-engine).
+1. Which engine is enabled. The standard NetworkPolicy is supported by both engines; CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, L7, and FQDN require `cni-cilium`. The engine capabilities are listed in [What is available in each engine](configuration.html#what-is-available-in-each-engine).
 1. The selector matches the pods: `d8 k get pods -n <namespace> -l <key>=<value>` should return the expected list.
 1. `policyTypes` is correct. With `Ingress` only, egress stays unrestricted; with `Egress` only, ingress stays unrestricted.
 1. AND vs OR in selectors. Re-check the array structure — a common cause of overly broad or overly narrow rules.
 1. Audit mode. When [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) is on, policies do not block traffic. `cilium-dbg endpoint list` shows this as `Disabled (Audit)`.
 1. Eventual consistency. Cilium and kube-router apply policies asynchronously. Wait a few seconds and re-test.
-1. Policy status (`CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` only). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` shows parse and apply errors in `status`.
+1. Policy status (CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy only). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` shows parse and apply errors in `status`.
 1. Conflict with a deny rule. Cilium deny rules override any allow rules. Look for policies with `ingressDeny` or `egressDeny` selecting the same endpoint.
 
-## Additional documentation
+## Additional resources
 
 - [HubbleMonitoringConfig — cni-cilium module](/modules/cni-cilium/cr.html#hubblemonitoringconfig)
 - [Troubleshooting Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/security/policy/#troubleshooting)
