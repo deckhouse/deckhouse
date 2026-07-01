@@ -1,0 +1,76 @@
+{{- $containerd_versions := list "2.2.4" }}
+{{- $runc_versions := list "1.3.5" }}
+{{- $containerd2runc := dict "2.2.4" "1.3.5" }}
+
+
+{{- range $containerd_version := $containerd_versions }}
+  {{- $image_version := $containerd_version | replace "." "-" }}
+  {{- $major_version := index (splitList "-" $image_version) 0 }}
+  {{- $runc_version := index $containerd2runc $containerd_version }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ index $.Images "builder/distroless" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/containerd-artifact-{{ $image_version }}
+  add: /out
+  to: /sysext/opt/deckhouse/bin
+  includePaths:
+  - containerd
+  - containerd-shim-runc-v1
+  - containerd-shim-runc-v2
+  - ctr
+  before: install
+{{- if and (eq $.Env "CSE") }}
+- image: {{ $.ModuleName }}/containerd-pidumount-artifact
+  add: /pidumount
+  to: /sysext/opt/deckhouse/bin/pidumount
+  before: install
+{{- end }}
+- image: {{ $.ModuleName }}/containerd-runc-artifact-{{ $runc_version }}
+  add: /out/runc
+  to: /sysext/opt/deckhouse/bin/runc
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /scripts
+  includePaths:
+  - extension-release.containerd
+  - sysext-containerd.service
+  stageDependencies:
+    install:
+    - extension-release.containerd
+    - sysext-containerd.service
+shell:
+  beforeInstall:
+  - pm install erofs-utils coreutils cryptsetup
+  - mkdir -p /out
+  install:
+  - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
+  - cp -f /scripts/sysext-containerd.service /sysext/usr/lib/systemd/system/containerd.service
+  - cp -f /scripts/extension-release.containerd /sysext/usr/lib/extension-release.d/
+  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 containerd.erofs sysext/
+  - veritysetup format containerd.erofs containerd.verity > verity.txt
+  - export ROOTHASH=$(awk '/^Root hash:/ {print $3}' verity.txt)
+  - cat containerd.erofs containerd.verity > /out/containerd.raw
+  - printf '%s\n' "$ROOTHASH" > /out/containerd.raw.roothash
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /out
+  to: /
+  includePaths:
+  - '**/*'
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "dkp", "sysext_level": "1.0", "containerd": "{{ $containerd_version }}", "runc": "{{ $runc_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
+{{- end }}
