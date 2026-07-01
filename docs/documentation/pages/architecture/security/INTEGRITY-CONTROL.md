@@ -36,7 +36,7 @@ that only up-to-date image versions are used for container startup.
 
 ## Integrity control of running containers
 
-Security event auditing in DKP includes analyzing Linux kernel events and Kubernetes API audit events.
+Runtime auditing in DKP includes analyzing Linux kernel events and Kubernetes API audit events.
 This makes it possible to track whether applications in pods are running unchanged, conform to their expected state,
 and have not been modified.
 
@@ -48,4 +48,4 @@ Auditing uses:
 Integrity control of running containers can detect threats such as launching command-line shells inside containers or pods,
 discovering containers running in privileged mode, mounting insecure paths into containers, or attempts to read sensitive data.
 
-For more details on configuring security audits, refer to [Security event audit](../../admin/configuration/security/events/runtime-audit.html).
+For more details on configuring runtime audit, refer to [Runtime audit](../../admin/configuration/security/events/runtime-audit.html).
