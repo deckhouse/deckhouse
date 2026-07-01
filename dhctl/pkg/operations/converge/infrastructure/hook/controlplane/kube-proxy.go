@@ -27,9 +27,9 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type KubeProxyChecker struct {
@@ -133,7 +133,7 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		return false, err
 	}
 
-	c.printNs(ns)
+	c.printNs(ctx, ns)
 
 	uuidInCluster := ns.Data["cluster-uuid"]
 	if c.clusterUUID != "" && c.clusterUUID != uuidInCluster {
@@ -147,16 +147,16 @@ func (c *KubeProxyChecker) Name() string {
 	return "SSH access and kube-proxy availability"
 }
 
-func (c *KubeProxyChecker) printNs(cm *corev1.ConfigMap) {
+func (c *KubeProxyChecker) printNs(ctx context.Context, cm *corev1.ConfigMap) {
 	if !c.logCheckResult {
 		return
 	}
 
 	yamlRepr, err := yaml.Marshal(cm)
 	if err != nil {
-		log.ErrorF("ConfigMap marshal error: %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("ConfigMap marshal error %v", err))
 		return
 	}
 
-	log.InfoF("Cluster UUID ConfigMap:\n%s\n", string(yamlRepr))
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cluster UUID ConfigMap:\n%s", string(yamlRepr)))
 }

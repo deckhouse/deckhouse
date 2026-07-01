@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -25,10 +26,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
@@ -44,9 +46,8 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -59,7 +60,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return fmt.Errorf("Not enough flags were provided to perform the operation.\nUse dhctl session --help to get available flags.")
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -75,7 +76,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		apiServerURL := fmt.Sprintf("http://localhost:%s", apiServerPort)
-		if err := localKubeConfig(apiServerURL); err != nil {
+		if err := localKubeConfig(ctx, apiServerURL); err != nil {
 			return fmt.Errorf("save kubeconfig: %v", err)
 		}
 
@@ -83,15 +84,15 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		sig := <-sigChan
 
-		// todo(log): why do not use logger?
-		fmt.Println("Received signal:", sig)
-		fmt.Println("Exiting SSH tunnel...")
+		l := dhlog.FromContext(ctx)
+		l.InfoContext(ctx, fmt.Sprintf("Received signal: %v", sig), dhlog.ShowInCompacted())
+		l.InfoContext(ctx, "Exiting SSH tunnel...", dhlog.ShowInCompacted())
 
 		return nil
 	})
 }
 
-func localKubeConfig(apiServerURL string) error {
+func localKubeConfig(ctx context.Context, apiServerURL string) error {
 	kubeconfigDir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to open home directory: %w", err)
@@ -118,8 +119,7 @@ func localKubeConfig(apiServerURL string) error {
 		return fmt.Errorf("failed to write kubeconfig: %w", err)
 	}
 
-	// todo(log): why do not use logger?
-	fmt.Printf("Kubeconfig successfully saved at: %s\n", kubeconfigPath)
+	dhlog.FromContext(ctx).InfoContext(ctx, "Kubeconfig successfully saved at: "+kubeconfigPath, dhlog.ShowInCompacted())
 
 	return nil
 }

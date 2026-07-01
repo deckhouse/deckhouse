@@ -16,15 +16,15 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/name212/govalue"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
@@ -49,7 +49,6 @@ type ClusterInfra struct {
 
 	tmpDir        string
 	isDebug       bool
-	logger        log.Logger
 	globalOptions *options.GlobalOptions
 
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
@@ -59,16 +58,10 @@ type ClusterInfraOptions struct {
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	TmpDir                 string
 	IsDebug                bool
-	Logger                 log.Logger
 	GlobalOptions          *options.GlobalOptions
 }
 
 func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infrastructureContext *infrastructure.Context, opts ClusterInfraOptions) *ClusterInfra {
-	logger := opts.Logger
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
-	}
-
 	return &ClusterInfra{
 		stateLoader:           terraState,
 		cache:                 cache,
@@ -77,7 +70,6 @@ func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infra
 		PhasedExecutionContext: opts.PhasedExecutionContext,
 		tmpDir:                 opts.TmpDir,
 		isDebug:                opts.IsDebug,
-		logger:                 logger,
 		globalOptions:          opts.GlobalOptions,
 	}
 }
@@ -89,19 +81,18 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.globalOptions == nil {
-		log.WarnLn("GlobalOption is nil!")
+		dhlog.FromContext(ctx).WarnContext(ctx, "GlobalOption is nil!")
 	}
 
 	if r.infrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           r.tmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           r.logger,
 			IsDebug:          r.isDebug,
 			GlobalOptions:    r.globalOptions,
 		})
 
-		r.infrastructureContext = infrastructure.NewContextWithProvider(providerGetter, r.logger)
+		r.infrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
 	}
 
 	provider, err := r.infrastructureContext.CloudProviderGetter()(ctx, metaConfig)
@@ -112,7 +103,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	defer func() {
 		err := provider.Cleanup()
 		if err != nil {
-			r.logger.LogErrorF("Failed to cleanup infrastructure cloud provider: %v\n", err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Failed to cleanup infrastructure cloud provider: %v", err))
 		}
 	}()
 

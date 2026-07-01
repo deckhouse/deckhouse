@@ -27,9 +27,10 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libcon_config "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type providerOptions struct {
@@ -95,7 +96,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	}
 
 	if options.requireKubeProvider && cfg.OverSSH() {
-		if sshProviderInitializer == nil || !sshProviderInitializer.CheckHosts() {
+		if sshProviderInitializer == nil || !sshProviderInitializer.CheckHosts(ctx) {
 			return sshProviderInitializer, nil, ErrSSHHostRequiredForKubernetesConnection
 		}
 	}
@@ -151,10 +152,9 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 		}
 	} else {
 		// loggerProvider should be forced to non-interactive to ask for password, because our wrapper hides all Info* and Warn* output
-		sett := baseProviderSettings.
-			Clone().
-			WithLogger(log.NonInteractiveLoggerProvider())
-
+		sett := baseProviderSettings.Clone()
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewAdapter(dhlog.Discard()))
+		sett.WithLogger(loggerProvider)
 		parser := libcon_config.NewFlagsParser(sett)
 		parser.WithEnvsPrefix(global.SSHEnvsPrefix)
 

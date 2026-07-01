@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type ResourceChecker interface {
@@ -33,10 +33,9 @@ type ResourceChecker interface {
 }
 
 type GetCheckerParams struct {
-	LoggerProvider log.LoggerProvider
 }
 
-func GetCheckerByGvk(gvk *schema.GroupVersionKind, params GetCheckerParams) (ResourceChecker, error) {
+func GetCheckerByGvk(gvk *schema.GroupVersionKind, _ GetCheckerParams) (ResourceChecker, error) {
 	if gvk.Empty() {
 		return nil, fmt.Errorf("Cannot get checker by gvk: gvk cannot be empty")
 	}
@@ -44,15 +43,15 @@ func GetCheckerByGvk(gvk *schema.GroupVersionKind, params GetCheckerParams) (Res
 	kind := gvk.Kind
 
 	if kind == "StaticInstance" {
-		return NewStaticInstanceChecker(params.LoggerProvider), nil
+		return NewStaticInstanceChecker(), nil
 	}
 
 	if _, ok := kindsWithoutCheck[kind]; ok {
-		return NewExistsResourceWithoutChecker(params.LoggerProvider), nil
+		return NewExistsResourceWithoutChecker(), nil
 	}
 
 	if phases, ok := kindsByPhases[kind]; ok {
-		return NewByPhaseChecker(phases, params.LoggerProvider), nil
+		return NewByPhaseChecker(phases), nil
 	}
 
 	conditionsParams, ok := kindsByConditions[kind]
@@ -60,7 +59,7 @@ func GetCheckerByGvk(gvk *schema.GroupVersionKind, params GetCheckerParams) (Res
 	// try to check by conditions for another but if conditions not found return ready
 	// because we do not know status.conditions is available for them
 	if !ok {
-		conditionsChecker := NewByConditionsChecker(defaultConditions, params.LoggerProvider).
+		conditionsChecker := NewByConditionsChecker(defaultConditions).
 			WithWaitAttempts(3).
 			WithCheckAll(false).
 			WithReadyIfNoStatusOrConditions(true)
@@ -75,7 +74,7 @@ func GetCheckerByGvk(gvk *schema.GroupVersionKind, params GetCheckerParams) (Res
 
 	// Deployment and APIService NodeGroup here
 	// if conditions not found wait for it
-	conditionsChecker := NewByConditionsChecker(defaultConditions, params.LoggerProvider).
+	conditionsChecker := NewByConditionsChecker(defaultConditions).
 		WithWaitAttempts(waitAttempts).
 		WithReadyIfNoStatusOrConditions(false).
 		WithCheckAll(conditionsParams.checkAll)
@@ -83,13 +82,13 @@ func GetCheckerByGvk(gvk *schema.GroupVersionKind, params GetCheckerParams) (Res
 	return conditionsChecker, nil
 }
 
-func debugLogAndReturnNotReady(logger log.Logger, resourceName, msg string) (bool, error) {
-	logger.LogDebugF("Resource %s %s.\n", resourceName, msg)
+func debugLogAndReturnNotReady(ctx context.Context, resourceName, msg string) (bool, error) {
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s %s.", resourceName, msg))
 	return false, nil
 }
 
-func debugLogAndReturnReady(logger log.Logger, resourceName, msg string) (bool, error) {
-	logger.LogDebugF("Resource %s %s.\n", resourceName, msg)
+func debugLogAndReturnReady(ctx context.Context, resourceName, msg string) (bool, error) {
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s %s.", resourceName, msg))
 	return true, nil
 }
 

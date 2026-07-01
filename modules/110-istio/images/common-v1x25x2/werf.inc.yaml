@@ -27,15 +27,25 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
-  tag: {{ $kialiVersion }}
-  add: /
-  to: /src/kial-frontend-assets
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   install:
   - cd /src/istio/ && git apply --verbose /patches/001-istio-gomod_gosum.patch
   - cd /src/istio/ && git apply --verbose /patches/002-istio-multicluster-regenerate-token-timeout.patch
   - cd /src/kiali/ && git apply --verbose /patches/001-kiali-go-mod.patch
+  - cd /src/kiali/ && git apply --verbose /patches/002-kiali-logout.patch
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-kiali-frontend-build-artifact
+from: {{ index $.Images "builder/node-alpine-22.16" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/kiali/frontend
+  to: /src/kiali/frontend
+  before: install
+shell:
+  install:
+  - cd /src/kiali/frontend
+  - yarn install --frozen-lockfile
+  - KIALI_ENV=production yarn run build
+  - mkdir -p /src/kial-frontend-assets/static
+  - cp -a build/. /src/kial-frontend-assets/static/

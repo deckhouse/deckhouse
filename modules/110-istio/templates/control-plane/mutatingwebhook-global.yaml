@@ -29,10 +29,14 @@
 ---
 {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
 {{- $fullVersion := get $versionInfo "fullVersion" }}
+{{- $revision := get $versionInfo "revision" }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: d8-istio-sidecar-injector-global
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=istiod-{{ $revision }},namespace=d8-istio
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=istiod-{{ $revision }},namespace=d8-istio
   {{- include "helm_lib_module_labels" (list . (dict "istio.deckhouse.io/full-version" $fullVersion) ) | nindent 2 }}
 webhooks:
 {{- /* Case 1: Namespace-wide injection */}}

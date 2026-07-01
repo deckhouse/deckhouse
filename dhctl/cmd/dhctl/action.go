@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"slices"
@@ -25,13 +27,14 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 type (
@@ -57,6 +60,8 @@ type actionIniter struct {
 	logFileMutex sync.Mutex
 	logFile      string
 
+	slogRoot *slog.Logger
+
 	opts               *options.Options
 	params             *actionIniterParams
 	registerOnShutdown registerOnShutdownFunc
@@ -64,6 +69,14 @@ type actionIniter struct {
 
 func newActionIniter(opts *options.Options) *actionIniter {
 	return &actionIniter{opts: opts}
+}
+
+// Logger returns the application slog root, or a stderr fallback if not yet initialized.
+func (i *actionIniter) Logger() *slog.Logger {
+	if i.slogRoot != nil {
+		return i.slogRoot
+	}
+	return logger.NewRoot(logger.Options{FileWriter: os.Stderr})
 }
 
 func (i *actionIniter) setParams(params actionIniterParams) *actionIniter {
@@ -131,7 +144,8 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	// pod uses json logs, but here json logger not initialized
 	// and we got not json log string
 	if tmpDirLockResult.skipped && tmpDirLockResult.skippedBy != grpcServerCmd {
-		log.InfoF("Tmp dir lock skipped because command '%s' should not acquire tmp dir\n", tmpDirLockResult.skippedBy)
+		ctx := context.Background()
+		logger.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Tmp dir lock skipped because command '%s' should not acquire tmp dir", tmpDirLockResult.skippedBy))
 	}
 
 	runTmpCleaner := i.initTmpDirCleaner(c, tmpDir)
@@ -145,10 +159,8 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	i.registerOnShutdown("Clear dhctl temporary directory", runTmpCleaner)
 
 	i.registerOnShutdown("Cleanup providers from default cache", func() {
-		infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLoggerProvider())
+		infrastructureprovider.CleanupProvidersFromDefaultCache()
 	})
-
-	i.registerOnShutdown("Cleanup progressbar", i.cleanupProgressbar())
 
 	return nil
 }
@@ -268,7 +280,7 @@ func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir st
 		return nil, err
 	}
 
-	releaseLock, err := cache.AcquireTmpDirLock(tmpDir, log.GetDefaultLoggerProvider(), cmdName)
+	releaseLock, err := cache.AcquireTmpDirLock(tmpDir, cmdName)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +299,6 @@ func (i *actionIniter) initTmpDirCleaner(c *kingpin.ParseContext, tmpDir string)
 		DefaultTmpDir:    options.DefaultTmpDir(),
 		DownloadCacheDir: i.opts.Global.DownloadCacheDir,
 		TmpDir:           tmpDir,
-		LoggerProvider:   log.GetDefaultLoggerProvider(),
 	}
 
 	// _server is special command for running action eg bootstrap as standalone process
@@ -326,46 +337,60 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
 
 func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
-	log.SetDebugEnabled(i.params.isDebug)
-	interactive := input.IsTerminal() && !i.opts.Global.ShowProgress
-
-	err := log.InitLogger(i.params.loggerType, interactive)
-	if err != nil {
-		return nil, err
-	}
-	if i.params.doNotWriteDebugFile {
-		return doNothingOnShutdownFunc, nil
-	}
+	// Terminal logging axes:
+	//   - stdoutTTY: stdout is a terminal → enable the terminal sink at all.
+	//   - interactive: pinned progress bar; on only when a terminal AND not the -v linear dump.
+	//   - verbose (-v): show every Info+ record on the terminal.
+	// DHCTL_DEBUG (isDebug) deliberately does NOT touch the terminal — it only enriches the .log file
+	// (full DEBUG is always captured there, plus shell-operator/klog internals via BindShellOperator).
+	// So the terminal looks identical with or without DHCTL_DEBUG.
+	stdoutTTY := input.IsTerminal()
+	interactive := stdoutTTY && !i.opts.Global.ShowProgress
+	verbose := i.opts.Global.ShowProgress
 
 	commandName := getCommandName(c)
 
-	if slices.Contains(skipTeeLoggerCommands, commandName) {
+	// Skip cases: build a working slog root WITHOUT a debug file. Every path still sets
+	// i.slogRoot + SetDefault + binds klog/shell-op, so logger.FromContext always routes
+	// to a real logger.
+	if i.params.doNotWriteDebugFile || slices.Contains(skipTeeLoggerCommands, commandName) {
+		i.bindSlogRoot(c, logger.NewRoot(logger.Options{
+			FileWriter:  os.Stdout,
+			TTYWriter:   os.Stdout,
+			IsTTY:       stdoutTTY,
+			Interactive: interactive,
+			Verbose:     verbose,
+		}))
 		return doNothingOnShutdownFunc, nil
 	}
 
 	logPath := i.params.debugLogFilePath
-	p := logPath
 
 	if logPath == "" {
 		cmdStr := strings.Join(strings.Fields(commandName), "")
 		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
 		logPath = path.Join(tmpDir, logFile)
-		p = tmpDir
 	}
-
-	log.SetLoggerOpts(p, commandName)
 
 	outFile, err := os.Create(logPath)
 	if err != nil {
 		return nil, err
 	}
 
-	err = log.WrapWithTeeLogger(outFile, 1024)
-	if err != nil {
-		return nil, err
-	}
+	shared := newSyncWriter(outFile)
 
-	log.InteractiveInfoF("Debug log file: %s\n", logPath)
+	// The slog root writes records straight to the shared file (its FileWriter), so the file
+	// contains only slog records — no separate legacy tee.
+	i.bindSlogRoot(c, logger.NewRoot(logger.Options{
+		FileWriter:  shared,
+		TTYWriter:   os.Stdout,
+		IsTTY:       stdoutTTY,
+		Interactive: interactive,
+		Verbose:     verbose,
+	}))
+
+	// cmd-level notice now goes through the slog root (terminal + file).
+	i.slogRoot.Info("Debug log file: " + logPath)
 
 	i.logFileMutex.Lock()
 	defer i.logFileMutex.Unlock()
@@ -373,11 +398,29 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	i.logFile = logPath
 
 	return func() {
-		if err := log.FlushAndClose(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
-			return
+		// slog writes synchronously, so closing the file is enough to flush.
+		if err := shared.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to close debug log file: %v\n", err)
 		}
 	}, nil
+}
+
+// bindSlogRoot installs root as the application slog root: stores it, makes it the slog
+// default, binds klog + shell-operator to it, and carries it on the kingpin context.
+func (i *actionIniter) bindSlogRoot(c *kingpin.ParseContext, root *slog.Logger) {
+	i.slogRoot = root
+
+	// Make the dual-sink root the slog default, so any logger.FromContext call whose context
+	// does not explicitly carry a logger (unavoidable at lifecycle/builder seams) still routes
+	// to the file + TTY sinks instead of a bare stderr handler.
+	slog.SetDefault(root)
+
+	// klog and shell-operator route into the slog root.
+	logger.BindKlog(root)
+	logger.BindShellOperator(root, i.params.isDebug)
+
+	// Carry the slog root on the kingpin context so command handlers can pull it.
+	kpcontext.SetContextToParseContext(logger.ToContext(kpcontext.ExtractContext(c), root), c)
 }
 
 func (i *actionIniter) getLoggerPath() string {
@@ -404,29 +447,4 @@ func disableCleanupOnInterrupted(s os.Signal) {
 	}
 	// disable tmp cleaning if user pass ctrl + c
 	cache.GetGlobalTmpCleaner().DisableCleanup("Interrupted by signal " + s.String())
-}
-
-func (i *actionIniter) cleanupProgressbar() onShutdownFunc {
-	return func() {
-		pb := progressbar.GetDefaultPb()
-		if pb != nil {
-			_, err := pb.ProgressBarPrinter.Stop()
-			if err != nil {
-				log.WarnF("failed to stop progress bar printer: %v", err)
-			}
-
-			if err := pb.LogBox.Stop(); err != nil {
-				log.WarnF("failed to stop logbox: %v", err)
-			}
-
-			_, err = pb.MultiPrinter.Stop()
-			if err != nil {
-				log.WarnF("failed to stop multi printer: %v", err)
-			}
-
-			if pb.WriterFabric != nil {
-				pb.WriterFabric.Cleanup()
-			}
-		}
-	}
 }

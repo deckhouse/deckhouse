@@ -19,14 +19,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -34,15 +36,25 @@ import (
 const (
 	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
 	capiNamespace                = "d8-cloud-instance-manager"
+	helmManagedSelector          = "app.kubernetes.io/managed-by=Helm"
 )
 
-// TODO(v1beta2): GVR uses v1beta1 for rolling upgrade from CSE 1.73 which still
-// serves v1beta1. Switch to v1beta2 once v1beta1 is no longer served.
-var capiResources = []schema.GroupVersionResource{
-	{Group: "cluster.x-k8s.io", Version: "v1beta1", Resource: "clusters"},
-	{Group: "cluster.x-k8s.io", Version: "v1beta1", Resource: "machinehealthchecks"},
-	{Group: "cluster.x-k8s.io", Version: "v1beta1", Resource: "machinedeployments"},
+var capiResources = []struct {
+	Group    string
+	Resource string
+}{
+	{Group: "cluster.x-k8s.io", Resource: "clusters"},
+	{Group: "cluster.x-k8s.io", Resource: "machinehealthchecks"},
+	{Group: "cluster.x-k8s.io", Resource: "machinedeployments"},
 }
+
+var crdGVR = schema.GroupVersionResource{
+	Group:    "apiextensions.k8s.io",
+	Version:  "v1",
+	Resource: "customresourcedefinitions",
+}
+
+var storedVersionPreference = []string{"v1beta1", "v1beta2"}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager/set-keep-policy-on-capi-resources",
@@ -64,55 +76,81 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 		},
 	})
 
-	for _, gvr := range capiResources {
-		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{})
+	for _, res := range capiResources {
+		version, ok, err := pickStoredVersion(dynClient, res.Group, res.Resource)
 		if err != nil {
-			if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
-				input.Logger.Info("skipping resource, not served", slog.String("resource", gvr.Resource), slog.Any("error", err))
+			return fmt.Errorf("resolve stored version for %s: %w", res.Resource, err)
+		}
+		if !ok {
+			continue
+		}
+		gvr := schema.GroupVersionResource{Group: res.Group, Version: version, Resource: res.Resource}
+
+		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: helmManagedSelector})
+		if err != nil {
+			if isConversionUnavailable(err) {
+				input.Logger.Info("skipping resource, conversion webhook unavailable", slog.String("resource", res.Resource), slog.String("version", version))
 				continue
 			}
-			return fmt.Errorf("list %s: %w", gvr.Resource, err)
+			return fmt.Errorf("list %s/%s: %w", res.Resource, version, err)
 		}
 
 		for _, item := range list.Items {
-			annotations := item.GetAnnotations()
-			if annotations == nil {
+			if item.GetAnnotations()[helmResourcePolicyAnnotation] == "keep" {
 				continue
 			}
-			if _, hasHelm := annotations["meta.helm.sh/release-name"]; !hasHelm {
-				continue
-			}
-			if annotations[helmResourcePolicyAnnotation] == "keep" {
-				continue
-			}
-
-			_, err := dynClient.Resource(gvr).Namespace(item.GetNamespace()).Patch(
+			if _, err := dynClient.Resource(gvr).Namespace(item.GetNamespace()).Patch(
 				context.TODO(),
 				item.GetName(),
 				types.MergePatchType,
 				patch,
 				metav1.PatchOptions{},
-			)
-			if err != nil {
-				return fmt.Errorf("patch %s/%s: %w", gvr.Resource, item.GetName(), err)
+			); err != nil {
+				return fmt.Errorf("patch %s/%s: %w", res.Resource, item.GetName(), err)
 			}
-			input.Logger.Info("stamped keep policy", slog.String("resource", gvr.Resource), slog.String("name", item.GetName()))
+			input.Logger.Info("stamped keep policy", slog.String("resource", res.Resource), slog.String("name", item.GetName()))
 		}
 
-		verify, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{})
+		verify, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: helmManagedSelector})
 		if err != nil {
-			return fmt.Errorf("verify list %s: %w", gvr.Resource, err)
+			return fmt.Errorf("verify list %s/%s: %w", res.Resource, version, err)
 		}
 		for _, item := range verify.Items {
-			annotations := item.GetAnnotations()
-			if _, hasHelm := annotations["meta.helm.sh/release-name"]; !hasHelm {
-				continue
-			}
-			if annotations[helmResourcePolicyAnnotation] != "keep" {
-				return fmt.Errorf("keep policy not set on helm-managed %s/%s: refusing to proceed to avoid prune", gvr.Resource, item.GetName())
+			if item.GetAnnotations()[helmResourcePolicyAnnotation] != "keep" {
+				return fmt.Errorf("keep policy not set on %s/%s: refusing to proceed to avoid prune", res.Resource, item.GetName())
 			}
 		}
 	}
 
 	return nil
+}
+
+func pickStoredVersion(dynClient dynamic.Interface, group, resource string) (string, bool, error) {
+	crd, err := dynClient.Resource(crdGVR).Get(context.TODO(), resource+"."+group, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	stored, _, err := unstructured.NestedStringSlice(crd.Object, "status", "storedVersions")
+	if err != nil {
+		return "", false, err
+	}
+	for _, want := range storedVersionPreference {
+		for _, have := range stored {
+			if have == want {
+				return want, true, nil
+			}
+		}
+	}
+	return "", false, nil
+}
+
+func isConversionUnavailable(err error) bool {
+	if apierrors.IsServiceUnavailable(err) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "conversion webhook") || strings.Contains(msg, "(re)initializing")
 }

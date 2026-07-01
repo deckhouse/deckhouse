@@ -16,6 +16,7 @@ package deckhouse
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -23,8 +24,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func cleanupDeckhousePods(ctx context.Context, kubeCl *client.KubernetesClient, pods *v1.PodList) *v1.PodList {
@@ -34,9 +36,9 @@ func cleanupDeckhousePods(ctx context.Context, kubeCl *client.KubernetesClient, 
 		switch pod.Status.Phase {
 		case v1.PodSucceeded, v1.PodFailed, v1.PodUnknown:
 			if err := kubeCl.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{}); err != nil {
-				log.DebugF("Failed to delete pod %s. err: %v", pod.Name, err)
+				dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to delete pod %s. err: %v", pod.Name, err), "\n"))
 			} else {
-				log.DebugF("Pod %s was successfully deleted", pod.Name)
+				dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Pod %s was successfully deleted", pod.Name), "\n"))
 			}
 		default:
 			d8Pods.Items = append(d8Pods.Items, pod)
@@ -51,13 +53,13 @@ func GetPod(ctx context.Context, kubeCl *client.KubernetesClient, leaderElection
 
 	pods, err := kubeCl.CoreV1().Pods("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
-		log.DebugF("Cannot get deckhouse pod. Got error: %v", err)
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Cannot get deckhouse pod. Got error: %v", err), "\n"))
 		return nil, ErrListPods
 	}
 	pods = cleanupDeckhousePods(ctx, kubeCl, pods)
 
 	if len(pods.Items) == 0 {
-		log.DebugF("Cannot get deckhouse pod. Count of returned pods is zero")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Cannot get deckhouse pod. Count of returned pods is zero")
 		return nil, ErrListPods
 	}
 
@@ -80,23 +82,23 @@ func getLeaderElectionLeaseHolderPod(
 		Get(ctx, leaderElectionLeaseName.Name, metav1.GetOptions{})
 	switch {
 	case err != nil:
-		log.DebugF("Cannot get deckhouse pod. Got error reading lease: %v", err)
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Cannot get deckhouse pod. Got error reading lease: %v", err), "\n"))
 		return nil, ErrReadLease
 	case lease.Spec.HolderIdentity == nil:
-		log.DebugLn("No Deckhouse leader election lease holder identity found")
+		dhlog.FromContext(ctx).DebugContext(ctx, "No Deckhouse leader election lease holder identity found")
 		return nil, ErrBadLease
 	case lease.Spec.RenewTime == nil:
-		log.DebugLn("No Deckhouse leader election lease renew time found")
+		dhlog.FromContext(ctx).DebugContext(ctx, "No Deckhouse leader election lease renew time found")
 		return nil, ErrBadLease
 	case lease.Spec.LeaseDurationSeconds == nil:
-		log.DebugLn("No Deckhouse leader election lease duration seconds found")
+		dhlog.FromContext(ctx).DebugContext(ctx, "No Deckhouse leader election lease duration seconds found")
 		return nil, ErrBadLease
 	}
 
 	leaseRenewTime := *lease.Spec.RenewTime
 	leaseDuration := time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second
 	if time.Since(leaseRenewTime.Time) >= leaseDuration {
-		log.DebugLn("Deckhouse leader election lease is expired")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Deckhouse leader election lease is expired")
 		return nil, ErrBadLease
 	}
 
@@ -106,6 +108,6 @@ func getLeaderElectionLeaseHolderPod(
 		}
 	}
 
-	log.DebugLn("Pod specified as Deckhouse leader election lease holder does not exist")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Pod specified as Deckhouse leader election lease holder does not exist")
 	return nil, ErrListPods
 }

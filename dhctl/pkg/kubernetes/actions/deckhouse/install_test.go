@@ -28,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestDeckhouseInstall(t *testing.T) {
@@ -42,7 +41,6 @@ func TestDeckhouseInstall(t *testing.T) {
 		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
-	log.InitLogger("json", false)
 	fakeClient := client.NewFakeKubernetesClient()
 
 	tests := []struct {
