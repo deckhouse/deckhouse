@@ -285,28 +285,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/200-operator-prometheus
-  to: /deckhouse/modules/200-operator-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/300-prometheus
-  to: /deckhouse/modules/300-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler
   to: /deckhouse/modules/302-vertical-pod-autoscaler
   excludePaths:
@@ -342,17 +320,6 @@
         - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/462-loki
-  to: /deckhouse/modules/462-loki
   excludePaths:
     - docs
     - README.md

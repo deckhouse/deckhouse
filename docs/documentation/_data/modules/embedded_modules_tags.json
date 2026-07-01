@@ -142,11 +142,6 @@
     "storage",
     "ssdlc"
   ],
-  "loki": [
-    "observability",
-    "logging",
-    "ssdlc"
-  ],
   "metallb": [
     "network",
     "balancing",
@@ -211,15 +206,11 @@
     "security",
     "ssdlc"
   ],
-  "operator-prometheus": [
-    "observability",
-    "ssdlc"
-  ],
   "pod-reloader": [
     "core",
     "ssdlc"
   ],
-  "prometheus": [
+  "prometheus-metrics-adapter": [
     "observability",
     "ssdlc"
   ],

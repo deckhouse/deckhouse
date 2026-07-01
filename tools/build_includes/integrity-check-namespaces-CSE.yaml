@@ -25,7 +25,6 @@ namespaces_for_integrity:
     - d8-neuvector
     - d8-observability
     - d8-operator-argo
-    - d8-operator-prometheus
     - d8-operator-trivy
     - d8-payload-registry
     - d8-pod-reloader
