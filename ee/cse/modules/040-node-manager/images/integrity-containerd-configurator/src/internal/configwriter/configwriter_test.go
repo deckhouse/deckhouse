@@ -145,7 +145,7 @@ func TestAggregatePolicies(t *testing.T) {
 	}
 }
 
-func TestRenderNsToml(t *testing.T) {
+func TestRenderIntegrityToml(t *testing.T) {
 	t.Parallel()
 
 	cfg := &DesiredConfig{
@@ -153,13 +153,13 @@ func TestRenderNsToml(t *testing.T) {
 		CACerts:    []string{"base64_ca_first", "base64_ca_second"},
 	}
 
-	got, err := RenderNsToml(cfg)
+	got, err := RenderIntegrityToml(cfg)
 	require.NoError(t, err)
 
-	var parsed nsTOML
+	var parsed integrityTOML
 	require.NoError(t, toml.Unmarshal(got, &parsed))
 	require.Equal(t, cfg.Namespaces, parsed.Namespaces)
-	require.Equal(t, cfg.CACerts, parsed.CACert)
+	require.Equal(t, cfg.CACerts, parsed.CACerts)
 }
 
 func TestWriterApplyAndRemove(t *testing.T) {
@@ -176,31 +176,31 @@ func TestWriterApplyAndRemove(t *testing.T) {
 
 	require.NoError(t, writer.Apply(log.NewNop(), config))
 
-	nsTomlPath := filepath.Join(dir, NsTomlFileName)
-	nsTomlData, err := os.ReadFile(nsTomlPath)
+	IntegrityTomlPath := filepath.Join(dir, IntegrityConfigFile)
+	IntegrityTomlData, err := os.ReadFile(IntegrityTomlPath)
 	require.NoError(t, err)
 
-	expected, err := RenderNsToml(config)
+	expected, err := RenderIntegrityToml(config)
 	require.NoError(t, err)
-	require.Equal(t, expected, nsTomlData)
+	require.Equal(t, expected, IntegrityTomlData)
 
 	require.NoError(t, writer.Apply(log.NewNop(), config))
-	unchanged, err := os.ReadFile(nsTomlPath)
+	unchanged, err := os.ReadFile(IntegrityTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, unchanged)
 
-	require.NoError(t, os.WriteFile(nsTomlPath, []byte("stale"), 0o644))
+	require.NoError(t, os.WriteFile(IntegrityTomlPath, []byte("stale"), 0o644))
 	require.NoError(t, writer.Apply(log.NewNop(), config))
-	restored, err := os.ReadFile(nsTomlPath)
+	restored, err := os.ReadFile(IntegrityTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, restored)
 
 	require.NoError(t, writer.Apply(log.NewNop(), nil))
-	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
+	_, err = os.Stat(filepath.Join(dir, IntegrityConfigFile))
 	require.True(t, os.IsNotExist(err))
 
 	require.NoError(t, writer.Apply(log.NewNop(), config))
 	require.NoError(t, writer.Apply(log.NewNop(), &DesiredConfig{}))
-	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
+	_, err = os.Stat(filepath.Join(dir, IntegrityConfigFile))
 	require.True(t, os.IsNotExist(err))
 }
