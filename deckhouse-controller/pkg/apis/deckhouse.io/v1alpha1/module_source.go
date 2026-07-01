@@ -94,6 +94,7 @@ type ModuleSourceSpec struct {
 	// Interval for registry scan.
 	//
 	// Defines the frequency of checking the container registry for new modules and their versions.
+	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
 	// +crd-enricher:deckhouse:documentation:default=3m
 	// +crd-enricher:deckhouse:documentation:examples=5m

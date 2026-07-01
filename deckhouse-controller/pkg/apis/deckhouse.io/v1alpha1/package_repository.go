@@ -81,6 +81,7 @@ type PackageRepositorySpec struct {
 	//
 	// Defines the frequency of checking the container registry for new packages.
 	// +optional
+	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
 	// +crd-enricher:deckhouse:documentation:default=6h
 	// +crd-enricher:deckhouse:documentation:examples=5m
