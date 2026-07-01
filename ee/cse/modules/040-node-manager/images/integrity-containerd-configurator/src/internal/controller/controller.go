@@ -1,18 +1,18 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
 package controller
 
+//nolint:goimports
+//nolint:gci
 import (
 	"context"
 	"fmt"
 	"slices"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
-	//nolint:goimports
-	//nolint:gci
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"integrity-containerd-configurator/internal/configwriter"
 )
@@ -35,7 +37,7 @@ type Reconciler struct {
 // +kubebuilder:rbac:groups=deckhouse.io,resources=containerdintegritypolicies/status,verbs=get
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	logger := ctrl.LoggerFrom(ctx)
+	logger := log.Default().With("reconcile", req.NamespacedName)
 
 	policy := &deckhousev1alpha1.ContainerdIntegrityPolicy{}
 	if err := r.Get(ctx, req.NamespacedName, policy); err != nil {

@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -12,8 +12,9 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
@@ -138,7 +139,7 @@ func TestAggregatePolicies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := AggregatePolicies(logr.Discard(), tt.policies)
+			got := AggregatePolicies(log.NewNop(), tt.policies)
 			require.Equal(t, tt.want, got)
 		})
 	}
@@ -173,7 +174,7 @@ func TestWriterApplyAndRemove(t *testing.T) {
 		CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
 	}
 
-	require.NoError(t, writer.Apply(logr.Discard(), config))
+	require.NoError(t, writer.Apply(log.NewNop(), config))
 
 	nsTomlPath := filepath.Join(dir, NsTomlFileName)
 	nsTomlData, err := os.ReadFile(nsTomlPath)
@@ -183,23 +184,23 @@ func TestWriterApplyAndRemove(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expected, nsTomlData)
 
-	require.NoError(t, writer.Apply(logr.Discard(), config))
+	require.NoError(t, writer.Apply(log.NewNop(), config))
 	unchanged, err := os.ReadFile(nsTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, unchanged)
 
 	require.NoError(t, os.WriteFile(nsTomlPath, []byte("stale"), 0o644))
-	require.NoError(t, writer.Apply(logr.Discard(), config))
+	require.NoError(t, writer.Apply(log.NewNop(), config))
 	restored, err := os.ReadFile(nsTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, restored)
 
-	require.NoError(t, writer.Apply(logr.Discard(), nil))
+	require.NoError(t, writer.Apply(log.NewNop(), nil))
 	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
 	require.True(t, os.IsNotExist(err))
 
-	require.NoError(t, writer.Apply(logr.Discard(), config))
-	require.NoError(t, writer.Apply(logr.Discard(), &DesiredConfig{}))
+	require.NoError(t, writer.Apply(log.NewNop(), config))
+	require.NoError(t, writer.Apply(log.NewNop(), &DesiredConfig{}))
 	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
 	require.True(t, os.IsNotExist(err))
 }
