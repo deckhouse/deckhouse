@@ -954,10 +954,10 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
-      - name: Set up Go 1.25
+      - name: Set up Go 1.26
         uses: actions/setup-go@v5.4.0
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
 
 
