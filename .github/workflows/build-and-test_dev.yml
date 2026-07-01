@@ -19,11 +19,17 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  pull_request_target:
-     types:
+  pull_request:
+    types:
       - opened
-      - synchronize
       - reopened
+      - synchronize
+
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
 env:
 
   # <template: werf_envs>
@@ -2968,6 +2974,29 @@ jobs:
           svacer_import_user: "${{ steps.secrets.outputs.SVACER_IMPORT_USER }}"
           svacer_import_password: "${{ steps.secrets.outputs.SVACER_IMPORT_PASSWORD }}"
           svace_analyze_ssh_private_key: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
+
+  update_fuzzing_targets:
+    name: Update fuzzing targets
+    runs-on: [self-hosted, regular]
+    needs:
+      - build_fe
+    steps:
+      - name: Download FE build report
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: build_report_FE
+          path: .
+
+      - name: Extract fuzzing images
+        run: |
+          jq -r '
+            .Images
+            | to_entries[]
+            | select(.key | endswith("-fuzz"))
+            | .key + " " + .value.DockerTag
+          ' images_tags_werf.json > fuzz-images.txt
+
+          cat fuzz-images.txt
 
   doc_web_build:
     name: Doc web build

@@ -1,0 +1,59 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Update fuzzing targets
+
+# Called from Build and test for dev branches after Build FE has produced
+# build_report_FE. This workflow does not build images. It only reads the
+# existing werf build report and extracts fuzz images.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  update_fuzzing_targets:
+    name: Update fuzzing targets
+    runs-on: [self-hosted, regular]
+    steps:
+      - name: Download FE build report
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: build_report_FE
+          path: .
+
+      - name: Extract fuzzing images
+        run: |
+          jq -r '
+            .Images
+            | to_entries[]
+            | select(.key | endswith("-fuzz"))
+            | .key + " " + .value.DockerTag
+          ' images_tags_werf.json > fuzz-images.txt
+
+          echo "Discovered fuzz images:"
+          cat fuzz-images.txt
+
+      - name: Upload fuzzing images list
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: fuzz-images
+          path: fuzz-images.txt
+          retention-days: 14
