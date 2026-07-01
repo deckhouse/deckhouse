@@ -52,9 +52,9 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -91,7 +91,7 @@ func RegisterController(
 		moduleManager:        mm,
 		edition:              edition,
 		metricStorage:        metricStorage,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		downloadedModulesDir: app.DownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
 		deckhouseSettings:    deckhouseSettings,
 	}

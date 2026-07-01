@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
-	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
@@ -68,8 +67,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -157,7 +156,7 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	r.edition = edition
 
 	reg := registry.NewService(dc, logger)
-	downloadedDir := d8env.GetDownloadedModulesDir()
+	downloadedDir := app.DownloadedModulesDir()
 
 	appsDir := filepath.Join(downloadedDir, "apps")
 	modulesDir := filepath.Join(downloadedDir, "modules")
@@ -333,10 +332,10 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 // Also sets a custom timeout for patch operations to prevent hanging on slow API calls.
 func (r *Runtime) buildObjectPatcher() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("object-patcher-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
-	client.WithRateLimiterSettings(addonapp.ObjectPatcherKubeClientQPS, addonapp.ObjectPatcherKubeClientBurst)
-	client.WithTimeout(addonapp.ObjectPatcherKubeClientTimeout)
+	client.WithContextName(app.KubeContext())
+	client.WithConfigPath(app.KubeConfig())
+	client.WithRateLimiterSettings(app.ObjectPatcherKubeClientQPS(), app.ObjectPatcherKubeClientBurst())
+	client.WithTimeout(app.ObjectPatcherKubeClientTimeout())
 	client.WithMetricPrefix("packages_object_patcher_")
 
 	if err := client.Init(); err != nil {
@@ -358,9 +357,9 @@ func (r *Runtime) buildObjectPatcher() error {
 //   - Converting Kubernetes events into binding contexts for hook execution
 func (r *Runtime) buildKubeEventsManager() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("kube-events-manager-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
-	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
+	client.WithContextName(app.KubeContext())
+	client.WithConfigPath(app.KubeConfig())
+	client.WithRateLimiterSettings(app.KubeClientQPS(), app.KubeClientBurst())
 	client.WithMetricPrefix("packages_kube_events_manager_")
 
 	if err := client.Init(); err != nil {
@@ -398,9 +397,9 @@ func (r *Runtime) buildKubeEventsManager() error {
 // Rate limits are specific to monitoring workloads (different from patch or watch clients).
 func (r *Runtime) buildNelmService() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("nelm-monitor-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
-	client.WithRateLimiterSettings(addonapp.HelmMonitorKubeClientQps, addonapp.HelmMonitorKubeClientBurst)
+	client.WithContextName(app.KubeContext())
+	client.WithConfigPath(app.KubeConfig())
+	client.WithRateLimiterSettings(app.HelmMonitorKubeClientQPS(), app.HelmMonitorKubeClientBurst())
 	client.WithMetricPrefix("packages_nelm_monitor_")
 
 	if err := client.Init(); err != nil {
@@ -436,8 +435,8 @@ func (r *Runtime) buildNelmService() error {
 // that custom resources referenced by later pipeline stages already exist.
 func (r *Runtime) buildCRDService() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("crd-installer-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithContextName(app.KubeContext())
+	client.WithConfigPath(app.KubeConfig())
 	client.WithMetricPrefix("packages_crd_installer_")
 
 	if err := client.Init(); err != nil {
@@ -460,9 +459,9 @@ func (r *Runtime) buildCRDService() error {
 // goroutine start later via r.healthService.Start, paired with Stop on shutdown.
 func (r *Runtime) buildHealthService() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("health-monitor-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
-	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
+	client.WithContextName(app.KubeContext())
+	client.WithConfigPath(app.KubeConfig())
+	client.WithRateLimiterSettings(app.KubeClientQPS(), app.KubeClientBurst())
 	client.WithMetricPrefix("packages_health_monitor_")
 
 	if err := client.Init(); err != nil {
@@ -699,7 +698,7 @@ func (r *Runtime) schedulePackage(name string) {
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, r.nelmService, r.status, r.logger), onDone)
 	}
 }
 
@@ -726,7 +725,7 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
 	}
 }
 
@@ -799,7 +798,7 @@ func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	}
 
 	// do not cleanup modules namespace
-	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
+	r.nelmService.Cleanup(ctx, keepReleases, app.NamespaceDeckhouse)
 }
 
 // GetStatus returns package status.

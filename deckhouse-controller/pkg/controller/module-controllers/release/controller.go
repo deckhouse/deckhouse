@@ -57,9 +57,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -95,8 +95,8 @@ func RegisterController(
 		log:                  logger,
 		moduleManager:        mm,
 		metricStorage:        ms,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		downloadedModulesDir: app.DownloadedModulesDir(),
+		symlinksDir:          filepath.Join(app.DownloadedModulesDir(), "modules"),
 		embeddedPolicy:       embeddedPolicy,
 		installer:            installer,
 		restartCheckTicker:   time.NewTicker(restartCheckDuration),
