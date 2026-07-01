@@ -27,8 +27,8 @@ spec:
   version: v1.50.0
 status:
   approved: false
-  message: migrated module 'enabled-module-not-found' not found in any ModuleSource
-    registry
+  message: 'migrated module ''enabled-module-not-found'' not found in any ModuleSource
+    registry: publish it in a ModuleSource (or fix the module''s source) before upgrading'
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---

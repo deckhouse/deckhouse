@@ -134,6 +134,16 @@ func newModuleCR(name string, availableSources []string, stage string) *v1alpha1
 	}
 }
 
+// newEmbeddedModuleCR builds a Module CR that is still embedded (Source ==
+// "Embedded") but already published in external sources, i.e. a module mid
+// embedded->external migration. It is used to assert that the source-availability
+// check guards this case at admission time too.
+func newEmbeddedModuleCR(name string, availableSources []string) *v1alpha1.Module {
+	m := newModuleCR(name, availableSources, "")
+	m.Properties.Source = v1alpha1.ModuleSourceEmbedded
+	return m
+}
+
 func newModuleConfigFull(name string, enabled *bool, source, updatePolicy string) *v1alpha1.ModuleConfig {
 	cfg := newModuleConfig(name, enabled, nil)
 	cfg.Spec.Source = source
@@ -631,6 +641,28 @@ func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
 			expectCheckEnabling: true,
 			wantAllowed:         true,
 			wantWarning:         "multiple sources",
+		},
+		{
+			// migration scenario: an embedded module pinned to a source that does
+			// not offer it (stale/mistyped .spec.source) must be rejected at
+			// admission, not silently accepted to stall later.
+			name:        "embedded module referencing an unavailable source is rejected",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "beta", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newEmbeddedModuleCR(moduleName, []string{"alpha"}),
+			wantAllowed: false,
+			wantMessage: "unavailable source",
+		},
+		{
+			// the embedded module is published in the chosen source, so pinning it
+			// for migration is allowed.
+			name:        "embedded module referencing an available source is allowed",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "alpha", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newEmbeddedModuleCR(moduleName, []string{"alpha", "beta"}),
+			wantAllowed: true,
 		},
 	}
 
