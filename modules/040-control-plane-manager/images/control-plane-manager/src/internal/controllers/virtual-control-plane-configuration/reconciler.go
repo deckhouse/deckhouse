@@ -30,6 +30,7 @@ import (
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,9 +47,6 @@ import (
 const (
 	requeueInterval                   = 5 * time.Minute
 	requeueIntervalOnReadingClusterIP = 5 * time.Second
-
-	defaultTenantClusterDomain     = "cluster.virtual"
-	defaultTenantServiceSubnetCIDR = "10.96.0.0/12"
 )
 
 var _ reconcile.Reconciler = (*reconciler)(nil)
@@ -78,6 +76,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	pkiSecret, res, err := r.reconcilePKISecret(ctx, vcp, apiserverService)
 	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -144,109 +146,6 @@ func applyNamespaceTarget(current, target *corev1.Namespace) {
 	}
 
 	maps.Copy(current.Labels, target.Labels)
-}
-
-func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (*corev1.Secret, reconcile.Result, error) {
-	target := buildTargetPKISecret(vcp)
-	current, err := r.getSecret(ctx, target.Namespace, target.Name)
-	if apierrors.IsNotFound(err) {
-		data, err := buildTargetPKISecretData(vcp, apiserverService)
-		if err != nil {
-			return nil, reconcile.Result{}, fmt.Errorf("generate PKI Secret data: %w", err)
-		}
-		target.Data = data
-
-		if err := r.createSecret(ctx, target); err != nil {
-			return nil, reconcile.Result{}, err
-		}
-
-		return target, reconcile.Result{}, nil
-	}
-	if err != nil {
-		return nil, reconcile.Result{}, fmt.Errorf("get PKI Secret: %w", err)
-	}
-
-	return current, reconcile.Result{}, nil
-}
-
-func buildTargetPKISecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	name := constants.VirtualControlPlaneNamespacePrefix + vcp.Name + "-pki"
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
-
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-	}
-}
-
-func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (map[string][]byte, error) {
-	advertiseAddress := net.ParseIP(apiserverService.Spec.ClusterIP)
-	if advertiseAddress == nil {
-		return nil, fmt.Errorf("invalid apiserver Service ClusterIP: %q", apiserverService.Spec.ClusterIP)
-	}
-
-	pkiDir, err := os.MkdirTemp("", "vcp-pki-*")
-	if err != nil {
-		return nil, fmt.Errorf("create temp PKI dir: %w", err)
-	}
-	defer os.RemoveAll(pkiDir)
-
-	nodeName := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
-	if _, err := pki.CreatePKIBundle(
-		nodeName,
-		defaultTenantClusterDomain,
-		advertiseAddress,
-		defaultTenantServiceSubnetCIDR,
-		pki.WithPKIDir(pkiDir),
-	); err != nil {
-		return nil, fmt.Errorf("create PKI bundle: %w", err)
-	}
-
-	return readPKIBundleSecretData(pkiDir)
-}
-
-func readPKIBundleSecretData(pkiDir string) (map[string][]byte, error) {
-	files := map[string]string{
-		"ca.crt":                       "ca.crt",
-		"ca.key":                       "ca.key",
-		"apiserver.crt":                "apiserver.crt",
-		"apiserver.key":                "apiserver.key",
-		"apiserver-kubelet-client.crt": "apiserver-kubelet-client.crt",
-		"apiserver-kubelet-client.key": "apiserver-kubelet-client.key",
-		"front-proxy-ca.crt":           "front-proxy-ca.crt",
-		"front-proxy-ca.key":           "front-proxy-ca.key",
-		"front-proxy-client.crt":       "front-proxy-client.crt",
-		"front-proxy-client.key":       "front-proxy-client.key",
-		"etcd-ca.crt":                  "etcd/ca.crt",
-		"etcd-ca.key":                  "etcd/ca.key",
-		"etcd-server.crt":              "etcd/server.crt",
-		"etcd-server.key":              "etcd/server.key",
-		"etcd-peer.crt":                "etcd/peer.crt",
-		"etcd-peer.key":                "etcd/peer.key",
-		"etcd-healthcheck-client.crt":  "etcd/healthcheck-client.crt",
-		"etcd-healthcheck-client.key":  "etcd/healthcheck-client.key",
-		"apiserver-etcd-client.crt":    "apiserver-etcd-client.crt",
-		"apiserver-etcd-client.key":    "apiserver-etcd-client.key",
-		"sa.key":                       "sa.key",
-		"sa.pub":                       "sa.pub",
-	}
-
-	data := make(map[string][]byte, len(files))
-	for secretKey, relPath := range files {
-		content, err := os.ReadFile(filepath.Join(pkiDir, relPath))
-		if err != nil {
-			return nil, fmt.Errorf("read PKI file %s: %w", relPath, err)
-		}
-		data[secretKey] = content
-	}
-
-	return data, nil
 }
 
 func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Service, reconcile.Result, error) {
@@ -329,6 +228,213 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 	current.Spec.Type = target.Spec.Type
 	current.Spec.Selector = target.Spec.Selector
 	current.Spec.Ports = target.Spec.Ports
+}
+
+func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (*corev1.Secret, reconcile.Result, error) {
+	target := buildTargetPKISecret(vcp)
+	current, err := r.getSecret(ctx, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		data, err := buildTargetPKISecretData(vcp, apiserverService)
+		if err != nil {
+			return nil, reconcile.Result{}, fmt.Errorf("generate PKI Secret data: %w", err)
+		}
+		target.Data = data
+
+		if err := r.createSecret(ctx, target); err != nil {
+			return nil, reconcile.Result{}, err
+		}
+
+		return target, reconcile.Result{}, nil
+	}
+	if err != nil {
+		return nil, reconcile.Result{}, fmt.Errorf("get PKI Secret: %w", err)
+	}
+
+	return current, reconcile.Result{}, nil
+}
+
+func buildTargetPKISecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
+	name := constants.VirtualControlPlaneNamespacePrefix + vcp.Name + "-pki"
+	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
+}
+
+func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (map[string][]byte, error) {
+	advertiseAddress := net.ParseIP(apiserverService.Spec.ClusterIP)
+	if advertiseAddress == nil {
+		return nil, fmt.Errorf("invalid apiserver Service ClusterIP: %q", apiserverService.Spec.ClusterIP)
+	}
+
+	pkiDir, err := os.MkdirTemp("", "vcp-pki-*")
+	if err != nil {
+		return nil, fmt.Errorf("create temp PKI dir: %w", err)
+	}
+	defer os.RemoveAll(pkiDir)
+
+	nodeName := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	if _, err := pki.CreatePKIBundle(
+		nodeName,
+		constants.DefaultTenantClusterDomain,
+		advertiseAddress,
+		constants.DefaultTenantServiceSubnetCIDR,
+		pki.WithPKIDir(pkiDir),
+	); err != nil {
+		return nil, fmt.Errorf("create PKI bundle: %w", err)
+	}
+
+	return readPKIBundleSecretData(pkiDir)
+}
+
+func readPKIBundleSecretData(pkiDir string) (map[string][]byte, error) {
+	files := map[string]string{
+		"ca.crt":                       "ca.crt",
+		"ca.key":                       "ca.key",
+		"apiserver.crt":                "apiserver.crt",
+		"apiserver.key":                "apiserver.key",
+		"apiserver-kubelet-client.crt": "apiserver-kubelet-client.crt",
+		"apiserver-kubelet-client.key": "apiserver-kubelet-client.key",
+		"front-proxy-ca.crt":           "front-proxy-ca.crt",
+		"front-proxy-ca.key":           "front-proxy-ca.key",
+		"front-proxy-client.crt":       "front-proxy-client.crt",
+		"front-proxy-client.key":       "front-proxy-client.key",
+		"etcd-ca.crt":                  "etcd/ca.crt",
+		"etcd-ca.key":                  "etcd/ca.key",
+		"etcd-server.crt":              "etcd/server.crt",
+		"etcd-server.key":              "etcd/server.key",
+		"etcd-peer.crt":                "etcd/peer.crt",
+		"etcd-peer.key":                "etcd/peer.key",
+		"etcd-healthcheck-client.crt":  "etcd/healthcheck-client.crt", // TODO: возможно откажемся
+		"etcd-healthcheck-client.key":  "etcd/healthcheck-client.key", // TODO: возможно откажемся
+		"apiserver-etcd-client.crt":    "apiserver-etcd-client.crt",
+		"apiserver-etcd-client.key":    "apiserver-etcd-client.key",
+		"sa.key":                       "sa.key",
+		"sa.pub":                       "sa.pub",
+	}
+
+	data := make(map[string][]byte, len(files))
+	for secretKey, relPath := range files {
+		content, err := os.ReadFile(filepath.Join(pkiDir, relPath))
+		if err != nil {
+			return nil, fmt.Errorf("read PKI file %s: %w", relPath, err)
+		}
+		data[secretKey] = content
+	}
+
+	return data, nil
+}
+
+func (r *reconciler) reconcileKubeconfigSecret(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiserverService *corev1.Service,
+	pkiSecret *corev1.Secret,
+) (reconcile.Result, error) {
+	target := buildTargetKubeconfigSecret(vcp)
+
+	_, err := r.getSecret(ctx, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret data: %w", err)
+		}
+		target.Data = data
+
+		return reconcile.Result{}, r.createSecret(ctx, target)
+	}
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("get kubeconfig Secret: %w", err)
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
+	name := constants.VirtualControlPlaneNamespacePrefix + vcp.Name + "-kubeconfig"
+	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
+}
+
+var kubeconfigFiles = []kubeconfig.File{kubeconfig.ControllerManager, kubeconfig.Scheduler}
+
+func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret) (map[string][]byte, error) {
+	clusterIP := apiserverService.Spec.ClusterIP
+	if clusterIP == "" || clusterIP == corev1.ClusterIPNone {
+		return nil, fmt.Errorf("apiserver Service has no ClusterIP")
+	}
+
+	caDir, err := os.MkdirTemp("", "vcp-kubeconfig-ca-*")
+	if err != nil {
+		return nil, fmt.Errorf("create temp CA dir: %w", err)
+	}
+	defer os.RemoveAll(caDir)
+
+	if err := writeKubeconfigCA(caDir, pkiSecret.Data); err != nil {
+		return nil, err
+	}
+
+	outDir, err := os.MkdirTemp("", "vcp-kubeconfig-out-*")
+	if err != nil {
+		return nil, fmt.Errorf("create temp out dir: %w", err)
+	}
+	defer os.RemoveAll(outDir)
+
+	if _, err := kubeconfig.CreateKubeconfigFiles(kubeconfigFiles,
+		kubeconfig.WithCertificatesDir(caDir),
+		kubeconfig.WithOutDir(outDir),
+		kubeconfig.WithLocalAPIEndpoint(clusterIP),
+	); err != nil {
+		return nil, fmt.Errorf("create kubeconfig files: %w", err)
+	}
+
+	return readKubeconfigSecretData(outDir)
+}
+
+func writeKubeconfigCA(dir string, pkiData map[string][]byte) error {
+	for _, name := range []string{"ca.crt", "ca.key"} {
+		content, ok := pkiData[name]
+		if !ok {
+			return fmt.Errorf("pki secret missing %q", name)
+		}
+
+		if err := os.WriteFile(filepath.Join(dir, name), content, 0o600); err != nil {
+			return fmt.Errorf("write %s: %w", name, err)
+		}
+	}
+
+	return nil
+}
+
+func readKubeconfigSecretData(outDir string) (map[string][]byte, error) {
+	data := make(map[string][]byte, len(kubeconfigFiles))
+	for _, file := range kubeconfigFiles {
+		content, err := os.ReadFile(filepath.Join(outDir, string(file)))
+		if err != nil {
+			return nil, fmt.Errorf("read kubeconfig %s: %w", file, err)
+		}
+		data[string(file)] = content
+	}
+
+	return data, nil
 }
 
 func (r *reconciler) reconcileConfigSecret(ctx context.Context) (*corev1.Secret, reconcile.Result, error) {
