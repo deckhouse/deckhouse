@@ -537,12 +537,9 @@ properties:
             properties:
               mode:
                 description: |
-                  Режим управления ресурсами.
+                  Режим управления ресурсами подов waypoint-controller.
 
-                  Возможные значения:
-
-                  - `Static`: с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static);
-                  - `VPA`: с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa).
+                  Используйте `Static`, чтобы задать запросы и ограничения (requests/limits) вручную в секции параметров [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static). Используйте `VPA`, чтобы ресурсами автоматически управлял [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md); настраивается в секции параметров [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa).
               vpa:
                 description: |
                   Параметры управления ресурсами в режиме VPA.

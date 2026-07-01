@@ -28,6 +28,7 @@ Istio solves the tasks for applications:
 - [Improving Observability](#observability).
 - [Organizing a multi-datacenter cluster by joining clusters into a single Service Mesh (multicluster)](#multicluster).
 - [Grouping isolated clusters into a federation with the ability to provide native (in the Service Mesh sense) access to selected services](#federation).
+- [Joining the mesh without per-Pod sidecars using ambient mode](#ambient-mesh).
 
 ## Mutual TLS
 
@@ -339,6 +340,47 @@ istioctl remote-clusters -i d8-istio
 NAME          SECRET                                     STATUS     ISTIOD
 cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
 ```
+
+## Ambient mesh
+
+{% alert level="warning" %}
+Available in Enterprise Edition and Certified Security Edition Pro only.
+{% endalert %}
+
+{% alert level="warning" %}
+Ambient mesh support is experimental and not recommended for production use.
+{% endalert %}
+
+Besides the classic sidecar mode, Istio can run the data plane in *ambient* mode. In this mode the mesh functionality is split into two layers, and application Pods no longer get a per-Pod `istio-proxy` sidecar container:
+
+- A node-level component (`ztunnel`) handles L4 functionality (mutual TLS, identity, basic authorization) for all mesh workloads on the node.
+- An optional per-namespace component (a *waypoint* proxy) handles L7 functionality (HTTP routing, L7 authorization, telemetry).
+
+Compared to the sidecar mode, ambient mode reduces per-Pod overhead (no sidecar container injected into every Pod) and lets you adopt mesh features incrementally — first L4 via `ztunnel`, then L7 only for the namespaces that need it.
+
+### Components
+
+- `ztunnel` — a DaemonSet that runs one Pod per node and transparently tunnels traffic of the ambient workloads on that node over [HBONE](https://istio.io/latest/docs/ambient/architecture/) (HTTP-Based Overlay Network Encapsulation) with mutual TLS. It provides L4 features without a sidecar.
+- waypoint proxy — an optional L7 proxy deployed per namespace (or for a subset of its workloads/services). In Deckhouse it is provisioned through the [`WaypointInstance`](cr.html#waypointinstance) Custom Resource, which is a Deckhouse abstraction on top of the native Istio waypoint provisioning. It adds declarative management of replicas (`Static`/`HPA`), resources (`Static`/`VPA`), node placement, and disruption budgets per waypoint instance.
+
+### Prerequisites
+
+- Use Istio 1.25 or newer (ambient mode is available starting with Istio 1.25).
+- Set [`dataPlane.trafficRedirectionSetupMode`](configuration.html#parameters-dataplane-trafficredirectionsetupmode) to `CNIPlugin`. Ambient mode requires the CNI plugin to set up traffic redirection.
+- Enable ambient mode via the [`ambient.enabled`](configuration.html#parameters-ambient-enabled) module parameter.
+
+### Enrolling workloads
+
+The module installs and runs the ambient infrastructure (`ztunnel`, and the waypoint controller for `WaypointInstance` resources), but it does **not** enroll your workloads automatically. Enrollment is done with standard Istio labels:
+
+- Add the `istio.io/dataplane-mode=ambient` label to a namespace (or Pod) to capture its traffic with `ztunnel` (L4).
+- Create a [`WaypointInstance`](cr.html#waypointinstance) in the namespace, then point workloads or services at it with the `istio.io/use-waypoint` label to enable L7 features.
+
+See [examples of using ambient mesh](examples.html#ambient-mesh) for step-by-step configuration.
+
+{% alert level="warning" %}
+Do not disable ambient mode while `WaypointInstance` resources still exist in the cluster. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. Delete all `WaypointInstance` resources before disabling ambient mode.
+{% endalert %}
 
 ## Authentication
 
