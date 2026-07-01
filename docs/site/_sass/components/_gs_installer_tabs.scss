@@ -45,8 +45,33 @@
       max-width: 100%;
       width: auto;
       height: auto;
+      max-height: 700px;
       margin: 0 auto;
       border: 1px solid #E7E9F5;
+
+      @include breakpoints.max-w(xxl) {
+        max-height: 560px;
+      }
+
+      @include breakpoints.max-w(xl) {
+        max-height: 490px;
+      }
+
+      @include breakpoints.max-w(l) {
+        max-height: 335px;
+      }
+
+      @include breakpoints.max-w(m) {
+        max-height: 255px;
+      }
+
+      @include breakpoints.max-w(s) {
+        max-height: 200px;
+      }
+
+      @include breakpoints.max-w(xs) {
+        max-height: 170px;
+      }
     }
   }
 
