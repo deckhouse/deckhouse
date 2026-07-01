@@ -283,6 +283,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{
 			nelm.ReleaseLabelPackageChecksum: checksum,
+			// TODO(ipaqsa): addon-operator legacy to migrate
+			nelm.ReleaseLabelModuleChecksum: checksum,
 		},
 		ResourcesLabels: map[string]string{
 			health.LabelKey: pkg.GetName(),
@@ -359,6 +361,13 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseNa
 	// Check if manifests changed by comparing checksums
 	recordedChecksum, err := s.client.GetChecksum(ctx, namespace, releaseName)
 	if err != nil {
+		// A deployed release without the checksum label was created outside this
+		// runtime (e.g. by addon-operator): the recorded checksum is unknown, so
+		// treat it as changed and upgrade to adopt the release and stamp the label.
+		if errors.Is(err, nelm.ErrLabelNotFound) {
+			return true, nil
+		}
+
 		return false, err
 	}
 

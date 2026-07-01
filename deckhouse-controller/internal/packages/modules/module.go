@@ -205,9 +205,9 @@ func (m *Module) GetRuntimeValues() string {
 	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	marshalledGlobal := m.globalValuesGetter()
+	marshalledGlobal, _ := json.Marshal(m.globalValuesGetter())
 
-	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
+	return fmt.Sprintf("Module=%s,Platform=%s", marshalled, marshalledGlobal)
 }
 
 // GetName returns the full module identifier.

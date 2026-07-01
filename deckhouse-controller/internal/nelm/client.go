@@ -46,6 +46,9 @@ const (
 
 	// ReleaseLabelPackageChecksum stores the rendered-manifests checksum on the release storage secret.
 	ReleaseLabelPackageChecksum = "packageChecksum"
+
+	// ReleaseLabelModuleChecksum stores the module checksum on the release storage secret.
+	ReleaseLabelModuleChecksum = "moduleChecksum"
 )
 
 var (
