@@ -58,3 +58,4 @@ shell:
   - KIALI_ENV=production yarn run build
   - mkdir -p /src/kial-frontend-assets/static
   - cp -a build/. /src/kial-frontend-assets/static/
+  - rm -rf node_modules

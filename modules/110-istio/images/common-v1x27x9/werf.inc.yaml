@@ -51,4 +51,5 @@ shell:
   - export CYPRESS_INSTALL_BINARY=0
   - yarn install --frozen-lockfile
   - KIALI_ENV=production yarn run build
+  - rm -rf node_modules
 {{- end }}
