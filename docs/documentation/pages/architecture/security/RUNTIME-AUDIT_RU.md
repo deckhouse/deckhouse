@@ -62,10 +62,3 @@ DKP запускает объединённые в DaemonSet агенты Falco 
 
 ![Работа shell-operator с правилами Falco](../../images/runtime-audit-engine/falco_shop.svg)
 <!--- Source: https://docs.google.com/drawings/d/13MFYtiwH4Y66SfEPZIcS7S2wAY6vnKcoaztxsmX1hug --->
-
-## Связь с модулем security-events-manager
-
-Рантайм-аудит (`runtime-audit-engine`) — это один из источников событий безопасности
-для модуля [`security-events-manager`](security-events.html).
-События, обнаруженные агентами Falco, могут быть собраны, нормализованы и доставлены
-в системы хранения и аналитики с помощью единого контура обработки событий безопасности.
