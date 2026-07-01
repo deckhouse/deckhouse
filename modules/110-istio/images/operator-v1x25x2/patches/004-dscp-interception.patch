@@ -1,0 +1,25 @@
+diff --git a/resources/v1.25.2/charts/istiod/files/injection-template.yaml b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
+--- a/resources/v1.25.2/charts/istiod/files/injection-template.yaml
++++ b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
+@@ -123,6 +123,10 @@ spec:
+     - "-c"
+     - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/excludeInterfaces` }}"
+     {{ end -}}
++    {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundDscp`) -}}
++    - "--outbound-dscp"
++    - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundDscp` }}"
++    {{ end -}}
+     - "--log_output_level={{ annotation .ObjectMeta `sidecar.istio.io/agentLogLevel` .Values.global.logging.level }}"
+     {{ if .Values.global.logAsJson -}}
+     - "--log_as_json"
+@@ -294,6 +298,10 @@ spec:
+           fieldPath: spec.nodeName
+     - name: ISTIO_META_INTERCEPTION_MODE
+       value: "{{ or (index .ObjectMeta.Annotations `sidecar.istio.io/interceptionMode`) .ProxyConfig.InterceptionMode.String }}"
++    {{- if isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundDscp` }}
++    - name: ISTIO_META_OUTBOUND_DSCP
++      value: "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundDscp` }}"
++    {{- end }}
+     {{- if .Values.global.network }}
+     - name: ISTIO_META_NETWORK
+       value: "{{ .Values.global.network }}"
