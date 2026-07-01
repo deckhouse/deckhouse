@@ -83,7 +83,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	configSecret, res, err := r.reconcileConfigSecret(ctx)
+	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -437,8 +437,8 @@ func readKubeconfigSecretData(outDir string) (map[string][]byte, error) {
 	return data, nil
 }
 
-func (r *reconciler) reconcileConfigSecret(ctx context.Context) (*corev1.Secret, reconcile.Result, error) {
-	secret, err := r.getSecret(ctx, constants.KubeSystemNamespace, constants.VirtualControlPlaneConfigSecretName)
+func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Secret, reconcile.Result, error) {
+	global, err := r.getSecret(ctx, constants.KubeSystemNamespace, constants.VirtualControlPlaneConfigSecretName)
 	if apierrors.IsNotFound(err) {
 		return nil, reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
@@ -446,7 +446,33 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context) (*corev1.Secret,
 		return nil, reconcile.Result{}, fmt.Errorf("get config Secret: %w", err)
 	}
 
-	return secret, reconcile.Result{}, nil
+	data, err := renderManifests(global.Data, vcp)
+	if err != nil {
+		return nil, reconcile.Result{}, fmt.Errorf("render manifests: %w", err)
+	}
+
+	target := buildTargetConfigSecret(vcp)
+	target.Data = data
+
+	current, err := r.getSecret(ctx, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		if err := r.createSecret(ctx, target); err != nil {
+			return nil, reconcile.Result{}, err
+		}
+		return target, reconcile.Result{}, nil
+	}
+	if err != nil {
+		return nil, reconcile.Result{}, fmt.Errorf("get rendered config Secret: %w", err)
+	}
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+		return current, reconcile.Result{}, nil
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+
+	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
 func (r *reconciler) reconcileControlPlaneNodes(
@@ -666,6 +692,10 @@ func (r *reconciler) getSecret(ctx context.Context, namespace, name string) (*co
 
 func (r *reconciler) createSecret(ctx context.Context, secret *corev1.Secret) error {
 	return r.client.Create(ctx, secret)
+}
+
+func (r *reconciler) patchSecret(ctx context.Context, base, secret *corev1.Secret) error {
+	return r.client.Patch(ctx, secret, client.MergeFrom(base))
 }
 
 // Service
