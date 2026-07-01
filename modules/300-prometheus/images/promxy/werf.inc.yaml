@@ -39,8 +39,8 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
   {{- if eq $.SVACE_ENABLED "false" }}
+  beforeInstall:
   - pm install git
   {{- end }}
   install:
