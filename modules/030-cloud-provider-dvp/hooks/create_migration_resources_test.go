@@ -39,7 +39,8 @@ cloudProviderDvp:
 `
 	)
 
-	clusterConfig := `
+	kubeconfigDataBase64 := base64.StdEncoding.EncodeToString([]byte("apiVe"))
+	clusterConfig := fmt.Sprintf(`
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
@@ -58,19 +59,19 @@ masterNodeGroup:
       virtualMachineClassName: superbe-class
       bootloader: EFI
       cpu:
-        coreFraction: 100%
+        coreFraction: 100%%
         cores: 4
       memory:
         size: 8Gi
   replicas: 1
 provider:
-  kubeconfigDataBase64: YXBpVmV=
+  kubeconfigDataBase64: %s
   namespace: cloud-provider01
 sshPublicKey: ssh-rsa AAAAB3N
 region: ru-msk-1
 zones:
   - default
-`
+`, kubeconfigDataBase64)
 
 	pccSecret := fmt.Sprintf(`
 apiVersion: v1
@@ -202,7 +203,7 @@ data:
 		})
 	})
 
-	clusterConfigNoZones := `
+	clusterConfigNoZones := fmt.Sprintf(`
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
@@ -221,17 +222,17 @@ masterNodeGroup:
       virtualMachineClassName: superbe-class
       bootloader: EFI
       cpu:
-        coreFraction: 100%
+        coreFraction: 100%%
         cores: 4
       memory:
         size: 8Gi
   replicas: 1
 provider:
-  kubeconfigDataBase64: YXBpVmV=
+  kubeconfigDataBase64: %s
   namespace: cloud-provider01
 sshPublicKey: ssh-rsa AAAAB3N
 region: ru-msk-1
-`
+`, kubeconfigDataBase64)
 
 	pccSecretNoZones := fmt.Sprintf(`
 apiVersion: v1
@@ -323,6 +324,79 @@ data:
 			migrationCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
 			Expect(migrationCM.Exists()).To(BeFalse())
 		})
+	})
+
+	Context("Hybrid migration: no PCC and legacy ModuleConfig v1 has kubeconfig", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+		BeforeEach(func() {
+			f.KubeStateSet(fmt.Sprintf(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 1
+  enabled: true
+  settings:
+    provider:
+      kubeconfigDataBase64: %s
+      namespace: cloud-provider01
+`, kubeconfigDataBase64))
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		credentialsSecretDocument := func() string {
+			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			resourcesYAML := migrationSecret.Field("data.resources\\.yaml").String()
+			Expect(resourcesYAML).NotTo(BeEmpty())
+
+			rawBytes, err := base64.StdEncoding.DecodeString(resourcesYAML)
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, doc := range splitYAMLDocuments(string(rawBytes)) {
+				var obj map[string]any
+				if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
+					continue
+				}
+				metadata, _ := obj["metadata"].(map[string]any)
+				if obj["kind"] == "Secret" && metadata["name"] == "d8-credentials" {
+					return doc
+				}
+			}
+
+			return ""
+		}
+
+		It("should create migration resources with d8-credentials Secret from legacy ModuleConfig kubeconfig", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			credentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-credentials")
+			Expect(credentialsSecret.Exists()).To(BeFalse())
+
+			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeTrue())
+
+			migrationCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
+			Expect(migrationCM.Exists()).To(BeTrue())
+
+			var credentialsSecretDoc map[string]any
+			credentialsSecretYAML := credentialsSecretDocument()
+			Expect(credentialsSecretYAML).NotTo(BeEmpty())
+			Expect(yaml.Unmarshal([]byte(credentialsSecretYAML), &credentialsSecretDoc)).To(Succeed())
+
+			Expect(credentialsSecretDoc).NotTo(BeNil(), "d8-credentials Secret document must be present in resources.yaml")
+			Expect(credentialsSecretDoc["type"]).To(Equal("cloud-provider.deckhouse.io/credentials"))
+
+			stringData, ok := credentialsSecretDoc["stringData"].(map[string]any)
+			Expect(ok).To(BeTrue(), "d8-credentials stringData must be a map")
+			Expect(stringData["authScheme"]).To(Equal("kubeconfig"))
+			Expect(stringData["secret"]).To(Equal(kubeconfigDataBase64))
+		})
+
 	})
 })
 
