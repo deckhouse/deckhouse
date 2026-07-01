@@ -1,11 +1,11 @@
 ---
-title: Runtime security audit architecture
+title: Runtime audit architecture
 permalink: en/architecture/security/runtime-audit.html
-search: security audit, runtime audit, audit rules, falco
-description: Runtime security audit architecture in Deckhouse Kubernetes Platform.
+search: runtime audit, audit rules, falco
+description: Runtime audit architecture in Deckhouse Kubernetes Platform.
 ---
 
-The runtime security audit of Deckhouse Kubernetes Platform (DKP) is based on the [Falco](https://falco.org/) threat detection system.
+The runtime audit of Deckhouse Kubernetes Platform (DKP) is based on the [Falco](https://falco.org/) threat detection system.
 This mechanism analyzes Linux kernel events and Kubernetes API audit events to detect suspicious activity
 in running containers and across the cluster.
 
@@ -35,7 +35,7 @@ Each cluster node runs a Falco Pod with the following components:
 
 ## Audit rules
 
-Security event analysis is performed using rules that define suspicious behavior patterns.
+Runtime audit event analysis is performed using rules that define suspicious behavior patterns.
 Each rule consists of a condition expression written in accordance with [Falco's condition syntax](https://falco.org/docs/concepts/rules/conditions/).
 
 ### Built-in rules
@@ -58,7 +58,7 @@ When a new rule is added, Falco automatically reloads the configuration.
 
 ## Relation to the security-events-manager module
 
-The runtime security audit (`runtime-audit-engine`) is one of the security event sources
+The runtime audit (`runtime-audit-engine`) is one of the security event sources
 for the [`security-events-manager`](security-events.html) module.
 Events detected by Falco agents can be collected, normalized, and delivered
 to storage and analytics systems via the unified security events processing pipeline.
