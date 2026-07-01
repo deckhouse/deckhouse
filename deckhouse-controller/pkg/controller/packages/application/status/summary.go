@@ -95,6 +95,11 @@ var summaryTable = map[phase]map[string]advice{
 			"Installation failed: startup or runtime hooks failed",
 			"Check the failed hook logs. Fix the configuration or hook code. The attempt will be retried on the next reconcile.",
 		},
+		"ConversionWebhooksApplyFailed": {
+			stateFailed,
+			"Installation failed: package conversion webhooks could not be applied",
+			"Check the package's ConversionWebhook manifests are valid (required fields, served apiVersion). The controller will retry on the next reconcile.",
+		},
 		"ManifestsApplyFailed": {
 			stateFailed,
 			"Installation failed: Helm could not apply manifests",
@@ -137,6 +142,11 @@ var summaryTable = map[phase]map[string]advice{
 			stateFailed,
 			"Update failed: startup or runtime hooks of the new version failed; previous version is no longer serving",
 			"The application is not serving requests. Check the new version's hook logs. Fix the hook/config or roll back the application version manually.",
+		},
+		"ConversionWebhooksApplyFailed": {
+			stateFailed,
+			"Update failed: conversion webhooks of the new version could not be applied; previous version is no longer serving",
+			"Check the new version's ConversionWebhook manifests are valid. Fix them or roll back the application version manually.",
 		},
 		"ManifestsApplyFailed": {
 			stateFailed,

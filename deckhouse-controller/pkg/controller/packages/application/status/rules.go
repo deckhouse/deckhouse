@@ -217,7 +217,7 @@ var (
 	// filesystem gates (download/mount and load) plus the late-stage gates.
 	// Settings (Configured) is excluded: an invalid new config does not break
 	// the already-running version.
-	reconcileChain = []string{intReadyOnFilesystem, intLoaded, intHooksProcessed, intConversionWebhooksApplied, intManifestsApplied}
+	reconcileChain = []string{intReadyOnFilesystem, intLoaded, intHooksProcessed, intManifestsApplied}
 )
 
 // firstFalse returns the first internal condition in chain whose status is False.
