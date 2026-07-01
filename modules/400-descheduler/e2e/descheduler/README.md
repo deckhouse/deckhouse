@@ -70,11 +70,13 @@ descheduler/
 ├── Taskfile.yaml              # includes all scenarios
 ├── chainsaw-config.yaml       # shared timeouts and execution settings
 └── tests/
-    ├── common/                # shared manifests and assertions
-    │   ├── assert-descheduler-ready.yaml
-    │   ├── assert-descheduler-rollout-complete.yaml
-    │   ├── sts-pinned.yaml
-    │   └── sts-unpin-patch.yaml
+    ├── common/                # shared files for several scenarios
+    │   ├── manifests/         # shared manifests (applied by tests)
+    │   │   ├── sts-pinned.yaml
+    │   │   └── sts-unpin-patch.yaml
+    │   └── asserts/           # shared assert/error files
+    │       ├── assert-descheduler-ready.yaml
+    │       └── assert-descheduler-rollout-complete.yaml
     ├── low-node-utilization/
     │   ├── chainsaw-test.yaml
     │   ├── manifests/

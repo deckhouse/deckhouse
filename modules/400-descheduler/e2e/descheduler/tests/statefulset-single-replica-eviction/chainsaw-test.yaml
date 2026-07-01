@@ -72,7 +72,7 @@ spec:
       try:
         - description: Create the StatefulSet pinned to the target node
           create:
-            file: ../common/sts-pinned.yaml
+            file: ../common/manifests/sts-pinned.yaml
             template: true
 
     - name: wait-statefulset-ready
@@ -108,7 +108,7 @@ spec:
       try:
         - description: Patch the StatefulSet pod template to stop bypassing the scheduler
           patch:
-            file: ../common/sts-unpin-patch.yaml
+            file: ../common/manifests/sts-unpin-patch.yaml
         - description: Assert the patch did not restart the pod and it remains on the target node
           assert:
             resource:
@@ -172,7 +172,7 @@ spec:
             with the current policy checksum (a descheduling cycle runs at pod startup)
           assert:
             timeout: 300s
-            file: ../common/assert-descheduler-rollout-complete.yaml
+            file: ../common/asserts/assert-descheduler-rollout-complete.yaml
         - description: Assert pod test-sts-0 was evicted, recreated with a new UID and rescheduled to a different node
           assert:
             timeout: 420s

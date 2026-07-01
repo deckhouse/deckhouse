@@ -70,7 +70,7 @@ spec:
       try:
         - description: Create the StatefulSet pinned to the target node
           create:
-            file: ../common/sts-pinned.yaml
+            file: ../common/manifests/sts-pinned.yaml
             template: true
 
     - name: wait-statefulset-pinned
@@ -129,7 +129,7 @@ spec:
       try:
         - description: Patch the StatefulSet pod template to stop bypassing the scheduler
           patch:
-            file: ../common/sts-unpin-patch.yaml
+            file: ../common/manifests/sts-unpin-patch.yaml
         - description: Assert the patch did not restart pods and all 3 remain on the target node
           assert:
             resource:
@@ -196,7 +196,7 @@ spec:
         - description: Assert the rollout is complete and the running pod carries the current policy checksum
           assert:
             timeout: 300s
-            file: ../common/assert-descheduler-rollout-complete.yaml
+            file: ../common/asserts/assert-descheduler-rollout-complete.yaml
       catch:
         - description: Describe the descheduler deployment on failure
           describe:
