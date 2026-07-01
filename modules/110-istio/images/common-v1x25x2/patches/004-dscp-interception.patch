@@ -1,24 +1,24 @@
 diff --git a/cni/pkg/plugin/sidecar_iptables_linux.go b/cni/pkg/plugin/sidecar_iptables_linux.go
-index 625d687bec..a61873a385 100644
+index 625d687bec..e33d512a3b 100644
 --- a/cni/pkg/plugin/sidecar_iptables_linux.go
 +++ b/cni/pkg/plugin/sidecar_iptables_linux.go
 @@ -39,6 +39,7 @@ func (ipt *iptables) Program(podName, netns string, rdrct *Redirect) error {
  	cfg.ProxyPort = rdrct.targetPort
  	cfg.ProxyUID = rdrct.noRedirectUID
  	cfg.ProxyGID = rdrct.noRedirectGID
-+	cfg.OutboundMark = rdrct.outboundMark
++	cfg.OutboundDscp = rdrct.outboundDscp
  	cfg.InboundInterceptionMode = rdrct.redirectMode
  	cfg.OutboundIPRangesInclude = rdrct.includeIPCidrs
  	cfg.InboundPortsExclude = rdrct.excludeInboundPorts
 diff --git a/cni/pkg/plugin/sidecar_redirect.go b/cni/pkg/plugin/sidecar_redirect.go
-index cb9e209726..6a0bbe0004 100644
+index cb9e209726..8b96a91695 100644
 --- a/cni/pkg/plugin/sidecar_redirect.go
 +++ b/cni/pkg/plugin/sidecar_redirect.go
 @@ -81,6 +81,7 @@ type Redirect struct {
  	redirectMode             string
  	noRedirectUID            string
  	noRedirectGID            string
-+	outboundMark             string
++	outboundDscp             string
  	includeIPCidrs           string
  	excludeIPCidrs           string
  	excludeInboundPorts      string
@@ -26,21 +26,21 @@ index cb9e209726..6a0bbe0004 100644
  			log.Warnf("cannot parse invalid drop environment variable %v", valErr)
  		}
  	}
-+	// Mark-based outbound interception: set when ISTIO_META_OUTBOUND_MARK is present on the proxy.
-+	redir.outboundMark = pi.ProxyEnvironments["ISTIO_META_OUTBOUND_MARK"]
++	// DSCP-based outbound interception: set when ISTIO_META_OUTBOUND_DSCP is present on the proxy.
++	redir.outboundDscp = pi.ProxyEnvironments["ISTIO_META_OUTBOUND_DSCP"]
  	return redir, nil
  }
 diff --git a/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml b/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
-index 3b3f69cd9d..3349ca4345 100644
+index 3b3f69cd9d..5ab9615c48 100644
 --- a/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
 +++ b/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
 @@ -123,6 +123,10 @@ spec:
      - "-c"
      - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/excludeInterfaces` }}"
      {{ end -}}
-+    {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
-+    - "--outbound-mark"
-+    - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}"
++    {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundDscp`) -}}
++    - "--outbound-dscp"
++    - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundDscp` }}"
 +    {{ end -}}
      - "--log_output_level={{ annotation .ObjectMeta `sidecar.istio.io/agentLogLevel` .Values.global.logging.level }}"
      {{ if .Values.global.logAsJson -}}
@@ -49,34 +49,15 @@ index 3b3f69cd9d..3349ca4345 100644
            fieldPath: spec.nodeName
      - name: ISTIO_META_INTERCEPTION_MODE
        value: "{{ or (index .ObjectMeta.Annotations `sidecar.istio.io/interceptionMode`) .ProxyConfig.InterceptionMode.String }}"
-+    {{- if isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}
-+    - name: ISTIO_META_OUTBOUND_MARK
-+      value: "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}"
++    {{- if isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundDscp` }}
++    - name: ISTIO_META_OUTBOUND_DSCP
++      value: "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundDscp` }}"
 +    {{- end }}
      {{- if .Values.global.network }}
      - name: ISTIO_META_NETWORK
        value: "{{ .Values.global.network }}"
-@@ -368,7 +376,7 @@ spec:
-       {{- else }}
-       allowPrivilegeEscalation: {{ .Values.global.proxy.privileged }}
-       capabilities:
--        {{ if or (eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY`) (eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true`) -}}
-+        {{ if or (eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY`) (eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true`) (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
-         add:
-         {{ if eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY` -}}
-         - NET_ADMIN
-@@ -376,6 +384,9 @@ spec:
-         {{ if eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true` -}}
-         - NET_BIND_SERVICE
-         {{- end }}
-+        {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
-+        - NET_ADMIN
-+        {{- end }}
-         {{- end }}
-         drop:
-         - ALL
 diff --git a/pilot/pkg/networking/core/cluster_builder.go b/pilot/pkg/networking/core/cluster_builder.go
-index 85a400a03c..04011d6176 100644
+index 85a400a03c..0e6a1c340d 100644
 --- a/pilot/pkg/networking/core/cluster_builder.go
 +++ b/pilot/pkg/networking/core/cluster_builder.go
 @@ -17,6 +17,7 @@ package core
@@ -91,7 +72,7 @@ index 85a400a03c..04011d6176 100644
  	maybeApplyEdsConfig(subsetCluster.cluster)
  
  	cb.applyMetadataExchange(opts.mutable.cluster)
-+	cb.applyOutboundSocketMark(opts.mutable.cluster)
++	cb.applyOutboundDscp(opts.mutable.cluster)
  
  	// Add the DestinationRule+subsets metadata. Metadata here is generated on a per-cluster
  	// basis in buildCluster, so we can just insert without a copy.
@@ -99,34 +80,35 @@ index 85a400a03c..04011d6176 100644
  	maybeApplyEdsConfig(mc.cluster)
  
  	cb.applyMetadataExchange(opts.mutable.cluster)
-+	cb.applyOutboundSocketMark(opts.mutable.cluster)
++	cb.applyOutboundDscp(opts.mutable.cluster)
  
  	if service.MeshExternal {
  		im := getOrCreateIstioMetadata(mc.cluster)
-@@ -300,6 +303,35 @@ func (cb *ClusterBuilder) applyMetadataExchange(c *cluster.Cluster) {
+@@ -300,6 +303,36 @@ func (cb *ClusterBuilder) applyMetadataExchange(c *cluster.Cluster) {
  	}
  }
  
-+// applyOutboundSocketMark tags upstream sockets with SO_MARK when the proxy advertises
-+// OutboundMark (sidecar running with the same UID as the app). Envoy's setsockopt(SO_MARK)
-+// requires CAP_NET_ADMIN; iptables then exempts marked packets via '-m mark --mark -j RETURN'.
-+func (cb *ClusterBuilder) applyOutboundSocketMark(c *cluster.Cluster) {
++// applyOutboundDscp tags upstream sockets with the IP DSCP value advertised by the proxy
++// (OutboundDscp) when the sidecar runs with the same UID as the app. Envoy sets it via
++// setsockopt(IP_TOS = dscp<<2), which is unprivileged (no CAP_NET_ADMIN, unlike SO_MARK);
++// iptables then exempts those packets via '-m dscp --dscp -j RETURN'.
++func (cb *ClusterBuilder) applyOutboundDscp(c *cluster.Cluster) {
 +	if !cb.sidecarProxy() {
 +		return
 +	}
-+	if cb.proxyMetadata == nil || cb.proxyMetadata.OutboundMark == "" {
++	if cb.proxyMetadata == nil || cb.proxyMetadata.OutboundDscp == "" {
 +		return
 +	}
-+	mark, err := strconv.ParseUint(cb.proxyMetadata.OutboundMark, 10, 32)
++	dscp, err := strconv.ParseUint(cb.proxyMetadata.OutboundDscp, 10, 6)
 +	if err != nil {
 +		return
 +	}
 +	sockOpt := &core.SocketOption{
-+		Description: "outbound socket mark to distinguish Envoy traffic in iptables",
-+		Level:       1, // SOL_SOCKET
-+		Name:        36, // SO_MARK
++		Description: "outbound DSCP to distinguish Envoy traffic in iptables",
++		Level:       0, // IPPROTO_IP
++		Name:        1, // IP_TOS
 +		Value: &core.SocketOption_IntValue{
-+			IntValue: int64(mark),
++			IntValue: int64(dscp << 2), // DSCP occupies the top 6 bits of the TOS byte
 +		},
 +		State: core.SocketOption_STATE_PREBIND,
 +	}
@@ -139,35 +121,36 @@ index 85a400a03c..04011d6176 100644
  // buildCluster builds the default cluster and also applies global options.
  // It is used for building both inbound and outbound cluster.
  func (cb *ClusterBuilder) buildCluster(name string, discoveryType cluster.Cluster_DiscoveryType,
-@@ -564,6 +596,7 @@ func (cb *ClusterBuilder) buildDefaultPassthroughCluster() *cluster.Cluster {
+@@ -564,6 +597,7 @@ func (cb *ClusterBuilder) buildDefaultPassthroughCluster() *cluster.Cluster {
  	cluster.AltStatName = util.DelimitedStatsPrefix(util.PassthroughCluster)
  	cb.applyConnectionPool(cb.req.Push.Mesh, newClusterWrapper(cluster), &networking.ConnectionPoolSettings{})
  	cb.applyMetadataExchange(cluster)
-+	cb.applyOutboundSocketMark(cluster)
++	cb.applyOutboundDscp(cluster)
  	return cluster
  }
  
 diff --git a/pkg/model/proxy.go b/pkg/model/proxy.go
-index f5b8a71558..498031bf47 100644
+index f5b8a71558..71042b97cf 100644
 --- a/pkg/model/proxy.go
 +++ b/pkg/model/proxy.go
-@@ -232,6 +232,11 @@ type NodeMetadata struct {
+@@ -232,6 +232,12 @@ type NodeMetadata struct {
  	// traffic interception mode at the proxy
  	InterceptionMode TrafficInterceptionMode `json:"INTERCEPTION_MODE,omitempty"`
  
-+	// OutboundMark, when set, enables mark-based outbound interception for this proxy:
-+	// Envoy tags upstream sockets with SO_MARK=<mark> and the init container excludes marked
-+	// packets instead of relying on the proxy UID/GID. Lets the sidecar share the app's UID/GID.
-+	OutboundMark string `json:"OUTBOUND_MARK,omitempty"`
++	// OutboundDscp, when set, enables DSCP-based outbound interception for this proxy:
++	// Envoy tags upstream sockets with IP_TOS=<dscp<<2> and the init container excludes those
++	// packets via '-m dscp --dscp' instead of relying on the proxy UID/GID. Lets the sidecar
++	// share the app's UID/GID. Unlike SO_MARK, setting IP_TOS needs no capability.
++	OutboundDscp string `json:"OUTBOUND_DSCP,omitempty"`
 +
  	// ServiceAccount specifies the service account which is running the workload.
  	ServiceAccount string `json:"SERVICE_ACCOUNT,omitempty"`
  
 diff --git a/tools/istio-iptables/pkg/capture/run.go b/tools/istio-iptables/pkg/capture/run.go
-index 9933c1f9f3..31ca141184 100644
+index 9933c1f9f3..70581ff067 100644
 --- a/tools/istio-iptables/pkg/capture/run.go
 +++ b/tools/istio-iptables/pkg/capture/run.go
-@@ -364,93 +364,116 @@ func (cfg *IptablesConfigurator) Run() error {
+@@ -364,93 +364,118 @@ func (cfg *IptablesConfigurator) Run() error {
  	cfg.ruleBuilder.AppendVersionedRule("127.0.0.6/32", "::6/128", constants.ISTIOOUTPUT, "nat",
  		"-o", "lo", "-s", constants.IPVersionSpecific, "-j", "RETURN")
  
@@ -194,21 +177,23 @@ index 9933c1f9f3..31ca141184 100644
 -				"-p", "tcp",
 -				"!", "--dport", cfg.cfg.InboundTunnelPort,
 -				"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
-+	if cfg.cfg.OutboundMark != "" {
-+		// Mark-based outbound interception. Envoy tags its upstream sockets with SO_MARK, so we
-+		// exclude marked packets from redirection. This replaces the owner-based rules below and
-+		// allows the sidecar to share the application's UID/GID (e.g. ingress-nginx under deckhouse).
++	if cfg.cfg.OutboundDscp != "" {
++		// DSCP-based outbound interception. Envoy tags its upstream sockets with IP_TOS (the
++		// DSCP field), so we exclude those packets from redirection. This replaces the
++		// owner-based rules below and allows the sidecar to share the application's UID/GID
++		// (e.g. ingress-nginx under deckhouse). Unlike SO_MARK, setsockopt(IP_TOS) needs no
++		// capability, so the sidecar can run as a non-root user.
 +		//
 +		// Known limitation: the "app calls its own VIP" redirect (app => Envoy outbound =>
-+		// Envoy inbound => app) is not installed, since it cannot be expressed by mark alone
++		// Envoy inbound => app) is not installed, since it cannot be expressed by DSCP alone
 +		// without distinguishing app from Envoy. This is acceptable for ingress-nginx.
 +		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
-+			"-m", "mark", "--mark", cfg.cfg.OutboundMark, "-j", "RETURN")
++			"-m", "dscp", "--dscp", cfg.cfg.OutboundDscp, "-j", "RETURN")
 +
 +		// Exclude DNS and istiod ports from redirection so the pilot-agent can bootstrap
 +		// (resolve istiod and fetch the initial Envoy config/certs) before Envoy is ready.
-+		// In owner-based mode these are covered by the UID match; in mark mode the pilot-agent
-+		// has no SO_MARK, so its traffic must be excluded by port.
++		// In owner-based mode these are covered by the UID match; in DSCP mode the pilot-agent
++		// sets no DSCP, so its traffic must be excluded by port.
 +		for _, port := range []string{"53", "15012", "15017"} {
 +			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
 +				"-p", "tcp", "--dport", port, "-j", "RETURN")
@@ -359,29 +344,30 @@ index 9933c1f9f3..31ca141184 100644
 +			// all UDP/TCP packets from Envoy, regardless of dest.
 +			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-m", "owner", "--gid-owner", gid, "-j", "RETURN")
 +		}
-+	} // end owner-based interception (OutboundMark == "")
++	} // end owner-based interception (OutboundDscp == "")
  
  	ownerGroupsFilter := config.ParseInterceptFilter(cfg.cfg.OwnerGroupsInclude, cfg.cfg.OwnerGroupsExclude)
  
 diff --git a/tools/istio-iptables/pkg/cmd/root.go b/tools/istio-iptables/pkg/cmd/root.go
-index 25a4dad215..a29b3da85c 100644
+index 25a4dad215..cb73835a50 100644
 --- a/tools/istio-iptables/pkg/cmd/root.go
 +++ b/tools/istio-iptables/pkg/cmd/root.go
-@@ -96,6 +96,12 @@ func bindCmdlineFlags(cfg *config.Config, cmd *cobra.Command) {
+@@ -96,6 +96,13 @@ func bindCmdlineFlags(cfg *config.Config, cmd *cobra.Command) {
  		"Comma separated list of virtual interfaces whose inbound traffic (from VM) will be treated as outbound.",
  		&cfg.RerouteVirtualInterfaces)
  
-+	flag.BindEnv(fs, constants.OutboundMarkFlag, "",
-+		"When set (e.g. to \"1338\"), exclude Envoy outbound traffic from interception by packet mark "+
-+			"(-m mark --mark <mark>) instead of by proxy UID/GID. Envoy must set the matching SO_MARK on "+
-+			"its upstream sockets. Allows the sidecar to share the application's UID/GID.",
-+		&cfg.OutboundMark)
++	flag.BindEnv(fs, constants.OutboundDscpFlag, "",
++		"When set (e.g. to \"8\"), exclude Envoy outbound traffic from interception by IP DSCP value "+
++			"(-m dscp --dscp <value>) instead of by proxy UID/GID. Envoy sets the matching DSCP on "+
++			"its upstream sockets via setsockopt(IP_TOS); this needs no capability, so the sidecar "+
++			"can run non-root and share the application's UID/GID.",
++		&cfg.OutboundDscp)
 +
  	flag.BindEnv(fs, constants.InboundTProxyMark, "t", "", &cfg.InboundTProxyMark)
  
  	flag.BindEnv(fs, constants.InboundTProxyRouteTable, "r", "", &cfg.InboundTProxyRouteTable)
 diff --git a/tools/istio-iptables/pkg/config/config.go b/tools/istio-iptables/pkg/config/config.go
-index ee6994482d..4a5d4e212b 100644
+index ee6994482d..f6421af981 100644
 --- a/tools/istio-iptables/pkg/config/config.go
 +++ b/tools/istio-iptables/pkg/config/config.go
 @@ -50,11 +50,17 @@ func DefaultConfig() *Config {
@@ -398,12 +384,12 @@ index ee6994482d..4a5d4e212b 100644
 +	InboundTunnelPort  string `json:"INBOUND_TUNNEL_PORT"`
 +	ProxyUID           string `json:"PROXY_UID"`
 +	ProxyGID           string `json:"PROXY_GID"`
-+	// OutboundMark, when set, enables mark-based outbound interception: Envoy
-+	// tags its outbound sockets with this mark (via SO_MARK) and the iptables
-+	// rules exclude marked packets instead of relying on --uid-owner/--gid-owner.
-+	// This lets the sidecar run with the same UID/GID as the application.
-+	// Empty (default) keeps the legacy owner-based behavior.
-+	OutboundMark             string        `json:"OUTBOUND_MARK"`
++	// OutboundDscp, when set, enables DSCP-based outbound interception: Envoy tags its
++	// outbound sockets with this DSCP value (via setsockopt(IP_TOS)) and the iptables rules
++	// exclude those packets via '-m dscp --dscp' instead of relying on --uid-owner/--gid-owner.
++	// This lets the sidecar run with the same UID/GID as the application, and unlike SO_MARK
++	// it needs no capability. Empty (default) keeps the legacy owner-based behavior.
++	OutboundDscp             string        `json:"OUTBOUND_DSCP"`
  	InboundInterceptionMode  string        `json:"INBOUND_INTERCEPTION_MODE"`
  	InboundTProxyMark        string        `json:"INBOUND_TPROXY_MARK"`
  	InboundTProxyRouteTable  string        `json:"INBOUND_TPROXY_ROUTE_TABLE"`
@@ -411,28 +397,19 @@ index ee6994482d..4a5d4e212b 100644
  	b.WriteString(fmt.Sprintf("PROXY_TUNNEL_PORT=%s\n", c.InboundTunnelPort))
  	b.WriteString(fmt.Sprintf("PROXY_UID=%s\n", c.ProxyUID))
  	b.WriteString(fmt.Sprintf("PROXY_GID=%s\n", c.ProxyGID))
-+	b.WriteString(fmt.Sprintf("OUTBOUND_MARK=%s\n", c.OutboundMark))
++	b.WriteString(fmt.Sprintf("OUTBOUND_DSCP=%s\n", c.OutboundDscp))
  	b.WriteString(fmt.Sprintf("INBOUND_INTERCEPTION_MODE=%s\n", c.InboundInterceptionMode))
  	b.WriteString(fmt.Sprintf("INBOUND_TPROXY_MARK=%s\n", c.InboundTProxyMark))
  	b.WriteString(fmt.Sprintf("INBOUND_TPROXY_ROUTE_TABLE=%s\n", c.InboundTProxyRouteTable))
 diff --git a/tools/istio-iptables/pkg/constants/constants.go b/tools/istio-iptables/pkg/constants/constants.go
-index 6ac71c5619..86e7f2b000 100644
+index 6ac71c5619..d7f15b26d4 100644
 --- a/tools/istio-iptables/pkg/constants/constants.go
 +++ b/tools/istio-iptables/pkg/constants/constants.go
-@@ -40,6 +40,8 @@ const (
- 
- // In TPROXY mode, mark the packet from envoy outbound to app by podIP,
- // this is to prevent it being intercepted to envoy inbound listener.
-+// When mark-based outbound interception is enabled (see OutboundMark flag), the same
-+// value is applied to Envoy outbound sockets via SO_MARK and matched in the nat table.
- const OutboundMark = "1338"
- 
- // iptables chains
-@@ -72,6 +74,7 @@ const (
+@@ -72,6 +72,7 @@ const (
  	ProxyUID                  = "proxy-uid"
  	ProxyGID                  = "proxy-gid"
  	RerouteVirtualInterfaces  = "kube-virt-interfaces"
-+	OutboundMarkFlag          = "outbound-mark"
++	OutboundDscpFlag          = "outbound-dscp"
  	DryRun                    = "dry-run"
  	TraceLogging              = "iptables-trace-logging"
  	SkipRuleApply             = "skip-rule-apply"
