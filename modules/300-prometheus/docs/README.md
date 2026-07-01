@@ -47,7 +47,7 @@ Deckhouse configures monitoring of Kubernetes "health" parameters and its compon
 
 ## Ingress monitoring
 
-The detailed description is available [here](../../modules/ingress-nginx/#monitoring-and-statistics).
+The detailed description is available [here](/modules/ingress-nginx/#monitoring-and-statistics).
 
 ## Advanced monitoring mode
 
