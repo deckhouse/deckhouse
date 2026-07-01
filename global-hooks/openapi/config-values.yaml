@@ -212,3 +212,82 @@ properties:
             * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
             * Use this parameter only in exceptional circumstances.
             * This parameter is applied during module activation.
+  applications:
+    description: |
+      Common parameters of Deckhouse applications.
+    additionalProperties: false
+    default: {}
+    type: object
+    properties:
+      publicDomainTemplate:
+        type: string
+        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        description: |
+          A DNS name template with two `%s` keys used as the dynamic parts of the string: the first key is substituted with the application instance name, the second key — with its namespace.
+
+          Deckhouse applications use this template when creating Ingress resources.
+
+          For example, given the template `%s.%s.company.my`, an application instance named `grafana` running in the `monitoring` namespace will get an Ingress resource at the address `grafana.monitoring.company.my`.
+
+          **Pay attention to the following:**
+          - If this parameter is not specified, Ingress resources will not be created.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. It is not recommended to change the `clusterDomain` value unless absolutely necessary.
+          - For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
+          - If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.
+          For example, if the nodes are registered under the `company.my` zone and the template is `%s.%s.company.my`.
+        x-doc-examples: [ "%s.%s.company.my", "%s.%s.kube.company.my" ]
+        x-examples: [ "%s.%s.company.my" ]
+      https:
+        description: |
+          The HTTPS implementation used by the Deckhouse applications.
+        type: object
+        additionalProperties: false
+        default: {}
+        x-examples:
+        - certManager:
+            clusterIssuerName: letsencrypt
+          mode: CertManager
+        - mode: Disabled
+        - mode: OnlyInURI
+        - mode: CustomCertificate
+          customCertificate:
+            secretName: plainstring
+        properties:
+          mode:
+            type: string
+            description: |
+              The HTTPS usage mode:
+              * `CertManager` — Deckhouse applications use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
+              * `CustomCertificate` — Deckhouse applications use HTTPS using the certificate from the `d8-system` namespace;
+              * `Disabled` — Deckhouse applications use HTTP only (some applications may not work, e.g., [user-authn](https://deckhouse.io/modules/user-authn/));
+              * `OnlyInURI` — Deckhouse applications use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
+            default: CertManager
+            enum:
+            - Disabled
+            - CertManager
+            - CustomCertificate
+            - OnlyInURI
+          certManager:
+            type: object
+            additionalProperties: false
+            default: {}
+            properties:
+              clusterIssuerName:
+                type: string
+                default: 'letsencrypt'
+                x-doc-default: 'letsencrypt'
+                description: |
+                  Name of a `ClusterIssuer` to use for Deckhouse applications.
+
+                  The [cert-manager](https://deckhouse.io/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+          customCertificate:
+            type: object
+            additionalProperties: false
+            properties:
+              secretName:
+                type: string
+                description: |
+                  The name of the secret in the `d8-system` namespace to use with Deckhouse applications.
+
+                  This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+                default: "false"
