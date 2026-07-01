@@ -33,7 +33,7 @@ The following requirements are applicable to the infrastructure and cluster node
 - A deployed and configured storage system providing access to LUN via iSCSI or Fibre Channel.
 
 - For iSCSI connections:
-  - A unique iSCSI Qualified Name (IQN) must be configured on each Kubernetes node in the `/etc/iscsi/initiatorname.iscsi` file.
+  - A unique iSCSI Qualified Name (IQN) must be configured on each cluster node in the `/etc/iscsi/initiatorname.iscsi` file.
   - The `multipath-tools` package must be installed on nodes.
 
 - For Fibre Channel connections:

@@ -34,7 +34,7 @@ DKP не поддерживает:
 - Развёрнутая и настроенная СХД, предоставляющая доступ к LUN по iSCSI или Fibre Channel.
 
 - Для подключения по iSCSI:
-  - на каждом узле Kubernetes должен быть настроен уникальный идентификатор iSCSI-инициатора (iSCSI Qualified Name, IQN) в файле `/etc/iscsi/initiatorname.iscsi`;
+  - на каждом узле кластера должен быть настроен уникальный идентификатор iSCSI-инициатора (iSCSI Qualified Name, IQN) в файле `/etc/iscsi/initiatorname.iscsi`;
   - на узлах должен быть установлен пакет `multipath-tools`.
 
 - Для подключения по Fibre Channel:
