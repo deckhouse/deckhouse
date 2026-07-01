@@ -627,6 +627,98 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
+## Ambient mesh
+
+{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
+
+{% alert level="warning" %}Ambient mesh support is experimental and not recommended for production use.{% endalert %}
+
+See the [ambient mesh overview](./#ambient-mesh) for the concepts (`ztunnel`, waypoint proxies) referenced below.
+
+### Enabling ambient mesh
+
+Ambient mode requires the [`CNIPlugin`](#cniplugin-application-traffic-redirection-mode-restrictions) traffic redirection mode and Istio 1.25 or newer.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  enabled: true
+  version: 2
+  settings:
+    dataPlane:
+      trafficRedirectionSetupMode: CNIPlugin
+    ambient:
+      enabled: true
+```
+
+Once enabled, the module runs the `ztunnel` DaemonSet and the waypoint controller. Workloads are not enrolled automatically — see the steps below.
+
+### Enrolling workloads into the ambient (L4) mesh
+
+Add the `istio.io/dataplane-mode=ambient` label to a namespace to capture the traffic of its Pods with `ztunnel`. This provides L4 features (mutual TLS, identity, L4 authorization) without a sidecar:
+
+```shell
+d8 k label namespace myns istio.io/dataplane-mode=ambient
+```
+
+### Adding a waypoint for L7 features
+
+To get L7 features (HTTP routing, L7 authorization, richer telemetry), create a `WaypointInstance` in the namespace:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: WaypointInstance
+metadata:
+  name: main
+  namespace: myns
+spec:
+  waypointFor: All
+  replicasManagement:
+    mode: Static
+    static:
+      replicas: 2
+  resourcesManagement:
+    mode: VPA
+    vpa:
+      mode: InPlaceOrRecreate
+      cpu:
+        min: 100m
+        max: 1000m
+      memory:
+        min: 128Mi
+        max: 2000Mi
+```
+
+The controller provisions the waypoint infrastructure (Deployment, Service, Gateway, VPA, and — when the effective replica count is `>= 2` — a PDB). The controller does **not** attach workloads to the waypoint; do that with the `istio.io/use-waypoint` label.
+
+Attach all workloads and services in the namespace to the waypoint:
+
+```shell
+d8 k label namespace myns istio.io/use-waypoint=main
+```
+
+Or attach a single service or workload:
+
+```shell
+d8 k -n myns label service myservice istio.io/use-waypoint=main
+```
+
+### Disabling ambient mesh
+
+{% alert level="warning" %}
+Before disabling ambient mode, delete all `WaypointInstance` resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources, which leaves orphaned waypoints (Deckhouse raises the `D8IstioActiveWaypointsWithAmbientDisabled` alert in that case).
+{% endalert %}
+
+```shell
+d8 k get waypointinstance -A
+d8 k -n myns delete waypointinstance main
+```
+
+Then set `ambient.enabled` back to `false` in the `istio` ModuleConfig.
+
 ## Control the data-plane behavior
 
 ### Prevent istio-proxy from terminating before the main application's connections are closed

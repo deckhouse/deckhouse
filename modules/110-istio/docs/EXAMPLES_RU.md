@@ -629,6 +629,98 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
+## Ambient mesh
+
+{% alert level="warning" %}Доступно только в Enterprise Edition и Certified Security Edition Pro.{% endalert %}
+
+{% alert level="warning" %}Поддержка ambient mesh является экспериментальной и не рекомендуется для использования в production-окружении.{% endalert %}
+
+Об упомянутых ниже понятиях (`ztunnel`, прокси waypoint) см. [обзор ambient mesh](./#ambient-mesh).
+
+### Включение ambient mesh
+
+Режим ambient требует режима перенаправления трафика [`CNIPlugin`](#ограничения-режима-перенаправления-прикладного-трафика-cniplugin) и Istio 1.25 или новее.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  enabled: true
+  version: 2
+  settings:
+    dataPlane:
+      trafficRedirectionSetupMode: CNIPlugin
+    ambient:
+      enabled: true
+```
+
+После включения модуль запускает DaemonSet `ztunnel` и контроллер waypoint. Рабочие нагрузки не подключаются автоматически — см. шаги ниже.
+
+### Подключение рабочих нагрузок к сети ambient (L4)
+
+Добавьте лейбл `istio.io/dataplane-mode=ambient` на неймспейс, чтобы захватывать трафик его подов с помощью `ztunnel`. Это обеспечивает функциональность L4 (Mutual TLS, идентификация, авторизация L4) без сайдкара:
+
+```shell
+d8 k label namespace myns istio.io/dataplane-mode=ambient
+```
+
+### Добавление waypoint для возможностей L7
+
+Чтобы получить возможности L7 (маршрутизация HTTP, авторизация L7, более подробная телеметрия), создайте в неймспейсе ресурс `WaypointInstance`:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: WaypointInstance
+metadata:
+  name: main
+  namespace: myns
+spec:
+  waypointFor: All
+  replicasManagement:
+    mode: Static
+    static:
+      replicas: 2
+  resourcesManagement:
+    mode: VPA
+    vpa:
+      mode: InPlaceOrRecreate
+      cpu:
+        min: 100m
+        max: 1000m
+      memory:
+        min: 128Mi
+        max: 2000Mi
+```
+
+Контроллер создает инфраструктуру waypoint (Deployment, Service, Gateway, VPA, а также — когда эффективное количество реплик `>= 2` — PDB). Контроллер **не** подключает рабочие нагрузки к waypoint; сделайте это с помощью лейбла `istio.io/use-waypoint`.
+
+Подключите все рабочие нагрузки и сервисы в неймспейсе к waypoint:
+
+```shell
+d8 k label namespace myns istio.io/use-waypoint=main
+```
+
+Или подключите отдельный сервис или рабочую нагрузку:
+
+```shell
+d8 k -n myns label service myservice istio.io/use-waypoint=main
+```
+
+### Отключение ambient mesh
+
+{% alert level="warning" %}
+Перед отключением режима ambient удалите все ресурсы `WaypointInstance`. При отключенном режиме ambient контроллер waypoint не запущен и не может согласовывать или удалять ресурсы waypoint, что приводит к осиротевшим waypoint (в этом случае Deckhouse генерирует алерт `D8IstioActiveWaypointsWithAmbientDisabled`).
+{% endalert %}
+
+```shell
+d8 k get waypointinstance -A
+d8 k -n myns delete waypointinstance main
+```
+
+Затем верните параметру `ambient.enabled` значение `false` в ModuleConfig `istio`.
+
 ## Управление поведением data plane
 
 ### Предотвращение завершения работы istio-proxy до завершения соединений основного приложения

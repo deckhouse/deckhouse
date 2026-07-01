@@ -1100,7 +1100,6 @@ properties:
     x-doc-d8Editions:
     - ee
     - cse-pro
-    x-doc-skip: true
     x-experimental: true
     default: {"enabled": false}
     properties:
@@ -1118,7 +1117,6 @@ properties:
         x-doc-d8Editions:
         - ee
         - cse-pro
-        x-doc-skip: true
         x-experimental: true
         default: {}
         properties:
@@ -1151,12 +1149,9 @@ properties:
               mode:
                 type: string
                 description: |
-                  Resource management mode.
+                  Resource management mode for waypoint-controller pods.
 
-                  Possible values:
-
-                  - `Static`: allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static) parameter section;
-                  - `VPA`: uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa) parameter section.
+                  Use `Static` to set requests and limits explicitly in the [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static) parameter section. Use `VPA` to let [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) manage resources automatically, configured in the [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa) parameter section.
                 enum: ['VPA', 'Static']
                 default: 'VPA'
               vpa:
