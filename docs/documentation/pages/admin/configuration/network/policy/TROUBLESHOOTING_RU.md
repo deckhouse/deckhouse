@@ -34,7 +34,16 @@ d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg endpoint list
 d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg endpoint get <endpoint-id>
 ```
 
-В выводе `cilium-dbg endpoint list` для каждого пода-эндпоинта видны статусы `POLICY (ingress)` и `POLICY (egress)`: `Enabled`, `Disabled` или `Disabled (Audit)` в режиме [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode).
+В выводе `cilium-dbg endpoint list` для каждого пода-эндпоинта видны статусы `POLICY (ingress)` и `POLICY (egress)`: `Enabled`, `Disabled` или `Disabled (Audit)` в режиме [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode). Пример вывода:
+
+```text
+ENDPOINT   POLICY (ingress)   POLICY (egress)   IDENTITY   LABELS (source:key[=value])
+1847       Enabled            Enabled            15234      k8s:app=client,k8s:io.kubernetes.pod.namespace=netpol-test
+2156       Enabled            Disabled           28765      k8s:app=server,k8s:io.kubernetes.pod.namespace=netpol-test
+3          Disabled           Disabled           1          reserved:host
+```
+
+Здесь `POLICY (ingress): Enabled` означает, что к поду применена хотя бы одна политика Ingress и действует default-deny для входящего трафика. `POLICY (egress): Disabled` — политик Egress нет, входящий трафик не ограничен.
 
 ## Наблюдаемость через Hubble
 
@@ -45,12 +54,29 @@ Hubble отображает вердикты политик в реальном 
 Через `hubble observe` можно фильтровать события по типу. В DKP клиент `hubble` поставляется вместе с агентом, поэтому команды удобно запускать через `d8 k exec` в под cilium-agent:
 
 ```bash
-d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --verdict DROPPED
-d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --verdict AUDITED
-d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --from-pod my-app/client --to-pod my-app/api
+d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --type policy-verdict --verdict DROPPED
+d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --type policy-verdict --verdict AUDITED
+d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --from-pod my-app/client --to-pod my-app/api
 ```
 
+{% alert level="info" %}
+В DKP нет отдельного исполняемого файла `d8 hubble`. Доступ к Hubble CLI обеспечивается через `exec` в под `cilium-agent`, как показано выше. Флаг `-it` нужен для потокового вывода при использовании без `--last`.
+{% endalert %}
+
 Каждый агент видит события только своего узла. Для общего сбора событий по кластеру используйте Hubble UI или экспорт через [HubbleMonitoringConfig](/modules/cni-cilium/cr.html#hubblemonitoringconfig).
+
+Пример вывода `hubble observe --type policy-verdict --verdict DROPPED`:
+
+```text
+Jun 10 12:00:01.234   netpol-test/outsider:52341   ->   netpol-test/server:8080   Policy verdict   INGRESS DENIED
+Jun 10 12:00:01.236   netpol-test/outsider:52342   ->   netpol-test/server:8080   Policy verdict   INGRESS DENIED
+```
+
+Пример вывода `hubble observe --type policy-verdict --verdict AUDITED` (в режиме `policyAuditMode`):
+
+```text
+Jun 10 12:05:01.101   netpol-test/client:53124   ->   netpol-test/server:8080   Policy verdict   INGRESS AUDITED
+```
 
 В выводе указаны идентификаторы политик, селекторов и сами поля ingress/egress, которые сработали. Это позволяет быстро понять, какое именно правило блокирует или пропускает соединение.
 
@@ -70,6 +96,13 @@ d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --from-pod my-app/client -
 
 ```bash
 d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg fqdn cache list
+```
+
+Пример вывода при наличии разрешённых DNS-запросов:
+
+```text
+Endpoint   Source Namespace   Source Name   FQDN           TTL    ExpirationTime               IPs
+1847       netpol-test        client        example.com.   299    2026-06-10T12:05:00.000Z     93.184.216.34
 ```
 
 В выводе видны записи с источником, DNS-именем, разрешёнными IP-адресами и TTL. Если для нужного имени записи нет, под либо не делал DNS-запрос, либо DNS-запрос не разрешён политикой и не попал в инспекцию (`rules.dns`). Механика обновления кеша описана в разделе [DNS Policy и IP Discovery](cilium_networkpolicy.html#dns-policy-и-ip-discovery).

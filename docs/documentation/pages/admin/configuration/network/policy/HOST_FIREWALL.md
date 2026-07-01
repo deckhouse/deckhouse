@@ -55,7 +55,7 @@ Use entities to describe peers:
 
 ## Example: API server access for the control plane
 
-A CiliumClusterwideNetworkPolicy that binds control plane nodes to the `kube-apiserver` entity. Without this binding, control plane operations may stutter for up to a minute when `cilium-agent` pods restart, due to a [Cilium Conntrack table reset](https://github.com/cilium/cilium/issues/19367):
+A CiliumClusterwideNetworkPolicy that binds control plane nodes to the `kube-apiserver` entity and allows etcd traffic between control plane nodes. Without the `kube-apiserver` rule, control plane operations may stutter for up to a minute when `cilium-agent` pods restart, due to a [Cilium Conntrack table reset](https://github.com/cilium/cilium/issues/19367):
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -69,7 +69,17 @@ spec:
   ingress:
     - fromEntities:
         - kube-apiserver
+    - fromEntities:
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "2379"
+              protocol: TCP
+            - port: "2380"
+              protocol: TCP
 ```
+
+The `fromEntities: kube-apiserver` rule allows all traffic from the API server without port restrictions — this covers kubelet (TCP/10250, TCP/10255) and component webhook endpoints. The `fromEntities: remote-node` rule is scoped to etcd ports (TCP/2379, TCP/2380) and allows replication traffic between control plane nodes.
 
 ## Example: SSH from administrative networks
 

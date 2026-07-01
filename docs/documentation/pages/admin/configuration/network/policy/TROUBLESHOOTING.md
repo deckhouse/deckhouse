@@ -33,7 +33,16 @@ d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg endpoint list
 d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg endpoint get <endpoint-id>
 ```
 
-In `cilium-dbg endpoint list`, each pod endpoint shows `POLICY (ingress)` and `POLICY (egress)` status: `Enabled`, `Disabled`, or `Disabled (Audit)` when [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) is on.
+In `cilium-dbg endpoint list`, each pod endpoint shows `POLICY (ingress)` and `POLICY (egress)` status: `Enabled`, `Disabled`, or `Disabled (Audit)` when [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) is on. Example output:
+
+```text
+ENDPOINT   POLICY (ingress)   POLICY (egress)   IDENTITY   LABELS (source:key[=value])
+1847       Enabled            Enabled            15234      k8s:app=client,k8s:io.kubernetes.pod.namespace=netpol-test
+2156       Enabled            Disabled           28765      k8s:app=server,k8s:io.kubernetes.pod.namespace=netpol-test
+3          Disabled           Disabled           1          reserved:host
+```
+
+`POLICY (ingress): Enabled` means at least one ingress policy applies to the pod and default-deny is active for inbound traffic. `POLICY (egress): Disabled` means there are no egress policies and outbound traffic is unrestricted.
 
 ## Observability via Hubble
 
@@ -44,12 +53,29 @@ In Hubble UI, connections between pods and services are tagged as `forwarded`, `
 `hubble observe` can filter events by type. In DKP, the `hubble` client ships with the agent, so it is convenient to run commands via `d8 k exec` against a cilium-agent pod:
 
 ```bash
-d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --verdict DROPPED
-d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --verdict AUDITED
-d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --from-pod my-app/client --to-pod my-app/api
+d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --type policy-verdict --verdict DROPPED
+d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --type policy-verdict --verdict AUDITED
+d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --from-pod my-app/client --to-pod my-app/api
 ```
 
+{% alert level="info" %}
+DKP does not provide a standalone `d8 hubble` binary. Hubble CLI access is provided by running `exec` into a `cilium-agent` pod, as shown above. The `-it` flag is required for streaming output when `--last` is not specified.
+{% endalert %}
+
 Each agent sees events only for its own node. For cluster-wide event collection, use Hubble UI or export via [HubbleMonitoringConfig](/modules/cni-cilium/cr.html#hubblemonitoringconfig).
+
+Example output of `hubble observe --type policy-verdict --verdict DROPPED`:
+
+```text
+Jun 10 12:00:01.234   netpol-test/outsider:52341   ->   netpol-test/server:8080   Policy verdict   INGRESS DENIED
+Jun 10 12:00:01.236   netpol-test/outsider:52342   ->   netpol-test/server:8080   Policy verdict   INGRESS DENIED
+```
+
+Example output of `hubble observe --type policy-verdict --verdict AUDITED` (with `policyAuditMode` on):
+
+```text
+Jun 10 12:05:01.101   netpol-test/client:53124   ->   netpol-test/server:8080   Policy verdict   INGRESS AUDITED
+```
 
 The output includes policy and selector identifiers and the specific ingress/egress fields that matched, which makes it easy to find the rule that blocked or allowed the connection.
 
@@ -69,6 +95,13 @@ If a `toFQDNs` rule does not allow traffic, inspect the DNS-name to IP cache mai
 
 ```bash
 d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg fqdn cache list
+```
+
+Example output when DNS requests have been intercepted:
+
+```text
+Endpoint   Source Namespace   Source Name   FQDN           TTL    ExpirationTime               IPs
+1847       netpol-test        client        example.com.   299    2026-06-10T12:05:00.000Z     93.184.216.34
 ```
 
 The output shows entries with the source, DNS name, resolved IPs, and TTL. If there is no entry for the expected name, the pod either did not make a DNS request, or the DNS request is not allowed by a policy with DNS inspection (`rules.dns`). The cache mechanics are described in [DNS Policy and IP Discovery](cilium_networkpolicy.html#dns-policy-and-ip-discovery).

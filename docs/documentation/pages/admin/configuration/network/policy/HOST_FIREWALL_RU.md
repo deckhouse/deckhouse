@@ -56,7 +56,7 @@ Host-политики не заменяют сетевую защиту инфр
 
 ## Пример: разрешение трафика к API-серверу для control plane
 
-CiliumClusterwideNetworkPolicy, привязывающая control plane-узлы к сущности `kube-apiserver`. Без неё во время перезапуска подов `cilium-agent` возможно кратковременное нарушение работы control plane из-за [сброса Conntrack-таблицы Cilium](https://github.com/cilium/cilium/issues/19367):
+CiliumClusterwideNetworkPolicy, привязывающая control plane-узлы к сущности `kube-apiserver` и разрешающая trафик etcd между control plane-узлами. Без правила `kube-apiserver` во время перезапуска подов `cilium-agent` возможно кратковременное нарушение работы control plane из-за [сброса Conntrack-таблицы Cilium](https://github.com/cilium/cilium/issues/19367):
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -70,7 +70,17 @@ spec:
   ingress:
     - fromEntities:
         - kube-apiserver
+    - fromEntities:
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "2379"
+              protocol: TCP
+            - port: "2380"
+              protocol: TCP
 ```
+
+Правило `fromEntities: kube-apiserver` разрешает весь трафик от API-сервера без ограничения по портам — это охватывает обращения к kubelet (TCP/10250, TCP/10255) и к webhook-эндпоинтам компонентов. Правило `fromEntities: remote-node` ограничено портами etcd (TCP/2379, TCP/2380) и разрешает трафик только между control plane-узлами.
 
 ## Пример: SSH с доверенных адресов администрирования
 
