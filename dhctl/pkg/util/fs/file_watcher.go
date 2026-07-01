@@ -20,7 +20,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func StartFileWatcher(ctx context.Context, path string, fsEventHanlder func(event fsnotify.Event), done chan struct{}) (*fsnotify.Watcher, error) {

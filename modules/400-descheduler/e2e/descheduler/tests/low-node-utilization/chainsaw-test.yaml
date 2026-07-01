@@ -15,7 +15,7 @@ spec:
       try:
         - description: Check descheduler deployment has ready replicas
           assert:
-            file: ../common/assert-descheduler-ready.yaml
+            file: ../common/asserts/assert-descheduler-ready.yaml
 
     - name: check-minimum-nodes
       description: Verify that the cluster has at least 2 worker nodes for the balancing test
@@ -178,7 +178,7 @@ spec:
                 value: 'True'
         - description: Assert descheduler has ready replicas
           assert:
-            file: ../common/assert-descheduler-ready.yaml
+            file: ../common/asserts/assert-descheduler-ready.yaml
       catch:
         - description: Describe descheduler deployment on failure
           describe:

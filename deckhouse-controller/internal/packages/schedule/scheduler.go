@@ -59,7 +59,7 @@ type Scheduler struct {
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
-	dynamicGetter          dynamic.Getter      // Reports a module's dynamic enabled state
+	dynamicGetter          dynamic.Getter      // Reports a module's resolved enablement intent (ModuleConfig + dynamic), answered by the global module
 
 	pause atomic.Bool // When true, no state changes are processed
 }
@@ -95,7 +95,8 @@ func WithDependencyGetter(getter dependency.Getter) Option {
 	}
 }
 
-// WithDynamicGetter sets the provider for a module's dynamic enabled state.
+// WithDynamicGetter sets the provider for a module's resolved enablement intent
+// (ModuleConfig plus dynamic hook state), answered by the global module.
 func WithDynamicGetter(getter dynamic.Getter) Option {
 	return func(s *Scheduler) {
 		s.dynamicGetter = getter

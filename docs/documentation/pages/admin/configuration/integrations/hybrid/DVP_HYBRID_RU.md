@@ -85,15 +85,11 @@ description: Подготовка к гибридной интеграции с 
          kubeconfigDataBase64: ${DVP_KUBECONFIG_B64}
          namespace: ${DVP_NAMESPACE}
        zones:
-         - <ZONE_NAME>
+         - ${DVP_ZONE}
    EOF
    ```
 
-   Где:
-
-   - `provider.kubeconfigDataBase64` — kubeconfig для доступа к API DVP в кодировке Base64;
-   - `provider.namespace` — неймспейс DVP, в котором будут создаваться виртуальные машины и диски;
-   - `zones` — список зон DVP, в которых разрешено создавать узлы.
+   В манифесте используются значения переменных окружения, заданных на предыдущих шагах: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE` и `DVP_ZONE`.
 
 1. Примените ModuleConfig:
 

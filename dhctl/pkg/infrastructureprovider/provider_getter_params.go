@@ -22,10 +22,11 @@ import (
 
 	"github.com/name212/govalue"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 

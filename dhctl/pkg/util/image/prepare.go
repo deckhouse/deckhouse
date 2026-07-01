@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func PrepareFiles(ctx context.Context, path string) error {

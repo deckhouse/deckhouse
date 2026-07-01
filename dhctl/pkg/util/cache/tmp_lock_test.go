@@ -22,13 +22,14 @@ import (
 	"slices"
 	"testing"
 
+	"log/slog"
+
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
-	"log/slog"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var testTmpDirLockCheckDir = path.Join(os.TempDir(), "dhctl-check-lock-tmp")

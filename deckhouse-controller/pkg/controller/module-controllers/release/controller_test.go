@@ -154,6 +154,42 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
+	// The module was still embedded but its embedded copy is no longer on disk
+	// (IsEmbeddedPresent == false), so the release is activated (Install) and the
+	// active source is switched off the "Embedded" sentinel to the real source.
+	suite.Run("embedded module switches source on install", func() {
+		suite.setupReleaseController(
+			suite.fetchTestFileData("embedded-module-source-switch.yaml"),
+			withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return false },
+			}),
+		)
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+	})
+
+	// The embedded copy is still on disk (IsEmbeddedPresent == true), so the release
+	// is only staged: the module stays pinned to its embedded copy and the active
+	// source must remain "Embedded".
+	suite.Run("embedded module keeps source while staged", func() {
+		suite.setupReleaseController(
+			suite.fetchTestFileData("embedded-module-stage-keep-source.yaml"),
+			withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return true },
+			}),
+		)
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+	})
+
 	suite.Run("deckhouse suitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
 
@@ -833,6 +869,12 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 func withBasicModulePhase(phase addonmodules.ModuleRunPhase) reconcilerOption {
 	return func(r *reconciler) {
 		r.moduleManager = stubModulesManager{modulePhase: phase}
+	}
+}
+
+func withInstaller(inst Installer) reconcilerOption {
+	return func(r *reconciler) {
+		r.installer = inst
 	}
 }
 

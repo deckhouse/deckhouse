@@ -196,17 +196,21 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.rescheduleOnEnable = true
 	}
 
-	// Intent rules for modules, appended last so their soft Enable overrides the
-	// floor's Static(Disable) (gates still veto via Forbid from any position). The
-	// dynamic rule turns a module on at runtime (e.g. enabled by a script); the
-	// bundle rule applies the active bundle's membership for the package's edition.
+	// Module intent rules, appended after the floor and gates so their soft votes
+	// override the floor's Static(Disable) (gates still veto via Forbid from any
+	// position). Order within is least-to-most authoritative:
+	//   - bundle: enable-only; turns the module on for its edition/bundle.
+	//   - dynamic: the resolved ModuleConfig + dynamic intent. It is last, so an
+	//     explicit user disable overrides the bundle's enable, and a user enable
+	//     turns on a module the bundle ignores. Hooks are enable-only; the disable
+	//     direction comes solely from ModuleConfig.
 	if isModule {
-		if s.dynamicGetter != nil {
-			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
-		}
-
 		if s.bundleChecker != nil {
 			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
+		}
+
+		if s.dynamicGetter != nil {
+			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
 		}
 	}
 

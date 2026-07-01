@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 // globalName is the literal sentinel used by Scheduler internally; it lives
@@ -991,24 +992,7 @@ func (s *SchedulerSuite) TestRescheduleFansOutToDirectSubscribers() {
 // untracked, so the whole graph must re-converge. An already-active, unrelated
 // bystander being re-scheduled is the observable signal of that reconverge.
 func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
-	dynamicState := make(map[string]bool)
-
-	// Replace the suite scheduler with one wired to a controllable dynamic getter
-	// so a module can be flipped on at runtime. Stop the original to avoid leaking
-	// its event goroutine.
-	s.sched.Stop()
-	s.sched = schedule.NewScheduler(
-		schedule.WithDependencyGetter(func(name string) *semver.Version {
-			return s.versions[name]
-		}),
-		schedule.WithDynamicGetter(func(module string) *bool {
-			if v, ok := dynamicState[module]; ok {
-				return &v
-			}
-
-			return nil
-		}),
-	)
+	enabledState := s.useDynamicScheduler()
 
 	s.activateGlobal()
 
@@ -1034,10 +1018,118 @@ func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
 
 	// Flip the module on and run a pass: it enables, triggering a full-graph
 	// reschedule that reverts and re-schedules the bystander too.
-	dynamicState["dynamic-mod"] = true
+	enabledState["dynamic-mod"] = boolPtr(true)
 	s.sched.Schedule()
 
 	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
 	s.Contains(scheduled, "dynamic-mod", "the newly enabled module must be scheduled")
 	s.Contains(scheduled, "bystander", "reschedule-on-enable must revert and re-schedule the whole graph")
+}
+
+// boolPtr returns a pointer to b, for the tri-state dynamic getter.
+func boolPtr(b bool) *bool { return &b }
+
+// useDynamicScheduler replaces the suite scheduler with one wired to a
+// controllable dynamic getter, backed by the returned map: a *true/*false entry
+// is an explicit enable/disable intent (as the global module would resolve from
+// ModuleConfig and dynamic hooks), an absent entry is "no opinion" (nil). Tests
+// drive enablement by mutating the map before a scheduling pass. The original
+// scheduler is stopped to avoid leaking its event goroutine.
+func (s *SchedulerSuite) useDynamicScheduler() map[string]*bool {
+	enabledState := make(map[string]*bool)
+
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		schedule.WithDependencyGetter(func(name string) *semver.Version {
+			return s.versions[name]
+		}),
+		schedule.WithDynamicGetter(func(module string) *bool {
+			return enabledState[module]
+		}),
+	)
+
+	return enabledState
+}
+
+// TestDynamicRuleEnablesOverFloor verifies the dynamic rule's Enable vote turns
+// on a module whose Disable floor would otherwise keep it off.
+func (s *SchedulerSuite) TestDynamicRuleEnablesOverFloor() {
+	enabledState := s.useDynamicScheduler()
+	s.activateGlobal()
+
+	enabledState["mod"] = boolPtr(true)
+	// Order 0 (global tier): enabling a Disable-floored module triggers a
+	// full-graph reschedule, which reverts global to idle; a higher-tier module
+	// would then be held by canSchedule until global re-completes. Same tier keeps
+	// the test focused on rule precedence, not order gating.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"an enable intent must override the module's Disable floor")
+}
+
+// TestDynamicRuleNilDefersToFloor verifies that with no intent the dynamic rule
+// is Undefined and resolution falls through to the floor: a Disable-floored
+// module stays off.
+func (s *SchedulerSuite) TestDynamicRuleNilDefersToFloor() {
+	s.useDynamicScheduler() // getter returns nil for everything
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"no intent must defer to the Disable floor")
+}
+
+// TestDynamicRuleDisableOverridesBundle verifies the dynamic rule outranks the
+// bundle vote: a module the active bundle would enable is still turned off by an
+// explicit disable intent, because the dynamic rule is appended after bundle.
+func (s *SchedulerSuite) TestDynamicRuleDisableOverridesBundle() {
+	enabledState := make(map[string]*bool)
+
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		schedule.WithDependencyGetter(func(name string) *semver.Version {
+			return s.versions[name]
+		}),
+		// Bundle enables every module it is asked about.
+		schedule.WithBundleChecker(func(edition.Licensing) bool { return true }),
+		schedule.WithDynamicGetter(func(module string) *bool {
+			return enabledState[module]
+		}),
+	)
+	s.activateGlobal()
+
+	// No intent: the bundle enable stands → module scheduled.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "bundle-on",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0, Floor: rule.Static(rule.Disable)},
+	}))
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "bundle-on",
+		"with no intent, a bundle enable must turn the module on")
+
+	// Explicit disable: overrides the bundle enable → module stays off.
+	enabledState["bundle-off"] = boolPtr(false)
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "bundle-off",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0, Floor: rule.Static(rule.Disable)},
+	}))
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "bundle-off",
+		"a disable intent must override the bundle enable")
 }
