@@ -28,6 +28,7 @@ const (
 	deckhouseExampleMarker                                    = "deckhouse:example"
 	deckhouseDisableAdditionalPropertiesMarker                = "deckhouse:DisableAdditionalProperties"
 	deckhouseXDocSearchMarker                                 = "deckhouse:XDocSearch"
+	deckhouseXDocSkipMarker                                   = "deckhouse:XDocSkip"
 	deckhouseXDocExampleMarker                                = "deckhouse:XDocExample"
 	deckhouseXRulesMarker                                     = "deckhouse:XRules"
 	deckhouseXConfigVersionMarker                             = "deckhouse:XConfigVersion"
@@ -36,6 +37,7 @@ const (
 
 const (
 	XDocExampleExtensionKey    = "x-doc-example"
+	XDocSkipExtensionKey       = "x-doc-skip"
 	XDocSearchExtensionKey     = "x-doc-search"
 	XRulesExtensionKey         = "x-rules"
 	XConfigVersionExtensionKey = "x-config-version"
@@ -72,6 +74,10 @@ type deckhouseXDocSearchType struct {
 	Value []string `marker:",optional"`
 }
 
+type deckhouseXDocSkipType struct {
+	Value bool `marker:",optional"`
+}
+
 type deckhouseXDocExampleType struct {
 	Value string `marker:"value,optional"`
 }
@@ -97,6 +103,7 @@ func BuildDeckhouseOpenAPIMarkerRegistry() (*ctmarkers.Registry, error) {
 			deckhouseExampleMarker:                                    deckhouseExampleType{},
 			deckhouseDisableAdditionalPropertiesMarker:                deckhouseDisableAdditionalPropertiesType{},
 			deckhouseXDocSearchMarker:                                 deckhouseXDocSearchType{},
+			deckhouseXDocSkipMarker:                                   deckhouseXDocSkipType{},
 			deckhouseXDocExampleMarker:                                deckhouseXDocExampleType{},
 			deckhouseXRulesMarker:                                     deckhouseXRulesType{},
 			deckhouseXConfigVersionMarker:                             deckhouseXConfigVersionType{},
@@ -180,6 +187,14 @@ func (m deckhouseDisableAdditionalPropertiesType) ApplyToSchema(schema *openapi3
 
 func (m deckhouseXDocSearchType) ApplyToSchema(schema *openapi3.Schema) error {
 	schema.Extensions[XDocSearchExtensionKey] = m.Value
+	return nil
+}
+
+func (m deckhouseXDocSkipType) ApplyToSchema(schema *openapi3.Schema) error {
+	if schema.Extensions == nil {
+		schema.Extensions = make(map[string]any)
+	}
+	schema.Extensions[XDocSkipExtensionKey] = true
 	return nil
 }
 
