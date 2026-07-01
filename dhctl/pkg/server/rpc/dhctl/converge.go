@@ -79,7 +79,7 @@ func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	f := fsm.New("initial", s.convergeServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.ConvergeRequest)
 	sendCh := make(chan *pb.ConvergeResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.ConvergeResponse, any]{
@@ -123,10 +123,10 @@ connectionProcessor:
 					result := s.convergeSafe(ctx, &convergeParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}})
 				}()
 
 			case *pb.ConvergeRequest_Continue:
@@ -138,13 +138,13 @@ connectionProcessor:
 				}
 				switch message.Continue.Continue {
 				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New("bad continue message"))
 				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
+					sendPhaseSwitch(ctx, phaseSwitcher.next, nil)
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.ErrStopOperationCondition
+					sendPhaseSwitch(ctx, phaseSwitcher.next, phases.ErrStopOperationCondition)
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New(message.Continue.Err))
 				}
 
 			case *pb.ConvergeRequest_Cancel:

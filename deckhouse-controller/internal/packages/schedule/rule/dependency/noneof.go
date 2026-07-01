@@ -21,7 +21,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
 // reasonNoneOfDependenciesViolated is returned when at least one member of a
@@ -38,54 +38,55 @@ type NoneOfGroup struct {
 	Members map[string]*semver.Constraints
 }
 
-// NoneOfChecker evaluates one or more NoneOf groups against the current
-// dependency graph. Each group is violated independently — for the package to
-// pass, every group must have zero installed members that match their
-// constraints. NoneOf groups are checker-only and add no edges to the
+// NoneOfRule evaluates one or more NoneOf groups against the current dependency
+// graph. Each group is violated independently — for the package to pass, every
+// group must have zero installed members that match their constraints. It is a
+// gate: it returns Undefined or Forbid only. NoneOf groups add no edges to the
 // topological graph; "must not be installed" expresses an admission predicate,
 // not an ordering relation.
-type NoneOfChecker struct {
+type NoneOfRule struct {
 	getter Getter
 	groups []NoneOfGroup
 }
 
-// NewNoneOfChecker constructs a NoneOfChecker that resolves member versions
-// through the given Getter (shared with the regular dependency.Checker and
-// the AnyOfChecker).
-func NewNoneOfChecker(getter Getter, groups []NoneOfGroup) *NoneOfChecker {
-	return &NoneOfChecker{
+// NewNoneOfRule constructs a NoneOfRule that resolves member versions through
+// the given Getter (shared with the regular dependency.Rule and the AnyOfRule).
+func NewNoneOfRule(getter Getter, groups []NoneOfGroup) *NoneOfRule {
+	return &NoneOfRule{
 		getter: getter,
 		groups: groups,
 	}
 }
 
-// Check returns Enabled when every group has zero violators. The first failing
-// group short-circuits the result; the Reason is NoneOfDependenciesViolated
-// and the Message names the group plus its actual offending members in sorted
-// order so identical inputs produce identical messages across reconciles.
-func (c *NoneOfChecker) Check() checker.Result {
-	for _, group := range c.groups {
-		violators := c.groupViolators(group)
+// Decide returns Undefined when every group has zero violators. The first
+// violated group short-circuits to Forbid; the Reason is
+// NoneOfDependenciesViolated and the Message names the group plus its actual
+// offending members in sorted order so identical inputs produce identical
+// messages across reconciles.
+func (r *NoneOfRule) Decide() rule.Decision {
+	for _, group := range r.groups {
+		violators := r.groupViolators(group)
 		if len(violators) == 0 {
 			continue
 		}
 
-		return checker.Result{
+		return rule.Decision{
+			Kind:    rule.Forbid,
 			Reason:  reasonNoneOfDependenciesViolated,
 			Message: noneOfFailureMessage(group, violators),
 		}
 	}
 
-	return checker.Result{Enabled: true}
+	return rule.Decision{Kind: rule.Undefined}
 }
 
 // groupViolators returns the sorted names of members that are installed and
 // match their forbidden constraint. An empty result means the group passes.
-func (c *NoneOfChecker) groupViolators(group NoneOfGroup) []string {
+func (r *NoneOfRule) groupViolators(group NoneOfGroup) []string {
 	var violators []string
 
 	for name, constraint := range group.Members {
-		version := removePrereleaseAndMetadata(c.getter(name))
+		version := removePrereleaseAndMetadata(r.getter(name))
 		if version == nil {
 			continue
 		}
