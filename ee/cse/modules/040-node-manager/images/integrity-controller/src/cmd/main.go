@@ -63,6 +63,7 @@ func main() {
 
 	logger := logr.FromSlogHandler(log.Default().Handler())
 	ctrl.SetLogger(logger)
+	// Using klog so leaderelections logs would be formatted to JSON
 	klog.SetLogger(logger)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
