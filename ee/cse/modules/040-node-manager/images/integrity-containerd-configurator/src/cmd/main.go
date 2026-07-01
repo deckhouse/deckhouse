@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -10,16 +10,12 @@ import (
 	"flag"
 	"os"
 
-	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
-
 	"github.com/go-logr/logr"
+	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/component-base/logs"
-	logsv1 "k8s.io/component-base/logs/api/v1"
-	_ "k8s.io/component-base/logs/json/register"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
@@ -30,8 +26,8 @@ import (
 )
 
 var (
-	scheme     = runtime.NewScheme()
-	logOptions = logs.NewOptions()
+	scheme   = runtime.NewScheme()
+	setupLog = log.Default().With("logger", "setup")
 )
 
 func init() {
@@ -42,21 +38,19 @@ func init() {
 func main() {
 	var probeAddr string
 	var configDir string
+	var debugging bool
 
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configDir, "config-dir", configwriter.DefaultConfigDir, "Directory for containerd integrity config files.")
-	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
-
-	logs.AddGoFlags(flag.CommandLine)
+	flag.BoolVar(&debugging, "debug", false, "If set, enables debug logging.")
 
 	flag.Parse()
-	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))
-	setupLog := ctrl.Log.WithName("setup")
 
-	if err := logsv1.ValidateAndApply(logOptions, nil); err != nil {
-		setupLog.Error(err, "unable to validate and apply log options")
-		os.Exit(1)
+	if debugging {
+		log.SetDefaultLevel(log.LevelDebug)
 	}
+
+	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -64,7 +58,7 @@ func main() {
 		LeaderElection:         false,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error("unable to start manager", log.Err(err))
 		os.Exit(1)
 	}
 
@@ -73,22 +67,22 @@ func main() {
 		Scheme: mgr.GetScheme(),
 		Writer: configwriter.NewWriter(configDir),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ContainerdIntegrityConfigurator")
+		setupLog.Error("unable to create controller", log.Err(err), "controller", "ContainerdIntegrityConfigurator")
 		os.Exit(1)
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
+		setupLog.Error("unable to set up health check", log.Err(err))
 		os.Exit(1)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
+		setupLog.Error("unable to set up ready check", log.Err(err))
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager", "configDir", configDir)
+	setupLog.Info("starting manager", "config_dir", configDir)
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.Error("problem running manager", log.Err(err))
 		os.Exit(1)
 	}
 }

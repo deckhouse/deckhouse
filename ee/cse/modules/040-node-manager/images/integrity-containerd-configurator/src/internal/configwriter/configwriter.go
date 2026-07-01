@@ -1,10 +1,12 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
 package configwriter
 
+//nolint: gci
+//nolint: goimports
 import (
 	"bytes"
 	"encoding/base64"
@@ -14,14 +16,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/BurntSushi/toml"
-	//nolint: gci
-	"github.com/go-logr/logr"
-	//nolint: gci
-	//nolint: goimports
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 
+	"github.com/BurntSushi/toml"
+
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -49,7 +49,7 @@ func NewWriter(configDir string) *Writer {
 }
 
 // AggregatePolicies builds desired configuration from all policies.
-func AggregatePolicies(logger logr.Logger, policies []deckhousev1alpha1.ContainerdIntegrityPolicy) *DesiredConfig {
+func AggregatePolicies(logger *log.Logger, policies []deckhousev1alpha1.ContainerdIntegrityPolicy) *DesiredConfig {
 	if len(policies) == 0 {
 		return &DesiredConfig{
 			Namespaces: []string{},
@@ -105,7 +105,7 @@ func RenderNsToml(cfg *DesiredConfig) ([]byte, error) {
 }
 
 // Apply writes or removes configuration files on disk.
-func (w *Writer) Apply(logger logr.Logger, config *DesiredConfig) error {
+func (w *Writer) Apply(logger *log.Logger, config *DesiredConfig) error {
 	if config == nil || len(config.Namespaces) == 0 {
 		return w.removeConfig(logger)
 	}
@@ -130,12 +130,12 @@ func (w *Writer) Apply(logger logr.Logger, config *DesiredConfig) error {
 		return fmt.Errorf("write ns.toml: %w", err)
 	}
 
-	logger.Info("Updated containerd integrity config", "namespaces", config.Namespaces, "caCertsCount", len(config.CACerts))
+	logger.Info("Updated containerd integrity config", "namespaces", config.Namespaces, "ca_certs_count", len(config.CACerts))
 
 	return nil
 }
 
-func (w *Writer) removeConfig(logger logr.Logger) error {
+func (w *Writer) removeConfig(logger *log.Logger) error {
 	path := filepath.Join(w.ConfigDir, NsTomlFileName)
 	if err := os.Remove(path); err != nil {
 		if os.IsNotExist(err) {
