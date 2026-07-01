@@ -47,7 +47,7 @@ description: Архитектура сбора, обработки и доста
 
 ### Пайплайн обработки
 
-![Схема пайплайна обработки](../../images/architecture/security/runtime-audit-security-events.ru.png)
+![Схема пайплайна обработки](../../images/architecture/security/security-events-manager.ru.png)
 
 Архитектура разделяет три фазы конвейера: **сбор**, **обработка и обогащение**, **доставка**.
 

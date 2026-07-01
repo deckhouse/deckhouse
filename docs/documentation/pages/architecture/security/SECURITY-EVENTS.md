@@ -46,7 +46,7 @@ At the delivery stage, sending to several types of storage and analytics systems
 
 ### Processing pipeline
 
-![Processing pipeline diagram](../../images/architecture/security/runtime-audit-security-events.png)
+![Processing pipeline diagram](../../images/architecture/security/security-events-manager.png)
 
 The architecture separates three stages of the pipeline: **collection**, **processing and enrichment**, and **delivery**.
 
