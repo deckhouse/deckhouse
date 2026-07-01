@@ -350,6 +350,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		ReleaseLabels: map[string]string{
 			nelm.ReleaseLabelPackageChecksum: checksum,
 			nelm.ReleaseLabelMaintenance:     strconv.FormatBool(state == NoResourceReconciliation),
+			// TODO(ipaqsa): addon-operator legacy to migrate
+			nelm.ReleaseLabelModuleChecksum: checksum,
 		},
 		ResourcesLabels: resourcesLabels,
 	})
