@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func CreateFileBackup(ctx context.Context, fName string) {

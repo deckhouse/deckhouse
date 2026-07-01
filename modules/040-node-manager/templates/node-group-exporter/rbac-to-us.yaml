@@ -1,4 +1,5 @@
-{{- if (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
+{{- if .Values.global.clusterIsBootstrapped }}
+  {{- if (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -28,5 +29,5 @@ subjects:
 - kind: ServiceAccount
   name: prometheus
   namespace: d8-monitoring
+  {{- end }}
 {{- end }}
-

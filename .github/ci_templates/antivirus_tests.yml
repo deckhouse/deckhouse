@@ -6,14 +6,21 @@
   {!{- if .only_images_expr }!}
   env:
     # `ONLY_IMAGES` comes from needs.changed_images.outputs.changed_compact
-    # (JSON array of "<module>.<image>" keys). Wired here for PR runs of both
-    # drweb-scan and kaspersky-scan when their templates are called with
-    # `withChangedImages: true` (see security-scan-images.yml). In weekly /
-    # release runs the templates pass empty `only_images_expr`, so this env
-    # block is omitted and the Go scanner falls back to full-scan.
-    # Empty value / "[]" is treated by the Go scanner as full-scan, so the
-    # bash side does not need to branch on it.
+    # (JSON array of "<module>.<image>" keys from images_digests.json).
+    # Wired here for PR runs of both drweb-scan and kaspersky-scan when their
+    # templates are called with `withChangedImages: true`
+    # (see security-scan-images.yml).
+    #
+    # `CHANGED_COUNT` is the total number of rebuilt final images from
+    # changed_images.py, including non-module/static images that do not have
+    # compact keys in images_digests.json.
+    #
+    # If CHANGED_COUNT is 0, there is nothing to scan.
+    # If CHANGED_COUNT is greater than 0 but ONLY_IMAGES is empty, run a full
+    # scan fallback to cover static/non-module images.
+    # Weekly / release runs do not pass these envs and still run full-scan.
     ONLY_IMAGES: {!{ .only_images_expr }!}
+    CHANGED_COUNT: {!{ .changed_count_expr }!}
   {!{- end }!}
   run: |
     registry_image_path=/sys/deckhouse-oss
@@ -43,20 +50,36 @@
     SCAN_DIR=/opt/actions-runners/scans/{!{ .container_name }!}
     echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
     echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
+    echo "skipped=false" >> $GITHUB_OUTPUT
     echo $CONTAINER_NAME
     {!{- if .only_images_expr }!}
     echo "----------------------------------------------"
-    if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+    if [[ -z "${ONLY_IMAGES:-}" || "${ONLY_IMAGES}" == "[]" || "${ONLY_IMAGES}" == "null" ]]; then
+      if [[ "${CHANGED_COUNT:-0}" == "0" ]]; then
+        echo "Skip {!{ .container_name }!} scan: no rebuilt images in this PR. Nothing to scan."
+        echo "skipped=true" >> "$GITHUB_OUTPUT"
+        echo "----------------------------------------------"
+        exit 0
+      fi
+
+      echo "Changed images detected (${CHANGED_COUNT}), but no module compact keys found."
+      echo "Run full {!{ .container_name }!} scan fallback to cover static/non-module images."
+      unset ONLY_IMAGES
+    else
       keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
       echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the {!{ .container_name }!} scanner."
       jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
-    else
-      echo "📋 Full-scan: ONLY_IMAGES is empty (no delta in this PR)."
     fi
     echo "----------------------------------------------"
+
     {!{- end }!}
-    docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
-      scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+    if [[ -n "${ONLY_IMAGES:-}" ]]; then
+      docker exec -e ONLY_IMAGES="${ONLY_IMAGES}" ${CONTAINER_NAME} \
+        scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+    else
+      docker exec ${CONTAINER_NAME} \
+        scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+    fi
     # Drop container-uid ownership so the host-side Upload/Cleanup steps below
     # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
     # touch the bind-mounted scan artifacts under the runner's UID (this step
@@ -83,7 +106,7 @@
     echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
 
 - name: Upload scan artifacts
-  if: github.repository == 'deckhouse/deckhouse' && always()
+  if: github.repository == 'deckhouse/deckhouse' && always() && steps.scan.outputs.skipped != 'true'
   uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
   with:
     name: {!{ .container_name }!}-scan-results-${{ steps.scan.outputs.scan_id }}
@@ -113,9 +136,9 @@
 {!{ end -}!}
 # <template: drweb_scan_job>
 drweb-scan:
-  name: Dr.Web Scan ${{ matrix.branch }}
+  name: Dr.Web Scan
   runs-on: [self-hosted, antivirus]
-  if: ${{ false }}
+  if: github.repository == 'deckhouse/deckhouse'
 {!{- if $withChangedImages }!}
   # PR mode: filter scanned images by the changed_images diff (delta-only scan).
   needs: [get-tags, changed_images]
@@ -131,6 +154,7 @@ drweb-scan:
     id-token: write
   outputs:
     scan_id: ${{ steps.scan.outputs.scan_id }}
+    skipped: ${{ steps.scan.outputs.skipped }}
   steps:
     {!{- $secrets := slice -}!}
     {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
@@ -141,12 +165,14 @@ drweb-scan:
         "container_name"      "drweb"
         "scan_path"           "drweb"
         "only_images_expr"    ""
+        "changed_count_expr"  ""
     -}!}
 {!{- if $withChangedImages -}!}
     {!{- $args = dict
         "container_name"      "drweb"
         "scan_path"           "drweb"
         "only_images_expr"    "${{ needs.changed_images.outputs.changed_compact }}"
+        "changed_count_expr"  "${{ needs.changed_images.outputs.changed_count }}"
     -}!}
 {!{- end }!}
     {!{ tmpl.Exec "av_scan_step" $args | strings.Indent 4 }!}
@@ -161,9 +187,9 @@ drweb-scan:
 {!{ end -}!}
 # <template: kaspersky_scan_job>
 kaspersky-scan:
-  name: Kaspersky Scan ${{ matrix.branch }}
+  name: Kaspersky Scan
   runs-on: [self-hosted, antivirus]
-  if: ${{ false }}
+  if: github.repository == 'deckhouse/deckhouse'
 {!{- if $withChangedImages }!}
   # PR mode: filter scanned images by the changed_images diff (delta-only scan).
   needs: [get-tags, changed_images]
@@ -179,6 +205,7 @@ kaspersky-scan:
     id-token: write
   outputs:
     scan_id: ${{ steps.scan.outputs.scan_id }}
+    skipped: ${{ steps.scan.outputs.skipped }}
   steps:
     {!{- $secrets := slice -}!}
     {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
@@ -186,15 +213,17 @@ kaspersky-scan:
     {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 
     {!{- $args := dict
-        "container_name"    "kaspersky"
-        "scan_path"         "antivirus"
-        "only_images_expr"  ""
+        "container_name"      "kaspersky"
+        "scan_path"           "antivirus"
+        "only_images_expr"    ""
+        "changed_count_expr"  ""
     -}!}
 {!{- if $withChangedImages -}!}
     {!{- $args = dict
-        "container_name"    "kaspersky"
-        "scan_path"         "antivirus"
-        "only_images_expr"  "${{ needs.changed_images.outputs.changed_compact }}"
+        "container_name"      "kaspersky"
+        "scan_path"           "antivirus"
+        "only_images_expr"    "${{ needs.changed_images.outputs.changed_compact }}"
+        "changed_count_expr"  "${{ needs.changed_images.outputs.changed_count }}"
     -}!}
 {!{- end }!}
     {!{ tmpl.Exec "av_scan_step" $args | strings.Indent 4 }!}
@@ -206,7 +235,7 @@ kaspersky-scan:
 set_security_antivirus_requirement_status:
   name: Set commit status after antivirus scan run
   runs-on: "self-slim"
-  needs: [drweb-scan, kaspersky-scan]
+  needs: [changed_images, drweb-scan, kaspersky-scan]
   if: ${{ always() }}
   permissions:
     contents: read
@@ -220,14 +249,26 @@ set_security_antivirus_requirement_status:
       env:
         PR_NUMBER: ${{ github.event.pull_request.number }}
         GH_REPO: ${{ github.repository }}
+        CHANGED_COUNT: ${{ needs.changed_images.outputs.changed_count }}
         DRWEB: ${{ needs.drweb-scan.result }}
         KASPERSKY: ${{ needs.kaspersky-scan.result }}
       run: |
-        echo "PR Number: $PR_NUMBER | Dr.Web: $DRWEB | Kaspersky: $KASPERSKY"
-        if [ "$DRWEB" == "success" ] && [ "$KASPERSKY" == "success" ]; then
-          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success" --remove-label "security/antivirus/failed"
-        elif [ "$DRWEB" == "skipped" ] && [ "$KASPERSKY" == "skipped" ]; then
+        echo "PR Number: $PR_NUMBER | changed_count=$CHANGED_COUNT | Dr.Web: $DRWEB | Kaspersky: $KASPERSKY"
+
+        if [[ "$GH_REPO" != "deckhouse/deckhouse" && "$DRWEB" == "skipped" && "$KASPERSKY" == "skipped" ]]; then
+          echo "Both antivirus scans were skipped in test repository. Antivirus labels are not set."
           gh pr edit "$PR_NUMBER" --remove-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+          exit 0
+        fi
+
+        if [[ "${CHANGED_COUNT:-0}" == "0" ]]; then
+          echo "No rebuilt images in this PR. Antivirus labels are not set."
+          gh pr edit "$PR_NUMBER" --remove-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+          exit 0
+        fi
+
+        if [[ "$DRWEB" == "success" && "$KASPERSKY" == "success" ]]; then
+          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success" --remove-label "security/antivirus/failed"
         else
           gh pr edit "$PR_NUMBER" --add-label "security/antivirus/failed" --remove-label "security/antivirus/success"
         fi

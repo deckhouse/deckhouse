@@ -47,6 +47,43 @@ type Module struct {
 	Settings   addonutils.Values
 }
 
+// UpdateModulesSettings applies a settings-and-enabled change to an
+// already-tracked package without redeploying or reloading it. It is meant to be
+// wired into the packages-config-controller, which owns package settings and the
+// ModuleConfig enabled intent independently of the package version handled by
+// UpdateModule. enabled is the tri-state user intent (*true/*false set by a
+// ModuleConfig, nil when unset) consumed by the scheduler's config rule.
+//
+// Unlike UpdateModule, this never enqueues Deploy/Load tasks and never cancels
+// the package's context tree: it only stashes the new pending settings and
+// enabled intent and, if either actually changed, triggers Reschedule so the
+// scheduler re-resolves the rule chain (re-evaluating the config rule) and, when
+// the package stays enabled, re-runs the Configure → Startup → Run pipeline (see
+// schedulePackage) with the new values. Any in-flight deploy or load for the
+// package keeps running untouched.
+//
+// Settings and the enabled intent diverge when the package is not tracked yet.
+// The enabled intent is always recorded: it lives in the global module, which
+// has no notion of tracking, so the scheduler's config rule sees the user intent
+// the moment the package is registered. Pending settings, by contrast, are
+// dropped — there is no per-package store to stash them in yet; the eventual
+// UpdateModule registers the package and supplies its settings. Either way, an
+// untracked package has no node to reschedule, so no Reschedule happens here.
+func (r *Runtime) UpdateModulesSettings(name string, settings addonutils.Values, enabled *bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Settings live in the per-package store; the ModuleConfig enabled intent
+	// lives in the global module (thread-safe for the scheduler's enabled getter).
+	// Reschedule if either actually changed.
+	settingsChanged := r.packages.UpdateSettings(name, settings)
+	enabledChanged := r.global.SetConfigEnabled(name, enabled)
+
+	if settingsChanged || enabledChanged {
+		r.scheduler.Reschedule(name)
+	}
+}
+
 // UpdateModule handles module creation and version changes from the module controller.
 //
 // Flow mirrors UpdateApp: version changes enqueue the full pipeline

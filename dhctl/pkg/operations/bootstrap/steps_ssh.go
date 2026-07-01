@@ -23,9 +23,8 @@ import (
 	"time"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
-
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {

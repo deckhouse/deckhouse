@@ -406,6 +406,7 @@ func (c *migratedModulesCheck) GetName() string {
 
 func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotFoundGroup)
+	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotDownloadedGroup)
 	requirements := dr.GetRequirements()
 	migratedModules, exists := requirements[MigratedModulesRequirementFieldName]
 	if !exists || migratedModules == "" {
@@ -433,45 +434,63 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		return fmt.Errorf("failed to list Modules: %w", err)
 	}
 
-	moduleSources := &v1alpha1.ModuleSourceList{}
-	if err := c.k8sclient.List(ctx, moduleSources); err != nil {
+	releaseList := &v1alpha1.ModuleReleaseList{}
+	if err := c.k8sclient.List(ctx, releaseList); err != nil {
+		return fmt.Errorf("failed to list ModuleReleases: %w", err)
+	}
+
+	sourceList := &v1alpha1.ModuleSourceList{}
+	if err := c.k8sclient.List(ctx, sourceList); err != nil {
 		return fmt.Errorf("failed to list ModuleSources: %w", err)
 	}
 
 	for _, moduleName := range modules {
-		foundMS := false
-		ModuleEnabled := false
-		// Check if module exists in ModuleList and is disabled
+		moduleEnabled := false
+		// Check if module exists in ModuleList and is enabled
 		for _, module := range moduleList.Items {
 			if module.Name == moduleName {
 				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					c.logger.Debug("migrated module is enabled", slog.String("module", moduleName))
-					ModuleEnabled = true
+					moduleEnabled = true
 				} else {
 					c.logger.Debug("migrated module is disabled", slog.String("module", moduleName))
 				}
 				break
 			}
 		}
-		if !ModuleEnabled {
+		if !moduleEnabled {
 			continue
 		}
 
-		// If module is not in ModuleConfig or is enabled, check ModuleSource
-		for _, source := range moduleSources.Items {
-			if c.isModuleAvailableInSource(moduleName, &source) {
-				foundMS = true
-				c.logger.Debug("migrated module found in source", slog.String("module", moduleName), slog.String("sourceName", source.Name))
-				break
-			}
+		// An enabled migrated module must already be pre-staged on the filesystem
+		// before the upgrade drops its embedded copy. A Deployed ModuleRelease means
+		// the module is downloaded and present on disk, so the upgrade will not race
+		// a registry download that could leave the module unavailable.
+		if c.hasDeployedRelease(moduleName, releaseList) {
+			c.logger.Debug("migrated module is pre-downloaded", slog.String("module", moduleName))
+			continue
 		}
 
-		if !foundMS {
-			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
+		// No Deployed ModuleRelease - the upgrade is blocked either way, but the two
+		// causes need different operator actions, so distinguish them with separate
+		// metrics/alerts:
+		if !c.isAvailableInAnySource(moduleName, sourceList) {
+			// Terminal: no ModuleSource offers the module at all. Waiting will not
+			// help - the operator must publish it in a ModuleSource (or fix the
+			// module's configured source) before upgrading.
 			c.setMigratedModuleNotFoundAlert(moduleName)
+			c.logger.Warn("migrated module is not available in any ModuleSource registry", slog.String("module", moduleName))
 
-			return fmt.Errorf(`migrated module '%s' not found in any ModuleSource registry`, moduleName)
+			return fmt.Errorf(`migrated module '%s' not found in any ModuleSource registry: publish it in a ModuleSource (or fix the module's source) before upgrading`, moduleName)
 		}
+
+		// Transient: a ModuleSource offers the module, but it has not been downloaded
+		// yet. Waiting for the source controller to pre-stage it resolves this, so this
+		// is not the terminal "not found" case and gets its own metric/alert.
+		c.setMigratedModuleNotDownloadedAlert(moduleName)
+		c.logger.Warn("migrated module has no Deployed ModuleRelease, it is not pre-downloaded yet", slog.String("module", moduleName))
+
+		return fmt.Errorf(`migrated module '%s' is not pre-downloaded yet: no Deployed ModuleRelease found, wait for the module to be downloaded from a ModuleSource before upgrading`, moduleName)
 	}
 
 	c.logger.Debug("all migrated modules validation passed")
@@ -479,24 +498,62 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	return nil
 }
 
-// isModuleAvailableInSource checks if a module is available in a specific ModuleSource
+// hasDeployedRelease reports whether the module has a Deployed ModuleRelease,
+// i.e. the module is downloaded and present on the filesystem.
+func (c *migratedModulesCheck) hasDeployedRelease(moduleName string, releaseList *v1alpha1.ModuleReleaseList) bool {
+	for _, release := range releaseList.Items {
+		if release.GetModuleName() == moduleName && release.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
+			return true
+		}
+	}
+	return false
+}
+
+// isAvailableInAnySource reports whether at least one ModuleSource advertises the
+// module without a pull error. It distinguishes a module that simply has not been
+// downloaded yet (available, transient) from one that no source offers at all
+// (terminal).
+func (c *migratedModulesCheck) isAvailableInAnySource(moduleName string, sourceList *v1alpha1.ModuleSourceList) bool {
+	for i := range sourceList.Items {
+		if c.isModuleAvailableInSource(moduleName, &sourceList.Items[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// isModuleAvailableInSource checks if a module is available in a specific ModuleSource.
 func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, source *v1alpha1.ModuleSource) bool {
-	// Check if module is in the available modules list
 	for _, availableModule := range source.Status.AvailableModules {
 		if availableModule.Name == moduleName {
-			// If there's a pull error, the module is not actually available
+			// a pull error means the module is not actually available
 			return availableModule.Error == ""
 		}
 	}
 	return false
 }
 
-// setMigratedModuleNotFoundAlert generates a Prometheus alert for missing migrated module
+// setMigratedModuleNotFoundAlert generates a Prometheus alert for a migrated module
+// that no ModuleSource offers at all (terminal case).
 func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string) {
 	// Set the metric value to 1 to trigger alert
 	c.metricStorage.Grouped().GaugeSet(
 		metrics.MigratedModuleNotFoundGroup,
 		metrics.MigratedModuleNotFoundMetricName,
+		1,
+		map[string]string{
+			metrics.LabelModule: moduleName,
+		})
+}
+
+// setMigratedModuleNotDownloadedAlert generates a Prometheus alert for a migrated
+// module that is available in a ModuleSource but has not been pre-downloaded yet
+// (transient case).
+func (c *migratedModulesCheck) setMigratedModuleNotDownloadedAlert(moduleName string) {
+	// Set the metric value to 1 to trigger alert
+	c.metricStorage.Grouped().GaugeSet(
+		metrics.MigratedModuleNotDownloadedGroup,
+		metrics.MigratedModuleNotDownloadedMetricName,
 		1,
 		map[string]string{
 			metrics.LabelModule: moduleName,

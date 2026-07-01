@@ -1,0 +1,39 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-1
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+    - name: ingressnginx
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: ingressnginx
+properties:
+  source: Embedded
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingressnginx
+spec:
+  enabled: true
+  source: test-source-2

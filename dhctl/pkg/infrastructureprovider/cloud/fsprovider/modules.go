@@ -24,9 +24,10 @@ import (
 	"strings"
 	"sync"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 const (
