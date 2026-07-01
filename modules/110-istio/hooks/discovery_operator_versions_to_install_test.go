@@ -26,7 +26,7 @@ import (
 var _ = Describe("Istio hooks :: discovery_operator_versions_to_install ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
-	f.RegisterCRD("sailoperator.io", "v1", "Istio", true)
+	f.RegisterCRD("sailoperator.io", "v1", "Istio", false)
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -134,17 +134,15 @@ apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: v1x8
-  namespace: d8-istio
 spec:
-  revision: v1x8
+  namespace: d8-istio
 ---
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: v1x2
-  namespace: d8-istio
 spec:
-  revision: v1x2
+  namespace: d8-istio
 `))
 
 			f.RunHook()
@@ -265,6 +263,39 @@ spec:
 		It("Should not add operator-free version from CRD", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(BeEmpty())
+		})
+	})
+
+	Context("Retiring Sail Istio CR keeps operator version", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.25":
+        revision: "v1x25"
+        supportsOperator: true
+    "1.27":
+        revision: "v1x27"
+        supportsOperator: false
+  versionsToInstall: ["1.27"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: v1x25
+spec:
+  namespace: d8-istio
+  version: v1.25.2
+`))
+			f.RunHook()
+		})
+
+		It("Should keep operator for retiring revision from cluster Istio CR", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
 		})
 	})
 
