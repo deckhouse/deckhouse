@@ -38,11 +38,14 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
+  {{- if eq $.SVACE_ENABLED "false" }}
   beforeInstall:
     - pm install git
+  {{- end }}
   install:
     - cd /src
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export PATH="$PATH:$(go env GOPATH)/bin"
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
     - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@latest
