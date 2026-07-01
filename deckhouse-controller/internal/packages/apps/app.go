@@ -88,6 +88,10 @@ type Application struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
+	// globalValuesGetter returns the platform global values exposed to helm
+	// templates under .Platform.
+	globalValuesGetter GlobalValuesGetter
+
 	logger *log.Logger
 }
 
@@ -115,7 +119,15 @@ type Config struct {
 	// GrantResolver resolves cluster resource grants for x-deckhouse-grantable-resource
 	// settings fields. When nil, grant defaulting/validation is disabled.
 	GrantResolver grants.Resolver
+
+	// GlobalValuesGetter returns the platform global values exposed under
+	// .Platform. When nil, .Platform is empty.
+	GlobalValuesGetter GlobalValuesGetter
 }
+
+// GlobalValuesGetter returns the platform global values. With withPrefix=false the
+// bare global tree is returned; withPrefix=true wraps it under a "global" key.
+type GlobalValuesGetter func(withPrefix bool) addonutils.Values
 
 // NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -147,6 +159,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	if a.grantResolver == nil {
 		a.grantResolver = grants.NoopResolver{}
 	}
+	a.globalValuesGetter = cfg.GlobalValuesGetter
 	a.logger = logger
 
 	parsed, err := semver.NewVersion(a.definition.Version)
@@ -234,7 +247,15 @@ func (a *Application) GetRuntimeValues() string {
 	runtimeValues := a.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	return fmt.Sprintf("Application=%s", marshalled)
+	// .Platform exposes the platform global values as-is, so a chart can read
+	// global.<path> as .Platform.<path>.
+	var global addonutils.Values
+	if a.globalValuesGetter != nil {
+		global = a.globalValuesGetter(false)
+	}
+	marshalledPlatform, _ := json.Marshal(global)
+
+	return fmt.Sprintf("Application=%s,Platform=%s", marshalled, marshalledPlatform)
 }
 
 // GetName returns the full application identifier in format "namespace.name".

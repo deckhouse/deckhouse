@@ -18,14 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
@@ -45,7 +45,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		),
 		&b.Options.Global,
 	)
@@ -53,54 +53,40 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		return err
 	}
 
-	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
-	if interactive {
-		intLogger, ok := b.logger.(*log.InteractiveLogger)
-		if !ok {
-			return fmt.Errorf("logger is not interactive")
-		}
-		labelChan := intLogger.GetPhaseChan()
-		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Bashible bundle", labelChan, phasesChan, intLogger.GetLogChan())
-
-		if err := progressbar.InitProgressBar(pbParam); err != nil {
+	body := func(_ chan phases.Progress) error {
+		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
 			return err
 		}
 
-		defer progressbar.FinishDefaultProgressBar()
-	}
-
-	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
-	if err != nil {
-		return err
-	}
-
-	sshClient, err := sshProvider.Client(ctx)
-	if err == nil {
-		if err = WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
-			return fmt.Errorf("failed to wait for SSH connection on master: %w", err)
+		sshClient, err := sshProvider.Client(ctx)
+		if err == nil {
+			if err = WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
+				return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+			}
 		}
+
+		nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+		if err != nil {
+			return fmt.Errorf("Could not get NodeInterface: %w", err)
+		}
+
+		return RunBashiblePipeline(ctx, &BashiblePipelineParams{
+			Node:           nodeInterface,
+			NodeIP:         b.Options.Bootstrap.InternalNodeIP,
+			DevicePath:     b.Options.Bootstrap.DevicePath,
+			MetaConfig:     metaConfig,
+			CommanderMode:  b.CommanderMode,
+			IsDebug:        b.IsDebug,
+			GlobalOpts:     &b.Options.Global,
+			LoggerProvider: b.loggerProvider,
+		})
 	}
 
-	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
-	if err != nil {
-		return fmt.Errorf("Could not get NodeInterface: %w", err)
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	if interactive {
+		return runProgress(ctx, dhlog.FromContext(ctx), "Bashible bundle", body)
 	}
 
-	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
-		Node:           nodeInterface,
-		NodeIP:         b.Options.Bootstrap.InternalNodeIP,
-		DevicePath:     b.Options.Bootstrap.DevicePath,
-		MetaConfig:     metaConfig,
-		CommanderMode:  b.CommanderMode,
-		IsDebug:        b.IsDebug,
-		GlobalOpts:     &b.Options.Global,
-		LoggerProvider: b.loggerProvider,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return body(nil)
 }

@@ -27,10 +27,10 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -76,7 +76,7 @@ func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 	f := fsm.New("initial", s.destroyServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.DestroyRequest)
 	sendCh := make(chan *pb.DestroyResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.DestroyResponse, any]{
@@ -120,10 +120,10 @@ connectionProcessor:
 					result := s.destroySafe(ctx, &destroyParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}})
 				}()
 
 			case *pb.DestroyRequest_Continue:
@@ -135,13 +135,13 @@ connectionProcessor:
 				}
 				switch message.Continue.Continue {
 				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New("bad continue message"))
 				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
+					sendPhaseSwitch(ctx, phaseSwitcher.next, nil)
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.ErrStopOperationCondition
+					sendPhaseSwitch(ctx, phaseSwitcher.next, phases.ErrStopOperationCondition)
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New(message.Continue.Err))
 				}
 
 			case *pb.DestroyRequest_Cancel:
@@ -179,7 +179,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	loggerFor := initDhctlLogger(ctx, p)
+	ctx = initDhctlLoggerCtx(ctx, p)
 
 	opts := newRequestOptions(
 		s.params.CacheDir,
@@ -188,16 +188,16 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
 
-	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+				infrastructureprovider.NewPreparatorProviderParams(),
 			),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
@@ -213,7 +213,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		return &pb.DestroyResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
 
 		var initialState phases.DhctlState
@@ -243,9 +243,9 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var sshProvider libcon.SSHProvider
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
@@ -282,12 +282,12 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TmpDir:         s.params.TmpDir,
-		LoggerProvider: log.SimpleLoggerProvider(loggerFor),
-		IsDebug:        s.params.IsDebug,
-		SSHProvider:    sshProvider,
-		KubeProvider:   kubeProvider,
-		Options:        opts,
+		TmpDir:       s.params.TmpDir,
+		Logger:       dhlog.FromContext(ctx),
+		IsDebug:      s.params.IsDebug,
+		SSHProvider:  sshProvider,
+		KubeProvider: kubeProvider,
+		Options:      opts,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

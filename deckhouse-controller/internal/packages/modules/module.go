@@ -145,8 +145,10 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 		return nil, fmt.Errorf("build values storage: %v", err)
 	}
 
-	// TODO(ipaqsa): get rid of it after migration to module v2
-	m.values.InjectRegistryValue(cfg.Repository)
+	if cfg.Repository.Repository != "" {
+		// TODO(ipaqsa): get rid of it after migration to module v2
+		m.values.InjectRegistryValue(cfg.Repository)
+	}
 
 	return m, nil
 }
@@ -247,7 +249,7 @@ func (m *Module) GetHooksQueues() []string {
 // GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
 // If include is provided, only hooks matching those names are included.
 func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]interface{})
+	d := make(map[string]any)
 	for _, h := range m.hooks.GetHooks() {
 		if len(include) == 0 || slices.Contains(include, h.GetName()) {
 			d[h.GetName()] = h.GetHookController().SnapshotsDump()
@@ -463,7 +465,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
 	hookConfigValues := m.values.GetSettings()
-	hookValues := m.values.GetValues()
+	hookValues := m.GetValues()
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
@@ -486,7 +488,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = m.values.ApplyValuesPatch(*valuesPatch); err != nil {
+		if err = m.values.ApplyValuesPatchWithLegacyRoot(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}

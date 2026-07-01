@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/name212/govalue"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
@@ -34,23 +33,12 @@ type MetaConfigPreparator struct {
 	// validateWithNATLayout
 	// todo need migration for validate everywhere not only bootstrap
 	validateWithNATLayout bool
-
-	logger log.Logger
 }
 
 func NewMetaConfigPreparator(validatePrefix bool) *MetaConfigPreparator {
 	return &MetaConfigPreparator{
 		validatePrefix: validatePrefix,
-		logger:         log.NewSilentLogger(),
 	}
-}
-
-func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparator {
-	if !govalue.IsNil(logger) {
-		p.logger = logger
-	}
-
-	return p
 }
 
 func (p *MetaConfigPreparator) EnableValidateWithNATLayout() *MetaConfigPreparator {
@@ -58,7 +46,7 @@ func (p *MetaConfigPreparator) EnableValidateWithNATLayout() *MetaConfigPreparat
 	return p
 }
 
-func (p *MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
+func (p *MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.MetaConfig) error {
 	if p.validatePrefix {
 		prefix := metaConfig.ClusterPrefix
 		if !prefixRegex.MatchString(prefix) {
@@ -70,11 +58,11 @@ func (p *MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.Me
 		return err
 	}
 
-	if err := p.validateNodeGroups(metaConfig); err != nil {
+	if err := p.validateNodeGroups(ctx, metaConfig); err != nil {
 		return err
 	}
 
-	if err := p.validateWithNATInstanceLayout(metaConfig); err != nil {
+	if err := p.validateWithNATInstanceLayout(ctx, metaConfig); err != nil {
 		return err
 	}
 
@@ -100,11 +88,11 @@ func (p *MetaConfigPreparator) validateMasterNodeGroup(metaConfig *config.MetaCo
 	return nil
 }
 
-func (p *MetaConfigPreparator) validateNodeGroups(metaConfig *config.MetaConfig) error {
+func (p *MetaConfigPreparator) validateNodeGroups(ctx context.Context, metaConfig *config.MetaConfig) error {
 	yandexNodeGroups, err := dhctljson.UnmarshalToFromMessageMap[[]nodeGroupSpec](metaConfig.ProviderClusterConfig, "nodeGroups")
 	if err != nil {
 		if errors.Is(err, dhctljson.ErrNotFound) {
-			p.logger.LogDebugLn("nodeGroups not found in provider cluster configuration. Skipping validation.")
+			dhlog.FromContext(ctx).DebugContext(ctx, "nodeGroups not found in provider cluster configuration. Skipping validation.")
 			return nil
 		}
 
@@ -122,15 +110,15 @@ func (p *MetaConfigPreparator) validateNodeGroups(metaConfig *config.MetaConfig)
 	return nil
 }
 
-func (p *MetaConfigPreparator) validateWithNATInstanceLayout(metaConfig *config.MetaConfig) error {
+func (p *MetaConfigPreparator) validateWithNATInstanceLayout(ctx context.Context, metaConfig *config.MetaConfig) error {
 	// layout was prepared with strcase.ToKebab before calling preparator
 	if metaConfig.Layout != "with-nat-instance" {
-		p.logger.LogDebugF("Skipping WithNATInstance layout validation. Got layout %v\n", metaConfig.Layout)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skipping WithNATInstance layout validation. Got layout %v", metaConfig.Layout))
 		return nil
 	}
 
 	if !p.validateWithNATLayout {
-		p.logger.LogDebugLn("Skipping WithNATInstance layout validation. Validation disabled")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping WithNATInstance layout validation. Validation disabled")
 		return nil
 	}
 

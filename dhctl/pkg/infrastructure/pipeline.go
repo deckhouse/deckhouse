@@ -26,10 +26,11 @@ import (
 	"strconv"
 	"strings"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -145,8 +146,7 @@ func ApplyPipeline(
 		return err
 	}
 
-	logger := r.GetLogger()
-	err := logger.LogProcessCtx(ctx, "infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
 
 	return extractedData, err
 }
@@ -192,12 +192,7 @@ func CheckPipeline(
 		return nil
 	}
 
-	err := log.ProcessCtx(
-		ctx,
-		"infrastructure",
-		fmt.Sprintf("Check state %s for %s", r.GetStep(), name),
-		pipelineFunc,
-	)
+	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
 
 	logDebugPlanIfNeed(ctx, r, name, destroy)
 
@@ -300,7 +295,7 @@ func CheckBaseInfrastructurePipeline(
 
 		return nil
 	}
-	err := log.ProcessCtx(ctx, "infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
 
 	logDebugPlanIfNeed(ctx, r, name, false)
 
@@ -315,19 +310,14 @@ func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error 
 		}
 
 		if r.ResourcesQuantityInState() == 0 {
-			log.InfoLn("Nothing to destroy! Skipping ...")
+			dhlog.FromContext(ctx).InfoContext(ctx, "Nothing to destroy! Skipping ...")
 			return nil
 		}
 
 		return r.Destroy(ctx)
 	}
 
-	return log.ProcessCtx(
-		ctx,
-		"infrastructure",
-		fmt.Sprintf("Destroy %s for %s", r.GetStep(), name),
-		pipelineFunc,
-	)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Destroy %s for %s", r.GetStep(), name), pipelineFunc)
 }
 
 func GetBaseInfraResult(ctx context.Context, r RunnerInterface, globalOptions *options.GlobalOptions) (*PipelineOutputs, error) {
@@ -503,11 +493,11 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	}
 
 	skipDebug := func(f string, args ...any) {
-		log.DebugF("%s\n", skipMessage(f, args...))
+		dhlog.FromContext(ctx).DebugContext(ctx, skipMessage(f, args...))
 	}
 
 	skipInfo := func(f string, args ...any) {
-		log.InfoF("%s\n", skipMessage(f, args...))
+		dhlog.FromContext(ctx).InfoContext(ctx, skipMessage(f, args...))
 	}
 
 	if debugPlanStep == "" {
@@ -545,7 +535,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	resultsErrs := make(map[string]error, len(targets))
 
 	// always return nil
-	_ = log.ProcessCtx(ctx, "infrastructure", "Getting debug plans", func(ctx context.Context) error {
+	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Getting debug plans", func(ctx context.Context) error {
 		for _, target := range targets {
 			res, err := r.DebugPlanTarget(ctx, destroy, debugPlanStep, target)
 			if err != nil {
@@ -563,24 +553,24 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	}
 
 	for target, targetErr := range resultsErrs {
-		log.WarnF("Cannot get plan output for %s: %v\n", targetStr(target), targetErr)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot get plan output for %s: %v", targetStr(target), targetErr))
 	}
 
 	for target, output := range results {
-		fullPretty, forTarget := extractChangesStrings(target, output)
-		log.DebugF("Full debug plan output for %s:\n%s\n", targetStr(target), fullPretty)
-		log.InfoF("Changes in plan for %s:\n%s\n", targetStr(target), forTarget)
+		fullPretty, forTarget := extractChangesStrings(ctx, target, output)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Full debug plan output for %s:\n%s", targetStr(target), fullPretty))
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Changes in plan for %s:\n%s", targetStr(target), forTarget))
 	}
 }
 
-func extractChangesStrings(target, planOutput string) (string, string) {
+func extractChangesStrings(ctx context.Context, target, planOutput string) (string, string) {
 	var mapOut map[string]any
 	err := json.Unmarshal([]byte(planOutput), &mapOut)
 	if err != nil {
 		return planOutput, ""
 	}
 
-	changesForTarget := extractChanges(target, mapOut)
+	changesForTarget := extractChanges(ctx, target, mapOut)
 
 	prettyOutput, err := json.MarshalIndent(mapOut, "", "  ")
 	if err != nil {
@@ -590,7 +580,7 @@ func extractChangesStrings(target, planOutput string) (string, string) {
 	return string(prettyOutput), changesForTarget
 }
 
-func extractChanges(target string, mapOut map[string]any) string {
+func extractChanges(ctx context.Context, target string, mapOut map[string]any) string {
 	changesRaw, ok := mapOut["resource_changes"]
 	if !ok {
 		return "Plan does not contain resource_changes key"
@@ -605,21 +595,21 @@ func extractChanges(target string, mapOut map[string]any) string {
 		change, ok := changeRaw.(map[string]any)
 		if !ok {
 			msg := fmt.Sprintf("Plan resource_changes key index %d for %s is not map[string]any, it is %T", i, target, changesRaw)
-			log.DebugF("%s\n", msg)
+			dhlog.FromContext(ctx).DebugContext(ctx, msg)
 			continue
 		}
 
 		address, ok := change["address"]
 		if !ok {
 			msg := fmt.Sprintf("Plan resource_changes key index %d for %s does not contain address key", i, target)
-			log.DebugF("%s\n", msg)
+			dhlog.FromContext(ctx).DebugContext(ctx, msg)
 			continue
 		}
 
 		addressStr, ok := address.(string)
 		if !ok {
 			msg := fmt.Sprintf("Plan resource_changes key index %d for %s address is not a string, it is %T", i, target, address)
-			log.DebugF("%s\n", msg)
+			dhlog.FromContext(ctx).DebugContext(ctx, msg)
 			continue
 		}
 

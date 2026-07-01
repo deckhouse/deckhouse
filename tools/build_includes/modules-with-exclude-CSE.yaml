@@ -1251,30 +1251,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/templates/early-oom
-  to: /deckhouse/modules/040-node-manager/templates/early-oom
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/machine-controller-manager
   to: /deckhouse/modules/040-node-manager/templates/machine-controller-manager
   excludePaths:

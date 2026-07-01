@@ -120,6 +120,10 @@ github.com/deckhouse/lib-connection v0.11.0 h1:iNoy8uqenzQ+DilWuqc6CJFB87BBE3QVV
 github.com/deckhouse/lib-connection v0.11.0/go.mod h1:OjMW+EU3LZFO2huiBBOzO3XHa5FaSCSungSZeTeYRGw=
 github.com/deckhouse/lib-dhctl v0.18.2 h1:vGBDPmWjTy1OcMJ+eFBoteui+eDewkXV94j139ozJ5A=
 github.com/deckhouse/lib-dhctl v0.18.2/go.mod h1:uG4+4vwNjWS4YzvHQ8rAXz8dR/cPmscLZW/+CTLzrys=
+github.com/deckhouse/lib-dhctl v0.18.3-0.20260630143737-fa241329ead4 h1:SjZo/Yd5F/qeeykm6uPaQ/PyXf30EMphD925OFM9quk=
+github.com/deckhouse/lib-dhctl v0.18.3-0.20260630143737-fa241329ead4/go.mod h1:SJLU8vWHDlxZW1cjOGfWpRRK75Yc/DvQuK2y5z6MCMM=
+github.com/deckhouse/lib-dhctl v0.19.0 h1:CwOkDB5KZ5q9lYCpZGMqVS5tap0WueqvX8LxOA6W3x4=
+github.com/deckhouse/lib-dhctl v0.19.0/go.mod h1:SJLU8vWHDlxZW1cjOGfWpRRK75Yc/DvQuK2y5z6MCMM=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
 github.com/deckhouse/lib-gossh v0.3.0/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.10.4 h1:1C61nXevgQiUnmv5Is+XP9Octu05XWKgjFi6gmL7miM=
@@ -421,6 +425,8 @@ github.com/mattn/go-colorable v0.1.14 h1:9A9LHSqF/7dyVVX6g0U9cwm9pG3kP9gSzcuIPHP
 github.com/mattn/go-colorable v0.1.14/go.mod h1:6LmQG8QLFO4G5z1gPvYEzlUgJ2wF+stgPZH1UqBm1s8=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
+github.com/mattn/go-isatty v0.0.22 h1:j8l17JJ9i6VGPUFUYoTUKPSgKe/83EYU2zBC7YNKMw4=
+github.com/mattn/go-isatty v0.0.22/go.mod h1:ZXfXG4SQHsB/w3ZeOYbR0PrPwLy+n6xiMrJlRFqopa4=
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/mattn/go-runewidth v0.0.20 h1:WcT52H91ZUAwy8+HUkdM3THM6gXqXuLJi9O3rjcQQaQ=
 github.com/mattn/go-runewidth v0.0.20/go.mod h1:XBkDxAl56ILZc9knddidhrOlY5R/pDhgLpndooCuJAs=
@@ -781,6 +787,7 @@ golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.1.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.5.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.8.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.17.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=

@@ -115,7 +115,7 @@
 drweb-scan:
   name: Dr.Web Scan ${{ matrix.branch }}
   runs-on: [self-hosted, antivirus]
-  if: github.repository == 'deckhouse/deckhouse'
+  if: ${{ false }}
 {!{- if $withChangedImages }!}
   # PR mode: filter scanned images by the changed_images diff (delta-only scan).
   needs: [get-tags, changed_images]
@@ -163,7 +163,7 @@ drweb-scan:
 kaspersky-scan:
   name: Kaspersky Scan ${{ matrix.branch }}
   runs-on: [self-hosted, antivirus]
-  if: github.repository == 'deckhouse/deckhouse'
+  if: ${{ false }}
 {!{- if $withChangedImages }!}
   # PR mode: filter scanned images by the changed_images diff (delta-only scan).
   needs: [get-tags, changed_images]

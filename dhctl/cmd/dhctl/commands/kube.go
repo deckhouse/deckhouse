@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,14 +20,16 @@ import (
 	"os"
 	"time"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
+
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -40,6 +42,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
 		doneCh := make(chan struct{})
 		tomb.RegisterOnShutdown("wait for kubernetes-api-connection to stop", func() {
@@ -52,7 +55,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 			WithInitParams(client.AppKubernetesInitParams(&opts.Kube))
 
 		proxyClose := func() {
-			log.InteractiveInfoLn("Press Ctrl+C to close the proxy connection.")
+			l.Info("Press Ctrl+C to close the proxy connection.")
 			ch := make(chan struct{})
 			<-ch
 		}
@@ -91,9 +94,9 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		logger := log.GetDefaultLogger()
+		l := logger.FromContext(ctx)
 
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
@@ -106,13 +109,13 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 
-		return log.ProcessCtx(ctx, "bootstrap", "Wait for Deckhouse to become Ready", func(ctx context.Context) error {
+		return logger.RunProcess(ctx, l, "Wait for Deckhouse to become Ready", func(ctx context.Context) error {
 			kube, err := kubeProvider.Client(ctx)
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %w", err)

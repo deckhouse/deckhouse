@@ -429,6 +429,13 @@ function main() {
       bb-bashible-ready-error "Got empty bashible-new.sh"
       exit 1
     fi
+    printf '%s\n' "$bashible_bundle" | jq -r '.data."cleanup_static_node.sh"' > $BOOTSTRAP_DIR/cleanup_static_node.sh
+    if [ ! -s $BOOTSTRAP_DIR/cleanup_static_node.sh ]; then
+      >&2 echo "ERROR: cleanup_static_node.sh is empty"
+      bb-bashible-ready-error "Got empty cleanup_static_node.sh"
+      exit 1
+    fi
+    chmod 700 "$BOOTSTRAP_DIR/cleanup_static_node.sh"
     read -r first_line < $BOOTSTRAP_DIR/bashible-new.sh
     if [[ "$first_line" != '#!/usr/bin/env bash' ]] ; then
       >&2 echo "ERROR: bashible-new.sh is not a bash script (path: $BOOTSTRAP_DIR/bashible-new.sh)"
@@ -468,7 +475,7 @@ function main() {
     local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
     bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
     echo "Configuration is in sync, nothing to do."
-    
+
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"

@@ -17,8 +17,6 @@ package infrastructure
 import (
 	"context"
 	"sync"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func NewSingleShotRunner(runner *Runner) *SingleShotRunner {
@@ -82,8 +80,4 @@ func (r *SingleShotRunner) Stop() {
 	r.stop.Do(func() {
 		r.Runner.Stop()
 	})
-}
-
-func (r *SingleShotRunner) GetLogger() log.Logger {
-	return r.Runner.logger
 }

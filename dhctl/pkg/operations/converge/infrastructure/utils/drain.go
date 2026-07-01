@@ -18,6 +18,7 @@ import (
 	"context"
 	goerrors "errors"
 	"fmt"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,10 +27,10 @@ import (
 	"k8s.io/klog/v2"
 
 	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -53,7 +54,7 @@ func GetDrainConfirmation(commanderMode bool) func(string) bool {
 func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, confirm func(string) bool, opts DrainOptions) error {
 	// todo it is deeper for pass from command root, use app package directly
 	if app.SkipDrainingNodes() {
-		log.InfoF("Skipping draining node %s because draining is disabled by env\n", nodeName)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Skipping draining node %s because draining is disabled by env", nodeName))
 		return nil
 	}
 
@@ -64,7 +65,7 @@ func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeNa
 	if err != nil {
 		if goerrors.Is(err, kubedrain.ErrDrainTimeout) {
 			if confirm("Cannot drain the node because the process timed out. Continue without a full-fledged drain?") {
-				log.WarnLn("Continuing without a full-fledged drain")
+				dhlog.FromContext(ctx).WarnContext(ctx, "Continuing without a full-fledged drain")
 				return nil
 			}
 
@@ -80,7 +81,7 @@ func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName st
 	node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node '%s' has been deleted. Skip", nodeName))
 			return nil
 		}
 
@@ -102,10 +103,10 @@ func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName st
 				verb = "Evicted"
 			}
 
-			log.DebugF("'%s' pod '%s' from Node", verb, klog.KObj(pod))
+			dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("'%s' pod '%s' from Node", verb, klog.KObj(pod)), "\n"))
 		},
-		Out:    writer{log.DebugLn},
-		ErrOut: writer{log.DebugLn},
+		Out:    writer{func(elems ...interface{}) { dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprint(elems...)) }},
+		ErrOut: writer{func(elems ...interface{}) { dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprint(elems...)) }},
 	}
 
 	if isNodeUnreachable(node) {

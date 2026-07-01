@@ -51,7 +51,8 @@ var _ runtime.Object = (*ModuleUpdatePolicy)(nil)
 // +genclient
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=mup
+// +kubebuilder:storageversion
 
 // ModuleUpdatePolicy source
 type ModuleUpdatePolicy struct {

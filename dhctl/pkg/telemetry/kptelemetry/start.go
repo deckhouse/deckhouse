@@ -15,6 +15,7 @@
 package kptelemetry
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -25,8 +26,9 @@ import (
 	ottrace "go.opentelemetry.io/otel/trace"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -78,7 +80,8 @@ func EndCommand(err error, errorCode int) {
 
 		commandSpan.End()
 
-		log.DebugF("TraceID: %s\n", commandSpan.SpanContext().TraceID().String())
+		ctx := context.Background()
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("TraceID: %s", commandSpan.SpanContext().TraceID().String()))
 	}
 	commandMu.Unlock()
 }

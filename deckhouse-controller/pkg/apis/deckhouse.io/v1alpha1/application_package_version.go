@@ -79,9 +79,10 @@ type ApplicationPackageVersion struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Defines the application package version parameters.
 	Spec ApplicationPackageVersionSpec `json:"spec,omitempty"`
 
-	// Status of an ApplicationPackageVersion.
+	// Application package version status.
 	Status ApplicationPackageVersionStatus `json:"status,omitempty"`
 }
 
@@ -91,7 +92,7 @@ type ApplicationPackageVersionSpec struct {
 	// +kubebuilder:validation:Immutable
 	PackageName string `json:"packageName,omitempty"`
 
-	// The name of the repository containing the package.
+	// Name of the package repository containing the package.
 	// +optional
 	// +kubebuilder:validation:Immutable
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
@@ -111,7 +112,7 @@ type ApplicationPackageVersionStatus struct {
 	// +optional
 	PackageSchemas *ApplicationPackageVersionStatusSchemas `json:"packageSchemas,omitempty"`
 
-	// Conditions represent the latest available observations of the package version's state.
+	// Conditions reflecting the latest observations of the package version state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -270,7 +271,7 @@ type ApplicationPackageVersionList struct {
 // PackageRequirements describes the platform and module dependencies of a package,
 // surfaced as part of the package version status.
 type PackageRequirements struct {
-	// Required Deckhouse version.
+	// Required Deckhouse Kubernetes Platform version.
 	// +optional
 	Deckhouse *VersionConstraint `json:"deckhouse,omitempty"`
 
@@ -278,8 +279,7 @@ type PackageRequirements struct {
 	// +optional
 	Kubernetes *VersionConstraint `json:"kubernetes,omitempty"`
 
-	// Required modules, partitioned into mandatory, conditional, and anyOf
-	// dependency buckets.
+	// Required modules, partitioned into mandatory, conditional, and anyOf dependencies.
 	// +optional
 	Modules *PackageModulesRequirements `json:"modules,omitempty"`
 }
@@ -319,12 +319,8 @@ type PackageModulesRequirements struct {
 	NoneOf []PackageModuleGroup `json:"noneOf,omitempty"`
 }
 
-// PackageModuleDependency is a single named module dependency with a semver
-// constraint. The constraint is required for entries in
-// PackageModulesRequirements.Conditional ("if installed, no version requirement"
-// is a no-op and rejected at parse time); for entries in
-// PackageModulesRequirements.Mandatory the constraint is optional and an empty
-// value means "any version".
+// PackageModuleDependency is a single named module dependency with an optional
+// semver constraint. An empty constraint means "any version".
 type PackageModuleDependency struct {
 	// Module name.
 	Name string `json:"name"`
@@ -334,11 +330,10 @@ type PackageModuleDependency struct {
 	Constraint string `json:"constraint,omitempty"`
 }
 
-// PackageModuleGroup is a named group of module dependencies. Group semantics
-// depend on the containing bucket: members of an anyOf group are alternatives
-// (at least one must be installed), members of a noneOf group are forbidden
-// (none may be installed). The Name is required and surfaces in scheduler
-// diagnostics; the Description is optional human-facing documentation.
+// PackageModuleGroup is a group of alternative module dependencies. At least one
+// member must be installed (and satisfy its constraint, if any) for the package
+// to start. The Name is required and surfaces in scheduler diagnostics; the
+// Description is optional human-facing documentation.
 type PackageModuleGroup struct {
 	// Stable identifier used by the scheduler in diagnostics.
 	Name string `json:"name"`
@@ -347,8 +342,7 @@ type PackageModuleGroup struct {
 	// +optional
 	Description string `json:"description,omitempty"`
 
-	// Module dependencies in this group. The bucket containing the group
-	// (anyOf / noneOf) defines whether members are alternatives or forbidden.
+	// Alternative module dependencies in this group.
 	Modules []PackageModuleDependency `json:"modules"`
 }
 
@@ -365,13 +359,21 @@ type PackageDescription struct {
 type PackageLicensing struct {
 	// Licensing information for different package editions.
 	// +optional
-	Editions map[string]PackageEdition `json:"editions,omitempty"`
+	Editions map[string]PackageEditionLicense `json:"editions,omitempty"`
 }
 
-type PackageEdition struct {
+// PackageEditionLicense is a single edition's licensing, shared by applications
+// and modules: whether the edition is available and which bundles enable the
+// package by default. Bundle membership is meaningful for modules; applications
+// have no bundles and typically leave EnabledInBundles empty.
+type PackageEditionLicense struct {
 	// Whether this edition is available for use.
 	// +optional
 	Available bool `json:"available,omitempty"`
+
+	// Bundles that enable the module by default in this edition.
+	// +optional
+	EnabledInBundles []string `json:"enabledInBundles,omitempty"`
 }
 
 type PackageChangelog struct {

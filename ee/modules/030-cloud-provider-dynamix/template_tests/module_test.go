@@ -59,7 +59,6 @@ const globalValues = `
 
 const moduleValuesA = `
 internal:
-  cniSecretData: "REVDT0RJUlVZIE9CUkFUTk8gQllTVFJP"
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: DynamixClusterConfiguration

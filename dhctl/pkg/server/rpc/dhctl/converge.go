@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -78,7 +79,7 @@ func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	f := fsm.New("initial", s.convergeServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.ConvergeRequest)
 	sendCh := make(chan *pb.ConvergeResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.ConvergeResponse, any]{
@@ -122,10 +123,10 @@ connectionProcessor:
 					result := s.convergeSafe(ctx, &convergeParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}})
 				}()
 
 			case *pb.ConvergeRequest_Continue:
@@ -137,13 +138,13 @@ connectionProcessor:
 				}
 				switch message.Continue.Continue {
 				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New("bad continue message"))
 				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
+					sendPhaseSwitch(ctx, phaseSwitcher.next, nil)
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.ErrStopOperationCondition
+					sendPhaseSwitch(ctx, phaseSwitcher.next, phases.ErrStopOperationCondition)
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New(message.Continue.Err))
 				}
 
 			case *pb.ConvergeRequest_Cancel:
@@ -181,7 +182,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	loggerFor := initDhctlLogger(ctx, p)
+	ctx = initDhctlLoggerCtx(ctx, p)
 
 	opts := newRequestOptions(
 		s.params.CacheDir,
@@ -190,16 +191,16 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
 
-	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
+				infrastructureprovider.NewPreparatorProviderParams(),
 			),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
@@ -215,7 +216,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if p.request.State != "" {
@@ -244,11 +245,10 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		TmpDir:           tmpDir,
 		GlobalOptions:    s.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
 	})
 
-	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter).
 		WithUseTfCache(opts.Cache.UseTfCache).
 		WithDebug(s.params.IsDebug)
 
@@ -273,7 +273,6 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		Embedded:              true,
 		IsDebug:               s.params.IsDebug,
 		TmpDir:                tmpDir,
-		Logger:                loggerFor,
 		InfrastructureContext: infrastructureContext,
 		Options:               opts,
 	}
@@ -302,16 +301,15 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		OnCheckResult:              onCheckResult,
 		ProviderGetter:             providerGetter,
 		TmpDir:                     tmpDir,
-		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
 		Options:                    opts,
 	}
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
