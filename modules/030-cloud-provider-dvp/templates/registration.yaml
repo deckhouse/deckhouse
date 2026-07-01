@@ -26,6 +26,9 @@ sshPublicKey: {{ . | b64enc | quote }}
 {{- end }}
 
 {{- $dvpValues := dict }}
+{{- with $providerClusterConfiguration.additionalVMLabels }}
+{{- $_ := set $dvpValues "additionalVMLabels" . }}
+{{- end }}
 dvp: {{ $dvpValues | toJson | b64enc | quote }}
 {{- end }}
 ---

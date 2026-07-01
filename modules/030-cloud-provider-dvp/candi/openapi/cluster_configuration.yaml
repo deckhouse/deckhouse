@@ -113,6 +113,14 @@ apiVersions:
           x-rules: [sshPublicKey]
           description: |
             A public key for accessing nodes.
+        additionalVMLabels:
+          type: object
+          description: |
+            Additional labels that will be added to all virtual machine pods in the created cluster: both master and worker nodes.
+
+            This parameter can be used to allow existing or custom [NetworkPolicy](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration-provider-networkpolicy) resources in the parent cluster to select VM pods by these labels. For example, you can add a label to VM pods and allow access to them only from a bastion pod or another trusted source.
+          additionalProperties:
+            type: string
         masterNodeGroup:
           type: object
           description: |
@@ -581,6 +589,19 @@ apiVersions:
                 - Isolated
                 - None
               default: Isolated
+            ingressPorts:
+              type: array
+              description: |
+                List of virtual machine TCP ports for which ingress traffic will be allowed from any source: external IP addresses and any pods in the parent cluster.
+
+                Can be used to expose services that need to accept inbound TCP traffic from any source.
+
+                To disable this unrestricted ingress access, specify an empty array. In this case, access to VMs can be configured separately using custom [NetworkPolicy](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration-provider-networkpolicy) resources that select VM pods by labels from the [additionalVMLabels](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration-provider-additionalvmlabels) parameter.
+              default: [22]
+              items:
+                type: integer
+                minimum: 1
+                maximum: 65535
           required:
             - kubeconfigDataBase64
             - namespace

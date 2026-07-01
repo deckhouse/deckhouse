@@ -26,6 +26,9 @@ resource "kubernetes_manifest" "isolated_cluster_prefix_network_policy" {
     metadata = {
       name      = each.value.name
       namespace = each.value.namespace
+      labels = {
+        "dvp.deckhouse.io/cluster-uuid" = local.cluster_uuid
+      }
     }
 
     spec = {

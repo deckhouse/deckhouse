@@ -2166,7 +2166,9 @@ internal:
     capiClusterName: "dvp"
     capiMachineTemplateKind: "DeckhouseMachineTemplate"
     capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1"
-    dvp: {}
+    dvp:
+      additionalVMLabels:
+        network-access: bastion
   nodeGroups:
     - cloudInstances:
         classReference:
@@ -2237,11 +2239,11 @@ internal:
 					Expect(dvpTemplate.Field("spec.template.spec.cpu.cpuFraction").String()).To(Equal("100%"))
 					Expect(dvpTemplate.Field("spec.template.spec.memory").String()).To(Equal("8Gi"))
 					Expect(dvpTemplate.Field("spec.template.spec.rootDiskSize").String()).To(Equal("50Gi"))
-					Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
-					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
-
-					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
-				}
+						Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
+						Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
+						Expect(dvpTemplate.Field("spec.template.spec.additionalVMLabels.network-access").String()).To(Equal("bastion"))
+						Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("b50dc3d13b18de8faa93d70839162822e5e2017140db6308cd5019ffd200c3b6"), "Prevent checksum changing")
+					}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 				Expect(registrySecret.Exists()).To(BeTrue())
@@ -2250,7 +2252,7 @@ internal:
 
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-8ced91ee",
-					templateName: "worker-a6381073",
+					templateName: "worker-b6ad24b0",
 				})
 			})
 		})

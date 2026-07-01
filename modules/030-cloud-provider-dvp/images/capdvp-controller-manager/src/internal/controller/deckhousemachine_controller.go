@@ -702,14 +702,19 @@ func (r *DeckhouseMachineReconciler) ensureVM(
 	// LiveMigrationPolicy: apply from spec or use default for masters
 	liveMigrationPolicy := r.resolveLiveMigrationPolicy(dvpMachine, machine)
 
+	vmLabels := map[string]string{
+		"deckhouse.io/managed-by":       "deckhouse",
+		"dvp.deckhouse.io/cluster-uuid": r.ClusterUUID,
+		"dvp.deckhouse.io/hostname":     dvpMachine.Name,
+	}
+	for k, v := range dvpMachine.Spec.AdditionalVMLabels {
+		vmLabels[k] = v
+	}
+
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: dvpMachine.Name,
-			Labels: map[string]string{
-				"deckhouse.io/managed-by":       "deckhouse",
-				"dvp.deckhouse.io/cluster-uuid": r.ClusterUUID,
-				"dvp.deckhouse.io/hostname":     dvpMachine.Name,
-			},
+			Name:   dvpMachine.Name,
+			Labels: vmLabels,
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
 			RunPolicy:                v1alpha2.RunPolicy(runPolicy),
