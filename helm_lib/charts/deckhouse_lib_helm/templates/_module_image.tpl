@@ -4,24 +4,29 @@
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
 
-  {{- /* New approach: use module package values */}} 
+  {{- /* New approach: use module package values */}}
   {{- if and $context.Module $context.Module.Package }}
-    {{- $registryBase := $context.Module.Package.Registry.repository }}
-    {{- if not $registryBase }}
-      {{- fail "Registry base is not set" }}
-    {{- end }}
-
-    {{- $packageName := $context.Module.Package.Name }}
-    {{- if not $packageName }}
-      {{- fail "Package name is not set" }}
-    {{- end }}
-
     {{- $imageDigest := index $context.Module.Package.Digests $containerName }}
     {{- if not $imageDigest }}
       {{- fail (printf "Image %s has no digest" $containerName) }}
     {{- end }}
 
-    {{- printf "%s/%s@%s" $registryBase $packageName $imageDigest }}
+    {{- $registryBase := $context.Module.Package.Registry.repository }}
+    {{- if $registryBase }}
+      {{- /* Module carries its own registry (external module): <repo>/<package>@<digest> */}}
+      {{- $packageName := $context.Module.Package.Name }}
+      {{- if not $packageName }}
+        {{- fail "Package name is not set" }}
+      {{- end }}
+      {{- printf "%s/%s@%s" $registryBase $packageName $imageDigest }}
+    {{- else }}
+      {{- /* Embedded module: no own registry, image lives in the platform registry addressed by digest */}}
+      {{- $registryBase = $context.Values.global.modulesImages.registry.base }}
+      {{- if not $registryBase }}
+        {{- fail "Registry base is not set" }}
+      {{- end }}
+      {{- printf "%s@%s" $registryBase $imageDigest }}
+    {{- end }}
 
   {{- /* Legacy fallback: use global modulesImages values */}}
   {{- else }}
