@@ -275,7 +275,7 @@ func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinit
 	defer client.Stop()
 
 	if cred.User != "root" {
-		cmd := client.Command("sh", "-c", "command -v sudo >/dev/null 2>&1")
+		cmd := client.Command("command -v sudo >/dev/null 2>&1")
 		if err := cmd.Run(ctx); err != nil {
 			return fmt.Errorf("required command \"sudo\" is not installed on host %s for user %q. Install sudo or use root user for bootstrap", address, cred.User)
 		}
