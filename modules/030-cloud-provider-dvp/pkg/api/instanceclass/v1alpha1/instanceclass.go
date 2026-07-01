@@ -18,6 +18,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -131,7 +132,7 @@ type InstanceClassVirtualMachine struct {
 	// +deckhouse:ru:description:value="Позволяет назначить виртуальную машину на указанные узлы DVP."
 	// +deckhouse:ru:description:value="[Аналогично](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) параметру `spec.nodeSelector` в Kubernetes Pods."
 	// +optional
-	NodeSelector InstanceClassVirtualMachineNodeSelector `json:"nodeSelector,omitempty"`
+	NodeSelector corev1.NodeSelector `json:"nodeSelector,omitempty"`
 	// [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) as in the `spec.priorityClassName` parameter for Kubernetes Pods.
 	// +deckhouse:ru:description:value="[Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) параметру `spec.priorityClassName` в Kubernetes Pods."
 	// +optional
@@ -141,7 +142,7 @@ type InstanceClassVirtualMachine struct {
 	// +deckhouse:ru:description:value="Позволяет задать tolerations для виртуальных машин на узле DVP."
 	// +deckhouse:ru:description:value="[Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) параметру `spec.tolerations` в Kubernetes Pods."
 	// +optional
-	Tolerations []InstanceClassVirtualMachineToleration `json:"tolerations,omitempty"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // +deckhouse:ru:description:value="Настройки процессора для виртуальной машины."
@@ -172,125 +173,6 @@ type InstanceClassVirtualMachineMemory struct {
 	// +kubebuilder:validation:Pattern=`^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$`
 	// +deckhouse:XDocExample:value="4Gi"
 	Size string `json:"size"`
-}
-
-// A node selector represents the union of the results of one or more label queries over a set of nodes.
-// That is, it represents the OR of the selectors represented by the node selector terms.
-// +deckhouse:ru:description:value="Селектор узлов представляет объединение результатов одного или нескольких запросов по меткам к набору узлов."
-// +deckhouse:ru:description:value="Иначе говоря, он представляет логическое OR для условий, заданных в `nodeSelectorTerms`."
-type InstanceClassVirtualMachineNodeSelector struct {
-	// Required. A list of node selector terms. The terms are ORed.
-	//
-	// A null or empty node selector term matches no objects. The requirements of them are ANDed.
-	// The TopologySelectorTerm type implements a subset of the NodeSelectorTerm.
-	// +deckhouse:ru:description:value="Список условий выбора узлов. Условия объединяются логическим OR."
-	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Пустое или null-условие выбора узлов не соответствует ни одному объекту. Требования внутри одного условия объединяются логическим AND."
-	// +deckhouse:ru:description:value="Тип `TopologySelectorTerm` реализует подмножество `NodeSelectorTerm`."
-	NodeSelectorTerms []InstanceClassVirtualMachineNodeSelectorTerm `json:"nodeSelectorTerms"`
-}
-
-// A null or empty node selector term matches no objects.
-// The requirements of them are ANDed.
-// The TopologySelectorTerm type implements a subset of the NodeSelectorTerm.
-// +deckhouse:ru:description:value="Пустое или null-условие выбора узлов не соответствует ни одному объекту."
-// +deckhouse:ru:description:value="Требования внутри одного условия объединяются логическим AND."
-// +deckhouse:ru:description:value="Тип `TopologySelectorTerm` реализует подмножество `NodeSelectorTerm`."
-type InstanceClassVirtualMachineNodeSelectorTerm struct {
-	// A list of node selector requirements by node's labels.
-	//
-	// A node selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
-	// +deckhouse:ru:description:value="Список требований выбора узла по меткам узла."
-	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Требование выбора узла — это селектор, который содержит значения, ключ и оператор, связывающий ключ со значениями."
-	// +optional
-	MatchExpressions []InstanceClassVirtualMachineNodeSelectorRequirement `json:"matchExpressions,omitempty"`
-
-	// A list of node selector requirements by node's fields.
-	//
-	// A node selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
-	// +deckhouse:ru:description:value="Список требований выбора узла по полям узла."
-	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Требование выбора узла — это селектор, который содержит значения, ключ и оператор, связывающий ключ со значениями."
-	// +optional
-	MatchFields []InstanceClassVirtualMachineNodeSelectorRequirement `json:"matchFields,omitempty"`
-}
-
-// A node selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
-// +deckhouse:ru:description:value="Требование выбора узла — это селектор, который содержит значения, ключ и оператор, связывающий ключ со значениями."
-type InstanceClassVirtualMachineNodeSelectorRequirement struct {
-	// The label key that the selector applies to.
-	// +deckhouse:ru:description:value="Ключ, к которому применяется селектор."
-	Key string `json:"key"`
-
-	// Represents a key's relationship to a set of values.
-	// Valid operators are In, NotIn, Exists, DoesNotExist, Gt, and Lt.
-	// +deckhouse:ru:description:value="Определяет отношение ключа к набору значений."
-	// +deckhouse:ru:description:value="Допустимые операторы: `In`, `NotIn`, `Exists`, `DoesNotExist`, `Gt` и `Lt`."
-	// +kubebuilder:validation:Enum=In;NotIn;Exists;DoesNotExist;Gt;Lt
-	Operator string `json:"operator"`
-
-	// An array of string values.
-	// If the operator is In or NotIn, the values array must be non-empty.
-	// If the operator is Exists or DoesNotExist, the values array must be empty.
-	// If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer.
-	// This array is replaced during a strategic merge patch.
-	// +deckhouse:ru:description:value="Массив строковых значений."
-	// +deckhouse:ru:description:value="Если оператор — `In` или `NotIn`, массив `values` должен быть непустым."
-	// +deckhouse:ru:description:value="Если оператор — `Exists` или `DoesNotExist`, массив `values` должен быть пустым."
-	// +deckhouse:ru:description:value="Если оператор — `Gt` или `Lt`, массив `values` должен содержать один элемент, который будет интерпретирован как целое число."
-	// +deckhouse:ru:description:value="Этот массив заменяется при применении `strategic merge patch`."
-	// +optional
-	Values []string `json:"values,omitempty"`
-}
-
-// The virtual machine this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator.
-// +deckhouse:ru:description:value="Виртуальная машина, для которой задан этот toleration, допускает любой taint, соответствующий тройке `<key,value,effect>` с учетом заданного оператора сопоставления."
-type InstanceClassVirtualMachineToleration struct {
-	// Key is the taint key that the toleration applies to.
-	// Empty means match all taint keys.
-	// If the key is empty, operator must be Exists; this combination means to match all values and all keys.
-	// +deckhouse:ru:description:value="Ключ taint, к которому применяется toleration."
-	// +deckhouse:ru:description:value="Пустое значение означает соответствие всем ключам taint."
-	// +deckhouse:ru:description:value="Если ключ пустой, оператор должен быть `Exists`; такая комбинация означает соответствие всем значениям и всем ключам."
-	// +optional
-	Key string `json:"key,omitempty"`
-
-	// Operator represents a key's relationship to the value.
-	// Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
-	// Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.
-	// Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
-	// +deckhouse:ru:description:value="Оператор определяет отношение ключа к значению."
-	// +deckhouse:ru:description:value="Допустимые операторы: `Exists`, `Equal`, `Lt` и `Gt`. По умолчанию используется `Equal`."
-	// +deckhouse:ru:description:value="Оператор `Exists` эквивалентен wildcard для значения, поэтому виртуальная машина может допускать все taint определенной категории."
-	// +deckhouse:ru:description:value="Операторы `Lt` и `Gt` выполняют числовые сравнения и требуют включенного feature gate `TaintTolerationComparisonOperators`."
-	// +optional
-	Operator string `json:"operator,omitempty"`
-
-	// Value is the taint value the toleration matches to.
-	// If the operator is Exists, the value should be empty, otherwise just a regular string.
-	// +deckhouse:ru:description:value="Значение taint, с которым сопоставляется toleration."
-	// +deckhouse:ru:description:value="Если оператор — `Exists`, значение должно быть пустым. В остальных случаях указывается обычная строка."
-	// +optional
-	Value string `json:"value,omitempty"`
-
-	// Effect indicates the taint effect to match.
-	// Empty means match all taint effects.
-	// When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
-	// +deckhouse:ru:description:value="Указывает эффект taint, с которым выполняется сопоставление."
-	// +deckhouse:ru:description:value="Пустое значение означает соответствие всем эффектам taint."
-	// +deckhouse:ru:description:value="Если значение указано, допустимые значения: `NoSchedule`, `PreferNoSchedule` и `NoExecute`."
-	// +optional
-	Effect string `json:"effect,omitempty"`
-
-	// TolerationSeconds represents the period of time the toleration, which must be of effect NoExecute,
-	// tolerates the taint. By default, it is not set, which means tolerate the taint forever (do not evict).
-	// Zero and negative values will be treated as 0 (evict immediately) by the system.
-	// +deckhouse:ru:description:value="Период времени, в течение которого toleration допускает taint. Поле применяется только для taint с эффектом `NoExecute`; для остальных эффектов оно игнорируется."
-	// +deckhouse:ru:description:value="По умолчанию значение не задано, что означает постоянное допущение taint без вытеснения."
-	// +deckhouse:ru:description:value="Нулевые и отрицательные значения будут обработаны системой как `0`, то есть приведут к немедленному вытеснению."
-	// +optional
-	TolerationSeconds *int64 `json:"tolerationSeconds,omitempty"`
 }
 
 // +deckhouse:ru:description:value="Параметры образа, который будет использоваться для создания корневого диска виртуальной машины."
