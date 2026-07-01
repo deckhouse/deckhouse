@@ -11,3 +11,10 @@
   license: Apache License 2.0
   id: etcd
   version: 3.6.10
+
+- name: Kine
+  link: https://github.com/k3s-io/kine
+  description: etcd-compatible API backed by SQL databases.
+  license: Apache License 2.0
+  id: kine
+  version: 0.16.3
