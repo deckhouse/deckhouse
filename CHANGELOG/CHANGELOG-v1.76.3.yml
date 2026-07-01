@@ -1,0 +1,4 @@
+kube-dns:
+  fixes:
+    - summary: Added deploy dependencies for webhook configuration
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21060
