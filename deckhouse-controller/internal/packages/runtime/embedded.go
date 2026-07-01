@@ -149,6 +149,10 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 			r.status.UpdateVersion(module.GetName(), module.GetVersion().String())
 			r.packages.Update(module.GetName(), module.GetVersion().String(), make(addonutils.Values))
 
+			if err := r.scheduler.AddNode(module); err != nil {
+				return fmt.Errorf("add node: %w", err)
+			}
+
 			return nil
 		})
 	}
