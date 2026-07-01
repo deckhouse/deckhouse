@@ -255,10 +255,6 @@
     "scaling",
     "ssdlc"
   ],
-  "upmeter": [
-    "observability",
-    "ssdlc"
-  ],
   "user-authn": [
     "security",
     "ssdlc"

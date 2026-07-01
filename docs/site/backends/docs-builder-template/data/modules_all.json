@@ -815,6 +815,8 @@
       "cse-lite",
       "cse-pro"
     ],
+    "external": "true",
+    "path": "/modules/upmeter/",
     "tags": [
       "observability",
       "ssdlc"
