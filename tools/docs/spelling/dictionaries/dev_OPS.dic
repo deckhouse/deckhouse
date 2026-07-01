@@ -1,4 +1,4 @@
-2693
+2704
 1GB
 2GB
 5XX
@@ -100,6 +100,7 @@ autoscalers
 autoscaling
 autounattend
 autoverification
+AvailableClusterResource
 Avi
 aws
 AWS
@@ -250,6 +251,8 @@ ClusterLoggingConfig
 ClusterName
 ClusterObservabilityAlert
 ClusterPodLoggingConfig
+ClusterResourceGrant
+ClusterResourceGrantPolicy
 ClusterRole
 ClusterRoleBinding
 clusterType
@@ -289,6 +292,8 @@ ContainerResourcePolicy
 contraire
 controlPlaneConfigurator
 controlPlaneManager
+ControlPlaneNode
+ControlPlaneOperation
 cooldown
 CoreDNS
 CPM
@@ -598,6 +603,7 @@ GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
 Grafanas
+GrantableClusterResourceDefinition
 GraphQL
 Graylog
 grep
@@ -1703,6 +1709,7 @@ ZvirtInstanceClass
 автоподменой
 авторизовывать
 авторизовываться
+авторизующий
 автоскейлерам
 автоскейлинг
 автосогласования
@@ -2130,6 +2137,7 @@ ZvirtInstanceClass
 мультимастерной
 мультимастерном
 мультимастерный
+мультимастерными
 мультиплатформенной
 мультитенантности
 мультитенантность
@@ -2171,7 +2179,7 @@ ZvirtInstanceClass
 неконфиденциальных
 ненагруженные
 ненагруженных
-️Необходимо
+необходимо
 неограничивающая
 неограничивающего
 неподдерживаемые
@@ -2200,6 +2208,7 @@ ZvirtInstanceClass
 оверпровижининг
 оверселлинг
 оверселлинга
+одномастерными
 одностраничных
 однострочник
 одноузлового
@@ -2269,6 +2278,7 @@ ZvirtInstanceClass
 перезапускается
 перезапускать
 перезапускаться
+перезапускающий
 перезапустились
 перезапустился
 перезапустится
@@ -2303,6 +2313,7 @@ ZvirtInstanceClass
 пересоздает
 пересоздаёт
 пересоздается
+пересоздайте
 пересоздастся
 переупорядочивание
 перехешируются
