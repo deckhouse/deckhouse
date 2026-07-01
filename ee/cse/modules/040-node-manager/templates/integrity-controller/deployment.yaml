@@ -76,9 +76,6 @@ spec:
         args:
         - --health-probe-bind-address=0.0.0.0:8081
         - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
-        - --leader-elect-lease-duration=1m
-        - --leader-elect-renew-deadline=50s
-        - --leader-elect-retry-period=5s
         livenessProbe:
           httpGet:
             path: /healthz
