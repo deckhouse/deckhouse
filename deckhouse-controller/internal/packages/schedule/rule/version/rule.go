@@ -19,7 +19,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
 // Getter retrieves the current version from the system.
@@ -29,51 +29,54 @@ import (
 //   - Module version from registry
 type Getter func() (*semver.Version, error)
 
-// Checker validates version constraints using semantic versioning.
-// Always acts as a blocker - packages cannot be enabled if version requirements aren't met.
-type Checker struct {
+// Rule validates version constraints using semantic versioning. It is a pure
+// gate: it either has no opinion (Undefined) or hard-vetoes (Forbid) — it never
+// turns a package on, so a satisfied version check cannot override an intent rule.
+type Rule struct {
 	versionGetter Getter              // Function to get current version
 	constraints   *semver.Constraints // Required version constraint (e.g., ">=1.21, <2.0")
 	reason        string
 }
 
-// NewChecker creates a new version checker with the given getter and constraints.
+// NewRule creates a new version rule with the given getter and constraints.
 //
 // Example constraints:
 //   - ">=1.21"           - Minimum version 1.21
 //   - ">=1.21, <2.0"     - Range from 1.21 to 2.0
 //   - "~1.21"            - Patch releases of 1.21
 //   - "^1.21"            - Minor releases of 1.x
-func NewChecker(getter Getter, constraints *semver.Constraints, reason string) *Checker {
-	return &Checker{
+func NewRule(getter Getter, constraints *semver.Constraints, reason string) *Rule {
+	return &Rule{
 		versionGetter: getter,
 		constraints:   constraints,
 		reason:        reason,
 	}
 }
 
-// Check retrieves the current version and validates it against constraints.
-// Returns disabled if:
+// Decide retrieves the current version and validates it against constraints.
+// Returns Forbid if:
 //   - Version getter fails (network error, API error, etc.)
 //   - Version doesn't satisfy constraints
-func (c *Checker) Check() checker.Result {
-	version, err := c.versionGetter()
+//
+// Otherwise it returns Undefined (no opinion): the gate is satisfied.
+func (r *Rule) Decide() rule.Decision {
+	version, err := r.versionGetter()
 	if err != nil {
-		return checker.Result{
+		return rule.Decision{
+			Kind:    rule.Forbid,
 			Reason:  "VersionLookupFailed",
 			Message: fmt.Sprintf("get version: %s", err.Error()),
 		}
 	}
 
 	// Validate returns (bool, []error) - we only use the errors
-	if _, errs := c.constraints.Validate(version); len(errs) != 0 {
-		return checker.Result{
-			Reason:  c.reason,
+	if _, errs := r.constraints.Validate(version); len(errs) != 0 {
+		return rule.Decision{
+			Kind:    rule.Forbid,
+			Reason:  r.reason,
 			Message: fmt.Errorf("check version error: %w", errs[0]).Error(),
 		}
 	}
 
-	return checker.Result{
-		Enabled: true,
-	}
+	return rule.Decision{Kind: rule.Undefined}
 }

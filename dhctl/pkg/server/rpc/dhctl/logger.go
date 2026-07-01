@@ -18,7 +18,8 @@ import (
 	"context"
 	"log/slog"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 )
 
@@ -47,7 +48,7 @@ func initLoggerOptions[T any](ctx context.Context, params *initLoggerOptionsPara
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
 
-	logWriter := logger.NewLogWriter(loggerDefault, params.sendCh, params.consumer)
+	logWriter := logger.NewLogWriter(ctx, loggerDefault, params.sendCh, params.consumer)
 
 	debugWriter := logger.NewDebugLogWriter(loggerDefault)
 

@@ -27,10 +27,10 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -76,7 +76,7 @@ func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 	f := fsm.New("initial", s.destroyServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.DestroyRequest)
 	sendCh := make(chan *pb.DestroyResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.DestroyResponse, any]{
@@ -120,10 +120,10 @@ connectionProcessor:
 					result := s.destroySafe(ctx, &destroyParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}})
 				}()
 
 			case *pb.DestroyRequest_Continue:
@@ -135,13 +135,13 @@ connectionProcessor:
 				}
 				switch message.Continue.Continue {
 				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New("bad continue message"))
 				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
+					sendPhaseSwitch(ctx, phaseSwitcher.next, nil)
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.ErrStopOperationCondition
+					sendPhaseSwitch(ctx, phaseSwitcher.next, phases.ErrStopOperationCondition)
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New(message.Continue.Err))
 				}
 
 			case *pb.DestroyRequest_Cancel:

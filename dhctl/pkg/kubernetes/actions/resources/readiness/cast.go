@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"reflect"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type (

@@ -20,7 +20,7 @@ import (
 	"io/fs"
 	"os"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type CheckLinkSource func(string) error

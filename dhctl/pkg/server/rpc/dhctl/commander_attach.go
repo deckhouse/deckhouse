@@ -26,8 +26,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -69,7 +69,7 @@ func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
 	f := fsm.New("initial", s.commanderAttachServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.CommanderAttachRequest)
 	sendCh := make(chan *pb.CommanderAttachResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.CommanderAttachResponse, attach.PhaseData]{
@@ -113,10 +113,10 @@ connectionProcessor:
 					result := s.commanderAttachSafe(ctx, &attachParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}})
 				}()
 
 			case *pb.CommanderAttachRequest_Continue:
@@ -128,13 +128,13 @@ connectionProcessor:
 				}
 				switch message.Continue.Continue {
 				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New("bad continue message"))
 				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
+					sendPhaseSwitch(ctx, phaseSwitcher.next, nil)
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.ErrStopOperationCondition
+					sendPhaseSwitch(ctx, phaseSwitcher.next, phases.ErrStopOperationCondition)
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New(message.Continue.Err))
 				}
 
 			case *pb.CommanderAttachRequest_Cancel:

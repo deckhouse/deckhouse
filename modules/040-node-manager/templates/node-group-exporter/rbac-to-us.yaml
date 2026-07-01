@@ -1,5 +1,5 @@
 {{- if .Values.global.clusterIsBootstrapped }}
-  {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+  {{- if (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

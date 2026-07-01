@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -25,17 +26,21 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	"github.com/go-chi/chi/v5"
+	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
@@ -45,7 +50,6 @@ import (
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
@@ -63,6 +67,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -105,7 +110,8 @@ type Runtime struct {
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
 
-	global *global.Module
+	edition *edition.Edition
+	global  *global.Module
 
 	grantResolver grants.Resolver // Resolves cluster resource grants for x-deckhouse-grantable-resource fields
 
@@ -134,7 +140,7 @@ type moduleManagerI interface {
 
 // New creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
+func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -148,6 +154,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
+	r.edition = edition
 
 	reg := registry.NewService(dc, logger)
 	downloadedDir := d8env.GetDownloadedModulesDir()
@@ -165,9 +172,6 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		r.appDeployer = erofsdeploy.NewDeployer(reg, appsDir, logger)
 		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
 	}
-
-	// Initialize scheduler with enabling/disabling callbacks
-	r.buildScheduler(cli)
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
@@ -201,21 +205,16 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		QueueService:      r.queueService,
 	}, r.logger)
 
-	conf, err := loader.LoadGlobalConf(context.Background(), r.logger)
-	if err != nil {
-		return nil, fmt.Errorf("load global conf: %w", err)
+	if err := r.loadGlobal(context.Background()); err != nil {
+		return nil, fmt.Errorf("load global: %w", err)
 	}
 
-	r.global, err = global.NewModuleByConfig(conf, r.logger)
-	if err != nil {
-		return nil, fmt.Errorf("new global module: %w", err)
-	}
+	// Initialize scheduler with enabling/disabling callbacks
+	r.buildScheduler(cli)
 
 	if err := r.loadEmbedded(context.Background()); err != nil {
 		return nil, fmt.Errorf("load embedded: %w", err)
 	}
-
-	r.status.NewStatus(r.global.GetName())
 
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
@@ -309,6 +308,8 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 			data = app.GetHookSnapshotsDump()
 		case mod != nil:
 			data = mod.GetHookSnapshotsDump()
+		case packageName == r.global.GetName():
+			data = r.global.GetHookSnapshotsDump()
 		default:
 			http.Error(w, "package not found", http.StatusNotFound)
 			return
@@ -573,6 +574,8 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	}
 
 	r.scheduler = schedule.NewScheduler(
+		schedule.WithDynamicGetter(r.global.IsEnabled),
+		schedule.WithBundleChecker(r.edition.IsEnabled),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
@@ -622,6 +625,8 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	r.logger.Debug("schedule global package")
+
 	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, r.global.GetName())
 	if ctx == nil {
 		return
@@ -640,15 +645,18 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 		}
 	}
 
+	settings := r.packages.GetPendingSettings(r.global.GetName())
+	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, r.status, r.logger))
+
 	// Enable initializes and syncs the global hooks; its OnStartup step is a no-op
 	// because global has no OnStartup hooks. globalrun then runs BeforeAll, ensures
 	// every enabled module's CRDs and publishes the capabilities. Both share the
 	// global queue, so Enable completes before globalrun.
 	enableTask := taskenable.NewTask(r.global, r.nelmService, r.queueService, r.status, r.logger)
-	r.queueService.Enqueue(ctx, "global", enableTask)
+	r.queueService.Enqueue(ctx, r.global.GetName(), enableTask)
 
 	runTask := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.queueService, r.status, r.logger)
-	r.queueService.Enqueue(ctx, "global", runTask, onDone)
+	r.queueService.Enqueue(ctx, r.global.GetName(), runTask, onDone)
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
@@ -666,6 +674,8 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 func (r *Runtime) schedulePackage(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("schedule package", slog.String("name", name))
 
 	onDone := queue.WithOnDone(func() {
 		r.scheduler.Complete(name)
@@ -701,6 +711,8 @@ func (r *Runtime) schedulePackage(name string) {
 func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("disable package", slog.String("name", name))
 
 	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
 	if ctx == nil {
@@ -816,4 +828,34 @@ func (r *Runtime) ResumeScheduler() {
 // used by the cycle simulation step to identify the proposed graph vertex.
 func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints) error {
 	return r.scheduler.CheckConstraints(name, constraints)
+}
+
+// settingsValidatorI validates settings for a loaded runtime package.
+type settingsValidatorI interface {
+	ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error)
+}
+
+// ValidatePackageSettings checks settings against the package's OpenAPI schema.
+// Returns valid if the package is not loaded yet (settings validated on load).
+func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidatePackageSettings")
+	defer span.End()
+
+	r.mu.RLock()
+	var validator settingsValidatorI
+	switch {
+	case r.global != nil && r.global.GetName() == name:
+		validator = r.global
+	case r.modules[name] != nil:
+		validator = r.modules[name]
+	case r.apps[name] != nil:
+		validator = r.apps[name]
+	}
+	r.mu.RUnlock()
+
+	if validator == nil {
+		return settingscheck.Result{Valid: true}, nil
+	}
+
+	return validator.ValidateSettings(ctx, settings)
 }
