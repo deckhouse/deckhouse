@@ -180,9 +180,11 @@ func analyzeCNIBootstrap(ctx context.Context, m *MetaConfig, globalOptions *opti
 
 // ApplyCNIBootstrap appends or replaces the user's cni-* ModuleConfig with
 // the recommendation derived from cni-bootstrap.yml. On mismatch the user is
-// prompted to confirm; in non-interactive mode the user's MC is kept. The
-// override is a full replace (not a merge): any custom fields outside the
-// recommendation are discarded, which is what the confirm prompt warns about.
+// prompted to confirm; in non-interactive mode missing recommended settings
+// are merged into the user's MC (user values win on conflict). If the user
+// declines the prompt in interactive mode, the MC is kept unchanged. A full
+// replace discards any custom fields outside the recommendation, which is what
+// the confirm prompt warns about.
 func ApplyCNIBootstrap(ctx context.Context, m *MetaConfig, globalOptions *options.GlobalOptions) error {
 	analysis, err := AnalyzeCNIBootstrap(ctx, m, globalOptions)
 	if err != nil {
@@ -213,8 +215,45 @@ func ApplyCNIBootstrap(ctx context.Context, m *MetaConfig, globalOptions *option
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("cni-bootstrap: replaced user ModuleConfig %q with %q", user.GetName(), recommended.GetName()))
 		return nil
 	}
+
+	if !input.IsTerminal() && user.GetName() == recommended.GetName() {
+		merged, added := mergeMissingCNISettings(user.Spec.Settings, recommended.Spec.Settings)
+		if len(added) > 0 {
+			user.Spec.Settings = merged
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+				"cni-bootstrap: merged missing settings into user ModuleConfig %q (added: %s)",
+				user.GetName(), strings.Join(added, ", "),
+			))
+			return nil
+		}
+	}
+
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("cni-bootstrap: keeping user ModuleConfig %q", user.GetName()))
 	return nil
+}
+
+// mergeMissingCNISettings copies recommended top-level settings into user when
+// the key is absent from user settings. Existing user values are preserved.
+func mergeMissingCNISettings(user, recommended SettingsValues) (SettingsValues, []string) {
+	if len(recommended) == 0 {
+		return user, nil
+	}
+
+	merged := SettingsValues{}
+	if len(user) > 0 {
+		maps.Copy(merged, user)
+	}
+
+	var added []string
+	for key, value := range recommended {
+		if _, ok := merged[key]; ok {
+			continue
+		}
+		merged[key] = value
+		added = append(added, key)
+	}
+
+	return merged, added
 }
 
 func cniBootstrapDecision(user, recommended *ModuleConfig) (CNIBootstrapMismatchReason, string) {
