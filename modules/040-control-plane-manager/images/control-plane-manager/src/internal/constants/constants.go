@@ -43,6 +43,7 @@ const (
 	VirtualControlPlaneNodeController      = "virtual-control-plane-node-controller"
 	VirtualControlPlaneNamespacePrefix     = "vcp-"
 	VirtualControlPlaneConfigSecretName    = "d8-virtual-control-plane-config"
+	VirtualControlPlaneConfigSecretSuffix  = "-config"
 	VirtualControlPlaneNodeOrdinalLabelKey = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
 	DefaultTenantClusterDomain             = "cluster.virtual"
 	DefaultTenantServiceSubnetCIDR         = "10.96.0.0/12"

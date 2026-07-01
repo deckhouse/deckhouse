@@ -106,7 +106,7 @@ func (e *StepExecutor) loadTargetStatefulSet(ctx context.Context) (*appsv1.State
 	secret := &corev1.Secret{}
 	if err := e.client.Get(
 		ctx,
-		client.ObjectKey{Namespace: constants.KubeSystemNamespace, Name: constants.VirtualControlPlaneConfigSecretName},
+		client.ObjectKey{Namespace: e.tenantIdentity.Namespace, Name: e.tenantIdentity.Namespace + constants.VirtualControlPlaneConfigSecretSuffix},
 		secret,
 	); err != nil {
 		return nil, fmt.Errorf("get vcp config secret: %w", err)
@@ -117,8 +117,10 @@ func (e *StepExecutor) loadTargetStatefulSet(ctx context.Context) (*appsv1.State
 		return nil, fmt.Errorf("component %q not found in config secret", e.operation.Spec.Component)
 	}
 
+	rendered := renderComponentManifest(raw, e.operation.Spec.NodeName)
+
 	sts := &appsv1.StatefulSet{}
-	if err := yaml.Unmarshal(raw, sts); err != nil {
+	if err := yaml.Unmarshal(rendered, sts); err != nil {
 		return nil, fmt.Errorf("decode statefulset for %s: %w", e.operation.Spec.Component, err)
 	}
 
