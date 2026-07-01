@@ -277,7 +277,7 @@ This integration lets you use [the Yandex Managed Service for Prometheus](https:
    - `<URL_TO_WRITE_METRICS>` — URL from the Yandex Monitoring/Prometheus/Writing Metrics page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJRSrfo9jU3aopsXrJyfq_UHs********`.
 
-   You may also specify additional parameters; refer to [the documentation](../../modules/prometheus/cr.html#prometheusremotewrite).
+   You may also specify additional parameters; refer to [the documentation](/modules/prometheus/cr.html#prometheusremotewrite).
 
 More details about this feature can be found [in Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
@@ -312,6 +312,6 @@ More details about this feature can be found [in Yandex Cloud documentation](htt
    - `<URL_READING_METRICS_WITH_GRAFANA>` — URL from the Yandex Monitoring/Prometheus/Reading Metrics with Grafana page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   You may also specify additional parameters; refer to [the documentation](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
+   You may also specify additional parameters; refer to [the documentation](/modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 More details about this feature can be found [in Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/querying/grafana).
