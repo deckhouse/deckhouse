@@ -1,0 +1,84 @@
+main_url: 'http://localhost:8080'
+
+screenshots:
+  - group: installer_main_page
+    items:
+      - filename: main_page.png
+        title: 'Главная страница'
+        url: ''
+      - filename: main_page_archive.png
+        title: 'Главная страница (архив)'
+        url: ''
+        steps:
+          - click: 'Архив'
+  - group: new_cluster
+    items:
+      - filename: new_cluster_main_page.png
+        title: 'Страница создания нового кластера'
+        url: '/registries'
+      - filename: new_cluster_select_channel.png
+        title: 'Выбор канала обновления'
+        url: '/registries'
+        steps:
+          - click:
+              testid: channel
+      - filename: new_cluster_select_k8s_version.png
+        title: 'Выбор версии Kubernetes'
+        url: '/registries'
+        steps:
+          - click:
+              testid: version
+      - filename: new_cluster_select_source.png
+        title: 'Выбор источника'
+        url: '/registries'
+        steps:
+          - click: 'Добавить источник'
+      - filename: new_cluster_enter_cse_license.png
+        title: 'Ввод лицензии Certified Security Edition'
+        url: '/registries'
+        steps:
+          - click: 'Добавить источник'
+          - click: 'Certified Security Edition'
+      - filename: new_cluster_enter_flant_license.png
+        title: 'Ввод лицензии Flant Edition'
+        url: '/registries'
+        steps:
+          - click: 'Добавить источник'
+          - click: 'Flant Edition'
+      - filename: new_cluster_enter_enterprise_license.png
+        title: 'Ввод лицензии Enterprise Edition'
+        url: '/registries'
+        steps:
+          - click: 'Добавить источник'
+          - click: 'Enterprise Edition'
+      - filename: new_cluster_enter_standard_license.png
+        title: 'Ввод лицензии Standard Edition'
+        url: '/registries'
+        steps:
+          - click: 'Добавить источник'
+          - click:
+              text: Standard Edition
+              exact: true
+      - filename: new_cluster_enter_standard_plus_license.png
+        title: 'Ввод лицензии Standard+ Edition'
+        url: '/registries'
+        steps:
+          - click: 'Добавить источник'
+          - click: 'Standard Edition+'
+      - filename: new_cluster_enter_basic_license.png
+        title: 'Ввод лицензии Basic Edition'
+        url: '/registries'
+        steps:
+          - click: 'Добавить источник'
+          - click: 'Basic Edition'
+      - filename: new_cluster_enter_personal_license.png
+        title: 'Ввод лицензии своего источника'
+        url: '/registries'
+        steps:
+          - click: 'Добавить источник'
+          - click: 'Свой источник'
+  - group: infrastructure
+    items:
+      - filename: infrastructure_main_page.png
+        title: 'Страница выбора инфраструктуры'
+        url: '/platforms'
