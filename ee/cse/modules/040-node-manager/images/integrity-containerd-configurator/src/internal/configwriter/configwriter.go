@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	DefaultConfigDir = "/etc/containerd/integrity"
-	NsTomlFileName   = "ns.toml"
+	IntegrityNSConfigDir = "/etc/containerd/integrity"
+	IntegrityConfigFile  = "integrity.toml"
 )
 
 // DesiredConfig is the aggregated containerd integrity configuration.
@@ -43,7 +43,7 @@ type Writer struct {
 // NewWriter creates a Writer with the given config directory.
 func NewWriter(configDir string) *Writer {
 	if configDir == "" {
-		configDir = DefaultConfigDir
+		configDir = IntegrityNSConfigDir
 	}
 	return &Writer{ConfigDir: configDir}
 }
@@ -94,14 +94,14 @@ func AggregatePolicies(logger *log.Logger, policies []deckhousev1alpha1.Containe
 	}
 }
 
-type nsTOML struct {
+type integrityTOML struct {
 	Namespaces []string `toml:"namespaces"`
-	CACert     []string `toml:"ca_cert"`
+	CACerts    []string `toml:"ca_certs"`
 }
 
-// RenderNsToml renders the ns.toml content for containerd.
-func RenderNsToml(cfg *DesiredConfig) ([]byte, error) {
-	return toml.Marshal(nsTOML{Namespaces: cfg.Namespaces, CACert: cfg.CACerts})
+// RenderIntegrityToml renders the integrity.toml content for containerd.
+func RenderIntegrityToml(cfg *DesiredConfig) ([]byte, error) {
+	return toml.Marshal(integrityTOML{Namespaces: cfg.Namespaces, CACerts: cfg.CACerts})
 }
 
 // Apply writes or removes configuration files on disk.
@@ -114,20 +114,20 @@ func (w *Writer) Apply(logger *log.Logger, config *DesiredConfig) error {
 		return fmt.Errorf("create config dir %q: %w", w.ConfigDir, err)
 	}
 
-	nsToml, err := RenderNsToml(config)
+	integrityToml, err := RenderIntegrityToml(config)
 	if err != nil {
-		return fmt.Errorf("render ns.toml: %w", err)
+		return fmt.Errorf("render integrity.toml: %w", err)
 	}
-	nsTomlPath := filepath.Join(w.ConfigDir, NsTomlFileName)
-	if existing, err := os.ReadFile(nsTomlPath); err == nil {
-		if bytes.Equal(existing, nsToml) {
+	integrityTomlPath := filepath.Join(w.ConfigDir, IntegrityConfigFile)
+	if existing, err := os.ReadFile(integrityTomlPath); err == nil {
+		if bytes.Equal(existing, integrityToml) {
 			return nil
 		}
 	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("read ns.toml: %w", err)
+		return fmt.Errorf("read integrity.toml: %w", err)
 	}
-	if err := pkiutil.WriteFileAtomically(nsTomlPath, nsToml, 0o644); err != nil {
-		return fmt.Errorf("write ns.toml: %w", err)
+	if err := pkiutil.WriteFileAtomically(integrityTomlPath, integrityToml, 0o644); err != nil {
+		return fmt.Errorf("write integrity.toml: %w", err)
 	}
 
 	logger.Info("Updated containerd integrity config", "namespaces", config.Namespaces, "ca_certs_count", len(config.CACerts))
@@ -136,7 +136,7 @@ func (w *Writer) Apply(logger *log.Logger, config *DesiredConfig) error {
 }
 
 func (w *Writer) removeConfig(logger *log.Logger) error {
-	path := filepath.Join(w.ConfigDir, NsTomlFileName)
+	path := filepath.Join(w.ConfigDir, IntegrityConfigFile)
 	if err := os.Remove(path); err != nil {
 		if os.IsNotExist(err) {
 			return nil
