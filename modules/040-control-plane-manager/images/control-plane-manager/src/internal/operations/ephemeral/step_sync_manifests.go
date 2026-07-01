@@ -86,7 +86,7 @@ func (e *StepExecutor) buildTargetStatefulSet(ctx context.Context) (*appsv1.Stat
 	pkiSecret := &corev1.Secret{}
 	if err := e.client.Get(
 		ctx,
-		client.ObjectKey{Namespace: e.tenantIdentity.Namespace, Name: e.tenantIdentity.Namespace + "-pki"},
+		client.ObjectKey{Namespace: e.tenantIdentity.Namespace, Name: constants.VirtualPKISecretName},
 		pkiSecret,
 	); err != nil {
 		return nil, fmt.Errorf("get pki secret: %w", err)
@@ -106,7 +106,7 @@ func (e *StepExecutor) loadTargetStatefulSet(ctx context.Context) (*appsv1.State
 	secret := &corev1.Secret{}
 	if err := e.client.Get(
 		ctx,
-		client.ObjectKey{Namespace: e.tenantIdentity.Namespace, Name: e.tenantIdentity.Namespace + constants.VirtualControlPlaneConfigSecretSuffix},
+		client.ObjectKey{Namespace: e.tenantIdentity.Namespace, Name: constants.VirtualRenderedConfigSecretName},
 		secret,
 	); err != nil {
 		return nil, fmt.Errorf("get vcp config secret: %w", err)

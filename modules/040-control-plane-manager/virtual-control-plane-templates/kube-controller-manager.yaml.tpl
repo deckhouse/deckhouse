@@ -29,9 +29,9 @@ spec:
         image: ${IMAGE_KUBE_CONTROLLER_MANAGER}
         command:
         - kube-controller-manager
-        - --kubeconfig=/pki/controller-manager.conf
-        - --authentication-kubeconfig=/pki/controller-manager.conf
-        - --authorization-kubeconfig=/pki/controller-manager.conf
+        - --kubeconfig=/kubeconfig/controller-manager.conf
+        - --authentication-kubeconfig=/kubeconfig/controller-manager.conf
+        - --authorization-kubeconfig=/kubeconfig/controller-manager.conf
         - --client-ca-file=/pki/ca.crt
         - --cluster-signing-cert-file=/pki/ca.crt
         - --cluster-signing-key-file=/pki/ca.key
@@ -43,9 +43,13 @@ spec:
         - --controllers=*,bootstrapsigner,tokencleaner
         volumeMounts:
         - {name: pki, mountPath: /pki, readOnly: true}
+        - {name: kubeconfig, mountPath: /kubeconfig, readOnly: true}
         resources:
           requests: {cpu: 100m, memory: 128Mi}
       volumes:
       - name: pki
         secret:
           secretName: d8-pki-virtual
+      - name: kubeconfig
+        secret:
+          secretName: d8-kubeconfig-virtual

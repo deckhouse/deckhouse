@@ -254,7 +254,7 @@ func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1
 }
 
 func buildTargetPKISecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	name := constants.VirtualControlPlaneNamespacePrefix + vcp.Name + "-pki"
+	name := constants.VirtualPKISecretName
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
 	return &corev1.Secret{
@@ -359,7 +359,7 @@ func (r *reconciler) reconcileKubeconfigSecret(
 }
 
 func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	name := constants.VirtualControlPlaneNamespacePrefix + vcp.Name + "-kubeconfig"
+	name := constants.VirtualKubeconfigSecretName
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
 	return &corev1.Secret{
