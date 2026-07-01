@@ -20,17 +20,87 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
+// Installer is a configurable mock. Any *Func field left nil falls back to the
+// default behavior, so a zero-value &Installer{} keeps the historical stub
+// semantics used across the existing tests.
 type Installer struct {
+	InstallFunc           func(ctx context.Context, module, version, tempModulePath string) error
+	StageFunc             func(ctx context.Context, module, version, tempModulePath string) error
+	StageFromRegistryFunc func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	RestoreFunc           func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	IsEmbeddedPresentFunc func(module string) bool
+	UninstallFunc         func(ctx context.Context, module string) error
+	DownloadFunc          func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error)
+	GetImageDigestFunc    func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error)
+	GetInstalledFunc      func() (map[string]struct{}, error)
+	SetClusterUUIDFunc    func(id string)
 }
 
-func (i *Installer) Install(_ context.Context, _, _, _ string) error {
+func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
+	if i.InstallFunc != nil {
+		return i.InstallFunc(ctx, module, version, tempModulePath)
+	}
 	return nil
 }
 
-func (i *Installer) Uninstall(_ context.Context, _ string) error {
+func (i *Installer) Stage(ctx context.Context, module, version, tempModulePath string) error {
+	if i.StageFunc != nil {
+		return i.StageFunc(ctx, module, version, tempModulePath)
+	}
 	return nil
 }
 
-func (i *Installer) Download(_ context.Context, _ *v1alpha1.ModuleSource, _ string, _ string) (string, error) {
+func (i *Installer) StageFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error {
+	if i.StageFromRegistryFunc != nil {
+		return i.StageFromRegistryFunc(ctx, source, module, version)
+	}
+	return nil
+}
+
+func (i *Installer) Restore(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error {
+	if i.RestoreFunc != nil {
+		return i.RestoreFunc(ctx, source, module, version)
+	}
+	return nil
+}
+
+func (i *Installer) IsEmbeddedPresent(module string) bool {
+	if i.IsEmbeddedPresentFunc != nil {
+		return i.IsEmbeddedPresentFunc(module)
+	}
+	return false
+}
+
+func (i *Installer) Uninstall(ctx context.Context, module string) error {
+	if i.UninstallFunc != nil {
+		return i.UninstallFunc(ctx, module)
+	}
+	return nil
+}
+
+func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error) {
+	if i.DownloadFunc != nil {
+		return i.DownloadFunc(ctx, source, module, version)
+	}
 	return "testdata/validation/module", nil
+}
+
+func (i *Installer) GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error) {
+	if i.GetImageDigestFunc != nil {
+		return i.GetImageDigestFunc(ctx, source, module, version)
+	}
+	return "", nil
+}
+
+func (i *Installer) GetInstalled() (map[string]struct{}, error) {
+	if i.GetInstalledFunc != nil {
+		return i.GetInstalledFunc()
+	}
+	return map[string]struct{}{}, nil
+}
+
+func (i *Installer) SetClusterUUID(id string) {
+	if i.SetClusterUUIDFunc != nil {
+		i.SetClusterUUIDFunc(id)
+	}
 }
