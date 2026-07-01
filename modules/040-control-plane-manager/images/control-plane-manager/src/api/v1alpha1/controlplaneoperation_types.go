@@ -111,6 +111,16 @@ func (c OperationComponent) IsStaticPodComponent() bool {
 	return c.PodComponentName() != ""
 }
 
+// HasPKI reports whether the component owns leaf certificates that need renewal.
+func (c OperationComponent) HasPKI() bool {
+	return c == OperationComponentEtcd || c == OperationComponentKubeAPIServer
+}
+
+// HasKubeconfigs reports whether the component uses kubeconfig credentials.
+func (c OperationComponent) HasKubeconfigs() bool {
+	return c != OperationComponentEtcd
+}
+
 func (c OperationComponent) LabelValue() string {
 	return c.PodComponentName()
 }

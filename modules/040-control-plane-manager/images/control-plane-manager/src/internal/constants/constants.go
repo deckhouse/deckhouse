@@ -40,6 +40,7 @@ const (
 const (
 	VirtualControlPlaneManagerName         = "virtual-control-plane-manager"
 	VirtualConfigurationController         = "virtual-control-plane-configuration-controller"
+	VirtualControlPlaneNodeController      = "virtual-control-plane-node-controller"
 	VirtualControlPlaneNamespacePrefix     = "vcp-"
 	VirtualControlPlaneConfigSecretName    = "d8-vcp-config"
 	VirtualControlPlaneNodeOrdinalLabelKey = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"

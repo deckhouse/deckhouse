@@ -12,7 +12,6 @@ spec:
   steps:
     - Backup
     - JoinEtcdCluster
-    - SyncManifests
     - WaitPodReady
     - CertObserve
   desiredConfigChecksum: 215dfa8dd684c54dea814c09d0f2912d640fc870a68bb9542705fafffedd9faf
