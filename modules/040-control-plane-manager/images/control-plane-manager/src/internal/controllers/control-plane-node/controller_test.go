@@ -38,6 +38,8 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	"control-plane-manager/internal/cpn/cpnplanner"
+	"control-plane-manager/internal/cpn/cpnreconcile"
 )
 
 var (
@@ -58,7 +60,7 @@ type ControllerTestSuite struct {
 
 	ctx        context.Context
 	client     client.Client
-	controller *Reconciler
+	controller *cpnreconcile.Reconciler
 }
 
 const testNodeName = "master-1"
@@ -74,15 +76,19 @@ func (suite *ControllerTestSuite) setupController(objs []client.Object) {
 		WithStatusSubresource(&controlplanev1alpha1.ControlPlaneNode{}).
 		Build()
 
-	suite.controller = &Reconciler{
-		client: suite.client,
-		log:    log.NewNop(),
-	}
+	suite.controller = cpnreconcile.New(
+		suite.client,
+		suite.client,
+		scheme,
+		cpnplanner.NormalOperationBuilder{},
+		nil,
+		log.NewNop(),
+	)
 }
 
 func (suite *ControllerTestSuite) reconcile() {
 	_, err := suite.controller.Reconcile(suite.ctx, reconcile.Request{
-		NamespacedName: client.ObjectKey{Name: testNodeName},
+		NamespacedName: client.ObjectKey{Name: testNodeName, Namespace: constants.KubeSystemNamespace},
 	})
 	require.NoError(suite.T(), err)
 }

@@ -18,20 +18,32 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"control-plane-manager/internal"
 	"control-plane-manager/internal/constants"
+	"control-plane-manager/internal/manager"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	manager, err := internal.NewManager(ctx, false) // TODO pprof flag
+	mode, err := parseManagerMode()
+	if err != nil {
+		log.Fatal("Failed to parse manager mode", log.Err(err))
+	}
+
+	builder, err := manager.NewBuilder(mode)
+	if err != nil {
+		log.Fatal("Failed to create manager builder", log.Err(err))
+	}
+
+	manager, err := builder.Build(ctx)
 	if err != nil {
 		log.Fatal("Failed to create a manager", log.Err(err))
 	}
@@ -46,7 +58,29 @@ func main() {
 	for range sigs {
 		log.Info("Shutdown signal received")
 		cancel()
-		log.Info("Bye from %s", constants.CpcControllerName)
+		log.Info("Bye")
 		break
+	}
+}
+
+func parseManagerMode() (constants.ControlPlaneType, error) {
+	modeFlag := flag.String("mode", string(constants.ControlPlaneTypeNormal), "control plane manager mode: normal or virtual")
+	flag.Parse()
+
+	mode := *modeFlag
+	if flag.NArg() > 0 {
+		if flag.NArg() != 1 {
+			return "", fmt.Errorf("expected at most one positional mode argument, got %d", flag.NArg())
+		}
+		mode = flag.Arg(0)
+	}
+
+	switch constants.ControlPlaneType(mode) {
+	case constants.ControlPlaneTypeNormal:
+		return constants.ControlPlaneTypeNormal, nil
+	case constants.ControlPlaneTypeVirtual:
+		return constants.ControlPlaneTypeVirtual, nil
+	default:
+		return "", fmt.Errorf("unsupported mode %q", mode)
 	}
 }

@@ -1,0 +1,146 @@
+{{- if .Values.controlPlaneManager.internal.hasVirtualControlPlane }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-vcp-config
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+type: Opaque
+stringData:
+  # Format marker for the global Virtual Control Plane config bundle.
+  # The first controller uses the whole Secret as checksum input.
+  config-format: control-plane.deckhouse.io/virtual-control-plane/v1alpha1
+  cluster-domain: {{ .Values.global.clusterConfiguration.clusterDomain | quote }}
+  service-subnet-cidr: {{ .Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
+  default-kubernetes-version: {{ .Values.controlPlaneManager.internal.effectiveKubernetesVersion | quote }}
+  components: |
+    - etcd
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: d8-virtual-control-plane-manager
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:virtual-control-plane
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: [""]
+  resources: ["statefulsets"]
+  verbs: ["get", "list", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["virtualcontrolplanes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["virtualcontrolplanes/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplanenodes"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplanenodes/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplaneoperations"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplaneoperations/status"]
+  verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:virtual-control-plane
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: d8-virtual-control-plane-manager
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: d8:virtual-control-plane
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d8-virtual-control-plane-manager
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: d8-virtual-control-plane-manager
+  template:
+    metadata:
+      labels:
+        app: d8-virtual-control-plane-manager
+        component: virtual-control-plane
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: d8-virtual-control-plane-manager
+      automountServiceAccountToken: true
+      priorityClassName: system-cluster-critical
+      containers:
+      - name: virtual-control-plane
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "controlPlaneManager") }}
+        args:
+        - --mode=virtual
+        ports:
+        - containerPort: 4296
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8095
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8095
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          timeoutSeconds: 8
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+            {{- include "control_plane_manager_resources" . | nindent 12 }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Mi
+{{- end }}
