@@ -72,6 +72,7 @@ spec:
                     type: string
                     x-doc-examples:
                     - <base64 encoded credentials>
+                    x-kubernetes-sensitive-data: true
                   login:
                     description: Username for authenticating to the container registry.
                     type: string

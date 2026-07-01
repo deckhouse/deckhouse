@@ -105,6 +105,7 @@ type PackageRepositorySpecRegistry struct {
 	// Container registry access token in Base64 (`~/.docker/config.json` format).
 	// Leave this field empty if anonymous access to the container registry is used.
 	// +optional
+	// +crd-enricher:deckhouse:sensitive-data
 	// +crd-enricher:deckhouse:documentation:examples=<base64 encoded credentials>
 	DockerCFG string `json:"dockerCfg,omitempty"`
 
