@@ -1,36 +1,3 @@
-From 0077067fd5dd06f230a2b7ccbec2bb5142cafeb1 Mon Sep 17 00:00:00 2001
-From: Paramoshka <parfenov_ivan_42a@mail.ru>
-Date: Tue, 30 Jun 2026 18:21:59 +0300
-Subject: [PATCH] mark-based outbound interception for same-uid app/sidecar
-
-Add mark-based interception mode as an opt-in alternative to the
-owner-match (--uid-owner) approach, for environments where the sidecar
-must run with the same UID/GID as the application container (e.g.
-ingress-nginx under deckhouse, both UID 64535).
-
-When traffic.sidecar.istio.io/outboundSocketMark is set, Envoy tags
-its outbound sockets with SO_MARK (via cluster socket_options from
-istiod) and iptables excludes marked packets via
-'-m mark --mark <mark> -j RETURN' instead of '--uid-owner'. This
-distinguishes Envoy from the app by socket mark rather than UID,
-breaking the infinite outbound redirection loop.
-
-UID transition to 64535 is intentionally NOT handled here; it belongs
-to the deckhouse 003-change-to-deckhouse-user patch. This patch only
-adds the mark plumbing and composes cleanly on top of 003.
-
-Signed-off-by: Paramoshka <parfenov_ivan_42a@mail.ru>
----
- cni/pkg/plugin/sidecar_iptables_linux.go      |   1 +
- cni/pkg/plugin/sidecar_redirect.go            |   3 +
- .../files/injection-template.yaml             |   8 +
- pkg/model/proxy.go                            |   5 +
- tools/istio-iptables/pkg/capture/run.go       | 181 ++++++++++--------
- tools/istio-iptables/pkg/cmd/root.go          |   6 +
- tools/istio-iptables/pkg/config/config.go     |  17 +-
- .../istio-iptables/pkg/constants/constants.go |   3 +
- 8 files changed, 140 insertions(+), 84 deletions(-)
-
 diff --git a/cni/pkg/plugin/sidecar_iptables_linux.go b/cni/pkg/plugin/sidecar_iptables_linux.go
 index 625d687bec..a61873a385 100644
 --- a/cni/pkg/plugin/sidecar_iptables_linux.go
@@ -64,7 +31,7 @@ index cb9e209726..6a0bbe0004 100644
  	return redir, nil
  }
 diff --git a/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml b/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
-index 3b3f69cd9d..67d03c2b03 100644
+index 3b3f69cd9d..3349ca4345 100644
 --- a/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
 +++ b/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
 @@ -123,6 +123,10 @@ spec:
@@ -89,6 +56,97 @@ index 3b3f69cd9d..67d03c2b03 100644
      {{- if .Values.global.network }}
      - name: ISTIO_META_NETWORK
        value: "{{ .Values.global.network }}"
+@@ -368,7 +376,7 @@ spec:
+       {{- else }}
+       allowPrivilegeEscalation: {{ .Values.global.proxy.privileged }}
+       capabilities:
+-        {{ if or (eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY`) (eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true`) -}}
++        {{ if or (eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY`) (eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true`) (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
+         add:
+         {{ if eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY` -}}
+         - NET_ADMIN
+@@ -376,6 +384,9 @@ spec:
+         {{ if eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true` -}}
+         - NET_BIND_SERVICE
+         {{- end }}
++        {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
++        - NET_ADMIN
++        {{- end }}
+         {{- end }}
+         drop:
+         - ALL
+diff --git a/pilot/pkg/networking/core/cluster_builder.go b/pilot/pkg/networking/core/cluster_builder.go
+index 85a400a03c..04011d6176 100644
+--- a/pilot/pkg/networking/core/cluster_builder.go
++++ b/pilot/pkg/networking/core/cluster_builder.go
+@@ -17,6 +17,7 @@ package core
+ import (
+ 	"fmt"
+ 	"math"
++	"strconv"
+ 	"time"
+ 
+ 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+@@ -223,6 +224,7 @@ func (cb *ClusterBuilder) buildSubsetCluster(
+ 	maybeApplyEdsConfig(subsetCluster.cluster)
+ 
+ 	cb.applyMetadataExchange(opts.mutable.cluster)
++	cb.applyOutboundSocketMark(opts.mutable.cluster)
+ 
+ 	// Add the DestinationRule+subsets metadata. Metadata here is generated on a per-cluster
+ 	// basis in buildCluster, so we can just insert without a copy.
+@@ -270,6 +272,7 @@ func (cb *ClusterBuilder) applyDestinationRule(mc *clusterWrapper, clusterMode C
+ 	maybeApplyEdsConfig(mc.cluster)
+ 
+ 	cb.applyMetadataExchange(opts.mutable.cluster)
++	cb.applyOutboundSocketMark(opts.mutable.cluster)
+ 
+ 	if service.MeshExternal {
+ 		im := getOrCreateIstioMetadata(mc.cluster)
+@@ -300,6 +303,35 @@ func (cb *ClusterBuilder) applyMetadataExchange(c *cluster.Cluster) {
+ 	}
+ }
+ 
++// applyOutboundSocketMark tags upstream sockets with SO_MARK when the proxy advertises
++// OutboundMark (sidecar running with the same UID as the app). Envoy's setsockopt(SO_MARK)
++// requires CAP_NET_ADMIN; iptables then exempts marked packets via '-m mark --mark -j RETURN'.
++func (cb *ClusterBuilder) applyOutboundSocketMark(c *cluster.Cluster) {
++	if !cb.sidecarProxy() {
++		return
++	}
++	if cb.proxyMetadata == nil || cb.proxyMetadata.OutboundMark == "" {
++		return
++	}
++	mark, err := strconv.ParseUint(cb.proxyMetadata.OutboundMark, 10, 32)
++	if err != nil {
++		return
++	}
++	sockOpt := &core.SocketOption{
++		Description: "outbound socket mark to distinguish Envoy traffic in iptables",
++		Level:       1, // SOL_SOCKET
++		Name:        36, // SO_MARK
++		Value: &core.SocketOption_IntValue{
++			IntValue: int64(mark),
++		},
++		State: core.SocketOption_STATE_PREBIND,
++	}
++	if c.UpstreamBindConfig == nil {
++		c.UpstreamBindConfig = &core.BindConfig{}
++	}
++	c.UpstreamBindConfig.SocketOptions = append(c.UpstreamBindConfig.SocketOptions, sockOpt)
++}
++
+ // buildCluster builds the default cluster and also applies global options.
+ // It is used for building both inbound and outbound cluster.
+ func (cb *ClusterBuilder) buildCluster(name string, discoveryType cluster.Cluster_DiscoveryType,
+@@ -564,6 +596,7 @@ func (cb *ClusterBuilder) buildDefaultPassthroughCluster() *cluster.Cluster {
+ 	cluster.AltStatName = util.DelimitedStatsPrefix(util.PassthroughCluster)
+ 	cb.applyConnectionPool(cb.req.Push.Mesh, newClusterWrapper(cluster), &networking.ConnectionPoolSettings{})
+ 	cb.applyMetadataExchange(cluster)
++	cb.applyOutboundSocketMark(cluster)
+ 	return cluster
+ }
+ 
 diff --git a/pkg/model/proxy.go b/pkg/model/proxy.go
 index f5b8a71558..498031bf47 100644
 --- a/pkg/model/proxy.go
@@ -378,6 +436,3 @@ index 6ac71c5619..86e7f2b000 100644
  	DryRun                    = "dry-run"
  	TraceLogging              = "iptables-trace-logging"
  	SkipRuleApply             = "skip-rule-apply"
--- 
-2.43.0
-
