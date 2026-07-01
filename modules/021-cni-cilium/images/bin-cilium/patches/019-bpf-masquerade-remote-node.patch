@@ -1,0 +1,30 @@
+diff --git a/bpf/lib/nat.h b/bpf/lib/nat.h
+index 4124bcf6..e21e21e6 100644
+--- a/bpf/lib/nat.h
++++ b/bpf/lib/nat.h
+@@ -688,8 +688,10 @@ snat_v4_needs_masquerade(struct __ctx_buff *ctx __maybe_unused,
+ 		 */
+ 
+ 		if (!is_defined(TUNNEL_MODE) || remote_ep->flag_skip_tunnel) {
+-			if (identity_is_remote_node(remote_ep->sec_identity))
+-				return NAT_PUNT_TO_STACK;
++			if (identity_is_remote_node(remote_ep->sec_identity)) {
++				target->addr = IPV4_MASQUERADE;
++				return NAT_NEEDED;
++			}
+ 		}
+ 
+ 		if (local_ep) {
+@@ -1520,8 +1522,10 @@ snat_v6_needs_masquerade(struct __ctx_buff *ctx __maybe_unused,
+ 	remote_ep = lookup_ip6_remote_endpoint(&tuple->daddr, 0);
+ 	if (remote_ep) {
+ 		if (!is_defined(TUNNEL_MODE) || remote_ep->flag_skip_tunnel) {
+-			if (identity_is_remote_node(remote_ep->sec_identity))
+-				return NAT_PUNT_TO_STACK;
++			if (identity_is_remote_node(remote_ep->sec_identity)) {
++				ipv6_addr_copy(&target->addr, &masq_addr);
++				return NAT_NEEDED;
++			}
+ 		}
+ 
+ 		if (local_ep) {
