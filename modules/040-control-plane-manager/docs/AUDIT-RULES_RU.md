@@ -257,6 +257,8 @@ users:
   - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
   - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
+  - system:serviceaccount:d8-cloud-instance-manager:integrity-containerd-configurator
+  - system:serviceaccount:d8-cloud-instance-manager:integrity-controller
   - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:node-controller
   - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc
@@ -745,6 +747,8 @@ rules:
       - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
       - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
+      - system:serviceaccount:d8-cloud-instance-manager:integrity-containerd-configurator
+      - system:serviceaccount:d8-cloud-instance-manager:integrity-controller
       - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:node-controller
       - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc

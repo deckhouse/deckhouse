@@ -1,0 +1,115 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  labels:
+    heritage: deckhouse
+    module: node-manager
+  name: containerdintegritypolicies.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: ContainerdIntegrityPolicy
+    listKind: ContainerdIntegrityPolicyList
+    plural: containerdintegritypolicies
+    singular: containerdintegritypolicy
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Label selector that defines which namespaces are protected by this policy.
+      jsonPath: .spec.protectedNamespaces.matchLabels
+      name: Match Labels
+      type: string
+    - description: Namespaces protected by this policy
+      jsonPath: .status.protectedNamespaces
+      name: Protected Namespaces
+      type: string
+    - name: Age
+      jsonPath: .metadata.creationTimestamp
+      type: date
+      description: >
+        CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ContainerdIntegrityPolicy defines containerd image integrity
+          policy for selected namespaces.
+        x-doc-examples:
+        - |
+            ```yaml
+            apiVersion: deckhouse.io/v1alpha1
+            kind: ContainerdIntegrityPolicy
+            metadata:
+              name: integrity-policy
+            spec:
+              ca: |
+                -----BEGIN CERTIFICATE-----
+                MIIGOTCCBCGgAwIBAgIJAOE/vJd8EB24MA0GCSqGSIb3DQEBBQUAMIGyMQswCQYD
+                VQQGEwJGUjEPMA0GA1UECAwGQWxzYWNlMRMwEQYDVQQHDApTdHJhc2JvdXJnMRgw
+                ...
+                iPe3o/4tyQGq+jEMAEjLlDECu0dEa6RFntcbBPMBP3wZwE2bI9GYgvyaZd63DNdm
+                KvbxUcDaVvXB0EU0bg==
+                -----END CERTIFICATE-----
+              protectedNamespaces:
+                matchLabels:
+                  integrity: enabled
+              ```
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ContainerdIntegrityPolicySpec defines the desired state of
+              ContainerdIntegrityPolicy.
+            properties:
+              ca:
+                description: PEM-encoded CA certificate used to verify image signatures.
+                type: string
+              protectedNamespaces:
+                description: Label selector that defines which namespaces are protected
+                  by this policy.
+                properties:
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: | 
+                      MatchLabels is a map of `key: value` pairs.
+                    x-doc-examples: [{ "foo": "bar" }]
+                    type: object
+                type: object
+            required:
+            - ca
+            - protectedNamespaces
+            type: object
+          status:
+            description: ContainerdIntegrityPolicyStatus defines the observed state
+              of ContainerdIntegrityPolicy.
+            properties:
+              protectedNamespaces:
+                description: List of namespace names that match the protectedNamespaces
+                  selector.
+                items:
+                  type: string
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

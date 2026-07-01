@@ -46,6 +46,7 @@ rules:
   - nodeusers
   - sshcredentials
   - staticinstances
+  - containerdintegritypolicies
   verbs:
   - get
   - list
@@ -165,6 +166,7 @@ rules:
   resources:
   - nodegroupconfigurations
   - staticinstances
+  - containerdintegritypolicies
   verbs:
   - get
   - list

@@ -109,6 +109,10 @@ linters-settings:
           name: d8:node-manager:caps-controller-manager-leader-election-role
         - kind: RoleBinding
           name: d8:node-manager:caps-controller-manager-leader-election-role
+        - kind: Role
+          name: d8:node-manager:integrity-controller-leader-election-role
+        - kind: RoleBinding
+          name: d8:node-manager:integrity-controller-leader-election-role
         - kind: ServiceAccount
           name: nvidia-device-plugin
         - kind: ServiceAccount

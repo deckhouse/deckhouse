@@ -218,6 +218,7 @@ rules:
   - nodeusers
   - staticinstances
   - sshcredentials
+  - containerdintegritypolicies
   - authorizationrules
   - clusterauthorizationrules
   - users
