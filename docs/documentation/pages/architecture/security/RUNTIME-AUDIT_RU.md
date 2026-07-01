@@ -29,8 +29,7 @@ DKP запускает объединённые в DaemonSet агенты Falco 
   и экспортирует их в виде метрик во внешние системы;
 - `kube-rbac-proxy` — защищает эндпоинт метрик `falcosidekick` от неавторизованного доступа.
 
-![Компоненты пода Falco](../../images/runtime-audit-engine/falco_pod.svg)
-<!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->
+Подробнее с архитектурой модуля [`runtime-audit-engine`](/modules/runtime-audit-engine/), реализующего аудит событий безопасности DKP, можно ознакомиться [в разделе архитектуры модуля](./runtime-audit-engine.html).
 
 ## Правила аудита
 
