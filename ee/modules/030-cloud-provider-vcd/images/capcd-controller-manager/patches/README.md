@@ -191,3 +191,14 @@ Changes:
 - Handle `primaryNetwork.IPAddress == ""` in DHCP mode as a transient condition.
 - Requeue with delay and informational log while waiting for DHCP lease.
 - Keep existing strict behavior for non-DHCP allocation modes.
+
+### 011-ignore-lb-delete-forbidden.patch
+
+Files:
+
+- controllers/vcdcluster_controller.go
+
+Changes:
+
+- During cluster deletion, treat LB delete errors as ignorable when VCD returns 403/404 or entity not found.
+- Prevents VCDCluster finalizer from blocking destroy on NO_RDE clusters where the service account lacks LB delete rights.
