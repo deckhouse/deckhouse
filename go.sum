@@ -221,6 +221,8 @@ github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7 h1:vi6Wxo7djSckxxcK1oWiZfx7hfRqAbowR6rM0rozO/s=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260701181010-e1c2dffd10e3 h1:o0zyDgHaVxqAVWfkqpSW96GZX80OZOCVbd+QwtVO5D8=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260701181010-e1c2dffd10e3/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
 github.com/deckhouse/lib-connection v0.11.0 h1:iNoy8uqenzQ+DilWuqc6CJFB87BBE3QVVXipBzQMcOc=
 github.com/deckhouse/lib-connection v0.11.0/go.mod h1:OjMW+EU3LZFO2huiBBOzO3XHa5FaSCSungSZeTeYRGw=
