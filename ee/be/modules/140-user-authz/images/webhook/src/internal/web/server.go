@@ -79,7 +79,7 @@ func NewServer(logger *log.Logger) (*Server, error) {
 		return nil, err
 	}
 
-	c := discoverycache.NewNamespacedDiscoveryCache(logger)
+	c := discoverycache.NewNamespacedDiscoveryCache(logger, config.Host)
 	informerFactory := informers.NewSharedInformerFactory(clientSet, 0)
 	nsInformer := informerFactory.Core().V1().Namespaces()
 
