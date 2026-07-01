@@ -1,8 +1,7 @@
 diff --git a/resources/v1.25.2/charts/istiod/files/injection-template.yaml b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
-index 74d87b52..00000000 100644
 --- a/resources/v1.25.2/charts/istiod/files/injection-template.yaml
 +++ b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
-@@ -120,6 +120,11 @@ spec:
+@@ -123,6 +123,10 @@ spec:
      - "-c"
      - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/excludeInterfaces` }}"
      {{ end -}}
@@ -13,7 +12,7 @@ index 74d87b52..00000000 100644
      - "--log_output_level={{ annotation .ObjectMeta `sidecar.istio.io/agentLogLevel` .Values.global.logging.level }}"
      {{ if .Values.global.logAsJson -}}
      - "--log_as_json"
-@@ -291,6 +296,11 @@ spec:
+@@ -294,6 +298,10 @@ spec:
            fieldPath: spec.nodeName
      - name: ISTIO_META_INTERCEPTION_MODE
        value: "{{ or (index .ObjectMeta.Annotations `sidecar.istio.io/interceptionMode`) .ProxyConfig.InterceptionMode.String }}"
