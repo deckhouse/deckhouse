@@ -120,7 +120,7 @@ csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @borg-z @090809
 docs/                                    @z9r5
-docs/documentation/pages/architecture/   @voitenkov
+docs/documentation/pages/architecture/   @xstayer
 helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5
