@@ -17,12 +17,10 @@ limitations under the License.
 package nodegroupfilter
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
-	nm "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
 )
 
 type NodeType string
@@ -46,7 +44,7 @@ type NodeGroupSpec struct {
 
 	CloudInstances CloudInstances `json:"cloudInstances,omitempty"`
 
-	NodeTemplate nm.NodeTemplate `json:"nodeTemplate,omitempty"`
+	NodeTemplate NodeTemplate `json:"nodeTemplate,omitempty"`
 
 	Chaos Chaos `json:"chaos,omitempty"`
 
@@ -57,6 +55,13 @@ type NodeGroupSpec struct {
 	Update Update `json:"update,omitempty"`
 
 	Kubelet Kubelet `json:"kubelet,omitempty"`
+}
+type NodeTemplate struct {
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	Labels map[string]string `json:"labels"`
+
+	Taints []corev1.Taint `json:"taints,omitempty"`
 }
 
 type GPU struct {
@@ -175,12 +180,12 @@ type Update struct {
 }
 
 type AutomaticDisruptions struct {
-	DrainBeforeApproval *bool          `json:"drainBeforeApproval,omitempty"`
-	Windows             update.Windows `json:"windows,omitempty"`
+	DrainBeforeApproval *bool   `json:"drainBeforeApproval,omitempty"`
+	Windows             Windows `json:"windows,omitempty"`
 }
 
 type RollingUpdateDisruptions struct {
-	Windows update.Windows `json:"windows,omitempty"`
+	Windows Windows `json:"windows,omitempty"`
 }
 
 type Kubelet struct {
@@ -226,4 +231,12 @@ type KubeletMemorySwap struct {
 
 type KubeletLimitedSwap struct {
 	Size string `json:"size"`
+}
+
+type Windows []Window
+
+type Window struct {
+	From string   `json:"from"`
+	To   string   `json:"to"`
+	Days []string `json:"days"`
 }
