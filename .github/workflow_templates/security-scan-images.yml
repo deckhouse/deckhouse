@@ -292,9 +292,9 @@ jobs:
               echo "✅ $name: $r"
               continue
             fi
-            # CVE PR-mode is temporarily disabled (test_cve_report_main has `if: false`); allow skipped until re-enabled.
-            if [[ "$name" == "cve" && "$r" == "skipped" ]]; then
-              echo "ℹ️  $name: $r (temporarily disabled)"
+            # nothing to scan
+            if [[ "$name" == "cve" && "$r" == "skipped" && "${{ needs.changed_images.outputs.changed_count }}" == "0" ]]; then
+              echo "ℹ️  $name: $r (no changed images)"
               continue
             fi
             if [[ "$IS_MAIN_REPO" == "false" && ( "$name" == "drweb" || "$name" == "kaspersky" ) && "$r" == "skipped" ]]; then
