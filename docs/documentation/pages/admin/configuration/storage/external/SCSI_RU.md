@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/storage/external/scsi.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) поддерживает управление хранилищами, подключёнными через iSCSI или Fibre Channel, обеспечивая возможность работы с томами на уровне блоковых устройств. Это позволяет интегрировать системы хранения данных с Kubernetes и управлять ими через CSI-драйвер.
+Deckhouse Kubernetes Platform (DKP) поддерживает управление хранилищами, подключёнными через iSCSI или Fibre Channel, обеспечивая возможность работы с томами на уровне блочных устройств. Это позволяет интегрировать системы хранения данных с Kubernetes и управлять ими через CSI-драйвер.
 
 На этой странице представлены инструкции по подключению SCSI-устройств в DKP, созданию SCSITarget, StorageClass, а также проверке работоспособности системы.
 
@@ -74,7 +74,7 @@ d8 k get module csi-scsi-generic -w
 
 ### Создание SCSITarget
 
-Ресурс [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget) описывает подключение к одной SCSI-цели. В `spec` укажите один из способов подключения: [`iSCSI`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-iscsi) или [`fibreChannel`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-fibrechannel).
+Ресурс [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget) описывает подключение к одной SCSI-цели. При создании ресурса в`spec` укажите один из способов подключения: [`iSCSI`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-iscsi) или [`fibreChannel`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-fibrechannel).
 
 #### iSCSI
 
@@ -236,7 +236,7 @@ d8 k get scsistorageclasses.storage.deckhouse.io <имя-scsistorageclass>
 
 ### Проверка работоспособности модуля csi-scsi-generic
 
-Проверьте состояние подов в пространстве `d8-csi-scsi-generic` при помощи команды ниже. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
+Проверьте состояние подов в неймспейсе `d8-csi-scsi-generic` при помощи команды ниже. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
 
 ```shell
 d8 k -n d8-csi-scsi-generic get pod -owide -w

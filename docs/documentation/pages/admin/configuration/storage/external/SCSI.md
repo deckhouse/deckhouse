@@ -73,7 +73,7 @@ d8 k get module csi-scsi-generic -w
 
 ### Creating an SCSITarget
 
-The [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget) resource describes connection to a single SCSI target. Under `spec`, specify one of the connection types: [`iSCSI`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-iscsi) or [`fibreChannel`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-fibrechannel).
+The [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget) resource describes connection to a single SCSI target. When creating a resource in `spec`, specify one of the connection types: [`iSCSI`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-iscsi) or [`fibreChannel`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-fibrechannel).
 
 #### iSCSI
 
