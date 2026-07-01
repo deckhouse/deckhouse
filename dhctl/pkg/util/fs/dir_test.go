@@ -23,11 +23,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/name212/govalue"
-	"github.com/stretchr/testify/require"
 	"log/slog"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	"github.com/name212/govalue"
+	"github.com/stretchr/testify/require"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const testLockFileToCheck = ".TestFileExistsInDirAndParentsDirs"
