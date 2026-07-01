@@ -78,7 +78,7 @@ descheduler/
     ├── low-node-utilization/
     │   ├── chainsaw-test.yaml
     │   ├── manifests/
-    │   ├── low_node_utilization.md
+    │   ├── README.md
     │   └── Taskfile.yml
     ├── high-node-utilization/
     │   └── ...
@@ -96,7 +96,7 @@ descheduler/
         └── ...
 ```
 
-Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/<name>.md`.
+Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/README.md`.
 
 ## Available Tests
 
