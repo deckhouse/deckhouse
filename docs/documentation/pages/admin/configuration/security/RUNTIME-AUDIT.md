@@ -16,7 +16,7 @@ With DKP, you can:
   - Mounting insecure paths into containers (for example, `/proc`).
   - Attempts to read sensitive data (for example, from `/etc/shadow`).
 
-## Data sources for security auditing
+## Data sources for runtime audit
 
 DKP uses two main sources of events:
 
@@ -50,7 +50,7 @@ Falco agents run on each cluster node and consume resources depending on the num
 On some systems, eBPF probes may not work.
 {% endalert %}
 
-## Enabling security event auditing
+## Enabling runtime audit
 
 1. Make sure the nodes meet the [minimum requirements](#minimum-requirements).
 1. Enable auditing in Deckhouse using the following configuration:
@@ -67,7 +67,7 @@ On some systems, eBPF probes may not work.
 1. (**Optional**) If the cluster control plane is not managed by DKP with [`control-plane-manager`](/modules/control-plane-manager/),
    configure the [Kubernetes API audit webhook](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) manually.
 
-All available security audit parameters are listed in the [`runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html) module documentation.
+All available runtime audit parameters are listed in the [`runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html) module documentation.
 
 ### Manually configuring the Kubernetes API audit webhook
 
@@ -107,7 +107,7 @@ To configure the webhook for receiving audit events from `kube-apiserver`:
 
 ## Working with audit rules
 
-Security event analysis is based on rules that define suspicious behavior criteria.
+Runtime audit event analysis is based on rules that define suspicious behavior criteria.
 DKP includes:
 
 - **Built-in rules**, including:
@@ -119,7 +119,7 @@ DKP includes:
 
 - **Custom rules**, defined via the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
-For more information on how security audit rules work, refer to [Architecture](../../../../architecture/security/runtime-audit.html).
+For more information on how runtime audit rules work, refer to [Architecture](../../../../architecture/security/runtime-audit.html).
 
 ### Adding a custom rule
 
@@ -213,7 +213,7 @@ Example conversion result:
 
 ## Log collection and alerts
 
-DKP exports security audit events as Prometheus metrics,
+DKP exports runtime audit events as Prometheus metrics,
 allowing you to set up log collection and alerts via resources of the [`log-shipper`](/modules/log-shipper/) and [`observability`](/modules/observability/) modules.
 This makes it possible to:
 
@@ -222,7 +222,7 @@ This makes it possible to:
 
 ### Configuring log and event collection
 
-All security audit events are sent to stdout.
+All runtime audit events are sent to stdout.
 To collect and forward events to a log storage, create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) resource
 following the example:
 
@@ -295,7 +295,7 @@ d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 
 ## Debugging and simulating events
 
-For debugging and simulating security events in DKP, you can use:
+For debugging and simulating runtime audit events in DKP, you can use:
 
 - The `event-generator` utility.
 - The `/test` HTTP endpoint of the `falcosidekick` service.
