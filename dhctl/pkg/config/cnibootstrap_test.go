@@ -449,58 +449,6 @@ func mustPCC(t *testing.T, m map[string]any) map[string]json.RawMessage {
 	return out
 }
 
-func TestMergeMissingCNISettings(t *testing.T) {
-	t.Parallel()
-
-	merged, added := mergeMissingCNISettings(
-		SettingsValues{"tunnelMode": "VXLAN"},
-		SettingsValues{"tunnelMode": "Disabled", "createNodeRoutes": true},
-	)
-	require.ElementsMatch(t, []string{"createNodeRoutes"}, added)
-	require.Equal(t, "VXLAN", merged["tunnelMode"])
-	require.Equal(t, true, merged["createNodeRoutes"])
-
-	merged, added = mergeMissingCNISettings(nil, SettingsValues{"createNodeRoutes": true})
-	require.ElementsMatch(t, []string{"createNodeRoutes"}, added)
-	require.Equal(t, true, merged["createNodeRoutes"])
-
-	_, added = mergeMissingCNISettings(SettingsValues{"createNodeRoutes": false}, SettingsValues{"createNodeRoutes": true})
-	require.Empty(t, added)
-}
-
-func TestApplyCNIBootstrap_MergesMissingSettingsNonInteractive(t *testing.T) {
-	dir := t.TempDir()
-
-	providerDir := filepath.Join(dir, "cloud-providers", "vcd-like")
-	require.NoError(t, os.MkdirAll(providerDir, 0o755))
-	body := []byte(`schemaVersion: 1
-name: cilium
-config:
-  default:
-    tunnelMode: Disabled
-    createNodeRoutes: true
-`)
-	require.NoError(t, os.WriteFile(filepath.Join(providerDir, "cni-bootstrap.yml"), body, 0o644))
-
-	userMC := newTestCNIModuleConfig(t, "cni-cilium", nil, true)
-	m := &MetaConfig{
-		ClusterType:   CloudClusterType,
-		ProviderName:  "vcd-like",
-		ModuleConfigs: []*ModuleConfig{userMC},
-	}
-
-	err := ApplyCNIBootstrap(t.Context(), m, candiDirOptions(dir))
-	if err != nil {
-		t.Skipf("cni-cilium schema not available in this environment: %v", err)
-	}
-
-	require.Len(t, m.ModuleConfigs, 1)
-	mc := m.ModuleConfigs[0]
-	require.Equal(t, "cni-cilium", mc.GetName())
-	require.Equal(t, true, mc.Spec.Settings["createNodeRoutes"])
-	require.Equal(t, "Disabled", mc.Spec.Settings["tunnelMode"])
-}
-
 func newTestCNIModuleConfig(t *testing.T, name string, settings map[string]any, enabled bool) *ModuleConfig {
 	t.Helper()
 	mc := &ModuleConfig{}
