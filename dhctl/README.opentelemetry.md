@@ -63,7 +63,7 @@ On the gRPC operation spans (`grpc.bootstrap`, `grpc.destroy`, `grpc.converge`):
 `dhctl.commander_uuid` is the cluster UUID in the Commander URL. A backend can
 build a link to the cluster page as:
 
-```
+```text
 <commander-base-url>/workspaces/<workspace>/clusters/{dhctl.commander_uuid}/configurations
 ```
 
