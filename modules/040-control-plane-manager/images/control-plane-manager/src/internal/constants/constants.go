@@ -44,6 +44,8 @@ const (
 	VirtualControlPlaneNamespacePrefix     = "vcp-"
 	VirtualControlPlaneConfigSecretName    = "d8-vcp-config"
 	VirtualControlPlaneNodeOrdinalLabelKey = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
+	DefaultTenantClusterDomain             = "cluster.virtual"
+	DefaultTenantServiceSubnetCIDR         = "10.96.0.0/12"
 )
 
 const (
@@ -59,7 +61,8 @@ const (
 	HeritageLabelValue                  = "deckhouse"
 	MaintenanceModeLabelKey             = "control-plane-manager.deckhouse.io/maintenance"
 	ConfigChecksumAnnotationKey         = "control-plane-manager.deckhouse.io/config-checksum"
-	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
+	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum" // actually this is cert params checksum (certSANs, encryption-algorithm)
+	CertsChecksumAnnotationKey          = "control-plane-manager.deckhouse.io/certs-checksum"
 	CAChecksumAnnotationKey             = "control-plane-manager.deckhouse.io/ca-checksum"
 	OperationStartedAtAnnotationKey     = "control-plane-manager.deckhouse.io/operation-started-at"
 	NodeNameEnvVar                      = "NODE_NAME"

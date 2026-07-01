@@ -19,6 +19,7 @@ package manager
 import (
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -31,6 +32,7 @@ import (
 	"control-plane-manager/internal/constants"
 	virtualcontrolplaneconfiguration "control-plane-manager/internal/controllers/virtual-control-plane-configuration"
 	virtualcontrolplanenode "control-plane-manager/internal/controllers/virtual-control-plane-node"
+	virtualcontrolplaneoperation "control-plane-manager/internal/controllers/virtual-control-plane-operation"
 )
 
 type virtualConfigurator struct{}
@@ -44,6 +46,8 @@ func (c *virtualConfigurator) configureOptions(opts *controllerruntime.Options) 
 				&corev1.Namespace{},
 				&corev1.Secret{},
 				&corev1.Service{},
+				&corev1.Pod{},
+				&appsv1.StatefulSet{},
 			},
 		},
 	}
@@ -80,6 +84,10 @@ func (c *virtualConfigurator) configureRuntimeManager(runtimeManager runtimemana
 
 	if err := virtualcontrolplanenode.BuildController(runtimeManager); err != nil {
 		return fmt.Errorf("build virtual-control-plane-node controller: %w", err)
+	}
+
+	if err := virtualcontrolplaneoperation.BuildController(runtimeManager); err != nil {
+		return fmt.Errorf("build virtual-control-plane-operation controller: %w", err)
 	}
 
 	return nil
