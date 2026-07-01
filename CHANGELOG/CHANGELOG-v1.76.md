@@ -114,6 +114,7 @@
  - **[docs]** Added an alert for failed documentation renderings. [#18756](https://github.com/deckhouse/deckhouse/pull/18756)
  - **[ingress-nginx]** A configuration drift alert is added. [#18342](https://github.com/deckhouse/deckhouse/pull/18342)
     All Ingress-Nginx controller pods will be restarted.
+ - **[istio]** Add deploy dependencies for Istio webhook configurations [#20995](https://github.com/deckhouse/deckhouse/pull/20995)
  - **[istio]** Added monitoring of the reserved UID `1337` in pods. [#18633](https://github.com/deckhouse/deckhouse/pull/18633)
  - **[istio]** Added support for the `istio.io/rev:default` label. [#18320](https://github.com/deckhouse/deckhouse/pull/18320)
  - **[istio]** Added validating webhooks for IstioFederation and IstioMulticluster resources. [#18406](https://github.com/deckhouse/deckhouse/pull/18406)
@@ -264,6 +265,7 @@
  - **[deckhouse]** Restore ModuleIsInMaintenanceMode alert by switching to d8_module_config_maintenance sourced from ModuleConfig. [#19352](https://github.com/deckhouse/deckhouse/pull/19352)
  - **[deckhouse]** Revoke permission to use moduleconfig to user. [#19698](https://github.com/deckhouse/deckhouse/pull/19698)
  - **[deckhouse]** Use non-controller ownerRefs for multi-source package CRs. [#20463](https://github.com/deckhouse/deckhouse/pull/20463)
+ - **[deckhouse]** fix libs in the python-based images [#21011](https://github.com/deckhouse/deckhouse/pull/21011)
  - **[dhctl]** Added a preflight check for validating InstanceClasses against the selected cloud provider. [#18473](https://github.com/deckhouse/deckhouse/pull/18473)
  - **[dhctl]** Added validation of the command execution status code [#18128](https://github.com/deckhouse/deckhouse/pull/18128)
  - **[dhctl]** Excluded `BaseInfraPhase` from the progress phase list for static clusters. [#17856](https://github.com/deckhouse/deckhouse/pull/17856)
@@ -281,6 +283,7 @@
  - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19793](https://github.com/deckhouse/deckhouse/pull/19793)
  - **[dhctl]** add NodeReady wait to dhctl converge and improve etcd check output [#18991](https://github.com/deckhouse/deckhouse/pull/18991)
  - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19560](https://github.com/deckhouse/deckhouse/pull/19560)
+ - **[dhctl]** fix grpc stream cancel deadlock [#21013](https://github.com/deckhouse/deckhouse/pull/21013)
  - **[dhctl]** fixed the `killall kubectl` command for the `d8 k` alias [#20423](https://github.com/deckhouse/deckhouse/pull/20423)
  - **[dhctl]** fixed the `pkill d8 k proxy` command in `dhctl` [#20460](https://github.com/deckhouse/deckhouse/pull/20460)
  - **[dhctl]** mitigate CVE-2026-33186 [#18625](https://github.com/deckhouse/deckhouse/pull/18625)
