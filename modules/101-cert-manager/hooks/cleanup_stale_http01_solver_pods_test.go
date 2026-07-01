@@ -63,6 +63,20 @@ status:
 `, name, namespace, creationTimestamp, deletionTimestamp, phase, containerStatuses)
 }
 
+func genSolverPodManifestWithoutCreationTimestamp(name, namespace, phase string) string {
+	return fmt.Sprintf(`
+apiVersion: v1
+kind: Pod
+metadata:
+  name: %s
+  namespace: %s
+  labels:
+    acme.cert-manager.io/http01-solver: "true"
+status:
+  phase: %s
+`, name, namespace, phase)
+}
+
 func setPodsState(f *HookExecutionConfig, manifests ...string) {
 	state := strings.Join(manifests, "\n---")
 	f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(state, 0))
@@ -70,6 +84,7 @@ func setPodsState(f *HookExecutionConfig, manifests ...string) {
 
 var _ = Describe("Cert Manager hooks :: cleanup stale http01 solver pods ::", func() {
 	f := HookExecutionConfigInit(`{"global":{}}`, "")
+	fSecondRun := HookExecutionConfigInit(`{"global":{}}`, "")
 
 	const ns = "cm-repro"
 
@@ -170,7 +185,37 @@ var _ = Describe("Cert Manager hooks :: cleanup stale http01 solver pods ::", fu
 
 		It("does not attempt to delete the pod again", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(BeEmpty())
 			Expect(f.KubernetesResource("Pod", ns, "solver-terminating")).ToNot(BeEmpty())
+		})
+	})
+
+	Context("Second hook run after stale pod was deleted", func() {
+		It("runs successfully without issuing delete patches", func() {
+			terminalAt := time.Now().Add(-2 * time.Minute)
+			setPodsState(f, genSolverPodManifest("solver-idempotent", ns, "Succeeded", false, terminalAt, terminalAt))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(1))
+			Expect(f.KubernetesResource("Pod", ns, "solver-idempotent")).To(BeEmpty())
+
+			setPodsState(fSecondRun, ``)
+			fSecondRun.RunHook()
+			Expect(fSecondRun).To(ExecuteSuccessfully())
+			Expect(fSecondRun.PatchCollector.Operations()).To(BeEmpty())
+		})
+	})
+
+	Context("Terminal solver pod with zero creationTimestamp", func() {
+		BeforeEach(func() {
+			setPodsState(f, genSolverPodManifestWithoutCreationTimestamp("solver-no-ts", ns, "Succeeded"))
+			f.RunHook()
+		})
+
+		It("keeps the pod", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(BeEmpty())
+			Expect(f.KubernetesResource("Pod", ns, "solver-no-ts")).ToNot(BeEmpty())
 		})
 	})
 })
