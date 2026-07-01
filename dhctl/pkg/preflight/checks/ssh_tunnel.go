@@ -99,7 +99,7 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 		}
 	}
 
-	cmd := sshCl.Command("sh", "-c", "id -u | grep -qx 0 || command -v sudo >/dev/null 2>&1")
+	cmd := sshCl.Command("id -u | grep -qx 0 || command -v sudo >/dev/null 2>&1")
 	if err := cmd.Run(ctx); err != nil {
 		return fmt.Errorf(
 			"required command \"sudo\" is not installed on host %s for user %q. Install sudo or use root user for bootstrap",
