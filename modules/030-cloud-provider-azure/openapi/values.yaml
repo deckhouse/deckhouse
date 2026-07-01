@@ -6,6 +6,10 @@ properties:
     type: object
     default: {}
     properties:
+      cniSecretData:
+        type: string
+        x-examples:
+        - "Y25pOiBjMmx0Y0d4bExXSnlhV1JuWlE9PQo="
       storageClasses:
         type: array
         additionalProperties:
