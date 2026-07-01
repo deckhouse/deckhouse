@@ -416,14 +416,10 @@ jobs:
 
   # ============================================================================
   # CVE — Trivy scan on PR images.
-  # TEMPORARILY DISABLED: PR-mode CVE scan currently misbehaves (false-positive
-  # noise / wrong PR-diff filter). Re-enable by removing the `if: false` guard
-  # once the underlying script is fixed. While disabled, the aggregator below
-  # explicitly allows `cve: skipped`, so it does not block PR merges.
   # ============================================================================
   test_cve_report_main:
     name: Trivy scan dev images
-    if: ${{ false }}
+    if: ${{ needs.changed_images.outputs.changed_count != '0' }}
     # External/fork PRs gated by 'status/ok-to-test' via pull_request_info (setFailed → this job is skipped).
     needs:
       - pull_request_info
