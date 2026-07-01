@@ -173,6 +173,7 @@ func (s *Service) destroySafe(ctx context.Context, p *destroyParams) (result *pb
 func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResult {
 	ctx, span := telemetry.StartSpan(ctx, "grpc.destroy")
 	defer span.End()
+	span.SetAttributes(telemetry.CommanderSpanAttributes(p.request.Options.CommanderMode, p.request.Options.CommanderUuid)...)
 
 	var err error
 
