@@ -2,6 +2,11 @@
 checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
 {{- end -}}
 
+{{- define "openstack_ccm_envs" -}}
+- name: SKIP_NODE_DELETION
+  value: "1"
+{{- end -}}
+
 {{- define "openstack_ccm_args" -}}
 - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
 - --allocate-node-cidrs=true
@@ -43,6 +48,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 {{- if $ccmImage -}}
   {{- $ccmConfig := dict -}}
   {{- $_ := set $ccmConfig "image" $ccmImage -}}
+  {{- $_ := set $ccmConfig "additionalEnvs" (include "openstack_ccm_envs" . | fromYamlArray) -}}
   {{- $_ := set $ccmConfig "additionalArgs" (include "openstack_ccm_args" . | fromYamlArray) -}}
   {{- $_ := set $ccmConfig "additionalPodAnnotations" (include "openstack_ccm_pod_annotations" . | fromYaml) -}}
   {{- $_ := set $ccmConfig "additionalVolumeMounts" (include "openstack_ccm_volume_mounts" . | fromYamlArray) -}}

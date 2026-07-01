@@ -1,0 +1,15 @@
+diff --git a/pkg/openstack/instances.go b/pkg/openstack/instances.go
+index a78e9305..c4b8e9f1 100644
+--- a/pkg/openstack/instances.go
++++ b/pkg/openstack/instances.go
+@@ -276,6 +276,10 @@ func instanceExistsByProviderID(ctx context.Context, compute *gophercloud.ServiceC
+ 	_, err = servers.Get(ctx, compute, instanceID).Extract()
+ 	if mc.ObserveRequest(err) != nil {
+ 		if errors.IsNotFound(err) {
++			if _, ok := sysos.LookupEnv("SKIP_NODE_DELETION"); ok {
++				klog.V(4).Infof("instanceExistsByProviderID(%v) not found, SKIP_NODE_DELETION is set, preventing deletion", providerID)
++				return false, cloudprovider.InstanceNotFound
++			}
+ 			return false, nil
+ 		}
+ 		return false, err
