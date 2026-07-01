@@ -70,14 +70,9 @@ spec:
         - kine
         - --endpoint=postgres://kine:kine@localhost:5432/kine?sslmode=disable
         - --listen-address=0.0.0.0:2379
-        - --ca-file=/pki/etcd-ca.crt
-        - --cert-file=/pki/etcd-server.crt
-        - --key-file=/pki/etcd-server.key
         ports:
         - {containerPort: 2379, name: client, protocol: TCP}
         - {containerPort: 8080, name: metrics, protocol: TCP}
-        volumeMounts:
-        - {name: pki, mountPath: /pki, readOnly: true}
         securityContext:
           runAsNonRoot: false
           runAsUser: 0
@@ -91,9 +86,6 @@ spec:
           requests: {cpu: 100m, memory: 128Mi}
           limits: {cpu: 500m, memory: 512Mi}
       volumes:
-      - name: pki
-        secret:
-          secretName: d8-pki-virtual
       - name: postgres-run
         emptyDir: {}
       - name: postgres-tmp
