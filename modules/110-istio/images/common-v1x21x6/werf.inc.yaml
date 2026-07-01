@@ -50,13 +50,11 @@ shell:
   install:
   - cd /src/kiali/frontend
   {{- include "node packages proxy" . | nindent 2 }}
+  {{- include "yarn3 packages proxy" . | nindent 2 }}
   {{- if .DistroPackagesProxy }}
-  - yarn config set registry "http://{{ $.DistroPackagesProxy }}/repository/npmjs/"
   - export CYPRESS_DOWNLOAD_MIRROR="http://{{ $.DistroPackagesProxy }}/repository/download.cypress.io"
   {{- end }}
   - yarn install --frozen-lockfile
-  setup:
-  - cd /src/kiali/frontend
   - KIALI_ENV=production yarn run build
   - mkdir -p /src/kial-frontend-assets/static
   - cp -a build/. /src/kial-frontend-assets/static/
