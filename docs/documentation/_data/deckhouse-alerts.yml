@@ -3927,8 +3927,8 @@ alerts:
       severity: "3"
       markupFormat: markdown
     - name: DeckhouseMigratedModuleNotDownloaded
-      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 002-deckhouse
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
       module: deckhouse
       edition: ce
       description: |
