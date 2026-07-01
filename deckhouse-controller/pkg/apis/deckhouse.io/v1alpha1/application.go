@@ -76,18 +76,22 @@ type Application struct {
 
 type ApplicationSpec struct {
 	// Name of the application package to install.
+	// +crd-enricher:deckhouse:documentation:examples=console
 	PackageName string `json:"packageName"`
 
 	// Name of the repository where the package is located.
 	// If not specified, the default repository is used.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
 	// Version of the application package to install.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 
 	// Release channel for the application package.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=stable
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
 	// Configuration settings for the application.

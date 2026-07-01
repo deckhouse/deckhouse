@@ -90,16 +90,19 @@ type ApplicationPackageVersionSpec struct {
 	// Name of the application package.
 	// +optional
 	// +kubebuilder:validation:Immutable
+	// +crd-enricher:deckhouse:documentation:examples=console
 	PackageName string `json:"packageName,omitempty"`
 
 	// Name of the package repository containing the package.
 	// +optional
 	// +kubebuilder:validation:Immutable
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
 	// Version of the application package.
 	// +optional
 	// +kubebuilder:validation:Immutable
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion,omitempty"`
 }
 
