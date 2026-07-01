@@ -1,5 +1,4 @@
 name: user-authn
-critical: true
 stage: General Availability
 subsystems:
   - security
