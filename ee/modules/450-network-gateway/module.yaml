@@ -8,3 +8,7 @@ namespace: d8-network-gateway
 descriptions:
   en: Creates a network gateway using Kubernetes nodes. It contains a DHCP server and a SNAT manager.
   ru: Создает сетевой шлюз из Kubernetes-узлов. Содержит в себе DHCP-сервер и настройщик SNAT.
+accessibility:
+  editions:
+    _default:
+      available: true

@@ -141,18 +141,18 @@ func (a *ModuleAccessibility) IsEnabled(editionName, bundleName string) bool {
 		return false
 	}
 
-	// check edition‑specific bundles first
-	if edition, ok := a.Editions[editionName]; ok && isEnabledInBundle(edition.EnabledInBundles, bundleName) {
-		return true
+	// an explicit edition entry is authoritative: it fully defines the enabled
+	// bundles for the edition and does not fall back to the default settings
+	if edition, ok := a.Editions[editionName]; ok {
+		return isEnabledInBundle(edition.EnabledInBundles, bundleName)
 	}
 
-	// check the default settings
+	// no edition entry — fall back to the default settings
 	defaultSettings, ok := a.Editions["_default"]
 	if !ok {
 		return false
 	}
 
-	// fallback to the default
 	return isEnabledInBundle(defaultSettings.EnabledInBundles, bundleName)
 }
 

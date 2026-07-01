@@ -6,3 +6,10 @@ namespace: d8-operator-prometheus
 descriptions:
   en: Manages the lifecycle of the monitoring system in the cluster.
   ru: Управляет жизненным циклом системы мониторинга в кластере.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

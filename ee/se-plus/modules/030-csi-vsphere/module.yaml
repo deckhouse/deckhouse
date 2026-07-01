@@ -7,3 +7,7 @@ stage: Deprecated
 descriptions:
   en: Provides CSI for VMware vSphere environments.
   ru: Предоставляет CSI для сред VMware vSphere.
+accessibility:
+  editions:
+    _default:
+      available: true
