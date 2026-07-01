@@ -31,6 +31,9 @@ import (
 )
 
 func (svc *Service) Build() error {
+	svc.buildMu.Lock()
+	defer svc.buildMu.Unlock()
+
 	start := time.Now()
 	status := "ok"
 	defer func() {
