@@ -30,7 +30,6 @@ import (
 type DVPInstanceClass struct {
 	// +deckhouse:XDocSkip
 	metav1.TypeMeta   `json:",inline"`
-	// +deckhouse:XDocSkip
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec InstanceClassSpec `json:"spec"`
