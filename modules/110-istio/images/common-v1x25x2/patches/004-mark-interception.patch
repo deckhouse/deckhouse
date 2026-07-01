@@ -1,4 +1,4 @@
-From 7532eeb40048757d26ec652c2700e696cbb3f9e4 Mon Sep 17 00:00:00 2001
+From aa3af44f94d8ff523d7ff9f4d82126d8e3dacbee Mon Sep 17 00:00:00 2001
 From: Paramoshka <parfenov_ivan_42a@mail.ru>
 Date: Tue, 30 Jun 2026 18:21:59 +0300
 Subject: [PATCH] mark-based outbound interception for same-uid app/sidecar
@@ -27,11 +27,11 @@ Signed-off-by: Paramoshka <parfenov_ivan_42a@mail.ru>
  pilot/pkg/networking/core/cluster_builder.go  |  45 +++++
  pilot/pkg/networking/core/listener_address.go |   6 +
  pkg/model/proxy.go                            |   5 +
- tools/istio-iptables/pkg/capture/run.go       | 170 ++++++++++--------
+ tools/istio-iptables/pkg/capture/run.go       | 181 ++++++++++--------
  tools/istio-iptables/pkg/cmd/root.go          |   6 +
  tools/istio-iptables/pkg/config/config.go     |  17 +-
  .../istio-iptables/pkg/constants/constants.go |   3 +
- 10 files changed, 180 insertions(+), 84 deletions(-)
+ 10 files changed, 191 insertions(+), 84 deletions(-)
 
 diff --git a/cni/pkg/plugin/sidecar_iptables_linux.go b/cni/pkg/plugin/sidecar_iptables_linux.go
 index 625d687bec..a61873a385 100644
@@ -202,10 +202,10 @@ index f5b8a71558..498031bf47 100644
  	ServiceAccount string `json:"SERVICE_ACCOUNT,omitempty"`
  
 diff --git a/tools/istio-iptables/pkg/capture/run.go b/tools/istio-iptables/pkg/capture/run.go
-index 9933c1f9f3..b4ec50b6af 100644
+index 9933c1f9f3..31ca141184 100644
 --- a/tools/istio-iptables/pkg/capture/run.go
 +++ b/tools/istio-iptables/pkg/capture/run.go
-@@ -364,93 +364,105 @@ func (cfg *IptablesConfigurator) Run() error {
+@@ -364,93 +364,116 @@ func (cfg *IptablesConfigurator) Run() error {
  	cfg.ruleBuilder.AppendVersionedRule("127.0.0.6/32", "::6/128", constants.ISTIOOUTPUT, "nat",
  		"-o", "lo", "-s", constants.IPVersionSpecific, "-j", "RETURN")
  
@@ -226,6 +226,12 @@ index 9933c1f9f3..b4ec50b6af 100644
 -				"!", "--dports", "53,"+cfg.cfg.InboundTunnelPort,
 -				"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
 -		} else {
+-			cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
+-				"-o", "lo",
+-				"!", "-d", constants.IPVersionSpecific,
+-				"-p", "tcp",
+-				"!", "--dport", cfg.cfg.InboundTunnelPort,
+-				"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
 +	if cfg.cfg.OutboundMark != "" {
 +		// Mark-based outbound interception. Envoy tags its upstream sockets with SO_MARK, so we
 +		// exclude marked packets from redirection. This replaces the owner-based rules below and
@@ -236,12 +242,35 @@ index 9933c1f9f3..b4ec50b6af 100644
 +		// without distinguishing app from Envoy. This is acceptable for ingress-nginx.
 +		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
 +			"-m", "mark", "--mark", cfg.cfg.OutboundMark, "-j", "RETURN")
++
++		// Exclude DNS and istiod ports from redirection so the pilot-agent can bootstrap
++		// (resolve istiod and fetch the initial Envoy config/certs) before Envoy is ready.
++		// In owner-based mode these are covered by the UID match; in mark mode the pilot-agent
++		// has no SO_MARK, so its traffic must be excluded by port.
++		for _, port := range []string{"53", "15012", "15017"} {
++			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++				"-p", "tcp", "--dport", port, "-j", "RETURN")
++			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++				"-p", "udp", "--dport", port, "-j", "RETURN")
+ 		}
+-		// Do not redirect app calls to back itself via Envoy when using the endpoint address
+-		// e.g. appN => appN by lo
+-		// If loopback explicitly set via OutboundIPRangesInclude, then don't return.
+-		if !ipv4RangesInclude.HasLoopBackIP && !ipv6RangesInclude.HasLoopBackIP {
 +	} else {
 +		for _, uid := range split(cfg.cfg.ProxyUID) {
 +			// Redirect app calls back to itself via Envoy when using the service VIP
 +			// e.g. appN => Envoy (client) => Envoy (server) => appN.
 +			// nolint: lll
-+			if redirectDNS {
+ 			if redirectDNS {
+-				// Users may have a DNS server that is on localhost. In these cases, applications may
+-				// send TCP traffic to the DNS server that we actually *do* want to intercept. To
+-				// handle this case, we exclude port 53 from this rule. Note: We cannot just move the
+-				// port 53 redirection rule further up the list, as we will want to avoid capturing
+-				// DNS requests from the proxy UID/GID
+-				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-o", "lo", "-p", "tcp",
+-					"!", "--dport", "53",
+-					"-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
 +				// When DNS is enabled, we skip this for port 53. This ensures we do not have:
 +				// app => istio-agent => Envoy inbound => dns server
 +				// Instead, we just have:
@@ -253,7 +282,9 @@ index 9933c1f9f3..b4ec50b6af 100644
 +					"-m", "multiport",
 +					"!", "--dports", "53,"+cfg.cfg.InboundTunnelPort,
 +					"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
-+			} else {
+ 			} else {
+-				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
+-					"-o", "lo", "-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
 +				cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
 +					"-o", "lo",
 +					"!", "-d", constants.IPVersionSpecific,
@@ -278,8 +309,26 @@ index 9933c1f9f3..b4ec50b6af 100644
 +					cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
 +						"-o", "lo", "-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
 +				}
-+			}
-+
+ 			}
+-		}
+-
+-		// Avoid infinite loops. Don't redirect Envoy traffic directly back to
+-		// Envoy for non-loopback traffic.
+-		// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
+-		// all UDP/TCP packets from Envoy, regardless of dest.
+-		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
+-			"-m", "owner", "--uid-owner", uid, "-j", "RETURN")
+-	}
+ 
+-	for _, gid := range split(cfg.cfg.ProxyGID) {
+-		// Redirect app calls back to itself via Envoy when using the service VIP
+-		// e.g. appN => Envoy (client) => Envoy (server) => appN.
+-		cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
+-			"-o", "lo",
+-			"!", "-d", constants.IPVersionSpecific,
+-			"-p", "tcp",
+-			"!", "--dport", cfg.cfg.InboundTunnelPort,
+-			"-m", "owner", "--gid-owner", gid, "-j", constants.ISTIOINREDIRECT)
 +			// Avoid infinite loops. Don't redirect Envoy traffic directly back to
 +			// Envoy for non-loopback traffic.
 +			// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
@@ -287,17 +336,7 @@ index 9933c1f9f3..b4ec50b6af 100644
 +			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
 +				"-m", "owner", "--uid-owner", uid, "-j", "RETURN")
 +		}
-+
-+		for _, gid := range split(cfg.cfg.ProxyGID) {
-+			// Redirect app calls back to itself via Envoy when using the service VIP
-+			// e.g. appN => Envoy (client) => Envoy (server) => appN.
- 			cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
- 				"-o", "lo",
- 				"!", "-d", constants.IPVersionSpecific,
- 				"-p", "tcp",
- 				"!", "--dport", cfg.cfg.InboundTunnelPort,
--				"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
--		}
+ 
 -		// Do not redirect app calls to back itself via Envoy when using the endpoint address
 -		// e.g. appN => appN by lo
 -		// If loopback explicitly set via OutboundIPRangesInclude, then don't return.
@@ -308,12 +347,21 @@ index 9933c1f9f3..b4ec50b6af 100644
 -				// handle this case, we exclude port 53 from this rule. Note: We cannot just move the
 -				// port 53 redirection rule further up the list, as we will want to avoid capturing
 -				// DNS requests from the proxy UID/GID
--				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-o", "lo", "-p", "tcp",
+-				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
+-					"-o", "lo", "-p", "tcp",
 -					"!", "--dport", "53",
--					"-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
+-					"-m", "owner", "!", "--gid-owner", gid, "-j", "RETURN")
 -			} else {
 -				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
--					"-o", "lo", "-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
+-					"-o", "lo", "-m", "owner", "!", "--gid-owner", gid, "-j", "RETURN")
++		for _, gid := range split(cfg.cfg.ProxyGID) {
++			// Redirect app calls back to itself via Envoy when using the service VIP
++			// e.g. appN => Envoy (client) => Envoy (server) => appN.
++			cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
++				"-o", "lo",
++				"!", "-d", constants.IPVersionSpecific,
++				"-p", "tcp",
++				"!", "--dport", cfg.cfg.InboundTunnelPort,
 +				"-m", "owner", "--gid-owner", gid, "-j", constants.ISTIOINREDIRECT)
 +
 +			// Do not redirect app calls to back itself via Envoy when using the endpoint address
@@ -341,51 +389,14 @@ index 9933c1f9f3..b4ec50b6af 100644
 -		// Envoy for non-loopback traffic.
 -		// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
 -		// all UDP/TCP packets from Envoy, regardless of dest.
--		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
--			"-m", "owner", "--uid-owner", uid, "-j", "RETURN")
+-		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-m", "owner", "--gid-owner", gid, "-j", "RETURN")
 -	}
--
--	for _, gid := range split(cfg.cfg.ProxyGID) {
--		// Redirect app calls back to itself via Envoy when using the service VIP
--		// e.g. appN => Envoy (client) => Envoy (server) => appN.
--		cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
--			"-o", "lo",
--			"!", "-d", constants.IPVersionSpecific,
--			"-p", "tcp",
--			"!", "--dport", cfg.cfg.InboundTunnelPort,
--			"-m", "owner", "--gid-owner", gid, "-j", constants.ISTIOINREDIRECT)
--
--		// Do not redirect app calls to back itself via Envoy when using the endpoint address
--		// e.g. appN => appN by lo
--		// If loopback explicitly set via OutboundIPRangesInclude, then don't return.
--		if !ipv4RangesInclude.HasLoopBackIP && !ipv6RangesInclude.HasLoopBackIP {
--			if redirectDNS {
--				// Users may have a DNS server that is on localhost. In these cases, applications may
--				// send TCP traffic to the DNS server that we actually *do* want to intercept. To
--				// handle this case, we exclude port 53 from this rule. Note: We cannot just move the
--				// port 53 redirection rule further up the list, as we will want to avoid capturing
--				// DNS requests from the proxy UID/GID
--				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
--					"-o", "lo", "-p", "tcp",
--					"!", "--dport", "53",
--					"-m", "owner", "!", "--gid-owner", gid, "-j", "RETURN")
--			} else {
--				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
--					"-o", "lo", "-m", "owner", "!", "--gid-owner", gid, "-j", "RETURN")
--			}
 +			// Avoid infinite loops. Don't redirect Envoy traffic directly back to
 +			// Envoy for non-loopback traffic.
 +			// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
 +			// all UDP/TCP packets from Envoy, regardless of dest.
 +			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-m", "owner", "--gid-owner", gid, "-j", "RETURN")
- 		}
--
--		// Avoid infinite loops. Don't redirect Envoy traffic directly back to
--		// Envoy for non-loopback traffic.
--		// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
--		// all UDP/TCP packets from Envoy, regardless of dest.
--		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-m", "owner", "--gid-owner", gid, "-j", "RETURN")
--	}
++		}
 +	} // end owner-based interception (OutboundMark == "")
  
  	ownerGroupsFilter := config.ParseInterceptFilter(cfg.cfg.OwnerGroupsInclude, cfg.cfg.OwnerGroupsExclude)
