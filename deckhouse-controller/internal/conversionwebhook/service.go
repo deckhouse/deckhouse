@@ -26,13 +26,16 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/flant/kube-client/client"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
@@ -59,6 +62,23 @@ const (
 	// decodeBufferSize is the read-ahead the streaming YAML decoder uses to tell
 	// YAML from JSON documents in the rendered manifest stream.
 	decodeBufferSize = 4096
+
+	// crdResource identifies CustomResourceDefinitions for the dynamic client;
+	// the service reads a target CRD's spec.conversion.strategy to tell when the
+	// webhook-handler has wired conversion.
+	crdGroup    = "apiextensions.k8s.io"
+	crdVersion  = "v1"
+	crdResource = "customresourcedefinitions"
+
+	// webhookConverterStrategy is a CRD's spec.conversion.strategy once the
+	// webhook-handler has patched it to serve webhook conversion.
+	webhookConverterStrategy = "Webhook"
+
+	// conversionPollInterval and conversionWaitTimeout bound the wait for the
+	// webhook-handler to patch the target CRD after the ConversionWebhook is
+	// applied. On timeout the task fails and the queue retries with backoff.
+	conversionPollInterval = 2 * time.Second
+	conversionWaitTimeout  = 2 * time.Minute
 )
 
 // renderer renders a package's Helm chart into a YAML manifest stream.
@@ -121,6 +141,46 @@ func (s *Service) Install(ctx context.Context, namespace string, pkg nelm.Packag
 		if err := s.apply(ctx, webhook); err != nil {
 			return fmt.Errorf("apply conversion webhook %q: %w", webhook.GetName(), err)
 		}
+
+		// Applying the ConversionWebhook is asynchronous from the webhook-handler
+		// patching the target CRD. Block until conversion is actually served, so
+		// the run task cannot create custom resources that would be stored without
+		// conversion (their fields pruned). The webhook name is the target CRD name.
+		if err := s.waitForConversion(ctx, webhook.GetName()); err != nil {
+			return fmt.Errorf("await conversion webhook %q: %w", webhook.GetName(), err)
+		}
+	}
+
+	return nil
+}
+
+// waitForConversion blocks until the target CRD's spec.conversion.strategy is
+// Webhook — i.e. the webhook-handler has picked up the ConversionWebhook and
+// wired conversion — or the bounded timeout elapses.
+func (s *Service) waitForConversion(ctx context.Context, crdName string) error {
+	gvr := schema.GroupVersionResource{Group: crdGroup, Version: crdVersion, Resource: crdResource}
+
+	condition := func(ctx context.Context) (bool, error) {
+		crd, err := s.client.Dynamic().Resource(gvr).Get(ctx, crdName, metav1.GetOptions{})
+		if err != nil {
+			// The target CRD may not be installed yet; keep waiting for it.
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+
+			return false, fmt.Errorf("get crd: %w", err)
+		}
+
+		strategy, _, err := unstructured.NestedString(crd.Object, "spec", "conversion", "strategy")
+		if err != nil {
+			return false, fmt.Errorf("read conversion strategy: %w", err)
+		}
+
+		return strategy == webhookConverterStrategy, nil
+	}
+
+	if err := wait.PollUntilContextTimeout(ctx, conversionPollInterval, conversionWaitTimeout, true, condition); err != nil {
+		return fmt.Errorf("wait for conversion strategy: %w", err)
 	}
 
 	return nil
