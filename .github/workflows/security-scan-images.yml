@@ -465,7 +465,7 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_OUTPUT
           echo "SCAN_SEVERAL_LATEST_RELEASES=False" >> $GITHUB_OUTPUT
           echo "LATEST_RELEASES_AMOUNT=0" >> $GITHUB_OUTPUT
-              # <template: cve_scan_deckhouse_images>
+            # <template: cve_scan_deckhouse_images>
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1308,7 +1308,7 @@ jobs:
               echo "✅ $name: $r"
               continue
             fi
-       # CVE SCAN is intentionally DISABLED for PR mode.
+            # CVE SCAN is intentionally DISABLED for PR mode.
             if [[ "$name" == "cve" && "$r" == "skipped" ]]; then
               echo "ℹ️  $name: $r (temporarily disabled)"
               continue

@@ -185,11 +185,11 @@ jobs:
       WORKDIR: "cve-scan"
     steps:
       {!{ tmpl.Exec "checkout_full_step"           $ctx | strings.Indent 6 }!}
-        {!{ tmpl.Exec "link_bin_step"                     | strings.Indent 6 }!}
-        {!{ tmpl.Exec "cve_scan_type_pr"                  | strings.Indent 6 }!}
-        {!{ tmpl.Exec "cve_scan_deckhouse_images"    $ctx | strings.Indent 6 }!}
-        {!{ tmpl.Exec "cve_tests_upload_reports_artifacts"| strings.Indent 6 }!}
-        {!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 6 }!}
+      {!{ tmpl.Exec "link_bin_step"                     | strings.Indent 6 }!}
+      {!{ tmpl.Exec "cve_scan_type_pr"                  | strings.Indent 6 }!}
+      {!{ tmpl.Exec "cve_scan_deckhouse_images"    $ctx | strings.Indent 6 }!}
+      {!{ tmpl.Exec "cve_tests_upload_reports_artifacts"| strings.Indent 6 }!}
+      {!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 6 }!}
     # NOTE: no `send_fail_report` here. PR-time CVE notifications are
     # intentionally silent — Loop pings on this workflow are reserved for
     # rootless / antivirus findings (and gitleaks lives in security-scan-src).
@@ -296,7 +296,7 @@ jobs:
               echo "✅ $name: $r"
               continue
             fi
-       # CVE SCAN is intentionally DISABLED for PR mode.
+            # CVE SCAN is intentionally DISABLED for PR mode.
             if [[ "$name" == "cve" && "$r" == "skipped" ]]; then
               echo "ℹ️  $name: $r (temporarily disabled)"
               continue
