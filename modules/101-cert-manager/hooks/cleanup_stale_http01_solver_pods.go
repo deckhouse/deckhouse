@@ -64,8 +64,15 @@ func solverPodTerminalSince(pod corev1.Pod) *time.Time {
 func isStaleTerminalSolverPod(pod solverPod, now time.Time) bool {
 	since := pod.TerminalSince
 	if since == nil {
+		if pod.CreatedAt.IsZero() {
+			return false
+		}
 		createdAt := pod.CreatedAt
 		since = &createdAt
+	}
+
+	if since.IsZero() {
+		return false
 	}
 
 	return now.Sub(*since) >= staleSolverGracePeriod
@@ -92,6 +99,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Settings: &go_hook.HookConfigSettings{
 		ExecutionMinInterval: 15 * time.Second,
 		ExecutionBurst:       1,
+	},
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "cleanup_stale_http01_solver_pods",
+			Crontab: "*/30 * * * *",
+		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
