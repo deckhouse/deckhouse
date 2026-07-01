@@ -1,4 +1,4 @@
-From aa3af44f94d8ff523d7ff9f4d82126d8e3dacbee Mon Sep 17 00:00:00 2001
+From 0077067fd5dd06f230a2b7ccbec2bb5142cafeb1 Mon Sep 17 00:00:00 2001
 From: Paramoshka <parfenov_ivan_42a@mail.ru>
 Date: Tue, 30 Jun 2026 18:21:59 +0300
 Subject: [PATCH] mark-based outbound interception for same-uid app/sidecar
@@ -24,14 +24,12 @@ Signed-off-by: Paramoshka <parfenov_ivan_42a@mail.ru>
  cni/pkg/plugin/sidecar_iptables_linux.go      |   1 +
  cni/pkg/plugin/sidecar_redirect.go            |   3 +
  .../files/injection-template.yaml             |   8 +
- pilot/pkg/networking/core/cluster_builder.go  |  45 +++++
- pilot/pkg/networking/core/listener_address.go |   6 +
  pkg/model/proxy.go                            |   5 +
  tools/istio-iptables/pkg/capture/run.go       | 181 ++++++++++--------
  tools/istio-iptables/pkg/cmd/root.go          |   6 +
  tools/istio-iptables/pkg/config/config.go     |  17 +-
  .../istio-iptables/pkg/constants/constants.go |   3 +
- 10 files changed, 191 insertions(+), 84 deletions(-)
+ 8 files changed, 140 insertions(+), 84 deletions(-)
 
 diff --git a/cni/pkg/plugin/sidecar_iptables_linux.go b/cni/pkg/plugin/sidecar_iptables_linux.go
 index 625d687bec..a61873a385 100644
@@ -91,100 +89,6 @@ index 3b3f69cd9d..67d03c2b03 100644
      {{- if .Values.global.network }}
      - name: ISTIO_META_NETWORK
        value: "{{ .Values.global.network }}"
-diff --git a/pilot/pkg/networking/core/cluster_builder.go b/pilot/pkg/networking/core/cluster_builder.go
-index 85a400a03c..7bc530dc9d 100644
---- a/pilot/pkg/networking/core/cluster_builder.go
-+++ b/pilot/pkg/networking/core/cluster_builder.go
-@@ -17,6 +17,7 @@ package core
- import (
- 	"fmt"
- 	"math"
-+	"strconv"
- 	"time"
- 
- 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-@@ -175,6 +176,43 @@ func (cb *ClusterBuilder) sidecarProxy() bool {
- 	return cb.proxyType == model.SidecarProxy
- }
- 
-+// outboundSocketMark returns the SO_MARK value configured for this proxy (from node metadata),
-+// or "" when mark-based outbound interception is disabled. When set, Envoy tags its upstream
-+// sockets with this mark so iptables can exclude the proxy's own traffic from redirection,
-+// allowing the sidecar to share the application's UID/GID.
-+func (cb *ClusterBuilder) outboundSocketMark() string {
-+	if cb.proxyMetadata == nil {
-+		return ""
-+	}
-+	return cb.proxyMetadata.OutboundMark
-+}
-+
-+// applyOutboundSocketMark tags the cluster's upstream sockets with SO_MARK=<mark> so that
-+// iptables (running with mark-based interception) can identify and skip Envoy's own traffic.
-+// Only meaningful for outbound clusters: inbound passthrough clusters reuse a distinct bind
-+// (127.0.0.6) that iptables matches by source address.
-+func (cb *ClusterBuilder) applyOutboundSocketMark(c *cluster.Cluster) {
-+	mark := cb.outboundSocketMark()
-+	if mark == "" {
-+		return
-+	}
-+	markInt, err := strconv.ParseInt(mark, 0, 64)
-+	if err != nil {
-+		log.Warnf("invalid OUTBOUND_MARK %q on proxy %s, skipping SO_MARK: %v", mark, cb.proxyID, err)
-+		return
-+	}
-+	if c.UpstreamBindConfig == nil {
-+		c.UpstreamBindConfig = &core.BindConfig{}
-+	}
-+	c.UpstreamBindConfig.SocketOptions = append(c.UpstreamBindConfig.SocketOptions, &core.SocketOption{
-+		Description: "outbound interception mark",
-+		Level:       syscallSOLSocket, // SOL_SOCKET
-+		Name:        syscallSOMark,    // SO_MARK
-+		Value:       &core.SocketOption_IntValue{IntValue: markInt},
-+		State:       core.SocketOption_STATE_PREBIND,
-+	})
-+}
-+
- func (cb *ClusterBuilder) buildSubsetCluster(
- 	opts buildClusterOpts, destRule *config.Config, subset *networking.Subset, service *model.Service,
- 	endpointBuilder *endpoints.EndpointBuilder,
-@@ -387,6 +425,9 @@ func (cb *ClusterBuilder) buildCluster(name string, discoveryType cluster.Cluste
- 			statPrefix := telemetry.BuildStatPrefix(cb.req.Push.Mesh.OutboundClusterStatName, string(service.Hostname), subset, port, 0, &service.Attributes)
- 			ec.cluster.AltStatName = util.DelimitedStatsPrefix(statPrefix)
- 		}
-+		// Tag outbound upstream sockets with SO_MARK so iptables can skip Envoy's own traffic
-+		// when mark-based interception is enabled (sidecar sharing the app UID/GID).
-+		cb.applyOutboundSocketMark(c)
- 	}
- 
- 	return ec
-@@ -564,6 +605,10 @@ func (cb *ClusterBuilder) buildDefaultPassthroughCluster() *cluster.Cluster {
- 	cluster.AltStatName = util.DelimitedStatsPrefix(util.PassthroughCluster)
- 	cb.applyConnectionPool(cb.req.Push.Mesh, newClusterWrapper(cluster), &networking.ConnectionPoolSettings{})
- 	cb.applyMetadataExchange(cluster)
-+	// This cluster is outbound (catches unknown outbound destinations). The inbound passthrough
-+	// cluster reuses this builder but fully reassigns UpstreamBindConfig (to 127.0.0.6), so the
-+	// SO_MARK set here is correctly dropped for inbound.
-+	cb.applyOutboundSocketMark(cluster)
- 	return cluster
- }
- 
-diff --git a/pilot/pkg/networking/core/listener_address.go b/pilot/pkg/networking/core/listener_address.go
-index b46784342a..04c4b682d0 100644
---- a/pilot/pkg/networking/core/listener_address.go
-+++ b/pilot/pkg/networking/core/listener_address.go
-@@ -35,6 +35,12 @@ const (
- 	// 6 is the magical number for inbound: 15006, 127.0.0.6, ::6
- 	InboundPassthroughBindIpv4 = "127.0.0.6"
- 	InboundPassthroughBindIpv6 = "::6"
-+
-+	// Linux socket option constants used for Envoy SO_MARK on outbound clusters.
-+	// Defined as literals (rather than the syscall package) so the code is portable
-+	// and not restricted to GOOS=linux at compile time; the values are stable in the UAPI.
-+	syscallSOLSocket = 1  // SOL_SOCKET
-+	syscallSOMark    = 36 // SO_MARK
- )
- 
- var (
 diff --git a/pkg/model/proxy.go b/pkg/model/proxy.go
 index f5b8a71558..498031bf47 100644
 --- a/pkg/model/proxy.go

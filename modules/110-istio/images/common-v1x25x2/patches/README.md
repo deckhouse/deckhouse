@@ -23,4 +23,8 @@ Change runAsUser from 1337 to 64535 in istio templates, changed istio-init.iptab
 
 ## 004-mark-interception.patch
 
-Add mark-based outbound interception as an opt-in alternative to --uid-owner, for pods where the sidecar must run with the same UID/GID as the application container (e.g. ingress-nginx under deckhouse, both UID 64535). With the dual-uid approach from 003 the app's own outbound traffic is also excluded from redirect, breaking interception. When `traffic.sidecar.istio.io/outboundSocketMark` is set, Envoy tags its outbound sockets with SO_MARK and iptables excludes marked packets via `-m mark --mark <mark> -j RETURN`, distinguishing Envoy from the app by socket mark. Applies on top of 003.
+Add mark-based outbound interception as an opt-in alternative to --uid-owner, for pods where the sidecar must run with the same UID/GID as the application container (e.g. ingress-nginx under deckhouse, both UID 64535). With the dual-uid approach from 003 the app's own outbound traffic is also excluded from redirect, breaking interception.
+
+When `traffic.sidecar.istio.io/outboundSocketMark` is set, the init container installs port-based exclusions (53, 15012, 15017) instead of owner-based UID/GID rules, and a no-op mark RETURN rule. Envoy does NOT set SO_MARK on its sockets — no CAP_NET_ADMIN required. Infinite loops are avoided because outbound redirect is scoped to the service CIDR (`-i`), while Envoy connects to pod IPs (via EDS) which fall outside that range.
+
+Applies on top of 003.
