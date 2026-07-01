@@ -6,3 +6,6 @@ path = "gitleaks.base.toml"
 regexes = [
   'kubernetesCni162'
 ]
+paths = [
+  'docs/site/_includes/getting_started/global/partials/installer/installer-steps-bare-metal.html',
+]
