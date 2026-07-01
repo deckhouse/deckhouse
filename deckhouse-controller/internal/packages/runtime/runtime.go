@@ -42,6 +42,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/conversionwebhook"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
@@ -59,6 +60,7 @@ import (
 	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
+	taskensurehooks "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurehooks"
 	taskglobalrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/globalrun"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
@@ -105,10 +107,11 @@ type Runtime struct {
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
 	debugServer *debug.Server       // Unix socket debug API
 
-	crdService        *crd.Service                        // Installs CRDs from package paths
-	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
-	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
-	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
+	crdService               *crd.Service                        // Installs CRDs from package paths
+	conversionWebhookService *conversionwebhook.Service          // Installs package ConversionWebhook resources before templates
+	objectPatcher            *objectpatch.ObjectPatcher          // Applies resource patches from hooks
+	scheduleManager          schedulemanager.ScheduleManager     // Cron-based schedule triggers
+	kubeEventsManager        kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
 
 	edition *edition.Edition
 	global  *global.Module
@@ -181,6 +184,12 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	// Build CRD service with its own client
 	if err := r.buildCRDService(); err != nil {
 		return nil, fmt.Errorf("build crd service: %w", err)
+	}
+
+	// Build conversion webhook service; it renders through the NELM service, so
+	// it must be built after buildNelmService.
+	if err := r.buildConversionWebhookService(); err != nil {
+		return nil, fmt.Errorf("build conversion webhook service: %w", err)
 	}
 
 	// Build Health service with its own client
@@ -449,6 +458,25 @@ func (r *Runtime) buildCRDService() error {
 	return nil
 }
 
+// buildConversionWebhookService creates the service that applies a package's
+// ConversionWebhook resources ahead of its templates. It renders through the
+// NELM service and applies with its own client, so it must run after
+// buildNelmService.
+func (r *Runtime) buildConversionWebhookService() error {
+	client := klient.New(klient.WithLogger(r.logger.Named("conversion-webhook-client")))
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithMetricPrefix("packages_conversion_webhook_")
+
+	if err := client.Init(); err != nil {
+		return fmt.Errorf("initialize conversion webhook client: %w", err)
+	}
+
+	r.conversionWebhookService = conversionwebhook.NewService(r.nelmService, client, r.logger)
+
+	return nil
+}
+
 // buildHealthService creates the workload-health service that drives ConditionScaled.
 //
 // The service watches workloads tagged with the health.LabelKey package label and
@@ -693,12 +721,14 @@ func (r *Runtime) schedulePackage(name string) {
 	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskensurehooks.NewTask(pkg, pkg.GetNamespace(), r.conversionWebhookService.Install, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskensurehooks.NewTask(pkg, modulesNamespace, r.conversionWebhookService.Install, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}
 }
