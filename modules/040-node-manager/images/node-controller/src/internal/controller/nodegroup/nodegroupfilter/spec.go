@@ -28,7 +28,8 @@ type NodeType string
 type NodeGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NodeGroupSpec `json:"spec"`
+	Spec              NodeGroupSpec   `json:"spec"`
+	Status            NodeGroupStatus `json:"status,omitempty"`
 }
 
 type NodeGroupSpec struct {
@@ -239,4 +240,76 @@ type Window struct {
 	From string   `json:"from"`
 	To   string   `json:"to"`
 	Days []string `json:"days"`
+}
+
+type NodeGroupEngine string
+
+type NodeGroupStatus struct {
+	Engine NodeGroupEngine `json:"engine,omitempty"`
+
+	Ready int32 `json:"ready,omitempty"`
+
+	Nodes int32 `json:"nodes,omitempty"`
+
+	Instances int32 `json:"instances,omitempty"`
+
+	Desired int32 `json:"desired,omitempty"`
+
+	Min int32 `json:"min,omitempty"`
+
+	Max int32 `json:"max,omitempty"`
+
+	UpToDate int32 `json:"upToDate,omitempty"`
+
+	Standby int32 `json:"standby,omitempty"`
+
+	Error string `json:"error,omitempty"`
+
+	LastMachineFailures []MachineFailure `json:"lastMachineFailures,omitempty"`
+
+	ConditionSummary ConditionSummary `json:"conditionSummary,omitempty"`
+
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+
+	Conditions []NodeGroupCondition `json:"conditions,omitempty"`
+}
+
+type MachineFailure struct {
+	Name string `json:"name,omitempty"`
+
+	ProviderID string `json:"providerID,omitempty"`
+
+	OwnerRef string `json:"ownerRef,omitempty"`
+
+	LastOperation MachineOperation `json:"lastOperation,omitempty"`
+}
+
+type MachineOperation struct {
+	Description string `json:"description,omitempty"`
+
+	LastUpdateTime string `json:"lastUpdateTime,omitempty"`
+
+	State string `json:"state,omitempty"`
+
+	Type string `json:"type,omitempty"`
+}
+
+type ConditionSummary struct {
+	StatusMessage string `json:"statusMessage,omitempty"`
+
+	Ready string `json:"ready,omitempty"`
+}
+
+type NodeGroupConditionType string
+
+type ConditionStatus string
+
+type NodeGroupCondition struct {
+	Type NodeGroupConditionType `json:"type"`
+
+	Status ConditionStatus `json:"status"`
+
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+
+	Message string `json:"message,omitempty"`
 }
