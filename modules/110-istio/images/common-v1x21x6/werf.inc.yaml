@@ -49,9 +49,9 @@ import:
 shell:
   install:
   - cd /src/kiali/frontend
-  {{- include "node packages proxy" . | nindent 2 }}
-  {{- include "yarn3 packages proxy" . | nindent 2 }}
   {{- if .DistroPackagesProxy }}
+  - sed -i 's|https://registry.yarnpkg.com|http://{{ $.DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
+  - sed -i 's|https://registry.npmjs.org|http://{{ $.DistroPackagesProxy }}/repository/npmjs|g' yarn.lock
   - export CYPRESS_DOWNLOAD_MIRROR="http://{{ $.DistroPackagesProxy }}/repository/download.cypress.io"
   {{- end }}
   - yarn install --frozen-lockfile
