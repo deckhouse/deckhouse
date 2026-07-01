@@ -538,6 +538,38 @@ Hugo:
 data-search-context="{{ T "search_context" }}"
 ```
 
+## Slider
+
+`slider.js` is included in `head-site.html` and initializes all elements with `[data-slider]`.
+
+```html
+<div class="slider" data-slider>
+  <div class="slider__viewport">
+    <div class="slider__track">
+      <div class="slider__slide">
+        <figure class="slider__figure">
+          <img src="/images/example-1.png" alt="Slide 1" decoding="async" />
+          <figcaption class="slider__caption">Slide 1</figcaption>
+        </figure>
+      </div>
+      <div class="slider__slide">
+        <figure class="slider__figure">
+          <img src="/images/example-2.png" alt="Slide 2" decoding="async" />
+          <figcaption class="slider__caption">Slide 2</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+  <div class="slider__nav" role="group" aria-label="Slides">
+    <button type="button" class="slider__prev" aria-label="Previous slide">←</button>
+    <div class="slider__pagination" aria-live="polite"></div>
+    <button type="button" class="slider__next" aria-label="Next slide">→</button>
+  </div>
+</div>
+```
+
+Add `.slider__nav` only if there is more than one slide. Pagination is rendered by JS.
+
 ## Markup (external modules documentation)
 
 [Hugo](gohugo.io) SSG is used for rendering.

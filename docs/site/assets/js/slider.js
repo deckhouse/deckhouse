@@ -85,23 +85,9 @@ function initCarousel(root) {
     );
   }
 
-  function layoutSlides(width) {
-    const slideWidth = `${width}px`;
-
-    for (const slide of slides) {
-      slide.style.flex = `0 0 ${slideWidth}`;
-      slide.style.width = slideWidth;
-      slide.style.maxWidth = slideWidth;
-    }
-
-    track.style.width = `${width * slideCount}px`;
-  }
-
-  function update(resize = false) {
+  function update() {
     const width = viewport.clientWidth;
     if (width <= 0) return;
-
-    if (resize) layoutSlides(width);
 
     track.style.transform = `translateX(${-index * width}px)`;
     syncNav();
@@ -114,7 +100,7 @@ function initCarousel(root) {
   }
 
   function refresh() {
-    update(true);
+    update();
   }
 
   if (prev) {
