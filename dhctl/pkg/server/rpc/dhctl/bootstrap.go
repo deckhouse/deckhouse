@@ -170,6 +170,13 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	ctx, span := telemetry.StartSpan(ctx, "grpc.bootstrap")
 	defer span.End()
 
+	// grpc.bootstrap is the root span of a commander-driven run; tag it with the
+	// commander identity so the whole trace is filterable by it.
+	span.SetAttributes(telemetry.CommanderSpanAttributes(
+		p.request.Options.CommanderMode,
+		p.request.Options.CommanderUuid,
+	)...)
+
 	var err error
 
 	cleanuper := callback.NewCallback()

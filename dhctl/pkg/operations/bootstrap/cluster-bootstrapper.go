@@ -223,6 +223,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	if m := bctx.metaConfig; m != nil {
+		// Cloud context on the bootstrap operation span (one span in both CLI and
+		// gRPC paths), set once the config is loaded.
+		span.SetAttributes(telemetry.CloudSpanAttributes(m.ClusterType, m.OriginalProviderName, m.Layout, m.ClusterPrefix, m.UUID)...)
+	}
+
 	defer func() {
 		if err := b.PhasedExecutionContext.Finalize(ctx, bctx.stateCache); err != nil {
 			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to finalize phased execution context: %v", err))
