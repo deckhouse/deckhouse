@@ -691,7 +691,28 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: "Deckhouse configuration contains errors.\n\nSteps to troubleshoot:\n\n1. Check Deckhouse logs by running the following command:\n\n   ```bash\n   d8 k -n d8-system logs -f -l app=deckhouse\n   ```\n\n1. Edit the Deckhouse global configuration:\n\n   ```bash\n   d8 k edit mc global\n   ```\n   \n   Or edit configuration of a specific module:\n\n   ```bash\n   d8 k edit mc <MODULE_NAME>\n   ```\n"
+      description: |
+        Deckhouse configuration contains errors.
+
+        Steps to troubleshoot:
+
+        1. Check Deckhouse logs by running the following command:
+
+           ```bash
+           d8 k -n d8-system logs -f -l app=deckhouse
+           ```
+
+        1. Edit the Deckhouse global configuration:
+
+           ```bash
+           d8 k edit mc global
+           ```
+
+           Or edit configuration of a specific module:
+
+           ```bash
+           d8 k edit mc <MODULE_NAME>
+           ```
       summary: |
         Deckhouse configuration is invalid.
       severity: "5"
@@ -898,7 +919,16 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: "Initial config for module {{ $labels.module }} is not valid. \n\nYou can get more details via\n\n```bash\nd8 k get mr -l module={{ $labels.module }}\n```\n\nProvided error: {{ $labels.error }}\n"
+      description: |
+        Initial config for module {{ $labels.module }} is not valid.
+
+        You can get more details via
+
+        ```bash
+        d8 k get mr -l module={{ $labels.module }}
+        ```
+
+        Provided error: {{ $labels.error }}
       summary: |
         Module configuration failed for module {{ $labels.module }}.
       severity: "5"
@@ -1003,7 +1033,24 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: "Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.\n\nSteps to investigate:\n\n1. Check Deckhouse logs for more information by running:\n\n   ```bash\n   d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch\n   ```\n\n1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.\n   \n   To compare the snapshot with the actual node objects for this hook, run the following command:\n\n   ```bash\n   diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'|sort) <(d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '.\"040-node-manager/hooks/handle_node_templates.go\"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)\n   ```\n"
+      description: |
+        Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.
+
+        Steps to investigate:
+
+        1. Check Deckhouse logs for more information by running:
+
+           ```bash
+           d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch
+           ```
+
+        1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.
+
+           To compare the snapshot with the actual node objects for this hook, run the following command:
+
+           ```bash
+           diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)
+           ```
       summary: |
         Possible API server connection error in the client-go informer.
       severity: "5"
@@ -3777,7 +3824,40 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: "Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and was not found in any available ModuleSource registry. DeckhouseRelease will be locked until the module becomes available in one of the configured ModuleSource registries.\n\nThis may indicate:\n\n- A ModuleSource registry is misconfigured.\n- The module has not been published to the registry yet.\n- A network issue is preventing access to the registry.\n\nTo investigate the issue, do the following:\n\n- Check the configured ModuleSources:\n  \n  ```bash\n  d8 k get modulesources\n  ```\n\n- List the available module sources:\n\n  ```bash\n  d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources\n  ```\n\n- List the modules available in a specific source:\n\n  ```bash\n  d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>\n  ```\n\n- Check the `deckhouse` logs for more details:\n\n  ```bash\n  d8 k -n d8-system logs -f -l app=deckhouse\n  ```\n"
+      description: |
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and was not found in any available ModuleSource registry. DeckhouseRelease will be locked until the module becomes available in one of the configured ModuleSource registries.
+
+        This may indicate:
+
+        - A ModuleSource registry is misconfigured.
+        - The module has not been published to the registry yet.
+        - A network issue is preventing access to the registry.
+
+        To investigate the issue, do the following:
+
+        - Check the configured ModuleSources:
+
+          ```bash
+          d8 k get modulesources
+          ```
+
+        - List the available module sources:
+
+          ```bash
+          d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+          ```
+
+        - List the modules available in a specific source:
+
+          ```bash
+          d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+          ```
+
+        - Check the `deckhouse` logs for more details:
+
+          ```bash
+          d8 k -n d8-system logs -f -l app=deckhouse
+          ```
       summary: |
         Migrated module {{ $labels.module }} was not found in any ModuleSource registry.
       severity: "6"

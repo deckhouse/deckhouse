@@ -213,7 +213,7 @@
         The `{{ $labels.hook }}` hook has failed multiple times in the last `__SCRAPE_INTERVAL_X_4__`.
 
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -264,7 +264,7 @@
       summary: Deckhouse is unable to discover modules.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -286,7 +286,7 @@
       summary: Deckhouse is unable to start the `{{ $labels.module }}` module.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -308,7 +308,7 @@
       summary: Deckhouse is unable to delete the `{{ $labels.module }}` module.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -330,7 +330,7 @@
       summary: Deckhouse is unable to run the `{{ $labels.hook }}` global hook.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -352,7 +352,7 @@
       summary: Deckhouse is unable to run the `{{ $labels.module }}`/`{{ $labels.hook }}` module hook.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -378,7 +378,7 @@
         Steps to troubleshoot:
 
         1. Check Deckhouse logs by running the following command:
-        
+
            ```bash
            d8 k -n d8-system logs -f -l app=deckhouse
            ```
@@ -388,7 +388,7 @@
            ```bash
            d8 k edit mc global
            ```
-           
+
            Or edit configuration of a specific module:
 
            ```bash
@@ -492,7 +492,7 @@
         Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.
 
         Steps to investigate:
-        
+
         1. Check Deckhouse logs for more information by running:
 
            ```bash
@@ -500,7 +500,7 @@
            ```
 
         1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.
-           
+
            To compare the snapshot with the actual node objects for this hook, run the following command:
 
            ```bash
@@ -520,7 +520,7 @@
       summary: Deprecated Deckhouse ConfigMap managed by Argo CD.
       description: |
         The Deckhouse ConfigMap is no longer used.
-        
+
         To resolve this issue, remove the `d8-system/deckhouse` ConfigMap from Argo CD.
 
   - alert: D8DeckhouseModuleUpdatePolicyNotFound
@@ -539,7 +539,7 @@
         The module update policy for {{ $labels.moduleRelease }} is missing.
 
         To resolve this issue, remove the label from the module release using the following command:
-        
+
         ```bash
         d8 k label mr {{ $labels.moduleRelease }} modules.deckhouse.io/update-policy-
         ```
@@ -558,10 +558,10 @@
       plk_protocol_version: "1"
       summary: Module configuration failed for module {{ $labels.module }}.
       description: |
-        Initial config for module {{ $labels.module }} is not valid. 
-        
+        Initial config for module {{ $labels.module }} is not valid.
+
         You can get more details via
-        
+
         ```bash
         d8 k get mr -l module={{ $labels.module }}
         ```
@@ -589,15 +589,15 @@
         - A ModuleSource registry is misconfigured.
         - The module has not been published to the registry yet.
         - A network issue is preventing access to the registry.
-        
+
         To investigate the issue, do the following:
 
         - Check the configured ModuleSources:
-          
+
           ```bash
           d8 k get modulesources
           ```
-        
+
         - List the available module sources:
 
           ```bash
@@ -609,7 +609,7 @@
           ```bash
           d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
           ```
-        
+
         - Check the `deckhouse` logs for more details:
 
           ```bash
