@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -60,7 +61,9 @@ func main() {
 		log.SetDefaultLevel(log.LevelDebug)
 	}
 
-	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))
+	logger := logr.FromSlogHandler(log.Default().Handler())
+	ctrl.SetLogger(logger)
+	klog.SetLogger(logger)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                  scheme,
