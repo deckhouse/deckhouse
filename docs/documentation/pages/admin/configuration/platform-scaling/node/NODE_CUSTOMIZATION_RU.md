@@ -537,6 +537,10 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 # config_path = "/etc/containerd/registry.d"
 ```
 
+{% alert level="warning" %}
+Больше примеров конфигураций для дополнительного хранилища образов — в разделе [«FAQ»](/modules/node-manager/faq.html#как-развернуть-кастомный-конфигурационный-файл-containerd) документации модуля `node-manager`.
+{% endalert %}
+
 ### Устаревший способ добавления конфигурации для дополнительного registry
 
 {% alert level="warning" %}

@@ -1,19 +1,12 @@
 ---
-title: Working with the image registry
+title: DKP component registry
 permalink: en/admin/configuration/registry/
-description: "Configure and manage container image registries in Deckhouse Kubernetes Platform. Internal registry setup, third-party registry integration, and edition switching."
+description: "DKP component registry: configuring interaction and usage."
+search: container registry, registry configuration, edition management, registry management, container images
 ---
 
-This section describes how to work with image registries and editions in Deckhouse Kubernetes Platform.
+This section describes the settings for interacting with the DKP component registry.
 
-## Working with image registries
+This section covers configuring DKP interaction with the registry in a running cluster. If you need information about working with the registry during cluster installation, go to the [Installing the platform](../../../installing/) section.
 
-This section describes working with image registries in a running cluster. If you are interested in information about working with the registry when installing the cluster, go to the [Installing the Platform](../../../installing/) section.
-
-The section [Third-party registry](../registry/third-party.html) describes the process of switching a running DKP cluster to use a third-party registry.
-The section [Internal registry](../registry/internal.html) describes preparing to switch between cluster operating modes: with or without using the internal container image registry, as well as the switching processes.
-The section [Restoring registry access](../registry/restore-token.html) describes the process for resuming Deckhouse Kubernetes Platform image downloads after a license token has expired is described.
-
-## Working with editions
-
-The section [Switching editions](../registry/switching-editions.html) describes the possible options for switching editions in a running Deckhouse Kubernetes Platform cluster.
+The capabilities and processes for configuring the DKP component registry depend on how the cluster is managed. In clusters fully managed by DKP, configuration management is handled by the [`registry`](/modules/registry/) module (for more details, see the section ["Configurations in a DKP-Managed cluster"](managing-interaction.html)). In Managed Kubernetes clusters, the `helper change-registry` is used; the `registry` module is not used (for more details, see the section ["Configurations in a Managed Kubernetes cluster"](third-party.html)).

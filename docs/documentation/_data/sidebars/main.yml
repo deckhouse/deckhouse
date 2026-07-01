@@ -22,25 +22,21 @@ entries:
                 ru: Описание
               url: /admin/configuration/
             - title:
-                en: Registries and editions
-                ru: Registries и редакции
+                en: DKP components registry
+                ru: Хранилище образов компонентов DKP
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: Third-party registry
-                    ru: Сторонний registry
+                    en: Settings in a DKP-managed cluster
+                    ru: Настройки в кластере, управляемом DKP
+                  url: /admin/configuration/registry/managing-interaction.html
+                - title:
+                    en: Settings in a Managed Kubernetes cluster
+                    ru: Настройки в Managed Kubernetes кластере
                   url: /admin/configuration/registry/third-party.html
-                - title:
-                    en: Internal registry
-                    ru: Внутренний registry
-                  url: /admin/configuration/registry/internal.html
-                - title:
-                    en: Restoring registry access
-                    ru: Восстановление подключения к registry
-                  url: /admin/configuration/registry/restore-token.html
             - title:
                 en: IAM
                 ru: IAM
@@ -1286,10 +1282,6 @@ entries:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
-            - title:
-                en: Direct mode of registry module
-                ru: Режим Direct модуля registry
-              url: /architecture/deckhouse/registry-direct-mode.html
         - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling

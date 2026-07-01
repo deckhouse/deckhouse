@@ -538,6 +538,10 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 # config_path = "/etc/containerd/registry.d"
 ```
 
+{% alert level="warning" %}
+For more configuration examples for additional registry, see the ["FAQ"](/modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration) section of the `node-manager` module documentation.
+{% endalert %}
+
 ### Old Method
 
 {% alert level="warning" %}
