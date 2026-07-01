@@ -8,9 +8,6 @@
   **If your cluster uses third-party Kubernetes operators (not part of DKP),
   make sure to explicitly grant permissions for their CRDs; otherwise, access to those resources will be restricted.**
 
-- The [default version](https://deckhouse.io/modules/ingress-nginx/v1.76/configuration.html#parameters-defaultcontrollerversion) of the Ingress NGINX Controller has been updated from 1.10 to 1.12.
-  Controllers using the default version will be upgraded automatically.
-
 - The [fencing-agent component](https://deckhouse.io/modules/node-manager/v1.76/cr.html#nodegroup-v1-spec-fencing-mode) of the `node-manager` module now uses a gossip-based protocol ([memberlist](https://github.com/hashicorp/memberlist) library)
   for distributed node health monitoring.
   This reduces the risk of false worker node reboots when the control plane is unavailable or the API server is under heavy load.
