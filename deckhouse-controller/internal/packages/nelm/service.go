@@ -283,6 +283,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{
 			nelm.ReleaseLabelPackageChecksum: checksum,
+			// TODO(ipaqsa): addon-operator legacy to migrate
+			nelm.ReleaseLabelModuleChecksum: checksum,
 		},
 		ResourcesLabels: map[string]string{
 			health.LabelKey: pkg.GetName(),
