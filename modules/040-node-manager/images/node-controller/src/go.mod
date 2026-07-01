@@ -4,7 +4,7 @@ go 1.24.2
 
 require (
 	github.com/deckhouse/deckhouse v1.74.8
-	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-20260701181010-e1c2dffd10e3
 	github.com/go-logr/logr v1.4.3
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
