@@ -374,6 +374,10 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 }
 
 func initGlobalVars() {
+	if err := os.Setenv("LC_ALL", "en_US.UTF-8"); err != nil {
+		panic(err)
+	}
+
 	dhctlPath := ""
 
 	if val, ok := os.LookupEnv("DHCTL_SKIP_LOOKUP_EXEC_PATH"); !ok || val != "yes" {
