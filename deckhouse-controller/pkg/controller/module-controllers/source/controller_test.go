@@ -182,6 +182,12 @@ func (suite *ControllerTestSuite) parseKubernetesObject(raw []byte) client.Objec
 		err = yaml.Unmarshal(raw, module)
 		require.NoError(suite.T(), err)
 		obj = module
+
+	case v1alpha1.ModuleConfigGVK.Kind:
+		config := new(v1alpha1.ModuleConfig)
+		err = yaml.Unmarshal(raw, config)
+		require.NoError(suite.T(), err)
+		obj = config
 	}
 
 	return obj
@@ -430,7 +436,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.2.3",
 			[]string{"ingressnginx"},
 			[]string{})
-		suite.setupTestController("embedded-module-single-source.yaml", withDependencyContainer(dc))
+		suite.setupTestController(string(suite.parseTestdata("embedded-module-single-source.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
 		require.NoError(suite.T(), err)
 	})
@@ -442,7 +448,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.2.3",
 			[]string{"ingressnginx"},
 			[]string{})
-		suite.setupTestController("embedded-module-several-sources-conflict.yaml", withDependencyContainer(dc))
+		suite.setupTestController(string(suite.parseTestdata("embedded-module-several-sources-conflict.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
 		require.NoError(suite.T(), err)
 	})
@@ -456,7 +462,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.2.3",
 			[]string{"ingressnginx"},
 			[]string{})
-		suite.setupTestController("embedded-module-stale-chosen-source.yaml", withDependencyContainer(dc))
+		suite.setupTestController(string(suite.parseTestdata("embedded-module-stale-chosen-source.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
 		require.NoError(suite.T(), err)
 	})
@@ -468,7 +474,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.2.3",
 			[]string{"ingressnginx"},
 			[]string{})
-		suite.setupTestController("embedded-module-chosen-source.yaml", withDependencyContainer(dc))
+		suite.setupTestController(string(suite.parseTestdata("embedded-module-chosen-source.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
 		require.NoError(suite.T(), err)
 	})
@@ -480,7 +486,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.2.3",
 			[]string{"ingressnginx"},
 			[]string{})
-		suite.setupTestController("embedded-module-other-chosen-source.yaml", withDependencyContainer(dc))
+		suite.setupTestController(string(suite.parseTestdata("embedded-module-other-chosen-source.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
 		require.NoError(suite.T(), err)
 	})
@@ -493,7 +499,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			"v1.2.3",
 			[]string{"ingressnginx"},
 			[]string{})
-		suite.setupTestController("embedded-module-embedded-chosen-source.yaml", withDependencyContainer(dc))
+		suite.setupTestController(string(suite.parseTestdata("embedded-module-embedded-chosen-source.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
 		require.NoError(suite.T(), err)
 	})
