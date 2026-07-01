@@ -1,87 +1,58 @@
 ---
-title: "Network policy configuration"
+title: "Network policies"
 permalink: en/admin/configuration/network/policy/configuration.html
 description: |
-  Setting up network policies for the Deckhouse Kubernetes Platform. Conditions for enabling pod traffic tunneling modes.
+  Overview of network policy implementations in Deckhouse Kubernetes Platform: NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall.
+search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall
 ---
 
-If there are requirements to restrict network interaction between servers at the infrastructure level where the Deckhouse Kubernetes Platform operates, the following conditions must be met:
+Network policies restrict how pods communicate with each other, with external systems, and with cluster nodes. In Deckhouse Kubernetes Platform (DKP), the implementation depends on the enabled CNI module.
 
-* Tunneling mode for traffic between pods is enabled ([configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode) for CNI Cilium, [configuration](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) for CNI Flannel).
-* Traffic between [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) encapsulated within a VXLAN is allowed (if inspection and filtering of traffic within a VXLAN tunnel is performed).
-* If there is integration with external systems (such as LDAP, SMTP, or other external APIs), it is required to allow network communication with them.
-* Local network communication is fully allowed within each individual cluster node.
-* Inter-node communication is allowed on the ports shown in the [platform component network interaction list](../../../../reference/network_interaction.html). Note that most ports are in the 4200-4299 range. When new platform components are added, they will be assigned ports from this range (if it is possible).
+## Network policy implementation in DKP
 
-## Configuring network policies via standard Kubernetes means
+The available policy formats and the engine that processes them depend on the enabled CNI module:
 
-### Example network policy configuration
+- With the [`cni-cilium`](/modules/cni-cilium/) module, the implementation is built into Cilium and supports three policy formats:
+  - the standard [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) at L3 and L4;
+  - [CiliumNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumnetworkpolicy) — a namespaced resource with L3–L7 rules;
+  - [CiliumClusterwideNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumclusterwidenetworkpolicy) — a cluster-scoped resource that also supports `nodeSelector` for protecting nodes (host firewall).
+- With the `cni-flannel` module or another CNI without policy support, the [`network-policy-engine`](/modules/network-policy-engine/) module handles enforcement on top of [kube-router](https://github.com/cloudnativelabs/kube-router). Only the standard NetworkPolicy at L3 and L4 is supported. Policies are translated into `iptables` and `ipset` rules on every node.
 
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: test-network-policy
-  namespace: default
-spec:
-  podSelector:
-    matchLabels:
-      app: db
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:
-    - ipBlock:
-        cidr: 172.17.0.0/16
-        except:
-        - 172.17.1.0/24
-    - namespaceSelector:
-        matchLabels:
-          project: myproject
-    - podSelector:
-        matchLabels:
-          role: frontend
-    ports:
-    - protocol: TCP
-      port: 6379
-  egress:
-  - to:
-    - ipBlock:
-        cidr: 10.0.0.0/24
-    ports:
-    - protocol: TCP
-      port: 5978
-```
-
-## Configuring cluster-wide network policies using CiliumClusterwideNetworkPolicy
-
-To define cluster-wide network policies in Deckhouse Kubernetes Platform, you can use the CiliumClusterwideNetworkPolicy objects of the [`cni-cilium`](/modules/cni-cilium/) module.
-
-{% alert level="danger" %}
-Using CiliumClusterwideNetworkPolicies while the `policyAuditMode` option is not enabled in the `cni-cilium` module configuration may lead to incorrect operation of the control plane or loss of SSH access to all cluster nodes.
+{% alert level="warning" %}
+Do not enable `cni-cilium` and `network-policy-engine` at the same time: Cilium already enforces network policies.
 {% endalert %}
 
-To use CiliumClusterwideNetworkPolicies, follow these steps:
+## What is available in each engine
 
-1. Apply the primary set of CiliumClusterwideNetworkPolicy objects. To do this, in the `cni-cilium` module configuration, add the option [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) and set it to `true`.
+When choosing a policy format, consider what each engine supports:
 
-   The `policyAuditMode` option can be removed after applying all CiliumClusterwideNetworkPolicy objects and verifying their functionality in Hubble UI.
+- standard NetworkPolicy (L3/L4, namespaced) — supported by both engines;
+- CiliumNetworkPolicy (L3–L7, FQDN, deny rules, namespaced) — only with `cni-cilium`;
+- CiliumClusterwideNetworkPolicy (L3–L7, FQDN, deny rules, cluster-scoped) — only with `cni-cilium`;
+- node-level host firewall via CiliumClusterwideNetworkPolicy with `nodeSelector` — only with `cni-cilium`;
+- policy audit mode ([`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode)) — only with `cni-cilium`.
 
-1. Apply the network security policy rule:
+## Network infrastructure requirements
 
-   ```yaml
-   apiVersion: "cilium.io/v2"
-   kind: CiliumClusterwideNetworkPolicy
-   metadata:
-     name: "allow-control-plane-connectivity"
-   spec:
-     ingress:
-     - fromEntities:
-       - kube-apiserver
-     nodeSelector:
-       matchLabels:
-         node-role.kubernetes.io/control-plane: ""
-   ```
+If the underlying infrastructure restricts network communication between servers, make sure the following conditions are met:
 
-If CiliumClusterwideNetworkPolicies are not used, the control plane may work incorrectly for up to a minute during the reboot of `cilium-agent` Pods. This occurs due to [Conntrack table reset](https://github.com/cilium/cilium/issues/19367). Binding to the `kube-apiserver` entity helps to bypass the bug.
+- Pod traffic tunneling is enabled: [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) for CNI Cilium, [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) for CNI Flannel. Additionally, allow inter-node communication over the VXLAN port from the [platform component network interaction list](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+- Traffic between pod subnets ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)) encapsulated in VXLAN is allowed, if the network inspects traffic inside the tunnel.
+- Communication with external systems the cluster integrates with (LDAP, SMTP, external APIs) is allowed.
+- Local communication inside each cluster node is allowed.
+- Inter-node communication is allowed on the ports listed in the [platform component network interaction list](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html). Most ports are in the 4200–4299 range; new platform components are assigned ports from the same range when possible.
+
+## Sections
+
+- [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html) — isolation model, selectors, default policies, API limitations.
+- [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) — Cilium extensions, entities, L7 rules, FQDN rules, audit mode.
+- [Host firewall on nodes](host_firewall.html) — protecting nodes with CiliumClusterwideNetworkPolicy and `nodeSelector`.
+- [Common policy examples](examples.html) — recipes for typical tasks.
+- [Diagnostics and observability](troubleshooting.html) — how to verify and debug policies.
+
+## Additional resources
+
+- [Network Policies — Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+- [Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/)
+- [Overview of Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/security/policy/)
+- [Host Firewall — Cilium documentation](https://docs.cilium.io/en/v1.17/security/host-firewall/)
