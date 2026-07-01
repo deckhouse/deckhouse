@@ -135,7 +135,7 @@ spec:
             # Traffic within the project is allowed.
             - namespaceSelector:
                 matchLabels:
-                  kubernetes.io/metadata.name: "{{ .projectName }}"
+                  projects.deckhouse.io/project: "{{ .projectName }}"
             # Metrics scraping from Prometheus.
             - namespaceSelector:
                 matchLabels:
@@ -162,7 +162,7 @@ spec:
         - to:
             - namespaceSelector:
                 matchLabels:
-                  kubernetes.io/metadata.name: "{{ .projectName }}"
+                  projects.deckhouse.io/project: "{{ .projectName }}"
         # Allow DNS traffic (both kube-dns and nodelocaldns).
         - to:
             - namespaceSelector:
@@ -207,7 +207,7 @@ spec:
         namespaceSelector:
           labelSelector:
             matchLabels:
-              kubernetes.io/metadata.name: "{{ .projectName }}"
+              projects.deckhouse.io/project: "{{ .projectName }}"
 
     {{- if .parameters.runtimeAuditEnabled }}
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
@@ -280,5 +280,5 @@ spec:
         namespaceSelector:
           labelSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .projectName }}
+              projects.deckhouse.io/project: {{ .projectName }}
     {{- end }}

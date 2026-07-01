@@ -130,8 +130,21 @@ func (r *Reconciler) namespaceName(pns *v1alpha3.ProjectNamespace) string {
 	return pns.Namespace + "-" + pns.Spec.Name
 }
 
+// inheritedNamespaceLabels are policy/grant labels an additional namespace inherits from the project's
+// main namespace, so that features (monitoring, vulnerability scanning), Pod Security Standard and
+// cluster resource grants (managed ClusterResourceGrantPolicy selects by project-template) apply in
+// EVERY namespace of the project, not just the main one. The main namespace is the source of truth:
+// these labels are rendered there from the ProjectTemplate (with fromParam already resolved).
+var inheritedNamespaceLabels = []string{
+	"security.deckhouse.io/pod-policy",
+	"extended-monitoring.deckhouse.io/enabled",
+	"security-scanning.deckhouse.io/enabled",
+	v1alpha3.ResourceLabelTemplate,
+}
+
 // ensureNamespace creates or updates the additional namespace, stamping the project ownership
-// labels. It refuses to adopt a pre-existing namespace that belongs to a different project.
+// labels and inheriting the project's policy/grant labels from the main namespace. It refuses to
+// adopt a pre-existing namespace that belongs to a different project.
 func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectNamespace, project string) error {
 	name := r.namespaceName(pns)
 
@@ -145,6 +158,16 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 		return fmt.Errorf("get namespace %q: %w", name, err)
 	}
 
+	// Главный namespace проекта носит имя проекта; читаем его лейблы, чтобы унаследовать политики/гранты.
+	mainLabels := map[string]string{}
+	main := &corev1.Namespace{}
+	switch err := r.Get(ctx, types.NamespacedName{Name: project}, main); {
+	case err == nil:
+		mainLabels = main.Labels
+	case !k8serrors.IsNotFound(err):
+		return fmt.Errorf("get main namespace %q: %w", project, err)
+	}
+
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, ns, func() error {
 		if ns.Labels == nil {
@@ -153,6 +176,15 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 		ns.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
 		ns.Labels[v1alpha3.ResourceLabelProject] = project
 		ns.Labels[v1alpha3.ResourceLabelProjectNamespace] = pns.Name
+		// Наследуем policy/grant-лейблы главного namespace; отсутствующие — снимаем, чтобы доп. namespace
+		// оставался синхронным (например, при выключении фичи в шаблоне).
+		for _, key := range inheritedNamespaceLabels {
+			if value, ok := mainLabels[key]; ok {
+				ns.Labels[key] = value
+			} else {
+				delete(ns.Labels, key)
+			}
+		}
 		return nil
 	})
 	if err != nil {

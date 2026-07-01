@@ -214,11 +214,18 @@ func (r *postRenderer) processObject(object *unstructured.Unstructured, core **u
 		return nil
 	}
 
-	if object.GetNamespace() != "" && object.GetNamespace() != r.project.Name {
+	// Namespaced objects may target ANY namespace of the project (main + additional): schema-based
+	// templates render NetworkPolicy/PodLoggingConfig once per project namespace. The render and this
+	// post-renderer derive the project namespace set from the same project.Status.Namespaces, so every
+	// rendered target is allowed here (no duplicates). An empty namespace defaults to main; a namespace
+	// outside the project (e.g. authored by a legacy resourcesTemplate) is forced to main with a warning.
+	switch ns := object.GetNamespace(); {
+	case ns == "":
+		object.SetNamespace(r.project.Name)
+	case !r.isProjectNamespace(ns):
 		r.warning = ErrNamespaceOverride
+		object.SetNamespace(r.project.Name)
 	}
-
-	object.SetNamespace(r.project.Name)
 
 	// Track resource in project status only if it's not unmanaged
 	// Unmanaged resources are created once but not tracked/updated
@@ -262,6 +269,21 @@ func (r *postRenderer) collectRoleRef(object *unstructured.Unstructured) {
 		RoleKind:    roleRef["kind"],
 		RoleName:    roleRef["name"],
 	})
+}
+
+// isProjectNamespace reports whether ns is the project's main namespace or one of its additional
+// namespaces (from status.namespaces). Namespaced objects targeting such a namespace are kept as-is;
+// anything else is forced to the main namespace.
+func (r *postRenderer) isProjectNamespace(ns string) bool {
+	if ns == r.project.Name {
+		return true
+	}
+	for _, s := range r.project.Status.Namespaces {
+		if s.Name == ns {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *postRenderer) newNamespace(name string) []byte {

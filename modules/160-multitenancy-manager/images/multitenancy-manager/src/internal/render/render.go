@@ -48,12 +48,29 @@ func Manifests(tmpl *v1alpha2.ProjectTemplate, project *v1alpha3.Project) (strin
 		return "", err
 	}
 
-	r := &renderer{name: project.Name, params: params}
+	r := &renderer{name: project.Name, namespaces: projectNamespaces(project), params: params}
 	docs, err := r.build(&tmpl.Spec)
 	if err != nil {
 		return "", err
 	}
 	return marshalDocs(docs)
+}
+
+// projectNamespaces lists all namespaces of the project (main first, then additional from
+// status.namespaces), so namespaced objects (NetworkPolicy, PodLoggingConfig) are rendered into every
+// namespace of the project, not just the main one. When the status is not yet populated it falls back
+// to the main namespace; additional namespaces are picked up on the next reconcile after status is
+// written (the project re-reconciles when its namespace set changes).
+func projectNamespaces(project *v1alpha3.Project) []string {
+	names := []string{project.Name}
+	seen := map[string]bool{project.Name: true}
+	for _, ns := range project.Status.Namespaces {
+		if ns.Name != "" && !seen[ns.Name] {
+			names = append(names, ns.Name)
+			seen[ns.Name] = true
+		}
+	}
+	return names
 }
 
 // effectiveParams overlays the template's parametersSchema defaults onto the project parameters,
@@ -68,8 +85,12 @@ func effectiveParams(tmpl *v1alpha2.ProjectTemplate, project *v1alpha3.Project) 
 }
 
 type renderer struct {
-	name   string
-	params map[string]any
+	name string
+	// namespaces is every namespace of the project (main first, then additional). Namespaced objects
+	// (NetworkPolicy, PodLoggingConfig) are rendered once per entry; cluster-scoped policies and the
+	// main Namespace object are rendered once and reach additional namespaces via label selectors.
+	namespaces []string
+	params     map[string]any
 }
 
 func (r *renderer) build(spec *v1alpha2.ProjectTemplateSpec) ([]map[string]any, error) {
@@ -81,21 +102,17 @@ func (r *renderer) build(spec *v1alpha2.ProjectTemplateSpec) ([]map[string]any, 
 	}
 	docs = append(docs, ns)
 
-	np, err := r.networkPolicy(spec)
+	nps, err := r.networkPolicies(spec)
 	if err != nil {
 		return nil, err
 	}
-	if np != nil {
-		docs = append(docs, np)
-	}
+	docs = append(docs, nps...)
 
-	plc, err := r.podLoggingConfig(spec)
+	plcs, err := r.podLoggingConfigs(spec)
 	if err != nil {
 		return nil, err
 	}
-	if plc != nil {
-		docs = append(docs, plc)
-	}
+	docs = append(docs, plcs...)
 
 	docs = append(docs, r.operationPolicy())
 
@@ -199,7 +216,11 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 	}, nil
 }
 
-func (r *renderer) networkPolicy(spec *v1alpha2.ProjectTemplateSpec) (map[string]any, error) {
+// networkPolicies renders the isolated NetworkPolicy into EVERY namespace of the project (main +
+// additional). The policy is namespaced, so isolation only takes effect where the object exists —
+// hence one per namespace. Intra-project traffic is allowed by the shared project label (whole
+// project), while the platform allows (monitoring/ingress/DNS) are namespace-independent literals.
+func (r *renderer) networkPolicies(spec *v1alpha2.ProjectTemplateSpec) ([]map[string]any, error) {
 	if spec.NetworkPolicy == nil {
 		return nil, nil
 	}
@@ -220,39 +241,52 @@ func (r *renderer) networkPolicy(spec *v1alpha2.ProjectTemplateSpec) (map[string
 			"podSelector":       map[string]any{"matchLabels": map[string]any{podKey: podVal}},
 		}
 	}
+	// Разрешаем трафик внутри ВСЕГО проекта (main + дополнительные namespace) по общему лейблу проекта,
+	// а не только внутри главного namespace — иначе доп. namespace изолируются и от собственного проекта.
+	projectSelector := map[string]any{
+		"namespaceSelector": map[string]any{"matchLabels": map[string]any{v1alpha3.ResourceLabelProject: r.name}},
+	}
 
-	return map[string]any{
-		"apiVersion": "networking.k8s.io/v1",
-		"kind":       "NetworkPolicy",
-		"metadata":   map[string]any{"name": "isolated"},
-		"spec": map[string]any{
-			"podSelector": map[string]any{"matchLabels": map[string]any{}},
-			"policyTypes": []any{"Ingress", "Egress"},
-			"ingress": []any{
-				map[string]any{"from": []any{
-					nsSelector(r.name),
-					withPod("d8-monitoring", "app.kubernetes.io/name", "prometheus"),
-					withPod("d8-ingress-nginx", "app", "controller"),
-					withPod("d8-service-with-healthchecks", "app", "agent"),
-				}},
-			},
-			"egress": []any{
-				map[string]any{"to": []any{nsSelector(r.name)}},
-				map[string]any{
-					"to": []any{nsSelector("kube-system")},
-					"ports": []any{
-						map[string]any{"protocol": "UDP", "port": 53},
-						map[string]any{"protocol": "TCP", "port": 53},
-						map[string]any{"protocol": "UDP", "port": 5353},
-						map[string]any{"protocol": "TCP", "port": 5353},
-					},
+	networkSpec := map[string]any{
+		"podSelector": map[string]any{"matchLabels": map[string]any{}},
+		"policyTypes": []any{"Ingress", "Egress"},
+		"ingress": []any{
+			map[string]any{"from": []any{
+				projectSelector,
+				withPod("d8-monitoring", "app.kubernetes.io/name", "prometheus"),
+				withPod("d8-ingress-nginx", "app", "controller"),
+				withPod("d8-service-with-healthchecks", "app", "agent"),
+			}},
+		},
+		"egress": []any{
+			map[string]any{"to": []any{projectSelector}},
+			map[string]any{
+				"to": []any{nsSelector("kube-system")},
+				"ports": []any{
+					map[string]any{"protocol": "UDP", "port": 53},
+					map[string]any{"protocol": "TCP", "port": 53},
+					map[string]any{"protocol": "UDP", "port": 5353},
+					map[string]any{"protocol": "TCP", "port": 5353},
 				},
 			},
 		},
-	}, nil
+	}
+
+	out := make([]map[string]any, 0, len(r.namespaces))
+	for _, ns := range r.namespaces {
+		out = append(out, map[string]any{
+			"apiVersion": "networking.k8s.io/v1",
+			"kind":       "NetworkPolicy",
+			"metadata":   map[string]any{"name": "isolated", "namespace": ns},
+			"spec":       networkSpec,
+		})
+	}
+	return out, nil
 }
 
-func (r *renderer) podLoggingConfig(spec *v1alpha2.ProjectTemplateSpec) (map[string]any, error) {
+// podLoggingConfigs renders the PodLoggingConfig into every namespace of the project — logs must ship
+// from pods of all project namespaces, not only the main one.
+func (r *renderer) podLoggingConfigs(spec *v1alpha2.ProjectTemplateSpec) ([]map[string]any, error) {
 	if spec.LogShipping == nil {
 		return nil, nil
 	}
@@ -263,12 +297,16 @@ func (r *renderer) podLoggingConfig(spec *v1alpha2.ProjectTemplateSpec) (map[str
 	if !ok || ref == "" {
 		return nil, nil
 	}
-	return map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha1",
-		"kind":       "PodLoggingConfig",
-		"metadata":   map[string]any{"name": "default"},
-		"spec":       map[string]any{"clusterDestinationRefs": []any{ref}},
-	}, nil
+	out := make([]map[string]any, 0, len(r.namespaces))
+	for _, ns := range r.namespaces {
+		out = append(out, map[string]any{
+			"apiVersion": "deckhouse.io/v1alpha1",
+			"kind":       "PodLoggingConfig",
+			"metadata":   map[string]any{"name": "default", "namespace": ns},
+			"spec":       map[string]any{"clusterDestinationRefs": []any{ref}},
+		})
+	}
+	return out, nil
 }
 
 func (r *renderer) operationPolicy() map[string]any {
@@ -355,11 +393,15 @@ func (r *renderer) falcoAuditRules(uids v1alpha2.IDRange, hasUIDs bool, gids v1a
 	}
 }
 
+// nsMatch selects ALL namespaces of the project (main + additional) by the shared
+// projects.deckhouse.io/project label, not just the main namespace by name — so cluster-scoped
+// policies (OperationPolicy, SecurityPolicy) that are rendered once actually cover every project
+// namespace, including additional ones created via ProjectNamespace.
 func (r *renderer) nsMatch() map[string]any {
 	return map[string]any{
 		"namespaceSelector": map[string]any{
 			"labelSelector": map[string]any{
-				"matchLabels": map[string]any{"kubernetes.io/metadata.name": r.name},
+				"matchLabels": map[string]any{v1alpha3.ResourceLabelProject: r.name},
 			},
 		},
 	}

@@ -27,7 +27,7 @@ spec:
   - to:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: test
+          projects.deckhouse.io/project: test
   - ports:
     - port: 53
       protocol: UDP
@@ -45,7 +45,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: test
+          projects.deckhouse.io/project: test
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: d8-monitoring
@@ -85,7 +85,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          kubernetes.io/metadata.name: test
+          projects.deckhouse.io/project: test
   policies:
     requiredResources:
       requests:
@@ -108,7 +108,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          kubernetes.io/metadata.name: test
+          projects.deckhouse.io/project: test
   policies:
     runAsUser:
       ranges:
