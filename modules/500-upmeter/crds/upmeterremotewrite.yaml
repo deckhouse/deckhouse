@@ -100,6 +100,24 @@ spec:
                   enum:
                     - 30
                     - 300
+                maxSampleAgeSeconds:
+                  type: integer
+                  format: int64
+                  description: |
+                    Maximum slot age (in seconds, relative to the current time) for which a slot is
+                    still pushed to the remote storage. Slots older than this threshold are dropped in
+                    bulk without being sent — this prevents a flood of HTTP 400 responses for stale data
+                    from backends that reject samples outside their acceptance window.
+
+                    Set it equal to your backend's acceptance window: lower drops slots the backend
+                    would still accept; higher keeps returning 400s for stale slots.
+
+                    The default is `3600`.
+
+                    Configured per `UpmeterRemoteWrite` because different backends have different
+                    acceptance windows.
+                  default: 3600
+                  minimum: 60
     - name: v1
       served: true
       storage: true
