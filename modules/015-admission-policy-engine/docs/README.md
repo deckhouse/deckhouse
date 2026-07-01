@@ -338,7 +338,7 @@ When specifying:
 To apply the above policy, it is sufficient to add the label `custom-operation-policy/enabled: "true"` to the desired namespace.
 Unlike `PSS`, the label name can be anything. Only a match between the label in the policy selector and the corresponding namespace is required.
 
-You can read more detailed information about using selectors in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+You can read more detailed information about using selectors in the [selector setup description](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 It is also possible to specify the action to be applied for the policy.
 The `spec.enforcementAction` parameter is used for this.
@@ -441,7 +441,7 @@ When specifying:
 To apply the above policy, it is sufficient to add the label `security-policy: mypolicy` to the desired namespace.
 Unlike `PSS`, the label name can be anything. Only a match between the label in the policy selector and the corresponding namespace is required.
 
-You can read more detailed information about using selectors in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+You can read more detailed information about using selectors in the [selector setup description](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 It is also possible to specify the action to be applied for the policy.
 The `spec.enforcementAction` parameter is used for this.
