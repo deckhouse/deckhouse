@@ -28,6 +28,7 @@ import (
 // +kubebuilder:metadata:labels="module=cloud-provider-dvp"
 // +kubebuilder:storageversion
 type DVPInstanceClass struct {
+	// +deckhouse:XDocSkip
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -132,6 +133,7 @@ type InstanceClassVirtualMachine struct {
 	// +deckhouse:ru:description:value="Позволяет назначить виртуальную машину на указанные узлы DVP."
 	// +deckhouse:ru:description:value="[Аналогично](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) параметру `spec.nodeSelector` в Kubernetes Pods."
 	// +optional
+	// +deckhouse:XDocSkip
 	NodeSelector corev1.NodeSelector `json:"nodeSelector,omitempty"`
 	// [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) as in the `spec.priorityClassName` parameter for Kubernetes Pods.
 	// +deckhouse:ru:description:value="[Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) параметру `spec.priorityClassName` в Kubernetes Pods."
@@ -142,6 +144,7 @@ type InstanceClassVirtualMachine struct {
 	// +deckhouse:ru:description:value="Позволяет задать tolerations для виртуальных машин на узле DVP."
 	// +deckhouse:ru:description:value="[Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) параметру `spec.tolerations` в Kubernetes Pods."
 	// +optional
+	// +deckhouse:XDocSkip
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 

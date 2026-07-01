@@ -168,6 +168,10 @@ func (g *CRDGenerator) GenerateYAML(meta CRDMeta, versions []VersionSpec) ([]byt
 				propsMap[specFieldName] = existingSpecMap
 			}
 
+			if err := deckhouse.ApplyCRDRootXDocSkip(root, reg, rootSchemaMap); err != nil {
+				return nil, fmt.Errorf("apply root x-doc-skip for version %s: %w", versionName, err)
+			}
+
 			versionsRaw[i] = vMap
 		}
 	}
