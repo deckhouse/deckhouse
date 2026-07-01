@@ -136,10 +136,10 @@ func TestLoad_AllFields(t *testing.T) {
 		"ADDON_OPERATOR_ADMISSION_SERVER_ENABLED":     "true",
 
 		// Kube.
-		"KUBE_CONTEXT":     "ctx",
-		"KUBE_CONFIG":      "/k/cfg",
-		"KUBE_SERVER":      "https://kube",
-		"KUBE_CLIENT_QPS":  "20",
+		"KUBE_CONTEXT":      "ctx",
+		"KUBE_CONFIG":       "/k/cfg",
+		"KUBE_SERVER":       "https://kube",
+		"KUBE_CLIENT_QPS":   "20",
 		"KUBE_CLIENT_BURST": "40",
 
 		// ObjectPatcher.
