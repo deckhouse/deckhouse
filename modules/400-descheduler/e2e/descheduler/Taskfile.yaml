@@ -1,6 +1,9 @@
 version: "3"
 
 includes:
+  descheduler-minreplicas-not-supported:
+    taskfile: ./tests/descheduler-minreplicas-not-supported/Taskfile.yml
+    dir: ./tests/descheduler-minreplicas-not-supported
   exclude-namespaces-from-processing:
     taskfile: ./tests/exclude-namespaces-from-processing/Taskfile.yml
     dir: ./tests/exclude-namespaces-from-processing
@@ -10,18 +13,40 @@ includes:
   low-node-utilization:
     taskfile: ./tests/low-node-utilization/Taskfile.yml
     dir: ./tests/low-node-utilization
+  statefulset-pdb-allows-one-disruption:
+    taskfile: ./tests/statefulset-pdb-allows-one-disruption/Taskfile.yml
+    dir: ./tests/statefulset-pdb-allows-one-disruption
+  statefulset-pdb-blocks-eviction:
+    taskfile: ./tests/statefulset-pdb-blocks-eviction/Taskfile.yml
+    dir: ./tests/statefulset-pdb-blocks-eviction
+  statefulset-remove-duplicates:
+    taskfile: ./tests/statefulset-remove-duplicates/Taskfile.yml
+    dir: ./tests/statefulset-remove-duplicates
+  statefulset-single-replica-eviction:
+    taskfile: ./tests/statefulset-single-replica-eviction/Taskfile.yml
+    dir: ./tests/statefulset-single-replica-eviction
 
 tasks:
   run:
     desc: Run all descheduler e2e tests
     cmds:
+      - task: descheduler-minreplicas-not-supported:run
       - task: exclude-namespaces-from-processing:run
       - task: high-node-utilization:run
       - task: low-node-utilization:run
+      - task: statefulset-pdb-allows-one-disruption:run
+      - task: statefulset-pdb-blocks-eviction:run
+      - task: statefulset-remove-duplicates:run
+      - task: statefulset-single-replica-eviction:run
 
   dry-run:
     desc: Dry-Run all descheduler e2e tests
     cmds:
+      - task: descheduler-minreplicas-not-supported:dry-run
       - task: exclude-namespaces-from-processing:dry-run
       - task: high-node-utilization:dry-run
       - task: low-node-utilization:dry-run
+      - task: statefulset-pdb-allows-one-disruption:dry-run
+      - task: statefulset-pdb-blocks-eviction:dry-run
+      - task: statefulset-remove-duplicates:dry-run
+      - task: statefulset-single-replica-eviction:dry-run
