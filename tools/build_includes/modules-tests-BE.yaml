@@ -318,28 +318,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/303-prometheus-pushgateway
-  to: /deckhouse/modules/303-prometheus-pushgateway
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-extended-monitoring
-  to: /deckhouse/modules/340-extended-monitoring
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
   excludePaths:
