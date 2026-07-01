@@ -159,6 +159,18 @@ func TestLifecycleScenarios(t *testing.T) {
 			tip:     "Check the failed hook logs. Fix the configuration or hook code. The attempt will be retried on the next reconcile.",
 		},
 		{
+			name: "install: conversion webhooks apply failed",
+			opts: []mappingOption{intCond(intConversionWebhooksApplied, metav1.ConditionFalse, "boom")},
+			wantConds: map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, "ConversionWebhooksApplyFailed"},
+				ConditionReady:     {metav1.ConditionFalse, "ConversionWebhooksApplyFailed"},
+				ConditionManaged:   {metav1.ConditionFalse, "ConversionWebhooksApplyFailed"},
+			},
+			state:   stateFailed,
+			message: "Installation failed: package conversion webhooks could not be applied",
+			tip:     "Check the package's ConversionWebhook manifests are valid (required fields, served apiVersion). The controller will retry on the next reconcile.",
+		},
+		{
 			name: "install: Helm apply failed",
 			opts: []mappingOption{intCond(intManifestsApplied, metav1.ConditionFalse, "boom")},
 			wantConds: map[string]*expectedCondition{
@@ -246,6 +258,18 @@ func TestLifecycleScenarios(t *testing.T) {
 			state:   stateFailed,
 			message: "Update failed: startup or runtime hooks of the new version failed; previous version is no longer serving",
 			tip:     "The application is not serving requests. Check the new version's hook logs. Fix the hook/config or roll back the application version manually.",
+		},
+		{
+			name: "update: conversion webhooks apply failed, old version down",
+			opts: updatingApp(intCond(intConversionWebhooksApplied, metav1.ConditionFalse, "boom")),
+			wantConds: map[string]*expectedCondition{
+				ConditionUpdateInstalled: {metav1.ConditionFalse, "ConversionWebhooksApplyFailed"},
+				ConditionReady:           {metav1.ConditionFalse, "ConversionWebhooksApplyFailed"},
+				ConditionScaled:          {metav1.ConditionUnknown, "ConversionWebhooksApplyFailed"},
+			},
+			state:   stateFailed,
+			message: "Update failed: conversion webhooks of the new version could not be applied; previous version is no longer serving",
+			tip:     "Check the new version's ConversionWebhook manifests are valid. Fix them or roll back the application version manually.",
 		},
 		{
 			name: "update: Helm apply failed",

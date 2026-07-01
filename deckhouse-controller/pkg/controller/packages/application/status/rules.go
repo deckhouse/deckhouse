@@ -31,7 +31,7 @@ const (
 	// UpdateInstalled instead.
 	// Possible reasons: Pending, RequirementsUnmet, DownloadFailed,
 	// LoadFromFilesystemFailed, SettingsInvalid, HookInitializationFailed,
-	// HookFailed, ManifestsApplyFailed.
+	// HookFailed, ConversionWebhooksApplyFailed, ManifestsApplyFailed.
 	ConditionInstalled = "Installed"
 
 	// ConditionUpdateInstalled reflects the state of installing a new version over
@@ -40,8 +40,8 @@ const (
 	// /Managed can stay True while UpdateInstalled reports a problem with the new
 	// version. False means the update is blocked or has failed.
 	// Possible reasons: Pending, DownloadFailed, LoadFromFilesystemFailed,
-	// SettingsInvalid, HookInitializationFailed, HookFailed, ManifestsApplyFailed,
-	// ApplyingManifests (the new version's manifests are still being applied).
+	// SettingsInvalid, HookInitializationFailed, HookFailed, ConversionWebhooksApplyFailed,
+	// ManifestsApplyFailed, ApplyingManifests (the new version's manifests are still being applied).
 	ConditionUpdateInstalled = "UpdateInstalled"
 
 	// ConditionReady reflects user-facing readiness of the application.
@@ -52,8 +52,8 @@ const (
 	// not affect Ready because the running version's settings are unchanged.
 	// Possible reasons: Pending, RequirementsUnmet, DownloadFailed,
 	// LoadFromFilesystemFailed, SettingsInvalid, HookInitializationFailed,
-	// HookFailed, ManifestsApplyFailed, ApplyingManifests (mid-apply over a
-	// non-serving previous version), Ready (when True).
+	// HookFailed, ConversionWebhooksApplyFailed, ManifestsApplyFailed, ApplyingManifests
+	// (mid-apply over a non-serving previous version), Ready (when True).
 	ConditionReady = "Ready"
 
 	// ConditionScaled reflects the runtime scaling state of the application.
@@ -72,8 +72,8 @@ const (
 	// is disabled under the running app — managing is meaningless until the
 	// dependency returns, but the cause is external rather than a controller failure.
 	// Possible reasons: RequirementsUnmet, DownloadFailed, HookInitializationFailed,
-	// HookFailed, ManifestsApplyFailed, ApplyingManifests (mid-apply over a
-	// non-managed previous version), Managed (when True).
+	// HookFailed, ConversionWebhooksApplyFailed, ManifestsApplyFailed, ApplyingManifests
+	// (mid-apply over a non-managed previous version), Managed (when True).
 	ConditionManaged = "Managed"
 
 	// ConditionConfigurationApplied reflects whether the desired configuration —
@@ -83,8 +83,8 @@ const (
 	// desired config is on disk). A disabled dependency under the running app
 	// also forces Unknown — the desired configuration is no longer being maintained.
 	// Possible reasons: RequirementsUnmet, DownloadFailed, SettingsInvalid,
-	// HookInitializationFailed, HookFailed, ManifestsApplyFailed,
-	// ApplyingManifests (the new version's manifests are still being applied),
+	// HookInitializationFailed, HookFailed, ConversionWebhooksApplyFailed,
+	// ManifestsApplyFailed, ApplyingManifests (the new version's manifests are still being applied),
 	// ConfigurationApplied (when True).
 	ConditionConfigurationApplied = "ConfigurationApplied"
 )
@@ -98,8 +98,11 @@ const (
 	intLoaded            = string(intstatus.ConditionLoaded)
 	intConfigured        = string(intstatus.ConditionConfigured)
 	intHooksProcessed    = string(intstatus.ConditionHooksProcessed)
-	intManifestsApplied  = string(intstatus.ConditionManifestsApplied)
-	intScaled            = string(intstatus.ConditionScaled)
+
+	intConversionWebhooksApplied = string(intstatus.ConditionConversionWebhooksApplied)
+
+	intManifestsApplied = string(intstatus.ConditionManifestsApplied)
+	intScaled           = string(intstatus.ConditionScaled)
 )
 
 // canonicalReason returns the user-facing reason for an external condition
@@ -131,6 +134,8 @@ func canonicalReason(internalCond, internalReason string) string {
 			return "HookInitializationFailed"
 		}
 		return "HookFailed"
+	case intConversionWebhooksApplied:
+		return "ConversionWebhooksApplyFailed"
 	case intManifestsApplied:
 		if internalReason == string(intstatus.ConditionReasonApplyingManifests) {
 			return internalReason
@@ -194,18 +199,19 @@ func phaseOf(state condmap.State) phase {
 // reconcileChain combines the filesystem gates with late-stage gates because
 // settings failures don't break a running app on reconcile.
 var installPipeline = []string{
-	intRequirementsMet,   // [0] install only
-	intReadyOnFilesystem, // [1] update onwards
-	intLoaded,            // [2]
-	intConfigured,        // [3] config phase onwards
-	intHooksProcessed,    // [4] late stage onwards
-	intManifestsApplied,  // [5]
+	intRequirementsMet,           // [0] install only
+	intReadyOnFilesystem,         // [1] update onwards
+	intLoaded,                    // [2]
+	intConfigured,                // [3] config phase onwards
+	intHooksProcessed,            // [4] late stage onwards
+	intConversionWebhooksApplied, // [5] EnsureHooks — before manifests apply
+	intManifestsApplied,          // [6]
 }
 
 var (
 	updatePipeline = installPipeline[1:] // RequirementsMet not re-checked on version change
-	configPipeline = installPipeline[3:] // settings + hooks + manifests
-	lateStage      = installPipeline[4:] // hooks + manifests
+	configPipeline = installPipeline[3:] // settings + hooks + conversion webhooks + manifests
+	lateStage      = installPipeline[4:] // hooks + conversion webhooks + manifests
 
 	// reconcileChain: gates that break a running app on reconcile — the
 	// filesystem gates (download/mount and load) plus the late-stage gates.
