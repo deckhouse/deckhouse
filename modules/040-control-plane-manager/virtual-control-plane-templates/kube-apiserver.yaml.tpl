@@ -29,10 +29,7 @@ spec:
         image: ${IMAGE_KUBE_APISERVER}
         command:
         - kube-apiserver
-        - --etcd-servers=https://${CPN_NAME}-kine:2379
-        - --etcd-cafile=/pki/etcd-ca.crt
-        - --etcd-certfile=/pki/apiserver-etcd-client.crt
-        - --etcd-keyfile=/pki/apiserver-etcd-client.key
+        - --etcd-servers=http://${CPN_NAME}-kine:2379
         - --client-ca-file=/pki/ca.crt
         - --tls-cert-file=/pki/apiserver.crt
         - --tls-private-key-file=/pki/apiserver.key
