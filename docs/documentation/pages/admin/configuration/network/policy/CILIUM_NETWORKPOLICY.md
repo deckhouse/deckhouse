@@ -18,7 +18,7 @@ When NetworkPolicy, CiliumNetworkPolicy, and CiliumClusterwideNetworkPolicy are 
 
 ## How rules are evaluated
 
-When evaluating a connection, Cilium follows these principles:
+When combining rules from NetworkPolicy, CiliumNetworkPolicy, and CiliumClusterwideNetworkPolicy, Cilium follows these principles:
 
 - deny rules take priority over allow rules;
 - allow rules from NetworkPolicy, CiliumNetworkPolicy, and CiliumClusterwideNetworkPolicy are merged;
