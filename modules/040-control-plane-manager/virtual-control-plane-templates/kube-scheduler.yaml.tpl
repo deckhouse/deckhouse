@@ -29,15 +29,19 @@ spec:
         image: ${IMAGE_KUBE_SCHEDULER}
         command:
         - kube-scheduler
-        - --kubeconfig=/pki/scheduler.conf
-        - --authentication-kubeconfig=/pki/scheduler.conf
-        - --authorization-kubeconfig=/pki/scheduler.conf
+        - --kubeconfig=/kubeconfig/scheduler.conf
+        - --authentication-kubeconfig=/kubeconfig/scheduler.conf
+        - --authorization-kubeconfig=/kubeconfig/scheduler.conf
         - --leader-elect=true
         volumeMounts:
         - {name: pki, mountPath: /pki, readOnly: true}
+        - {name: kubeconfig, mountPath: /kubeconfig, readOnly: true}
         resources:
           requests: {cpu: 100m, memory: 128Mi}
       volumes:
       - name: pki
         secret:
           secretName: d8-pki-virtual
+      - name: kubeconfig
+        secret:
+          secretName: d8-kubeconfig-virtual

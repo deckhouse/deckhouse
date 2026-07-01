@@ -148,7 +148,7 @@ func (e *StepExecutor) loadTenantPKIConfig(ctx context.Context) (tenantPKIConfig
 	secret := &corev1.Secret{}
 	key := client.ObjectKey{
 		Namespace: e.tenantIdentity.Namespace,
-		Name:      e.tenantIdentity.Namespace + "-config",
+		Name:      constants.VirtualRenderedConfigSecretName,
 	}
 	err := e.client.Get(ctx, key, secret)
 	if apierrors.IsNotFound(err) {
@@ -208,7 +208,7 @@ func (e *StepExecutor) getPKISecret(ctx context.Context) (*corev1.Secret, error)
 	secret := &corev1.Secret{}
 	key := client.ObjectKey{
 		Namespace: e.tenantIdentity.Namespace,
-		Name:      e.tenantIdentity.Namespace + "-pki",
+		Name:      constants.VirtualPKISecretName,
 	}
 	if err := e.client.Get(ctx, key, secret); err != nil {
 		return nil, fmt.Errorf("get pki secret %s: %w", key.Name, err)

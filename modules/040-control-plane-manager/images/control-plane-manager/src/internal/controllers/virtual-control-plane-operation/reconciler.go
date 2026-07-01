@@ -320,7 +320,7 @@ func (r *reconciler) getSecrets(ctx context.Context, operation *controlplanev1al
 	configSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Namespace: operation.Namespace,
-		Name:      operation.Namespace + constants.VirtualControlPlaneConfigSecretSuffix,
+		Name:      constants.VirtualRenderedConfigSecretName,
 	}, configSecret); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get config secret: %v", err)
 	}
@@ -328,7 +328,7 @@ func (r *reconciler) getSecrets(ctx context.Context, operation *controlplanev1al
 	pkiSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Namespace: operation.Namespace,
-		Name:      operation.Namespace + "-pki",
+		Name:      constants.VirtualPKISecretName,
 	}, pkiSecret); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get pki secret: %v", err)
 	}
@@ -336,7 +336,7 @@ func (r *reconciler) getSecrets(ctx context.Context, operation *controlplanev1al
 	kubeconfigSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Namespace: operation.Namespace,
-		Name:      operation.Namespace + "-kubeconfig",
+		Name:      constants.VirtualKubeconfigSecretName,
 	}, kubeconfigSecret); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get kubeconfig secret: %v", err)
 	}

@@ -88,7 +88,7 @@ func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *cor
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      namespace + constants.VirtualControlPlaneConfigSecretSuffix,
+			Name:      constants.VirtualRenderedConfigSecretName,
 			Namespace: namespace,
 			Labels: map[string]string{
 				constants.HeritageLabelKey: constants.HeritageLabelValue,
