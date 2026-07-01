@@ -13,9 +13,9 @@ description: Архитектура модуля admission-policy-engine в Deck
 - SecurityPolicyException — описывает исключения из политики безопасности кластера.
 
 {% alert level="info" %}
-Обработка ресурсов OperationPolicy и SecurityPolicy выполняется модулем [`deckhouse`](/modules/deckhouse/). Deckhouse-контроллер модуля `deckhouse` с использованием [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html) и [хуков модуля](../module-development/structure/#hooks) на основе OperationPolicy и SecurityPolicy создает кастомные ресурсы для [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/). Gatekeeper использует созданные кастомные ресурсы для валидации создаваемых или обновляемых ресурсов Kubernetes.
+Обработка ресурсов OperationPolicy и SecurityPolicy выполняется модулем [`deckhouse`](/modules/deckhouse/). Deckhouse-контроллер модуля `deckhouse` с использованием [addon-operator](https://github.com/flant/addon-operator/blob/main/docs/src/OVERVIEW.md) и [хуков модуля](../module-development/structure/#hooks) на основе OperationPolicy и SecurityPolicy создает кастомные ресурсы для [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/). Gatekeeper использует созданные кастомные ресурсы для валидации создаваемых или обновляемых ресурсов Kubernetes.
 
-Подробнее о концепции хуков можно узнать из документации [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html).
+Подробнее о концепции хуков можно узнать из документации [addon-operator](https://github.com/flant/addon-operator/blob/main/docs/src/OVERVIEW.md).
 {% endalert %}
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/admission-policy-engine/).

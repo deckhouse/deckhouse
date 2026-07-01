@@ -12,9 +12,9 @@ The [`admission-policy-engine`](/modules/admission-policy-engine/) module enforc
 - SecurityPolicyException: Describes exceptions to the cluster security policy.
 
 {% alert level="info" %}
-The [`deckhouse`](/modules/deckhouse/) module processes the OperationPolicy and SecurityPolicy resources. The Deckhouse controller of the `deckhouse` module uses [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html) and [module hooks](../module-development/structure/#hooks) to create custom resources for [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) based on OperationPolicy and SecurityPolicy. Gatekeeper uses the resulting custom resources to validate newly created or updated Kubernetes resources.
+The [`deckhouse`](/modules/deckhouse/) module processes the OperationPolicy and SecurityPolicy resources. The Deckhouse controller of the `deckhouse` module uses [addon-operator](https://github.com/flant/addon-operator/blob/main/docs/src/OVERVIEW.md) and [module hooks](../module-development/structure/#hooks) to create custom resources for [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) based on OperationPolicy and SecurityPolicy. Gatekeeper uses the resulting custom resources to validate newly created or updated Kubernetes resources.
 
-For details on the hooks concept, refer to the [addon-operator documentation](https://flant.github.io/addon-operator/OVERVIEW.html).
+For details on the hooks concept, refer to the [addon-operator documentation](https://github.com/flant/addon-operator/blob/main/docs/src/OVERVIEW.md).
 {% endalert %}
 
 For a detailed description of the module, refer to [the corresponding documentation section](/modules/admission-policy-engine/).

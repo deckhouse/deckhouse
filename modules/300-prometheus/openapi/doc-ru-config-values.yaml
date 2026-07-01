@@ -44,7 +44,7 @@ properties:
         description: |
           Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
 
-          Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
+          Используется, если включен модуль [`user-authn`](/modules/user-authn/) или задан параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
           Массив групп, пользователям которых позволен доступ в Grafana и Prometheus.
@@ -100,7 +100,7 @@ properties:
       Допускается использование значений переменных окружения контейнера `config-reloader` в качестве значений лейблов,
       например:
       * `HOSTNAME`/`POD_NAME` — содержит наименование пода (например, `prometheus-main-0`, `prometheus-main-1` и т. д.);
-      * `SHARD` — содержит номер [шарда](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md).
+      * `SHARD` — содержит номер шарда.
   https:
     description: |
       Тип сертификата, используемого для Grafana/Prometheus.
