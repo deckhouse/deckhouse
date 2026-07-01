@@ -17,6 +17,9 @@ limitations under the License.
 package nodegroupfilter
 
 import (
+	"encoding/json"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,6 +59,8 @@ type NodeGroupSpec struct {
 	Update Update `json:"update,omitempty"`
 
 	Kubelet Kubelet `json:"kubelet,omitempty"`
+
+	Fencing Fencing `json:"fencing,omitempty"`
 }
 type NodeTemplate struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
@@ -312,4 +317,35 @@ type NodeGroupCondition struct {
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 
 	Message string `json:"message,omitempty"`
+}
+
+type Fencing struct {
+	Mode     string           `json:"mode,omitempty"`
+	Watchdog *FencingWatchdog `json:"watchdog,omitempty"`
+}
+
+type FencingWatchdog struct {
+	Timeout int64 `json:"timeout,omitempty"`
+}
+
+func (f *FencingWatchdog) UnmarshalJSON(data []byte) error {
+	type Alias struct {
+		Timeout string `json:"timeout,omitempty"`
+	}
+
+	var aux Alias
+
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
+		return err
+	}
+
+	duration, err := time.ParseDuration(aux.Timeout)
+	if err != nil {
+		return err
+	}
+
+	f.Timeout = int64(duration.Seconds())
+
+	return nil
 }
