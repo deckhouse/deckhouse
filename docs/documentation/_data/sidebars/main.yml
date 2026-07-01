@@ -1291,6 +1291,42 @@ entries:
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
         - title:
+            en: Marketplace
+            ru: Marketplace
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/marketplace/
+            - title:
+                en: Concepts
+                ru: Концепции
+              url: /architecture/marketplace/concepts.html
+            - title:
+                en: Application development
+                ru: Разработка приложений
+              url: /architecture/marketplace/application-development.html
+            - title:
+                en: Nelm annotations
+                ru: Аннотации Nelm
+              url: /architecture/marketplace/nelm-annotations.html
+            - title:
+                en: Hooks
+                ru: Хуки
+              url: /architecture/marketplace/hooks.html
+        - title:
+            en: Delivery subsystem
+            ru: Подсистема Delivery
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/delivery/
+            - title:
+                en: operator-argo module
+                ru: Модуль operator-argo
+              url: /architecture/delivery/operator-argo.html
+        - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
           folders:
