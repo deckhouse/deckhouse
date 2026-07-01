@@ -9,21 +9,21 @@
   {%- endif -%}
 {%- endfor -%}
 {%- if total_slides > 0 -%}
-<div class="installer_box installer-carousel" data-installer-carousel>
-  <div class="installer-carousel__viewport">
-    <div class="installer-carousel__track">
+<div class="slider" data-slider>
+  <div class="slider__viewport">
+    <div class="slider__track">
       {%- for block in installer_data.screenshots -%}
         {%- if filter_group == '' or block.group == filter_group -%}
           {%- for item in block.items -%}
-      <div class="installer-carousel__slide">
-        <figure class="installer-carousel__figure">
+      <div class="slider__slide">
+        <figure class="slider__figure">
           <img
             src="/images/gs/installer/{{ item.filename }}"
             alt="{{ item.title | default: '' | escape }}"
             decoding="async"
           />
           {%- if item.title -%}
-          <figcaption class="installer-carousel__caption">{{ item.title | escape }}</figcaption>
+          <figcaption class="slider__caption">{{ item.title | escape }}</figcaption>
           {%- endif -%}
         </figure>
       </div>
@@ -33,10 +33,10 @@
     </div>
   </div>
   {%- if total_slides > 1 -%}
-  <div class="installer-carousel__nav" role="group" aria-label="{% if page.lang == 'ru' %}Слайды{% else %}Slides{% endif %}">
-    <button type="button" class="installer-carousel__prev" aria-label="{% if page.lang == 'ru' %}Предыдущий слайд{% else %}Previous slide{% endif %}">←</button>
-    <div class="installer-carousel__pagination" aria-live="polite"></div>
-    <button type="button" class="installer-carousel__next" aria-label="{% if page.lang == 'ru' %}Следующий слайд{% else %}Next slide{% endif %}">→</button>
+  <div class="slider__nav" role="group" aria-label="{% if page.lang == 'ru' %}Слайды{% else %}Slides{% endif %}">
+    <button type="button" class="slider__prev" aria-label="{% if page.lang == 'ru' %}Предыдущий слайд{% else %}Previous slide{% endif %}">←</button>
+    <div class="slider__pagination" aria-live="polite"></div>
+    <button type="button" class="slider__next" aria-label="{% if page.lang == 'ru' %}Следующий слайд{% else %}Next slide{% endif %}">→</button>
   </div>
   {%- endif -%}
 </div>
