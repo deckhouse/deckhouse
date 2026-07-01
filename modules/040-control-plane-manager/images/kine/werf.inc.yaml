@@ -1,0 +1,50 @@
+{{- $version := include "get_oss_version_by_id" (list "kine" $ ) }}
+{{- $version = printf "v%s" $version }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b {{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/k3s-io/kine.git /src
+  - cd /src && rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+mount:
+{{ include "mount points for golang builds" . }}
+shell:
+  install:
+  - apk add --no-cache gcc musl-dev
+  - cd /src
+  - |
+    GOPROXY=$(cat /run/secrets/GOPROXY) \
+    GOOS=linux GOARCH=amd64 \
+    CGO_ENABLED=1 CGO_CFLAGS="-DSQLITE_USE_ALLOCA=1" \
+    go build \
+      -ldflags="-s -w -extldflags '-static' -X github.com/k3s-io/kine/pkg/version.Version={{ $version }}" \
+      -o /kine .
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /kine
+  to: /usr/bin/kine
+  before: install
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/kine"]
