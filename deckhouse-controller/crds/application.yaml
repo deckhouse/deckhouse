@@ -200,7 +200,7 @@ spec:
               urls:
                 description: |-
                   URLs of application endpoints, collected from Ingress resources of the
-                  application chart annotated with packages.deckhouse.io/is-application-endpoint.
+                  application chart annotated with `packages.deckhouse.io/is-application-endpoint`.
                 items:
                   description: |-
                     ApplicationStatusURL is a single application endpoint built from an Ingress
@@ -209,7 +209,8 @@ spec:
                     description:
                       description: |-
                         Description of the endpoint, taken from the value of the
-                        packages.deckhouse.io/is-application-endpoint annotation.
+                        `packages.deckhouse.io/is-application-endpoint` annotation.
+
                         Empty when the annotation value is "true".
                       type: string
                     url:
