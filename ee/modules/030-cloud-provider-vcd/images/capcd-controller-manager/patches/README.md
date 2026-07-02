@@ -202,3 +202,14 @@ Changes:
 
 - During cluster deletion, treat LB delete errors as ignorable when VCD returns 403/404 or entity not found.
 - Prevents VCDCluster finalizer from blocking destroy on NO_RDE clusters where the service account lacks LB delete rights.
+
+### 012-delete-remaining-vapp-vms-on-cluster-delete.patch
+
+Files:
+
+- controllers/vcdcluster_controller.go
+
+Changes:
+
+- During cluster deletion, remove remaining VMs from the cluster vApp (e.g. terraform-managed master) instead of failing with "VMs detected in the vApp".
+- Best-effort per-VM delete; always proceed to vApp removal so VCDCluster finalizer can be released before dhctl terraform destroy.

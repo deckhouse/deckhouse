@@ -1,0 +1,59 @@
+diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_controller.go
+index 00000000..00000000 100644
+--- a/controllers/vcdcluster_controller.go
++++ b/controllers/vcdcluster_controller.go
+@@ -1381,29 +1381,32 @@ func (r *VCDClusterReconciler) reconcileDelete(ctx context.Context,
+ 		if err != nil {
+ 			log.Error(err, "failed to remove VCDClusterError from RDE", "rdeID", vcdCluster.Status.InfraId)
+ 		}
+-		if vApp.VApp.Children != nil {
+-			updatedErr := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDClusterVappDeleteError, "", vcdCluster.Name, fmt.Sprintf(
+-				"Error occurred during cluster deletion; %d VMs detected in the vApp %s",
+-				len(vApp.VApp.Children.VM), vcdCluster.Name))
+-			if updatedErr != nil {
+-				log.Error(updatedErr, "failed to add VCDClusterVappDeleteError into RDE", "rdeID", vcdCluster.Status.InfraId)
+-			}
+-			return ctrl.Result{}, errors.Errorf(
+-				"Error occurred during cluster deletion; %d VMs detected in the vApp %s",
+-				len(vApp.VApp.Children.VM), vcdCluster.Name)
+-		} else {
+-			log.Info("Deleting vApp of the cluster", "vAppName", vcdCluster.Name)
+-			err = vdcManager.DeleteVApp(vcdCluster.Name)
+-			if err != nil {
+-				err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDClusterVappDeleteError, "", vcdCluster.Name, fmt.Sprintf("%v", err))
+-				if err1 != nil {
+-					log.Error(err1, "failed to add VCDClusterVappDeleteError into RDE", "rdeID", vcdCluster.Status.InfraId)
+-				}
+-				return ctrl.Result{}, errors.Wrapf(err,
+-					"Error occurred during cluster deletion; failed to delete vApp [%s]", vcdCluster.Name)
+-			}
+-			log.Info("Successfully deleted vApp of the cluster", "vAppName", vcdCluster.Name)
++		if vApp.VApp.Children != nil && len(vApp.VApp.Children.VM) > 0 {
++			log.Info("Deleting remaining VMs from vApp during cluster deletion",
++				"vAppName", vcdCluster.Name, "vmCount", len(vApp.VApp.Children.VM))
++			for _, childVM := range vApp.VApp.Children.VM {
++				if childVM == nil || childVM.Name == "" {
++					continue
++				}
++				if err := vdcManager.DeleteVM(vcdCluster.Name, childVM.Name); err != nil {
++					log.Info("Failed to delete VM from vApp during cluster deletion, will attempt vApp removal",
++						"vAppName", vcdCluster.Name, "vmName", childVM.Name, "error", err)
++					continue
++				}
++				log.Info("Deleted VM from vApp during cluster deletion", "vAppName", vcdCluster.Name, "vmName", childVM.Name)
++			}
+ 		}
++		log.Info("Deleting vApp of the cluster", "vAppName", vcdCluster.Name)
++		err = vdcManager.DeleteVApp(vcdCluster.Name)
++		if err != nil {
++			err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDClusterVappDeleteError, "", vcdCluster.Name, fmt.Sprintf("%v", err))
++			if err1 != nil {
++				log.Error(err1, "failed to add VCDClusterVappDeleteError into RDE", "rdeID", vcdCluster.Status.InfraId)
++			}
++			return ctrl.Result{}, errors.Wrapf(err,
++				"Error occurred during cluster deletion; failed to delete vApp [%s]", vcdCluster.Name)
++		}
++		log.Info("Successfully deleted vApp of the cluster", "vAppName", vcdCluster.Name)
+ 	}
+ 	// Remove vapp from VCDResourceSet in the RDE
+ 	rdeManager := vcdsdk.NewRDEManager(workloadVCDClient, vcdCluster.Status.InfraId,
