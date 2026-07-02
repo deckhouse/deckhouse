@@ -382,6 +382,7 @@ Datastreams
 DCGM
 DDTHH
 de
+debian
 Debian
 deckhouse
 Deckhouse
@@ -568,6 +569,7 @@ GCP
 GCPClusterConfiguration
 GCPInstanceClass
 GCPInstanceClasses
+gdm
 GeeseFS
 GELF
 Gemfile
@@ -828,6 +830,7 @@ LetsEncrypt
 LFS
 libc
 lifecycle
+lightdm
 linkTitle
 linstor
 Linstor
@@ -1318,6 +1321,8 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
+sddm
+SDN
 sds
 Searchable
 seccomp
@@ -1367,6 +1372,7 @@ smokeMini
 snaphost
 Snapshotter
 SNAT
+softdog
 SomeRegion
 SonarQube
 Sonatype
@@ -1516,6 +1522,7 @@ TrustDomain
 tuf
 tunnelMode
 txt
+ubuntu
 Ubuntu
 UDP
 UEFI
@@ -1673,6 +1680,8 @@ worktree
 worseness
 WSL
 www
+Xorg
+xz
 Yadro
 YadroStorageClass
 YadroStorageConnection
@@ -2215,6 +2224,7 @@ ZvirtInstanceClass
 одностраничных
 однострочник
 одноузлового
+одноузловом
 ООМ
 опциональные
 Опциональные
@@ -2276,6 +2286,7 @@ ZvirtInstanceClass
 перегенерировать
 Перегенерируйте
 передеплоятся
+перезагрузится
 Перезаказ
 перезапускает
 перезапускается
@@ -2316,6 +2327,7 @@ ZvirtInstanceClass
 пересоздает
 пересоздаёт
 пересоздается
+пересоздаётся
 пересоздайте
 пересоздастся
 переупорядочивание
@@ -2572,6 +2584,7 @@ ZvirtInstanceClass
 таймаутом
 таймауту
 таймауты
+тайминги
 таргетов
 тегирование
 тегирования
