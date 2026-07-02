@@ -39,7 +39,8 @@ cloudProviderDvp:
 `
 	)
 
-	clusterConfig := `
+	kubeconfigDataBase64 := base64.StdEncoding.EncodeToString([]byte("apiVe"))
+	clusterConfig := fmt.Sprintf(`
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
@@ -58,19 +59,19 @@ masterNodeGroup:
       virtualMachineClassName: superbe-class
       bootloader: EFI
       cpu:
-        coreFraction: 100%
+        coreFraction: 100%%
         cores: 4
       memory:
         size: 8Gi
   replicas: 1
 provider:
-  kubeconfigDataBase64: YXBpVmV=
+  kubeconfigDataBase64: %s
   namespace: cloud-provider01
 sshPublicKey: ssh-rsa AAAAB3N
 region: ru-msk-1
 zones:
   - default
-`
+`, kubeconfigDataBase64)
 
 	pccSecret := fmt.Sprintf(`
 apiVersion: v1
@@ -202,7 +203,7 @@ data:
 		})
 	})
 
-	clusterConfigNoZones := `
+	clusterConfigNoZones := fmt.Sprintf(`
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
@@ -221,17 +222,17 @@ masterNodeGroup:
       virtualMachineClassName: superbe-class
       bootloader: EFI
       cpu:
-        coreFraction: 100%
+        coreFraction: 100%%
         cores: 4
       memory:
         size: 8Gi
   replicas: 1
 provider:
-  kubeconfigDataBase64: YXBpVmV=
+  kubeconfigDataBase64: %s
   namespace: cloud-provider01
 sshPublicKey: ssh-rsa AAAAB3N
 region: ru-msk-1
-`
+`, kubeconfigDataBase64)
 
 	pccSecretNoZones := fmt.Sprintf(`
 apiVersion: v1
@@ -322,6 +323,184 @@ data:
 
 			migrationCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
 			Expect(migrationCM.Exists()).To(BeFalse())
+		})
+	})
+
+	// migrationResourceDocuments decodes the resources.yaml bundle and indexes documents by kind.
+	migrationResourceDocuments := func(f *HookExecutionConfig) map[string][]map[string]any {
+		migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+		resourcesYAML := migrationSecret.Field("data.resources\\.yaml").String()
+		Expect(resourcesYAML).NotTo(BeEmpty())
+
+		rawBytes, err := base64.StdEncoding.DecodeString(resourcesYAML)
+		Expect(err).NotTo(HaveOccurred())
+
+		byKind := map[string][]map[string]any{}
+		for _, doc := range splitYAMLDocuments(string(rawBytes)) {
+			var obj map[string]any
+			if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
+				continue
+			}
+			kind, _ := obj["kind"].(string)
+			byKind[kind] = append(byKind[kind], obj)
+		}
+		return byKind
+	}
+
+	Context("Hybrid migration: no PCC and legacy ModuleConfig v1 has kubeconfig", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+		BeforeEach(func() {
+			f.KubeStateSet(fmt.Sprintf(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 1
+  enabled: true
+  settings:
+    provider:
+      kubeconfigDataBase64: %s
+      namespace: cloud-provider01
+    zones:
+      - zone-a
+      - zone-b
+`, kubeconfigDataBase64))
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should create migration resources with d8-credentials Secret from legacy ModuleConfig kubeconfig", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			credentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-credentials")
+			Expect(credentialsSecret.Exists()).To(BeFalse())
+
+			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeTrue())
+
+			migrationCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
+			Expect(migrationCM.Exists()).To(BeTrue())
+
+			docs := migrationResourceDocuments(f)
+
+			credentialsSecretDoc := docs["Secret"]
+			Expect(credentialsSecretDoc).To(HaveLen(1), "exactly one Secret document expected in resources.yaml")
+			Expect(credentialsSecretDoc[0]["type"]).To(Equal("cloud-provider.deckhouse.io/credentials"))
+
+			stringData, ok := credentialsSecretDoc[0]["stringData"].(map[string]any)
+			Expect(ok).To(BeTrue(), "d8-credentials stringData must be a map")
+			Expect(stringData["authScheme"]).To(Equal("kubeconfig"))
+			Expect(stringData["secret"]).To(Equal(kubeconfigDataBase64))
+		})
+
+		It("should include a ModuleConfig v2 mirroring the v1->v2 conversion and no node resources", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			docs := migrationResourceDocuments(f)
+
+			Expect(docs["NodeGroup"]).To(BeEmpty(), "hybrid migration must not generate NodeGroups")
+			Expect(docs["DVPInstanceClass"]).To(BeEmpty(), "hybrid migration must not generate DVPInstanceClasses")
+
+			mcDocs := docs["ModuleConfig"]
+			Expect(mcDocs).To(HaveLen(1), "hybrid migration must include exactly one ModuleConfig v2")
+			mc := mcDocs[0]
+
+			spec, ok := mc["spec"].(map[string]any)
+			Expect(ok).To(BeTrue(), "ModuleConfig spec must be a map")
+			Expect(spec["enabled"]).To(Equal(true))
+			Expect(spec["version"]).To(BeNumerically("==", 2))
+
+			settings, ok := spec["settings"].(map[string]any)
+			Expect(ok).To(BeTrue(), "ModuleConfig spec.settings must be a map")
+
+			provider, ok := settings["provider"].(map[string]any)
+			Expect(ok).To(BeTrue(), "settings.provider must be a map")
+			providerParams, ok := provider["parameters"].(map[string]any)
+			Expect(ok).To(BeTrue(), "settings.provider.parameters must be a map")
+			Expect(providerParams["namespace"]).To(Equal("cloud-provider01"))
+
+			// Tombstones: JSON-merge-patch delete markers so that `kubectl apply`
+			// over an existing stored v1 ModuleConfig strips the legacy fields
+			// instead of unioning them into a version:2 object (which the webhook
+			// rejects). Keys must be PRESENT with a null value.
+			namespaceTombstone, hasNamespaceTombstone := provider["namespace"]
+			Expect(hasNamespaceTombstone).To(BeTrue(), "legacy provider.namespace tombstone must be present")
+			Expect(namespaceTombstone).To(BeNil(), "legacy provider.namespace tombstone must be null")
+			kubeconfigTombstone, hasKubeconfigTombstone := provider["kubeconfigDataBase64"]
+			Expect(hasKubeconfigTombstone).To(BeTrue(), "legacy provider.kubeconfigDataBase64 tombstone must be present")
+			Expect(kubeconfigTombstone).To(BeNil(), "legacy provider.kubeconfigDataBase64 tombstone must be null")
+			zonesTombstone, hasZonesTombstone := settings["zones"]
+			Expect(hasZonesTombstone).To(BeTrue(), "legacy top-level zones tombstone must be present")
+			Expect(zonesTombstone).To(BeNil(), "legacy top-level zones tombstone must be null")
+
+			nodes, ok := settings["nodes"].(map[string]any)
+			Expect(ok).To(BeTrue(), "settings.nodes must be a map")
+			_, hasNodesDisabled := nodes["disabled"]
+			Expect(hasNodesDisabled).To(BeFalse(), "nodes.disabled must not be explicitly set (schema default)")
+			nodesParams, ok := nodes["parameters"].(map[string]any)
+			Expect(ok).To(BeTrue(), "settings.nodes.parameters must be a map")
+			Expect(nodesParams["layout"]).To(Equal("Standard"))
+			Expect(nodesParams["sshPublicKey"]).To(Equal("ssh-rsa PLACEHOLDER_REPLACE_ME"))
+			Expect(nodesParams["zones"]).To(Equal([]any{"zone-a", "zone-b"}),
+				"legacy top-level zones must move into nodes.parameters.zones")
+
+			storage, ok := settings["storage"].(map[string]any)
+			Expect(ok).To(BeTrue(), "settings.storage must be a map")
+			_, hasStorageDisabled := storage["disabled"]
+			Expect(hasStorageDisabled).To(BeFalse(), "storage.disabled must not be explicitly set (schema default)")
+		})
+	})
+
+	Context("Hybrid migration: no PCC and legacy ModuleConfig v1 without namespace or zones", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+		BeforeEach(func() {
+			f.KubeStateSet(fmt.Sprintf(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 1
+  enabled: true
+  settings:
+    provider:
+      kubeconfigDataBase64: %s
+`, kubeconfigDataBase64))
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should default namespace to 'default' and omit zones", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			docs := migrationResourceDocuments(f)
+			mcDocs := docs["ModuleConfig"]
+			Expect(mcDocs).To(HaveLen(1))
+
+			settings := mcDocs[0]["spec"].(map[string]any)["settings"].(map[string]any)
+			provider := settings["provider"].(map[string]any)
+			providerParams := provider["parameters"].(map[string]any)
+			Expect(providerParams["namespace"]).To(Equal("default"))
+
+			nodesParams := settings["nodes"].(map[string]any)["parameters"].(map[string]any)
+			_, hasZones := nodesParams["zones"]
+			Expect(hasZones).To(BeFalse(), "zones must be absent when the legacy ModuleConfig has none")
+
+			// Tombstones must be emitted regardless of whether the legacy fields
+			// were set, so `kubectl apply` always deletes any stale v1 keys.
+			_, hasNamespaceTombstone := provider["namespace"]
+			Expect(hasNamespaceTombstone).To(BeTrue(), "provider.namespace tombstone must be present")
+			_, hasKubeconfigTombstone := provider["kubeconfigDataBase64"]
+			Expect(hasKubeconfigTombstone).To(BeTrue(), "provider.kubeconfigDataBase64 tombstone must be present")
+			_, hasZonesTombstone := settings["zones"]
+			Expect(hasZonesTombstone).To(BeTrue(), "top-level zones tombstone must be present")
 		})
 	})
 })
