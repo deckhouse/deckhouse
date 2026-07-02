@@ -332,7 +332,9 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			RootSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
-			NoPodLogs: true,
+			NoPodLogs:                    true,
+			NoFinalTracking:              true,
+			LegacyHelmCompatibleTracking: true,
 		},
 		Chart:                  opts.Path,
 		DefaultChartName:       releaseName,
