@@ -72,6 +72,8 @@ github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535/go.mod h1:o
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/atomicgo/cursor v0.0.1/go.mod h1:cBON2QmmrysudxNBFthvMtN32r3jxVRIvzkUiF/RuIk=
+github.com/avelino/slugify v0.0.0-20180501145920-855f152bd774 h1:HrMVYtly2IVqg9EBooHsakQ256ueojP7QuG32K71X/U=
+github.com/avelino/slugify v0.0.0-20180501145920-855f152bd774/go.mod h1:5wi5YYOpfuAKwL5XLFYopbgIl/v7NZxaJpa/4X6yFKE=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
@@ -114,10 +116,10 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deckhouse/delivery-kit-sdk v1.1.0 h1:Uu1PoTrpe1pTYLxIEcpau2ONFXgckvET2dw9Ot22ZD4=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
-github.com/deckhouse/lib-connection v0.12.0 h1:bUOQOPtqDcT0rINgMzVHxh4AASkaZVv/dDoImzqZ0ow=
-github.com/deckhouse/lib-connection v0.12.0/go.mod h1:6fNsoXGoxiuSZRMhB1m2NWs1Q70tlmJNdm0MHmjBips=
-github.com/deckhouse/lib-dhctl v0.20.0 h1:ahubdw6pdgg/9GGKCgU68d+6VSv04ZEhzt6+xQIDO48=
-github.com/deckhouse/lib-dhctl v0.20.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
+github.com/deckhouse/lib-connection v0.11.1-0.20260702115358-3929f17498d7 h1:NEQT2YmLG9rQcGu53CHwodKiJGpEeHrax11yUIwvr+Q=
+github.com/deckhouse/lib-connection v0.11.1-0.20260702115358-3929f17498d7/go.mod h1:uLPegvx24Y19XibgHMFmAYM4h29WP6B75N0Y62/8/TA=
+github.com/deckhouse/lib-dhctl v0.19.1-0.20260701151330-d191ab1f6589 h1:RDWAwTGqrPLEwYCN7fyWPGcDeYNKQGq40cQLMQpAtXE=
+github.com/deckhouse/lib-dhctl v0.19.1-0.20260701151330-d191ab1f6589/go.mod h1:SJLU8vWHDlxZW1cjOGfWpRRK75Yc/DvQuK2y5z6MCMM=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
 github.com/deckhouse/lib-gossh v0.3.0/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.10.4 h1:1C61nXevgQiUnmv5Is+XP9Octu05XWKgjFi6gmL7miM=
@@ -594,6 +596,8 @@ github.com/weppos/publicsuffix-go v0.13.0/go.mod h1:z3LCPQ38eedDQSwmsSRW4Y7t2L8L
 github.com/weppos/publicsuffix-go v0.40.3-0.20250127173806-e489a31678ca/go.mod h1:43Dfyxu2dpmLg56at26Q4k9gwf3yWSUiwk8kGnwzULk=
 github.com/weppos/publicsuffix-go v0.50.1-0.20250829105427-5340293a34a1 h1:e+uu4AaRkDK7dfU29WbMpf+jDS8TYmLw97dtNbSA4DE=
 github.com/weppos/publicsuffix-go v0.50.1-0.20250829105427-5340293a34a1/go.mod h1:VXhClBYMlDrUsome4pOTpe68Ui0p6iQRAbyHQD1yKoU=
+github.com/werf/logboek v0.5.5 h1:RmtTejHJOyw0fub4pIfKsb7OTzD90ZOUyuBAXqYqJpU=
+github.com/werf/logboek v0.5.5/go.mod h1:Gez5J4bxekyr6MxTmIJyId1F61rpO+0/V4vjCIEIZmk=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhemzwFU4jHLhdvlE6uDZjXFejJXr49I=
