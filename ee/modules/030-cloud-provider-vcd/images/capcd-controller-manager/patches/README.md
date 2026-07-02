@@ -211,5 +211,5 @@ Files:
 
 Changes:
 
-- During cluster deletion, remove remaining VMs from the cluster vApp (e.g. terraform-managed master) instead of failing with "VMs detected in the vApp".
-- Best-effort per-VM delete; always proceed to vApp removal so VCDCluster finalizer can be released before dhctl terraform destroy.
+- During cluster deletion, skip vApp removal when VMs remain in the vApp (e.g. terraform-managed master) instead of failing with "VMs detected in the vApp".
+- Release the VCDCluster finalizer and let dhctl terraform destroy clean up the remaining infrastructure without killing the control plane API mid-destroy.
