@@ -29,6 +29,10 @@ const (
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
 
 	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
+
+	// ApplicationAnnotationIsEndpoint marks an Ingress in the application chart
+	// as an application endpoint; its hosts and paths are reflected in status.urls.
+	ApplicationAnnotationIsEndpoint = "packages.deckhouse.io/is-application-endpoint"
 )
 
 var (
@@ -109,6 +113,11 @@ type ApplicationStatus struct {
 	// Information about the currently installed version.
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
+
+	// URLs of application endpoints, collected from Ingress resources of the
+	// application chart annotated with packages.deckhouse.io/is-application-endpoint.
+	// +optional
+	URLs []string `json:"urls,omitempty"`
 
 	// Nelm tracking.
 	// +kubebuilder:pruning:PreserveUnknownFields

@@ -410,6 +410,11 @@ func (in *ApplicationStatus) DeepCopyInto(out *ApplicationStatus) {
 		*out = new(ApplicationStatusVersion)
 		**out = **in
 	}
+	if in.URLs != nil {
+		in, out := &in.URLs, &out.URLs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.Tracking.DeepCopyInto(&out.Tracking)
 	in.LastAppliedConfiguration.DeepCopyInto(&out.LastAppliedConfiguration)
 	if in.Conditions != nil {

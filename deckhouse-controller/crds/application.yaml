@@ -197,6 +197,13 @@ spec:
                 description: Nelm tracking.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              urls:
+                description: |-
+                  URLs of application endpoints, collected from Ingress resources of the
+                  application chart annotated with packages.deckhouse.io/is-application-endpoint.
+                items:
+                  type: string
+                type: array
             type: object
         required:
         - spec

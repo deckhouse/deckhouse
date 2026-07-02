@@ -141,6 +141,7 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 
 	if packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
+		app.Status.URLs = packageStatus.URLs
 
 		if packageStatus.Settings != nil {
 			if raw, err := json.Marshal(packageStatus.Settings); err == nil {
