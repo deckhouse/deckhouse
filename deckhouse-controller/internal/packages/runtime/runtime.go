@@ -173,6 +173,23 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
 	}
 
+	// Build object patcher with optimized rate limits for batch operations
+	if err := r.buildObjectPatcher(); err != nil {
+		return nil, fmt.Errorf("build object patcher: %w", err)
+	}
+
+	// Build Kubernetes events manager for watching cluster resources
+	if err := r.buildKubeEventsManager(); err != nil {
+		return nil, fmt.Errorf("build kube events manager: %w", err)
+	}
+
+	r.hookEventHandler = hookevent.NewHandler(hookevent.Config{
+		KubeEventsManager: r.kubeEventsManager,
+		ScheduleManager:   r.scheduleManager,
+		TaskBuilder:       r,
+		QueueService:      r.queueService,
+	}, r.logger)
+
 	if err := r.loadGlobal(context.Background()); err != nil {
 		return nil, fmt.Errorf("load global: %w", err)
 	}
@@ -198,23 +215,6 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	if err := r.buildHealthService(); err != nil {
 		return nil, fmt.Errorf("build health service: %w", err)
 	}
-
-	// Build object patcher with optimized rate limits for batch operations
-	if err := r.buildObjectPatcher(); err != nil {
-		return nil, fmt.Errorf("build object patcher: %w", err)
-	}
-
-	// Build Kubernetes events manager for watching cluster resources
-	if err := r.buildKubeEventsManager(); err != nil {
-		return nil, fmt.Errorf("build kube events manager: %w", err)
-	}
-
-	r.hookEventHandler = hookevent.NewHandler(hookevent.Config{
-		KubeEventsManager: r.kubeEventsManager,
-		ScheduleManager:   r.scheduleManager,
-		TaskBuilder:       r,
-		QueueService:      r.queueService,
-	}, r.logger)
 
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
