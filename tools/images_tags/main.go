@@ -52,23 +52,9 @@ var	DefaultImagesDigests = map[string]interface{}{
 // This is used to execute templates and matrix tests.
 
 func main() {
-	var (
-		output string
-		stream = os.Stdout
-	)
+	var output string
 	flag.StringVar(&output, "output", "", "output file for generated code")
 	flag.Parse()
-
-	// If output defined write a file
-	if output != "" {
-		var err error
-		stream, err = os.Create(output)
-		if err != nil {
-			panic(err)
-		}
-
-		defer stream.Close()
-	}
 
 	digests := make(map[string]map[string]string)
 
@@ -140,7 +126,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	stream.Write(p)
+
+	// Write the result only after every fallible step above has succeeded.
+	// Creating (truncating) the output file up front would leave an empty,
+	// uncompilable file behind if the render step failed — which then breaks
+	// subsequent `go generate` runs that compile the testing/library package.
+	if output == "" {
+		if _, err := os.Stdout.Write(p); err != nil {
+			panic(err)
+		}
+		return
+	}
+	if err := os.WriteFile(output, p, 0o644); err != nil {
+		panic(err)
+	}
 }
 
 type Spec struct {
