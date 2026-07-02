@@ -319,3 +319,87 @@ func collectPackages(v any) []string {
 
 	return result
 }
+
+const metaV1PkgPath = "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+// ApplyCRDRootXDocSkip sets x-doc-skip on CRD root schema properties that correspond
+// to embedded metav1.TypeMeta marked with deckhouse:XDocSkip (apiVersion, kind).
+func ApplyCRDRootXDocSkip(root any, reg *ctmarkers.Registry, rootSchemaMap map[string]any) error {
+	if rootSchemaMap == nil {
+		return nil
+	}
+
+	props, ok := rootSchemaMap["properties"].(map[string]any)
+	if !ok || props == nil {
+		return nil
+	}
+
+	skipTypeMeta, err := typeMetaHasXDocSkip(root, reg)
+	if err != nil {
+		return err
+	}
+	if !skipTypeMeta {
+		return nil
+	}
+
+	for _, name := range []string{"apiVersion", "kind"} {
+		prop, ok := props[name].(map[string]any)
+		if !ok {
+			continue
+		}
+		prop[markers.XDocSkipExtensionKey] = true
+	}
+
+	return nil
+}
+
+func typeMetaHasXDocSkip(root any, reg *ctmarkers.Registry) (bool, error) {
+	collector := &ctmarkers.Collector{Registry: reg}
+
+	rt := reflect.TypeOf(root)
+	for rt != nil && rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+	if rt == nil || rt.Kind() != reflect.Struct {
+		return false, fmt.Errorf("crd root x-doc-skip: root must be a struct, got %T", root)
+	}
+
+	pkgs, err := loader.LoadRoots(rt.PkgPath())
+	if err != nil {
+		return false, fmt.Errorf("load package %s: %w", rt.PkgPath(), err)
+	}
+
+	for _, pkg := range pkgs {
+		var found bool
+		err := ctmarkers.EachType(collector, pkg, func(info *ctmarkers.TypeInfo) {
+			if found || info.Name != rt.Name() {
+				return
+			}
+
+			for _, field := range info.Fields {
+				if len(field.Markers["deckhouse:XDocSkip"]) == 0 {
+					continue
+				}
+
+				for i := 0; i < rt.NumField(); i++ {
+					sf := rt.Field(i)
+					if sf.Tag != field.Tag || !sf.Anonymous {
+						continue
+					}
+					if sf.Type.PkgPath() == metaV1PkgPath && sf.Type.Name() == "TypeMeta" {
+						found = true
+						return
+					}
+				}
+			}
+		})
+		if err != nil {
+			return false, fmt.Errorf("walk types in package %s: %w", rt.PkgPath(), err)
+		}
+		if found {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
