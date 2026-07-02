@@ -36,12 +36,6 @@ import (
 
 const (
 	taskTracer = "package-startup"
-
-	// mainQueueName is the default hook binding queue. Synchronization of hooks on
-	// this queue must complete before Helm runs, since it seeds values the chart
-	// reads (e.g. internal.*); addon-operator enforces the same by keeping
-	// main-queue Synchronization tasks ahead of the module's Helm phase.
-	mainQueueName = "main"
 )
 
 // packageI abstracts package operations needed for startup.
@@ -119,9 +113,7 @@ func (t *task) Execute(ctx context.Context) error {
 	// For each hook binding, we need to:
 	// - executePlan initial synchronization if ExecuteHookOnSynchronization=true
 	// - Unlock monitors to allow future events to trigger the hook
-	// - Block until sync completes for main-queue hooks (unconditionally) and for
-	//   named-queue hooks that set WaitForSynchronization, so hook-seeded values
-	//   are populated before beforeHelm/Helm runs.
+	// - If WaitForSynchronization=true, block until sync completes
 	t.logger.Debug("wait for sync tasks to finish")
 	wg := new(sync.WaitGroup)
 	for hook, info := range infos {
@@ -131,9 +123,7 @@ func (t *task) Execute(ctx context.Context) error {
 			// queue = <name>/<queue>
 			queueName := fmt.Sprintf("%s/%s", t.pkg.GetName(), hookInfo.QueueName)
 
-			// Main-queue hooks must finish before Helm regardless of the flag
-			// (matching addon-operator); named-queue hooks wait only when they opt in.
-			if hookInfo.QueueName == mainQueueName || hookInfo.KubernetesBinding.WaitForSynchronization {
+			if hookInfo.KubernetesBinding.WaitForSynchronization {
 				queueName = fmt.Sprintf("%s/sync", queueName)
 				// Add to WaitGroup - we'll block until this completes
 				t.queue.Enqueue(ctx, queueName, syncTask, queue.WithWait(wg))
@@ -144,7 +134,8 @@ func (t *task) Execute(ctx context.Context) error {
 			t.queue.Enqueue(ctx, queueName, syncTask)
 		}
 	}
-	// Block until the waited sync hooks complete so their values are ready for Helm.
+	// Block until all WaitForSynchronization hooks complete
+	// This ensures critical hooks run before startup hooks
 	wg.Wait()
 
 	// Step 3: Run package startup hooks (onStartup binding)
