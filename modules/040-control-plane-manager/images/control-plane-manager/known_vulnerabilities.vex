@@ -34,20 +34,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-33186"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/google.golang.org/grpc"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: компонент controller (controlPlaneManager) не поднимает gRPC-сервер с path-based авторизационными интерцепторами. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с deny-правилами и fallback allow в данном компоненте не задействован.",
-      "timestamp": "2026-03-24T09:40:38.893711Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-39883"
       },
       "products": [
@@ -62,5 +48,5 @@
     }
   ],
   "timestamp": "2025-10-28T18:45:30Z",
-  "last_updated": "2026-04-10T08:25:16Z"
+  "last_updated": "2026-07-02T08:31:00Z"
 }
