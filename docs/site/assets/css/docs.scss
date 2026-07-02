@@ -1668,6 +1668,22 @@ a.comparison-table__module-proprietaryOkmeter::after {
       @include breakpoints.max-w(xl) {
         padding-right: 50px;
       }
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 36px;
+        background-color: #F6F7F8;
+        border-right: 1px solid #C4CAD4;
+        color: #A7B0BE;
+
+        @include breakpoints.max-w(xl) {
+          width: 35px;
+        }
+      }
     }
 }
 
@@ -1675,7 +1691,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
   position: relative;
 }
 
-.docs pre.code__transfer {
+.docs pre {
     font-family: 'Source Code Pro', monospace;
     border-radius: 4px;
     padding: 10px;
@@ -1693,22 +1709,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
     @include breakpoints.max-w(xs) {
       font-size: 11px;
-    }
-
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 36px;
-        background-color: #F6F7F8;
-        border-right: 1px solid #C4CAD4;
-        color: #A7B0BE;
-
-        @include breakpoints.max-w(xl) {
-          width: 35px;
-        }
     }
 
     &:has(.language-tree) {
