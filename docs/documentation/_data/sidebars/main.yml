@@ -1315,6 +1315,10 @@ entries:
                 ru: Модуль Deckhouse
               url: /architecture/deckhouse/deckhouse.html
             - title:
+                en: Deckhouse queues
+                ru: Очереди Deckhouse
+              url: /architecture/deckhouse/queues.html
+            - title:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
