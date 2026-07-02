@@ -10,4 +10,7 @@ extractedLinksMax: 0
 
 В данном подразделе описывается архитектура подсистемы Delivery в Deckhouse Kubernetes Platform (DKP).
 
-В подсистему Delivery входит модуль [`operator-argo`](/modules/operator-argo/), управляющий инсталляциями ArgoCD в DKP.
+В подсистему Delivery входят следующие модули:
+
+- [`operator-argo`](/modules/operator-argo/) — управляет инсталляциями ArgoCD в DKP,
+- [`operator-helm`](/modules/operator-helm/) — обеспечивает декларативное управление развертывания Helm-чартов.
