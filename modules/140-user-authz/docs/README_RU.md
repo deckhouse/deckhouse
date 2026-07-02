@@ -212,6 +212,7 @@ read:
     - deckhouse.io/modulesources
     - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodegroups
+    - deckhouse.io/nodetopologies
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/packagerepositories
@@ -566,6 +567,7 @@ write:
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
     - deckhouse.io/localpathprovisioners
+    - deckhouse.io/nodetopologies
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projects
