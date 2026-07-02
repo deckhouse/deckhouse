@@ -29,7 +29,7 @@ spec:
         image: ${IMAGE_KUBE_APISERVER}
         command:
         - kube-apiserver
-        - --etcd-servers=http://${CPN_NAME}-kine:2379
+        - --etcd-servers=http://127.0.0.1:2379
         - --client-ca-file=/pki/ca.crt
         - --tls-cert-file=/pki/apiserver.crt
         - --tls-private-key-file=/pki/apiserver.key
@@ -69,6 +69,30 @@ spec:
           periodSeconds: 10
         resources:
           requests: {cpu: 250m, memory: 512Mi}
+      - name: kine
+        image: ${IMAGE_KINE}
+        env:
+        - {name: PGHOST, valueFrom: {secretKeyRef: {name: d8-datastore-creds-virtual, key: host}}}
+        - {name: PGUSER, valueFrom: {secretKeyRef: {name: d8-datastore-creds-virtual, key: username}}}
+        - {name: PGPASSWORD, valueFrom: {secretKeyRef: {name: d8-datastore-creds-virtual, key: password}}}
+        command:
+        - kine
+        - --endpoint=postgres://$(PGUSER):$(PGPASSWORD)@$(PGHOST):5432/kine?sslmode=require
+        - --listen-address=127.0.0.1:2379
+        ports:
+        - {containerPort: 8080, name: metrics, protocol: TCP}
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          readOnlyRootFilesystem: true
+          seccompProfile:
+            type: RuntimeDefault
+        resources:
+          requests: {cpu: 100m, memory: 128Mi}
+          limits: {cpu: 500m, memory: 512Mi}
       volumes:
       - name: pki
         secret:

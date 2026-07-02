@@ -83,8 +83,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if res, err := r.reconcileAdminKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if err := r.reconcileStatus(ctx, vcp, apiserverService); err != nil {
+		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
+	}
+
 	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp)
 	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcilePostgres(ctx, vcp, configSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -339,27 +351,66 @@ func (r *reconciler) reconcileKubeconfigSecret(
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
 ) (reconcile.Result, error) {
-	target := buildTargetKubeconfigSecret(vcp)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualKubeconfigSecretName, componentKubeconfigFiles)
+}
+
+func (r *reconciler) reconcileAdminKubeconfigSecret(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiserverService *corev1.Service,
+	pkiSecret *corev1.Secret,
+) (reconcile.Result, error) {
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualAdminKubeconfigSecretName, adminKubeconfigFiles)
+}
+
+func (r *reconciler) reconcileKubeconfigSecretFiles(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiserverService *corev1.Service,
+	pkiSecret *corev1.Secret,
+	name string,
+	files []kubeconfig.File,
+) (reconcile.Result, error) {
+	target := buildTargetKubeconfigSecret(vcp, name)
 
 	_, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret)
+		data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret data: %w", err)
+			return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
 		}
 		target.Data = data
 
 		return reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("get kubeconfig Secret: %w", err)
+		return reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	name := constants.VirtualKubeconfigSecretName
+func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) error {
+	endpoint := fmt.Sprintf("https://%s:6443", apiserverService.Spec.ClusterIP)
+	ref := &controlplanev1alpha1.VirtualControlPlaneKubeconfigSecretRef{
+		Namespace: constants.VirtualControlPlaneNamespacePrefix + vcp.Name,
+		Name:      constants.VirtualAdminKubeconfigSecretName,
+	}
+
+	if vcp.Status.Endpoint == endpoint &&
+		vcp.Status.KubeconfigSecretRef != nil &&
+		*vcp.Status.KubeconfigSecretRef == *ref {
+		return nil
+	}
+
+	base := vcp.DeepCopy()
+	vcp.Status.Endpoint = endpoint
+	vcp.Status.KubeconfigSecretRef = ref
+
+	return r.client.Status().Patch(ctx, vcp, client.MergeFrom(base))
+}
+
+func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane, name string) *corev1.Secret {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
 	return &corev1.Secret{
@@ -374,9 +425,11 @@ func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) 
 	}
 }
 
-var kubeconfigFiles = []kubeconfig.File{kubeconfig.ControllerManager, kubeconfig.Scheduler}
+var componentKubeconfigFiles = []kubeconfig.File{kubeconfig.ControllerManager, kubeconfig.Scheduler}
 
-func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret) (map[string][]byte, error) {
+var adminKubeconfigFiles = []kubeconfig.File{kubeconfig.SuperAdmin}
+
+func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret, kubeconfigFiles []kubeconfig.File) (map[string][]byte, error) {
 	clusterIP := apiserverService.Spec.ClusterIP
 	if clusterIP == "" || clusterIP == corev1.ClusterIPNone {
 		return nil, fmt.Errorf("apiserver Service has no ClusterIP")
@@ -406,7 +459,7 @@ func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret
 		return nil, fmt.Errorf("create kubeconfig files: %w", err)
 	}
 
-	return readKubeconfigSecretData(outDir)
+	return readKubeconfigSecretData(outDir, kubeconfigFiles)
 }
 
 func writeKubeconfigCA(dir string, pkiData map[string][]byte) error {
@@ -424,7 +477,7 @@ func writeKubeconfigCA(dir string, pkiData map[string][]byte) error {
 	return nil
 }
 
-func readKubeconfigSecretData(outDir string) (map[string][]byte, error) {
+func readKubeconfigSecretData(outDir string, kubeconfigFiles []kubeconfig.File) (map[string][]byte, error) {
 	data := make(map[string][]byte, len(kubeconfigFiles))
 	for _, file := range kubeconfigFiles {
 		content, err := os.ReadFile(filepath.Join(outDir, string(file)))

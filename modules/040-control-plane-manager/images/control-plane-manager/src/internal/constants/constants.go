@@ -46,6 +46,7 @@ const (
 	VirtualRenderedConfigSecretName        = "d8-vcp-config-virtual"
 	VirtualPKISecretName                   = "d8-pki-virtual"
 	VirtualKubeconfigSecretName            = "d8-kubeconfig-virtual"
+	VirtualAdminKubeconfigSecretName       = "d8-admin-kubeconfig-virtual"
 	VirtualControlPlaneNodeOrdinalLabelKey = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
 	DefaultTenantClusterDomain             = "cluster.virtual"
 	DefaultTenantServiceSubnetCIDR         = "10.96.0.0/12"
