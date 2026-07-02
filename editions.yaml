@@ -85,7 +85,6 @@ editions:
   - metallb
   - monitoring-custom
   - monitoring-kubernetes
-  - monitoring-ping
   - multitenancy-manager
   - namespace-configurator
   - node-local-dns
@@ -93,7 +92,6 @@ editions:
   - operator-prometheus
   - priority-class
   - prometheus
-  - prometheus-metrics-adapter
   - registry
   - registrypackages
   - registry-packages-proxy

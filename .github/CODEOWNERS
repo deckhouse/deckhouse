@@ -125,6 +125,8 @@ helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5
 tools/docs/                              @z9r5
+tools/integrity_check_namespaces         @alexey-gavrilov-flant @himax1991
+tools/build_includes/integrity-check-**  @alexey-gavrilov-flant @himax1991
 /pkg/                                    @ldmonster
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
