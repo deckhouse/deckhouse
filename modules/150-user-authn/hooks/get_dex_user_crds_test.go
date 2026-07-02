@@ -801,8 +801,12 @@ username: external
 
 	Context("With a User whose email changed (Password object renamed)", func() {
 		BeforeEach(func() {
-			// The previous email hashed to a different object name. After the
-			// email change the old object is no longer referenced by any user.
+			// The previous email hashed to a different object name. After the email
+			// change the old object is no longer referenced by that name, but the
+			// user still owns it (matched by username). The live hash below differs
+			// from User.spec.password on purpose: it represents a password the user
+			// rotated after account creation, which must survive the rename instead
+			// of being reverted to the immutable creation-time spec.password.
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1
@@ -811,11 +815,17 @@ metadata:
   name: admin
 spec:
   email: admin@example.com
-  password: $2a$10$E/MjyzFi6GZkta9GHd8zCeuYigbLenXv18jkxOZ6vhoWsKnaxNJou
+  password: $2a$10$thisIsTheOriginalUserSpecHashMustNotOverwriteLiveHashAA
 ---
 apiVersion: dex.coreos.com/v1
 email: old@example.com
-hash: aGFzaA==
+hash: dXNlckNoYW5nZWRIYXNo
+hashUpdatedAt: "2024-01-02T03:04:05Z"
+incorrectPasswordLoginAttempts: 3
+lockedUntil: "2077-01-01T00:00:00Z"
+previousHashes:
+- b2xkSGFzaA==
+requireResetHashOnNextSuccLogin: true
 kind: Password
 metadata:
   name: oldemailencodedname
@@ -829,7 +839,7 @@ username: admin
 `))
 			f.RunHook()
 		})
-		It("Should delete the old-name Password and create one under the new email encoding", func() {
+		It("Should delete the old-name Password and recreate it under the new email encoding, preserving the live hash", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			// Object keyed by the previous email encoding is orphaned and removed.
 			Expect(f.KubernetesResource("Password", "d8-user-authn", "oldemailencodedname").Exists()).To(BeFalse())
@@ -837,7 +847,15 @@ username: admin
 			newPassword := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf")
 			Expect(newPassword.Exists()).To(BeTrue())
 			Expect(newPassword.Field("email").String()).To(Equal("admin@example.com"))
-			Expect(newPassword.Field("hashUpdatedAt").Time()).To(BeTemporally("~", time.Now(), time.Minute))
+			// The live hash the user last set is carried over, NOT reseeded from
+			// the CR's original creation-time password.
+			Expect(newPassword.Field("hash").String()).To(Equal("dXNlckNoYW5nZWRIYXNo"))
+			// Other Dex-managed runtime state is carried over as well.
+			Expect(newPassword.Field("hashUpdatedAt").String()).To(Equal("2024-01-02T03:04:05Z"))
+			Expect(newPassword.Field("incorrectPasswordLoginAttempts").Int()).To(Equal(int64(3)))
+			Expect(newPassword.Field("lockedUntil").String()).To(Equal("2077-01-01T00:00:00Z"))
+			Expect(newPassword.Field("requireResetHashOnNextSuccLogin").Bool()).To(BeTrue())
+			Expect(newPassword.Field("previousHashes").String()).To(MatchJSON(`["b2xkSGFzaA=="]`))
 		})
 	})
 

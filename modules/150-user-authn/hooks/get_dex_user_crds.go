@@ -140,6 +140,9 @@ type Password struct {
 	Email                           string     `json:"email"`
 	UserID                          string     `json:"userID"`
 	Hash                            string     `json:"hash"`
+	HashUpdatedAt                   string     `json:"hashUpdatedAt,omitempty"`
+	PreviousHashes                  []string   `json:"previousHashes,omitempty"`
+	IncorrectPasswordLoginAttempts  int        `json:"incorrectPasswordLoginAttempts,omitempty"`
 	Groups                          []string   `json:"groups,omitempty"`
 	RequireResetHashOnNextSuccLogin bool       `json:"requireResetHashOnNextSuccLogin"`
 	LockedUntil                     *time.Time `json:"lockedUntil"`
@@ -194,12 +197,21 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	// makes an email change (object name change) behave correctly.
 	passwordsSnap := input.Snapshots.Get("passwords")
 	passwordsByName := make(map[string]Password, len(passwordsSnap))
+	// Secondary index keyed by the (stable) username. User.spec.email is mutable
+	// while the Password object name is derived from the email, so after an email
+	// change the by-name lookup misses even though a Password already exists for
+	// the user. The by-username index lets us find that object and carry its live
+	// Dex-managed state onto the renamed object instead of reseeding it.
+	passwordsByUsername := make(map[string]Password, len(passwordsSnap))
 	allPasswords := make([]Password, 0, len(passwordsSnap))
 	for password, err := range sdkobjectpatch.SnapshotIter[Password](passwordsSnap) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over 'passwords' snapshot: %w", err)
 		}
 		passwordsByName[password.Name] = password
+		if password.Username != "" {
+			passwordsByUsername[password.Username] = password
+		}
 		allPasswords = append(allPasswords, password)
 	}
 
@@ -241,6 +253,24 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 
 		existingPassword, passwordExists := passwordsByName[encodedName]
 
+		// livePassword is the Password object that currently backs this user, if
+		// any. When the by-name lookup misses we fall back to the username index:
+		// this happens on an email change, where the object name (derived from the
+		// email) no longer matches but a Password with the live hash still exists
+		// under the previous name. Treating a rename as a brand-new user would
+		// reseed the immutable creation-time User.spec.password and drop the live
+		// hash the moment the old object is cleaned up as an orphan.
+		livePassword := existingPassword
+		isRename := false
+		// Only fall back to a module-managed object: an unmanaged Password that
+		// happens to share the username must never seed our recreated object.
+		if !passwordExists {
+			if prev, ok := passwordsByUsername[dexUser.Name]; ok && isModuleManagedPassword(prev) {
+				livePassword = prev
+				isRename = true
+			}
+		}
+
 		// The raw bcrypt from User.spec.password seeds a brand-new Password only.
 		// Capture it before we possibly overwrite the rendered value below.
 		rawPassword := dexUser.Spec.Password
@@ -248,9 +278,10 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		// IMPORTANT:
 		// Dex updates Password objects when a user changes password in the UI.
 		// If we echoed User.spec.password into the internal values we would expose
-		// a stale hash. Prefer the live Password.hash when a Password already exists.
-		if passwordExists && existingPassword.Hash != "" {
-			dexUser.Spec.Password = existingPassword.Hash
+		// a stale hash. Prefer the live Password.hash when a Password already
+		// exists (either under the current name or, on a rename, under the old one).
+		if livePassword.Hash != "" {
+			dexUser.Spec.Password = livePassword.Hash
 		}
 
 		var expireAt string
@@ -278,22 +309,25 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		lock := DexUserLock{}
-		if passwordExists && existingPassword.LockedUntil != nil && existingPassword.LockedUntil.After(now) {
+		if livePassword.LockedUntil != nil && livePassword.LockedUntil.After(now) {
 			lock = DexUserLock{
 				State:   true,
 				Reason:  ptr.To(PasswordPolicyLockout),
 				Message: ptr.To("Locked due to too many failed login attempts"),
-				Until:   ptr.To(existingPassword.LockedUntil.Format(time.RFC3339)),
+				Until:   ptr.To(livePassword.LockedUntil.Format(time.RFC3339)),
 			}
 
 			// If this annotation exists - we consider lock was set by administrator.
-			if _, ok := existingPassword.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
+			if _, ok := livePassword.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
 				lock.Reason = ptr.To(LockedByAdministrator)
 				lock.Message = ptr.To("Locked by administrator")
 			}
-		} else if _, ok := existingPassword.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
+		} else if _, ok := livePassword.Annotations[PasswordAnnotationLockedByAdministrator]; ok && passwordExists {
 			// In this case we have expired or unexisted lock and saved from previous lock annotation.
 			// For sure we need to delete it (and persist the change to the cluster).
+			// On a rename we skip this: the old object is about to be deleted as an
+			// orphan and newPasswordObjectFromExisting only carries the annotation
+			// forward while the lock is still active, so no stale annotation lingers.
 			input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 				annotations := obj.GetAnnotations()
 				if annotations == nil {
@@ -302,8 +336,8 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 				delete(annotations, PasswordAnnotationLockedByAdministrator)
 				obj.SetAnnotations(annotations)
 				return obj, nil
-			}, "dex.coreos.com/v1", "Password", existingPassword.Namespace, existingPassword.Name)
-			delete(existingPassword.Annotations, PasswordAnnotationLockedByAdministrator)
+			}, "dex.coreos.com/v1", "Password", livePassword.Namespace, livePassword.Name)
+			delete(livePassword.Annotations, PasswordAnnotationLockedByAdministrator)
 		}
 		dexUser.Status.Lock = lock
 
@@ -314,9 +348,16 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		// fields (hash after a user change, hashUpdatedAt, previousHashes,
 		// incorrectPasswordLoginAttempts, lockedUntil, requireResetHashOnNextSuccLogin)
 		// on an existing object.
-		if passwordExists {
+		switch {
+		case passwordExists:
 			reconcileExistingPassword(input, existingPassword, dexUser.Name, email, groups)
-		} else {
+		case isRename:
+			// Email (hence object name) changed. Recreate the object under the new
+			// name while preserving the live Dex-managed state, so a rename never
+			// reverts the password or resets the rotation clock. The old object is
+			// removed by the orphan-cleanup pass below.
+			input.PatchCollector.CreateIfNotExists(newPasswordObjectFromExisting(encodedName, dexUser.Name, email, groups, livePassword, now))
+		default:
 			input.PatchCollector.CreateIfNotExists(newPasswordObject(encodedName, dexUser.Name, email, rawPassword, groups, now))
 		}
 
@@ -389,6 +430,17 @@ func encodePasswordHash(rawPassword string) string {
 	return rawPassword
 }
 
+// toUnstructuredSlice converts a []string into the []any that
+// unstructured.Unstructured requires: holding a []string makes the runtime
+// converter panic during DeepCopy.
+func toUnstructuredSlice(values []string) []any {
+	out := make([]any, len(values))
+	for i, v := range values {
+		out[i] = v
+	}
+	return out
+}
+
 // newPasswordObject builds a brand-new Dex Password object for a user. It stamps
 // hashUpdatedAt with the current time so the rotation policy starts the clock at
 // creation instead of treating the password as ancient (zero time), which would
@@ -414,13 +466,67 @@ func newPasswordObject(encodedName, username, email, rawPassword string, groups 
 		"hashUpdatedAt": now.UTC().Format(time.RFC3339),
 	}
 	if len(groups) > 0 {
-		// unstructured.Unstructured must only hold []interface{} (not []string),
-		// otherwise the runtime converter panics.
-		groupsAny := make([]any, len(groups))
-		for i, g := range groups {
-			groupsAny[i] = g
-		}
-		obj["groups"] = groupsAny
+		obj["groups"] = toUnstructuredSlice(groups)
+	}
+
+	return &unstructured.Unstructured{Object: obj}
+}
+
+// newPasswordObjectFromExisting builds a Password object under a new (email
+// derived) name while carrying over the Dex-managed runtime state of the object
+// it replaces. It is used when a user's email changes: because the object name
+// is derived from the email, the old object cannot simply be patched - it has to
+// be recreated under the new name. We copy hash, hashUpdatedAt, previousHashes,
+// incorrectPasswordLoginAttempts, lockedUntil, requireResetHashOnNextSuccLogin
+// and (only while the lock is still active) the locked-by-administrator
+// annotation, so a rename does not revert the password to the immutable
+// creation-time User.spec.password, reset the rotation clock, or clear the
+// lockout state.
+func newPasswordObjectFromExisting(encodedName, username, email string, groups []string, existing Password, now time.Time) *unstructured.Unstructured {
+	annotations := map[string]any{
+		helmResourcePolicyAnnotation: helmResourcePolicyKeep,
+	}
+	// Carry the locked-by-administrator marker only while the lock is genuinely
+	// active. Copying a stale annotation onto the fresh object would misreport an
+	// expired lock as administrator-set until the next reconcile cleaned it up.
+	lockActive := existing.LockedUntil != nil && existing.LockedUntil.After(now)
+	if v, ok := existing.Annotations[PasswordAnnotationLockedByAdministrator]; ok && lockActive {
+		annotations[PasswordAnnotationLockedByAdministrator] = v
+	}
+
+	obj := map[string]any{
+		"apiVersion": "dex.coreos.com/v1",
+		"kind":       "Password",
+		"metadata": map[string]any{
+			"name":        encodedName,
+			"namespace":   dexNamespace,
+			"labels":      passwordObjectLabels(),
+			"annotations": annotations,
+		},
+		"email":    email,
+		"username": username,
+		"userID":   username,
+		// existing.Hash is already stored in Dex's on-disk (base64) form, so it is
+		// copied verbatim rather than re-encoded.
+		"hash":                            existing.Hash,
+		"requireResetHashOnNextSuccLogin": existing.RequireResetHashOnNextSuccLogin,
+	}
+	if existing.HashUpdatedAt != "" {
+		obj["hashUpdatedAt"] = existing.HashUpdatedAt
+	}
+	if existing.IncorrectPasswordLoginAttempts != 0 {
+		// unstructured.Unstructured only accepts int64 for integer values; a plain
+		// int makes the runtime converter panic during DeepCopy.
+		obj["incorrectPasswordLoginAttempts"] = int64(existing.IncorrectPasswordLoginAttempts)
+	}
+	if existing.LockedUntil != nil {
+		obj["lockedUntil"] = existing.LockedUntil.UTC().Format(time.RFC3339)
+	}
+	if len(existing.PreviousHashes) > 0 {
+		obj["previousHashes"] = toUnstructuredSlice(existing.PreviousHashes)
+	}
+	if len(groups) > 0 {
+		obj["groups"] = toUnstructuredSlice(groups)
 	}
 
 	return &unstructured.Unstructured{Object: obj}
