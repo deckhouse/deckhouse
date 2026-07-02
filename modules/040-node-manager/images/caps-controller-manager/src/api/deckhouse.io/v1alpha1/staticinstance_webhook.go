@@ -87,6 +87,16 @@ func (*StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj ru
 		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
+	existing := &StaticInstance{}
+	err = cli.Get(ctx, client.ObjectKey{Name: staticInstance.Name}, existing)
+	switch {
+	case err == nil:
+		staticinstancelog.Info("StaticInstance already exists, skipping address validation", "name", staticInstance.GetName())
+		return nil, nil
+	case !apierrors.IsNotFound(err):
+		return nil, fmt.Errorf("failed to get StaticInstance %q: %w", staticInstance.GetName(), err)
+	}
+
 	if err := staticInstance.validateAddressIfNoSkipBootstrap(ctx, cli); err != nil {
 		return nil, field.Forbidden(field.NewPath("spec", "address"), err.Error())
 	}
