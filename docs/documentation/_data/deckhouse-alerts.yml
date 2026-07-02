@@ -3932,26 +3932,34 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and is available in a ModuleSource registry, but it has not been downloaded yet (no Deployed ModuleRelease). DeckhouseRelease will be locked until the module is pre-downloaded.
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and is available in a ModuleSource registry, but it has not been downloaded yet (no deployed ModuleRelease exists). DeckhouseRelease will be locked until the module is downloaded.
 
-        This is usually transient: the module source controller needs time to pull the module from the registry. If the alert persists, this may indicate:
-        - The module's update policy or ModuleSource is misconfigured, so the module is never pulled.
-        - There is a network issue preventing the module download.
+        This alert is usually temporary while the module source controller downloads the module from the registry. If the alert persists, this may indicate:
 
-        To investigate, run the following commands:
+        - The module's update policy or ModuleSource is misconfigured, preventing the module from being downloaded.
+        - A network issue is preventing the module from being downloaded.
 
-        ```bash
-        # Check the ModuleRelease objects for the module
-        d8 k get mr -l module={{ $labels.module }}
+        To investigate the issue, do the following:
 
-        # Check ModuleSource status
-        d8 k get modulesources
+        - Check the ModuleRelease objects for the module:
 
-        # Check Deckhouse logs for more details
-        d8 k -n d8-system logs -f -l app=deckhouse
-        ```
+          ```bash
+          d8 k get mr -l module={{ $labels.module }}
+          ```
+
+        - Check the configured ModuleSources:
+
+          ```bash
+          d8 k get modulesources
+          ```
+
+        - Check the `deckhouse` logs for more details:
+
+          ```bash
+          d8 k -n d8-system logs -f -l app=deckhouse
+          ```
       summary: |
-        Migrated module {{ $labels.module }} is not downloaded yet.
+        Migrated module {{ $labels.module }} has not been downloaded yet.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseMigratedModuleNotFound
@@ -3960,33 +3968,41 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and was not found in any available ModuleSource registry. DeckhouseRelease will be locked until the module becomes available in one of the configured ModuleSource registries.
 
         This may indicate:
-        - The module source registry is not properly configured.
+
+        - A ModuleSource registry is misconfigured.
         - The module has not been published to the registry yet.
-        - There is a network issue preventing access to the registry.
+        - A network issue is preventing access to the registry.
 
-        Please check:
-        1. ModuleSource configurations: `d8 k get modulesources`.
-        2. Registry accessibility and credentials.
-        3. Module availability in the configured registries.
+        To investigate the issue, do the following:
 
-        To investigate, run the following commands:
+        - Check the configured ModuleSources:
 
-        ```bash
-        # Check ModuleSource status
-        d8 k get modulesources
+          ```bash
+          d8 k get modulesources
+          ```
 
-        # Check available modules in all sources
-        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
-        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+        - List the available module sources:
 
-        # Check Deckhouse logs for more details
-        d8 k -n d8-system logs -f -l app=deckhouse
-        ```
+          ```bash
+          d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+          ```
+
+        - List the modules available in a specific source:
+
+          ```bash
+          d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+          ```
+
+        - Check the `deckhouse` logs for more details:
+
+          ```bash
+          d8 k -n d8-system logs -f -l app=deckhouse
+          ```
       summary: |
-        Migrated module {{ $labels.module }} not found in registry.
+        Migrated module {{ $labels.module }} was not found in any ModuleSource registry.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
