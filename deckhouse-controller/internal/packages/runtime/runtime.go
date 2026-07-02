@@ -173,6 +173,17 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
 	}
 
+	if err := r.loadGlobal(context.Background()); err != nil {
+		return nil, fmt.Errorf("load global: %w", err)
+	}
+
+	// Initialize scheduler with enabling/disabling callbacks
+	r.buildScheduler(cli)
+
+	if err := r.loadEmbedded(context.Background()); err != nil {
+		return nil, fmt.Errorf("load embedded: %w", err)
+	}
+
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
@@ -204,17 +215,6 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 		TaskBuilder:       r,
 		QueueService:      r.queueService,
 	}, r.logger)
-
-	if err := r.loadGlobal(context.Background()); err != nil {
-		return nil, fmt.Errorf("load global: %w", err)
-	}
-
-	// Initialize scheduler with enabling/disabling callbacks
-	r.buildScheduler(cli)
-
-	if err := r.loadEmbedded(context.Background()); err != nil {
-		return nil, fmt.Errorf("load embedded: %w", err)
-	}
 
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
