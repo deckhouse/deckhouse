@@ -18,7 +18,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "containerd_intregrity_policies",
+			Name:       "containerd_integrity_policies",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "ContainerdIntegrityPolicy",
 			FilterFunc: containerdIntegrityPolicyFilter,
@@ -31,7 +31,7 @@ func containerdIntegrityPolicyFilter(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func handleContainerdIntegrityPolicies(_ context.Context, input *go_hook.HookInput) error {
-	hasCIP := len(input.Snapshots.Get("containerd_intregrity_policies")) > 0
+	hasCIP := len(input.Snapshots.Get("containerd_integrity_policies")) > 0
 
 	if hasCIP {
 		input.Logger.Info("One or more ContainerdIntegrityPolicies found, nodeManager.internal.containerdIntegrityControllerEnabled set to true")
