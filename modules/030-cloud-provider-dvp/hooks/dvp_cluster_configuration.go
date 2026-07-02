@@ -51,6 +51,7 @@ type moduleConfigFilterResult struct {
 	Version  int64           `json:"version"`
 	Enabled  bool            `json:"enabled"`
 	Provider json.RawMessage `json:"provider,omitempty"`
+	Zones    []string        `json:"zones,omitempty"`
 }
 
 type namedResourceResult struct {
@@ -108,10 +109,19 @@ func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}
 
 	if mc.Spec.Settings != nil {
-		if providerRaw, ok := mc.Spec.Settings.GetMap()["provider"]; ok {
+		settings := mc.Spec.Settings.GetMap()
+		if providerRaw, ok := settings["provider"]; ok {
 			providerBytes, err := json.Marshal(providerRaw)
 			if err == nil {
 				result.Provider = json.RawMessage(providerBytes)
+			}
+		}
+
+		if zonesRaw, ok := settings["zones"].([]any); ok {
+			for _, zoneRaw := range zonesRaw {
+				if zone, ok := zoneRaw.(string); ok && zone != "" {
+					result.Zones = append(result.Zones, zone)
+				}
 			}
 		}
 	}
@@ -235,8 +245,15 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 	pccPresent := len(pccSnaps) > 0
 
 	if !pccPresent {
-		// no PCC: new cluster, standard flow
-		deleteMigrationArtifacts(input)
+		legacyCredentialsPresent, err := mapLegacyModuleConfigCredentialsToRootValues(input)
+		if err != nil {
+			return fmt.Errorf("map legacy ModuleConfig credentials to root values: %w", err)
+		}
+
+		if !legacyCredentialsPresent {
+			deleteMigrationArtifacts(input)
+		}
+
 		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
@@ -429,23 +446,59 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		input.Values.Set("cloudProviderDvp.nodes", nodes)
 	}
 
-	// inject synthetic creds only if credentials.go (Order 19) hasn't populated yet
-	if _, exists := input.Values.GetOk("cloudProviderDvp.internal.credentialSecrets.d8-credentials"); !exists {
-		if pcc.Provider != nil && pcc.Provider.KubeconfigDataBase64 != nil && len(*pcc.Provider.KubeconfigDataBase64) > 0 {
-			// set whole map at once; JSON-patch fails on missing intermediate path
-			existing := make(map[string]any)
-			if v, ok := input.Values.GetOk("cloudProviderDvp.internal.credentialSecrets"); ok {
-				if err := json.Unmarshal([]byte(v.Raw), &existing); err != nil {
-					return fmt.Errorf("unmarshal credentialSecrets: %w", err)
-				}
-			}
-			existing[dvpCredentialSecretName] = map[string]any{
-				"authScheme": dvpAuthSchemeKubeconfig,
-				"secret":     *pcc.Provider.KubeconfigDataBase64,
-			}
-			input.Values.Set("cloudProviderDvp.internal.credentialSecrets", existing)
+	if pcc.Provider != nil && pcc.Provider.KubeconfigDataBase64 != nil && len(*pcc.Provider.KubeconfigDataBase64) > 0 {
+		if err := setD8CredentialValuesIfAbsent(input, *pcc.Provider.KubeconfigDataBase64); err != nil {
+			return err
 		}
 	}
+
+	return nil
+}
+
+func mapLegacyModuleConfigCredentialsToRootValues(input *go_hook.HookInput) (bool, error) {
+	mcSnaps := input.Snapshots.Get("module_config")
+	if len(mcSnaps) == 0 {
+		return false, nil
+	}
+
+	var mc moduleConfigFilterResult
+	if err := mcSnaps[0].UnmarshalTo(&mc); err != nil {
+		return false, fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
+	}
+
+	if mc.Version != 1 || len(mc.Provider) == 0 {
+		return false, nil
+	}
+
+	var provider v1.DvpProvider
+	if err := json.Unmarshal(mc.Provider, &provider); err != nil {
+		return false, fmt.Errorf("parse ModuleConfig provider settings: %w", err)
+	}
+
+	if provider.KubeconfigDataBase64 == nil || *provider.KubeconfigDataBase64 == "" {
+		return false, nil
+	}
+
+	return true, setD8CredentialValuesIfAbsent(input, *provider.KubeconfigDataBase64)
+}
+
+func setD8CredentialValuesIfAbsent(input *go_hook.HookInput, kubeconfigDataBase64 string) error {
+	if _, exists := input.Values.GetOk("cloudProviderDvp.internal.credentialSecrets.d8-credentials"); exists {
+		return nil
+	}
+
+	existing := make(map[string]any)
+	if v, ok := input.Values.GetOk("cloudProviderDvp.internal.credentialSecrets"); ok {
+		if err := json.Unmarshal([]byte(v.Raw), &existing); err != nil {
+			return fmt.Errorf("unmarshal credentialSecrets: %w", err)
+		}
+	}
+
+	existing[dvpCredentialSecretName] = map[string]any{
+		"authScheme": dvpAuthSchemeKubeconfig,
+		"secret":     kubeconfigDataBase64,
+	}
+	input.Values.Set("cloudProviderDvp.internal.credentialSecrets", existing)
 
 	return nil
 }

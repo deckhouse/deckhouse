@@ -46,7 +46,8 @@ cloudProviderDvp:
    "zones": ["default"]
 }
 `
-	stateAClusterConfiguration1 := `
+	kubeconfigDataBase64 := base64.StdEncoding.EncodeToString([]byte("apiVe"))
+	stateAClusterConfiguration1 := fmt.Sprintf(`
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
@@ -65,7 +66,7 @@ masterNodeGroup:
       virtualMachineClassName: superbe-class
       bootloader: EFI
       cpu:
-        coreFraction: 100%
+        coreFraction: 100%%
         cores: 4
       liveMigrationPolicy: PreferForced
       runPolicy: AlwaysOnUnlessStoppedManually
@@ -75,13 +76,13 @@ masterNodeGroup:
         size: 8Gi
   replicas: 3
 provider:
-  kubeconfigDataBase64: YXBpVmV=
+  kubeconfigDataBase64: %s
   namespace: cloud-provider01
 sshPublicKey: ssh-rsa AAAAB3N
 region: ru-msk-1
 zones:
 - default
-`
+`, kubeconfigDataBase64)
 
 	notEmptyPCCState := fmt.Sprintf(`
 apiVersion: v1
@@ -121,6 +122,58 @@ data:
 			Expect(f.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.apiVersion").String()).To(Equal("deckhouse.io/v1"))
 			Expect(f.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.kind").String()).To(Equal("DVPCloudDiscoveryData"))
 			Expect(f.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["default"]`))
+		})
+	})
+
+	Context("State A: no PCC and legacy ModuleConfig v1 has kubeconfig", func() {
+		f := HookExecutionConfigInit(emptyValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			f.KubeStateSet(fmt.Sprintf(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 1
+  enabled: true
+  settings:
+    provider:
+      kubeconfigDataBase64: %s
+      namespace: cloud-provider01
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-migration-resources
+  namespace: d8-cloud-provider-dvp
+type: Opaque
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-module-is-migrating
+  namespace: d8-cloud-provider-dvp
+`, kubeconfigDataBase64))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("should fill credential values before migration resources are applied", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.authScheme").String()).To(Equal("kubeconfig"))
+			Expect(f.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.secret").String()).To(Equal(kubeconfigDataBase64))
+
+			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeTrue())
+
+			migrationCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
+			Expect(migrationCM.Exists()).To(BeTrue())
 		})
 	})
 
@@ -189,7 +242,7 @@ metadata:
 
 			// Synthetic d8-credentials should be injected from PCC kubeconfigDataBase64.
 			Expect(b.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.authScheme").String()).To(Equal("kubeconfig"))
-			Expect(b.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.secret").String()).To(Equal("YXBpVmV="))
+			Expect(b.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.secret").String()).To(Equal(kubeconfigDataBase64))
 
 			Expect(b.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
 

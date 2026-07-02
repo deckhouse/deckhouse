@@ -68,8 +68,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleDVPMigrationResources(_ context.Context, input *go_hook.HookInput) error {
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(pccSnaps) == 0 {
-		// State A: no PCC - nothing to create; deletion is handled by dvp_cluster_configuration.go.
-		return nil
+		// State A: no PCC - hybrid migrations can still need credentials from legacy ModuleConfig v1.
+		return createLegacyModuleConfigMigrationResources(input)
 	}
 
 	var pccResult pccSecretFilterResult
@@ -105,5 +105,51 @@ func handleDVPMigrationResources(_ context.Context, input *go_hook.HookInput) er
 	}
 
 	createMigrationConfigMap(input)
+	return nil
+}
+
+func createLegacyModuleConfigMigrationResources(input *go_hook.HookInput) error {
+	mcSnaps := input.Snapshots.Get("module_config")
+	if len(mcSnaps) == 0 {
+		return nil
+	}
+
+	var mc moduleConfigFilterResult
+	if err := mcSnaps[0].UnmarshalTo(&mc); err != nil {
+		return fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
+	}
+
+	if mc.Version != 1 || len(mc.Provider) == 0 {
+		return nil
+	}
+
+	var provider v1.DvpProvider
+	if err := json.Unmarshal(mc.Provider, &provider); err != nil {
+		return fmt.Errorf("parse ModuleConfig provider settings: %w", err)
+	}
+
+	if provider.KubeconfigDataBase64 == nil || *provider.KubeconfigDataBase64 == "" {
+		return nil
+	}
+
+	namespace := ""
+	if provider.Namespace != nil {
+		namespace = *provider.Namespace
+	}
+
+	// The hybrid bundle upgrades the admin's stored config to the v2 schema: a
+	// ModuleConfig v2 (kubeconfig removed, moved into the Secret) plus the
+	// d8-credentials Secret. Hybrid clusters order only CloudEphemeral nodes that
+	// already exist as user-managed resources, so no NodeGroups/DVPInstanceClasses
+	// are generated (unlike the PCC path).
+	resources := []any{
+		buildModuleConfigForHybrid(namespace, mc.Zones),
+		buildD8CredentialsSecret(*provider.KubeconfigDataBase64),
+	}
+	if err := createMigrationResourcesSecret(input, resources); err != nil {
+		return fmt.Errorf("create migration resources: %w", err)
+	}
+	createMigrationConfigMap(input)
+
 	return nil
 }

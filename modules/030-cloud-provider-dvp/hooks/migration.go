@@ -45,8 +45,6 @@ const (
 	dvpCredentialSecretType       = "cloud-provider.deckhouse.io/credentials"
 	moduleConfigAPIVersion        = "deckhouse.io/v1alpha1"
 	pccSecretName                 = "d8-provider-cluster-configuration"
-	pccSecretNamespace            = "kube-system"
-	pccClusterConfigKey           = "cloud-provider-cluster-configuration.yaml"
 	dvpCandiDiscoverySecretName   = "d8-candi-cloud-provider-discovery-data"
 )
 
@@ -55,98 +53,22 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 		return nil
 	}
 
-	providerSettings := map[string]any{
-		"parameters": map[string]any{
-			"namespace": *cfg.Provider.Namespace,
-		},
-	}
-
-	layout := ""
-	if cfg.Layout != nil {
-		layout = *cfg.Layout
-	}
-	sshPublicKey := ""
-	if cfg.SSHPublicKey != nil {
-		sshPublicKey = *cfg.SSHPublicKey
-	}
-	nodesSettings := map[string]any{
-		"parameters": map[string]any{
-			"layout":       layout,
-			"sshPublicKey": sshPublicKey,
-		},
-	}
-	nodesParameters := nodesSettings["parameters"].(map[string]any)
-	if cfg.Region != nil {
-		nodesParameters["region"] = *cfg.Region
-	}
-	if cfg.Zones != nil {
-		nodesParameters["zones"] = stringsToAnySlice(*cfg.Zones)
-	}
-
 	resources := make([]any, 0, 4+len(cfg.NodeGroups))
+	resources = append(resources, buildD8CredentialsSecret(*cfg.Provider.KubeconfigDataBase64))
+
+	moduleConfig, err := buildModuleConfigFromPCC(cfg)
+	if err != nil {
+		return err
+	}
+	resources = append(resources, moduleConfig)
 
 	masterNodeGroup, err := mapFromAny(cfg.MasterNodeGroup)
 	if err != nil {
 		return fmt.Errorf("convert masterNodeGroup: %w", err)
 	}
 
-	ipAddressesMap := make(map[string][]string)
-	if addrs := extractIPAddresses("master", masterNodeGroup); len(addrs) > 0 {
-		ipAddressesMap["master"] = addrs
-	}
-	for _, rawNodeGroup := range cfg.NodeGroups {
-		nodeGroup, err := mapFromAny(rawNodeGroup)
-		if err != nil {
-			return fmt.Errorf("convert nodeGroup: %w", err)
-		}
-		ngName, _ := nodeGroup["name"].(string)
-		if ngName != "" {
-			if addrs := extractIPAddresses(ngName, nodeGroup); len(addrs) > 0 {
-				ipAddressesMap[ngName] = addrs
-			}
-		}
-	}
-	if len(ipAddressesMap) > 0 {
-		nodesParameters["ipAddresses"] = ipAddressesMap
-	}
-
-	moduleConfig := map[string]any{
-		"apiVersion": moduleConfigAPIVersion,
-		"kind":       "ModuleConfig",
-		"metadata": map[string]any{
-			"name": dvpModuleName,
-		},
-		"spec": map[string]any{
-			"enabled": true,
-			"version": int(2),
-			"settings": map[string]any{
-				"provider": providerSettings,
-				"storage": map[string]any{
-					"parameters": map[string]any{},
-				},
-				"nodes": nodesSettings,
-			},
-		},
-	}
-	resources = append(resources, moduleConfig)
-
-	credentialSecret := map[string]any{
-		"apiVersion": "v1",
-		"kind":       "Secret",
-		"metadata": map[string]any{
-			"name":      dvpCredentialSecretName,
-			"namespace": dvpNamespace,
-		},
-		"type": dvpCredentialSecretType,
-		"stringData": map[string]any{
-			"authScheme": dvpAuthSchemeKubeconfig,
-			"secret":     *cfg.Provider.KubeconfigDataBase64,
-		},
-	}
-	resources = append(resources, credentialSecret)
-
 	if len(masterNodeGroup) != 0 {
-		masterResources, err := createNodeGroupResources("master", masterNodeGroup, true, cfg.Zones)
+		masterResources, err := buildNodeGroupAndInstanceClassResources("master", masterNodeGroup, true, cfg.Zones)
 		if err != nil {
 			return err
 		}
@@ -164,7 +86,7 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 			return errors.New("nodeGroups[].name cannot be empty")
 		}
 
-		nodeGroupResources, err := createNodeGroupResources(name, nodeGroup, false, cfg.Zones)
+		nodeGroupResources, err := buildNodeGroupAndInstanceClassResources(name, nodeGroup, false, cfg.Zones)
 		if err != nil {
 			return err
 		}
@@ -172,6 +94,157 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 	}
 
 	return createMigrationResourcesSecret(input, resources)
+}
+
+// buildD8CredentialsSecret returns the managed d8-credentials Secret manifest,
+// shared by the PCC and hybrid v1 migration paths.
+func buildD8CredentialsSecret(kubeconfigDataBase64 string) map[string]any {
+	return map[string]any{
+		"apiVersion": "v1",
+		"kind":       "Secret",
+		"metadata": map[string]any{
+			"name":      dvpCredentialSecretName,
+			"namespace": dvpNamespace,
+		},
+		"type": dvpCredentialSecretType,
+		"stringData": map[string]any{
+			"authScheme": dvpAuthSchemeKubeconfig,
+			"secret":     kubeconfigDataBase64,
+		},
+	}
+}
+
+// buildModuleConfigFromPCC builds the ModuleConfig v2 manifest for the PCC (cloud
+// DVP) migration path. Provider and nodes settings are derived from the
+// ProviderClusterConfiguration: namespace, layout, sshPublicKey, region, zones
+// and the per-NodeGroup ipAddresses aggregated from the master and worker
+// NodeGroups. storage.parameters is emitted empty and disabled flags are omitted
+// so schema defaults apply, matching buildModuleConfigForHybrid.
+func buildModuleConfigFromPCC(cfg *v1.DvpProviderClusterConfiguration) (map[string]any, error) {
+	providerSettings := map[string]any{
+		"parameters": map[string]any{
+			"namespace": *cfg.Provider.Namespace,
+		},
+	}
+
+	layout := ""
+	if cfg.Layout != nil {
+		layout = *cfg.Layout
+	}
+	sshPublicKey := ""
+	if cfg.SSHPublicKey != nil {
+		sshPublicKey = *cfg.SSHPublicKey
+	}
+	nodesParameters := map[string]any{
+		"layout":       layout,
+		"sshPublicKey": sshPublicKey,
+	}
+	if cfg.Region != nil {
+		nodesParameters["region"] = *cfg.Region
+	}
+	if cfg.Zones != nil {
+		nodesParameters["zones"] = stringsToAnySlice(*cfg.Zones)
+	}
+
+	masterNodeGroup, err := mapFromAny(cfg.MasterNodeGroup)
+	if err != nil {
+		return nil, fmt.Errorf("convert masterNodeGroup: %w", err)
+	}
+
+	ipAddressesMap := make(map[string][]string)
+	if addrs := extractIPAddresses("master", masterNodeGroup); len(addrs) > 0 {
+		ipAddressesMap["master"] = addrs
+	}
+
+	for _, rawNodeGroup := range cfg.NodeGroups {
+		nodeGroup, err := mapFromAny(rawNodeGroup)
+		if err != nil {
+			return nil, fmt.Errorf("convert nodeGroup: %w", err)
+		}
+
+		ngName, _ := nodeGroup["name"].(string)
+		if ngName == "" {
+			continue
+		}
+
+		if addrs := extractIPAddresses(ngName, nodeGroup); len(addrs) > 0 {
+			ipAddressesMap[ngName] = addrs
+		}
+	}
+
+	if len(ipAddressesMap) > 0 {
+		nodesParameters["ipAddresses"] = ipAddressesMap
+	}
+
+	return map[string]any{
+		"apiVersion": moduleConfigAPIVersion,
+		"kind":       "ModuleConfig",
+		"metadata": map[string]any{
+			"name": dvpModuleName,
+		},
+		"spec": map[string]any{
+			"enabled": true,
+			"version": int(2),
+			"settings": map[string]any{
+				"provider": providerSettings,
+				"storage": map[string]any{
+					"parameters": map[string]any{},
+				},
+				"nodes": map[string]any{
+					"parameters": nodesParameters,
+				},
+			},
+		},
+	}, nil
+}
+
+// buildModuleConfigForHybrid builds the ModuleConfig v2 manifest for the hybrid v1
+// migration path. The shape mirrors the declarative v1->v2 conversion in
+// openapi/conversions/v2.yaml: the legacy provider.namespace becomes
+// provider.parameters.namespace (defaulting to "default"), the legacy top-level
+// zones move into nodes.parameters.zones, kubeconfigDataBase64 is dropped (it now
+// lives in the d8-credentials Secret), and nodes.parameters gets the required
+// layout/sshPublicKey placeholders the admin must review.
+//
+// disabled flags (nodes/storage/ccm) are intentionally omitted: they carry schema
+// defaults, matching createProviderClusterConfigurationResources.
+func buildModuleConfigForHybrid(namespace string, zones []string) map[string]any {
+	if namespace == "" {
+		namespace = "default"
+	}
+
+	nodesParameters := map[string]any{
+		"layout":       "Standard",
+		"sshPublicKey": "ssh-rsa PLACEHOLDER_REPLACE_ME",
+	}
+	if len(zones) > 0 {
+		nodesParameters["zones"] = stringsToAnySlice(zones)
+	}
+
+	return map[string]any{
+		"apiVersion": moduleConfigAPIVersion,
+		"kind":       "ModuleConfig",
+		"metadata": map[string]any{
+			"name": dvpModuleName,
+		},
+		"spec": map[string]any{
+			"enabled": true,
+			"version": int(2),
+			"settings": map[string]any{
+				"provider": map[string]any{
+					"parameters": map[string]any{
+						"namespace": namespace,
+					},
+				},
+				"storage": map[string]any{
+					"parameters": map[string]any{},
+				},
+				"nodes": map[string]any{
+					"parameters": nodesParameters,
+				},
+			},
+		},
+	}
 }
 
 func createMigrationResourcesSecret(input *go_hook.HookInput, resources []any) error {
@@ -249,7 +322,7 @@ func marshalResourcesManifest(resources []any) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func createNodeGroupResources(name string, nodeGroup map[string]any, master bool, clusterZones *[]string) ([]any, error) {
+func buildNodeGroupAndInstanceClassResources(name string, nodeGroup map[string]any, master bool, clusterZones *[]string) ([]any, error) {
 	instanceClassSpec, ok := nodeGroup["instanceClass"].(map[string]any)
 	if !ok || len(instanceClassSpec) == 0 {
 		return nil, fmt.Errorf("%s.instanceClass cannot be empty", name)

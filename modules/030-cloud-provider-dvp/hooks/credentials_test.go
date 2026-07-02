@@ -52,6 +52,19 @@ data:
   secret: %s
 `, base64.StdEncoding.EncodeToString([]byte("kubeconfig")), base64.StdEncoding.EncodeToString([]byte("apiVe")))
 
+	kubeconfigDataBase64 := base64.StdEncoding.EncodeToString([]byte("apiVe"))
+	migratedCredentialSecret := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+data:
+  authScheme: %s
+  secret: %s
+`, base64.StdEncoding.EncodeToString([]byte("kubeconfig")), base64.StdEncoding.EncodeToString([]byte(kubeconfigDataBase64)))
+
 	credSecret2 := fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
@@ -68,7 +81,7 @@ data:
   secret: %s
 `, base64.StdEncoding.EncodeToString([]byte("userpass")), base64.StdEncoding.EncodeToString([]byte("user1")), base64.StdEncoding.EncodeToString([]byte("pass1")))
 
-	nonCredSecret := `
+	nonCredSecret := fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
 metadata:
@@ -76,8 +89,8 @@ metadata:
   namespace: d8-cloud-provider-dvp
 type: Opaque
 data:
-  key: dmFsdWU=
-`
+  key: %s
+`, base64.StdEncoding.EncodeToString([]byte("value")))
 
 	Context("Single credential secret", func() {
 		f := HookExecutionConfigInit(initValues, `{}`)
@@ -95,6 +108,24 @@ data:
 			entry := secrets.Get("d8-credentials")
 			Expect(entry.Get("authScheme").String()).To(Equal("kubeconfig"))
 			Expect(entry.Get("secret").String()).To(Equal("apiVe"))
+			Expect(entry.Get("identity").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Credential secret from migration resources", func() {
+		f := HookExecutionConfigInit(initValues, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(migratedCredentialSecret))
+			f.RunHook()
+		})
+
+		It("should populate credentialSecrets with d8-credentials", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			entry := f.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials")
+			Expect(entry.Exists()).To(BeTrue())
+			Expect(entry.Get("authScheme").String()).To(Equal("kubeconfig"))
+			Expect(entry.Get("secret").String()).To(Equal(kubeconfigDataBase64))
 			Expect(entry.Get("identity").Exists()).To(BeFalse())
 		})
 	})
