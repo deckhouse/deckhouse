@@ -12,8 +12,8 @@ This page documents Deckhouse Code admin OpenSearch endpoints.
 
 ## Permissions
 
-- `POST /admin/opensearch/recreate_indices`: admin only (`authenticated_as_admin!`).
-- `GET /admin/opensearch/indexing_queue_stats`: authenticated user with permission `read_admin_search_indexing_queue_stats` on `:global`.
+- `POST /api/v4/admin/opensearch/recreate_indices`: admin only (`authenticated_as_admin!`).
+- `GET /api/v4/admin/opensearch/indexing_queue_stats`: authenticated user with permission `read_admin_search_indexing_queue_stats` on `:global`.
 
 ## POST `/api/v4/admin/opensearch/recreate_indices`
 
@@ -47,10 +47,10 @@ Synchronously recreates OpenSearch index(es) and enqueues background reindex job
 
 ```bash
 curl --request POST \
-  --header "PRIVATE-TOKEN: <admin_token>" \
+  --header "PRIVATE-TOKEN: <your_access_token>" \
   --header "Content-Type: application/json" \
   --data '{"schema_class":"recreate_all"}' \
-  --url "https://code.example.com/api/v4/admin/opensearch/recreate_indices"
+  --url "https://gitlab.example.com/api/v4/admin/opensearch/recreate_indices"
 ```
 
 ## GET `/api/v4/admin/opensearch/indexing_queue_stats`
@@ -75,6 +75,6 @@ Fields:
 
 ```bash
 curl --request GET \
-  --header "PRIVATE-TOKEN: <token>" \
-  --url "https://code.example.com/api/v4/admin/opensearch/indexing_queue_stats"
+  --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/admin/opensearch/indexing_queue_stats"
 ```

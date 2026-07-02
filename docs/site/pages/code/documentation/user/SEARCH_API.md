@@ -10,13 +10,13 @@ weight: 46
 
 This page documents the Search REST API implemented in Deckhouse Code.
 
-Source of truth: API and FE extension code on branch `feature/api-search-update-plan` (not upstream GitLab `doc/api/search.md`, which has different behavior for some filters/scopes).
+Source of truth: the Deckhouse Code FE search extension code (not upstream GitLab `doc/api/search.md`, which has different behavior for some filters/scopes).
 
 ## Endpoints
 
 - `GET /api/v4/search`
-- `GET /api/v4/groups/:id/-/search`
-- `GET /api/v4/projects/:id/-/search`
+- `GET /api/v4/groups/:id/search` (the `-/` variant `/api/v4/groups/:id/-/search` is also accepted)
+- `GET /api/v4/projects/:id/search` (the `-/` variant `/api/v4/projects/:id/-/search` is also accepted)
 
 All endpoints require authentication.
 
@@ -48,12 +48,12 @@ Response header `X-Search-Type` returns the resolved search type (`advanced`/oth
 |---|---|---:|---|---|
 | `search` | string | ✅ | all | Search query |
 | `scope` | string | ✅ | all | See matrix above |
-| `state` | string | ❌ | all | `all`, `opened`, `closed`, `merged` |
 | `confidential` | boolean | ❌ | all | Passed to search service |
-| `type` | array[string] | ❌ | all | Work item type filter (effective for `work_items`) |
-| `page` / `per_page` | integer | ❌ | all | Offset pagination |
 | `include_archived` | boolean | ❌ | instance, group | Not available for project endpoint |
+| `page` / `per_page` | integer | ❌ | all | Offset pagination |
 | `ref` | string | ❌ | project | Branch/tag for project search |
+| `state` | string | ❌ | all | `all`, `opened`, `closed`, `merged` |
+| `type` | array[string] | ❌ | all | Work item type filter (effective for `work_items`) |
 
 ### OpenSearch / FE filter parameters
 
@@ -62,18 +62,18 @@ When parameter scope is invalid, API returns `400` with message:
 
 | Parameter | Type | Applies to `scope` | Validation |
 |---|---|---|---|
-| `fields` | array[string] | `work_items`, `issues` | only `title`; otherwise `400` |
+| `author_username` | string | `merge_requests` | author filter |
 | `exclude_forks` | boolean | `work_items`, `issues` | only in those scopes |
-| `num_context_lines` | integer | `blobs` | range `0..20` |
-| `regex` | boolean | `blobs` | query length `3..512` and at least one alphanumeric literal; otherwise `400` |
-| `language` | array[string] | `blobs` | comma-separated values supported |
+| `fields` | array[string] | `work_items`, `issues` | only `title`; otherwise `400` |
 | `label_name` | array[string] | `work_items`, `issues`, `merge_requests` | comma-separated values supported |
-| `source_branch` | string | `merge_requests` | exact branch filter |
-| `target_branch` | string | `merge_requests` | exact branch filter |
+| `language` | array[string] | `blobs` | comma-separated values supported |
+| `not_author_username` | string | `merge_requests` | author exclusion filter |
 | `not_source_branch` | string | `merge_requests` | exclusion filter |
 | `not_target_branch` | string | `merge_requests` | exclusion filter |
-| `author_username` | string | `merge_requests` | author filter |
-| `not_author_username` | string | `merge_requests` | author exclusion filter |
+| `num_context_lines` | integer | `blobs` | range `0..20` |
+| `regex` | boolean | `blobs` | query length `3..512` and at least one alphanumeric literal; otherwise `400` |
+| `source_branch` | string | `merge_requests` | exact branch filter |
+| `target_branch` | string | `merge_requests` | exact branch filter |
 
 ## Response headers
 
@@ -86,30 +86,63 @@ When parameter scope is invalid, API returns `400` with message:
 - `work_items`/`issues` (`work_item_type_ids` and `labels` buckets),
 - `merge_requests` (`labels` buckets).
 
+## Response body
+
+The endpoint returns a JSON array of scope-specific entities:
+
+| Scope | Entity type |
+|---|---|
+| `issues` | `IssueBasic` |
+| `work_items` | `WorkItem` |
+| `merge_requests` | `MergeRequestBasic` |
+| `milestones` | `Milestone` |
+| `notes` | `Note` |
+| `commits` | `Commit` |
+| `blobs` | `Blob` |
+| `wiki_blobs` | `Blob` |
+| `projects` | `BasicProjectDetails` |
+| `users` | `UserBasic` |
+| `snippet_titles` | `Snippet` |
+
+Example response for `scope=issues`:
+
+```json
+[
+  {
+    "id": 1001,
+    "iid": 42,
+    "title": "Deploy pipeline fails on main",
+    "state": "opened",
+    "project_id": 7,
+    "web_url": "https://gitlab.example.com/my-group/my-project/-/issues/42"
+  }
+]
+```
+
 ## Examples
 
 ### Instance search: issues/work items with labels and fields
 
 ```bash
 curl --request GET \
-  --header "PRIVATE-TOKEN: <token>" \
-  --url "https://code.example.com/api/v4/search?scope=issues&search=deploy&fields=title&label_name=team%3Aplatform&exclude_forks=true"
+  --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/search?scope=issues&search=deploy&fields=title&label_name=team%3Aplatform&exclude_forks=true"
 ```
 
 ### Group search: merge requests with FE MR filters
 
 ```bash
 curl --request GET \
-  --header "PRIVATE-TOKEN: <token>" \
-  --url "https://code.example.com/api/v4/groups/my-group/-/search?scope=merge_requests&search=release&source_branch=release%2F1.2&not_author_username=bot"
+  --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/groups/my-group/-/search?scope=merge_requests&search=release&source_branch=release%2F1.2&not_author_username=bot"
 ```
 
 ### Project search: code blobs with regex and context lines
 
 ```bash
 curl --request GET \
-  --header "PRIVATE-TOKEN: <token>" \
-  --url "https://code.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy.*job&regex=true&num_context_lines=5&language=Ruby"
+  --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy.*job&regex=true&num_context_lines=5&language=Ruby"
 ```
 
 ## Error cases (`400`)

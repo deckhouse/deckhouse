@@ -12,8 +12,8 @@ weight: 38
 
 ## Права доступа
 
-- `POST /admin/opensearch/recreate_indices`: только администратор (`authenticated_as_admin!`).
-- `GET /admin/opensearch/indexing_queue_stats`: аутентифицированный пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
+- `POST /api/v4/admin/opensearch/recreate_indices`: только администратор (`authenticated_as_admin!`).
+- `GET /api/v4/admin/opensearch/indexing_queue_stats`: аутентифицированный пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
 
 ## POST `/api/v4/admin/opensearch/recreate_indices`
 
@@ -47,10 +47,10 @@ weight: 38
 
 ```bash
 curl --request POST \
-  --header "PRIVATE-TOKEN: <admin_token>" \
+  --header "PRIVATE-TOKEN: <your_access_token>" \
   --header "Content-Type: application/json" \
   --data '{"schema_class":"recreate_all"}' \
-  --url "https://code.example.com/api/v4/admin/opensearch/recreate_indices"
+  --url "https://gitlab.example.com/api/v4/admin/opensearch/recreate_indices"
 ```
 
 ## GET `/api/v4/admin/opensearch/indexing_queue_stats`
@@ -75,6 +75,6 @@ curl --request POST \
 
 ```bash
 curl --request GET \
-  --header "PRIVATE-TOKEN: <token>" \
-  --url "https://code.example.com/api/v4/admin/opensearch/indexing_queue_stats"
+  --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/admin/opensearch/indexing_queue_stats"
 ```
