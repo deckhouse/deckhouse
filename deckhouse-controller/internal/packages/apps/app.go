@@ -73,6 +73,12 @@ type Application struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
+	// initialized tracks whether hook controllers have been built for this instance,
+	// so the Enable task skips re-initialization on every reschedule. It is per-instance
+	// on purpose: hook controllers may live on process-global SDK-registry singletons,
+	// so inferring init state from controller presence would leak across instances.
+	initialized atomic.Bool
+
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
 	repository registry.Remote   // Application repository
@@ -500,11 +506,10 @@ func (a *Application) GetConstraints() schedule.Constraints {
 	return a.definition.Constraints()
 }
 
-// HooksInitialized reports whether the package requires a hook initialize phase.
-// This is true when hooks have not yet been initialized (no controllers attached),
-// meaning the pkg needs to go through the full startup sequence before it can run.
+// HooksInitialized reports whether this instance has already built its hook
+// controllers. When true, the Enable task skips the initialize+sync phase.
 func (a *Application) HooksInitialized() bool {
-	return a.hooks.Initialized()
+	return a.initialized.Load()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
@@ -526,6 +531,8 @@ func (a *Application) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+
+	a.initialized.Store(true)
 }
 
 // DisableHooks tears down all active hook bindings and clears the hook registry.
@@ -551,6 +558,14 @@ func (a *Application) DisableHooks() {
 		}
 	}
 
+	// Detach controllers so a subsequent InitializeHooks starts fresh. Hook objects
+	// may be process-global SDK-registry singletons, so a stale controller left here
+	// would make the next Enable wrongly believe this instance is already initialized.
+	for _, hook := range a.hooks.GetHooks() {
+		hook.WithHookController(nil)
+	}
+
+	a.initialized.Store(false)
 	a.running.Store(false)
 }
 

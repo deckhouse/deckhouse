@@ -160,13 +160,11 @@ func (t *task) initializeHooks(ctx context.Context) (map[string][]hookcontroller
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "InitializeHooks")
 	defer span.End()
 
-	if t.pkg.HooksInitialized() {
-		return map[string][]hookcontroller.BindingExecutionInfo{}, nil
+	if !t.pkg.HooksInitialized() {
+		// Initialize hook controllers and bind them to Kubernetes events and schedules
+		t.logger.Debug("initialize package hooks")
+		t.pkg.InitializeHooks()
 	}
-
-	// Initialize hook controllers and bind them to Kubernetes events and schedules
-	t.logger.Debug("initialize package hooks")
-	t.pkg.InitializeHooks()
 
 	t.logger.Debug("enable schedule hooks")
 
