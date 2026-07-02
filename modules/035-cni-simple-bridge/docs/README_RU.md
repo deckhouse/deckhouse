@@ -7,6 +7,6 @@ description: "Обеспечение работы сети в кластере D
 
 Включается автоматически для следующих облачных провайдеров:
 
-- [AWS](../../modules/cloud-provider-aws/).
-- [Azure](../../modules/cloud-provider-azure/).
-- [GCP](../../modules/cloud-provider-gcp/).
+- [AWS](/modules/cloud-provider-aws/).
+- [Azure](/modules/cloud-provider-azure/).
+- [GCP](/modules/cloud-provider-gcp/).

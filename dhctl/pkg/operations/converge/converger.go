@@ -421,9 +421,10 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 		return fmt.Errorf("Need to pass the running node name. It may taint the infrastructure state during converge")
 	}
 
-	// Preserve the non-cancelable base for the long-running auto-converge loop, but carry the
-	// slog root from the request ctx so logging keeps its file + TTY sinks.
-	convergeCtx := convergectx.NewContext(dhlog.ToContext(context.Background(), dhlog.FromContext(ctx)), convergectx.Params{
+	// Detach cancellation for the long-running auto-converge loop, but keep every ctx value from
+	// the request ctx — the slog root (so logging keeps its file + TTY sinks) AND the active OTel
+	// span (so converge/tofu spans stay parented instead of surfacing as orphan root traces).
+	convergeCtx := convergectx.NewContext(context.WithoutCancel(ctx), convergectx.Params{
 		KubeProvider:           c.KubeProvider,
 		SSHProviderInitializer: c.SSHProviderInitializer,
 		Cache:                  cache.Global(),
