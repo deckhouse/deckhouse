@@ -34,49 +34,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var componentCertTree = map[controlplanev1alpha1.OperationComponent]map[pki.RootCertName][]pki.LeafCertName{
+var componentCertTree = map[controlplanev1alpha1.OperationComponent]map[pki.RootCertBaseName][]pki.LeafCertBaseName{
 	controlplanev1alpha1.OperationComponentEtcd: {
-		pki.EtcdCACertName: {
-			pki.EtcdServerCertName,
-			pki.EtcdPeerCertName,
-			pki.EtcdHealthcheckClientCertName,
-			pki.ApiserverEtcdClientCertName,
+		pki.EtcdCACertBaseName: {
+			pki.EtcdServerCertBaseName,
+			pki.EtcdPeerCertBaseName,
+			pki.EtcdHealthcheckClientCertBaseName,
+			pki.ApiserverEtcdClientCertBaseName,
 		},
 	},
 	controlplanev1alpha1.OperationComponentKubeAPIServer: {
-		pki.CACertName: {
-			pki.ApiserverCertName,
-			pki.ApiserverKubeletClientCertName,
+		pki.CACertBaseName: {
+			pki.ApiserverCertBaseName,
+			pki.ApiserverKubeletClientCertBaseName,
 		},
-		pki.FrontProxyCACertName: {
-			pki.FrontProxyClientCertName,
+		pki.EtcdCACertBaseName: {
+			pki.ApiserverEtcdClientCertBaseName,
+		},
+		pki.FrontProxyCACertBaseName: {
+			pki.FrontProxyClientCertBaseName,
 		},
 	},
-}
-
-var pkiSecretFileLayout = map[string]string{
-	"ca.crt":                       "ca.crt",
-	"ca.key":                       "ca.key",
-	"front-proxy-ca.crt":           "front-proxy-ca.crt",
-	"front-proxy-ca.key":           "front-proxy-ca.key",
-	"front-proxy-client.crt":       "front-proxy-client.crt",
-	"front-proxy-client.key":       "front-proxy-client.key",
-	"apiserver.crt":                "apiserver.crt",
-	"apiserver.key":                "apiserver.key",
-	"apiserver-kubelet-client.crt": "apiserver-kubelet-client.crt",
-	"apiserver-kubelet-client.key": "apiserver-kubelet-client.key",
-	"apiserver-etcd-client.crt":    "apiserver-etcd-client.crt",
-	"apiserver-etcd-client.key":    "apiserver-etcd-client.key",
-	"etcd-ca.crt":                  "etcd/ca.crt",
-	"etcd-ca.key":                  "etcd/ca.key",
-	"etcd-server.crt":              "etcd/server.crt",
-	"etcd-server.key":              "etcd/server.key",
-	"etcd-peer.crt":                "etcd/peer.crt",
-	"etcd-peer.key":                "etcd/peer.key",
-	"etcd-healthcheck-client.crt":  "etcd/healthcheck-client.crt",
-	"etcd-healthcheck-client.key":  "etcd/healthcheck-client.key",
-	"sa.key":                       "sa.key",
-	"sa.pub":                       "sa.pub",
 }
 
 type tenantPKIConfig struct {
@@ -172,7 +150,7 @@ func createComponentPKIBundle(
 	cfg tenantPKIConfig,
 	advertiseAddress net.IP,
 	pkiDir string,
-	certTree map[pki.RootCertName][]pki.LeafCertName,
+	certTree map[pki.RootCertBaseName][]pki.LeafCertBaseName,
 ) (pki.PKIApplyReport, error) {
 	if cfg.EncryptionAlgorithm != "" {
 		return pki.CreatePKIBundle(
@@ -217,8 +195,8 @@ func (e *StepExecutor) getPKISecret(ctx context.Context) (*corev1.Secret, error)
 }
 
 func materializePKISecret(pkiDir string, data map[string][]byte) error {
-	for secretKey, relPath := range pkiSecretFileLayout {
-		content, ok := data[secretKey]
+	for flatKey, relPath := range pki.FileLayout() {
+		content, ok := data[flatKey]
 		if !ok {
 			continue
 		}
@@ -246,7 +224,7 @@ func applyRegeneratedLeafs(secret *corev1.Secret, pkiDir string, report pki.PKIA
 			continue
 		}
 
-		secretBase := strings.ReplaceAll(entry.Name, "/", "-")
+		secretBase := pki.FlatBaseName(entry.Name)
 		for _, ext := range []string{".crt", ".key"} {
 			content, err := os.ReadFile(filepath.Join(pkiDir, entry.Name+ext))
 			if err != nil {
