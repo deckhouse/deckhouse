@@ -4,6 +4,15 @@ permalink: ru/admin/configuration/network/policy/examples.html
 description: |
   Готовые рецепты сетевых политик для Deckhouse Kubernetes Platform: запрет трафика в namespace, разрешения по namespace и подам, egress к DNS, доступ к API-серверу, правила L7 и FQDN.
 lang: ru
+relatedLinks:
+  - title: "Стандартный NetworkPolicy Kubernetes"
+    url: kubernetes_networkpolicy.html
+  - title: "CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy"
+    url: cilium_networkpolicy.html
+  - title: "Host firewall на узлах"
+    url: host_firewall.html
+  - title: "Диагностика и наблюдаемость политик"
+    url: troubleshooting.html
 ---
 
 В этом разделе собраны типовые сценарии настройки сетевых политик. Стандартные примеры (NetworkPolicy) работают в любых кластерах с поддержкой политик; примеры с CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy — только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/).
@@ -205,9 +214,3 @@ spec:
         - 169.254.169.254/32
 ```
 
-## Дополнительные ресурсы
-
-- [Стандартный NetworkPolicy Kubernetes](kubernetes_networkpolicy.html)
-- [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)
-- [Host firewall на узлах](host_firewall.html)
-- [Диагностика и наблюдаемость политик](troubleshooting.html)

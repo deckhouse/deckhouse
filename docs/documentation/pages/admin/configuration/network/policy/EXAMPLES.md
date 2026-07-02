@@ -3,6 +3,15 @@ title: "Common policy examples"
 permalink: en/admin/configuration/network/policy/examples.html
 description: |
   Ready-to-use network policy recipes for Deckhouse Kubernetes Platform: deny external ingress, namespace and pod selectors, DNS egress, API server access, L7 and FQDN rules.
+relatedLinks:
+  - title: "Kubernetes NetworkPolicy"
+    url: kubernetes_networkpolicy.html
+  - title: "CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy"
+    url: cilium_networkpolicy.html
+  - title: "Host firewall on nodes"
+    url: host_firewall.html
+  - title: "Diagnostics and observability"
+    url: troubleshooting.html
 ---
 
 This page collects common scenarios for network policies. Standard NetworkPolicy examples work in any cluster that supports network policies; CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy examples require the [`cni-cilium`](/modules/cni-cilium/) module.
@@ -204,9 +213,3 @@ spec:
         - 169.254.169.254/32
 ```
 
-## Additional resources
-
-- [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html)
-- [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)
-- [Host firewall on nodes](host_firewall.html)
-- [Diagnostics and observability](troubleshooting.html)

@@ -3,6 +3,15 @@ title: "Host firewall on nodes"
 permalink: en/admin/configuration/network/policy/host_firewall.html
 description: |
   Host firewall in Deckhouse Kubernetes Platform via CiliumClusterwideNetworkPolicy with nodeSelector. Safe rollout, mandatory rules, and control plane protection.
+relatedLinks:
+  - title: "Host Firewall — Cilium documentation"
+    url: https://docs.cilium.io/en/v1.17/security/host-firewall/
+  - title: "CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy"
+    url: cilium_networkpolicy.html
+  - title: "Platform component network interaction list"
+    url: /products/kubernetes-platform/documentation/v1/reference/network_interaction.html
+  - title: "Diagnostics and observability"
+    url: troubleshooting.html
 ---
 
 A host firewall is a Cilium mode where network policies apply to cluster nodes themselves rather than to pods. In DKP, you configure it through [CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) with the `nodeSelector` field. Available only in clusters with the [`cni-cilium`](/modules/cni-cilium/) module.
@@ -131,9 +140,3 @@ spec:
 
 This is a starting point. Extend the policy with rules for monitoring, ingress controllers, load balancers, and SSH that match your setup.
 
-## Additional resources
-
-- [Host Firewall — Cilium documentation](https://docs.cilium.io/en/v1.17/security/host-firewall/)
-- [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)
-- [Platform component network interaction list](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html)
-- [Diagnostics and observability](troubleshooting.html)

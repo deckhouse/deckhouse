@@ -3,6 +3,15 @@ title: "Kubernetes NetworkPolicy"
 permalink: en/admin/configuration/network/policy/kubernetes_networkpolicy.html
 description: |
   Kubernetes NetworkPolicy model, selectors, default policies, and API limitations in Deckhouse Kubernetes Platform.
+relatedLinks:
+  - title: "Network Policies — Kubernetes documentation"
+    url: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+  - title: "Kube-router: Enforcing Kubernetes network policies with iptables and ipset"
+    url: https://cloudnativelabs.github.io/post/2017-05-1-kube-network-policies/
+  - title: "Common policy examples"
+    url: examples.html
+  - title: "Diagnostics and observability"
+    url: troubleshooting.html
 ---
 
 The standard [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) resource (`networking.k8s.io/v1`) defines L3/L4 traffic rules for pods (TCP, UDP, optionally SCTP). In DKP, these policies are enforced by the [`cni-cilium`](/modules/cni-cilium/) module or the [`network-policy-engine`](/modules/network-policy-engine/) module, depending on the CNI in use; the mapping between CNI and engine is described in [Network policy implementation in DKP](configuration.html#network-policy-implementation-in-dkp).
@@ -218,9 +227,3 @@ The Kubernetes NetworkPolicy API does not support the following scenarios (these
 
 Some of these tasks are addressed by [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html), available in clusters with `cni-cilium`.
 
-## Additional resources
-
-- [Network Policies — Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
-- [Kube-router: Enforcing Kubernetes network policies with iptables and ipset](https://cloudnativelabs.github.io/post/2017-05-1-kube-network-policies/)
-- [Common policy examples](examples.html)
-- [Diagnostics and observability](troubleshooting.html)

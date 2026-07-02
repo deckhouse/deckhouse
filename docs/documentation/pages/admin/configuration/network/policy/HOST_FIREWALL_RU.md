@@ -4,6 +4,15 @@ permalink: ru/admin/configuration/network/policy/host_firewall.html
 description: |
   Настройка host firewall в Deckhouse Kubernetes Platform на основе CiliumClusterwideNetworkPolicy с nodeSelector. Безопасный порядок включения, обязательные правила, защита control plane.
 lang: ru
+relatedLinks:
+  - title: "Host Firewall — документация Cilium"
+    url: https://docs.cilium.io/en/v1.17/security/host-firewall/
+  - title: "CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy"
+    url: cilium_networkpolicy.html
+  - title: "Список сетевого взаимодействия компонентов платформы"
+    url: /products/kubernetes-platform/documentation/v1/reference/network_interaction.html
+  - title: "Диагностика и наблюдаемость политик"
+    url: troubleshooting.html
 ---
 
 Host firewall — это режим работы Cilium, в котором сетевые политики применяются не к подам, а к самим узлам кластера. В DKP host firewall настраивается ресурсами [CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) с полем `nodeSelector`. Доступен только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/).
@@ -132,9 +141,3 @@ spec:
 
 Этот пример — стартовая точка. Дополните политику разрешениями для мониторинга, ingress-контроллеров, балансировщиков и SSH согласно вашей конфигурации.
 
-## Дополнительные ресурсы
-
-- [Host Firewall — документация Cilium](https://docs.cilium.io/en/v1.17/security/host-firewall/)
-- [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)
-- [Список сетевого взаимодействия компонентов платформы](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html)
-- [Диагностика и наблюдаемость политик](troubleshooting.html)

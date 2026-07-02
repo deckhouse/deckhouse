@@ -4,6 +4,15 @@ permalink: ru/admin/configuration/network/policy/kubernetes_networkpolicy.html
 description: |
   Описание модели NetworkPolicy Kubernetes, селекторов, default-политик и ограничений API в Deckhouse Kubernetes Platform.
 lang: ru
+relatedLinks:
+  - title: "Network Policies — документация Kubernetes"
+    url: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+  - title: "Kube-router: Enforcing Kubernetes network policies with iptables and ipset"
+    url: https://cloudnativelabs.github.io/post/2017-05-1-kube-network-policies/
+  - title: "Типовые примеры политик"
+    url: examples.html
+  - title: "Диагностика и наблюдаемость политик"
+    url: troubleshooting.html
 ---
 
 Стандартный ресурс [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) (`networking.k8s.io/v1`) описывает правила фильтрации трафика подов на уровнях L3 и L4 (TCP, UDP, опционально SCTP). В DKP такие политики обрабатываются модулем [`cni-cilium`](/modules/cni-cilium/) или модулем [`network-policy-engine`](/modules/network-policy-engine/) — в зависимости от [выбранного CNI](configuration.html#реализация-сетевых-политик-в-dkp).
@@ -219,9 +228,3 @@ API NetworkPolicy Kubernetes не поддерживает следующие с
 
 Часть этих задач решается через [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html), доступные в кластерах с `cni-cilium`.
 
-## Дополнительные ресурсы
-
-- [Network Policies — документация Kubernetes](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
-- [Kube-router: Enforcing Kubernetes network policies with iptables and ipset](https://cloudnativelabs.github.io/post/2017-05-1-kube-network-policies/)
-- [Типовые примеры политик](examples.html)
-- [Диагностика и наблюдаемость политик](troubleshooting.html)

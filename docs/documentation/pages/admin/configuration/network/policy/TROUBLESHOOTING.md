@@ -3,6 +3,17 @@ title: "Diagnostics and observability"
 permalink: en/admin/configuration/network/policy/troubleshooting.html
 description: |
   Tools for inspecting applied network policies in Deckhouse Kubernetes Platform: kubectl describe, Hubble UI and CLI, flow logs, and a "policy not applied" checklist.
+relatedLinks:
+  - title: "HubbleMonitoringConfig — cni-cilium module"
+    url: /modules/cni-cilium/cr.html#hubblemonitoringconfig
+  - title: "Troubleshooting Policy — Cilium documentation"
+    url: https://docs.cilium.io/en/v1.17/security/policy/#troubleshooting
+  - title: "Kubernetes NetworkPolicy"
+    url: kubernetes_networkpolicy.html
+  - title: "CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy"
+    url: cilium_networkpolicy.html
+  - title: "Host firewall on nodes"
+    url: host_firewall.html
 ---
 
 This page covers commands and techniques for inspecting applied network policies and investigating connectivity issues. Some tools require the [`cni-cilium`](/modules/cni-cilium/) module — this is noted explicitly.
@@ -147,10 +158,3 @@ If a policy is created but traffic does not behave as expected, walk through the
 1. Policy status (CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy only). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` shows parse and apply errors in `status`.
 1. Conflict with a deny rule. Cilium deny rules override any allow rules. Look for policies with `ingressDeny` or `egressDeny` selecting the same endpoint.
 
-## Additional resources
-
-- [HubbleMonitoringConfig — cni-cilium module](/modules/cni-cilium/cr.html#hubblemonitoringconfig)
-- [Troubleshooting Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/security/policy/#troubleshooting)
-- [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html)
-- [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)
-- [Host firewall on nodes](host_firewall.html)

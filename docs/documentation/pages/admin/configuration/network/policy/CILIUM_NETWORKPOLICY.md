@@ -3,6 +3,17 @@ title: "CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy"
 permalink: en/admin/configuration/network/policy/cilium_networkpolicy.html
 description: |
   Cilium extensions for network policies in Deckhouse Kubernetes Platform: entities, L7 rules, FQDN rules, deny rules, and policyAuditMode.
+relatedLinks:
+  - title: "Network Policy — Cilium documentation"
+    url: https://docs.cilium.io/en/v1.17/network/kubernetes/policy/
+  - title: "Overview of Network Policy — Cilium documentation"
+    url: https://docs.cilium.io/en/v1.17/security/policy/
+  - title: "Host firewall on nodes"
+    url: host_firewall.html
+  - title: "Common policy examples"
+    url: examples.html
+  - title: "Diagnostics and observability"
+    url: troubleshooting.html
 ---
 
 In clusters with the [`cni-cilium`](/modules/cni-cilium/) module enabled, two Cilium-specific formats are available in addition to the standard NetworkPolicy:
@@ -387,10 +398,3 @@ Recommended order:
 
 Once audit mode is off, policies start blocking traffic that is not allowed by any rule.
 
-## Additional resources
-
-- [Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/)
-- [Overview of Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/security/policy/)
-- [Host firewall on nodes](host_firewall.html)
-- [Common policy examples](examples.html)
-- [Diagnostics and observability](troubleshooting.html)

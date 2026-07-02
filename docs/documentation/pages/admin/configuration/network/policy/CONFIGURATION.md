@@ -4,6 +4,15 @@ permalink: en/admin/configuration/network/policy/configuration.html
 description: |
   Overview of network policy implementations in Deckhouse Kubernetes Platform: NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall.
 search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall
+relatedLinks:
+  - title: "Network Policies — Kubernetes documentation"
+    url: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+  - title: "Network Policy — Cilium documentation"
+    url: https://docs.cilium.io/en/v1.17/network/kubernetes/policy/
+  - title: "Overview of Network Policy — Cilium documentation"
+    url: https://docs.cilium.io/en/v1.17/security/policy/
+  - title: "Host Firewall — Cilium documentation"
+    url: https://docs.cilium.io/en/v1.17/security/host-firewall/
 ---
 
 Network policies restrict how pods communicate with each other, with external systems, and with cluster nodes. In Deckhouse Kubernetes Platform (DKP), the implementation depends on the enabled CNI module.
@@ -50,9 +59,3 @@ If the underlying infrastructure restricts network communication between servers
 - [Common policy examples](examples.html) — recipes for typical tasks.
 - [Diagnostics and observability](troubleshooting.html) — how to verify and debug policies.
 
-## Additional resources
-
-- [Network Policies — Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
-- [Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/)
-- [Overview of Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/security/policy/)
-- [Host Firewall — Cilium documentation](https://docs.cilium.io/en/v1.17/security/host-firewall/)

@@ -4,6 +4,17 @@ permalink: ru/admin/configuration/network/policy/cilium_networkpolicy.html
 description: |
   Описание расширений Cilium для сетевых политик в Deckhouse Kubernetes Platform: entities, правила L7, FQDN-правила, deny-правила, режим policyAuditMode.
 lang: ru
+relatedLinks:
+  - title: "Network Policy — документация Cilium"
+    url: https://docs.cilium.io/en/v1.17/network/kubernetes/policy/
+  - title: "Overview of Network Policy — документация Cilium"
+    url: https://docs.cilium.io/en/v1.17/security/policy/
+  - title: "Host firewall на узлах"
+    url: host_firewall.html
+  - title: "Типовые примеры политик"
+    url: examples.html
+  - title: "Диагностика и наблюдаемость политик"
+    url: troubleshooting.html
 ---
 
 В кластерах с включённым модулем [`cni-cilium`](/modules/cni-cilium/) дополнительно к стандартному NetworkPolicy доступны два формата от Cilium:
@@ -388,10 +399,3 @@ spec:
 
 После отключения режима аудита политики начнут блокировать трафик, не подходящий ни под одно allow-правило.
 
-## Дополнительные ресурсы
-
-- [Network Policy — документация Cilium](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/)
-- [Overview of Network Policy — документация Cilium](https://docs.cilium.io/en/v1.17/security/policy/)
-- [Host firewall на узлах](host_firewall.html)
-- [Типовые примеры политик](examples.html)
-- [Диагностика и наблюдаемость политик](troubleshooting.html)
