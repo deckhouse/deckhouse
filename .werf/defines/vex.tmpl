@@ -4,7 +4,10 @@
 # list of $ and image name.
 # list ($ "common/kubernetes")
 {{- define "vex mitigation" }}
-  {{- if or (ne (env "VAULT_ADDR" "") "") (ne (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "") }}
+  {{- /* VEX signing disabled: the build runs on runtime-provisioned machines where VAULT_ADDR / ACTIONS_ID_TOKEN_REQUEST_TOKEN
+         are set but Vault/cosign credentials are unavailable. Forcing this gate to false skips all *-vex-artifact images.
+         Original condition was: or (ne (env VAULT_ADDR) "") (ne (env ACTIONS_ID_TOKEN_REQUEST_TOKEN) ""). */}}
+  {{- if false }}
   {{- $context := index . 0 }}
   {{- $imageName := index . 1 }}
   {{- $knownVulnPath := "" }}
@@ -29,7 +32,7 @@ secrets:
   env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
   env: REGISTRY_PASSWORD
-# {{- if eq (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "" }}
+{{- if eq (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "" }}
 - id: VAULT_ADDR
   env: VAULT_ADDR
 - id: WERF_SIGN_KEY
@@ -40,19 +43,19 @@ secrets:
   env: WERF_VAULT_AUTH_ROLE
 - id: VAULT_JWT
   env: WERF_VAULT_AUTH_JWT
-#{{- else }}
-#- id: VAULT_ADDR
-#  env: COSIGN_VAULT_ADDRESS
-#- id: COSIGN_VAULT_KEY
-#  env: COSIGN_VAULT_KEY
-#- id: VAULT_ROLE
-#  env: COSIGN_AUTH_ROLE
-#- id: TRANSIT_SECRET_ENGINE_PATH
-#  env: COSIGN_TRANSIT_SECRET_ENGINE_PATH
-#- id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
-#  env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
-#- id: ACTIONS_ID_TOKEN_REQUEST_URL
-#  env: ACTIONS_ID_TOKEN_REQUEST_URL
+{{- else }}
+- id: VAULT_ADDR
+  env: COSIGN_VAULT_ADDRESS
+- id: COSIGN_VAULT_KEY
+  env: COSIGN_VAULT_KEY
+- id: VAULT_ROLE
+  env: COSIGN_AUTH_ROLE
+- id: TRANSIT_SECRET_ENGINE_PATH
+  env: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+- id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+  env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+- id: ACTIONS_ID_TOKEN_REQUEST_URL
+  env: ACTIONS_ID_TOKEN_REQUEST_URL
 {{- end }}
 git:
 - add: {{ $knownVulnPath }}
