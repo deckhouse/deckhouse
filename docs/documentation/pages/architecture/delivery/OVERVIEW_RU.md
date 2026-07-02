@@ -12,5 +12,5 @@ extractedLinksMax: 0
 
 В подсистему Delivery входят следующие модули:
 
-- [`operator-argo`](/modules/operator-argo/) — управляет инсталляциями ArgoCD в DKP,
+- [`operator-argo`](/modules/operator-argo/) — управляет инсталляциями ArgoCD в DKP;
 - [`operator-helm`](/modules/operator-helm/) — обеспечивает декларативное управление развертывания Helm-чартов.
