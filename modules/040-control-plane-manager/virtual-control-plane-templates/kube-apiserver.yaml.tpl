@@ -77,7 +77,7 @@ spec:
         - {name: PGPASSWORD, valueFrom: {secretKeyRef: {name: d8-datastore-creds-virtual, key: password}}}
         command:
         - kine
-        - --endpoint=postgres://$(PGUSER):$(PGPASSWORD)@$(PGHOST):5432/kine?sslmode=require
+        - --endpoint=postgres://$(PGUSER)@$(PGHOST):5432/kine?sslmode=require
         - --listen-address=127.0.0.1:2379
         ports:
         - {containerPort: 8080, name: metrics, protocol: TCP}
