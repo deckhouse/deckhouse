@@ -652,7 +652,7 @@ The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at l
 - cgroup v2 is disabled
 - EROFS file system is unavailable.
 
-The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `/etc/containerd/conf.d/` (if CRI containerd v1 is used on the cluster nodes) or `/etc/containerd/conf2.d/` (if CRI containerd v2 is used on the cluster nodes) directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
+The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `/etc/containerd/conf.d/` (if CRI containerd v1 is used on the cluster nodes) or `/etc/containerd/conf2.d/` (if CRI containerd v2 is used on the cluster nodes) directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NodeGroupConfiguration (NGC) resources through which they may have been added.
 
 If the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/) is used, an additional reason why the CRI may fail to switch can be the `containerd-dvcr-config.sh` NGC. If the virtualization platform is already installed and running, this NGC can be removed.
 
@@ -769,14 +769,16 @@ The example of `NodeGroupConfiguration` uses functions of the script [032_config
 Adding custom settings causes a restart of the containerd service.
 {% endalert %}
 
-Bashible on nodes merges main Deckhouse containerd config with configs from:
+Bashible on nodes merges main DKP containerd configuration with the following configuration files:
 
-- `/etc/containerd/conf.d/*.toml` — if containerd v1 is used as the CRI on the cluster nodes.
-- `/etc/containerd/conf2.d/*.toml` — if containerd v2 is used as the CRI on the cluster nodes.
+- `/etc/containerd/conf.d/*.toml`: If containerd v1 is used as the CRI on the cluster nodes.
+- `/etc/containerd/conf2.d/*.toml`: If containerd v2 is used as the CRI on the cluster nodes.
 
 {% alert level="warning" %}
 You can override the values of the parameters that are specified in the file `/etc/containerd/deckhouse.toml`, but you will have to ensure their functionality on your own. Also, it is better not to change the configuration for the master nodes (nodeGroup `master`).
 {% endalert %}
+
+The following are configuration examples of the NodeGroupConfiguration resources adding a custom configuration file for a corresponding containerd version.
 
 {% tabs containerd_version %}
 {% tab "For containerd v1" %}

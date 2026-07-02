@@ -183,8 +183,8 @@ Useful specifics of certain scripts:
 
 - [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl): Merges the containerd configuration files and **restarts** the service. The location of the configuration files depends on the CRI used on the cluster nodes:
 
-  - `/etc/containerd/conf.d/*.toml` — for containerd v1,
-  - `/etc/containerd/conf2.d/*.toml` — for containerd v2.
+  - `/etc/containerd/conf.d/*.toml`: For containerd v1.
+  - `/etc/containerd/conf2.d/*.toml`: For containerd v2.
   
   Note that directories containing configuration files are not created automatically. Files must be added to these directories in scripts with a priority of less than `32`.
 

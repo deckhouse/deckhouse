@@ -182,7 +182,7 @@ rm /var/lib/bashible/configuration_checksum
 
 - [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — объединяет конфигурационные файлы containerd и **перезапускает** сервис. Размещение конфигурационных файлов зависит от CRI на узлах кластера:
 
-  - `/etc/containerd/conf.d/*.toml` — для containerd v1,
+  - `/etc/containerd/conf.d/*.toml` — для containerd v1;
   - `/etc/containerd/conf2.d/*.toml` — для containerd v2.
   
   Следует учитывать, что директории с конфигурационными файлами не создаются автоматически. Файлы в них нужно добавлять в скриптах с приоритетом менее `32`.

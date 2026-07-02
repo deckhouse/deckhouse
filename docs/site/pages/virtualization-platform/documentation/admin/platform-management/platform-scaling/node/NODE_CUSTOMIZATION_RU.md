@@ -163,7 +163,7 @@ rm /var/lib/bashible/configuration_checksum
 
 - [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — объединяет конфигурационные файлы containerd и **перезапускает** сервис. Размещение конфигурационных файлов зависит от CRI на узлах кластера:
 
-  - `/etc/containerd/conf.d/*.toml` — для containerd v1,
+  - `/etc/containerd/conf.d/*.toml` — для containerd v1;
   - `/etc/containerd/conf2.d/*.toml` — для containerd v2.
   
   Следует учитывать, что директории с конфигурационными файлами не создаются автоматически. Файлы в них нужно добавлять в скриптах с приоритетом менее `32`.
@@ -409,14 +409,16 @@ Done
 Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
 {% endalert %}
 
-Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла:
+Bashible на узлах объединяет конфигурацию containerd для DVP с конфигурацией из файла:
 
-- `/etc/containerd/conf.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v1.
+- `/etc/containerd/conf.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v1;
 - `/etc/containerd/conf2.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v2.
 
 {% alert level="warning" %}
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`. При этом корректную работу таких изменений необходимо обеспечить самостоятельно. Рекомендуется **не изменять** конфигурацию на управляющих (master) узлах (NodeGroup `master`).
 {% endalert %}
+
+Далее приведены примеры конфигурации ресурсов NodeGroupConfiguration, добавляющих кастомный конфигурационный файл для соответствующей версии containerd.
 
 {% tabs containerd_version %}
 {% tab "Для containerd v1" %}

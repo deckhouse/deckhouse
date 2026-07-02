@@ -651,7 +651,7 @@ spec:
 - Отсутствует cgroup v2;
 - Недоступна файловая система EROFS.
 
-Лейбл `node.deckhouse.io/containerd-config=custom` выставляется, если на узле присутствуют файлы с расширением `.toml` в директориях `/etc/containerd/conf.d/` (если на узлах кластера используется CRI containerd v1) или `/etc/containerd/conf2.d/` (если на узлах кластера используется CRI containerd v2). В этом случае следует удалить такие файлы (если это не повлечёт критичных последствий для работы контейнеров) и удалить соответствующие NGC, с помощью которых они могли быть добавлены.
+Лейбл `node.deckhouse.io/containerd-config=custom` выставляется, если на узле присутствуют файлы с расширением `.toml` в директориях `/etc/containerd/conf.d/` (если на узлах кластера используется CRI containerd v1) или `/etc/containerd/conf2.d/` (если на узлах кластера используется CRI containerd v2). В этом случае следует удалить такие файлы (если это не повлечёт критичных последствий для работы контейнеров) и удалить соответствующие ресурсы NodeGroupConfiguration (NGC), с помощью которых они могли быть добавлены.
 
 Если используется [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/), причиной невозможности смены CRI может быть NGC `containerd-dvcr-config.sh`. Если платформа виртуализации уже установлена и работает, этот NGC можно удалить.
 
@@ -768,14 +768,16 @@ for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGr
 Добавление кастомных настроек вызывает перезапуск сервиса containerd.
 {% endalert %}
 
-Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла:
+Bashible на узлах объединяет конфигурацию containerd для DKP с конфигурацией из файла:
 
-- `/etc/containerd/conf.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v1.
+- `/etc/containerd/conf.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v1;
 - `/etc/containerd/conf2.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v2.
 
 {% alert level="warning" %}
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но их работу придётся обеспечивать самостоятельно. Также, лучше изменением конфигурации не затрагивать master-узлы (nodeGroup `master`).
 {% endalert %}
+
+Далее приведены примеры конфигурации ресурсов NodeGroupConfiguration, добавляющих кастомный конфигурационный файл для соответствующей версии containerd.
 
 {% tabs containerd_version %}
 {% tab "Для containerd v1" %}
