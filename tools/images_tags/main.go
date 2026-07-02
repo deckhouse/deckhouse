@@ -61,16 +61,33 @@ func main() {
 	// Run render command to get config file from which we calculate images names.
 	// Prefer d8 dk when available, fallback to werf.
 	cmdArgs := []string{"werf", "config", "render", "--dev", "--log-quiet"}
+	versionArgs := []string{"werf", "version"}
 	if _, lookPathErr := exec.LookPath("d8"); lookPathErr == nil {
 		cmdArgs = []string{"d8", "dk", "config", "render", "--dev", "--log-quiet"}
+		versionArgs = []string{"d8", "dk", "version"}
 	}
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env,
+
+	renderEnv := append(os.Environ(),
 		"CI_COMMIT_REF_NAME=",
 		"CI_COMMIT_TAG=",
 		"WERF_ENV=FE",
 	)
+
+	// Log the renderer and its werf version. werf.yaml template functions
+	// (e.g. toYaml, added in werf 2.54.0) differ across werf versions, so
+	// surfacing the exact version makes render failures diagnosable.
+	renderer := strings.Join(versionArgs[:len(versionArgs)-1], " ")
+	verCmd := exec.Command(versionArgs[0], versionArgs[1:]...)
+	verCmd.Env = renderEnv
+	verCmd.Dir = path.Join("..")
+	if verOut, verErr := verCmd.CombinedOutput(); verErr != nil {
+		fmt.Fprintf(os.Stderr, "images_tags: rendering werf config with %q (could not determine werf version: %v)\n", renderer, verErr)
+	} else {
+		fmt.Fprintf(os.Stderr, "images_tags: rendering werf config with %q (werf %s)\n", renderer, strings.TrimSpace(string(verOut)))
+	}
+
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmd.Env = renderEnv
 	cmd.Dir = path.Join("..")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
