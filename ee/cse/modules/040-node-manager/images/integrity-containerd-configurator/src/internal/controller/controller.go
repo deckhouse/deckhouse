@@ -13,7 +13,7 @@ import (
 	"slices"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,13 +38,6 @@ type Reconciler struct {
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	logger := log.Default().With("reconcile", req.NamespacedName)
-
-	policy := &deckhousev1alpha1.ContainerdIntegrityPolicy{}
-	if err := r.Get(ctx, req.NamespacedName, policy); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("get ContainerdIntegrityPolicy: %w", err)
-		}
-	}
 
 	policyList := &deckhousev1alpha1.ContainerdIntegrityPolicyList{}
 	if err := r.List(ctx, policyList); err != nil {
