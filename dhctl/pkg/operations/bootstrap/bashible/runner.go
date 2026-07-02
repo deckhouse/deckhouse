@@ -26,6 +26,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -96,7 +97,7 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.AlreadyRun, alreadyRunDefaultOpts...).
 		Clone(
 			retry.WithName("Checking whether Bashible already ran"),
-			retry.WithLogger(r.loggerProvider()),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
 
 	isReady := false
@@ -128,13 +129,11 @@ func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
 		"/var/lib/bashible/discovered-node-ip":   &res.NodeIP,
 	}
 
-	logger := r.loggerProvider()
-
 	for fileName, resPointer := range infoFiles {
 		loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ReadFileForInfo, readFileForInfoDefaultOpts...).
 			Clone(
 				retry.WithName("Read info file %s", fileName),
-				retry.WithLogger(logger),
+				retry.WithLogger(dhlog.FromContext(ctx)),
 			)
 
 		err := retry.NewLoopWithParams(loopParams).
@@ -165,7 +164,7 @@ func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
 		}
 	}
 
-	logger.DebugF("Got node info %+v", res)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Got node info %+v", res))
 
 	return &res, nil
 }
@@ -183,7 +182,7 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ExecuteBundle, executeBundleDefaultOpts...).
 		Clone(
 			retry.WithName("Execute bundle"),
-			retry.WithLogger(r.loggerProvider()),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
 
 	var relaySpanUpdater = func(trace.Span) {}
@@ -352,7 +351,7 @@ func (r *Runner) unlockBashible(ctx context.Context) error {
 }
 
 func (r *Runner) createDir(ctx context.Context, dir, access string) error {
-	loopParams := r.prepareLoopParams(dir)
+	loopParams := r.prepareLoopParams(ctx, dir)
 
 	bashCmd := withUmask("mkdir -p -m %s %s", access, dir)
 
@@ -367,7 +366,7 @@ func (r *Runner) createDir(ctx context.Context, dir, access string) error {
 }
 
 func (r *Runner) touchFile(ctx context.Context, file string) error {
-	loopParams := r.prepareLoopParams(file)
+	loopParams := r.prepareLoopParams(ctx, file)
 
 	bashCmd := withUmask("touch %s", file)
 
@@ -392,11 +391,11 @@ func (r *Runner) runWithSH(ctx context.Context, bashCmd string) error {
 	return nil
 }
 
-func (r *Runner) prepareLoopParams(target string) retry.Params {
+func (r *Runner) prepareLoopParams(ctx context.Context, target string) retry.Params {
 	return retry.SafeCloneOrNewParams(r.loopsParams.Prepare, prepareDefaultOpts...).
 		Clone(
 			retry.WithName("Prepare %s", target),
-			retry.WithLogger(r.loggerProvider()),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
 }
 

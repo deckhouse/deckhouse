@@ -292,7 +292,7 @@ func (b *bootstrapTest) node(t *testing.T) libcon.Interface {
 		}).WithErr(b.commandErr)
 	})
 
-	err := cl.Start()
+	err := cl.Start(context.Background())
 	require.NoError(t, err, "client should started")
 
 	return cl

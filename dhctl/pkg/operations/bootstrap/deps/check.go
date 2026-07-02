@@ -34,6 +34,7 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/local"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -111,7 +112,7 @@ func (c *DependenciesChecker) checkShell(ctx context.Context) error {
 		loopParams := retry.SafeCloneOrNewParams(c.loopsParams.Shell, checkDepsDefaultOpts...).
 			Clone(
 				retry.WithName("Check shell is bash"),
-				retry.WithLogger(c.loggerProvider()),
+				retry.WithLogger(dhlog.FromContext(ctx)),
 			)
 
 		err := retry.NewSilentLoopWithParams(loopParams).
@@ -152,7 +153,7 @@ func (c *DependenciesChecker) checkDependencies(ctx context.Context) error {
 		loopParams := retry.SafeCloneOrNewParams(c.loopsParams.Dependencies, checkDepsDefaultOpts...).
 			Clone(
 				retry.WithName("Check all DHCTL dependencies"),
-				retry.WithLogger(c.loggerProvider()),
+				retry.WithLogger(dhlog.FromContext(ctx)),
 			)
 
 		return retry.NewSilentLoopWithParams(loopParams).

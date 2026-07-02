@@ -283,7 +283,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 				retry.WithName("%s", name),
 				retry.WithAttempts(150),
 				retry.WithWait(1*time.Second),
-				retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
+				retry.WithLogger(dhlog.FromContext(ctx)),
 			)
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)

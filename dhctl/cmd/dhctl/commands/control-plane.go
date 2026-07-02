@@ -19,7 +19,6 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -42,8 +41,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		ctx := kpcontext.ExtractContext(c)
 		l := logger.FromContext(ctx)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
@@ -94,8 +92,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 		ctx := kpcontext.ExtractContext(c)
 		l := logger.FromContext(ctx)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,

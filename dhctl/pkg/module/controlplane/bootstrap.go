@@ -29,6 +29,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -270,7 +271,7 @@ func (p *BootstrapPreparator) createSignatureDir(ctx context.Context) error {
 	loopParams := retry.SafeCloneOrNewParams(p.loopsParams.CreateSigDir, createSigDirDefaultOpts...).
 		Clone(
 			retry.WithName("Prepare %s", signaturePath),
-			retry.WithLogger(logger),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
