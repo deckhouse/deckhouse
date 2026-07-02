@@ -87,17 +87,15 @@ Available in the **EE** edition.
 
 DKP supports a mechanism for delaying the shutdown or reboot of a node if it is running stateful applications or virtual machines (VMs). This is implemented by the `d8-shutdown-inhibitor` service of the [`node-manager`](/modules/node-manager/) module.
 
-The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. DKP defers the shutdown or restart of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other cases where data loss must be avoided. Detailed information about the mechanism’s principles and features is available in the [`node-manager` module documentation](/modules/node-manager/#delaying-node-reboot-or-shutdown-while-critical-pods-are-running).
+The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. DKP delays the shutdown or restart of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other cases where data loss must be avoided. For information about the mechanism's principles and features, refer to the [`node-manager` module documentation](/modules/node-manager/#delaying-node-reboot-or-shutdown-while-critical-pods-are-running).
 
-### Enabling a node shutdown delay while critical pods are running on it
+### Enabling a node shutdown delay
 
 {% alert level="warning" %}
-Please note the specific behavior of this mechanism in a cluster with a single master node.
-
-To determine whether to block a node, the NodeGroup is additionally queried. If the current node belongs to the `master` group and is the only master node in the cluster, the shutdown block will not be applied to it.
+To decide whether to block a node shutdown, DKP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
 {% endalert %}
 
-To enable the mechanism that delays a node’s restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the pod (for a Deployment, specify the label in the pod template).
+To enable the mechanism that delays a node's restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the Pod (for a Deployment, specify the label in the pod template).
 
 Example of a Pod manifest with the `pod.deckhouse.io/inhibit-node-shutdown` label:
 
@@ -111,30 +109,30 @@ metadata:
     pod.deckhouse.io/inhibit-node-shutdown: "true"
 spec:
   containers:
-  - name: app
-    image: my-registry/my-app:1.0.0
+    - name: app
+      image: my-registry/my-app:1.0.0
 ```
 
 {% alert level="warning" %}
-The shutdown block only applies to pods with the `pod.deckhouse.io/inhibit-node-shutdown` label that are in the `Running` phase on the node. Pods without this label terminate according to the kubelet's standard graceful shutdown process.
+The block only applies to pods labeled with `pod.deckhouse.io/inhibit-node-shutdown` that are in the `Running` phase on the node. Kubelet shuts down the pods without this label according to the standard graceful shutdown process.
 {% endalert %}
 
-### Searching Pods Blocking Shutdown and Troubleshooting on the Node
+### Searching pods that prevent shutdown and performing the node troubleshooting
 
-To search the pods that are blocking shutdown, use the following command:
+To search the pods that are blocking a node shutdown, use the following command:
 
 ```shell
 d8 k get po -A -l pod.deckhouse.io/inhibit-node-shutdown -o wide
 ```
 
-To view the condition on a node, use the following command:
+To view the `GracefulShutdownPostpone` condition on a node, use the following command:
 
 ```shell
 d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
 ```
 
-Possible values for `reason`:
+Possible values of the `reason` field:
 
-- `WaitingForShutdownSignal`: The inhibitor is running on the node, but the lock has not yet begun.
-- `PodsWithLabelAreRunningOnNode`: The lock has begun. Pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are still running on the node.
-- `NoRunningPodsWithLabel`: The lock has been released. The shutdown can continue.
+- `WaitingForShutdownSignal`: The shutdown blocking mechanism is running on the node, but the blocking has not yet begun.
+- `PodsWithLabelAreRunningOnNode`: The shutdown has been blocked because there are pods with the label `pod.deckhouse.io/inhibit-node-shutdown` still running on the node.
+- `NoRunningPodsWithLabel`: The blocking has been released and the shutdown can continue.
