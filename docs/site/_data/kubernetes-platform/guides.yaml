@@ -65,3 +65,14 @@
     - baremetal
     - cloud
     - production
+- name:
+    ru: "Планирование большого количества подов на узле"
+    en: "Planning for a high pod count on a node"
+  link: "high-pod-density.html"
+  description:
+    ru: Рекомендации по подготовке узлов к запуску большого количества подов (сотни и тысячи на узел)
+    en: Recommendations for preparing nodes to run a large number of pods (hundreds and thousands per node)
+  tags:
+    - baremetal
+    - cloud
+    - production
