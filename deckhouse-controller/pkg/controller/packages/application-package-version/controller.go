@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"time"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -324,6 +324,7 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 		},
 		DisableOptions: disableOptionsToCR(meta.definition.DisableOptions),
 		Requirements:   requirementsToCR(meta.definition.Requirements),
+		Licensing:      licensingToCR(meta.definition.Licensing),
 		Changelog: &v1alpha1.PackageChangelog{
 			Features: meta.changelog.Features,
 			Fixes:    meta.changelog.Fixes,
@@ -343,24 +344,22 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 
 // setPackageSchema parses a raw YAML/JSON OpenAPI v3 schema and stores it on the
 // ApplicationPackageVersion status under either SettingsSchema or ValuesSchema,
-// selected by schemaType. The schema is wrapped in a lightweight envelope that
-// recognises the x-config-version marker used by packages to version their schema
-// format. An empty rawSchema is treated as "no schema supplied" and returns nil
+// selected by schemaType. The schema is stored as a typed openapi.OpenAPIV3Schema
+// that preserves all Deckhouse x-* extensions as explicit fields.
+// The x-config-version envelope marker is stripped.
+// An empty rawSchema is treated as "no schema supplied" and returns nil
 // without touching the status. Unknown schemaType values are silently ignored.
 func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, rawSchema []byte) error {
 	if len(rawSchema) == 0 {
 		return nil
 	}
 
-	type schemaVersion struct {
+	var wrapper struct {
 		Version string `json:"x-config-version"`
-		apiextensionsv1.JSONSchemaProps
+		openapi.OpenAPIV3Schema
 	}
 
-	jsonSchema := &schemaVersion{
-		Version: "1",
-	}
-	if err := yaml.Unmarshal(rawSchema, jsonSchema); err != nil {
+	if err := yaml.Unmarshal(rawSchema, &wrapper); err != nil {
 		return fmt.Errorf("invalid JSON schema: %w", err)
 	}
 
@@ -368,15 +367,15 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
 	}
 
+	schema := &v1alpha1.PackageSchema{
+		OpenAPIV3Schema: &wrapper.OpenAPIV3Schema,
+	}
+
 	switch schemaType {
 	case schemaTypeSettings:
-		apv.Status.PackageSchemas.SettingsSchema = &apiextensionsv1.CustomResourceValidation{
-			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
-		}
+		apv.Status.PackageSchemas.SettingsSchema = schema
 	case schemaTypeValues:
-		apv.Status.PackageSchemas.ValuesSchema = &apiextensionsv1.CustomResourceValidation{
-			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
-		}
+		apv.Status.PackageSchemas.ValuesSchema = schema
 	default:
 	}
 
@@ -400,6 +399,20 @@ func requirementsToCR(r dto.Requirements) *v1alpha1.PackageRequirements {
 		Deckhouse:  deckhouse,
 		Modules:    modulesCR,
 	}
+}
+
+// licensingToCR projects dto.Licensing onto the v1alpha1 PackageLicensing CR shape.
+func licensingToCR(l dto.Licensing) *v1alpha1.PackageLicensing {
+	if len(l.Editions) == 0 {
+		return nil
+	}
+
+	editions := make(map[string]v1alpha1.PackageEditionLicense, len(l.Editions))
+	for name, e := range l.Editions {
+		editions[name] = v1alpha1.PackageEditionLicense{Available: e.Available}
+	}
+
+	return &v1alpha1.PackageLicensing{Editions: editions}
 }
 
 // versionConstraintToCR wraps a raw semver constraint string into the v1alpha1

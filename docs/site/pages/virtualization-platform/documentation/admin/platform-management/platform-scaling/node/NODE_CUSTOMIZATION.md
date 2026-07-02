@@ -161,7 +161,12 @@ When writing scripts, it's important to consider the following features of their
 
 Useful specifics of certain scripts:
 
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl): Merges all `containerd` service configuration files located in `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. Note that the `/etc/containerd/conf.d/` directory is not created automatically, and any configuration files in it should be created by scripts with a priority lower than `32`.
+* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl): Merges the containerd configuration files and **restarts** the service. The location of the configuration files depends on the CRI used on the cluster nodes:
+
+  - `/etc/containerd/conf.d/*.toml`: For containerd v1.
+  - `/etc/containerd/conf2.d/*.toml`: For containerd v2.
+  
+  Note that directories containing configuration files are not created automatically. Files must be added to these directories in scripts with a priority of less than `32`.
 
 ## How to use containerd with Nvidia GPU support
 
@@ -404,11 +409,20 @@ Done
 Adding custom settings will trigger a restart of the `containerd` service.
 {% endalert %}
 
-`bashible` on the nodes merges the DVP `containerd` configuration with configurations from `/etc/containerd/conf.d/*.toml`.
+Bashible on nodes merges main DVP containerd config with configs from:
+
+- `/etc/containerd/conf.d/*.toml`: If containerd v1 is used as the CRI on the cluster nodes.
+- `/etc/containerd/conf2.d/*.toml`: If containerd v2 is used as the CRI on the cluster nodes.
 
 {% alert level="warning" %}
 You can override the parameter values defined in the `/etc/containerd/deckhouse.toml` file. However, you are responsible for ensuring the correct operation of such changes. It is recommended **not to modify the configuration** on control plane (master) nodes (NodeGroup `master`).
 {% endalert %}
+
+The following are configuration examples of the NodeGroupConfiguration resources adding a custom configuration file for a corresponding containerd version.
+
+{% tabs containerd_version %}
+{% tab "For containerd v1" %}
+{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -444,6 +458,52 @@ spec:
     - "worker"
   weight: 31
 ```
+
+{% endraw %}
+{% endtab %}
+{% tab "For containerd v2" %}
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-option-config.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    mkdir -p /etc/containerd/conf2.d
+    bb-sync-file /etc/containerd/conf2.d/runtimeclass.toml - << "EOF"
+    [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm]
+      runtime_type = "io.containerd.runc.v2"
+      [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm.options]
+        BinaryName = ""
+        SystemdCgroup = true
+        ShmSize = 17179869184
+    EOF
+  nodeGroups:
+    - "worker"
+  weight: 31
+```
+
+{% endraw %}
+{% endtab %}
+{% endtabs %}
 
 ## Adding a configuration for an additional registry
 

@@ -20,11 +20,12 @@ import (
 
 	"github.com/name212/govalue"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
@@ -37,10 +38,10 @@ import (
 
 func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
 	if !b.Options.Global.SanityCheck {
-		log.WarnLn(bootstrapAbortCheckMessage)
+		dhlog.FromContext(ctx).WarnContext(ctx, bootstrapAbortCheckMessage)
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Abort", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Abort", func(ctx context.Context) error {
 		return b.doRunBootstrapAbort(ctx, forceAbortFromCache)
 	})
 }
@@ -62,7 +63,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		),
 		&b.Options.Global,
 	)
@@ -78,16 +79,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		TmpDir:           b.TmpDir,
 		GlobalOptions:    &b.Options.Global,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           b.logger,
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger).
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter).
 		WithUseTfCache(b.Options.Cache.UseTfCache).
 		WithDebug(b.Options.Global.IsDebug)
 
 	cachePath := metaConfig.CachePath()
-	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("State config for prefix %s:  %s", metaConfig.ClusterPrefix, cachePath))
 	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 	}
@@ -98,7 +98,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 	defer func() {
 		if err := b.PhasedExecutionContext.Finalize(ctx, stateCache); err != nil {
-			b.Logger.LogWarnF("failed to finalize phased execution context: %v\n", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to finalize phased execution context: %v", err))
 		}
 	}()
 
@@ -110,7 +110,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	if !hasUUID {
 		return b.commanderModeAction(
 			func() error {
-				log.InfoF("No UUID found in the cache, will exit now\n")
+				dhlog.FromContext(ctx).InfoContext(ctx, "No UUID found in the cache, will exit now")
 				return nil
 			},
 			func() error {
@@ -119,13 +119,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		)
 	}
 
-	err = log.ProcessCtx(ctx, "common", "Get cluster UUID from the cache", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Get cluster UUID from the cache", func(ctx context.Context) error {
 		uuid, err := stateCache.Load(ctx, "uuid")
 		if err != nil {
 			return err
 		}
 		metaConfig.UUID = string(uuid)
-		log.InfoF("Cluster UUID: %s\n", metaConfig.UUID)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cluster UUID: %s", metaConfig.UUID))
 		return nil
 	})
 	if err != nil {
@@ -136,11 +136,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 
 	var destroyer destroy.Destroyer
 
-	loggerProvider := log.SimpleLoggerProvider(b.Logger)
-
 	bootstrapState := NewBootstrapState(stateCache)
 
-	err = log.ProcessCtx(ctx, "common", "Choose abort type", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Choose abort type", func(ctx context.Context) error {
 		ok, err := bootstrapState.IsManifestsCreated(ctx)
 		if err != nil {
 			return err
@@ -150,7 +148,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		// error is OK here in case of abort from cache w/o ssh hosts
 		sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
 
-		log.DebugF("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v", ok, forceAbortFromCache))
 		if !ok || forceAbortFromCache {
 			destroyer, err = destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
 				MetaConfig:             metaConfig,
@@ -159,7 +157,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				PhasedExecutionContext: b.PhasedExecutionContext,
 
 				SSHClientProvider: sshProvider,
-				LoggerProvider:    loggerProvider,
+				Logger:            dhlog.FromContext(ctx),
 
 				TmpDir:        b.TmpDir,
 				GlobalOptions: &b.Options.Global,
@@ -176,7 +174,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				logMsg = "Force aborting from cache"
 			}
 
-			b.logger.LogInfoLn(logMsg)
+			dhlog.FromContext(ctx).InfoContext(ctx, logMsg)
 
 			return nil
 		}
@@ -204,7 +202,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData)
 		}
 
-		destroyParams.LoggerProvider = loggerProvider
+		destroyParams.Logger = dhlog.FromContext(ctx)
 		destroyParams.IsDebug = b.IsDebug
 		destroyParams.TmpDir = b.TmpDir
 
@@ -213,7 +211,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			return err
 		}
 
-		b.logger.LogInfoLn("Deckhouse installation has already started. Destroying cluster")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse installation has already started. Destroying cluster")
 		return nil
 	})
 	if err != nil {
@@ -239,7 +237,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		}
 		preflightRunner := preflight.New(staticAbortSuite)
 		preflightRunner.UseCache(bootstrapState)
-		preflightRunner.SetCacheSalt(state.ConfigHash(b.Options.Global.ConfigPaths))
+		preflightRunner.SetCacheSalt(state.ConfigHash(ctx, b.Options.Global.ConfigPaths))
 		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
 		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err

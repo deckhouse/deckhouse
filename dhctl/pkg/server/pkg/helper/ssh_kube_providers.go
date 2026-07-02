@@ -22,9 +22,9 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
@@ -41,7 +41,7 @@ func AllowMissingHostsFromCache() CreateProvidersOption {
 	}
 }
 
-func CreateProviders(ctx context.Context, config string, logger log.Logger, isDebug bool, tmpDir string, opts ...CreateProvidersOption) (*providerinitializer.SSHProviderInitializer, libcon.KubeProvider, func() error, error) {
+func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir string, opts ...CreateProvidersOption) (*providerinitializer.SSHProviderInitializer, libcon.KubeProvider, func() error, error) {
 	options := &CreateProvidersOptions{}
 	for _, opt := range opts {
 		opt(options)
@@ -49,13 +49,14 @@ func CreateProviders(ctx context.Context, config string, logger log.Logger, isDe
 
 	cleanuper := callback.NewCallback()
 
-	externalLogger, ok := logger.(*log.ExternalLogger)
-	if !ok {
-		return nil, nil, nil, fmt.Errorf("cannot convert logger to ExternalLogger")
+	loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
+	params := settings.ProviderParams{
+		LoggerProvider: loggerProvider,
+		IsDebug:        isDebug,
+		NodeTmpPath:    app.DeckhouseNodeTmpPath,
+		NodeBinPath:    app.DeckhouseNodeBinPath,
+		TmpDir:         tmpDir,
 	}
-
-	loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: isDebug, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: tmpDir}
 
 	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithConnectionConfig(config))
 	if err != nil {

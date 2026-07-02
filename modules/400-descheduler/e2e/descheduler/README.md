@@ -4,7 +4,7 @@ End-to-end tests for the `descheduler` module, using [Kyverno Chainsaw](https://
 
 ## Overview
 
-These tests validate Descheduler behavior in a Deckhouse cluster: pod rebalancing via LowNodeUtilization and HighNodeUtilization strategies, and the Deckhouse patch that excludes `d8-*` and `kube-system` namespaces from eviction.
+These tests validate Descheduler behavior in a Deckhouse cluster: pod rebalancing via LowNodeUtilization and HighNodeUtilization strategies, the Deckhouse patch that excludes `d8-*` and `kube-system` namespaces from eviction, and StatefulSet-specific behavior (RemoveDuplicates redistribution, PodDisruptionBudget handling, single-replica eviction, and the unsupported `minReplicas` knob).
 
 Each scenario lives in `tests/<name>/` and is executed via Task wrappers that call `chainsaw test` with JUnit reports in `./reports/`.
 
@@ -70,20 +70,35 @@ descheduler/
 ├── Taskfile.yaml              # includes all scenarios
 ├── chainsaw-config.yaml       # shared timeouts and execution settings
 └── tests/
-    ├── common/
-    │   └── assert-descheduler-ready.yaml
+    ├── common/                # shared files for several scenarios
+    │   ├── manifests/         # shared manifests (applied by tests)
+    │   │   ├── sts-pinned.yaml
+    │   │   └── sts-unpin-patch.yaml
+    │   └── asserts/           # shared assert/error files
+    │       ├── assert-descheduler-ready.yaml
+    │       └── assert-descheduler-rollout-complete.yaml
     ├── low-node-utilization/
     │   ├── chainsaw-test.yaml
     │   ├── manifests/
-    │   ├── low_node_utilization.md
+    │   ├── README.md
     │   └── Taskfile.yml
     ├── high-node-utilization/
     │   └── ...
-    └── exclude-namespaces-from-processing/
+    ├── exclude-namespaces-from-processing/
+    │   └── ...
+    ├── statefulset-remove-duplicates/
+    │   └── ...
+    ├── statefulset-pdb-blocks-eviction/
+    │   └── ...
+    ├── statefulset-pdb-allows-one-disruption/
+    │   └── ...
+    ├── statefulset-single-replica-eviction/
+    │   └── ...
+    └── descheduler-minreplicas-not-supported/
         └── ...
 ```
 
-Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/<name>.md`.
+Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/README.md`.
 
 ## Available Tests
 
@@ -92,6 +107,11 @@ Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/<name>
 | `task low-node-utilization:run`               | `tests/low-node-utilization/`               | LowNodeUtilization rebalances pods from overloaded nodes       |
 | `task high-node-utilization:run`              | `tests/high-node-utilization/`              | HighNodeUtilization consolidates pods onto fewer nodes         |
 | `task exclude-namespaces-from-processing:run` | `tests/exclude-namespaces-from-processing/` | Deckhouse patch prevents eviction of pods in `d8-*` namespaces |
+| `task statefulset-remove-duplicates:run` | `tests/statefulset-remove-duplicates/` | StatefulSet without PDB: RemoveDuplicates evicts duplicate pods and they spread across nodes |
+| `task statefulset-pdb-blocks-eviction:run` | `tests/statefulset-pdb-blocks-eviction/` | StatefulSet + PDB `maxUnavailable: 0`: every eviction is blocked, pods stay in place |
+| `task statefulset-pdb-allows-one-disruption:run` | `tests/statefulset-pdb-allows-one-disruption/` | StatefulSet + PDB `maxUnavailable: 1`: evictions are serialized, StatefulSet stays available |
+| `task statefulset-single-replica-eviction:run` | `tests/statefulset-single-replica-eviction/` | Single-replica StatefulSet is evicted — no `minReplicas` protection exists in Deckhouse |
+| `task descheduler-minreplicas-not-supported:run` | `tests/descheduler-minreplicas-not-supported/` | `spec.minReplicas` cannot be persisted in the CR; manual ConfigMap edits are overwritten |
 
 ## Running Tests
 

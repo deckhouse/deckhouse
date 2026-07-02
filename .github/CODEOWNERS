@@ -49,6 +49,9 @@
 038-registry/                                                    @nabokihms @vadimartynov
 039-registry-packages-proxy/                                     @borg-z @090809
 040-control-plane-manager/                                       @sprait
+**/040-control-plane-manager/hooks/audit_policy*                           @nabokihms @AlwxSin
+**/040-control-plane-manager/templates/_authentication_configuration.tpl   @nabokihms @AlwxSin
+**/040-control-plane-manager/templates/_authorization_config.tpl           @nabokihms @AlwxSin
 040-node-manager/                                                @borg-z @090809
 **/040-node-manager/images/builder-cuda                          @serg-su
 **/040-node-manager/images/nvidia-container-toolkit              @serg-su
@@ -80,7 +83,6 @@
 160-multitenancy-manager/                                        @nabokihms @AlwxSin
 200-operator-prometheus/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
 300-prometheus/                                                  @vladimirGuryanov @lazovskiy @maksimmadzhuga
-301-prometheus-*/                                                @vladimirGuryanov @lazovskiy @maksimmadzhuga
 302-vertical-pod-autoscaler/                                     @yalosev @ergoz
 303-prometheus-*/                                                @vladimirGuryanov @lazovskiy
 340-extended-monitoring/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
@@ -91,7 +93,6 @@
 402-ingress-nginx/                                               @miklezzzz @apolovov
 450-keepalived/                                                  @AndreyPavlovFlant @apolovov
 450-network-gateway/                                             @AndreyPavlovFlant @apolovov
-460-log-shipper/                                                 @vladimirGuryanov @lazovskiy @maksimmadzhuga
 462-loki/                                                        @vladimirGuryanov @lazovskiy @maksimmadzhuga
 470-chrony/                                                      @borg-z @090809
 491-containerized-data-importer                                  @fl64
@@ -119,11 +120,13 @@ csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @borg-z @090809
 docs/                                    @z9r5
-docs/documentation/pages/architecture/   @voitenkov
+docs/documentation/pages/architecture/   @xstayer
 helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5
 tools/docs/                              @z9r5
+tools/integrity_check_namespaces         @alexey-gavrilov-flant @himax1991
+tools/build_includes/integrity-check-**  @alexey-gavrilov-flant @himax1991
 /pkg/                                    @ldmonster
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null

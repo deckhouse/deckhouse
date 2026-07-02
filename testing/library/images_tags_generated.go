@@ -305,9 +305,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"helper":               "imageHash-localPathProvisioner-helper",
 		"localPathProvisioner": "imageHash-localPathProvisioner-localPathProvisioner",
 	},
-	"logShipper": map[string]interface{}{
-		"vector": "imageHash-logShipper-vector",
-	},
 	"loki": map[string]interface{}{
 		"loki": "imageHash-loki-loki",
 	},
@@ -352,7 +349,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"clusterAutoscaler135":     "imageHash-nodeManager-clusterAutoscaler135",
 		"clusterAutoscaler136":     "imageHash-nodeManager-clusterAutoscaler136",
 		"d8ShutdownInhibitor":      "imageHash-nodeManager-d8ShutdownInhibitor",
-		"earlyOom":                 "imageHash-nodeManager-earlyOom",
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"kubernetesApiProxy":       "imageHash-nodeManager-kubernetesApiProxy",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
@@ -390,10 +386,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"promxy":                      "imageHash-prometheus-promxy",
 		"trickster":                   "imageHash-prometheus-trickster",
-	},
-	"prometheusMetricsAdapter": map[string]interface{}{
-		"k8sPrometheusAdapter":   "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",
-		"prometheusReverseProxy": "imageHash-prometheusMetricsAdapter-prometheusReverseProxy",
 	},
 	"registry": map[string]interface{}{
 		"dockerAuth":          "imageHash-registry-dockerAuth",

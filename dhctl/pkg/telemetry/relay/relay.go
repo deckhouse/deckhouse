@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -95,11 +96,12 @@ func InitRelay(ctx context.Context, params RelayParams) (stopFunc, updateRelaySp
 
 	// Create checker/killer for health monitor
 	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
+		ctx,
 		fmt.Sprintf("http://%s:%s/healthz", RelayAddress, RelayPort),
 		params.GlobalOpts,
 	)
 	if err == nil {
-		killScript, err := template.RenderAndSaveKillReverseTunnelScript(RelayAddress, RelayPort, params.GlobalOpts)
+		killScript, err := template.RenderAndSaveKillReverseTunnelScript(ctx, RelayAddress, RelayPort, params.GlobalOpts)
 		if err == nil {
 			checker := utils.NewRunScriptReverseTunnelChecker(wrapper.Client(), checkScript)
 			killer := utils.NewRunScriptReverseTunnelKiller(wrapper.Client(), killScript)
@@ -111,7 +113,22 @@ func InitRelay(ctx context.Context, params RelayParams) (stopFunc, updateRelaySp
 
 	return func() {
 		if r.tunnel != nil {
-			r.tunnel.Stop()
+			// lib-connection's ReverseTunnel.Stop() can deadlock on an internal
+			// channel send when the health monitor has been flapping — e.g. the
+			// reverse tunnel never became reachable, as happens when dhctl runs in
+			// a local container bootstrapping a cloud master (the master can't
+			// health-check the tunnel back). A stuck Stop() would block dhctl
+			// teardown forever (tomb.WaitShutdown), so bound it with a timeout and
+			// move on; the leaked goroutine dies with the process.
+			done := make(chan struct{})
+			go func() {
+				r.tunnel.Stop()
+				close(done)
+			}()
+			select {
+			case <-done:
+			case <-time.After(10 * time.Second):
+			}
 		}
 		if r.server != nil {
 			_ = r.server.Stop(context.Background())

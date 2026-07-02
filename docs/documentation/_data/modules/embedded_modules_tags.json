@@ -142,11 +142,6 @@
     "storage",
     "ssdlc"
   ],
-  "log-shipper": [
-    "observability",
-    "logging",
-    "ssdlc"
-  ],
   "loki": [
     "observability",
     "logging",
@@ -159,10 +154,6 @@
     "ssdlc"
   ],
   "monitoring-applications": [
-    "observability",
-    "ssdlc"
-  ],
-  "monitoring-custom": [
     "observability",
     "ssdlc"
   ],
@@ -225,10 +216,6 @@
     "ssdlc"
   ],
   "prometheus": [
-    "observability",
-    "ssdlc"
-  ],
-  "prometheus-metrics-adapter": [
     "observability",
     "ssdlc"
   ],

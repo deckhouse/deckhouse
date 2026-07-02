@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: conflict-pod
+  labels:
+    e2e-test: sts-single-replica-conflict
+spec:
+  nodeName: ($targetNode)
+  terminationGracePeriodSeconds: 5
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.9
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi

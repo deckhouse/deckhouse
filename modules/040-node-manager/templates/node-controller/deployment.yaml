@@ -3,7 +3,7 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -46,6 +46,9 @@ kind: Deployment
 metadata:
   name: node-controller
   namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
@@ -99,9 +102,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "node_controller_resources" . | nindent 12 }}
-{{- end }}
         env:
       # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to kubernetes-api-proxy are needed on the bootstrap phase to make node-controller work without kube-proxy
   {{- if not .Values.global.clusterIsBootstrapped }}
@@ -172,9 +173,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
-{{- end }}
       volumes:
       - name: cert
         secret:

@@ -11,7 +11,7 @@ import:
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
   before: install
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-kiali-frontend-build-artifact
   add: /src/kial-frontend-assets/static
   to: /opt/kiali/console
   before: install

@@ -136,20 +136,6 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 	)
 }
 
-func TestSetIncorrectLogDoesNotPanic(t *testing.T) {
-	cfg := getTestCfgForMaster(t, 1, []string{"1.1.1.1"})
-
-	do := func() {
-		preparator := NewMetaConfigPreparator(true)
-
-		preparator.WithLogger(nil)
-
-		_ = preparator.Validate(context.TODO(), cfg)
-	}
-
-	require.NotPanics(t, do)
-}
-
 func getTestCfgForMaster(t *testing.T, replicas int, externalIPS []string) *config.MetaConfig {
 	cfg := &config.MetaConfig{}
 

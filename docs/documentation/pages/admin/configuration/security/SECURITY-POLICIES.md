@@ -17,6 +17,8 @@ In the DKP policies are divided into three categories:
 These policies complement each other. If multiple policies are applied to a single namespace, objects are validated against each of them. If even one policy is violated, the object will not be created.
 {% endalert %}
 
+In addition to policies that prohibit using parameters different from the set requirements, DKP supports the [SecurityPolicyException](#security-policy-exceptions) resource, which allows creating fine-grained exceptions from security policy checks. With this resource, you can allow using specific parameters for individual pods or containers without changing security policies applied to the entire namespace.
+
 ## How validation failure messages are displayed
 
 Depending on how pods are created, there are differences in how the API generates messages regarding validation failures (violations of established policies):
@@ -424,6 +426,10 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 
 Using the [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy), you can create security policies that define container behavior restrictions in the cluster, such as host network access, privileges, AppArmor usage, and more.
 
+{% alert level="info" %}
+Detailed information on pod and container security settings (such as `hostNetwork`, `hostPID`, `hostIPC` and others), available values, and practical suggestions are available on the ["Pod and container security settings"](../../../user/security/pod-settings.html) page.
+{% endalert %}
+
 Example security policy:
 
 ```yaml
@@ -488,6 +494,98 @@ spec:
 ```
 
 To assign this security policy, add the `enforce: "mypolicy"` label to the target namespace.
+
+## Security policy exceptions
+
+[SecurityPolicyException](/modules/admission-policy-engine/cr.html#securitypolicyexception) is a resource that lets you create fine-grained exceptions from security policy checks for individual pods and containers. It allows you to avoid excluding an entire namespace from checks and instead define only the necessary exceptions from a specific rule for a pod or container.
+
+### Adding exceptions
+
+To add exceptions for a pod or container, do the following:
+
+1. Create a [SecurityPolicyException](/modules/admission-policy-engine/cr.html#securitypolicyexception) object describing the required exceptions.
+
+   It is recommended that you describe the reason for each exception in the rule's `metadata` field (for example, `metadata.description`). This makes auditing and maintenance easier.
+
+2. In the pod template (usually via `spec.template.metadata.labels` in a Deployment, StatefulSet, or DaemonSet resource), add one of the following labels referencing the exception:
+   - `security.deckhouse.io/security-policy-exception: <exception-name>`: Exception for the entire pod.
+   - `security.deckhouse.io/security-policy-exception.container.<container-name>: <exception-name>`: Exception for a specific container.
+
+Priority when selecting an exception for a container:
+
+1. The label `security.deckhouse.io/security-policy-exception.container.<container-name>` is checked first.
+1. If the container-specific label is absent, the exception from `security.deckhouse.io/security-policy-exception` is used.
+
+{% alert level="warning" %}
+If a container-specific label is set for a container but it points to an invalid or non-existent SecurityPolicyException object, it still has priority over the global label and may lead to pod placement denial.
+{% endalert %}
+
+### Configuration example
+
+For this example, consider a pod that requires:
+
+- Permission to use the [`hostNetwork`](../../../user/security/pod-settings.html#hostnetwork) parameter for the entire pod.
+- Permission to use the [`privileged`](../../../user/security/pod-settings.html#privileged) parameter only for the `sample-init` container.
+
+Without the SecurityPolicyException resource, allowing these parameters would require implementing a custom security policy where these settings could be allowed for any pod in the cluster.
+
+With SecurityPolicyException, it is enough to create only the following resources:
+
+- Exception to allow the `hostNetwork` parameter:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: SecurityPolicyException
+  metadata:
+    name: allow-hostnetwork-pod
+  spec:
+    network:
+      hostNetwork:
+        allowedValue: true
+        metadata:
+          description: >-
+            Pod requires host network mode for node-level network diagnostics.
+  ```
+
+- Exception to allow the `privileged` parameter in the `sample-init` container:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: SecurityPolicyException
+  metadata:
+    name: allow-privileged-init-container
+  spec:
+    securityContext:
+      privileged:
+        allowedValue: true
+        metadata:
+          description: >-
+            Container init requires privileged mode to access host-level networking features.
+  ```
+
+After that, the corresponding labels need to be added to the pod template:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example
+spec:
+  template:
+    metadata:
+      labels:
+        # General exception applicable to the entire pod.
+        security.deckhouse.io/security-policy-exception: allow-hostnetwork-pod
+        # Exception applicable to the sample-init container.
+        security.deckhouse.io/security-policy-exception.container.sample-init: allow-privileged-init-container
+    spec:
+      hostNetwork: true
+    ...
+    containers:
+      - name: sample-init
+        securityContext:
+          privileged: true
+```
 
 ### Partial policy enforcement
 
@@ -897,7 +995,7 @@ To enable container image signature verification in a DKP cluster:
 
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
-   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 1. Create an [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) that restricts running pods from third-party registries:
 
@@ -920,7 +1018,7 @@ To enable container image signature verification in a DKP cluster:
 
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
-   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 1. Add a label to the namespace where signature verification should be enabled (specify your namespace):
 

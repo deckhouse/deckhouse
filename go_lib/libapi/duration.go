@@ -25,6 +25,7 @@ import (
 // +k8s:deepcopy-gen=false
 
 // Duration custom type for appropriate json marshalling / unmarshalling (like "15m")
+// +kubebuilder:validation:Type=string
 type Duration struct {
 	time.Duration
 }

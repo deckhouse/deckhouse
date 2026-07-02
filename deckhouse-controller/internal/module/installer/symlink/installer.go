@@ -128,6 +128,83 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	return nil
 }
 
+// Stage copies a module from temp location to permanent storage WITHOUT creating
+// the symlink. The files end up at /deckhouse/downloaded/<module>/<version>/ but
+// the module is not exposed to the operator, so an embedded copy of the same name
+// keeps serving the module. The symlink is created later (by Install/Restore) once
+// the embedded copy is gone.
+func (i *Installer) Stage(ctx context.Context, module, version, tempModulePath string) error {
+	_, span := otel.Tracer(tracerName).Start(ctx, "Stage")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("path", tempModulePath))
+
+	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
+
+	logger.Debug("stage module without symlink")
+
+	// Create permanent module directory: /deckhouse/downloaded/<module>
+	modulePath := filepath.Join(i.downloaded, module)
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
+	}
+
+	// /deckhouse/downloaded/<module>/<version>
+	versionPath := filepath.Join(modulePath, version)
+
+	// Remove old version if exists (for atomic update)
+	if _, err := os.Stat(versionPath); err == nil {
+		if err = os.RemoveAll(versionPath); err != nil {
+			return fmt.Errorf("delete old version '%s': %w", versionPath, err)
+		}
+	}
+
+	// Copy module files to permanent location, but do NOT create the symlink.
+	if err := cp.Copy(tempModulePath, versionPath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("copy module '%s': %w", modulePath, err)
+	}
+
+	return nil
+}
+
+// StageFromRegistry downloads a module from the registry to permanent storage
+// WITHOUT creating the symlink. Mirrors Restore but skips activation.
+func (i *Installer) StageFromRegistry(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "StageFromRegistry")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("source", ms.GetName()))
+
+	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
+	logger.Debug("stage module from registry without symlink")
+
+	// Create permanent module directory: /deckhouse/downloaded/<module>
+	modulePath := filepath.Join(i.downloaded, module)
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
+	}
+
+	// /deckhouse/downloaded/<module>/<version>
+	versionPath := filepath.Join(modulePath, version)
+
+	// Download module only if it is not present on the filesystem yet.
+	if _, err := os.Stat(versionPath); err != nil {
+		if err = i.registry.Download(ctx, registry.BuildRemote(ms), versionPath, module, version); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("download module '%s': %w", module, err)
+		}
+	}
+
+	return nil
+}
+
 // Uninstall removes module symlink and cleans up module files.
 // Process:
 //  1. Check if symlink exists (returns early if not)

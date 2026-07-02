@@ -54,4 +54,3 @@ func TestNodeGroupConversion_PreservesSeccompDefault(t *testing.T) {
 		t.Fatalf("seccompDefault was not preserved after round-trip conversion")
 	}
 }
-

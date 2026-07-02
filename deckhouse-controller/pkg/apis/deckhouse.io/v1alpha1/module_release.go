@@ -84,9 +84,21 @@ var _ runtime.Object = (*ModuleRelease)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=mr
+// +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase",description="Current release status."
+// +kubebuilder:printcolumn:name="update policy",type="string",JSONPath=`.metadata.labels.modules\.deckhouse\.io/update-policy`,description="Associated update policy."
+// +kubebuilder:printcolumn:name="transitionTime",type="date",format="date-time",JSONPath=".status.transitionTime",description="When the release status was changed."
+// +kubebuilder:printcolumn:name="message",type="string",JSONPath=".status.message",description="Release status details."
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
+// +crd-enricher:crd:stripFormat=true
 
-// ModuleRelease is a Module release object.
+// Defines the configuration for a Deckhouse release.
+//
+// **ModuleRelease resources are created by Deckhouse.**
 type ModuleRelease struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -262,43 +274,66 @@ func (mr *ModuleRelease) GetUpdateSpec() *UpdateSpec {
 
 type ModuleReleaseRequirements struct {
 	ModuleReleasePlatformRequirements `json:",inline"`
-	ParentModules                     map[string]string `json:"modules,omitempty"`
+	// A list of other modules required for the module release. Ensure the modules are enabled.
+	ParentModules map[string]string `json:"modules,omitempty"`
 }
 
 type ModuleReleasePlatformRequirements struct {
-	Deckhouse  string `json:"deckhouse,omitempty"`
+	// Required Deckhouse version.
+	Deckhouse string `json:"deckhouse,omitempty"`
+	// Required Kubernetes version.
 	Kubernetes string `json:"kubernetes,omitempty"`
 }
 
 type ModuleReleaseSpec struct {
+	// Module name.
 	ModuleName string `json:"moduleName"`
-	Version    string `json:"version,omitempty"`
-	Weight     uint32 `json:"weight,omitempty"`
+	// Module version.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
+	Version string `json:"version"`
+	// Module _weight_ (priority).
+	Weight uint32 `json:"weight,omitempty"`
 
-	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
+	// Time until which the release will be delayed.
+	ApplyAfter *metav1.Time `json:"applyAfter,omitempty"`
+	// Release dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform to run the module release.
 	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
-	UpdateSpec   *UpdateSpec                `json:"update,omitempty"`
-	Changelog    *MappedFields              `json:"changelog,omitempty"`
+	// Optional transition rules.
+	UpdateSpec *UpdateSpec `json:"update,omitempty"`
+	// Release's changelog for the module.
+	Changelog *MappedFields `json:"changelog,omitempty"`
 }
 
 type UpdateSpec struct {
+	// List of `from`→`to` transition rules that allow skipping step-by-step updates.
+	// If the current installed module version (status `Deployed`) is not lower than `from`, and the cluster has a release whose version matches `to`, the controller will skip intermediate releases and update the module to the version from `to`.
+	// The `to` value can specify a minor line (`X.Y` — the latest available `X.Y.Z` will be selected).
+	// The rule is specified in the constrained release — the one whose version matches `to`.
 	Versions []UpdateConstraint `json:"versions,omitempty"`
 }
 
-// UpdateConstraint defines a semver range [from, to] where From is the minimal version that can upgrade directly
-// to the To endpoint. Values support major.minor or full semver.
 type UpdateConstraint struct {
+	// The minimum version from which the transition is allowed (format `X.Y`).
 	From string `json:"from"`
-	To   string `json:"to"`
+	// The end version of the range — a minor line (`X.Y`).
+	To string `json:"to"`
 }
 
 type ModuleReleaseStatus struct {
-	Phase          string          `json:"phase,omitempty"`
-	Approved       bool            `json:"approved"`
-	TransitionTime metav1.Time     `json:"transitionTime,omitempty"`
-	Message        string          `json:"message"`
-	Size           uint32          `json:"size"`
-	PullDuration   metav1.Duration `json:"pullDuration"`
+	// Current status of the release.
+	// +kubebuilder:validation:Enum=Pending;Deployed;Superseded;Suspended;Skipped;Terminating
+	Phase string `json:"phase,omitempty"`
+	// Status indicating that the release is ready for deployment. For the Manual update mode only (`update.mode: Manual`).
+	// +optional
+	Approved bool `json:"approved"`
+	// Time of release status change.
+	TransitionTime metav1.Time `json:"transitionTime,omitempty"`
+	// Detailed status or error message.
+	Message string `json:"message,omitempty"`
+	// Size of the module image.
+	Size uint32 `json:"size,omitempty"`
+	// Module loading duration.
+	PullDuration metav1.Duration `json:"pullDuration,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -78,6 +78,23 @@ var (
 
 var _ loader.ModuleLoader = &Loader{}
 
+// Installer abstracts *installer.Installer so tests can inject a mock and assert
+// which installation path a module took (Restore vs StageFromRegistry) without
+// touching the registry or filesystem. It mirrors the public method set of
+// *installer.Installer that the loader and its getter expose to other controllers.
+type Installer interface {
+	SetClusterUUID(id string)
+	GetInstalled() (map[string]struct{}, error)
+	GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error)
+	Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error)
+	Install(ctx context.Context, module, version, tempModulePath string) error
+	Stage(ctx context.Context, module, version, tempModulePath string) error
+	StageFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	Restore(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	IsEmbeddedPresent(module string) bool
+	Uninstall(ctx context.Context, module string) error
+}
+
 type Loader struct {
 	client         client.Client
 	logger         *log.Logger
@@ -88,7 +105,7 @@ type Loader struct {
 	// global module dir
 	globalDir string
 
-	installer *installer.Installer
+	installer Installer
 
 	registries map[string]*addonmodules.Registry
 
@@ -148,7 +165,7 @@ func (l *Loader) Sync(ctx context.Context) error {
 }
 
 // Installer returns installer instance
-func (l *Loader) Installer() *installer.Installer {
+func (l *Loader) Installer() Installer {
 	return l.installer
 }
 

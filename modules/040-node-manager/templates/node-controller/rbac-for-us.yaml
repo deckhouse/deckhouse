@@ -4,6 +4,9 @@ kind: ServiceAccount
 metadata:
   name: node-controller
   namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 automountServiceAccountToken: false
 ---
@@ -12,6 +15,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:node-manager:node-controller
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 rules:
 # NodeGroups - full access for status updates
@@ -101,19 +107,55 @@ rules:
   - get
   - list
   - watch
-# CAPI Machine
+# MCM MachineDeployment - patch replicas + delete on NodeGroup removal (capi-machine-deployment controller)
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machinedeployments
+  verbs:
+  - update
+  - patch
+  - delete
+# CAPI Machine and related resources
 - apiGroups:
   - cluster.x-k8s.io
   resources:
   - machines
   - machinedeployments
+  - clusters
+  - machinehealthchecks
   verbs:
   - get
   - list
   - watch
+  - create
   - update
   - patch
   - delete
+# CAPI infrastructure resources (DeckhouseControlPlane, provider machine templates)
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - deckhousecontrolplanes
+  - deckhousecontrolplanes/status
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - deckhousemachinetemplates
+  - dynamixmachinetemplates
+  - huaweicloudmachinetemplates
+  - staticmachinetemplates
+  - vcdmachinetemplates
+  - yandexmachinetemplates
+  - zvirtmachinetemplates
+  verbs:
+  - get
+  - list
 # MCM Machine
 - apiGroups:
   - machine.sapcloud.io
@@ -193,11 +235,26 @@ rules:
   - create
   - update
   - patch
+# CRDs - for CAPI CRD migration controller
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:node-manager:node-controller
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -212,6 +269,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:node-manager:node-controller:rbac-proxy
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io

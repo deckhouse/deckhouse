@@ -15,11 +15,14 @@
 package minget
 
 import (
+	"context"
 	"embed"
 	"errors"
+	"fmt"
 	"os"
+	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 //go:embed all:embed
@@ -32,7 +35,7 @@ const (
 
 var mingetBinaryPath = "/minget"
 
-func Bytes() ([]byte, error) {
+func Bytes(ctx context.Context) ([]byte, error) {
 	binaryPath := mingetBinaryPath
 	if path := os.Getenv(mingetBinaryPathEnv); path != "" {
 		binaryPath = path
@@ -41,24 +44,24 @@ func Bytes() ([]byte, error) {
 	stat, err := os.Stat(binaryPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.InfoF("%s does not exist. Falling back to embedded minget\n", binaryPath)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s does not exist. Falling back to embedded minget", binaryPath))
 		} else {
-			log.WarnF("Failed to stat %s: %v. Falling back to embedded minget", binaryPath, err)
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to stat %s: %v. Falling back to embedded minget", binaryPath, err), "\n"))
 		}
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 
 	if stat.IsDir() {
-		log.WarnF("%s is a directory. Falling back to embedded minget", binaryPath)
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("%s is a directory. Falling back to embedded minget", binaryPath), "\n"))
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 
 	file, err := os.ReadFile(binaryPath)
 	if err != nil {
-		log.WarnF("Failed to open %s: %v. Falling back to embedded minget", binaryPath, err)
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to open %s: %v. Falling back to embedded minget", binaryPath, err), "\n"))
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 
-	log.DebugF("Using %s\n", binaryPath)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using %s", binaryPath))
 	return file, nil
 }
