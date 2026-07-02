@@ -422,8 +422,20 @@ spec:
 			providerParams, ok := provider["parameters"].(map[string]any)
 			Expect(ok).To(BeTrue(), "settings.provider.parameters must be a map")
 			Expect(providerParams["namespace"]).To(Equal("cloud-provider01"))
-			_, hasKubeconfig := provider["kubeconfigDataBase64"]
-			Expect(hasKubeconfig).To(BeFalse(), "kubeconfigDataBase64 must not be present in ModuleConfig v2")
+
+			// Tombstones: JSON-merge-patch delete markers so that `kubectl apply`
+			// over an existing stored v1 ModuleConfig strips the legacy fields
+			// instead of unioning them into a version:2 object (which the webhook
+			// rejects). Keys must be PRESENT with a null value.
+			namespaceTombstone, hasNamespaceTombstone := provider["namespace"]
+			Expect(hasNamespaceTombstone).To(BeTrue(), "legacy provider.namespace tombstone must be present")
+			Expect(namespaceTombstone).To(BeNil(), "legacy provider.namespace tombstone must be null")
+			kubeconfigTombstone, hasKubeconfigTombstone := provider["kubeconfigDataBase64"]
+			Expect(hasKubeconfigTombstone).To(BeTrue(), "legacy provider.kubeconfigDataBase64 tombstone must be present")
+			Expect(kubeconfigTombstone).To(BeNil(), "legacy provider.kubeconfigDataBase64 tombstone must be null")
+			zonesTombstone, hasZonesTombstone := settings["zones"]
+			Expect(hasZonesTombstone).To(BeTrue(), "legacy top-level zones tombstone must be present")
+			Expect(zonesTombstone).To(BeNil(), "legacy top-level zones tombstone must be null")
 
 			nodes, ok := settings["nodes"].(map[string]any)
 			Expect(ok).To(BeTrue(), "settings.nodes must be a map")
@@ -473,12 +485,22 @@ spec:
 			Expect(mcDocs).To(HaveLen(1))
 
 			settings := mcDocs[0]["spec"].(map[string]any)["settings"].(map[string]any)
-			providerParams := settings["provider"].(map[string]any)["parameters"].(map[string]any)
+			provider := settings["provider"].(map[string]any)
+			providerParams := provider["parameters"].(map[string]any)
 			Expect(providerParams["namespace"]).To(Equal("default"))
 
 			nodesParams := settings["nodes"].(map[string]any)["parameters"].(map[string]any)
 			_, hasZones := nodesParams["zones"]
 			Expect(hasZones).To(BeFalse(), "zones must be absent when the legacy ModuleConfig has none")
+
+			// Tombstones must be emitted regardless of whether the legacy fields
+			// were set, so `kubectl apply` always deletes any stale v1 keys.
+			_, hasNamespaceTombstone := provider["namespace"]
+			Expect(hasNamespaceTombstone).To(BeTrue(), "provider.namespace tombstone must be present")
+			_, hasKubeconfigTombstone := provider["kubeconfigDataBase64"]
+			Expect(hasKubeconfigTombstone).To(BeTrue(), "provider.kubeconfigDataBase64 tombstone must be present")
+			_, hasZonesTombstone := settings["zones"]
+			Expect(hasZonesTombstone).To(BeTrue(), "top-level zones tombstone must be present")
 		})
 	})
 })

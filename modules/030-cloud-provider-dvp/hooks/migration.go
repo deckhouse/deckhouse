@@ -208,6 +208,15 @@ func buildModuleConfigFromPCC(cfg *v1.DvpProviderClusterConfiguration) (map[stri
 //
 // disabled flags (nodes/storage/ccm) are intentionally omitted: they carry schema
 // defaults, matching createProviderClusterConfigurationResources.
+//
+// The legacy provider.namespace, provider.kubeconfigDataBase64 and top-level zones
+// fields are emitted with a null value on purpose. A hybrid cluster already has a
+// stored v1 ModuleConfig, and this bundle is applied by the admin via
+// `kubectl apply -f -`. Without a prior last-applied-configuration annotation,
+// kubectl computes a JSON-merge-patch that only ADDS the new v2 keys, leaving the
+// old v1 keys in place; the merged object then fails v2 validation (provider is
+// additionalProperties:false). JSON-merge-patch treats null as a delete marker, so
+// these tombstones strip the stale v1 keys on apply.
 func buildModuleConfigForHybrid(namespace string, zones []string) map[string]any {
 	if namespace == "" {
 		namespace = "default"
@@ -232,10 +241,13 @@ func buildModuleConfigForHybrid(namespace string, zones []string) map[string]any
 			"version": int(2),
 			"settings": map[string]any{
 				"provider": map[string]any{
+					"namespace":            nil,
+					"kubeconfigDataBase64": nil,
 					"parameters": map[string]any{
 						"namespace": namespace,
 					},
 				},
+				"zones": nil,
 				"storage": map[string]any{
 					"parameters": map[string]any{},
 				},
