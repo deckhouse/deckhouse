@@ -21,8 +21,6 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/register"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 func newReconciler(t *testing.T, objs ...runtime.Object) *Controller {
@@ -304,4 +305,39 @@ func assertInSyncUnknownCondition(t *testing.T, nodeTopology *v1.NodeTopology) {
 	}
 
 	t.Fatal("expected InSync condition")
+}
+
+func TestNodeGroupToNodes_ReturnsOnlyNodesFromNodeGroup(t *testing.T) {
+	node1 := makeNode("node-1", "worker")
+	node2 := makeNode("node-2", "worker")
+	node3 := makeNode("node-3", "master")
+	nodeWithoutGroup := makeNode("node-4", "")
+
+	nodeGroup := makeNodeGroup("worker", nil)
+
+	r := newReconciler(t, node1, node2, node3, nodeWithoutGroup, nodeGroup)
+
+	requests := r.nodeGroupToNodes(context.Background(), nodeGroup)
+
+	if len(requests) != 2 {
+		t.Fatalf("expected 2 requests, got %d", len(requests))
+	}
+
+	got := map[string]bool{}
+	for _, request := range requests {
+		got[request.Name] = true
+	}
+
+	if !got["node-1"] {
+		t.Fatal("expected request for node-1")
+	}
+	if !got["node-2"] {
+		t.Fatal("expected request for node-2")
+	}
+	if got["node-3"] {
+		t.Fatal("did not expect request for node-3")
+	}
+	if got["node-4"] {
+		t.Fatal("did not expect request for node-4")
+	}
 }

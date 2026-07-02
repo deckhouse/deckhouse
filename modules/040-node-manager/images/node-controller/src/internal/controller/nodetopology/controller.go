@@ -23,8 +23,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
@@ -46,7 +49,33 @@ type Controller struct {
 	register.Base
 }
 
-func (r *Controller) SetupWatches(_ register.Watcher) {}
+func (r *Controller) SetupWatches(w register.Watcher) {
+	w.Watches(
+		&v1.NodeGroup{},
+		handler.EnqueueRequestsFromMapFunc(r.nodeGroupToNodes),
+		builder.WithPredicates(),
+	)
+}
+
+func (r *Controller) nodeGroupToNodes(ctx context.Context, obj client.Object) []reconcile.Request {
+	nodeGroupName := obj.GetName()
+
+	var nodes corev1.NodeList
+	if err := r.Client.List(ctx, &nodes, client.MatchingLabels{
+		nodecommon.NodeGroupLabel: nodeGroupName,
+	}); err != nil {
+		return nil
+	}
+
+	requests := make([]reconcile.Request, 0, len(nodes.Items))
+	for _, node := range nodes.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: client.ObjectKey{Name: node.Name},
+		})
+	}
+
+	return requests
+}
 
 func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
