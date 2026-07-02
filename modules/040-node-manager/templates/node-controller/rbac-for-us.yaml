@@ -39,6 +39,27 @@ rules:
   - get
   - update
   - patch
+  # NodeTopologies - per-node topology status
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - nodetopologies
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - nodetopologies/status
+  verbs:
+    - get
+    - update
+    - patch
 # Nodes - read and update for labels/taints
 - apiGroups:
   - deckhouse.io

@@ -1,0 +1,123 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodetopologies.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: nodetopologies
+    singular: nodetopology
+    kind: NodeTopology
+    shortNames:
+      - nt
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: NodeGroup
+          type: string
+          jsonPath: .status.nodeGroup
+        - name: DesiredPolicy
+          type: string
+          jsonPath: .status.desired.topologyManager.policy
+        - name: EffectivePolicy
+          type: string
+          jsonPath: .status.effective.topologyManager.policy
+        - name: InSync
+          type: string
+          jsonPath: .status.conditions[?(@.type=="InSync")].status
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes topology settings desired for and effectively applied on a node.
+          properties:
+            metadata:
+              type: object
+            status:
+              type: object
+              properties:
+                nodeName:
+                  type: string
+                  description: Name of the Kubernetes Node.
+                nodeGroup:
+                  type: string
+                  description: Name of the NodeGroup this node belongs to.
+                desired:
+                  type: object
+                  description: Settings expected from NodeGroup.
+                  properties:
+                    topologyManager:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                        policy:
+                          type: string
+                          enum:
+                            - None
+                            - BestEffort
+                            - Restricted
+                            - SingleNumaNode
+                        scope:
+                          type: string
+                          enum:
+                            - Container
+                            - Pod
+                effective:
+                  type: object
+                  description: Settings actually applied on the node.
+                  properties:
+                    topologyManager:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                        policy:
+                          type: string
+                          enum:
+                            - None
+                            - BestEffort
+                            - Restricted
+                            - SingleNumaNode
+                        scope:
+                          type: string
+                          enum:
+                            - Container
+                            - Pod
+                conditions:
+                  type: array
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
