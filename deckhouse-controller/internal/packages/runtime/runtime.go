@@ -173,21 +173,6 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
 	}
 
-	// Build NELM service with its own client and runtime cache for resource monitoring
-	if err := r.buildNelmService(); err != nil {
-		return nil, fmt.Errorf("build nelm service: %w", err)
-	}
-
-	// Build CRD service with its own client
-	if err := r.buildCRDService(); err != nil {
-		return nil, fmt.Errorf("build crd service: %w", err)
-	}
-
-	// Build Health service with its own client
-	if err := r.buildHealthService(); err != nil {
-		return nil, fmt.Errorf("build health service: %w", err)
-	}
-
 	// Build object patcher with optimized rate limits for batch operations
 	if err := r.buildObjectPatcher(); err != nil {
 		return nil, fmt.Errorf("build object patcher: %w", err)
@@ -214,6 +199,21 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 
 	if err := r.loadEmbedded(context.Background()); err != nil {
 		return nil, fmt.Errorf("load embedded: %w", err)
+	}
+
+	// Build NELM service with its own client and runtime cache for resource monitoring
+	if err := r.buildNelmService(); err != nil {
+		return nil, fmt.Errorf("build nelm service: %w", err)
+	}
+
+	// Build CRD service with its own client
+	if err := r.buildCRDService(); err != nil {
+		return nil, fmt.Errorf("build crd service: %w", err)
+	}
+
+	// Build Health service with its own client
+	if err := r.buildHealthService(); err != nil {
+		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
