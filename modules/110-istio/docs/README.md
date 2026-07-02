@@ -304,18 +304,28 @@ spec:
 
 To troubleshoot service publishing in the federation, follow these checks:
 
-```shell
-# Check which Services are marked as public in the local cluster.
-d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
+Check which services are marked as public in the local cluster:
 
-# Check metadata exchange status with remote clusters.
+```shell
+d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
+```
+
+Check metadata exchange status with remote clusters:
+
+```shell
 d8 k get istiofederation
 d8 k get istiofederation <name> -o jsonpath='{.status.conditions}'
+```
 
-# Check that the remote cluster provided its public services list.
+Check that the remote cluster provided its public services list:
+
+```shell
 d8 k get istiofederation <name> -o jsonpath='{.status.metadataCache.private.publicServices}'
+```
 
-# Check that local routing resources were created from the received metadata.
+Check that local routing resources were created from the received metadata:
+
+```shell
 d8 k -n d8-istio get serviceentry,destinationrule
 ```
 

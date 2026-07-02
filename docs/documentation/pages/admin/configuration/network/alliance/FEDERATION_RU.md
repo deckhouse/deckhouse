@@ -85,18 +85,28 @@ spec:
 
 Диагностика публикации сервисов в федерации:
 
-```shell
-# Проверить, какие Service помечены как публичные в локальном кластере.
-d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
+Проверьте, какие сервисы помечены как публичные в локальном кластере:
 
-# Проверить состояние обмена метаданными с удалёнными кластерами.
+```shell
+d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
+```
+
+Проверьте состояние обмена метаданными с удалёнными кластерами:
+
+```shell
 d8 k get istiofederation
 d8 k get istiofederation <name> -o jsonpath='{.status.conditions}'
+```
 
-# Проверить, что удаленный кластер передал список своих публичных сервисов.
+Проверьте, что удалённый кластер передал список своих публичных сервисов:
+
+```shell
 d8 k get istiofederation <name> -o jsonpath='{.status.metadataCache.private.publicServices}'
+```
 
-# Проверить, что по полученным метаданным созданы маршруты в локальном кластере.
+Проверьте, что по полученным метаданным созданы маршруты в локальном кластере:
+
+```shell
 d8 k -n d8-istio get serviceentry,destinationrule
 ```
 
