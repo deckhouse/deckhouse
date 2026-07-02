@@ -33,6 +33,8 @@ func ApplyNodeGroupCRDFilter(obj *unstructured.Unstructured) (interface{}, error
 	return common.NodeGroupCRDInfo{
 		Name:            ng.GetName(),
 		Spec:            ng.Spec,
+		Engine:          ng.Status.Engine,
+		UseMCM:          ng.GetAnnotations()["node.deckhouse.io/use-mcm"] != "",
 		ManualRolloutID: ng.GetAnnotations()["manual-rollout-id"],
 	}, nil
 }

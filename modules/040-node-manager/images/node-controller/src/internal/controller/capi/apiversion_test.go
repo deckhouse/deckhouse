@@ -25,8 +25,8 @@ func TestIsClusterRequest(t *testing.T) {
 	}{
 		{"cluster:static", true},
 		{"cluster:yandex", true},
-		{"cluster:", false},     // prefix only, len not > 8
-		{"cluster", false},      // no colon
+		{"cluster:", false}, // prefix only, len not > 8
+		{"cluster", false},  // no colon
 		{"md-worker-abc", false},
 		{"", false},
 	}
