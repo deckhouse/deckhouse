@@ -82,6 +82,8 @@ spec:
                 description: PEM-encoded CA certificate used to verify image signatures.
                 type: string
               protectedNamespaces:
+                required:
+                  - matchLabels
                 description: Label selector that defines which namespaces are protected
                   by this policy.
                 properties:
