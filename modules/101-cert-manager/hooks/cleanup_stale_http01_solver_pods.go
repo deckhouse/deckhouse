@@ -94,6 +94,10 @@ func applySolverPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}, nil
 }
 
+// cleanupStaleHTTP01SolverPods removes terminal HTTP-01 solver pods left behind when
+// cert-manager treats existing solver pods as valid without checking pod phase.
+// Orphaned Challenges and solver Ingress resources after publicDomainTemplate or
+// clusterDomain changes are tracked separately.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("cleanup-stale-http01-solver-pods"),
 	Settings: &go_hook.HookConfigSettings{
@@ -160,3 +164,6 @@ func cleanupStaleHTTP01SolverPods(ctx context.Context, input *go_hook.HookInput)
 
 	return nil
 }
+
+// Orphaned Challenges and solver Ingress after publicDomainTemplate or clusterDomain
+// changes are tracked in fix/cert-manager-stale-http01-solver-domain-change.
