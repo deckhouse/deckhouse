@@ -1,13 +1,20 @@
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ index $.Images "builder/distroless" }}
+shell:
+  beforeInstall:
+  - pm install baselayout -d /out
+  - pm install python@3.12 gnu-glibc grep sed coreutils bash -d /out
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/iptables-loop.py
   to: /iptables-loop.py
 import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /out
+  to: /
+  before: setup
 {{- include "image mount points" $ }}
-shell:
-  beforeInstall:
-  - pm install python@3.12 gnu-glibc grep sed coreutils bash
-  install:
-  - rm -rf /usr/local/bin/pm /var/lib/pm

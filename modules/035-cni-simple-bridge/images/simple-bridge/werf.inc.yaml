@@ -1,19 +1,26 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
 from: {{ index $.Images "builder/distroless" }}
 git:
 - add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/rootfs
-  to: /
-import:
-{{- include "image mount points" . }}
+  to: /out
 shell:
   beforeInstall:
-    - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl
-    - rm -rf /out/usr/local/bin/pm /var/lib/pm
+  - pm install baselayout -d /out
+  - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl -d /out
   install:
-    # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
-    - unlink /sbin
+  # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
+  - unlink /out/sbin
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: {{ index $.Images "base/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /out
+  to: /
+  before: install
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/sbin/iptables-wrapper"]
-
