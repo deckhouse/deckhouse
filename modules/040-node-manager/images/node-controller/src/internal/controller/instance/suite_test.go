@@ -22,7 +22,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	corev1 "k8s.io/api/core/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -77,7 +76,11 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping the envtest environment with deckhouse CRDs")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(scheme, testenv.CRDPaths("instance.yaml", "machine.yaml", "mcm.yaml"))
+	testEnv, cfg, k8sClient, err = testenv.Start(scheme,
+		testenv.InstanceCRDFile,
+		testenv.MCMCRDFile,
+		testenv.MachineCRDFile,
+	)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating the machine namespace")
