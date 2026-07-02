@@ -1,5 +1,5 @@
 {{- define "integrity_containerd_configurator_resources" }}
-cpu: 25m
+cpu: 10m
 memory: 50Mi
 {{- end }}
 
