@@ -4,6 +4,7 @@
 
 
  - A new resource, `kubernetes_resource_ready_v1`, has been introduced to perform readiness checks for cloud resources, replacing `wait` blocks. After upgrading, the OpenTofu plan will include adding the new resources and removing `wait` blocks. Running `converge` is required to apply the changes and is safe: it does not modify existing cloud resources. During migration, readiness checks are skipped for resources older than 5 days. Related warnings may appear and can be safely ignored.
+ - After upgrading to v1.76.0, kubectl logs and exec fail cluster-wide for all users. Manual workaround is available — see PR description.
  - Changes were introduced in the OpenTofu integration to support the new `kubernetes_resource_ready_v1` resource used by `cloud-provider-dvp` and avoid unnecessary or destructive plan changes when data sources depend on readiness checks. Other cloud providers are not affected. If you encounter unexpected converge plans or cluster bootstrap issues when using OpenTofu-based providers (such as DVP, DynamiX, zVirt, or Yandex), report them to Deckhouse Technical Support.
  - Cilium agents will be restarted during the update.
  - Custom edits to the local-path-config ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
@@ -113,6 +114,7 @@
  - **[docs]** Added an alert for failed documentation renderings. [#18756](https://github.com/deckhouse/deckhouse/pull/18756)
  - **[ingress-nginx]** A configuration drift alert is added. [#18342](https://github.com/deckhouse/deckhouse/pull/18342)
     All Ingress-Nginx controller pods will be restarted.
+ - **[istio]** Add deploy dependencies for Istio webhook configurations [#20995](https://github.com/deckhouse/deckhouse/pull/20995)
  - **[istio]** Added monitoring of the reserved UID `1337` in pods. [#18633](https://github.com/deckhouse/deckhouse/pull/18633)
  - **[istio]** Added support for the `istio.io/rev:default` label. [#18320](https://github.com/deckhouse/deckhouse/pull/18320)
  - **[istio]** Added validating webhooks for IstioFederation and IstioMulticluster resources. [#18406](https://github.com/deckhouse/deckhouse/pull/18406)
@@ -164,10 +166,12 @@
     Workload Pods are no longer denied by unrelated SecurityPolicy checks (e.g. hostNetwork/hostPort) when corresponding policy fields are not explicitly set.
  - **[admission-policy-engine]** Revert  Changed default PSS policy to Baseline for unrecognized deckhouse versions [#19187](https://github.com/deckhouse/deckhouse/pull/19187)
  - **[candi]** Added deletion of webhook configurations before destroying a Deckhouse deployment. [#19041](https://github.com/deckhouse/deckhouse/pull/19041)
+ - **[candi]** Fix containerd credential escaping by rendering username/password into auth string. [#20921](https://github.com/deckhouse/deckhouse/pull/20921)
  - **[candi]** Fixed CVEs in `cloud-provider-azure`. [#18067](https://github.com/deckhouse/deckhouse/pull/18067)
  - **[candi]** Fixed internal node IP discovery for static nodes in DVP clusters. [#18441](https://github.com/deckhouse/deckhouse/pull/18441)
  - **[candi]** fix cve node-manager and opentofu. [#19940](https://github.com/deckhouse/deckhouse/pull/19940)
  - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#18133](https://github.com/deckhouse/deckhouse/pull/18133)
+ - **[candi]** fix static node cleanup to wipe data on externally mounted volumes before unmounting, preventing stale data from causing re-bootstrap failures [#20758](https://github.com/deckhouse/deckhouse/pull/20758)
  - **[cert-manager]** Disable SecurityPolicyExceptions for cert-manager namespace [#19184](https://github.com/deckhouse/deckhouse/pull/19184)
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0 [#20250](https://github.com/deckhouse/deckhouse/pull/20250)
  - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18657](https://github.com/deckhouse/deckhouse/pull/18657)
@@ -181,6 +185,7 @@
  - **[cloud-provider-azure]** fix CVEs in cloud-provider-azure [#18240](https://github.com/deckhouse/deckhouse/pull/18240)
  - **[cloud-provider-dvp]** Add skip storage class annotation handling to skip discovery of some storage classes from parent clusters, e.g., local disks. [#19783](https://github.com/deckhouse/deckhouse/pull/19783)
  - **[cloud-provider-dvp]** Allowed using `additionalDisks` in master InstanceClasses. [#17352](https://github.com/deckhouse/deckhouse/pull/17352)
+ - **[cloud-provider-dvp]** CVE fixes [#20908](https://github.com/deckhouse/deckhouse/pull/20908)
  - **[cloud-provider-dvp]** Fixed CVEs. [#19362](https://github.com/deckhouse/deckhouse/pull/19362)
  - **[cloud-provider-dvp]** Fixed invalid and unpredictable logic in the DeckhouseMachine controller. [#18715](https://github.com/deckhouse/deckhouse/pull/18715)
  - **[cloud-provider-dvp]** Fixed missing SSH public keys for ephemeral nodes. [#19357](https://github.com/deckhouse/deckhouse/pull/19357)
@@ -235,12 +240,15 @@
  - **[control-plane-manager]** Skip rebind of ClusterRoleBinding/kubeadm:cluster-admins until the cluster is fully bootstrapped; harden the reconciliation hook. Fixes "cannot change roleRef" on fresh clusters. [#19744](https://github.com/deckhouse/deckhouse/pull/19744)
  - **[control-plane-manager]** Upgraded etcd to 3.6.10. [#19273](https://github.com/deckhouse/deckhouse/pull/19273)
     Etcd will restart.
+ - **[control-plane-manager]** fix Helm adoption of kubeadm:cluster-admins CRB on upgrade from pre-v1.76 [#20904](https://github.com/deckhouse/deckhouse/pull/20904)
+    After upgrading to v1.76.0, kubectl logs and exec fail cluster-wide for all users. Manual workaround is available — see PR description.
  - **[csi-vsphere]** Fixed the Deckhouse queue getting stuck [#20092](https://github.com/deckhouse/deckhouse/pull/20092)
  - **[deckhouse-controller]** A module that conditionally depends on another is no longer disabled when an incompatible version of that dependency is enabled; the enable is rejected instead. [#20344](https://github.com/deckhouse/deckhouse/pull/20344)
  - **[deckhouse-controller]** Fix applications charts rendering issue [#20282](https://github.com/deckhouse/deckhouse/pull/20282)
  - **[deckhouse-controller]** Fix false DeckhouseUpdatingFailed alert on registries without version tags in release-channel repo [#18310](https://github.com/deckhouse/deckhouse/pull/18310)
  - **[deckhouse-controller]** Fixed error logging for MPO validation. [#18698](https://github.com/deckhouse/deckhouse/pull/18698)
  - **[deckhouse-controller]** Fixed validation for switching ClusterConfiguration kubernetesVersion from an explicit version to Automatic. [#20331](https://github.com/deckhouse/deckhouse/pull/20331)
+ - **[deckhouse-controller]** add werf dependency to webhook [#20970](https://github.com/deckhouse/deckhouse/pull/20970)
  - **[deckhouse-controller]** added extra validation for kubernets version multiple downgrades scenario [#18794](https://github.com/deckhouse/deckhouse/pull/18794)
  - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19277](https://github.com/deckhouse/deckhouse/pull/19277)
  - **[deckhouse]** Bumped Hugo and `x/image` to fix CVE-2026-33809, CVE-2026-35166. [#18985](https://github.com/deckhouse/deckhouse/pull/18985)
@@ -257,6 +265,7 @@
  - **[deckhouse]** Restore ModuleIsInMaintenanceMode alert by switching to d8_module_config_maintenance sourced from ModuleConfig. [#19352](https://github.com/deckhouse/deckhouse/pull/19352)
  - **[deckhouse]** Revoke permission to use moduleconfig to user. [#19698](https://github.com/deckhouse/deckhouse/pull/19698)
  - **[deckhouse]** Use non-controller ownerRefs for multi-source package CRs. [#20463](https://github.com/deckhouse/deckhouse/pull/20463)
+ - **[deckhouse]** fix libs in the python-based images [#21011](https://github.com/deckhouse/deckhouse/pull/21011)
  - **[dhctl]** Added a preflight check for validating InstanceClasses against the selected cloud provider. [#18473](https://github.com/deckhouse/deckhouse/pull/18473)
  - **[dhctl]** Added validation of the command execution status code [#18128](https://github.com/deckhouse/deckhouse/pull/18128)
  - **[dhctl]** Excluded `BaseInfraPhase` from the progress phase list for static clusters. [#17856](https://github.com/deckhouse/deckhouse/pull/17856)
@@ -274,6 +283,7 @@
  - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19793](https://github.com/deckhouse/deckhouse/pull/19793)
  - **[dhctl]** add NodeReady wait to dhctl converge and improve etcd check output [#18991](https://github.com/deckhouse/deckhouse/pull/18991)
  - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19560](https://github.com/deckhouse/deckhouse/pull/19560)
+ - **[dhctl]** fix grpc stream cancel deadlock [#21013](https://github.com/deckhouse/deckhouse/pull/21013)
  - **[dhctl]** fixed the `killall kubectl` command for the `d8 k` alias [#20423](https://github.com/deckhouse/deckhouse/pull/20423)
  - **[dhctl]** fixed the `pkill d8 k proxy` command in `dhctl` [#20460](https://github.com/deckhouse/deckhouse/pull/20460)
  - **[dhctl]** mitigate CVE-2026-33186 [#18625](https://github.com/deckhouse/deckhouse/pull/18625)
@@ -290,10 +300,14 @@
     All pods of Ingress-NGINX controller of 1.10 and 1.12 versions will be restarted.
  - **[ingress-nginx]** CVE-2026-3288 is mitigated in all Ingress-Nginx controllers. [#18387](https://github.com/deckhouse/deckhouse/pull/18387)
     All Ingress-Nginx controller pods will be restarted.
+ - **[ingress-nginx]** Default ingress controller version is reverted to 1.10. [#20934](https://github.com/deckhouse/deckhouse/pull/20934)
+    All ingress-nginx controller pods using default controller version will be restarted.
  - **[ingress-nginx]** Fixing mount points in a geoproxy image. [#20126](https://github.com/deckhouse/deckhouse/pull/20126)
     Geoproxy image will be restarted.
  - **[ingress-nginx]** Initial ingress store sync is  fixed. [#19031](https://github.com/deckhouse/deckhouse/pull/19031)
     All Ingress-NGINX controller pods will be restarted.
+ - **[ingress-nginx]** Nginx is updated to 1.30.3. [#20787](https://github.com/deckhouse/deckhouse/pull/20787)
+    All ingress-nginx pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19865](https://github.com/deckhouse/deckhouse/pull/19865)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20200](https://github.com/deckhouse/deckhouse/pull/20200)
@@ -401,6 +415,7 @@
  - **[candi]** Make flag encryption-provider-config-automatic-reload auto enabled when secretEncryptionKey is true [#19287](https://github.com/deckhouse/deckhouse/pull/19287)
     Apiserver will restart if secretEncryptionKey is true
  - **[candi]** add container-selinux package for selinux policies on rhel based distributions. [#17714](https://github.com/deckhouse/deckhouse/pull/17714)
+ - **[candi]** update base_images [#20914](https://github.com/deckhouse/deckhouse/pull/20914)
  - **[cilium-hubble]** Added vex with CVE-2026-33726 for hubble [#18913](https://github.com/deckhouse/deckhouse/pull/18913)
  - **[cilium-hubble]** Fixed vex file [#19001](https://github.com/deckhouse/deckhouse/pull/19001)
  - **[cilium-hubble]** open source components versions migrated from werf.inc.yaml to oss.yaml [#18117](https://github.com/deckhouse/deckhouse/pull/18117)

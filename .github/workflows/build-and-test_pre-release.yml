@@ -27,7 +27,6 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.72.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -175,7 +174,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -220,9 +218,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -294,15 +317,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -511,9 +533,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -644,15 +691,40 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
-      - name: Set up Go 1.25
+      - name: Set up Go 1.26
         uses: actions/setup-go@v5.4.0
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
+
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
 
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -722,7 +794,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -767,9 +838,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -841,15 +937,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1025,7 +1120,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1070,9 +1164,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -1144,15 +1263,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1328,7 +1446,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1373,9 +1490,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -1447,15 +1589,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1631,7 +1772,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1676,9 +1816,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -1750,15 +1915,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1934,7 +2098,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1979,9 +2142,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -2053,15 +2241,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -2237,7 +2424,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -2282,9 +2468,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -2356,15 +2567,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -2520,6 +2730,26 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -2709,14 +2939,14 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:0827a3308a3cd84f78f6c35448bccdb35ae3061ec6be9c7f1b87936f76e1f551"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:a3f1fac5643b72b112e7bb6698e2d63bb15a729bf4f7550a014001b54dd944d1"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sleep infinity)
+          CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sleep infinity)
           docker exec ${CONTAINER_ID} pm install git
           docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
           docker rm -f ${CONTAINER_ID}
@@ -2947,7 +3177,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make ci
+          docker run -w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec ${TESTS_IMAGE_NAME} make ci
     # </template: tests_template>
 
   golint:
@@ -3070,7 +3300,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"
     # </template: tests_template>
 
   openapi_test_cases:
@@ -3188,7 +3418,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
+          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
 
   security_scan_images:
@@ -3395,7 +3625,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
+          docker run -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
 
   doc_pdf_build:
@@ -3498,9 +3728,34 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -3585,6 +3840,26 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -3712,6 +3987,26 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split

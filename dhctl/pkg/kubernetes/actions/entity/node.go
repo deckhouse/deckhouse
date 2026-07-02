@@ -33,12 +33,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -59,12 +60,12 @@ func (i *NodeIP) Name() string {
 	return i.InternalIP
 }
 
-func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, logger log.Logger, apiserverHosts ...string) (string, error) {
+func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
 
-	return cloudData, logger.LogProcessCtx(ctx, "default", name, func(ctx context.Context) error {
+	return cloudData, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), name, func(ctx context.Context) error {
 		if showDeckhouseLogs {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -90,7 +91,7 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 
 		err := retry.NewSilentLoop(name, 225, 1*time.Second).RunContext(ctx, func() error {
 			if nodeGroupName == global.MasterNodeGroupName {
-				logger.LogInfoF("Waiting while all API-server endpoints '%s' will be available in bootstrap secret\n", allPassedHosts)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Waiting while all API-server endpoints '%s' will be available in bootstrap secret", allPassedHosts))
 			}
 			secret, err := kubeCl.CoreV1().
 				Secrets("d8-cloud-instance-manager").
@@ -103,7 +104,7 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 				var endpoints []string
 
 				endpointsRaw := secret.Data["apiserverEndpoints"]
-				logger.LogDebugF("Got raw apiserverEndpoints: %v", string(endpointsRaw))
+				dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Got raw apiserverEndpoints: %v", string(endpointsRaw)), "\n"))
 
 				err := yaml.Unmarshal(endpointsRaw, &endpoints)
 				if err != nil {
@@ -118,7 +119,7 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 						return fmt.Errorf("failed to split endpoint `%s` into host and port: %v", endpoint, err)
 					}
 
-					logger.LogDebugF("Got API-server host %s from secret\n", host)
+					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Got API-server host %s from secret", host))
 
 					hostsMap[host] = struct{}{}
 				}
@@ -130,7 +131,7 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 					}
 				}
 			} else if nodeGroupName == global.MasterNodeGroupName {
-				logger.LogDebugLn("Got empty apiserver endpoints from arguments")
+				dhlog.FromContext(ctx).DebugContext(ctx, "Got empty apiserver endpoints from arguments")
 			}
 
 			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
@@ -141,28 +142,27 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 			return err
 		}
 
-		logger.LogInfoLn("Cloud configuration found!")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Cloud configuration found!")
 		return nil
 	})
 }
 
-func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, logger log.Logger, data map[string]interface{}) error {
+func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, data map[string]any) error {
 	doc := unstructured.Unstructured{}
 	doc.SetUnstructuredContent(data)
 
 	return retry.NewLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 600, 1*time.Second).
-		WithLogger(logger).
 		RunContext(ctx, func() error {
 			res, err := kubeCl.Dynamic().
 				Resource(nodeGroupResource).
 				Create(ctx, &doc, metav1.CreateOptions{})
 			if err == nil {
-				logger.LogInfoF("NodeGroup %q created\n", res.GetName())
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("NodeGroup %q created", res.GetName()))
 				return nil
 			}
 
 			if errors.IsAlreadyExists(err) {
-				logger.LogInfoF("Object %v, updating ... ", err)
+				dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf("Object %v, updating ... ", err), "\n"))
 				content, err := doc.MarshalJSON()
 				if err != nil {
 					return err
@@ -173,7 +173,7 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 				if err != nil {
 					return err
 				}
-				logger.LogInfoF("OK!")
+				dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
 				return nil
 			}
 
@@ -251,9 +251,9 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 					continue
 				}
 				if cond.Message != "" {
-					log.InfoF("Node %q Ready: %s (%s)\n", nodeName, cond.Status, cond.Message)
+					dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node %q Ready: %s (%s)", nodeName, cond.Status, cond.Message))
 				} else {
-					log.InfoF("Node %q Ready: %s\n", nodeName, cond.Status)
+					dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node %q Ready: %s", nodeName, cond.Status))
 				}
 				if cond.Status == corev1.ConditionTrue {
 					return nil
@@ -291,21 +291,22 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 				}
 			}
 
-			message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+			var message strings.Builder
+			fmt.Fprintf(&message, "Nodes Ready %d of %d\n", len(readyNodes), desiredReadyNodes)
 			for _, node := range nodes.Items {
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
 				}
-				message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
 
 			if len(readyNodes) >= desiredReadyNodes {
-				log.InfoLn(message)
+				dhlog.FromContext(ctx).InfoContext(ctx, message.String())
 				return nil
 			}
 
-			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message.String(), "\n"))
 		})
 }
 
@@ -334,9 +335,9 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 								var err error
 								ready, err = checker.IsReady(ctx, node.Name)
 								if err != nil {
-									log.InfoF("While performing check '%s', node %s returned an error: %v\n", checker.Name(), node.Name, err)
+									dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("While performing check '%s', node %s returned an error: %v", checker.Name(), node.Name, err))
 								} else if !ready {
-									log.InfoF("Node %s is ready but %s is not ready\n", node.Name, checker.Name())
+									dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node %s is ready but %s is not ready", node.Name, checker.Name()))
 								}
 							}
 
@@ -348,26 +349,27 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 				}
 			}
 
-			message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+			var message strings.Builder
+			fmt.Fprintf(&message, "Nodes Ready %d of %v\n", len(readyNodes), desiredReadyNodes)
 			for _, node := range nodesList.Items {
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
 				}
-				message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
 
 			if len(readyNodes) >= desiredReadyNodes {
-				log.InfoLn(message)
+				dhlog.FromContext(ctx).InfoContext(ctx, message.String())
 				return nil
 			}
 
-			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message.String(), "\n"))
 		})
 }
 
-func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
-	nodeTemplates := make(map[string]map[string]interface{})
+func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]any, error) {
+	nodeTemplates := make(map[string]map[string]any)
 
 	err := retry.NewLoop("Get NodeGroups node template settings", 50, 1*time.Second).
 		RunContext(ctx, func() error {
@@ -377,9 +379,9 @@ func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient)
 			}
 
 			for _, group := range nodeGroups.Items {
-				var nodeTemplate map[string]interface{}
-				if spec, ok := group.Object["spec"].(map[string]interface{}); ok {
-					nodeTemplate, _ = spec["nodeTemplate"].(map[string]interface{})
+				var nodeTemplate map[string]any
+				if spec, ok := group.Object["spec"].(map[string]any); ok {
+					nodeTemplate, _ = spec["nodeTemplate"].(map[string]any)
 					// if we do not set node template in cluster provider configuration
 					// we get nil node template from config,
 					// but k8s always returns empty map (not nil)
@@ -439,10 +441,9 @@ func requestNodeExists(ctx context.Context, kubeCl *client.KubernetesClient, nod
 	return true, err
 }
 
-func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, logger log.Logger) (bool, error) {
+func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) (bool, error) {
 	exists := false
 	err := retry.NewLoop(fmt.Sprintf("Checking node exists %s", nodeName), 10, 1*time.Second).
-		WithLogger(logger).
 		RunContext(ctx, func() error {
 			var err error
 			exists, err = requestNodeExists(ctx, kubeCl, nodeName)
@@ -476,14 +477,14 @@ func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientPr
 
 		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, listOpts)
 		if err != nil {
-			log.DebugF("Cannot get nodes. Got error: %v", err)
+			dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Cannot get nodes. Got error: %v", err), "\n"))
 			return err
 		}
 		return nil
 	})
 
 	if err != nil {
-		log.DebugF("Cannot get nodes after %d attempts\n", loopParams.Attempts())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cannot get nodes after %d attempts", loopParams.Attempts()))
 		return nil, err
 	}
 

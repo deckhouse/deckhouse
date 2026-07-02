@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-DMT_VERSION=0.1.84
+DMT_VERSION=0.1.88
 
 function install_dmt() {
   platform_name=$(uname -m)
@@ -65,9 +65,31 @@ function structure_prepare {
   mkdir -p /deckhouse/candi/cloud-providers
 
   for dir in "${modules_dir[@]}"; do
-    cp -R /deckhouse/"${dir}"/* /deckhouse/modules
-
     shopt -s nullglob
+    for source_module_dir in /deckhouse/${dir}/*; do
+      local module_name
+      module_name=$(basename "${source_module_dir}")
+      local target_module_dir="/deckhouse/modules/${module_name}"
+      local merged_oss_tmp=""
+
+      if [[ -f "${target_module_dir}/oss.yaml" && -f "${source_module_dir}/oss.yaml" ]]; then
+        merged_oss_tmp=$(mktemp)
+        cat "${target_module_dir}/oss.yaml" > "${merged_oss_tmp}"
+        printf "\n" >> "${merged_oss_tmp}"
+        cat "${source_module_dir}/oss.yaml" >> "${merged_oss_tmp}"
+      fi
+
+      if [[ -d "${target_module_dir}" ]]; then
+        cp -R "${source_module_dir}"/. "${target_module_dir}"/
+      else
+        cp -R "${source_module_dir}" "${target_module_dir}"
+      fi
+
+      if [[ -n "${merged_oss_tmp}" ]]; then
+        mv "${merged_oss_tmp}" "${target_module_dir}/oss.yaml"
+      fi
+    done
+
     for cloud_provider_dir in /deckhouse/${dir}/${cloud_providers_glob}; do
       local cloud_provider_name=$(echo "${cloud_provider_dir}" | grep -oP '(?<=030-cloud-provider-)[^[:space:]]+')
       cp -R $cloud_provider_dir /deckhouse/candi/cloud-providers/"${cloud_provider_name}"

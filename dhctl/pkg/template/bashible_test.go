@@ -32,14 +32,14 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 	tplContent, err := os.ReadFile("/deckhouse/candi/bashible/bashible.sh.tpl")
 	require.NoError(t, err)
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"runType":     "Normal",
 		"clusterUUID": "848c3b2c-eda6-11ec-9289-dff550c719eb",
-		"nodeGroup": map[string]interface{}{
+		"nodeGroup": map[string]any{
 			"name":     "master",
 			"nodeType": "CloudPermanent",
 		},
-		"clusterMasterEndpoints": []map[string]interface{}{
+		"clusterMasterEndpoints": []map[string]any{
 			{
 				"address":     "10.0.0.1",
 				"kubeApiPort": 6443,
@@ -53,12 +53,12 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 		"clusterMasterKubeAPIEndpoints": []string{
 			"10.0.0.1:6443",
 		},
-		"images": map[string]interface{}{
-			"registrypackages": map[string]interface{}{
+		"images": map[string]any{
+			"registrypackages": map[string]any{
 				"rppGet": "sha256:test",
 			},
 		},
-		"registry": map[string]interface{}{
+		"registry": map[string]any{
 			"registryModuleEnable": "false",
 		},
 	}
@@ -82,7 +82,7 @@ func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *test
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	data, err := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
+	data, err := metaConfig.ConfigForBashibleBundleTemplate(context.Background(), "10.0.0.2")
 	require.NoError(t, err)
 
 	tplContent, err := os.ReadFile("/deckhouse/candi/bashible/bashible.sh.tpl")

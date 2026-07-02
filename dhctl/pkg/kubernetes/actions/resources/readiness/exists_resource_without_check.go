@@ -18,21 +18,16 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 // ExistsResourceWithoutChecker
 // use for resources without special checks
 // resources was get before run check and we do not need check another
 type ExistsResourceWithoutChecker struct {
-	loggerProvider log.LoggerProvider
 }
 
-func NewExistsResourceWithoutChecker(loggerProvider log.LoggerProvider) *ExistsResourceWithoutChecker {
-	return &ExistsResourceWithoutChecker{
-		loggerProvider: loggerProvider,
-	}
+func NewExistsResourceWithoutChecker() *ExistsResourceWithoutChecker {
+	return &ExistsResourceWithoutChecker{}
 }
 
 func (e *ExistsResourceWithoutChecker) WaitAttemptsBeforeCheck() int {
@@ -40,6 +35,6 @@ func (e *ExistsResourceWithoutChecker) WaitAttemptsBeforeCheck() int {
 	return 1
 }
 
-func (e *ExistsResourceWithoutChecker) IsReady(_ context.Context, _ *unstructured.Unstructured, resourceName string) (bool, error) {
-	return debugLogAndReturnReady(log.SafeProvideLogger(e.loggerProvider), resourceName, "is exists and ready, because do not need special checks")
+func (e *ExistsResourceWithoutChecker) IsReady(ctx context.Context, _ *unstructured.Unstructured, resourceName string) (bool, error) {
+	return debugLogAndReturnReady(ctx, resourceName, "is exists and ready, because do not need special checks")
 }

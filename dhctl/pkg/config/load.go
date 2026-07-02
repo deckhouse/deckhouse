@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,10 +34,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type SchemaStore struct {
@@ -126,8 +127,8 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
-		pathsNoTrimmed := strings.Split(pathsStr, ",")
-		for _, p := range pathsNoTrimmed {
+		pathsNoTrimmed := strings.SplitSeq(pathsStr, ",")
+		for p := range pathsNoTrimmed {
 			paths = append(paths, strings.TrimSpace(p))
 		}
 	}
@@ -143,6 +144,8 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 	}
 
 	st.conversionsStore = conversion.NewConversionsStore()
+
+	ctx := context.Background()
 
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
@@ -184,7 +187,7 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// autoconverger and state exporter do not contains module dir
-		log.WarnF("Modules dir %s not found\n", modulesDir)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Modules dir %s not found", modulesDir))
 		return st
 	}
 
@@ -193,7 +196,7 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 		stat, err := os.Stat(conversionPath)
 		if err == nil && stat.IsDir() {
 			err := st.conversionsStore.Add(moduleName, conversionPath)
-			log.DebugF("Found conversion for module %s. Latest version: %d\n", moduleName, st.conversionsStore.Get(moduleName).LatestVersion())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found conversion for module %s. Latest version: %d", moduleName, st.conversionsStore.Get(moduleName).LatestVersion()))
 
 			return err
 		}
@@ -227,7 +230,7 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 			st.moduleConfigsCache[moduleName] = schema
 
 		case errors.Is(err, os.ErrNotExist):
-			log.DebugF("Openapi spec not found for module %s\n", moduleName)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Openapi spec not found for module %s", moduleName))
 		default:
 			return err
 		}
@@ -327,6 +330,7 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 // if schema not fount then return ErrSchemaNotFound
 // if schema not found for ModuleConfig then return ErrSchemaNotFound also
 func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
+	ctx := context.Background()
 	options := applyOptions(opts...)
 	if !index.IsValid() {
 		return fmt.Errorf(
@@ -345,7 +349,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return err
 		}
 		mcName := mc.GetName()
-		log.DebugF("Found module config to validate %s\n", mcName)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found module config to validate %s", mcName))
 		if mc.Spec.Enabled == nil && mcName != "global" {
 			// we need return error because on top level we want filter module configs from modulesources and move into resources
 			// global is special mc without module
@@ -353,7 +357,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		}
 
 		if _, ok := s.modulesCache[mcName]; !ok && mcName != "global" {
-			log.DebugF("Module %s wasn't found. It is probably a module from modulesources. Skipping it\n", mc.GetName())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Module %s wasn't found. It is probably a module from modulesources. Skipping it", mc.GetName()))
 			return ErrSchemaNotFound
 		}
 
@@ -364,7 +368,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
-			log.DebugF("Schema for module config %s wasn't found. It is probably a module from modulesources. Skipping it\n", mc.GetName())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Schema for module config %s wasn't found. It is probably a module from modulesources. Skipping it", mc.GetName()))
 			return fmt.Errorf("Schema for module config %s not found", mcName)
 		}
 
@@ -382,7 +386,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 	}
 
 	if schema == nil {
-		log.DebugF("No schema for index %s. Skipping it\n", index.String())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("No schema for index %s. Skipping it", index.String()))
 		// we need return error because on top level we want filter documents without index and move into resources
 		return ErrSchemaNotFound
 	}
@@ -448,7 +452,7 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (bool, error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
-	var blank map[string]interface{}
+	var blank map[string]any
 
 	if options.strictUnmarshal {
 		err := yaml.UnmarshalStrict(*dataObj, &blank)
@@ -503,10 +507,11 @@ func applyOptions(opts ...ValidateOption) validateOptions {
 }
 
 func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
+	ctx := context.Background()
 	conversion := s.conversionsStore.Get(mc.GetName())
-	log.DebugF("Starting conversion for module %s. Latest version: %d\n", mc.GetName(), conversion.LatestVersion())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Starting conversion for module %s. Latest version: %d", mc.GetName(), conversion.LatestVersion()))
 	var err error
-	var conversed map[string]interface{}
+	var conversed map[string]any
 	if mc.Spec.Version < conversion.LatestVersion() {
 		set := &mc.Spec.Settings
 		unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(set)
@@ -517,7 +522,7 @@ func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
 		if err != nil {
 			return []byte{}, fmt.Errorf("error converting to unstructured: %w", err)
 		}
-		log.DebugF("conversion successfully applied for ModuleConfig %s\n", mc.GetName())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("conversion successfully applied for ModuleConfig %s", mc.GetName()))
 	} else {
 		return yaml.Marshal(mc.Spec.Settings)
 	}

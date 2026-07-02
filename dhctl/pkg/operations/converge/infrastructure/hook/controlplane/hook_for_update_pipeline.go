@@ -28,6 +28,7 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -35,7 +36,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -115,7 +115,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	}
 
 	if !runner.HasVMDestruction() {
-		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return false, nil
 	}
 
@@ -141,7 +141,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
-		log.InfoF("Got empty master IP for ssh for node %s.\n", h.nodeToConverge)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s.", h.nodeToConverge))
 		return false, nil
 	}
 
@@ -177,7 +177,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	}
 
 	if !runner.HasVMDestruction() {
-		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return nil
 	}
 
@@ -191,7 +191,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	}
 
 	if !h.commanderMode {
-		cl, err := h.sshProvider.Client(context.Background())
+		cl, err := h.sshProvider.Client(ctx)
 		if err != nil {
 			panic("Node interface is not ssh")
 		}
@@ -259,7 +259,7 @@ func (h *HookForUpdatePipeline) IsReady() error {
 }
 
 func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context, devicePath string) error {
-	getDevicePathManifest := func() interface{} {
+	getDevicePathManifest := func() any {
 		return manifests.SecretMasterDevicePath(h.nodeToConverge, []byte(devicePath))
 	}
 
@@ -271,7 +271,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 		Manifest: getDevicePathManifest,
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
@@ -279,7 +279,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 
 			return nil
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			data, err := json.Marshal(manifest.(*apiv1.Secret))
 			if err != nil {
 				return err

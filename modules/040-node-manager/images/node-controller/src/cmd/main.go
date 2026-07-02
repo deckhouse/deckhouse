@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -32,6 +33,7 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -42,6 +44,8 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/crdmigration"
+	cachemetrics "github.com/deckhouse/node-controller/internal/metrics/cache"
 	"github.com/deckhouse/node-controller/internal/register"
 	_ "github.com/deckhouse/node-controller/internal/register/controllers"
 	"github.com/deckhouse/node-controller/internal/webhook"
@@ -54,6 +58,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	utilruntime.Must(capiv1beta2.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha1.AddToScheme(scheme))
@@ -92,6 +97,17 @@ func main() {
 	cfg := ctrl.GetConfigOrDie()
 	ctx := ctrl.SetupSignalHandler()
 
+	setupLog.Info("ensuring CAPI CRDs")
+	directClient, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "unable to create direct client for CRD migration")
+		os.Exit(1)
+	}
+	if err := crdmigration.EnsureCRDs(ctx, directClient); err != nil {
+		setupLog.Error(err, "unable to ensure CAPI CRDs")
+		os.Exit(1)
+	}
+
 	cacheOpts, clientOpts := common.CacheOptions()
 	clientOpts.Cache.DisableFor = append(clientOpts.Cache.DisableFor, webhook.DisableFor()...)
 
@@ -116,6 +132,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	instrumentedClient := &cachemetrics.InstrumentedClient{
+		Client: mgr.GetClient(),
+	}
+
+	if err = mgr.Add(cachemetrics.NewCollector(instrumentedClient)); err != nil {
+		setupLog.Error(err, "unable to add cache metrics collector")
+		os.Exit(1)
+	}
+
 	if err = webhook.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to setup webhooks")
 		os.Exit(1)
@@ -129,7 +154,7 @@ func main() {
 	}
 	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
 
-	if err = register.SetupAll(mgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
+	if err = register.SetupAll(mgr, instrumentedClient, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}

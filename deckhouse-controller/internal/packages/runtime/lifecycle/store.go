@@ -97,6 +97,31 @@ func (s *Store) Update(name, version string, settings addonutils.Values) context
 	return nil
 }
 
+// UpdateSettings stores new pending settings for an already-tracked package
+// without touching its version or context tree. Returns true if the settings
+// checksum changed and the caller should Reschedule, false if nothing changed or
+// the package is not tracked yet.
+//
+// Unlike Update, this never creates or cancels a context: in-flight deploy and
+// load tasks are left running. It is the settings-only counterpart to Update,
+// used when settings change independently of a version change. The ModuleConfig
+// enabled intent is tracked separately by the global module (see
+// global.Module.SetConfigEnabled), not here.
+func (s *Store) UpdateSettings(name string, settings addonutils.Values) bool {
+	pkg, ok := s.packages[name]
+	if !ok {
+		return false
+	}
+
+	if pkg.settings.Checksum() == settings.Checksum() {
+		return false
+	}
+
+	pkg.settings = settings
+
+	return true
+}
+
 // HandleEvent renews the context for the given event type and returns it.
 //
 // For EventRemove: clears version and settings before renewing context, so a

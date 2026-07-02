@@ -21,17 +21,20 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -101,8 +104,6 @@ type Runner struct {
 	confirm func() *input.Confirmation
 	stopped bool
 
-	logger log.Logger
-
 	// Atomic flag to check weather infrastructure utility is running. Do not manually change its values.
 	// Odd number - infrastructure utility is running
 	// Even number - runner is in standby mode
@@ -139,8 +140,6 @@ func (r *Runner) WithDebug(d bool) *Runner {
 func NewRunner(cfg *config.MetaConfig, stateCache state.Cache, executor Executor) *Runner {
 	prefix := cfg.ClusterPrefix
 
-	logger := log.GetDefaultLogger()
-
 	step := executor.Step()
 
 	r := &Runner{
@@ -150,7 +149,6 @@ func NewRunner(cfg *config.MetaConfig, stateCache state.Cache, executor Executor
 		stateCache:     stateCache,
 		changeSettings: ChangeActionSettings{},
 		infraExecutor:  executor,
-		logger:         logger,
 	}
 
 	var destinations []SaverDestination
@@ -204,15 +202,17 @@ func (r *Runner) WithHook(h InfraActionHook) *Runner {
 func (r *Runner) WithState(stateData []byte) *Runner {
 	step := r.infraExecutor.Step()
 
+	ctx := context.Background()
+
 	tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(step)+deckhouseClusterStateSuffix)
 	if err != nil {
-		log.ErrorF("Can't save infrastructure state for runner %s: %s\n", step, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Can't save infrastructure state for runner %s: %s", step, err))
 		return r
 	}
 
 	err = os.WriteFile(tmpFile.Name(), stateData, 0o600)
 	if err != nil {
-		log.ErrorF("Can't write infrastructure state for runner %s: %s\n", step, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Can't write infrastructure state for runner %s: %s", step, err))
 		return r
 	}
 
@@ -223,15 +223,17 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 func (r *Runner) WithVariables(variablesData []byte) *Runner {
 	step := r.infraExecutor.Step()
 
+	ctx := context.Background()
+
 	tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), varFileName)
 	if err != nil {
-		log.ErrorF("Can't save infrastructure variables for runner %s: %s\n", step, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Can't save infrastructure variables for runner %s: %s", step, err))
 		return r
 	}
 
 	err = os.WriteFile(tmpFile.Name(), variablesData, 0o600)
 	if err != nil {
-		log.ErrorF("Can't write infrastructure variables for runner %s: %s\n", step, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Can't write infrastructure variables for runner %s: %s", step, err))
 		return r
 	}
 
@@ -278,15 +280,6 @@ func (r *Runner) WithSingleShotMode(enabled bool) RunnerInterface {
 	return r
 }
 
-func (r *Runner) WithLogger(logger log.Logger) *Runner {
-	r.logger = logger
-	return r
-}
-
-func (r *Runner) GetLogger() log.Logger {
-	return r.logger
-}
-
 func (r *Runner) switchInfrastructureUtilityIsRunning() {
 	atomic.AddInt32(&r.infrastructureUtilityRunningCounter, 1)
 }
@@ -311,7 +304,7 @@ func (r *Runner) Init(ctx context.Context) error {
 		}
 
 		if hasState {
-			r.logger.LogInfoF("Cached infrastructure state found:\n\t%s\n\n", r.statePath)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cached infrastructure state found:\n\t%s", r.statePath))
 			if !r.allowedCachedState {
 				var isConfirm bool
 				switch r.useTfCache {
@@ -340,7 +333,7 @@ func (r *Runner) Init(ctx context.Context) error {
 				err := fs.WriteContentIfNeed(r.statePath, stateData)
 				if err != nil {
 					err := fmt.Errorf("Can't write infrastructure state for runner %s: %s", r.infraExecutor.Step(), err)
-					r.logger.LogErrorLn(err)
+					dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 					return err
 				}
 			}
@@ -352,7 +345,7 @@ func (r *Runner) Init(ctx context.Context) error {
 		r.WithState(nil)
 	}
 
-	return r.logger.LogProcessCtx(ctx, "default", "infrastructure init ...", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure init ...", func(ctx context.Context) error {
 		_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 			err := r.infraExecutor.Init(ctx)
 			return 0, err
@@ -432,27 +425,27 @@ func (r *Runner) Apply(ctx context.Context) error {
 		return ErrRunnerStopped
 	}
 
-	return r.logger.LogProcessCtx(ctx, "default", "infrastructure apply ...", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure apply ...", func(ctx context.Context) error {
 		skip, err := r.isSkipChanges(ctx)
 		if err != nil {
 			return err
 		}
 		if skip {
-			r.logger.LogInfoLn("Skipping infrastructure apply.")
+			dhlog.FromContext(ctx).InfoContext(ctx, "Skipping infrastructure apply.")
 			return nil
 		}
 
 		if !govalue.IsNil(r.stateChecker) {
-			err = r.logger.LogProcessCtx(ctx, "default", "infrastructure state check before apply...", func(ctx context.Context) error {
+			err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure state check before apply...", func(ctx context.Context) error {
 				if r.statePath == "" {
-					log.InfoF("Infrastructure state path is empty. Skipping infrastructure state check.\n")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Infrastructure state path is empty. Skipping infrastructure state check.")
 					return nil
 				}
 
 				st, err := os.ReadFile(r.statePath)
 				if err != nil {
 					if os.IsNotExist(err) {
-						log.DebugF("State file %s not found, probably applying with a new resource. Skipping check.\n", r.statePath)
+						dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("State file %s not found, probably applying with a new resource. Skipping check.", r.statePath))
 						return nil
 					}
 					return err
@@ -465,11 +458,11 @@ func (r *Runner) Apply(ctx context.Context) error {
 			}
 		}
 
-		err = r.stateSaver.Start(r)
+		err = r.stateSaver.Start(ctx, r)
 		if err != nil {
 			return err
 		}
-		defer r.stateSaver.Stop()
+		defer r.stateSaver.Stop(ctx)
 
 		_, err = r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 			err := r.infraExecutor.Apply(ctx, ApplyOpts{
@@ -501,8 +494,7 @@ func (r *Runner) ShowPlan(ctx context.Context) ([]byte, error) {
 		PlanPath: r.GetPlanPath(),
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
@@ -516,7 +508,7 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 		return ErrRunnerStopped
 	}
 
-	return r.logger.LogProcessCtx(ctx, "default", "infrastructure plan ...", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure plan ...", func(ctx context.Context) error {
 		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhousePlanSuffix)
 		if err != nil {
 			return fmt.Errorf("Can't create temp file for plan: %w", err)
@@ -573,29 +565,29 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 	executorStep := string(r.infraExecutor.Step())
 
 	if destroy {
-		log.InfoF(
+		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf(
 			"Skipping debug plan for destroy: passed step %s; executor step %s; target '%s'\n",
 			step,
 			executorStep,
 			target,
-		)
+		), "\n"))
 		return "", nil
 	}
 
 	if step != executorStep || target == "" {
-		log.InfoF(
+		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf(
 			"Skipping debug plan: passed step %s; executor step %s; target '%s'\n",
 			step,
 			executorStep,
 			target,
-		)
+		), "\n"))
 		return "", nil
 	}
 
 	processName := fmt.Sprintf("infrastructure debug plan for %s...", target)
 
 	res := ""
-	return res, r.logger.LogProcessCtx(ctx, "default", processName, func(ctx context.Context) error {
+	return res, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), processName, func(ctx context.Context) error {
 		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhouseDebugPlanSuffix)
 		if err != nil {
 			return fmt.Errorf("Can't create temp file for debug plan: %w", err)
@@ -605,7 +597,7 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 
 		defer func() {
 			if err := os.Remove(tmpFileName); err != nil {
-				log.WarnF("Can't remove debug plan file '%s' for target %s: %v\n", tmpFileName, target, err)
+				dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't remove debug plan file '%s' for target %s: %v", tmpFileName, target, err))
 			}
 		}()
 
@@ -660,8 +652,7 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure output for %q\n%v", output, err)
@@ -684,7 +675,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 	}
 
 	if r.changeSettings.AutoDismissDestructive {
-		r.logger.LogInfoLn("Infrastructure destroy skipped.")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Infrastructure destroy skipped.")
 		return nil
 	}
 
@@ -712,12 +703,12 @@ func (r *Runner) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return r.logger.LogProcessCtx(ctx, "default", "infrastructure destroy ...", func(ctx context.Context) error {
-		err := r.stateSaver.Start(r)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure destroy ...", func(ctx context.Context) error {
+		err := r.stateSaver.Start(ctx, r)
 		if err != nil {
 			return err
 		}
-		defer r.stateSaver.Stop()
+		defer r.stateSaver.Stop(ctx)
 
 		_, err = r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 			err := r.infraExecutor.Destroy(ctx, DestroyOpts{
@@ -745,9 +736,11 @@ func (r *Runner) ResourcesQuantityInState() int {
 		return 0
 	}
 
+	ctx := context.Background()
+
 	data, err := os.ReadFile(r.statePath)
 	if err != nil {
-		r.logger.LogErrorLn(err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		return 0
 	}
 
@@ -756,7 +749,7 @@ func (r *Runner) ResourcesQuantityInState() int {
 	}
 	err = json.Unmarshal(data, &st)
 	if err != nil {
-		r.logger.LogErrorF("ResourcesQuantityInState cannot parse state: %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("ResourcesQuantityInState cannot parse state: %v", err))
 		return 0
 	}
 
@@ -791,7 +784,8 @@ func (r *Runner) GetPlanPath() string {
 // a flag to prevent executions of next runner commands.
 func (r *Runner) Stop() {
 	if r.checkInfrastructureUtilityIsRunning() && !r.stopped {
-		log.DebugF("Runner Stop is called for %s.\n", r.name)
+		ctx := context.Background()
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Runner Stop is called for %s.", r.name))
 		r.infraExecutor.Stop()
 	}
 	r.stopped = true
@@ -812,9 +806,8 @@ func (r *Runner) execInfrastructureUtility(ctx context.Context, executor func(ct
 
 	r.switchInfrastructureUtilityIsRunning()
 	defer r.switchInfrastructureUtilityIsRunning()
-	r.infraExecutor.SetExecutorLogger(r.logger)
 	exitCode, err := executor(ctx)
-	r.logger.LogInfoF("Infrastructure runner %q process exited.\n", r.infraExecutor.Step())
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Infrastructure runner %q process exited.", r.infraExecutor.Step()))
 
 	return exitCode, err
 }
@@ -836,8 +829,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure plan for %q\n%v", planFile, err)
@@ -879,7 +871,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 			}
 		}
 	}
-	log.DebugF("HasVMDestruction: %v\n", hasVMChange)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("HasVMDestruction: %v", hasVMChange))
 	return &destructiveChangesReport{
 		changes:      destructiveChanges,
 		hasVMChanges: hasVMChange,
@@ -899,17 +891,14 @@ func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string)
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return false, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
-	for _, action := range result {
-		if action == "delete" {
-			return true, nil
-		}
+	if slices.Contains(result, "delete") {
+		return true, nil
 	}
 
 	return false, nil

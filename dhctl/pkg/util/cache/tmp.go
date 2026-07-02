@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -26,7 +27,8 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -39,8 +41,6 @@ type ClearTmpParams struct {
 	TmpDir           string
 	DefaultTmpDir    string
 	DownloadCacheDir string
-
-	LoggerProvider log.LoggerProvider
 }
 
 type TmpCleaner interface {
@@ -58,7 +58,7 @@ func GetGlobalTmpCleaner() TmpCleaner {
 	defer globalTmpCleanerMutex.Unlock()
 
 	if govalue.IsNil(globalTmpCleaner) {
-		return NewDummyTmpCleaner(nil, "")
+		return NewDummyTmpCleaner("")
 	}
 
 	return globalTmpCleaner
@@ -74,7 +74,7 @@ func SetGlobalTmpCleaner(c TmpCleaner) {
 func NewTmpCleaner(params ClearTmpParams) TmpCleaner {
 	if params.IsDebug {
 		msg := fmt.Sprintf("Skip cleaning temp dir '%s' because dhctl work in debug mode\n", params.TmpDir)
-		return NewDummyTmpCleaner(params.LoggerProvider, msg)
+		return NewDummyTmpCleaner(msg)
 	}
 
 	tmpDir := params.TmpDir
@@ -85,7 +85,7 @@ func NewTmpCleaner(params ClearTmpParams) TmpCleaner {
 
 	if tmpDir == "" || tmpDir == "/" || tmpDir == "." || tmpDir == ".." {
 		msg := fmt.Sprintf("Skip clean tmp dir because pass empty tmp dir or incorrect: '%s'\n", params.TmpDir)
-		return NewDummyTmpCleaner(params.LoggerProvider, msg)
+		return NewDummyTmpCleaner(msg)
 	}
 
 	suffixesForSkip := []string{
@@ -104,20 +104,19 @@ func NewTmpCleaner(params ClearTmpParams) TmpCleaner {
 }
 
 type DummyTmpCleaner struct {
-	loggerProvider log.LoggerProvider
-	msg            string
+	msg string
 }
 
-func NewDummyTmpCleaner(loggerProvider log.LoggerProvider, msg string) *DummyTmpCleaner {
+func NewDummyTmpCleaner(msg string) *DummyTmpCleaner {
 	return &DummyTmpCleaner{
-		loggerProvider: loggerProvider,
-		msg:            msg,
+		msg: msg,
 	}
 }
 
 func (d *DummyTmpCleaner) Cleanup() {
+	ctx := context.Background()
 	if d.msg != "" {
-		log.SafeProvideLogger(d.loggerProvider).LogInfoLn(d.msg)
+		dhlog.FromContext(ctx).InfoContext(ctx, d.msg)
 	}
 }
 
@@ -142,23 +141,22 @@ func newRegularTmpCleaner(params *ClearTmpParams, suffixesForSkip []string) *reg
 }
 
 func (r *regularTmpCleaner) Cleanup() {
-	logger := log.SafeProvideLogger(r.params.LoggerProvider)
+	ctx := context.Background()
 
 	if r.disableCleanup {
 		// lock file will deleted by callback returned from AcquireTmpDirLock
-		logger.LogDebugF(
-			"Cleanup tmp dir '%s' was skipped with reason: %s\n",
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cleanup tmp dir '%s' was skipped with reason: %s",
 			r.params.TmpDir,
 			r.disableCleanupMsg,
-		)
+		))
 		return
 	}
 
 	tmpDir := r.params.TmpDir
 
-	logger.LogDebugF("Clean temp dir '%s' started\n", tmpDir)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Clean temp dir '%s' started", tmpDir))
 	defer func() {
-		logger.LogDebugF("Clean temp dir '%s' was finished\n", tmpDir)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Clean temp dir '%s' was finished", tmpDir))
 	}()
 
 	// do not clean tmp dir, because user may need temporary files to debug infra
@@ -175,7 +173,7 @@ func (r *regularTmpCleaner) Cleanup() {
 
 	err := filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			logger.LogDebugF("%s %s because walk returns err: %v\n", cleanupErrorPrefix, fullPath, err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s %s because walk returns err: %v", cleanupErrorPrefix, fullPath, err))
 			return nil
 		}
 
@@ -186,12 +184,12 @@ func (r *regularTmpCleaner) Cleanup() {
 
 		if info.IsDir() {
 			if fullPath == "/" {
-				logger.LogWarnF("Found root dir '/' Skip all\n")
+				dhlog.FromContext(ctx).WarnContext(ctx, "Found root dir '/' Skip all")
 				return filepath.SkipDir
 			}
 
 			if slices.Contains(skipDirs, fullPath) {
-				logger.LogDebugF("Skip cleaning dir '%s'\n", fullPath)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skip cleaning dir '%s'", fullPath))
 				return nil
 			}
 
@@ -223,19 +221,19 @@ func (r *regularTmpCleaner) Cleanup() {
 	})
 
 	if err != nil {
-		logger.LogDebugF("%s walking '%s' got error: %v\n", cleanupErrorPrefix, tmpDir, err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s walking '%s' got error: %v", cleanupErrorPrefix, tmpDir, err))
 		return
 	}
 
 	// lock file will delete after all
 	if len(lockFiles) > 1 {
-		logger.LogWarnF("%s found multiple lock files: %v. Skip cleaning %s\n", cleanupErrorPrefix, lockFiles, tmpDir)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("%s found multiple lock files: %v. Skip cleaning %s", cleanupErrorPrefix, lockFiles, tmpDir))
 		return
 	}
 
 	sortByDepthDescending(removeFiles)
 	for _, fullPath := range removeFiles {
-		remove(fullPath, logger, "Delete tmp file")
+		remove(fullPath, "Delete tmp file")
 	}
 
 	skipDeleteDir := func(dir string) bool {
@@ -250,27 +248,27 @@ func (r *regularTmpCleaner) Cleanup() {
 		return false
 	}
 
-	logger.LogDebugF("Cleaning temp dir. Keep next files: %v\nDirs for deletion: %v\n", keepFiles, dirsForDeletion)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cleaning temp dir. Keep next files: %v\nDirs for deletion: %v", keepFiles, dirsForDeletion))
 
 	sortByDepthDescending(dirsForDeletion)
 	for _, dir := range dirsForDeletion {
 		if skipDeleteDir(dir) {
-			logger.LogDebugF("Skip cleaning temp sub dir '%s'\n", dir)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skip cleaning temp sub dir '%s'", dir))
 			continue
 		}
 
-		remove(dir, logger, "Delete tmp sub dir")
+		remove(dir, "Delete tmp sub dir")
 	}
 
 	// we have one or nothing lock files here
 	if len(lockFiles) != 0 {
-		remove(lockFiles[0], logger, "Delete tmp dir lock file")
+		remove(lockFiles[0], "Delete tmp dir lock file")
 	}
 
 	if len(keepFiles) == 0 && tmpDir != r.params.DefaultTmpDir {
-		remove(tmpDir, logger, "Delete tmp dir")
+		remove(tmpDir, "Delete tmp dir")
 	} else {
-		logger.LogDebugF("Cleaning temp dir '%s' skipeed because it default or have keept files %d\n", tmpDir, len(keepFiles))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cleaning temp dir '%s' skipeed because it default or have keept files %d", tmpDir, len(keepFiles)))
 	}
 }
 
@@ -303,10 +301,11 @@ func sortByDepthDescending(paths []string) {
 	})
 }
 
-func remove(fullPath string, logger log.Logger, msg string) {
-	logger.LogDebugF("%s: '%s'\n", msg, fullPath)
+func remove(fullPath string, msg string) {
+	ctx := context.Background()
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s: '%s'", msg, fullPath))
 	err := os.Remove(fullPath)
 	if err != nil && !os.IsNotExist(err) {
-		logger.LogInfoF("%s % did not success'%s': %v\n", cleanupErrorPrefix, msg, fullPath, err)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s %s did not success'%s': %v", cleanupErrorPrefix, msg, fullPath, err))
 	}
 }

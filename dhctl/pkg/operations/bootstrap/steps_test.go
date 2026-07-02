@@ -30,12 +30,10 @@ import (
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func TestBootstrapGetNodesFromCache(t *testing.T) {
-	log.InitLogger("json", false)
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-bootstrap-*")
 	defer os.RemoveAll(dir)
 

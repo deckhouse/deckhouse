@@ -24,12 +24,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestDeckhouseInstall(t *testing.T) {
@@ -43,7 +41,6 @@ func TestDeckhouseInstall(t *testing.T) {
 		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
-	log.InitLogger("json", false)
 	fakeClient := client.NewFakeKubernetesClient()
 
 	tests := []struct {
@@ -257,9 +254,9 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc1.SetName("global")
-	mc1.Spec.Enabled = ptr.To(true)
+	mc1.Spec.Enabled = new(true)
 	mc1.Spec.Version = 1
-	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
+	mc1.Spec.Settings = config.SettingsValues(map[string]any{
 		"ha": true,
 	})
 
@@ -308,9 +305,9 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc1.SetName("global")
-	mc1.Spec.Enabled = ptr.To(true)
+	mc1.Spec.Enabled = new(true)
 	mc1.Spec.Version = 1
-	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
+	mc1.Spec.Settings = config.SettingsValues(map[string]any{
 		"ha": true,
 	})
 
@@ -321,9 +318,9 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc2.SetName("deckhouse")
-	mc2.Spec.Enabled = ptr.To(true)
+	mc2.Spec.Enabled = new(true)
 	mc2.Spec.Version = 1
-	mc2.Spec.Settings = config.SettingsValues(map[string]interface{}{
+	mc2.Spec.Settings = config.SettingsValues(map[string]any{
 		"bundle": "Minimal",
 	})
 
@@ -367,7 +364,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := createMC("deckhouse", map[string]interface{}{
+			mc := createMC("deckhouse", map[string]any{
 				"bundle":         "Minimal",
 				"logLevel":       "Debug",
 				"releaseChannel": "Alpha",
@@ -394,7 +391,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 
 			require.Len(t, mcs.Items, 1)
 
-			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"], "releaseChannel")
+			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]any)["settings"], "releaseChannel")
 		})
 	})
 
@@ -404,11 +401,11 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := createMC("global", map[string]interface{}{
+			mc := createMC("global", map[string]any{
 				"highAvailability": true,
-				"modules": map[string]interface{}{
-					"https": map[string]interface{}{
-						"customCertificate": map[string]interface{}{
+				"modules": map[string]any{
+					"https": map[string]any{
+						"customCertificate": map[string]any{
 							"secretName": "secret",
 						},
 					},
@@ -437,7 +434,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 
 			require.Len(t, mcs.Items, 1)
 
-			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"].(map[string]interface{})["modules"], "https")
+			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]any)["settings"].(map[string]any)["modules"], "https")
 		})
 	})
 
@@ -447,7 +444,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := createMC("prometheus", map[string]interface{}{
+			mc := createMC("prometheus", map[string]any{
 				"highAvailability": true,
 			})
 
@@ -479,17 +476,17 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mcDeckhouse := createMC("deckhouse", map[string]interface{}{
+			mcDeckhouse := createMC("deckhouse", map[string]any{
 				"bundle":         "Minimal",
 				"logLevel":       "Debug",
 				"releaseChannel": "Alpha",
 			})
 
-			mcGlobal := createMC("global", map[string]interface{}{
+			mcGlobal := createMC("global", map[string]any{
 				"highAvailability": true,
-				"modules": map[string]interface{}{
-					"https": map[string]interface{}{
-						"customCertificate": map[string]interface{}{
+				"modules": map[string]any{
+					"https": map[string]any{
+						"customCertificate": map[string]any{
 							"secretName": "secret",
 						},
 					},

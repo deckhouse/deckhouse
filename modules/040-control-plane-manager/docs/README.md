@@ -16,6 +16,7 @@ The control-plane-manager:
   - placing data storage application pods closer to the data itself,
   - state-based node prioritization (network load, storage subsystem status, etc.),
   - dividing nodes into zones, etc.
+- **Monitors the control plane**. The CPM module organizes secure metrics collection and provides a basic set of monitoring rules for the control plane components. For details, refer to [Control plane monitoring](#control-plane-monitoring).
 
 ## Managing certificates
 
@@ -177,6 +178,15 @@ When OIDC authentication is configured, additional user information is included 
 - `user-authn.deckhouse.io/dex-provider` — Dex provider identifier (requires `federated:id` scope)
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
+
+## Control plane monitoring
+
+The module organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
+
+- `kube-apiserver`;
+- `kube-controller-manager`;
+- `kube-scheduler`;
+- `kube-etcd`.
 
 ## Feature Gates
 

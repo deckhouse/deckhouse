@@ -55,6 +55,18 @@ spec:
   enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: test-module-1-v1.0.0
+  labels:
+    module: test-module-1
+spec:
+  moduleName: test-module-1
+  version: 1.0.0
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   name: source-2

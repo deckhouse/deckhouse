@@ -107,7 +107,6 @@ func TestFiniteStateMachine(t *testing.T) {
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			f := fsm.New(tt.initialState, tt.transitions)
 			for _, e := range tt.events {

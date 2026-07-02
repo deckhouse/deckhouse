@@ -18,17 +18,17 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
@@ -44,7 +44,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 	defer registryStop()
 
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	preparatorParams.WithPhaseBootstrap()
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
@@ -60,11 +60,10 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		TmpDir:           b.TmpDir,
 		GlobalOptions:    &b.Options.Global,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           b.logger,
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger).
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter).
 		WithUseTfCache(b.Options.Cache.UseTfCache).
 		WithDebug(b.Options.Global.IsDebug)
 
@@ -98,30 +97,22 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	defer cleanup()
 
-	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
-	if interactive {
-		intLogger, ok := b.logger.(*log.InteractiveLogger)
-		if !ok {
-			return fmt.Errorf("logger is not interactive")
-		}
-		labelChan := intLogger.GetPhaseChan()
-		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Base infrastructure", labelChan, phasesChan, intLogger.GetLogChan())
+	body := func(_ chan phases.Progress) error {
+		return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Cloud infrastructure", func(ctx context.Context) error {
+			baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
+			if err != nil {
+				return err
+			}
 
-		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			_, err = infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", &b.Options.Global, infrastructure.GetBaseInfraResult)
 			return err
-		}
-
-		defer progressbar.FinishDefaultProgressBar()
+		})
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Cloud infrastructure", func(ctx context.Context) error {
-		baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
-		if err != nil {
-			return err
-		}
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	if interactive {
+		return runProgress(ctx, dhlog.FromContext(ctx), "Base infrastructure", body)
+	}
 
-		_, err = infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", &b.Options.Global, infrastructure.GetBaseInfraResult)
-		return err
-	})
+	return body(nil)
 }

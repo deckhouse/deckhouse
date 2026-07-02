@@ -30,11 +30,11 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -78,7 +78,7 @@ func (c StaticInstancesSSHCredentialsCheck) Run(ctx context.Context) error {
 		if !ok {
 			return fmt.Errorf("Instance %s: SSHCredentials %s not found", inst.Name, inst.CredName)
 		}
-		log.InfoF("Checking StaticInstance %s (%s)\n", inst.Name, inst.Address)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Checking StaticInstance %s (%s)", inst.Name, inst.Address))
 		if err := testSSHConnection(ctx, c.SSHProviderInitializer, inst.Address, cred); err != nil {
 			return fmt.Errorf("Cannot connect to %s (%s:%d): %w", inst.Name, inst.Address, cred.SSHPort, err)
 		}
@@ -95,7 +95,7 @@ func parseResources(docs []string) ([]staticInstance, map[string]*v1alpha2.SSHCr
 			continue
 		}
 
-		var m map[string]interface{}
+		var m map[string]any
 		if err := yaml.Unmarshal([]byte(doc), &m); err != nil {
 			return nil, nil, fmt.Errorf("Cannot unmarshal YAML: %w", err)
 		}

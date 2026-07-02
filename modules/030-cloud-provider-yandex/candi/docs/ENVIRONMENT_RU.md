@@ -283,7 +283,7 @@ spec:
    - `<URL_ЗАПИСИ_МЕТРИК>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии [с документацией](../../modules/prometheus/cr.html#prometheusremotewrite).
+   Также вы можете указать дополнительные параметры в соответствии [с документацией](/modules/prometheus/cr.html#prometheusremotewrite).
 
 Подробнее с данной функциональностью можно ознакомиться [в документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
@@ -319,6 +319,6 @@ spec:
    - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии [с документацией](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
+   Также вы можете указать дополнительные параметры в соответствии [с документацией](/modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 Подробнее с данной функциональностью можно ознакомиться [в документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).

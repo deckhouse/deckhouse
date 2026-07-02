@@ -15,7 +15,9 @@
 package manifests
 
 import (
+	"context"
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 	"time"
@@ -25,10 +27,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const (
@@ -155,7 +157,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 
 	initImage, err := getDeckhouseInitImage()
 	if err != nil {
-		log.ErrorF("Cannot get init image: %v\n", err)
+		ctx := context.Background()
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot get init image: %v", err))
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
 		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], initImage)
@@ -175,7 +178,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To(int32(0)),
+			RevisionHistoryLimit: new(int32(0)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -200,7 +203,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			HostNetwork:                  true,
 			DNSPolicy:                    apiv1.DNSDefault,
 			ServiceAccountName:           "deckhouse",
-			AutomountServiceAccountToken: ptr.To(true),
+			AutomountServiceAccountToken: new(true),
 			// system-cluster-critical: protects the bootstrap pod from eviction
 			// under any node pressure while the cluster is being assembled, and
 			// gives it scheduling priority over everything else. The helm chart
@@ -208,9 +211,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			// Deployment with its own, priority does not change.
 			PriorityClassName: "system-cluster-critical",
 			SecurityContext: &apiv1.PodSecurityContext{
-				RunAsUser:    ptr.To(int64(0)),
-				RunAsGroup:   ptr.To(int64(0)),
-				RunAsNonRoot: ptr.To(false),
+				RunAsUser:    new(int64(0)),
+				RunAsGroup:   new(int64(0)),
+				RunAsNonRoot: new(false),
 			},
 			Tolerations: []apiv1.Toleration{
 				{Operator: apiv1.TolerationOpExists},
@@ -311,11 +314,11 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		SecurityContext: &apiv1.SecurityContext{
-			ReadOnlyRootFilesystem: ptr.To(true),
-			RunAsUser:              ptr.To(int64(0)),
-			RunAsGroup:             ptr.To(int64(0)),
-			RunAsNonRoot:           ptr.To(false),
-			Privileged:             ptr.To(true),
+			ReadOnlyRootFilesystem: new(true),
+			RunAsUser:              new(int64(0)),
+			RunAsGroup:             new(int64(0)),
+			RunAsNonRoot:           new(false),
+			Privileged:             new(true),
 		},
 	}
 
@@ -334,7 +337,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		SecurityContext: &apiv1.SecurityContext{
-			ReadOnlyRootFilesystem: ptr.To(true),
+			ReadOnlyRootFilesystem: new(true),
 		},
 	}
 
@@ -521,7 +524,7 @@ func DeckhouseServiceAccount() *apiv1.ServiceAccount {
 				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -613,9 +616,7 @@ func RegistryBashibleConfigSecret(data map[string][]byte) *apiv1.Secret {
 
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {
 	preparedLabels := make(map[string]string)
-	for key, value := range labels {
-		preparedLabels[key] = value
-	}
+	maps.Copy(preparedLabels, labels)
 	return &apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -641,9 +642,9 @@ func SecretWithInfrastructureState(data []byte) *apiv1.Secret {
 	)
 }
 
-func PatchWithInfrastructureState(stateData []byte) interface{} {
-	return map[string]interface{}{
-		"data": map[string]interface{}{
+func PatchWithInfrastructureState(stateData []byte) any {
+	return map[string]any{
+		"data": map[string]any{
 			"cluster-tf-state.json": stateData,
 		},
 	}
@@ -711,9 +712,9 @@ func SecretWithNodeInfrastructureState(nodeName, nodeGroup string, data, setting
 	)
 }
 
-func PatchWithNodeInfrastructureState(stateData []byte) interface{} {
-	return map[string]interface{}{
-		"data": map[string]interface{}{
+func PatchWithNodeInfrastructureState(stateData []byte) any {
+	return map[string]any{
+		"data": map[string]any{
 			"node-tf-state.json": stateData,
 		},
 	}

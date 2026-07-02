@@ -29,13 +29,14 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -123,7 +124,7 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 			}
 
 			if _, ok := nodeState.Labels[global.InfrastructureStateBackupLabelKey]; ok {
-				log.DebugF("Found backup state secret %s for node: %s. Skipping.\n", secretName, name)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found backup state secret %s for node: %s. Skipping.", secretName, name))
 				continue
 			}
 
@@ -274,7 +275,6 @@ func SaveNodeInfrastructureState(
 	kubeCl *client.KubernetesClient,
 	nodeName, nodeGroup string,
 	tfState, settings []byte,
-	logger log.Logger,
 ) error {
 	if len(tfState) == 0 {
 		return ErrNoInfrastructureState
@@ -282,17 +282,17 @@ func SaveNodeInfrastructureState(
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.SecretWithNodeInfrastructureState(nodeName, nodeGroup, tfState, settings)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -301,7 +301,6 @@ func SaveNodeInfrastructureState(
 		},
 	}
 	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 450, 1*time.Second).
-		WithLogger(logger).
 		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
 }
 
@@ -310,10 +309,10 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		return ErrNoInfrastructureState
 	}
 
-	getInfrastructureStateManifest := func() interface{} {
+	getInfrastructureStateManifest := func() any {
 		return manifests.SecretWithNodeInfrastructureState(nodeName, global.MasterNodeGroupName, tfState, nil)
 	}
-	getDevicePathManifest := func() interface{} {
+	getDevicePathManifest := func() any {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)
 	}
 
@@ -321,14 +320,14 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getInfrastructureStateManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -339,14 +338,14 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		{
 			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 			Manifest: getDevicePathManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*v1.Secret))
 				if err != nil {
 					return err
@@ -386,15 +385,15 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-cluster-terraform-state"`,
-		Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		Manifest: func() any { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -414,8 +413,8 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		return err
 	}
 
-	patch, err := json.Marshal(map[string]interface{}{
-		"data": map[string]interface{}{
+	patch, err := json.Marshal(map[string]any{
+		"data": map[string]any{
 			"cloud-provider-discovery-data.json": outputs.CloudDiscovery,
 		},
 	})

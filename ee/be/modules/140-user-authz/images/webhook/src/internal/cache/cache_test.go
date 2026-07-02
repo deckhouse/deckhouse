@@ -255,6 +255,20 @@ func TestCacheCheck(t *testing.T) {
 	}
 }
 
+func TestNewNamespacedDiscoveryCacheAPIAddress(t *testing.T) {
+	logger := log.New(io.Discard, "", log.LstdFlags)
+
+	c := NewNamespacedDiscoveryCache(logger, "")
+	if c.kubernetesAPIAddress != kubernetesAPIAddress {
+		t.Fatalf("empty apiAddress: got %q, want %q", c.kubernetesAPIAddress, kubernetesAPIAddress)
+	}
+
+	c = NewNamespacedDiscoveryCache(logger, "https://10.0.0.1:6443")
+	if want := "https://10.0.0.1:6443"; c.kubernetesAPIAddress != want {
+		t.Fatalf("explicit apiAddress: got %q, want %q", c.kubernetesAPIAddress, want)
+	}
+}
+
 func newTestCache() *NamespacedDiscoveryCache {
 	server := newTestServer()
 

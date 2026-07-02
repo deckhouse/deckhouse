@@ -18,6 +18,8 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 // Definition represents module metadata.
@@ -28,8 +30,9 @@ type Definition struct {
 	Critical bool   `json:"critical,omitempty" yaml:"critical,omitempty"`
 	Weight   uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 
-	Requirements   Requirements   `json:"requirements" yaml:"requirements"`
-	DisableOptions DisableOptions `json:"disableOptions" yaml:"disableOptions"`
+	Requirements   Requirements      `json:"requirements" yaml:"requirements"`
+	Licensing      edition.Licensing `json:"licensing" yaml:"licensing"`
+	DisableOptions DisableOptions    `json:"disableOptions" yaml:"disableOptions"`
 }
 
 // Requirements specifies dependencies required by the module.
@@ -69,10 +72,16 @@ type ModuleGroup struct {
 	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
 }
 
-// DisableOptions configures application disablement behavior.
+// DisableOptions configures module disablement behavior.
 type DisableOptions struct {
-	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
-	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
+	Confirmation bool            `json:"confirmation" yaml:"confirmation"`
+	Messages     DisableMessages `json:"messages" yaml:"messages"`
+}
+
+// DisableMessages holds localized disable confirmation messages for the module.
+type DisableMessages struct {
+	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
+	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
 // Constraints projects the module definition onto the scheduler input shape,
@@ -122,5 +131,12 @@ func (d Definition) Constraints() schedule.Constraints {
 		Dependencies: deps,
 		AnyOf:        anyOf,
 		NoneOf:       noneOf,
+		Subscriptions: map[string]struct{}{
+			"global": {},
+		},
+		Licensing: d.Licensing,
+		// Modules are disabled by default; a higher-precedence intent rule
+		// (bundle membership, user config) turns them on.
+		Floor: rule.Static(rule.Disable),
 	}
 }

@@ -105,7 +105,7 @@ type Config struct {
 	GlobalValuesGetter GlobalValuesGetter
 }
 
-type GlobalValuesGetter func(prefix bool) addonutils.Values
+type GlobalValuesGetter func() addonutils.Values
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -143,6 +143,11 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.values, err = values.NewStorage(m.name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("build values storage: %v", err)
+	}
+
+	if cfg.Repository.Repository != "" {
+		// TODO(ipaqsa): get rid of it after migration to module v2
+		m.values.InjectRegistryValue(cfg.Repository)
 	}
 
 	return m, nil
@@ -200,9 +205,9 @@ func (m *Module) GetRuntimeValues() string {
 	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	marshalledGlobal := m.globalValuesGetter(false)
+	marshalledGlobal, _ := json.Marshal(m.globalValuesGetter())
 
-	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
+	return fmt.Sprintf("Module=%s,Platform=%s", marshalled, marshalledGlobal)
 }
 
 // GetName returns the full module identifier.
@@ -244,7 +249,7 @@ func (m *Module) GetHooksQueues() []string {
 // GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
 // If include is provided, only hooks matching those names are included.
 func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]interface{})
+	d := make(map[string]any)
 	for _, h := range m.hooks.GetHooks() {
 		if len(include) == 0 || slices.Contains(include, h.GetName()) {
 			d[h.GetName()] = h.GetHookController().SnapshotsDump()
@@ -298,7 +303,7 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 func (m *Module) GetValues() addonutils.Values {
 	moduleValues := m.values.GetValues()
 	return addonutils.MergeValues(
-		addonutils.Values{"global": m.globalValuesGetter(false)},
+		addonutils.Values{"global": m.globalValuesGetter()},
 		moduleValues,
 		addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): moduleValues},
 	)
@@ -383,8 +388,8 @@ func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 }
 
 // GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook {
-	return m.hooks.GetHooksByBinding(binding)
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
+	return hooks.ToControllable(m.hooks.GetHooksByBinding(binding))
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.
@@ -460,7 +465,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
 	hookConfigValues := m.values.GetSettings()
-	hookValues := m.values.GetValues()
+	hookValues := m.GetValues()
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
@@ -483,7 +488,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = m.values.ApplyValuesPatch(*valuesPatch); err != nil {
+		if err = m.values.ApplyValuesPatchWithLegacyRoot(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}

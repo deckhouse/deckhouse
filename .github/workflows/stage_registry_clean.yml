@@ -25,7 +25,6 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.72.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -93,9 +92,33 @@ jobs:
 
     # </template: checkout_step>
 
+    # <template: read_werf_version_step>
+    - name: Read werf version from werf_envs.yml
+      id: read_werf_version
+      run: |
+        set -euo pipefail
+        WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+        if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+          echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+          exit 1
+        fi
+        WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+        if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          exit 1
+        fi
+        echo "Detected WERF_VERSION=${WERF_VERSION}"
+        echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+        echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+    # </template: read_werf_version_step>
+
     # <template: werf_install_step>
     - name: Install werf-dk CLI
       run: |
+        if [[ -z "${WERF_VERSION:-}" ]]; then
+          echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+          exit 1
+        fi
         WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
         echo "$WERF_PATH" >> "$GITHUB_PATH"
         CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
