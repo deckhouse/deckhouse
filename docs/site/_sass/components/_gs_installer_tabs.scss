@@ -8,6 +8,10 @@
   min-width: 0;
   box-sizing: border-box;
 
+  &__title {
+    margin-bottom: 10px;
+  }
+
   &__viewport {
     overflow: hidden;
     width: 100%;

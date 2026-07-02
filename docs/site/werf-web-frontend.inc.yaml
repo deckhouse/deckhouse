@@ -82,6 +82,7 @@ git:
   - _includes/related_links.liquid
   - _plugins/alert.rb
   - _plugins/tabs.rb
+  - _plugins/sliders.rb
   - _plugins/jekyll_asset_pipeline.rb
   - _plugins/codeblock_unknown_lang_fallback.rb
   - _plugins/custom_filters.rb
