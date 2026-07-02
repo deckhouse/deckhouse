@@ -442,7 +442,7 @@ update-base-images-versions:
 	$(MAKE) render-workflow
 
 BASE_LIMIT_KEYS := REGISTRY_PATH \
-								base/distroless \
+                base/distroless \
                 builder/distroless \
                 builder/golang-1.25 \
                 builder/golang-1.26 \
