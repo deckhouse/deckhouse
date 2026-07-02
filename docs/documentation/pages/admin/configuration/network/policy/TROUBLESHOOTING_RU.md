@@ -4,6 +4,17 @@ permalink: ru/admin/configuration/network/policy/troubleshooting.html
 description: |
   Способы проверки применённых сетевых политик в Deckhouse Kubernetes Platform: kubectl describe, Hubble UI и CLI, flow logs, чек-лист «политика не применяется».
 lang: ru
+relatedLinks:
+  - title: "HubbleMonitoringConfig — модуль cni-cilium"
+    url: /modules/cni-cilium/cr.html#hubblemonitoringconfig
+  - title: "Troubleshooting Policy — документация Cilium"
+    url: https://docs.cilium.io/en/v1.17/security/policy/#troubleshooting
+  - title: "Стандартный NetworkPolicy Kubernetes"
+    url: kubernetes_networkpolicy.html
+  - title: "CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy"
+    url: cilium_networkpolicy.html
+  - title: "Host firewall на узлах"
+    url: host_firewall.html
 ---
 
 В этом разделе собраны команды и приёмы для проверки применённых сетевых политик и расследования проблем со связностью. Часть инструментов работает только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/) — это указано отдельно.
@@ -147,11 +158,3 @@ Cilium должен видеть DNS-запросы, чтобы поддержи
 1. Eventual consistency. После создания политики Cilium и kube-router применяют её асинхронно. Подождите несколько секунд и повторите проверку.
 1. Статус политики (только для CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` покажет в `status` ошибки парсинга или применения.
 1. Конфликт с deny-правилом. Deny-правила Cilium имеют приоритет над любыми allow-правилами. Найдите политики с `ingressDeny` и `egressDeny`, выбирающие тот же эндпоинт.
-
-## Дополнительные ресурсы
-
-- [HubbleMonitoringConfig — модуль cni-cilium](/modules/cni-cilium/cr.html#hubblemonitoringconfig)
-- [Troubleshooting Policy — документация Cilium](https://docs.cilium.io/en/v1.17/security/policy/#troubleshooting)
-- [Стандартный NetworkPolicy Kubernetes](kubernetes_networkpolicy.html)
-- [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)
-- [Host firewall на узлах](host_firewall.html)
