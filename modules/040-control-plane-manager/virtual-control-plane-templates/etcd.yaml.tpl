@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: ${CPN_NAME}-kine
+  name: ${CPN_NAME}-postgres
   namespace: ${NAMESPACE}
   labels:
-    app: kine
+    app: postgres
     control-plane.deckhouse.io/vcp: ${VCP_NAME}
     control-plane.deckhouse.io/cpn: ${CPN_NAME}
 spec:
-  serviceName: ${CPN_NAME}-kine
+  serviceName: ${CPN_NAME}-postgres
   replicas: 1
   selector:
     matchLabels:
-      app: kine
+      app: postgres
       control-plane.deckhouse.io/cpn: ${CPN_NAME}
   template:
     metadata:
       labels:
-        app: kine
+        app: postgres
         control-plane.deckhouse.io/vcp: ${VCP_NAME}
         control-plane.deckhouse.io/cpn: ${CPN_NAME}
     spec:
@@ -64,27 +64,6 @@ spec:
           timeoutSeconds: 5
         resources:
           requests: {cpu: 100m, memory: 256Mi}
-      - name: kine
-        image: ${IMAGE_KINE}
-        command:
-        - kine
-        - --endpoint=postgres://kine:kine@localhost:5432/kine?sslmode=disable
-        - --listen-address=0.0.0.0:2379
-        ports:
-        - {containerPort: 2379, name: client, protocol: TCP}
-        - {containerPort: 8080, name: metrics, protocol: TCP}
-        securityContext:
-          runAsNonRoot: false
-          runAsUser: 0
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop: [ALL]
-          readOnlyRootFilesystem: true
-          seccompProfile:
-            type: RuntimeDefault
-        resources:
-          requests: {cpu: 100m, memory: 128Mi}
-          limits: {cpu: 500m, memory: 512Mi}
       volumes:
       - name: postgres-run
         emptyDir: {}
@@ -98,20 +77,3 @@ spec:
       resources:
         requests:
           storage: 2Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ${CPN_NAME}-kine
-  namespace: ${NAMESPACE}
-  labels:
-    app: kine
-    control-plane.deckhouse.io/cpn: ${CPN_NAME}
-spec:
-  clusterIP: None
-  selector:
-    app: kine
-    control-plane.deckhouse.io/cpn: ${CPN_NAME}
-  ports:
-  - {name: client, port: 2379, targetPort: 2379}
-  - {name: metrics, port: 8080, targetPort: 8080}
