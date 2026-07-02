@@ -15,12 +15,14 @@
 package nelm
 
 import (
+	"cmp"
 	"io"
 	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
@@ -49,16 +51,18 @@ type endpointIngress struct {
 	} `json:"spec"`
 }
 
-// extractEndpointURLs collects application endpoint URLs from a rendered
-// multi-document YAML manifest. A URL is built for every host/path pair of
-// networking.k8s.io Ingress resources annotated with
+// extractEndpointURLs collects application endpoints from a rendered
+// multi-document YAML manifest. An endpoint is built for every host/path pair
+// of networking.k8s.io Ingress resources annotated with
 // packages.deckhouse.io/is-application-endpoint (any value except "false").
-// The scheme is https when the host is covered by spec.tls, http otherwise.
-// The result is deduplicated and sorted; undecodable documents are skipped.
-func extractEndpointURLs(renderedManifests string) []string {
+// The annotation value becomes the endpoint description ("true" means no
+// description). The scheme is https when the host is covered by spec.tls,
+// http otherwise. The result is deduplicated and sorted; undecodable
+// documents are skipped.
+func extractEndpointURLs(renderedManifests string) []status.URL {
 	dec := yaml.NewYAMLOrJSONDecoder(strings.NewReader(renderedManifests), 4096)
 
-	var urls []string
+	var urls []status.URL
 	for {
 		ing := new(endpointIngress)
 		if err := dec.Decode(ing); err != nil {
@@ -74,8 +78,14 @@ func extractEndpointURLs(renderedManifests string) []string {
 			continue
 		}
 
-		if value, set := ing.Metadata.Annotations[v1alpha1.ApplicationAnnotationIsEndpoint]; !set || value == "false" {
+		value, set := ing.Metadata.Annotations[v1alpha1.ApplicationAnnotationIsEndpoint]
+		if !set || value == "false" {
 			continue
+		}
+
+		description := value
+		if description == "true" {
+			description = ""
 		}
 
 		tlsHosts := make(map[string]struct{})
@@ -97,7 +107,7 @@ func extractEndpointURLs(renderedManifests string) []string {
 
 			paths := rule.HTTP.Paths
 			if len(paths) == 0 {
-				urls = append(urls, scheme+"://"+rule.Host+"/")
+				urls = append(urls, status.URL{URL: scheme + "://" + rule.Host + "/", Description: description})
 				continue
 			}
 
@@ -106,12 +116,14 @@ func extractEndpointURLs(renderedManifests string) []string {
 				if !strings.HasPrefix(path, "/") {
 					path = "/" + path
 				}
-				urls = append(urls, scheme+"://"+rule.Host+path)
+				urls = append(urls, status.URL{URL: scheme + "://" + rule.Host + path, Description: description})
 			}
 		}
 	}
 
-	slices.Sort(urls)
+	slices.SortFunc(urls, func(a, b status.URL) int {
+		return cmp.Or(cmp.Compare(a.URL, b.URL), cmp.Compare(a.Description, b.Description))
+	})
 
 	return slices.Compact(urls)
 }

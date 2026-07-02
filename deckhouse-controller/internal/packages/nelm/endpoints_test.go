@@ -18,13 +18,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
 func TestExtractEndpointURLs(t *testing.T) {
 	tests := []struct {
 		name     string
 		rendered string
-		expected []string
+		expected []status.URL
 	}{
 		{
 			name:     "empty manifest",
@@ -51,7 +53,32 @@ spec:
       - path: /ui
       - path: /api
 `,
-			expected: []string{"https://app.example.com/api", "https://app.example.com/ui"},
+			expected: []status.URL{
+				{URL: "https://app.example.com/api"},
+				{URL: "https://app.example.com/ui"},
+			},
+		},
+		{
+			name: "annotation value becomes description",
+			rendered: `
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    packages.deckhouse.io/is-application-endpoint: "Web UI"
+spec:
+  tls:
+  - hosts:
+    - app.example.com
+  rules:
+  - host: app.example.com
+    http:
+      paths:
+      - path: /ui
+`,
+			expected: []status.URL{
+				{URL: "https://app.example.com/ui", Description: "Web UI"},
+			},
 		},
 		{
 			name: "no tls yields http scheme",
@@ -68,7 +95,7 @@ spec:
       paths:
       - path: /
 `,
-			expected: []string{"http://app.example.com/"},
+			expected: []status.URL{{URL: "http://app.example.com/"}},
 		},
 		{
 			name: "rule without paths defaults to root",
@@ -85,7 +112,7 @@ spec:
   rules:
   - host: app.example.com
 `,
-			expected: []string{"https://app.example.com/"},
+			expected: []status.URL{{URL: "https://app.example.com/"}},
 		},
 		{
 			name: "ingress without annotation is skipped",
@@ -162,7 +189,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "true"
+    packages.deckhouse.io/is-application-endpoint: "Dashboard"
 spec:
   tls:
   - hosts:
@@ -186,7 +213,10 @@ spec:
   rules:
   - host: c.example.com
 `,
-			expected: []string{"http://b.example.com/metrics", "https://a.example.com/"},
+			expected: []status.URL{
+				{URL: "http://b.example.com/metrics", Description: "Dashboard"},
+				{URL: "https://a.example.com/", Description: "Dashboard"},
+			},
 		},
 		{
 			name: "path without leading slash is normalized",
@@ -203,7 +233,7 @@ spec:
       paths:
       - path: ui
 `,
-			expected: []string{"http://app.example.com/ui"},
+			expected: []status.URL{{URL: "http://app.example.com/ui"}},
 		},
 	}
 

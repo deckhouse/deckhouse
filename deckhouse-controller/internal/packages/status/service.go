@@ -103,8 +103,14 @@ type Status struct {
 	Tracking   Tracking          `json:"tracking"`
 	Settings   addonutils.Values `json:"settings,omitempty"`
 
-	// URLs are application endpoint URLs collected from the rendered manifests.
-	URLs []string `json:"urls,omitempty"`
+	// URLs are application endpoints collected from the rendered manifests.
+	URLs []URL `json:"urls,omitempty"`
+}
+
+// URL is a single application endpoint collected from the rendered manifests.
+type URL struct {
+	URL         string `json:"url"`
+	Description string `json:"description,omitempty"`
 }
 
 type Tracking struct {
@@ -297,7 +303,7 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 // UpdateURLs stores application endpoint URLs collected from the rendered
 // manifests and notifies listeners if they changed.
 // If the package is not tracked by the service, the update is silently ignored.
-func (s *Service) UpdateURLs(name string, urls []string) {
+func (s *Service) UpdateURLs(name string, urls []URL) {
 	s.mu.Lock()
 	status, ok := s.statuses[name]
 	if !ok {

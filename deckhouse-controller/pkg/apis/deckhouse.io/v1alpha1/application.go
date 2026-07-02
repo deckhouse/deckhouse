@@ -117,7 +117,7 @@ type ApplicationStatus struct {
 	// URLs of application endpoints, collected from Ingress resources of the
 	// application chart annotated with packages.deckhouse.io/is-application-endpoint.
 	// +optional
-	URLs []string `json:"urls,omitempty"`
+	URLs []ApplicationStatusURL `json:"urls,omitempty"`
 
 	// Nelm tracking.
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -157,6 +157,19 @@ type ApplicationStatusSummary struct {
 	// state. Empty when no action is required.
 	// +optional
 	Tip string `json:"tip,omitempty"`
+}
+
+// ApplicationStatusURL is a single application endpoint built from an Ingress
+// of the application chart.
+type ApplicationStatusURL struct {
+	// URL of the application endpoint.
+	URL string `json:"url"`
+
+	// Description of the endpoint, taken from the value of the
+	// packages.deckhouse.io/is-application-endpoint annotation.
+	// Empty when the annotation value is "true".
+	// +optional
+	Description string `json:"description,omitempty"`
 }
 
 type ApplicationStatusVersion struct {
