@@ -1495,12 +1495,10 @@ metadata:
 {% endalert %}
 
 {% alert level="warning" %}
-Обратите внимание на особенности работы механизма в кластере с единственным master-узлом.
-
-Для принятия решения о блокировке узла дополнительно опрашивается NodeGroup. Если текущий узел принадлежит к группе `master` и он единственный master-узел в кластере, блокировка выключения для него применена не будет.
+Для принятия решения о блокировке выключения DKP дополнительно опрашивает NodeGroup. Если текущий узел принадлежит к группе `master` и является единственным master-узлом в кластере, блокировка выключения для него применена не будет.
 {% endalert %}
 
-Чтобы включить механизм задержки перезагрузки или выключения узла (shutdown), добавьте на под лейбл `pod.deckhouse.io/inhibit-node-shutdown` (для Deployment укажите лейбл в шаблоне пода).
+Чтобы включить механизм задержки перезагрузки или выключения узла (далее просто «выключение узла»), добавьте на под лейбл `pod.deckhouse.io/inhibit-node-shutdown` (для Deployment укажите лейбл в шаблоне пода).
 
 Пример манифеста пода с лейблом `pod.deckhouse.io/inhibit-node-shutdown`:
 
@@ -1514,33 +1512,33 @@ metadata:
     pod.deckhouse.io/inhibit-node-shutdown: "true"
 spec:
   containers:
-  - name: app
-    image: my-registry/my-app:1.0.0
+    - name: app
+      image: my-registry/my-app:1.0.0
 ```
 
 {% alert level="warning" %}
-Блокировка срабатывает только для подов с лейблом `pod.deckhouse.io/inhibit-node-shutdown` в фазе `Running` на узле. Поды без лейбла завершаются по обычному сценарию graceful shutdown kubelet.
+Блокировка срабатывает только для подов с лейблом `pod.deckhouse.io/inhibit-node-shutdown` в фазе `Running` на узле. Поды без лейбла kubelet выключает по обычному сценарию graceful shutdown.
 {% endalert %}
 
-### Поиск подов, блокирующих shutdown, и диагностика на узле
+### Поиск подов, блокирующих выключение, и диагностика на узле
 
-Для поиска подов, из-за которых блокируется shutdown, используйте команду:
+Для поиска подов, из-за которых блокируется выключение узла, используйте команду:
 
 ```shell
 d8 k get po -A -l pod.deckhouse.io/inhibit-node-shutdown -o wide
 ```
 
-Для просмотра condition на узле используйте команду:
+Для просмотра состояния `GracefulShutdownPostpone` на узле используйте команду:
 
 ```shell
 d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
 ```
 
-Возможные значения `reason`:
+Возможные значения поля `reason`:
 
-- `WaitingForShutdownSignal` — ингибитор работает на узле, блокировка ещё не начиналась.
-- `PodsWithLabelAreRunningOnNode` — блокировка началась, поды с лейблом `pod.deckhouse.io/inhibit-node-shutdown` ещё работают на узле.
-- `NoRunningPodsWithLabel` — блокировка снята, shutdown может продолжиться.
+- `WaitingForShutdownSignal` — на узле работает механизм блокировки выключения, но блокировка ещё не началась;
+- `PodsWithLabelAreRunningOnNode` — выключение заблокировано, поскольку на узле ещё работают поды с лейблом `pod.deckhouse.io/inhibit-node-shutdown`;
+- `NoRunningPodsWithLabel` — блокировка снята, выключение может быть продолжено.
 
 ## Как механизм fencing обрабатывает разные типы узлов?
 

@@ -1521,23 +1521,23 @@ The block only applies to pods labeled with `pod.deckhouse.io/inhibit-node-shutd
 
 ### Searching pods that prevent shutdown and performing the node troubleshooting
 
-To search the pods that are preventing shutdown, use the following command:
+To search the pods that are preventing a node shutdown, use the following command:
 
 ```shell
 d8 k get po -A -l pod.deckhouse.io/inhibit-node-shutdown -o wide
 ```
 
-To view the condition on a node, use the following command:
+To view the `GracefulShutdownPostpone` condition on a node, use the following command:
 
 ```shell
 d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
 ```
 
-Possible values for `reason`:
+Possible values of the `reason` field:
 
-- `WaitingForShutdownSignal`: The inhibitor is running on the node, but the lock has not yet begun.
-- `PodsWithLabelAreRunningOnNode`: The lock has begun. Pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are still running on the node.
-- `NoRunningPodsWithLabel`: The lock has been released. The shutdown can continue.
+- `WaitingForShutdownSignal`: The shutdown blocking mechanism is running on the node, but the blocking has not yet begun.
+- `PodsWithLabelAreRunningOnNode`: The shutdown has been blocked because there are pods with the label `pod.deckhouse.io/inhibit-node-shutdown` still running on the node.
+- `NoRunningPodsWithLabel`: The blocking has been released and the shutdown can continue.
 
 ## How the fencing mechanism handles different node types?
 

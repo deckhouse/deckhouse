@@ -11,7 +11,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
     * The ability to define metadata that are inherited by all nodes in the group.
     * Monitoring of a group as a single entity (grouping nodes on graphs by groups, grouping alerts about node unavailability, alerts about the unavailability of N or N% of nodes in a group).
 1. **Chaos monkey** — the systemic termination of nodes. This feature tests the resilience of cluster elements and running applications.
-1. Delay the reboot or shutdown of a node while critical pods are running on it.
+1. Delaying the reboot or shutdown of a node while critical pods are running on it.
 1. Installing, updating, and configuring the node software (containerd, kubelet, etc.), connecting the node to the cluster:
     * Installing operating system (see the list of [supported OS](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
     * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, etc.).
@@ -77,28 +77,26 @@ The following monitoring patterns are available for node groups:
 
 ## Delaying node reboot or shutdown while critical pods are running
 
-The `d8-shutdown-inhibitor` service in `node-manager` delays node shutdown or reboot if stateful applications or virtual machines (VMs) are running on the node. The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. DKP defers the shutdown or reboot of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other scenarios where data loss must be avoided.
+The `d8-shutdown-inhibitor` service in `node-manager` delays node shutdown or reboot if stateful applications or virtual machines (VMs) are running on the node. The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. DKP delays the shutdown or reboot of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other scenarios where data loss must be avoided.
 
 ### How it works and key features
 
-The `d8-shutdown-inhibitor` service (inhibitor) prevents a node from shutting down as long as there are pods on it with the `Running` status that are labeled `pod.deckhouse.io/inhibit-node-shutdown`. The `GracefulShutdownPostpone` condition is used for this blocking. Additionally, the node is cordoned off during the blocking period to prevent the scheduler from scheduling new pods on it. The kubelet reads the node’s `GracefulShutdownPostpone` condition and does not begin evicting pods marked with this label as long as the condition’s `status` is `True` and `reason` is `PodsWithLabelAreRunningOnNode`. If there are pods on the node with the label `pod.deckhouse.io/inhibit-node-shutdown`, a corresponding message is displayed in the node console (wall).
+The `d8-shutdown-inhibitor` service prevents a node from shutting down as long as there are pods on it with the `Running` status that are labeled `pod.deckhouse.io/inhibit-node-shutdown`. The `GracefulShutdownPostpone` condition is used for this blocking. Additionally, the node is cordoned off during the blocking period to prevent the scheduler from scheduling new pods on it. The kubelet reads the node’s `GracefulShutdownPostpone` condition and does not begin evicting pods marked with this label as long as the condition’s `status` is `True` and `reason` is `PodsWithLabelAreRunningOnNode`. If there are pods on the node with the label `pod.deckhouse.io/inhibit-node-shutdown`, a corresponding message is displayed in the node console (wall).
 
-#### Features of the mechanism in DKP
+#### Delaying mechanism features in DKP
 
 The delay in restarting or shutting down a node while critical pods are running on it has the following features in DKP:
 
 * A label must be explicitly set on each pod that is to block shutdown. If pods are created via a Deployment, the label is specified in the pod template.
-* This mechanism works only with a patched DKP kubelet. Vanilla Kubernetes does not support this behavior.
+* This mechanism works only with a modified kubelet version included in DKP. The regular Kubernetes does not support this behavior.
 * The maximum block duration (`InhibitDelayMaxSec`) is `3` days. After this period expires, the shutdown may proceed regardless of whether there are pods on the node with the label `pod.deckhouse.io/inhibit-node-shutdown`.
-* This mechanism does not cancel the scheduling of disruptive updates in `node-manager`—it only delays the actual reboot of the node at the time of shutdown.
+* This mechanism does not cancel the scheduling of [disruptive updates](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#disruptive-updates) in `node-manager`. It only delays the actual reboot of the node at the time of shutdown.
 
 {% alert level="warning" %}
-Please note the specific behavior of the mechanism in a cluster with a single master node.
-
-To decide whether to lock a node, the NodeGroup is additionally queried. If the current node belongs to the `master` group and is the only master node in the cluster, the shutdown lock will not be applied to it.
+To decide whether to block a node shutdown, DKP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
 {% endalert %}
 
-Information on enabling the delay mechanism is provided in the section ["How to delay a node reboot while critical pods are running on it"](faq.html#how-to-enable-a-delay-before-shutting-down-or-restarting-a-node-while-critical-pods-are-running-on-it).
+For information on enabling the delay mechanism, refer to the section ["How to delay a node reboot while critical pods are running on it"](faq.html#how-to-enable-a-delay-before-a-node-shutdown-or-restart-while-critical-pods-are-running-on-it).
 
 ## Automatic deploying, configuring and updating Kubernetes nodes
 
