@@ -67,7 +67,7 @@ The smaller and more efficient the image, the faster the pod starts. Use minimal
 
 Image pull time and disk load at startup depend on image size and structure. With a large number of pods, this can become a problem:
 
-- use minimal base images (for example, `distroless`, `*-slim`, or Alpine Linux), without unnecessary packages and tools;
+- use minimal base images (for example, `distroless`, `*-slim`, or `alpine`), without unnecessary packages and tools;
 - reduce the number of image layers and merge them when possible to decrease the amount of unpacking and mounting;
 - keep images small — remove package manager caches, build artifacts, and temporary files;
 - use multi-stage builds.
