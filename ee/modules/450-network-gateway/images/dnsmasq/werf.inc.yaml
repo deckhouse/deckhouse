@@ -4,11 +4,10 @@ final: false
 from: {{ index $.Images "builder/distroless" }}
 shell:
   beforeInstall:
-  - pm install baselayout -d /out
   - pm install dnsmasq sqlite python@3.12 gnu-glibc python-wheel -d /out
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ index $.Images "base/scratch" }}
+from: {{ index $.Images "base/distroless-fin" }}
 git:
 - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/prepare-config.py
   to: /prepare-config.py
@@ -25,5 +24,5 @@ import:
 {{- include "image mount points" $ }}
 shell:
   install:
-  - python3 -m pip install -f file:///wheels --no-index --upgrade pip
-  - python3 -m pip install -f file:///wheels --no-index -r /requirements.txt
+  - pip3 install -f file:///wheels --no-index --upgrade pip
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt

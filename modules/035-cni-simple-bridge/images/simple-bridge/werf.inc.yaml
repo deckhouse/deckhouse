@@ -7,14 +7,10 @@ git:
   to: /out
 shell:
   beforeInstall:
-  - pm install baselayout -d /out
   - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl -d /out
-  install:
-  # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
-  - unlink /out/sbin
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "base/scratch" }}
+from: {{ index $.Images "base/distroless-fin" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /out
@@ -24,3 +20,7 @@ import:
 imageSpec:
   config:
     entrypoint: ["/sbin/iptables-wrapper"]
+shell:
+  install:
+  # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
+  - unlink /sbin

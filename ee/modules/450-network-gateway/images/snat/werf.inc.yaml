@@ -4,11 +4,10 @@ final: false
 from: {{ index $.Images "builder/distroless" }}
 shell:
   beforeInstall:
-  - pm install baselayout -d /out
   - pm install python@3.12 gnu-glibc grep sed coreutils bash -d /out
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ index $.Images "base/scratch" }}
+from: {{ index $.Images "base/distroless-fin" }}
 git:
 - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/iptables-loop.py
   to: /iptables-loop.py

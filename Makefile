@@ -271,7 +271,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs dmt-gen generate-werf 
+generate: generate-kubernetes generate-tools generate-docs dmt-gen generate-werf
 
 .PHONY: generate-tools
 generate-tools: yq
@@ -442,6 +442,7 @@ update-base-images-versions:
 	$(MAKE) render-workflow
 
 BASE_LIMIT_KEYS := REGISTRY_PATH \
+								base/distroless \
                 builder/distroless \
                 builder/golang-1.25 \
                 builder/golang-1.26 \
@@ -465,6 +466,9 @@ update-container-factory: ## Download container-factory digests and update candi
 	  echo "# version=$$ver"; \
 	  for key in $(BASE_LIMIT_KEYS); do \
 	    line=$$(grep -F "$${key}:" .alt_base_images.full.yml | head -n1); \
+	    case "$$key" in \
+	      base/distroless) line=$$(printf '%s\n' "$$line" | sed 's#^base/distroless:#base/distroless-fin:#');; \
+	    esac; \
 	    echo "$$line"; \
 	  done; \
 	} > alt_base_images.yml; \

@@ -33,7 +33,7 @@ shell:
   - pm install curl bash jq yq sed grep gawk procps iproute2 findutils coreutils openssl vim less ethtool pwru gnu-glibc-locale util-linux -d /out
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "base/scratch" }}
+from: {{ index $.Images "base/distroless-fin" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /out
