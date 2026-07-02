@@ -8,7 +8,7 @@ shell:
   - pm install python@3.12 gnu-glibc grep sed coreutils bash -d /out
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ index $.Images "base/scratch" }}
+from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/iptables-loop.py
   to: /iptables-loop.py

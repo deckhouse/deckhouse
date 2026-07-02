@@ -14,7 +14,7 @@ shell:
   - unlink /out/sbin
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: {{ index $.Images "base/scratch" }}
+from: {{ index $.Images "base/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /out
