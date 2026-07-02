@@ -58,4 +58,3 @@ If the underlying infrastructure restricts network communication between servers
 - [Host firewall on nodes](host_firewall.html) — protecting nodes with CiliumClusterwideNetworkPolicy and `nodeSelector`.
 - [Common policy examples](examples.html) — recipes for typical tasks.
 - [Diagnostics and observability](troubleshooting.html) — how to verify and debug policies.
-

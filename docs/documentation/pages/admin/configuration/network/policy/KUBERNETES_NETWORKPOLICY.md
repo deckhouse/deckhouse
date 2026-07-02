@@ -226,4 +226,3 @@ The Kubernetes NetworkPolicy API does not support the following scenarios (these
 - blocking loopback or traffic from the pod's own node.
 
 Some of these tasks are addressed by [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html), available in clusters with `cni-cilium`.
-

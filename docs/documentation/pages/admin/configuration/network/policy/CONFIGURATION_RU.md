@@ -59,4 +59,3 @@ relatedLinks:
 - [Host firewall на узлах](host_firewall.html) — защита самих узлов с помощью CiliumClusterwideNetworkPolicy и `nodeSelector`.
 - [Типовые примеры политик](examples.html) — рецепты для частых задач.
 - [Диагностика и наблюдаемость политик](troubleshooting.html) — как проверить применение политики и расследовать проблемы.
-

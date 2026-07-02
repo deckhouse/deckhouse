@@ -227,4 +227,3 @@ API NetworkPolicy Kubernetes не поддерживает следующие с
 - запрет loopback-трафика и трафика от собственного узла пода.
 
 Часть этих задач решается через [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html), доступные в кластерах с `cni-cilium`.
-

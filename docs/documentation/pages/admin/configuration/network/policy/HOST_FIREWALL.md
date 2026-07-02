@@ -139,4 +139,3 @@ spec:
 ```
 
 This is a starting point. Extend the policy with rules for monitoring, ingress controllers, load balancers, and SSH that match your setup.
-

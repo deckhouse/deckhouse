@@ -157,4 +157,3 @@ If a policy is created but traffic does not behave as expected, walk through the
 1. Eventual consistency. Cilium and kube-router apply policies asynchronously. Wait a few seconds and re-test.
 1. Policy status (CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy only). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` shows parse and apply errors in `status`.
 1. Conflict with a deny rule. Cilium deny rules override any allow rules. Look for policies with `ingressDeny` or `egressDeny` selecting the same endpoint.
-

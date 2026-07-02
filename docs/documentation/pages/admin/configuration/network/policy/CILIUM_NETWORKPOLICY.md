@@ -397,4 +397,3 @@ Recommended order:
 1. Turn audit mode off (`policyAuditMode: false`).
 
 Once audit mode is off, policies start blocking traffic that is not allowed by any rule.
-
