@@ -16,11 +16,14 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	gohook "github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // ApplyBindingActions reconfigures a hook's dynamic Kubernetes monitors in
@@ -33,9 +36,20 @@ import (
 // Without this the monitor keeps its registration-time (empty) Kind, its
 // snapshot stays empty, and the hook fails. Mirrors addon-operator's
 // ModuleHook.ApplyBindingActions.
-func ApplyBindingActions(bindings []shtypes.OnKubernetesEventConfig, ctrl *controller.HookController, actions []gohook.BindingAction) error {
+func ApplyBindingActions(logger *log.Logger, bindings []shtypes.OnKubernetesEventConfig, ctrl *controller.HookController, actions []gohook.BindingAction) error {
 	for _, action := range actions {
 		monitorID, ok := monitorIDForBinding(bindings, action.Name)
+
+		// TEMP DIAGNOSTIC: prove whether the action reaches here and resolves a
+		// monitor. Remove once the dynamic-kind binding path is confirmed working.
+		logger.Info("apply binding action",
+			slog.String("binding", action.Name),
+			slog.String("action", action.Action),
+			slog.String("kind", action.Kind),
+			slog.String("apiVersion", action.ApiVersion),
+			slog.String("monitor_id", monitorID),
+			slog.Bool("monitor_resolved", ok))
+
 		if !ok {
 			continue
 		}
@@ -49,6 +63,13 @@ func ApplyBindingActions(bindings []shtypes.OnKubernetesEventConfig, ctrl *contr
 			if err := ctrl.UpdateMonitor(monitorID, action.Kind, action.ApiVersion); err != nil {
 				return fmt.Errorf("update monitor for binding %q: %w", action.Name, err)
 			}
+
+			// TEMP DIAGNOSTIC: UpdateMonitor returned nil — either it recreated
+			// the monitor or it silently no-oped on a missing link.
+			logger.Info("update monitor returned ok",
+				slog.String("binding", action.Name),
+				slog.String("monitor_id", monitorID),
+				slog.String("kind", action.Kind))
 		}
 	}
 
