@@ -19,6 +19,7 @@ package ephemeral
 import (
 	"context"
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/certs"
 	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/operations"
 	"fmt"
@@ -195,7 +196,7 @@ func (e *StepExecutor) getPKISecret(ctx context.Context) (*corev1.Secret, error)
 }
 
 func materializePKISecret(pkiDir string, data map[string][]byte) error {
-	for flatKey, relPath := range pki.FileLayout() {
+	for flatKey, relPath := range certs.VirtualCertsFileLayout() {
 		content, ok := data[flatKey]
 		if !ok {
 			continue

@@ -29,7 +29,7 @@ const (
 // This is the single source of truth for flattening/unflattening the full PKI bundle,
 // used both when materializing a flat key/value map onto disk and when reading a
 // generated PKI bundle back into a flat map.
-func FileLayout() map[string]string {
+func FileLayout(options ...layoutOption) map[string]string {
 	layout := make(map[string]string)
 
 	for _, root := range rootCertNames() {
@@ -41,6 +41,10 @@ func FileLayout() map[string]string {
 
 	layout[SAPrivateKeyFileName] = SAPrivateKeyFileName
 	layout[SAPublicKeyFileName] = SAPublicKeyFileName
+
+	for _, option := range options {
+		option(layout)
+	}
 
 	return layout
 }
@@ -69,4 +73,22 @@ func addCertFiles(layout map[string]string, baseName string) {
 	flat := FlatBaseName(baseName)
 	layout[flat+".crt"] = baseName + ".crt"
 	layout[flat+".key"] = baseName + ".key"
+}
+
+type layoutOption func(map[string]string)
+
+func WithExcludedRootCertificates(excludedCertificates ...RootCertBaseName) layoutOption {
+	return func(layout map[string]string) {
+		for _, cert := range excludedCertificates {
+			delete(layout, string(cert))
+		}
+	}
+}
+
+func WithExcludedLeafCertificates(excludedLeafCertificates ...LeafCertBaseName) layoutOption {
+	return func(layout map[string]string) {
+		for _, cert := range excludedLeafCertificates {
+			delete(layout, string(cert))
+		}
+	}
 }

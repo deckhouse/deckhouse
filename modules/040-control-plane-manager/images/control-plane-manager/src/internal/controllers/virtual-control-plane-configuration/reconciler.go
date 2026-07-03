@@ -27,6 +27,7 @@ import (
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/certs"
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 
@@ -296,7 +297,7 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 }
 
 func readPKIBundleSecretData(pkiDir string) (map[string][]byte, error) {
-	layout := pki.FileLayout()
+	layout := certs.VirtualCertsFileLayout()
 
 	data := make(map[string][]byte, len(layout))
 	for flatKey, relPath := range layout {
