@@ -30,9 +30,9 @@ const (
 
 	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
 
-	// ApplicationAnnotationIsEndpoint marks an Ingress in the application chart
+	// ApplicationAnnotationEndpoint marks an Ingress in the application chart
 	// as an application endpoint; its hosts and paths are reflected in status.urls.
-	ApplicationAnnotationIsEndpoint = "packages.deckhouse.io/is-application-endpoint"
+	ApplicationAnnotationEndpoint = "packages.deckhouse.io/application-endpoint"
 )
 
 var (
