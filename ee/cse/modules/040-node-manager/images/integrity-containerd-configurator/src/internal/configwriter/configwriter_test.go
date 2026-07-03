@@ -14,9 +14,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 )
 
@@ -96,27 +93,25 @@ func TestAggregatePolicies(t *testing.T) {
 			},
 		},
 		{
-			name: "skip policy with empty CA",
+			name: "include policy with empty CA",
 			policies: []deckhousev1alpha1.ContainerdIntegrityPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "empty-ca"},
-					Spec:       deckhousev1alpha1.ContainerdIntegrityPolicySpec{CA: "   "},
+					Spec: deckhousev1alpha1.ContainerdIntegrityPolicySpec{CA: ""},
 					Status: deckhousev1alpha1.ContainerdIntegrityPolicyStatus{
 						ProtectedNamespaces: []string{"skipped-ns"},
 					},
 				},
 			},
 			want: &DesiredConfig{
-				Namespaces: []string{},
-				CACerts:    []string{},
+				Namespaces: []string{"skipped-ns"},
+				CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(""))},
 			},
 		},
 		{
-			name: "skip empty CA and apply valid policy",
+			name: "include empty CA and valid policy",
 			policies: []deckhousev1alpha1.ContainerdIntegrityPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "empty-ca"},
-					Spec:       deckhousev1alpha1.ContainerdIntegrityPolicySpec{CA: "   "},
+					Spec: deckhousev1alpha1.ContainerdIntegrityPolicySpec{CA: ""},
 					Status: deckhousev1alpha1.ContainerdIntegrityPolicyStatus{
 						ProtectedNamespaces: []string{"skipped-ns"},
 					},
@@ -129,8 +124,11 @@ func TestAggregatePolicies(t *testing.T) {
 				},
 			},
 			want: &DesiredConfig{
-				Namespaces: []string{"my-ns"},
-				CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
+				Namespaces: []string{"my-ns", "skipped-ns"},
+				CACerts: []string{
+					base64.StdEncoding.EncodeToString([]byte("")),
+					base64.StdEncoding.EncodeToString([]byte(ca)),
+				},
 			},
 		},
 	}
@@ -139,7 +137,7 @@ func TestAggregatePolicies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := AggregatePolicies(log.NewNop(), tt.policies)
+			got := AggregatePolicies(tt.policies)
 			require.Equal(t, tt.want, got)
 		})
 	}
@@ -174,7 +172,8 @@ func TestWriterApplyAndRemove(t *testing.T) {
 		CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
 	}
 
-	require.NoError(t, writer.Apply(log.NewNop(), config))
+	_, err := writer.Apply(config)
+	require.NoError(t, err)
 
 	IntegrityTomlPath := filepath.Join(dir, IntegrityConfigFile)
 	IntegrityTomlData, err := os.ReadFile(IntegrityTomlPath)
@@ -184,23 +183,28 @@ func TestWriterApplyAndRemove(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expected, IntegrityTomlData)
 
-	require.NoError(t, writer.Apply(log.NewNop(), config))
+	_, err = writer.Apply(config)
+	require.NoError(t, err)
 	unchanged, err := os.ReadFile(IntegrityTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, unchanged)
 
 	require.NoError(t, os.WriteFile(IntegrityTomlPath, []byte("stale"), 0o644))
-	require.NoError(t, writer.Apply(log.NewNop(), config))
+	_, err = writer.Apply(config)
+	require.NoError(t, err)
 	restored, err := os.ReadFile(IntegrityTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, restored)
 
-	require.NoError(t, writer.Apply(log.NewNop(), nil))
+	_, err = writer.Apply(nil)
+	require.NoError(t, err)
 	_, err = os.Stat(filepath.Join(dir, IntegrityConfigFile))
 	require.True(t, os.IsNotExist(err))
 
-	require.NoError(t, writer.Apply(log.NewNop(), config))
-	require.NoError(t, writer.Apply(log.NewNop(), &DesiredConfig{}))
+	_, err = writer.Apply(config)
+	require.NoError(t, err)
+	_, err = writer.Apply(&DesiredConfig{})
+	require.NoError(t, err)
 	_, err = os.Stat(filepath.Join(dir, IntegrityConfigFile))
 	require.True(t, os.IsNotExist(err))
 }

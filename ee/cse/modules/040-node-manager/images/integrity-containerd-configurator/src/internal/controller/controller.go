@@ -43,10 +43,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("list ContainerdIntegrityPolicies: %w", err)
 	}
 
-	desired := configwriter.AggregatePolicies(logger, policyList.Items)
+	desired := configwriter.AggregatePolicies(policyList.Items)
 
-	if err := r.Writer.Apply(logger, desired); err != nil {
+	applyResult, err := r.Writer.Apply(desired)
+	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("apply containerd integrity config: %w", err)
+	}
+	if applyResult.Removed {
+		logger.Info("Found no namespaces matching the policies' selectors, removing containerd integrity config")
+	}
+	if applyResult.Updated {
+		logger.Info("Updated containerd integrity config", "namespaces", applyResult.Namespaces, "ca_certs_count", applyResult.CACertsCount)
 	}
 
 	return reconcile.Result{}, nil
