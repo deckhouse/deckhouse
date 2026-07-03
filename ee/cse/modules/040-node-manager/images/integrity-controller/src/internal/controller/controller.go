@@ -71,19 +71,14 @@ func (r *Reconciler) listMatchingNamespaces(
 	ctx context.Context,
 	policy *deckhousev1alpha1.ContainerdIntegrityPolicy,
 ) ([]string, error) {
-	selector := labels.SelectorFromSet(policy.Spec.ProtectedNamespaces.MatchLabels)
-
 	namespaceList := &corev1.NamespaceList{}
-	if err := r.List(ctx, namespaceList); err != nil {
+	if err := r.List(ctx, namespaceList, client.MatchingLabels(policy.Spec.ProtectedNamespaces.MatchLabels)); err != nil {
 		return nil, err
 	}
 
-	matchedNamespaces := make([]string, 0)
+	matchedNamespaces := make([]string, len(namespaceList.Items))
 	for i := range namespaceList.Items {
-		namespace := &namespaceList.Items[i]
-		if selector.Matches(labels.Set(namespace.Labels)) {
-			matchedNamespaces = append(matchedNamespaces, namespace.Name)
-		}
+		matchedNamespaces[i] = namespaceList.Items[i].Name
 	}
 
 	sort.Strings(matchedNamespaces)
