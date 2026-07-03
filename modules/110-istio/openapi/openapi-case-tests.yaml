@@ -32,6 +32,12 @@ positive:
             requests:
               cpu: 100m
               memory: 128Mi
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.d8-istio.svc.cluster.local
+            port: 10003
   values:
     - {}
 negative:
@@ -46,3 +52,9 @@ negative:
             requests:
               cpu: 100m
               memory: 128Mi
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.istio-system.svc.cluster.local
+            port: "10003"
