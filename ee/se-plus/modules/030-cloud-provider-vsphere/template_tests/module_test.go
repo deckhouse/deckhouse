@@ -225,6 +225,75 @@ const moduleValuesD = `
             tcpAppProfileName: profile1
 `
 
+const moduleValuesDatastoreOnly = `
+    internal:
+      storageClasses:
+      - name: aaa-datastore
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/aaa/
+        path: /dc/datastore/aaa
+        zones: ["zone-a"]
+      - name: bbb-datastore
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/bbb/
+        path: /dc/datastore/bbb
+        zones: ["zone-a"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        datacenter: X1
+        zones: ["zone-a"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+`
+
+const moduleValuesHybrid = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        datacenter: X1
+        zones: ["aaa", "bbb"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        zones: ["zone-a", "zone-b"]
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        masterNodeGroup:
+          instanceClass:
+            datastore: dev/lun_1
+            mainNetwork: k8s-msk/test_187
+            memory: 8192
+            numCPUs: 4
+            template: dev/golden_image
+          replicas: 1
+`
+
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -559,6 +628,31 @@ nodes:
   externalVmNetworkName: aaa,bbb
   internalVmNetworkName: ccc,ddd
 `))
+		})
+	})
+
+	Context("Vsphere DatastoreCluster filtered by hook: first Datastore gets default annotation", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesDatastoreOnly)
+			f.HelmRender()
+		})
+
+		It("first StorageClass gets default annotation, second does not", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			scAaa := f.KubernetesGlobalResource("StorageClass", "aaa-datastore")
+			scBbb := f.KubernetesGlobalResource("StorageClass", "bbb-datastore")
+
+			Expect(scAaa.Exists()).To(BeTrue())
+			Expect(scBbb.Exists()).To(BeTrue())
+
+			Expect(scAaa.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.deckhouse.io/volume-expansion-mode: offline
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+			Expect(scBbb.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 		})
 	})
 
