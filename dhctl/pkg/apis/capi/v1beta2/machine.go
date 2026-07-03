@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +25,7 @@ import (
 
 const (
 	group        = "cluster.x-k8s.io"
-	groupVersion = "v1beta1"
+	groupVersion = "v1beta2"
 
 	machinesName    = "machines"
 	deploymentsName = "machinedeployments"

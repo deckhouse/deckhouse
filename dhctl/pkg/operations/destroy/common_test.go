@@ -43,7 +43,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis"
-	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta1"
+	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta2"
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
@@ -594,7 +594,7 @@ func testCreateCAPIResources(t *testing.T, kubeCl *client.KubernetesClient) []te
 	createdResources := make([]testCreatedResource, 0)
 
 	md := testYAMLToUnstructured(t, `
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   annotations:
@@ -604,7 +604,7 @@ metadata:
   name: test-worker-9bfeb8f2
   namespace: d8-cloud-instance-manager
   ownerReferences:
-  - apiVersion: cluster.x-k8s.io/v1beta1
+  - apiVersion: cluster.x-k8s.io/v1beta2
     kind: Cluster
     name: test
     uid: 1f63df99-2a20-4460-877e-d8bc69001052
@@ -634,13 +634,13 @@ spec:
         dataSecretName: worker-9e1e0bbc
       clusterName: test
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: MachineTemplate
         name: worker-9e1e0bbc
-        namespace: d8-cloud-instance-manager
-      nodeDeletionTimeout: 10m0s
-      nodeDrainTimeout: 10m0s
-      nodeVolumeDetachTimeout: 10m0s
+      deletion:
+        nodeDeletionTimeoutSeconds: 600
+        nodeDrainTimeoutSeconds: 600
+        nodeVolumeDetachTimeoutSeconds: 600
 `)
 	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(t.Context(), md, metav1.CreateOptions{})
 	require.NoError(t, err)

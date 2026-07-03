@@ -29,7 +29,7 @@ import (
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta1"
+	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta2"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -565,7 +565,7 @@ func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.Kubernet
 			return checkCAPIMachinesAPI(kubeCl)
 		})
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get resources in group=cluster.x-k8s.io, version=v1beta1: %v", err))
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get resources in group=cluster.x-k8s.io, version=v1beta2: %v", err))
 		if input.NewConfirmation().
 			WithMessage("Machines weren't deleted from the cluster. Do you want to continue?").
 			WithYesByDefault().
@@ -598,7 +598,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Patch nodeDrainTimeout for machine %s", machine.GetName()))
 			m := machine
 			// we delete cluster anyway and we can force delete machine (without drain)
-			if err = unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout"); err != nil {
+			if err = unstructured.SetNestedField(m.Object, int64(10), "spec", "deletion", "nodeDrainTimeoutSeconds"); err != nil {
 				return err
 			}
 
