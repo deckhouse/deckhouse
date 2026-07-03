@@ -111,7 +111,7 @@ The module consists of the following components:
 
    For more details about the component, refer to [the applicationset-controller documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/).
 
-1. **&lt;ArgoCD name&gt;-argocd-image-updater-controller** (Deployment): Argocd-image-updater-controller. Optional component consisting of a single **argocd-image-updater** container and intended for automatic container image updates in Argo CD applications when new versions appear in image registries. The component tracks image tag changes and, when a new version is found, updates corresponding Application resources in Argo CD (for example, image tags in manifests or `Helm values`) via a pull request to a Git repository or directly, depending on the selected workflow.
+1. **&lt;ArgoCD name&gt;-argocd-image-updater-controller** (Deployment): Argocd-image-updater-controller. Optional component consisting of a single **argocd-image-updater** container and intended for automatic container image updates in Argo CD applications when new versions appear in image registries. The component tracks image tag changes and, when a new version is found, updates corresponding Application resources in Argo CD (for example, image tags in manifests or Helm values) via a pull request to a Git repository or directly, depending on the selected workflow.
 
    Argocd-image-updater-controller performs the following functions:
 
