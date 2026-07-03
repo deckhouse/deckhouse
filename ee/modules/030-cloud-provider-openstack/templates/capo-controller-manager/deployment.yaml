@@ -1,0 +1,73 @@
+{{- define "capo_controller_manager_pod_annotations" -}}
+checksum/config: {{ include (print $.Template.BasePath "/capo-controller-manager/webhook-tls.yaml") . | sha256sum }}
+{{- end -}}
+
+{{- define "capo_controller_manager_pod_labels" -}}
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+security.deckhouse.io/security-policy-exception: capo-controller-manager
+{{- end }}
+{{- end -}}
+
+{{- define "capo_controller_manager_args" -}}
+- "--health-addr"
+- ":9445"
+- "--webhook-port"
+- "4201"
+{{- end -}}
+
+{{- define "capo_controller_manager_ports" -}}
+- name: webhook-server
+  containerPort: 4201
+  protocol: TCP
+{{- end -}}
+
+{{- define "capo_controller_manager_volume_mounts" -}}
+- name: cert
+  mountPath: "/tmp/k8s-webhook-server/serving-certs"
+  readOnly: true
+{{- end -}}
+
+{{- define "capo_controller_manager_volumes" -}}
+- name: cert
+  secret:
+    secretName: capo-controller-manager-webhook-tls
+    defaultMode: 420
+{{- end -}}
+
+{{- define "capo_controller_manager_liveness_probe" -}}
+httpGet:
+  path: "/healthz"
+  port: 9445
+initialDelaySeconds: 15
+periodSeconds: 20
+{{- end -}}
+
+{{- define "capo_controller_manager_readiness_probe" -}}
+httpGet:
+  path: "/readyz"
+  port: 9445
+initialDelaySeconds: 5
+periodSeconds: 10
+{{- end -}}
+
+{{- $capiConfig := dict -}}
+{{- $_ := set $capiConfig "fullname" "capo-controller-manager" -}}
+{{- $_ := set $capiConfig "namespace" "d8-cloud-provider-openstack" -}}
+{{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "capoControllerManager")) -}}
+{{- $_ := set $capiConfig "capiProviderName" "infrastructure-openstack" -}}
+{{- $_ := set $capiConfig "hostNetwork" true -}}
+{{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
+{{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
+{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
+{{- $_ := set $capiConfig "additionalArgs" (include "capo_controller_manager_args" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalPorts" (include "capo_controller_manager_ports" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumeMounts" (include "capo_controller_manager_volume_mounts" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumes" (include "capo_controller_manager_volumes" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalPodAnnotations" (include "capo_controller_manager_pod_annotations" . | fromYaml) -}}
+{{- $_ := set $capiConfig "additionalPodLabels" (include "capo_controller_manager_pod_labels" . | fromYaml) -}}
+{{- $_ := set $capiConfig "livenessProbe" (include "capo_controller_manager_liveness_probe" . | fromYaml) -}}
+{{- $_ := set $capiConfig "readinessProbe" (include "capo_controller_manager_readiness_probe" . | fromYaml) -}}
+{{- $_ := set $capiConfig "vpaEnabled" true -}}
+{{- $_ := set $capiConfig "securityPolicyExceptionEnabled" true -}}
+
+{{- include "helm_lib_capi_controller_manager_manifests" (list . $capiConfig) }}

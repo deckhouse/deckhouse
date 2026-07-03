@@ -149,6 +149,7 @@ rules:
   - deckhousemachinetemplates
   - dynamixmachinetemplates
   - huaweicloudmachinetemplates
+  - openstackmachinetemplates
   - staticmachinetemplates
   - vcdmachinetemplates
   - yandexmachinetemplates
