@@ -1207,16 +1207,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
-  to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/cse/modules/015-admission-policy-engine/openapi/config-values.yaml
   to: /deckhouse/modules/015-admission-policy-engine/openapi/config-values.yaml
   stageDependencies:
