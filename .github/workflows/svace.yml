@@ -139,6 +139,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+      tags: ${{ steps.set-pr-tag.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -298,7 +299,19 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
-
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
       - name: Build and push deckhouse images
         id: build
@@ -434,10 +447,12 @@ jobs:
         with:
           name: build_report_${{ env.WERF_ENV }}
           path: images_tags_werf.json
-
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json || true
+        run: |
+          rm images_tags_werf.json || true
+          rm changed_images.json || true
+          rm images_digests.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
