@@ -1,0 +1,24 @@
+diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_controller.go
+index 00000000..00000000 100644
+--- a/controllers/vcdcluster_controller.go
++++ b/controllers/vcdcluster_controller.go
+@@ -1381,16 +1381,9 @@ func (r *VCDClusterReconciler) reconcileDelete(ctx context.Context,
+ 		if err != nil {
+ 			log.Error(err, "failed to remove VCDClusterError from RDE", "rdeID", vcdCluster.Status.InfraId)
+ 		}
+-		if vApp.VApp.Children != nil {
+-			updatedErr := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDClusterVappDeleteError, "", vcdCluster.Name, fmt.Sprintf(
+-				"Error occurred during cluster deletion; %d VMs detected in the vApp %s",
+-				len(vApp.VApp.Children.VM), vcdCluster.Name))
+-			if updatedErr != nil {
+-				log.Error(updatedErr, "failed to add VCDClusterVappDeleteError into RDE", "rdeID", vcdCluster.Status.InfraId)
+-			}
+-			return ctrl.Result{}, errors.Errorf(
+-				"Error occurred during cluster deletion; %d VMs detected in the vApp %s",
+-				len(vApp.VApp.Children.VM), vcdCluster.Name)
++		if vApp.VApp.Children != nil && len(vApp.VApp.Children.VM) > 0 {
++			log.Info("Skipping vApp deletion during cluster deletion; VMs remain in vApp",
++				"vAppName", vcdCluster.Name, "vmCount", len(vApp.VApp.Children.VM))
+ 		} else {
+ 			log.Info("Deleting vApp of the cluster", "vAppName", vcdCluster.Name)
+ 			err = vdcManager.DeleteVApp(vcdCluster.Name)
