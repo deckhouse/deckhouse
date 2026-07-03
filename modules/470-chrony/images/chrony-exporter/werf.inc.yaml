@@ -1,5 +1,4 @@
 {{- $chronyExproterVersion := "0.11.0"}}
-{{- $promuVersion := "0.17.0"}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -18,32 +17,10 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v{{$promuVersion}} $(cat /run/secrets/SOURCE_REPO)/prometheus/promu.git promu
   - git clone --depth 1 --branch v{{$chronyExproterVersion}} $(cat /run/secrets/SOURCE_REPO)/SuperQ/chrony_exporter.git chrony_exporter
-  - cd /src/promu
-  - git apply /patches/promu/*.patch --verbose
   - cd /src/chrony_exporter
   - git apply /patches/chrony_exporter/*.patch --verbose
-  - rm -rf /src/promu/.git /src/chrony_exporter/.git
----
-image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/promu
-  to: /src
-  before: install
-mount:
-{{ include "mount points for golang builds" . }}
-secrets:
-- id: GOPROXY
-  value: {{ .GOPROXY }}
-shell:
-  install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - cd /src
-  - go build -ldflags="-s -w" -o promu ./main.go
+  - rm -rf /src/chrony_exporter/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
@@ -55,7 +32,7 @@ import:
   add: /src/chrony_exporter
   to: /chrony_exporter
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact
+- image: common/promu-artifact
   add: /src/promu
   to: /bin/promu
   before: install
