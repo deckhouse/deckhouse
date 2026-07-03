@@ -32,8 +32,8 @@ Available only in DKP Enterprise Edition (EE).
 * Federation requires mutual trust between clusters.
   It requires a mutual root certificate exchange: cluster A must trust cluster B, and vice versa.
 * Configuring inter-cluster access to services requires exchanging information about public services.
-  This is done using ServiceEntry resources.
-  A ServiceEntry describes the public `ingressgateway` address of cluster B
+  This is done using `ServiceEntry` resources.
+  A `ServiceEntry` describes the public `ingressgateway` address of cluster B
   so that services in cluster A can reach the `bar` service in cluster B.
 
 <div data-presentation="../../../../presentations/istio/federation_common_principles_en.pdf"></div>
@@ -64,14 +64,14 @@ To establish a federation, you must:
     the IstioFederation resource will be filled with necessary service data in `status.metadataCache.public` and `status.metadataCache.private`.
 * Add the `federation.istio.deckhouse.io/public-service: ""` label to each Service resource
   that is considered public within the federation.
-  * In the other federation clusters, corresponding ServiceEntry and DestinationRule resources will be created for each such Service,
+  * In the other federation clusters, corresponding `ServiceEntry` and DestinationRule resources will be created for each such Service,
     leading to the `ingressgateway` of the original cluster.
   * The label value must be empty. You do not need to label other resources, such as Deployment, Pod, or VirtualService, to publish a service in the federation.
 
 {% alert level="warning" %}
 Federation publishing does not support `ExternalName` services, services without `.spec.ports`, or services with ports missing the `name` field.
 
-Each port name must start with a supported Istio prefix: `http`, `http2`, `https`, `tcp`, `tls`, `grpc`, or `grpc-web`. The module uses the port name to determine the protocol in the generated ServiceEntry. If the prefix is not recognized, the port will be handled as TCP.
+Each port name must start with a supported Istio prefix: `http`, `http2`, `https`, `tcp`, `tls`, `grpc`, or `grpc-web`. The module uses the port name to determine the protocol in the generated `ServiceEntry`. If the prefix is not recognized, the port will be handled as TCP.
 {% endalert %}
 
 Example of a public service:

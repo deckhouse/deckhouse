@@ -249,7 +249,7 @@ Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deploymen
 #### General principles of federation
 
 - Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. This is achieved by a mutual exchange of root certificates.
-- You also need to share information about public services to use the federation. You can do that using the ServiceEntry resource. A ServiceEntry defines the public `ingressgateway` address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
+- You also need to share information about public services to use the federation. You can do that using the `ServiceEntry` resource. A `ServiceEntry` defines the public `ingressgateway` address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
 <div data-presentation="presentations/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
@@ -274,13 +274,13 @@ To establish a federation, you must:
 - Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
   - After successful auto-negotiation between clusters, the status of `IstioFederation` resource will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
 - Add the `federation.istio.deckhouse.io/public-service: ""` label to each Service that is considered public within the federation.
-  - In the other federation clusters, corresponding ServiceEntry and DestinationRule resources will be created for each such Service, leading to the `ingressgateway` of the original cluster.
+  - In the other federation clusters, corresponding `ServiceEntry` and DestinationRule resources will be created for each such Service, leading to the `ingressgateway` of the original cluster.
   - The label value must be empty. You do not need to label other resources, such as Deployment, Pod, or VirtualService, to publish a service in the federation.
 
 {% alert level="warning" %}
 Federation publishing does not support `ExternalName` services, services without `.spec.ports`, or services with ports missing the `name` field.
 
-Each port name must start with a supported Istio prefix: `http`, `http2`, `https`, `tcp`, `tls`, `grpc`, or `grpc-web`. The module uses the port name to determine the protocol in the generated ServiceEntry. If the prefix is not recognized, the port will be handled as TCP.
+Each port name must start with a supported Istio prefix: `http`, `http2`, `https`, `tcp`, `tls`, `grpc`, or `grpc-web`. The module uses the port name to determine the protocol in the generated `ServiceEntry`. If the prefix is not recognized, the port will be handled as TCP.
 {% endalert %}
 
 Example of a public service:
