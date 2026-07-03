@@ -170,6 +170,10 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 
 ## Дефрагментация etcd
 
+{% alert level="info" %}
+В кластерах с тремя и более членами etcd по умолчанию включена периодическая дефрагментация etcd. Она выполняется раз в сутки ровно в 1:00 ночи по времени сервера. Подробнее — в документации модуля [`control-plane-manager`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag).
+{% endalert %}
+
 {% alert level="warning" %}
 Перед дефрагментацией [создайте резервную копию etcd](../../backup/backup-and-restore.html#создание-резервных-копий-с-помощью-deckhousecli).
 {% endalert %}

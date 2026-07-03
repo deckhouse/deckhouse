@@ -18,6 +18,8 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
 - Upgrade/downgrade компонентов. DKP поддерживает согласованное обновление или понижение версии control plane, что позволяет поддерживать единообразие версий в кластере. В редакциях CSE поддерживается только upgrade.
 
 - Управление конфигурацией etcd-кластера и его членов. DKP масштабирует master-узлы, выполняет миграцию из single-master в multi-master и обратно.
+  
+- Периодическая дефрагментация etcd. В кластерах с тремя и более членами etcd эта функция включена по умолчанию.
 
 - Настройка kubeconfig. DKP формирует актуальный конфигурационный файл (с правами `cluster-admin`), генерирует, продлевает и обновляет kubeconfig для компонентов control plane и административный kubeconfig (`admin.conf`), а также создает символическую ссылку для пользователя `root` (`/root/.kube/config` -> `admin.conf`). При включённом модуле [`user-authz`](/modules/user-authz/) символическую ссылку можно отключить параметром [`rootKubeconfigSymlink`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) в модуле `control-plane-manager` (подробнее — в [«FAQ»](/modules/control-plane-manager/faq.html#модель-административного-доступа-к-кластеру) модуля `control-plane-manager`). Также DKP ужесточает права доступа к файлам `admin.conf` и `super-admin.conf` для усиления безопасности.
 
@@ -251,3 +253,36 @@ spec:
 {% alert level="warning" %}
 После применения ресурса настройки GRUB будут обновлены, и узлы кластера начнут последовательную перезагрузку для применения изменений.
 {% endalert %}
+
+## Настройка периодической дефрагментации etcd
+
+В кластерах с тремя и более членами etcd (3 и более master-узлов или 2 и более master-узлов при наличии etcd-арбитра) эта функция включена по умолчанию. Дефрагментация выполняется раз в сутки ровно в 1:00 ночи по времени сервера.
+
+{% alert level="warning" %}
+Включение периодической дефрагментации в кластере с одним master-узлом приводит к кратковременной недоступности управляющего слоя каждый раз во время ее выполнения.
+{% endalert %}
+
+Для настройки периодической дефрагментации etcd используйте параметр [`defrag`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag) в конфигурации модуля `control-plane-manager`. Желаемую периодичность дефрагментации укажите в параметре [`cronSchedule`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag-cronschedule) в формате cron (UTC).
+
+Пример конфигурации модуля `control-plane-manager` с настройками периодичности дефрагментации etcd раз в сутки в 4:00 ночи по времени сервера:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      bindToWildcard: true
+      certSANs:
+      - bakery.infra
+      - devs.infra
+      publishAPI: {}
+    etcd:
+      defrag: 
+        enabled: true
+        cronSchedule: 0 4 * * *
+```

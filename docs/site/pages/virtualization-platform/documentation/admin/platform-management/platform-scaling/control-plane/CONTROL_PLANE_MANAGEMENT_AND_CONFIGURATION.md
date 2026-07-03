@@ -17,6 +17,8 @@ The control plane management functionality includes:
 
 - Managing the etcd cluster configuration and its members. DVP scales master nodes and performs migrations between single-master and multi-master modes.
 
+- Periodic defragmentation of etcd. In clusters with three or more etcd members, this feature is enabled by default.
+
 - Configuring kubeconfig. DVP generates an up-to-date configuration file (with `cluster-admin` privileges), handles automatic renewal and updates, and creates a `symlink` for the `root` user.
 
 > Some parameters affecting control plane behavior are taken from the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource.
@@ -246,3 +248,36 @@ spec:
 {% alert level="warning" %}
 After applying the resource, the GRUB settings will be updated and the cluster nodes will begin a sequential reboot to apply the changes.
 {% endalert %}
+
+## etcd periodic defragmentation configuration
+
+In clusters with three or more etcd members (3 or more master nodes, or 2 or more master nodes if an etcd arbitrator is present), this feature is enabled by default. Defragmentation runs once a day at exactly 1:00 a.m. server time.
+
+{% alert level="warning" %}
+Enabling periodic defragmentation in a cluster with a single master node causes the control plane to be temporarily unavailable each time it runs.
+{% endalert %}
+
+To configure periodic etcd defragmentation, use the [`defrag`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag) parameter in the `control-plane-manager` module configuration. Specify the desired defragmentation frequency in the [`cronSchedule`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag-cronschedule) parameter using the cron (UTC) format.
+
+Example configuration of the `control-plane-manager` module with settings for etcd defragmentation once a day at 4:00 a.m. server time:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      bindToWildcard: true
+      certSANs:
+      - bakery.infra
+      - devs.infra
+      publishAPI: {}
+    etcd:
+      defrag: 
+        enabled: true
+        cronSchedule: 0 4 * * *
+```
