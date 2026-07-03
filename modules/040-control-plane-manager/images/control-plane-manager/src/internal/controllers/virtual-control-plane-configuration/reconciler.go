@@ -451,10 +451,12 @@ func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret
 	}
 	defer os.RemoveAll(outDir)
 
+	endpoint := fmt.Sprintf("https://%s:6443", clusterIP)
 	if _, err := kubeconfig.CreateKubeconfigFiles(kubeconfigFiles,
 		kubeconfig.WithCertificatesDir(caDir),
 		kubeconfig.WithOutDir(outDir),
 		kubeconfig.WithLocalAPIEndpoint(clusterIP),
+		kubeconfig.WithControlPlaneEndpointURL(endpoint),
 	); err != nil {
 		return nil, fmt.Errorf("create kubeconfig files: %w", err)
 	}
