@@ -56,7 +56,7 @@ Argo CD instance deployment scenario in a [principal cluster](https://argocd-age
 
 The module consists of the following components:
 
-1. **argocd-operator-controller-manager** (Deployment): Implementation of [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator) that allows deploying Argo CD instances in a DKP cluster. The component works with the following custom resources:
+1. **Argocd-operator-controller-manager** (Deployment): Implementation of [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator) that allows deploying Argo CD instances in a DKP cluster. The component works with the following custom resources:
    - [ArgoCD](/modules/operator-argo/cr.html#argocd): Main resource for deploying and configuring an Argo CD instance.
    - [ArgoCDExport](/modules/operator-argo/cr.html#argocdexport): Exports Argo CD configuration and state for backup or migration. The operator reads the ArgoCDExport custom resource and creates a Job/CronJob with the same name as the ArgoCDExport resource. The created Job/CronJob performs backup of the Argo CD instance configuration.
    - [NamespaceManagement](/modules/operator-argo/cr.html#namespacemanagement): Defines namespace management rules for an Argo CD instance. The operator watches the NamespaceManagement custom resource and updates the `argocd-cmd-params-cm` ConfigMap accordingly.
@@ -69,9 +69,9 @@ The module consists of the following components:
    - **manager**: Main container.
    - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to `manager` metrics.
 
-{% alert level="info" %}
-The following components describe resources created by argocd-operator-controller-manager based on configuration defined in the ArgoCD custom resource. The `<ArgoCD name>` prefix is used in descriptions and is replaced by the controller with the ArgoCD resource name.
-{% endalert %}
+   {% alert level="info" %}
+   The following components describe resources created by argocd-operator-controller-manager based on configuration defined in the ArgoCD custom resource. The `<ArgoCD name>` prefix is used in descriptions and is replaced by the controller with the ArgoCD resource name.
+   {% endalert %}
 
 1. **&lt;ArgoCD name&gt;-server** (Deployment): Argocd-server. Main component for interacting with an Argo CD instance. Argocd-server provides REST/gRPC API and a web UI for Argo CD management. The component allows managing Application, ApplicationSet, and AppProject custom resources through the provided interfaces (web UI, API, CLI).
 
@@ -80,7 +80,7 @@ The following components describe resources created by argocd-operator-controlle
    It consists of the following containers:
 
    - **argocd-server-init**: Optional set of init containers defined by the user in the [`.spec.server.initContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-initcontainers) parameter of the ArgoCD custom resource.
-   - **rollout-extension**: Optional init container that loads the UI extension for the [Rollout custom resource](https://argoproj.github.io/argo-rollouts/features/specification/). The module does not provide a controller for this custom resource. Such controller must be installed and configured separately. `argocd-operator-controller-manager` adds rollout-extension if [`.spec.server.enableRolloutsUI`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enablerolloutsui) is set to `true`.
+   - **rollout-extension**: Optional init container that loads the UI extension for the [Rollout](https://argoproj.github.io/argo-rollouts/features/specification/) custom resource. The module does not provide a controller for this custom resource. Such controller must be installed and configured separately. `argocd-operator-controller-manager` adds rollout-extension if [`.spec.server.enableRolloutsUI`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enablerolloutsui) is set to `true`.
    - **argocd-server**: Main container.
    - **argocd-server-sidecar**: Optional set of sidecar containers defined by the user in the [`.spec.server.sidecarContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-sidecarcontainers) parameter of the ArgoCD custom resource.
 
@@ -163,7 +163,7 @@ The following components describe resources created by argocd-operator-controlle
 
    Argocd-operator-controller-manager deploys this component if [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) in the ArgoCD custom resource is `true`.
 
-1. **&lt;ArgoCD name&gt;-redis-ha-haproxy** (Deployment): Argocd-redis-ha-proxy. Additional component for load balancing and traffic distribution to Redis cluster instances (`redis-ha-server`).
+1. **&lt;ArgoCD name&gt;-redis-ha-haproxy** (Deployment): Argocd-redis-ha-proxy. Additional component for load balancing and distributing traffic to Redis cluster instances (redis-ha-server) based on the [HAProxy](https://github.com/haproxy/haproxy) load balancer/reverse proxy server.
 
    It consists of the following containers:
 
