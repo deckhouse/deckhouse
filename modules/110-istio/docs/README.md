@@ -249,7 +249,7 @@ Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deploymen
 #### General principles of federation
 
 - Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. This is achieved by a mutual exchange of root certificates.
-- You also need to share information about government services to use the federation. You can do that using ServiceEntry resource. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
+- You also need to share information about public services to use the federation. You can do that using the `ServiceEntry` resource. A `ServiceEntry` defines the public `ingressgateway` address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
 <div data-presentation="presentations/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
@@ -273,12 +273,63 @@ To establish a federation, you must:
 
 - Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
   - After successful auto-negotiation between clusters, the status of `IstioFederation` resource will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
-- Add the `federation.istio.deckhouse.io/public-service: ""` label to each resource(`service`) that is considered public within the federation.
-  - In the other federation clusters, a corresponding `ServiceEntry` will be created for each `service`, leading to the `ingressgateway` of the original cluster.
+- Add the `federation.istio.deckhouse.io/public-service: ""` label to each Service that is considered public within the federation.
+  - In the other federation clusters, corresponding `ServiceEntry` and DestinationRule resources will be created for each such Service, leading to the `ingressgateway` of the original cluster.
+  - The label value must be empty. You do not need to label other resources, such as Deployment, Pod, or VirtualService, to publish a service in the federation.
 
 {% alert level="warning" %}
-In the `.spec.ports` section of `services`, each port must have the `name` field filled.
+Federation publishing does not support `ExternalName` services, services without `.spec.ports`, or services with ports missing the `name` field.
+
+Each port name must start with a supported Istio prefix: `http`, `http2`, `https`, `tcp`, `tls`, `grpc`, or `grpc-web`. The module uses the port name to determine the protocol in the generated `ServiceEntry`. If the prefix is not recognized, the port will be handled as TCP.
 {% endalert %}
+
+Example of a public service:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews
+  namespace: bookinfo
+  labels:
+    federation.istio.deckhouse.io/public-service: ""
+spec:
+  selector:
+    app: reviews
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+```
+
+To troubleshoot service publishing in the federation, follow these checks:
+
+Check which services are marked as public in the local cluster:
+
+```shell
+d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
+```
+
+Check metadata exchange status with remote clusters:
+
+```shell
+d8 k get istiofederation
+d8 k get istiofederation <name> -o jsonpath='{.status.conditions}'
+```
+
+Check that the remote cluster provided its public services list:
+
+```shell
+d8 k get istiofederation <name> -o jsonpath='{.status.metadataCache.private.publicServices}'
+```
+
+Check that local routing resources were created from the received metadata:
+
+```shell
+d8 k -n d8-istio get serviceentry,destinationrule
+```
+
+In the IstioFederation `status.conditions`, the `PublicMetadataExchangeReady`, `PrivateMetadataExchangeReady`, and `DataplaneConnectionReady` conditions should become `True`. If metadata exchange does not work, check the [`D8IstioFederationMetadataEndpointDoesntWork`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istiofederationmetadataendpointdoesntwork) alert and the availability of the remote cluster `spec.metadataEndpoint`.
 
 ### Multicluster
 
