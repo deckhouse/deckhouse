@@ -3,7 +3,7 @@ Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package configwriter
+package configapplier
 
 //nolint: gci
 //nolint: goimports
@@ -33,7 +33,7 @@ type DesiredConfig struct {
 	CACerts    []string
 }
 
-// ApplyResult describes the outcome of Writer.Apply.
+// ApplyResult describes the outcome of FSApplier.Apply.
 type ApplyResult struct {
 	Updated      bool
 	Removed      bool
@@ -41,17 +41,17 @@ type ApplyResult struct {
 	CACertsCount int
 }
 
-// Writer writes containerd integrity configuration to the local filesystem.
-type Writer struct {
+// FSApplier writes containerd integrity configuration to the local filesystem.
+type FSApplier struct {
 	ConfigDir string
 }
 
-// NewWriter creates a Writer with the given config directory.
-func NewWriter(configDir string) *Writer {
+// NewFSApplier creates a FSApplier with the given config directory.
+func NewFSApplier(configDir string) *FSApplier {
 	if configDir == "" {
 		configDir = IntegrityNSConfigDir
 	}
-	return &Writer{ConfigDir: configDir}
+	return &FSApplier{ConfigDir: configDir}
 }
 
 // AggregatePolicies builds desired configuration from all policies.
@@ -105,7 +105,7 @@ func RenderIntegrityToml(cfg *DesiredConfig) ([]byte, error) {
 }
 
 // Apply writes or removes configuration files on disk.
-func (w *Writer) Apply(config *DesiredConfig) (*ApplyResult, error) {
+func (w *FSApplier) Apply(config *DesiredConfig) (*ApplyResult, error) {
 	if config == nil || len(config.Namespaces) == 0 {
 		return w.removeConfig()
 	}
@@ -137,7 +137,7 @@ func (w *Writer) Apply(config *DesiredConfig) (*ApplyResult, error) {
 	}, nil
 }
 
-func (w *Writer) removeConfig() (*ApplyResult, error) {
+func (w *FSApplier) removeConfig() (*ApplyResult, error) {
 	path := filepath.Join(w.ConfigDir, IntegrityConfigFile)
 	if err := os.Remove(path); err != nil {
 		if os.IsNotExist(err) {

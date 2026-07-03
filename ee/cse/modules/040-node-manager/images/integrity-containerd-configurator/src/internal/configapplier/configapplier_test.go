@@ -3,7 +3,7 @@ Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package configwriter
+package configapplier
 
 import (
 	"encoding/base64"
@@ -160,11 +160,11 @@ func TestRenderIntegrityToml(t *testing.T) {
 	require.Equal(t, cfg.CACerts, parsed.CACerts)
 }
 
-func TestWriterApplyAndRemove(t *testing.T) {
+func TestFSApplierApplyAndRemove(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	writer := NewWriter(dir)
+	applier := NewFSApplier(dir)
 
 	ca := "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----"
 	config := &DesiredConfig{
@@ -172,7 +172,7 @@ func TestWriterApplyAndRemove(t *testing.T) {
 		CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
 	}
 
-	_, err := writer.Apply(config)
+	_, err := applier.Apply(config)
 	require.NoError(t, err)
 
 	IntegrityTomlPath := filepath.Join(dir, IntegrityConfigFile)
@@ -183,27 +183,27 @@ func TestWriterApplyAndRemove(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expected, IntegrityTomlData)
 
-	_, err = writer.Apply(config)
+	_, err = applier.Apply(config)
 	require.NoError(t, err)
 	unchanged, err := os.ReadFile(IntegrityTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, unchanged)
 
 	require.NoError(t, os.WriteFile(IntegrityTomlPath, []byte("stale"), 0o644))
-	_, err = writer.Apply(config)
+	_, err = applier.Apply(config)
 	require.NoError(t, err)
 	restored, err := os.ReadFile(IntegrityTomlPath)
 	require.NoError(t, err)
 	require.Equal(t, expected, restored)
 
-	_, err = writer.Apply(nil)
+	_, err = applier.Apply(nil)
 	require.NoError(t, err)
 	_, err = os.Stat(filepath.Join(dir, IntegrityConfigFile))
 	require.True(t, os.IsNotExist(err))
 
-	_, err = writer.Apply(config)
+	_, err = applier.Apply(config)
 	require.NoError(t, err)
-	_, err = writer.Apply(&DesiredConfig{})
+	_, err = applier.Apply(&DesiredConfig{})
 	require.NoError(t, err)
 	_, err = os.Stat(filepath.Join(dir, IntegrityConfigFile))
 	require.True(t, os.IsNotExist(err))
