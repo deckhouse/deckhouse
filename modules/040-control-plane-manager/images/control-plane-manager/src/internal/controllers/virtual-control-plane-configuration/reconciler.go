@@ -96,11 +96,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
 	}
 
-	joinToken, res, err := r.reconcileNodeJoinSecret(ctx, vcp)
-	if err != nil || !res.IsZero() {
-		return res, err
-	}
-
 	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp)
 	if err != nil || !res.IsZero() {
 		return res, err
@@ -114,7 +109,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	// Least-critical step, kept last so it never blocks control-plane bring-up.
+	joinToken, res, err := r.reconcileNodeJoinSecret(ctx, vcp)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	if res, err := r.reconcileJoinScript(ctx, vcp, apiserverService, pkiSecret, configSecret, joinToken); err != nil || !res.IsZero() {
 		return res, err
 	}
