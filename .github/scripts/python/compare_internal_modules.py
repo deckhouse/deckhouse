@@ -46,8 +46,6 @@ whitelist = [
     "release-channel-version-prebuild",
     "tests-prebuild",
     "tests",
-    "dev/candi",
-    "common/candi",
 ]
 
 # Find and read build reports
