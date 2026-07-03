@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -166,6 +167,7 @@ type reconciler struct {
 
 type moduleManager interface {
 	AreModulesInited() bool
+	GetModule(name string) *addonmodules.BasicModule
 }
 
 func (r *reconciler) preflight(ctx context.Context) error {
