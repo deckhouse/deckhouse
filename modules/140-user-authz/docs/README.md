@@ -327,10 +327,6 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
-read:
-    - deckhouse.io/customprometheusrules
-    - deckhouse.io/grafanaadditionaldatasources
-    - deckhouse.io/grafanadashboarddefinitions
 write:
     - apps/deployments
     - apps/statefulsets
@@ -449,10 +445,7 @@ write:
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
-    - deckhouse.io/customprometheusrules
     - deckhouse.io/deckhousereleases
-    - deckhouse.io/grafanaadditionaldatasources
-    - deckhouse.io/grafanadashboarddefinitions
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances

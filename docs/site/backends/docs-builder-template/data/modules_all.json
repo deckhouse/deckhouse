@@ -325,6 +325,8 @@
       "cse-lite",
       "cse-pro"
     ],
+    "external": "true",
+    "path": "/modules/loki/",
     "tags": [
       "observability",
       "logging",
@@ -547,6 +549,23 @@
       "delivery"
     ]
   },
+  "operator-prometheus": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/operator-prometheus/",
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
   "operator-trivy": {
     "editions": [
       "ee",
@@ -577,6 +596,23 @@
     ],
     "tags": [
       "core",
+      "ssdlc"
+    ]
+  },
+  "prometheus": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/prometheus/",
+    "tags": [
+      "observability",
       "ssdlc"
     ]
   },
