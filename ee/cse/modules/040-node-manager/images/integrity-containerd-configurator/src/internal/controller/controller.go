@@ -71,7 +71,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 				oldPolicy, okOld := e.ObjectOld.(*deckhousev1alpha1.ContainerdIntegrityPolicy)
 				newPolicy, okNew := e.ObjectNew.(*deckhousev1alpha1.ContainerdIntegrityPolicy)
 				if !okOld || !okNew {
-					return true
+					return false
 				}
 
 				if oldPolicy.Spec.CA != newPolicy.Spec.CA {
