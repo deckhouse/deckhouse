@@ -197,41 +197,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/200-operator-prometheus
-  to: /deckhouse/modules/200-operator-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/300-prometheus
-  to: /deckhouse/modules/300-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler
   to: /deckhouse/modules/302-vertical-pod-autoscaler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-custom
-  to: /deckhouse/modules/340-monitoring-custom
   excludePaths:
     - docs
     - README.md
@@ -254,17 +221,6 @@
         - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/462-loki
-  to: /deckhouse/modules/462-loki
   excludePaths:
     - docs
     - README.md
@@ -751,21 +707,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/300-prometheus/hooks/common_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/common_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/380-metallb/templates/controller
   to: /deckhouse/modules/380-metallb/templates/controller
   excludePaths:
@@ -974,11 +915,6 @@
         - '**/*'
 - add: /ee/cse/modules/150-user-authn/openapi/values.yaml
   to: /deckhouse/modules/150-user-authn/openapi/values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/openapi/config-values.yaml
-  to: /deckhouse/modules/462-loki/openapi/config-values.yaml
   stageDependencies:
     install:
         - '**/*'
