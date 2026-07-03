@@ -22,6 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 )
 
@@ -36,7 +38,7 @@ type Reconciler struct {
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := ctrl.LoggerFrom(ctx)
+	logger := log.Default().With("controller", "containerdintegritypolicy", "name", req.Name)
 
 	policy := &deckhousev1alpha1.ContainerdIntegrityPolicy{}
 	if err := r.Get(ctx, req.NamespacedName, policy); err != nil {
@@ -99,7 +101,10 @@ func (r *Reconciler) enqueuePoliciesForNamespace(
 	}
 	policyList := &deckhousev1alpha1.ContainerdIntegrityPolicyList{}
 	if err := r.List(ctx, policyList); err != nil {
-		ctrl.LoggerFrom(ctx).Error(err, "failed to list ContainerdIntegrityPolicies on namespace watch")
+		log.Default().With("controller", "containerdintegritypolicy").Error(
+			"failed to list ContainerdIntegrityPolicies on namespace watch",
+			log.Err(err),
+		)
 		return nil
 	}
 	namespaceLabels := labels.Set(namespace.Labels)
