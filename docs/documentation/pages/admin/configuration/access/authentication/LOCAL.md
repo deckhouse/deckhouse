@@ -49,7 +49,11 @@ If the `htpasswd` command is not available, install the appropriate package:
 
 ## Local user operations
 
-Use the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands for administrative actions on local users. They create a [UserOperation](/modules/user-authn/cr.html#useroperation) resource, wait for the operation to complete, and print the result.
+Password reset, 2FA reset, and lock/unlock operations are performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
+
+### Administrative operations
+
+Use the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
 The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
 
@@ -98,6 +102,19 @@ Examples of using the [`d8 iam user`](/products/kubernetes-platform/documentatio
   ```
 
 By default, commands wait for the operation to complete. To only create a UserOperation and print its name, use the `--wait=false` flag.
+
+### Self-service password reset
+
+A local user can reset their own password in the DKP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+
+Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
+
+When a user resets their password:
+
+- the new password must comply with the [password policy](#configuring-password-policy);
+- the user's active sessions are terminated and re-authentication is required.
+
+For user-facing password change and reset scenarios, see [Configuring authentication for applications](../../../user/access/authentication.html#changing-and-resetting-a-local-users-password).
 
 ## Adding a user to a group
 

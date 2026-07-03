@@ -546,7 +546,11 @@ spec:
 
 ### Local user operations
 
-Use the `d8 iam user` commands for administrative actions on local users. They create a [UserOperation](cr.html#useroperation) resource, wait for the operation to complete, and print the result.
+Password reset, 2FA reset, and lock/unlock operations are performed via the [UserOperation](cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
+
+#### Administrative operations
+
+Use the `d8 iam user` commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
 The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
 
@@ -593,6 +597,14 @@ d8 iam user unlock admin
 ```
 
 By default, commands wait for the operation to complete. To only create a UserOperation and print its name, use the `--wait=false` flag.
+
+#### Self-service password reset
+
+A local user can reset their own password in the DKP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+
+Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
+
+When a user resets their password, the new password must comply with the password policy, and the user's active sessions are terminated — re-authentication is required.
 
 ### Adding a user to a group
 

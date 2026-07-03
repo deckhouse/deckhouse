@@ -30,6 +30,28 @@ Example of DKP authentication interface with username and password input:
 
 ![Example login/password interface](../../images/user/access/authentication/web-auth-example2.png)
 
+## Changing and resetting a local user's password
+
+If [local authentication](../../admin/configuration/access/authentication/local.html) is configured in the cluster, a user can change or reset their password independently.
+
+### Password change required by policy or administrator
+
+During login, DKP may redirect a local user to the password change form if:
+
+- the password does not meet the [complexity policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy);
+- the password has expired according to the [rotation policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy);
+- an administrator initiated a forced password change.
+
+The form requires the current password, a new password, and confirmation. The new password must comply with the cluster password policy.
+
+### Self-service password reset
+
+A local user can reset their password in the DKP authentication interface. The operation is performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource with `initiatorType: self`.
+
+Self-service reset is available only for local accounts. If you sign in through LDAP, GitHub, or another external provider, contact the administrator of that system.
+
+After a password reset, active sessions are terminated and you must sign in again with the new password.
+
 ## Enabling Authentication in a Web Application
 
 > To enable authentication in an application, authentication must first be configured at the Deckhouse Kubernetes Platform level.
