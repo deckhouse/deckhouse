@@ -527,5 +527,11 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 		}
 	}
 
+	if len(hookResult.BindingActions) > 0 {
+		if err = hooks.ApplyBindingActions(h.GetHookConfig().OnKubernetesEvents, h.GetHookController(), hookResult.BindingActions); err != nil {
+			return fmt.Errorf("apply binding actions: %w", err)
+		}
+	}
+
 	return nil
 }
