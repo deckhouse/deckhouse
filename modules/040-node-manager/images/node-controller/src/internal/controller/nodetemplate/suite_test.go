@@ -67,7 +67,12 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping the envtest environment with the NodeGroup CRD")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(scheme, testenv.NodeGroupCRDFile)
+	testEnv, cfg, k8sClient, err = testenv.Start(
+		scheme,
+		testenv.CRDPaths(
+			testenv.WithNodeGroupCRDFile(),
+		)...,
+	)
 	Expect(err).NotTo(HaveOccurred())
 
 	// The node-template controller registered itself via its package init(); since only this

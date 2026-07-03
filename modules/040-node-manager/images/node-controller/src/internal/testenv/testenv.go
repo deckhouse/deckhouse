@@ -14,11 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package testenv holds controller-agnostic helpers for envtest-based integration suites.
-// Any node-controller controller can use it to bootstrap a real apiserver, wire its
-// registered controllers into a manager, and get the common test plumbing (unique names,
-// finalizer stripping, kubectl-style dumps, a kubectl pause hook). It is intentionally
-// free of Ginkgo/Gomega so it can back any test runner.
 package testenv
 
 import (
@@ -57,17 +52,6 @@ const (
 // KubeconfigPath is where PauseForKubectl writes the envtest kubeconfig.
 const KubeconfigPath = "/tmp/envtest.kubeconfig"
 
-// CRD manifest file names loaded by envtest.
-type CRDFile string
-
-const (
-	MachineCRDFile           CRDFile = "machine.yaml"
-	MachineDeploymentCRDFile CRDFile = "machine-deployment.yaml"
-	NodeGroupCRDFile         CRDFile = "node_group.yaml"
-	MCMCRDFile               CRDFile = "mcm.yaml"
-	InstanceCRDFile          CRDFile = "instance.yaml"
-)
-
 // BinaryAssetsDir returns the kubebuilder assets directory: KUBEBUILDER_ASSETS if set,
 // otherwise the first versioned directory under the nearest bin/k8s (populated by
 // `make envtest`), discovered by walking up from the test working directory.
@@ -97,63 +81,11 @@ func AssetsAvailable() bool {
 	return BinaryAssetsDir() != ""
 }
 
-// crdPaths resolves the given CRD file names against the node-controller/crds and
-// 040-node-manager/crds directories (found by walking up from the test working directory),
-// falling back to the bare file name when the CRD is found in neither, e.g.
-// crdPaths("instance.yaml", "machine.yaml").
-func crdPaths(files ...CRDFile) []string {
-	if len(files) == 0 {
-		return nil
-	}
-
-	controllerCRDs := findDirUp("node-controller/crds")
-	nodeManagerCRDs := findDirUp("040-node-manager/crds")
-
-	ret := make([]string, 0, len(files))
-
-	for _, file := range files {
-		candidate := filepath.Join(controllerCRDs, string(file))
-
-		if _, err := os.Stat(candidate); err == nil {
-			ret = append(ret, candidate)
-			continue
-		}
-
-		candidate = filepath.Join(nodeManagerCRDs, string(file))
-
-		if _, err := os.Stat(candidate); err == nil {
-			ret = append(ret, candidate)
-			continue
-		}
-
-		ret = append(ret, string(file))
-	}
-	return ret
-}
-
-func findDirUp(name string) string {
-	dir, err := os.Getwd()
-	if err != nil {
-		return ""
-	}
-	for {
-		candidate := filepath.Join(dir, name)
-		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
-			return candidate
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return ""
-		}
-		dir = parent
-	}
-}
-
 // Start boots an envtest apiserver with the given scheme and CRD files and returns a client.
 // Call testEnv.Stop() in AfterSuite.
-func Start(scheme *runtime.Scheme, crdFiles ...CRDFile) (*envtest.Environment, *rest.Config, client.Client, error) {
+func Start(scheme *runtime.Scheme, crdPaths ...string) (*envtest.Environment, *rest.Config, client.Client, error) {
 	env := &envtest.Environment{
-		CRDDirectoryPaths:     crdPaths(crdFiles...),
+		CRDDirectoryPaths:     crdPaths,
 		ErrorIfCRDPathMissing: true,
 		BinaryAssetsDirectory: BinaryAssetsDir(),
 	}

@@ -76,10 +76,13 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping the envtest environment with deckhouse CRDs")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(scheme,
-		testenv.InstanceCRDFile,
-		testenv.MCMCRDFile,
-		testenv.MachineCRDFile,
+	testEnv, cfg, k8sClient, err = testenv.Start(
+		scheme,
+		testenv.CRDPaths(
+			testenv.WithInstanceCRDFile(),
+			testenv.WithMCMCRDFile(),
+			testenv.WithMachineCRDFile(),
+		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())
 

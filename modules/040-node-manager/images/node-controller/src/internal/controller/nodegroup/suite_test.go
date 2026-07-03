@@ -74,11 +74,14 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping the envtest environment with the nodegroup CRDs")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(scheme,
-		testenv.NodeGroupCRDFile,
-		testenv.MCMCRDFile,
-		testenv.MachineCRDFile,
-		testenv.MachineDeploymentCRDFile,
+	testEnv, cfg, k8sClient, err = testenv.Start(
+		scheme,
+		testenv.CRDPaths(
+			testenv.WithNodeGroupCRDFile(),
+			testenv.WithMCMCRDFile(),
+			testenv.WithMachineCRDFile(),
+			testenv.WithMachineDeploymentCRDFile(),
+		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())
 
