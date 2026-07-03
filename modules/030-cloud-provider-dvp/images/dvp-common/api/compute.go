@@ -465,7 +465,7 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 	if delErr := c.clientset.CoreV1().Secrets(c.namespace).Delete(ctx, name, metav1.DeleteOptions{}); delErr != nil && !k8serrors.IsNotFound(delErr) {
 		return fmt.Errorf("delete stale '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, delErr)
 	}
-	if _, createErr := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); createErr != nil {
+	if _, createErr := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); createErr != nil && !k8serrors.IsAlreadyExists(createErr) {
 		return fmt.Errorf("recreate '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, createErr)
 	}
 	return nil

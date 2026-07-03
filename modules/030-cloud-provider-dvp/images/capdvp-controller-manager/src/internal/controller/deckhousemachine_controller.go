@@ -331,7 +331,7 @@ func (r *DeckhouseMachineReconciler) handleVMRunning(
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
 	if err := r.DVP.ComputeService.EnsureCloudInitSecretImmutable(ctx, cloudInitSecretName); err != nil {
-		logger.Error(err, "failed to ensure cloud-init secret immutable", "secret", cloudInitSecretName)
+		return ctrl.Result{}, fmt.Errorf("ensure cloud-init secret immutable %q: %w", cloudInitSecretName, err)
 	}
 
 	logger.Info("Reconciled DeckhouseMachine successfully")
