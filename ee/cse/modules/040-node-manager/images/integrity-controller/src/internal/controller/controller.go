@@ -16,8 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
@@ -87,24 +89,31 @@ func (r *ContainerdIntegrityPolicyReconciler) listMatchingNamespaces(
 	return matchedNamespaces, nil
 }
 
-func (r *ContainerdIntegrityPolicyReconciler) enqueueAllPolicies(
+func (r *ContainerdIntegrityPolicyReconciler) enqueuePoliciesForNamespace(
 	ctx context.Context,
-	_ client.Object,
+	obj client.Object,
 ) []reconcile.Request {
+	namespace, ok := obj.(*corev1.Namespace)
+	if !ok {
+		return nil
+	}
 	policyList := &deckhousev1alpha1.ContainerdIntegrityPolicyList{}
 	if err := r.List(ctx, policyList); err != nil {
 		ctrl.LoggerFrom(ctx).Error(err, "failed to list ContainerdIntegrityPolicies on namespace watch")
 		return nil
 	}
-
-	requests := make([]reconcile.Request, 0, len(policyList.Items))
+	namespaceLabels := labels.Set(namespace.Labels)
+	requests := make([]reconcile.Request, 0)
 	for i := range policyList.Items {
 		policy := &policyList.Items[i]
-		requests = append(requests, reconcile.Request{
-			NamespacedName: client.ObjectKeyFromObject(policy),
-		})
+		selector := labels.SelectorFromSet(policy.Spec.ProtectedNamespaces.MatchLabels)
+		if selector.Matches(namespaceLabels) ||
+			slices.Contains(policy.Status.ProtectedNamespaces, namespace.Name) {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(policy),
+			})
+		}
 	}
-
 	return requests
 }
 
@@ -114,7 +123,11 @@ func (r *ContainerdIntegrityPolicyReconciler) SetupWithManager(mgr ctrl.Manager)
 		For(&deckhousev1alpha1.ContainerdIntegrityPolicy{}).
 		Watches(
 			&corev1.Namespace{},
-			handler.EnqueueRequestsFromMapFunc(r.enqueueAllPolicies),
+			handler.EnqueueRequestsFromMapFunc(r.enqueuePoliciesForNamespace),
+			builder.WithPredicates(predicate.Or(
+				predicate.LabelChangedPredicate{},
+				predicate.GenerationChangedPredicate{}, // create
+			)),
 		).
 		Complete(r)
 }
