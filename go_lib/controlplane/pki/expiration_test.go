@@ -60,11 +60,11 @@ func TestListCertificateExpirations_MissingEntries(t *testing.T) {
 	dir := t.TempDir()
 	caCert, _ := makeTestCACert(t, "kubernetes")
 
-	require.NoError(t, writeCert(dir, string(CACertName), caCert))
+	require.NoError(t, writeCert(dir, string(CACertBaseName), caCert))
 
 	report, err := ListCertificateExpirations(
 		WithCertificatesDir(dir),
-		WithRootCertificates(CACertName, CACertName, EtcdCACertName),
+		WithRootCertificates(CACertBaseName, CACertBaseName, EtcdCACertBaseName),
 	)
 	require.NoError(t, err)
 	require.Len(t, report.Entries, 2)
@@ -74,16 +74,16 @@ func TestListCertificateExpirations_MissingEntries(t *testing.T) {
 		byName[e.Name] = e
 	}
 
-	caEntry, ok := byName[string(CACertName)]
+	caEntry, ok := byName[string(CACertBaseName)]
 	require.True(t, ok)
 	require.NoError(t, caEntry.Err)
 	assert.True(t, caEntry.IsCA)
 
-	etcdCAEntry, ok := byName[string(EtcdCACertName)]
+	etcdCAEntry, ok := byName[string(EtcdCACertBaseName)]
 	require.True(t, ok)
 	var missing *MissingError
 	require.ErrorAs(t, etcdCAEntry.Err, &missing)
-	assert.Equal(t, string(EtcdCACertName), missing.BaseName)
+	assert.Equal(t, string(EtcdCACertBaseName), missing.BaseName)
 	assert.Equal(t, filepath.Join(dir, "etcd", "ca.crt"), etcdCAEntry.Path)
 }
 
@@ -93,14 +93,14 @@ func TestGetCertificateExpiration_NormalizesKnownAndUnknownPaths(t *testing.T) {
 	etcdServerCert := makeTestLeafCert(t, "etcd-server", etcdCACert, etcdCAKey)
 	customCert, _ := makeTestCACert(t, "custom-ca")
 
-	require.NoError(t, writeCert(dir, string(EtcdServerCertName), etcdServerCert))
+	require.NoError(t, writeCert(dir, string(EtcdServerCertBaseName), etcdServerCert))
 	require.NoError(t, writeCert(dir, "custom/custom-cert", customCert))
 
 	knownPath := filepath.Join(dir, "etcd", "server.crt")
 	knownExpiration, err := GetCertificateExpiration(knownPath)
 	require.NoError(t, err)
-	assert.Equal(t, string(EtcdServerCertName), knownExpiration.Name)
-	assert.Equal(t, EtcdCACertName, knownExpiration.Authority)
+	assert.Equal(t, string(EtcdServerCertBaseName), knownExpiration.Name)
+	assert.Equal(t, EtcdCACertBaseName, knownExpiration.Authority)
 	assert.False(t, knownExpiration.IsCA)
 	assert.Equal(t, filepath.Clean(knownPath), knownExpiration.Path)
 

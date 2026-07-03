@@ -54,7 +54,7 @@ func (e *StepExecutor) waitPodReady(ctx context.Context) operations.StepResult {
 	}
 
 	if !isStatefulSetRolloutComplete(sts) {
-		return operations.StepIsProgressing(step, "statefulset rolling out", waitPodReadyRequeue)
+		return operations.StepIsProgressing(step, e.rolloutProgressMessage(ctx, sts), waitPodReadyRequeue)
 	}
 
 	return operations.StepIsCompleted(step, "statefulset is ready")
@@ -107,8 +107,8 @@ func (e *StepExecutor) crashLoopingPods(ctx context.Context, sts *appsv1.Statefu
 	var names []string
 	for i := range pods.Items {
 		pod := &pods.Items[i]
-		// selector в нашей топологии уникален на STS, но ownerRef-фильтр исключает
-		// случайные совпадения, если манифест задаст широкий selector.
+		// The selector is unique to the STS in our topology, but the ownerRef filter
+		// prevents accidental matches if a manifest specifies a broad selector.
 		if isOwnedBy(pod, sts) && isPodCrashLooping(pod) {
 			names = append(names, pod.Name)
 		}
