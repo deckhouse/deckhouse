@@ -57,7 +57,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
 Модуль состоит из следующих компонентов:
 
-1. **argocd-operator-controller-manager** (Deployment) — реализация [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator), позволяющая разворачивать экземпляры Argo CD в кластере DKP. Компонент работает со следующими кастомными ресурсами:
+1. **Argocd-operator-controller-manager** (Deployment) — реализация [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator), позволяющая разворачивать экземпляры Argo CD в кластере DKP. Компонент работает со следующими кастомными ресурсами:
    - [ArgoCD](/modules/operator-argo/cr.html#argocd) — основной ресурс для развёртывания и настройки экземпляра Argo CD;
    - [ArgoCDExport](/modules/operator-argo/cr.html#argocdexport) — экспорт настроек и состояния Argo CD для резервного копирования или миграции. Оператор читает кастомный ресурс ArgoCDExport и создаёт Job/CronJob с именем, совпадающим с именем ресурса ArgoCDExport. Созданный Job/CronJob выполняет резервное копирование настроек экземпляра Argo CD;
    - [NamespaceManagement](/modules/operator-argo/cr.html#namespacemanagement) — определение правил управления неймспейсами для экземпляра Argo CD. Оператор следит за кастомным ресурсом NamespaceManagement и соответствующим образом обновляет ConfigMap `argocd-cmd-params-cm`;
@@ -70,9 +70,9 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - **manager** — основной контейнер;
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к метрикам `manager`.
 
-{% alert level="info" %}
-Следующие компоненты описывают ресурсы, которые создаёт argocd-operator-controller-manager на основе конфигурации, заданной в кастомном ресурсе ArgoCD. Для описания используется префикс `<ArgoCD name>`, который будет заменяться контроллером на имя ресурса ArgoCD.
-{% endalert %}
+   {% alert level="info" %}
+   Следующие компоненты описывают ресурсы, которые создаёт argocd-operator-controller-manager на основе конфигурации, заданной в кастомном ресурсе ArgoCD. Для описания используется префикс `<ArgoCD name>`, который будет заменяться контроллером на имя ресурса ArgoCD.
+   {% endalert %}
 
 1. **&lt;ArgoCD name&gt;-server** (Deployment) — argocd-server, основной компонент взаимодействия с экземпляром Argo CD. Argocd-server предоставляет REST/gRPC API и пользовательский веб-интерфейс для управления Argo CD. Компонент позволяет управлять кастомными ресурсами Application, ApplicationSet и AppProject через предоставляемые интерфейсы (веб, API, CLI).
 
@@ -81,7 +81,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    Состоит из следующих контейнеров:
 
    - **argocd-server-init** — опциональный набор init-контейнеров, задаваемых пользователем в параметре [`.spec.server.initContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-initcontainers) кастомного ресурса ArgoCD;
-   - **rollout-extension** — опциональный init-контейнер, загружающий расширение UI для работы с [кастомным ресурсом Rollout](https://argoproj.github.io/argo-rollouts/features/specification/). Модуль не предоставляет контроллер, обрабатывающий этот кастомный ресурс. Контроллер должен быть установлен и настроен дополнительно. `argocd-operator-controller-manager` добавляет rollout-extension, если значение параметра [`.spec.server.enableRolloutsUI`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enablerolloutsui) принимает значение `true`;
+   - **rollout-extension** — опциональный init-контейнер, загружающий расширение UI для работы с кастомным ресурсом [Rollout](https://argoproj.github.io/argo-rollouts/features/specification/). Модуль не предоставляет контроллер, обрабатывающий этот кастомный ресурс. Контроллер должен быть установлен и настроен дополнительно. `argocd-operator-controller-manager` добавляет rollout-extension, если значение параметра [`.spec.server.enableRolloutsUI`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enablerolloutsui) принимает значение `true`;
    - **argocd-server** — основной контейнер;
    - **argocd-server-sidecar** — опциональный набор сайдкар-контейнеров, задаваемых пользователем в параметре [`.spec.server.sidecarContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-sidecarcontainers) кастомного ресурса ArgoCD.
 
@@ -164,7 +164,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
    Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `true`.
 
-1. **&lt;ArgoCD name&gt;-redis-ha-haproxy** (Deployment) — argocd-redis-ha-haproxy, дополнительный компонент для балансировки нагрузки и распределения трафика к экземплярам кластера Redis (redis-ha-server).
+1. **&lt;ArgoCD name&gt;-redis-ha-haproxy** (Deployment) — argocd-redis-ha-haproxy, дополнительный компонент для балансировки нагрузки и распределения трафика к экземплярам кластера Redis (redis-ha-server) на основе балансировщика нагрузки/обратного прокси-сервера [HAProxy](https://github.com/haproxy/haproxy).
 
    Состоит из следующих контейнеров:
 
