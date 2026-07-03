@@ -6,7 +6,7 @@ search: deckhouse, deckhouse-controller, modules
 description: Архитектура модуля deckhouse в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`deckhouse`](/modules/deckhouse/) реализует ядро Deckhouse Kubernetes Platform (DKP), выполняющее следующие операции:
+Модуль [`deckhouse`](/modules/deckhouse/) реализует ядро Deckhouse Kubernetes Platform (DKP) и выполняет следующие операции:
 - обновление платформы;
 - управление конфигурацией модулей;
 - установка и обновление модулей;
@@ -64,11 +64,11 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 
 1. **Deckhouse** (Deployment) — контроллер, реализующий операции по управлению платформой.
 
-   Контроллер оркестрирует задачи по управлению платформой с использованием механизма очередей. Подробнее можно ознакомиться [в соответствующем разделе документации](./queues.html).
+   Контроллер оркестрирует задачи по управлению платформой с использованием [механизма очередей](./queues.html).
 
-   Контроллер Deckhouse может быть запущен в стандартном режиме или в режиме изоляции [хуков](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md). Для этого необходимо создать ConfigMap `chroot-mode` в неймспейсе `d8-system`.
+   Контроллер Deckhouse может быть запущен в стандартном режиме или в режиме изоляции [хуков](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md). Для этого необходимо создать ConfigMap `chroot-mode` в неймспейсе `d8-system`. В режиме изоляции shell-хуки и скрипты включения модулей выполняются в chroot-окружении с ограниченным набором смонтированных каталогов, что изолирует их от файловой системы контейнера контроллера.
 
-   Если включен режим [высокой доступности (High Availability, HA)](../../admin/configuration/high-reliability-and-availability/), запускается несколько экземпляров контроллера Deckhouse. Для обеспечения корректной работы контроллеры Deckhouse проводят выборы лидера с использованием ресурса Lease `deckhouse-leader-election`. Контроллер, который был избран как лидер, запускает [addon-operator](https://github.com/flant/addon-operator) и управление кастомными ресурсами.
+   Если включен режим [высокой доступности (High Availability, HA)](../../admin/configuration/high-reliability-and-availability/), запускается несколько экземпляров контроллера Deckhouse. Для обеспечения корректной работы контроллеры Deckhouse проводят выборы лидера с использованием ресурса Lease `deckhouse-leader-election`. Контроллер, который был избран как лидер, берёт на себя выполнение всех операций по управлению платформой.
 
    Кроме того, контроллер Deckhouse настраивает:
 
@@ -86,22 +86,22 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 
    * **init-downloaded-modules** — init-контейнер, подготавливающий структуру каталогов для работы с модулями;
    * **deckhouse** — основной контейнер;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к интерфейсу debug HTTP основного контейнера.
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к интерфейсу отладки компонентов основного контейнера.
   
 1. **Webhook-handler** (Deployment) — состоит из одного контейнера **handler** и реализует универсальный вебхук для конверсий и валидации кастомных ресурсов, находящихся под управлением DKP.
 
     Компонент следит за кастомными ресурсами [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) и [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) и на их основе создаёт из шаблона Python-файлы хуков для [shell-operator](https://github.com/flant/shell-operator). При получении запросов от `kube-apiserver` на валидацию или конверсию ресурсов shell-operator запускает необходимый хук и возвращает результат обработки.
 
-1. **Cni-migration-manager** (Deployment) — опциональный компонент, запускающийся на control-plane узлах и состоящий из одного контейнера **manager**. Компонент управляет процессом миграции CNI и фиксирует текущее состояние в кастомном ресурсе CNIMigration.
+1. **Cni-migration-manager** (Deployment) — опциональный компонент, запускающийся на control-plane узлах и состоящий из одного контейнера **manager**. Компонент управляет процессом миграции CNI и фиксирует текущее состояние в кастомном ресурсе CNIMigration. Поддерживается миграция на `flannel`, `cni-simple-bridge`, `cilium`. Подробнее можно ознакомиться [в руководстве переключения CNI в кластере](/products/kubernetes-platform/guides/cni-migration.html).
 
     {% alert level="info" %}
-    Компонент создаётся global hook `detect-cni-migration` при наличии кастомного ресурса CNIMigration, который создаётся при [переключении CNI в кластере](/products/kubernetes-platform/guides/cni-migration.html).
+    Компонент создаётся глобальным хуком `detect-cni-migration` при наличии кастомного ресурса CNIMigration. Ресурс CNIMigration создаётся администратором в ручную или при использовании команды `d8 network cni-migration switch --to-cni <target cni>`. Подробнее можно ознакомиться [в соответствующем руководстве](/products/kubernetes-platform/guides/cni-migration.html).
     {% endalert %}
 
 1. **Cni-migration-agent** (DaemonSet) — опциональный компонент, запускающийся на всех узлах кластера и состоящий из одного контейнера **agent**. Компонент следит за кастомным ресурсом CNIMigration и управляет кастомным ресурсом CNINodeMigration, отражающим текущее состояние миграции на конкретном узле.
 
     {% alert level="info" %}
-    Компонент создаётся global hook `detect-cni-migration` при наличии кастомного ресурса CNIMigration, который создаётся при [переключении CNI в кластере](/products/kubernetes-platform/guides/cni-migration.html).
+    Компонент создаётся глобальным хуком `detect-cni-migration` при наличии кастомного ресурса CNIMigration. Ресурс CNIMigration создаётся администратором в ручную или при использовании команды `d8 network cni-migration switch --to-cni <target cni>`. Подробнее можно ознакомиться [в соответствующем руководстве](/products/kubernetes-platform/guides/cni-migration.html).
     {% endalert %}
 
 ## Взаимодействия модуля

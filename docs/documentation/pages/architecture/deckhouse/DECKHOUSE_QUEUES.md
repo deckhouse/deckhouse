@@ -7,14 +7,37 @@ description: Description of queue processing in the Deckhouse controller in Deck
 
 The [`deckhouse`](/modules/deckhouse/) module implements the core of Deckhouse Kubernetes Platform (DKP), performing various platform management operations using a queueing mechanism. For more information about the module architecture, refer to the [corresponding documentation section](./deckhouse.html).
 
-The Deckhouse controller implements two queue types:
+The Deckhouse controller implements addon-operator and marketplace queues.
 
-- Addon-operator.
-- Marketplace.
+### Addon-operator queues
 
-### Addon-operator
+The **addon-operator queues** are the primary processing mechanism for built-in and external Deckhouse modules. The queue is implemented in [shell-operator](https://github.com/flant/shell-operator) and extended with [addon-operator](https://github.com/flant/addon-operator) task types. The Deckhouse controller synchronizes [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resources and updates global or module values for addon-operator.
 
-The **addon-operator queue** is the primary processing mechanism for built-in and external Deckhouse modules. The queue is implemented in [shell-operator](https://github.com/flant/shell-operator) and extended with [addon-operator](https://github.com/flant/addon-operator) task types. The Deckhouse controller synchronizes [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resources and updates global or module values for addon-operator.
+Task types:
+
+| Task                               | Function                                                                            |
+|------------------------------------|-------------------------------------------------------------------------------------|
+| GlobalHookRun                      | Run global hooks (onStartup, beforeAll, afterAll, kubernetes, schedule)           |
+| GlobalHookEnableKubernetesBindings | Enable Kubernetes monitors from global hooks                                         |
+| GlobalHookWaitKubernetesSynchronization | Block the queue until global hooks with `executeHookOnSynchronization: true` complete |
+| GlobalHookEnableScheduleBindings   | Register cron tasks in the addon-operator scheduler                                 |
+| DiscoverHelmReleases               | Find "extra" Helm releases after the first converge                                |
+| ApplyKubeConfigValues              | Apply changes from ModuleConfig                                                     |
+| ConvergeModules                    | Full converge cycle for all modules                                                 |
+| ModuleRun                          | Configure or update a module; runs subtasks: onStartup -> sync -> beforeHelm -> helm -> afterHelm |
+| ParallelModuleRun                  | Batch parallel launch of modules                                                    |
+| ModuleDelete                       | Remove a module (helm delete, afterDeleteHelm)                                      |
+| ModuleHookRun                      | Run a module hook on event                                                          |
+| ModuleEnsureCRDs                   | Install module CRDs                                                                 |
+| ModulePurge                        | Remove unknown Helm release                                                         |
+
+Addon-operator queue types:
+
+| Queue       | Name                                   | Purpose                                                                                      |
+|-------------|----------------------------------------|----------------------------------------------------------------------------------------------|
+| Main        | `main`                                 | Run global hooks at startup, install critical modules, configure and delete modules          |
+| Parallel    | `parallel_queue_0` ... `parallel_queue_19` | Parallel ModuleRun with module dependencies taken into account (20 queues)                  |
+| Hook queues | From task config ([hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md)) | Tasks for a specific module and global hooks |
 
 Each queue is a separate pipeline with one worker. The queue has the following properties:
 
@@ -25,38 +48,12 @@ Each queue is a separate pipeline with one worker. The queue has the following p
   - `AddTailTasks`: Insert a subtask at the end of the queue after the current task succeeds.
   - `AddAfterTasks`: Insert a subtask right after the current task.
 - A task is executed until success unless `allowFailure: true` is set in task parameters.
-- On error, exponential restart (backoff) is applied starting with a 5-second delay between retries.
+- On error, exponential restart (backoff) is applied, starting with a 5-second delay between retries.
 
 {% alert level="warning" %}
 If a task cannot complete successfully and `allowFailure: true` is not set in its parameters, that task blocks the queue it runs in.
 Tasks in different processing queues do not block each other.
 {% endalert %}
-
-Queue types:
-
-| Queue       | Name                                   | Purpose                                                                                      |
-|-------------|----------------------------------------|----------------------------------------------------------------------------------------------|
-| Main        | `main`                                 | Startup, converge, ModuleConfig, ModuleRun/Delete, global startup tasks                     |
-| Parallel    | `parallel_queue_0` ... `parallel_queue_19` | Parallel ModuleRun with module dependencies taken into account (20 queues)                  |
-| Hook queues | From task config ([hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md)) | Tasks for a specific module or global hook |
-
-Task types:
-
-| Task                               | Function                                                                            |
-|------------------------------------|-------------------------------------------------------------------------------------|
-| GlobalHookRun                      | Run a global hook (onStartup, beforeAll, afterAll, kubernetes, schedule)           |
-| GlobalHookEnableKubernetesBindings | Enable Kubernetes monitors for global hooks                                         |
-| GlobalHookWaitKubernetesSynchronization | Wait for global hook synchronization                                           |
-| GlobalHookEnableScheduleBindings   | Enable cron bindings for global hooks                                               |
-| DiscoverHelmReleases               | Find "extra" Helm releases after the first converge                                |
-| ApplyKubeConfigValues              | Apply changes from ModuleConfig                                                     |
-| ConvergeModules                    | Full converge cycle for all modules                                                 |
-| ModuleRun                          | Configure or update a module; runs subtasks: onStartup -> sync -> beforeHelm -> helm -> afterHelm |
-| ParallelModuleRun                  | Batch parallel launch of modules                                                    |
-| ModuleDelete                       | Remove a module (helm delete, afterDeleteHelm)                                      |
-| ModuleHookRun                      | Run a module hook on event                                                          |
-| ModuleEnsureCRDs                   | Install module CRDs                                                                 |
-| ModulePurge                        | Remove unknown Helm release                                                         |
 
 At startup, the Deckhouse controller creates `main` and `parallel_queue_0..19` queues and adds the following tasks to `main` in this order:
 
@@ -94,9 +91,9 @@ If more than one identical task is added to a queue, all duplicates are removed 
 
 To view addon-operator queues, use the `d8 system queue list` command.
 
-### Marketplace
+### Marketplace queues
 
-The **Marketplace queue** is an internal queue implementation used by [Marketplace](../marketplace) functionality.
+The **Marketplace queues** are a queue implementation used by [Marketplace](../marketplace) functionality.
 
 Each queue served by the Deckhouse controller for Marketplace has the following properties:
 
@@ -120,9 +117,9 @@ Task types:
 |-----------|----------------------------------------------------------------------------------------------|
 | Deploy    | Downloads/mounts the package image                                                           |
 | Load      | Parses configuration, creates Application/Module, registers in scheduler                     |
-| Configure | Applies settings from Store                                                                  |
-| Enable    | Enables hooks, sync, OnStartup                                                               |
-| Run       | BeforeHelm -> helm Upgrade -> AfterHelm                                                      |
+| Configure | Applies Application/Module settings using the parameter store                                |
+| Enable    | Enables hooks, performs parameter synchronization, runs OnStartup hook                       |
+| Run       | Runs subtasks when installing Application/Module: BeforeHelm -> helm Upgrade -> AfterHelm    |
 | HookRun   | Runs a hook on event                                                                         |
 | HookSync  | Initial synchronization of Kubernetes binding                                                |
 | Disable   | Removes Helm, disables hooks, clears hook queues                                             |
@@ -133,5 +130,5 @@ Task execution in one queue does not block task execution in another queue.
 To view Marketplace queues, use the `d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller packages queue dump` command.
 
 {% alert level="warning" %}
-During module converge in addon-operator, the Deckhouse controller pauses Marketplace queue processing.
+When performing module installation or configuration tasks in addon-operator, the Deckhouse controller pauses Marketplace queue processing.
 {% endalert %}

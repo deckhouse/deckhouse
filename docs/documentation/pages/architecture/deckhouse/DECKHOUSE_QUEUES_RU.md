@@ -8,14 +8,37 @@ description: Описание работы очередей контроллер
 
 Модуль [`deckhouse`](/modules/deckhouse/) реализует ядро Deckhouse Kubernetes Platform (DKP), выполняющее различные операции по управлению платформой с использованием механизма очередей. Подробнее с архитектурой модуля можно ознакомиться в [соответствующем разделе документации](./deckhouse.html).
 
-Контроллер Deckhouse реализует 2 вида очередей:
+Контроллер Deckhouse реализует очереди addon-operator и marketplace.
 
-- addon-operator;
-- marketplace.
+### Очереди addon-operator
 
-### Addon-operator
+**Очереди addon-operator** — это основной механизм обработки встроенных и внешних модулей Deckhouse. Очередь реализована в [shell-operator](https://github.com/flant/shell-operator) и расширена типами задач [addon-operator](https://github.com/flant/addon-operator). Контроллер Deckhouse синхронизирует кастомные ресурсы [ModuleConfig](../../reference/api/cr.html#moduleconfig) и обновляет глобальные или модульные values для addon-operator.
 
-**Очередь addon-operator** — это основной механизм обработки встроенных и внешних модулей Deckhouse. Очередь реализована в [shell-operator](https://github.com/flant/shell-operator) и расширена типами задач [addon-operator](https://github.com/flant/addon-operator). Контроллер Deckhouse синхронизирует кастомные ресурсы [ModuleConfig](../../reference/api/cr.html#moduleconfig) и обновляет глобальные или модульные values для addon-operator.
+Типы задач:
+
+| Задача                           | Что делает                                                                          |
+|----------------------------------|-------------------------------------------------------------------------------------|
+| GlobalHookRun                    | Запуск глобальных хуков (onStartup, beforeAll, afterAll, kubernetes, schedule)           |
+| GlobalHookEnableKubernetesBindings | Включение K8s-мониторов из глобальных хуков                                                |
+| GlobalHookWaitKubernetesSynchronization | Блокировка очереди до завершения глобальных хуков с установленным параметром `executeHookOnSynchronization: true`|
+| GlobalHookEnableScheduleBindings | Регистрирует cron-задачи в планировщике addon-operator |
+| DiscoverHelmReleases             | Поиск «лишних» Helm-релизов после первого converge                                  |
+| ApplyKubeConfigValues            | Применение изменений из ModuleConfig                                                |
+| ConvergeModules                  | Полный цикл converge всех модулей                                                   |
+| ModuleRun                        | Настройка или обновление модуля, выполняются подзадачи: onStartup → sync → beforeHelm → helm → afterHelm                                   |
+| ParallelModuleRun                | Пакетный параллельный запуск модулей                                                |
+| ModuleDelete                     | Удаление модуля (helm delete, afterDeleteHelm)                                      |
+| ModuleHookRun                    | Запуск module hook по событию                                                       |
+| ModuleEnsureCRDs                 | Установка CRD модуля                                                                |
+| ModulePurge                      | Удаление неизвестного helm release                                                  |
+
+Типы очередей addon-operator:
+
+| Очередь       | Имя                                   | Назначение                                                                                      |
+|-------------- |-------------------------------------- |-------------------------------------------------------------------------------------------------|
+| Main          | `main`                                  | Выполнение глобальных хуков при старте, установка критичных модулей, настройка и удаление модулей  |
+| Parallel      | `parallel_queue_0` … `parallel_queue_19`  | Параллельный ModuleRun с учётом зависимостей модулей (20 штук)                                 |
+| Hook queues   | из конфигурации задачи ([хука](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md)) | Задачи конкретного модуля и глобальные хуки  |
 
 Каждая очередь — отдельный pipeline с одним воркером, который реализует очередь со следующими свойствами:
 
@@ -26,38 +49,12 @@ description: Описание работы очередей контроллер
   - `AddTailTasks` — вставить подзадачу в конец очереди после того, как текущая завершится успешно;
   - `AddAfterTasks` — вставить подзадачу сразу после текущей;
 - задача выполняется до успеха, если не указано `allowFailure: true` в параметре задачи;
-- в случае ошибки выполняется экспоненциальный перезапуск (backoff) начиная с задержки в 5 секунд между попытками.
+- в случае ошибки выполняется экспоненциальный перезапуск (backoff), начиная с задержки в 5 секунд между попытками.
 
 {% alert level="warning" %}
 Если задача не может завершиться успешно и при этом в её параметрах не указано `allowFailure: true`, то такая задача блокирует очередь, в которой она выполняется.
 Задачи в разных очередях обработки не блокируют друг друга.
 {% endalert %}
-
-Типы очередей:
-
-| Очередь       | Имя                                   | Назначение                                                                                      |
-|-------------- |-------------------------------------- |-------------------------------------------------------------------------------------------------|
-| Main          | `main`                                  | Старт, converge, ModuleConfig, ModuleRun/Delete, глобальные задачи на старте                      |
-| Parallel      | `parallel_queue_0` … `parallel_queue_19`  | Параллельный ModuleRun с учётом зависимостей модулей (20 штук)                                 |
-| Hook queues   | из конфига задачи ([хука](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md)) | Задачи конкретного модуля или global hook                                        |
-
-Типы задач:
-
-| Задача                           | Что делает                                                                          |
-|----------------------------------|-------------------------------------------------------------------------------------|
-| GlobalHookRun                    | Запуск global hook (onStartup, beforeAll, afterAll, kubernetes, schedule)           |
-| GlobalHookEnableKubernetesBindings | Включение K8s-мониторов global hook                                                 |
-| GlobalHookWaitKubernetesSynchronization | Ожидание sync global hooks                                                 |
-| GlobalHookEnableScheduleBindings | Включение cron global hook                                                          |
-| DiscoverHelmReleases             | Поиск «лишних» Helm-релизов после первого converge                                  |
-| ApplyKubeConfigValues            | Применение изменений из ModuleConfig                                                |
-| ConvergeModules                  | Полный цикл converge всех модулей                                                   |
-| ModuleRun                        | Настройка или обновление модуля, выполняются подзадачи: onStartup → sync → beforeHelm → helm → afterHelm                                   |
-| ParallelModuleRun                | Пакетный параллельный запуск модулей                                                |
-| ModuleDelete                     | Удаление модуля (helm delete, afterDeleteHelm)                                      |
-| ModuleHookRun                    | Запуск module hook по событию                                                       |
-| ModuleEnsureCRDs                 | Установка CRD модуля                                                                |
-| ModulePurge                      | Удаление неизвестного helm release                                                  |
 
 При старте контроллер Deckhouse создает очереди `main` и `parallel_queue_0..19` и добавляет в `main` задачи в следующем порядке:
 
@@ -95,9 +92,9 @@ description: Описание работы очередей контроллер
 
 Для просмотра очередей addon-operator можно использовать команду `d8 system queue list`.
 
-### Marketplace
+### Очереди Marketplace
 
-**Очередь Marketplace** — внутренняя реализация очереди для работы с функционала [Marketplace](../marketplace).
+**Очереди Marketplace** — реализация очереди для работы функционала [Marketplace](../marketplace).
 
 Каждая очередь, которую обслуживает контроллер Deckhouse для Marketplace, обладает следующими свойствами:
 
@@ -111,8 +108,8 @@ description: Описание работы очередей контроллер
 
 | Имя                               | Назначение                                                        |
 |-----------------------------------|-------------------------------------------------------------------|
-| {packageName}                     | Lifecycle: Deploy, Load, Configure, Enable, Run, Disable, Undeploy|
-| {packageName}/{hookQueue}         | Хуки по K8s/schedule-событиям (queue из binding хука)            |
+| {packageName}                     | Реализация задач жизненного цикла пакетов: Deploy, Load, Configure, Enable, Run, Disable, Undeploy|
+| {packageName}/{hookQueue}         | Хуки по K8s/schedule-событиям (очередь из binding-хука)    |
 | {packageName}/{hookQueue}/sync    | Синхронизация хука при старте (WaitForSynchronization)            |
 
 Типы задач:
@@ -121,18 +118,18 @@ description: Описание работы очередей контроллер
 |-----------|--------------------------------------------------------------------------------------------|
 | Deploy    | Скачивает/монтирует образ пакета                                                           |
 | Load      | Парсит конфиг, создаёт Application/Module, регистрирует в scheduler                        |
-| Configure | Применяет settings из Store                                                                |
-| Enable    | Включает хуки, sync, OnStartup                                                             |
-| Run       | BeforeHelm → helm Upgrade → AfterHelm                                                      |
+| Configure | Применяет настройки Application/Module, используя хранилище параметров                     |
+| Enable    | Включает хуки, выполняет синхронизацию параметров, запускает хук на событие OnStartup      |
+| Run       | Выполняет подзадачи при установке Application/Module: BeforeHelm → helm Upgrade → AfterHelm     |
 | HookRun   | Запуск хука по событию                                                                     |
 | HookSync  | Начальная синхронизация K8s binding                                                        |
 | Disable   | Удаляет Helm, отключает хуки, чистит hook-очереди                                          |
-| Undeploy  | Убирает пакет с диска                                                                      |
+| Undeploy  | Удаляет пакет с диска                                                                      |
 
 Выполнение задач в одной очереди не блокирует выполнение задач в другой очереди.
 
 Для просмотра очередей  Marketplace можно использовать команду `d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller packages queue dump`.
 
 {% alert level="warning" %}
-Контроллер Deckhouse при converge модуля в addon-operator ставит на паузу отработку очередей Marketplace.
+Контроллер Deckhouse при выполнении задач по установке или настройке модулей в addon-operator ставит на паузу отработку очередей Marketplace.
 {% endalert %}

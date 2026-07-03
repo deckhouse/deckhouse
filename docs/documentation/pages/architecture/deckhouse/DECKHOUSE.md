@@ -63,11 +63,11 @@ The module consists of the following components:
 
 1. **Deckhouse** (Deployment): A controller that implements platform management operations.
 
-   The controller orchestrates platform management tasks using a queueing mechanism. For details, refer to the [corresponding documentation section](./queues.html).
+   The controller orchestrates platform management tasks using [the queueing mechanism](./queues.html).
 
-   The Deckhouse controller can run in standard mode or in [hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) isolation mode. To enable it, create the `chroot-mode` ConfigMap in the `d8-system` namespace.
+   The Deckhouse controller can run in standard mode or in [hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) isolation mode. To enable it, create the `chroot-mode` ConfigMap in the `d8-system` namespace. In isolation mode, shell hooks and module enable scripts run in a chroot environment with a limited set of mounted directories, isolating them from the controller container file system.
 
-   If [High Availability (HA)](../../admin/configuration/high-reliability-and-availability/) mode is enabled, multiple Deckhouse controller instances are started. To ensure correct behavior, Deckhouse controllers perform leader election using the `deckhouse-leader-election` Lease resource. The controller elected as leader starts the [addon-operator](https://github.com/flant/addon-operator) and manages custom resources.
+   If [High Availability (HA)](../../admin/configuration/high-reliability-and-availability/) mode is enabled, multiple Deckhouse controller instances are started. To ensure correct behavior, Deckhouse controllers perform leader election using the `deckhouse-leader-election` Lease resource. The controller elected as leader performs all platform management operations.
 
    In addition, the Deckhouse controller configures:
 
@@ -85,22 +85,22 @@ The module consists of the following components:
 
    * **init-downloaded-modules**: Init container that prepares the directory structure required for module operations.
    * **deckhouse**: Main container.
-   * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the main container debug HTTP interface.
+   * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the main container component debug interface.
   
 1. **Webhook-handler** (Deployment): Consists of a single **handler** container and implements a generic webhook for conversion and validation of custom resources managed by DKP.
 
     The component watches [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) and [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) custom resources and, based on them, generates hook Python files for [shell-operator](https://github.com/flant/shell-operator) from templates. When `kube-apiserver` sends resource validation or conversion requests, shell-operator runs the required hook and returns the processing result.
 
-1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the CNI migration process and records the current state in the CNIMigration custom resource.
+1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the CNI migration process and records the current state in the CNIMigration custom resource. Migration to `flannel`, `cni-simple-bridge`, and `cilium` is supported. For details, refer to the [CNI switching guide](/products/kubernetes-platform/guides/cni-migration.html).
 
     {% alert level="info" %}
-    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. This resource is created when [switching CNI in a cluster](/products/kubernetes-platform/guides/cni-migration.html).
+    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command. For details, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
     {% endalert %}
 
 1. **Cni-migration-agent** (DaemonSet): An optional component running on all cluster nodes, consisting of a single **agent** container. The component watches the CNIMigration custom resource and manages the CNINodeMigration custom resource that reflects migration state for a specific node.
 
     {% alert level="info" %}
-    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. This resource is created when [switching CNI in a cluster](/products/kubernetes-platform/guides/cni-migration.html).
+    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command. For details, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
     {% endalert %}
 
 ## Module interactions
