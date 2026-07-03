@@ -21,7 +21,7 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
 
 Архитектура модуля [`csi-huawei`](/modules/csi-huawei/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Архитектура модуля csi-huawei](../../../images/architecture/storage/c4-l2-csi-huawei.ru.png)
 
 ## Компоненты модуля

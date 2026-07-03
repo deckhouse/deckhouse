@@ -21,7 +21,7 @@ description: Архитектура модуля cloud-provider-dynamix в Deckh
 
 Архитектура модуля [`cloud-provider-dynamix`](/modules/cloud-provider-dynamix/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Архитектура модуля cloud-provider-dynamix](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dynamix.ru.png)
 
 ## Компоненты модуля

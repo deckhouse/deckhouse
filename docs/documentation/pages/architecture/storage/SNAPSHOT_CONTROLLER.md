@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`snapshot-controller`](/modules/snapshot-controller/) module and its interactions with other components of DKP are shown in the following diagrams:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+<!--- Source: structurizr code --->
 ![Snapshot-controller module architecture](../../images/architecture/storage/c4-l2-snapshot-controller.png)
 
 ## Module components

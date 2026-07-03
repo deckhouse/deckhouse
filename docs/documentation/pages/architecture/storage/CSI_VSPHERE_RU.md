@@ -21,7 +21,7 @@ description: Архитектура модуля csi-vsphere в Deckhouse Kubern
 
 Архитектура модуля [`csi-vsphere`](/modules/csi-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Архитектура модуля csi-vsphere](../../../images/architecture/storage/c4-l2-csi-vsphere.ru.png)
 
 ## Компоненты модуля

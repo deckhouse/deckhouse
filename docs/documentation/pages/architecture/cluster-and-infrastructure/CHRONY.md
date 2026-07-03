@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`chrony`](/modules/chrony/) module its interactions with other DKP components are shown in the following diagram:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+<!--- Source: structurizr code --->
 ![Chrony module architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.png)
 
 ## Module components

@@ -31,7 +31,7 @@ description: Архитектура модуля admission-policy-engine в Deck
 
 Архитектура модуля [`admission-policy-engine`](/modules/admission-policy-engine/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Архитектура модуля admission-policy-engine](../../images/architecture/security/c4-l2-admission-policy-engine.ru.png)
 
 ## Компоненты модуля

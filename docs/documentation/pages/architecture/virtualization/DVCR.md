@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the DVCR component of [`virtualization`](/modules/virtualization/) module and its interactions with other components of DKP are shown in the following diagrams:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Architecture of the DVCR component of virtualization module](../../images/architecture/virtualization/c4-l2-virtualization-dvcr.png)
 
 ## DVCR components

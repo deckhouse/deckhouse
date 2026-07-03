@@ -44,4 +44,4 @@ changes made by `npm install` are included into the repostiory.
 find . -name ".gitignore" -type f -delete
 ```
 
-Then commit content to `fox.flant.com/deckhouse/3p/prometheus/prometheus-deps` to the branch `${PROMETHEUS_VERSION}`.
+Then commit the content to the `prometheus/prometheus-deps` repository (under `SOURCE_REPO`) on branch `${PROMETHEUS_VERSION}`.

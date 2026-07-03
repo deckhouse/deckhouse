@@ -44,12 +44,12 @@ For a detailed view of individual services, refer to the Level 2 and higher diag
 
 The following graphical symbols are used in the diagrams:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+<!--- Source: structurizr code --->
 ![Legend used in DKP diagrams](../../images/architecture/c4-legend.png)
 
 ## Context diagram
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+<!--- Source: structurizr code --->
 ![DKP context diagram](../../images/architecture/c4-l1-context.png)
 
 The following roles interact with DKP:
@@ -69,7 +69,7 @@ The diagram below shows the DKP subsystems.
 Relationships between subsystems are shown in a generalized form and without detailed interactions.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+<!--- Source: structurizr code --->
 ![DKP subsystem diagram](../../images/architecture/c4-subsystems.png)
 
 ## Module diagram
@@ -80,5 +80,5 @@ The diagram below shows all modules included in the Default [module bundle](../.
 Relationships between modules are shown in a generalized form and without detailed interactions.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+<!--- Source: structurizr code --->
 ![DKP module diagram](../../images/architecture/c4-modules.png)

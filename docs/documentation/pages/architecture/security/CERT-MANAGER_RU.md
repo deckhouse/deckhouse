@@ -19,7 +19,7 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
 
 Архитектура модуля [`cert-manager`](/modules/cert-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Архитектура модуля cert-manager](../../images/architecture/security/c4-l2-cert-manager.ru.png)
 
 ## Компоненты модуля

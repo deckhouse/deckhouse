@@ -33,12 +33,12 @@ relatedLinks:
 
 Для элементов диаграмм используется следующие графические символы:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Условные обозначения на диаграммах DKP](../../images/architecture/c4-legend.ru.png)
 
 ## Диаграмма контекста
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Диаграмма контекста DKP](../../images/architecture/c4-l1-context.ru.png)
 
 С DKP взаимодействуют:
@@ -58,7 +58,7 @@ relatedLinks:
 Связи между подсистемами показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Диаграмма подсистем DKP](../../images/architecture/c4-subsystems.ru.png)
 
 ## Диаграмма модулей
@@ -69,5 +69,5 @@ relatedLinks:
 Связи между модулями показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code --->
 ![Диаграмма модулей DKP](../../images/architecture/c4-modules.ru.png)
