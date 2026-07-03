@@ -14,14 +14,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -33,6 +31,14 @@ const (
 type DesiredConfig struct {
 	Namespaces []string
 	CACerts    []string
+}
+
+// ApplyResult describes the outcome of Writer.Apply.
+type ApplyResult struct {
+	Updated      bool
+	Removed      bool
+	Namespaces   []string
+	CACertsCount int
 }
 
 // Writer writes containerd integrity configuration to the local filesystem.
@@ -49,7 +55,7 @@ func NewWriter(configDir string) *Writer {
 }
 
 // AggregatePolicies builds desired configuration from all policies.
-func AggregatePolicies(logger *log.Logger, policies []deckhousev1alpha1.ContainerdIntegrityPolicy) *DesiredConfig {
+func AggregatePolicies(policies []deckhousev1alpha1.ContainerdIntegrityPolicy) *DesiredConfig {
 	if len(policies) == 0 {
 		return &DesiredConfig{
 			Namespaces: []string{},
@@ -63,17 +69,11 @@ func AggregatePolicies(logger *log.Logger, policies []deckhousev1alpha1.Containe
 	for i := range policies {
 		policy := &policies[i]
 
-		policyCA := strings.TrimSpace(policy.Spec.CA)
-		if policyCA == "" {
-			logger.Info("Skipping policy with empty spec.ca", "policy", policy.Name)
-			continue
-		}
-
 		for _, ns := range policy.Status.ProtectedNamespaces {
 			namespacesSet[ns] = struct{}{}
 		}
 
-		caCertsSet[base64.StdEncoding.EncodeToString([]byte(policyCA))] = struct{}{}
+		caCertsSet[base64.StdEncoding.EncodeToString([]byte(policy.Spec.CA))] = struct{}{}
 	}
 
 	namespaces := make([]string, 0, len(namespacesSet))
@@ -105,46 +105,46 @@ func RenderIntegrityToml(cfg *DesiredConfig) ([]byte, error) {
 }
 
 // Apply writes or removes configuration files on disk.
-func (w *Writer) Apply(logger *log.Logger, config *DesiredConfig) error {
+func (w *Writer) Apply(config *DesiredConfig) (*ApplyResult, error) {
 	if config == nil || len(config.Namespaces) == 0 {
-		return w.removeConfig(logger)
+		return w.removeConfig()
 	}
 
 	if err := os.MkdirAll(w.ConfigDir, 0o755); err != nil {
-		return fmt.Errorf("create config dir %q: %w", w.ConfigDir, err)
+		return nil, fmt.Errorf("create config dir %q: %w", w.ConfigDir, err)
 	}
 
 	integrityToml, err := RenderIntegrityToml(config)
 	if err != nil {
-		return fmt.Errorf("render integrity.toml: %w", err)
+		return nil, fmt.Errorf("render integrity.toml: %w", err)
 	}
 	integrityTomlPath := filepath.Join(w.ConfigDir, IntegrityConfigFile)
 	if existing, err := os.ReadFile(integrityTomlPath); err == nil {
 		if bytes.Equal(existing, integrityToml) {
-			return nil
+			return &ApplyResult{}, nil
 		}
 	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("read integrity.toml: %w", err)
+		return nil, fmt.Errorf("read integrity.toml: %w", err)
 	}
 	if err := pkiutil.WriteFileAtomically(integrityTomlPath, integrityToml, 0o644); err != nil {
-		return fmt.Errorf("write integrity.toml: %w", err)
+		return nil, fmt.Errorf("write integrity.toml: %w", err)
 	}
 
-	logger.Info("Updated containerd integrity config", "namespaces", config.Namespaces, "ca_certs_count", len(config.CACerts))
-
-	return nil
+	return &ApplyResult{
+		Updated:      true,
+		Namespaces:   config.Namespaces,
+		CACertsCount: len(config.CACerts),
+	}, nil
 }
 
-func (w *Writer) removeConfig(logger *log.Logger) error {
+func (w *Writer) removeConfig() (*ApplyResult, error) {
 	path := filepath.Join(w.ConfigDir, IntegrityConfigFile)
 	if err := os.Remove(path); err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return &ApplyResult{}, nil
 		}
-		return fmt.Errorf("remove %q: %w", path, err)
+		return nil, fmt.Errorf("remove %q: %w", path, err)
 	}
 
-	logger.Info("Found no namespaces matching the policies' selectors, removing containerd integrity config")
-
-	return nil
+	return &ApplyResult{Removed: true}, nil
 }
