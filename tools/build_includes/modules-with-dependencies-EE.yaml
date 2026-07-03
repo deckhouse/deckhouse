@@ -239,14 +239,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/300-prometheus/hooks
-  to: /deckhouse/modules/300-prometheus/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler/hooks
   to: /deckhouse/modules/302-vertical-pod-autoscaler/hooks
   excludePaths:
@@ -273,14 +265,6 @@
         - '**/*'
 - add: /modules/400-descheduler/hooks
   to: /deckhouse/modules/400-descheduler/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/462-loki/hooks
-  to: /deckhouse/modules/462-loki/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
