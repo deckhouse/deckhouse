@@ -135,6 +135,16 @@ properties:
               - cse-pro
             example:
               yandex.cpi.flant.com/listener-subnet-id: xyz-123
+          gatewayPodAnnotations:
+            type: object
+            additionalProperties:
+              type: string
+            description: Additional annotations for ingressgateway DaemonSet pods.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            example:
+              checksum/config: xyz-123
           nodeSelector:
             type: object
             additionalProperties:
