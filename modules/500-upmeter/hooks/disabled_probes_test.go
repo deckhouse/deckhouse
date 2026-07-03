@@ -32,7 +32,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 	const initValues = `{"upmeter": { "internal": { "disabledProbes": [] }, "disabledProbes": [] }}`
 
 	Context("smokeMiniDisabled ", func() {
-		f := HookExecutionConfigInit(initValues, `{}`)
+		f := newHookExecutionConfig(initValues)
 
 		It("disables synthetic group when true", func() {
 			f.ValuesSetFromYaml("upmeter.smokeMiniDisabled", []byte("true"))
@@ -57,7 +57,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 
 	Context("extensions probes depending on deployed apps", func() {
 		Context("no apps", func() {
-			f := HookExecutionConfigInit(initValues, `{}`)
+			f := newHookExecutionConfig(initValues)
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
@@ -76,7 +76,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 		})
 
 		Context("with cluster-autoscaler", func() {
-			f := HookExecutionConfigInit(initValues, `{}`)
+			f := newHookExecutionConfig(initValues)
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(deploymentInCloudInstanceManager("cluster-autoscaler"), 1))
@@ -92,7 +92,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 		})
 
 		Context("with MCM, CCM, and bashible-apiserver", func() {
-			f := HookExecutionConfigInit(initValues, `{}`)
+			f := newHookExecutionConfig(initValues)
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
@@ -113,7 +113,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 		})
 
 		Context("with prometheus-longterm", func() {
-			f := HookExecutionConfigInit(initValues, `{}`)
+			f := newHookExecutionConfig(initValues)
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
@@ -133,7 +133,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 		})
 
 		Context("with grafana-v10 deployment", func() {
-			f := HookExecutionConfigInit(initValues, `{}`)
+			f := newHookExecutionConfig(initValues)
 
 			It("extensions/grafana-v10 probe is disabled when deployment is absent", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
@@ -162,7 +162,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 		})
 
 		Context("with observability module", func() {
-			f := HookExecutionConfigInit(initValues, `{}`)
+			f := newHookExecutionConfig(initValues)
 
 			It("observability probes are disabled when observability module is disabled", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
@@ -198,11 +198,98 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/observability-recording"))
 			})
 		})
+
+		Context("with virtualization module", func() {
+			f := newHookExecutionConfig(initValues)
+
+			It("virtualization probe is disabled when virtualization module is disabled", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Delete("virtualization").Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("virtualization/"))
+			})
+
+			It("virtualization probe is disabled without default vmclass", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("virtualization/"))
+			})
+
+			It("virtualization probe is enabled with configured vmclass and default storageclass", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultStorageClass("fast"), 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
+				f.ValuesSet("upmeter.virtualizationProbe.virtualMachineClassName", "custom")
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("virtualization/"))
+			})
+
+			It("virtualization probe is disabled without disk storageclass", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic"), 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("virtualization/"))
+			})
+
+			It("virtualization probe is disabled without virtual image URL", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+defaultStorageClass("fast"), 2))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("virtualization/"))
+			})
+
+			It("virtualization probe is enabled with default vmclass and default storageclass", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+defaultStorageClass("fast"), 2))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("virtualization/"))
+			})
+
+			It("virtualization probe is enabled with default vmclass and configured disk storageclass", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+virtualizationModuleConfigWithDiskStorageClass("fast"), 2))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("virtualization/"))
+			})
+		})
 	})
 
 	Context("load-balancing probes depending on deployed apps", func() {
 		Context("no apps", func() {
-			f := HookExecutionConfigInit(initValues, `{}`)
+			f := newHookExecutionConfig(initValues)
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(``))
@@ -219,7 +306,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 		})
 
 		Context("with CCM", func() {
-			f := HookExecutionConfigInit(initValues, `{}`)
+			f := newHookExecutionConfig(initValues)
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(deploymentCCM("openstack")))
@@ -295,7 +382,57 @@ func allModules() set.Set {
 		"prometheus",
 		"prometheus-metrics-adapter",
 		"vertical-pod-autoscaler",
+		"virtualization",
 	)
+}
+
+func newHookExecutionConfig(initValues string) *HookExecutionConfig {
+	f := HookExecutionConfigInit(initValues, `{}`)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	f.RegisterCRD("virtualization.deckhouse.io", "v1alpha3", "VirtualMachineClass", false)
+	return f
+}
+
+func defaultVMClass(name string) string {
+	const format = `
+---
+apiVersion: virtualization.deckhouse.io/v1alpha3
+kind: VirtualMachineClass
+metadata:
+  name: %s
+  annotations:
+    virtualmachineclass.virtualization.deckhouse.io/is-default-class: "true"
+`
+	return fmt.Sprintf(format, name)
+}
+
+func defaultStorageClass(name string) string {
+	const format = `
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: %s
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: example.com/provisioner
+`
+	return fmt.Sprintf(format, name)
+}
+
+func virtualizationModuleConfigWithDiskStorageClass(name string) string {
+	const format = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  settings:
+    virtualDisks:
+      defaultStorageClassName: %s
+`
+	return fmt.Sprintf(format, name)
 }
 
 func Test_calcDisabledProbes(t *testing.T) {
@@ -609,6 +746,44 @@ func Test_calcDisabledProbes(t *testing.T) {
 				"extensions/label-enforcer",
 				"extensions/observability-webhook",
 			),
+		},
+
+		// virtualization -> virtualization/
+		{
+			name:           "virtualization off",
+			expectDisabled: set.New("virtualization/"),
+		},
+		{
+			name: "virtualization on",
+			args: args{
+				presence:       appPresence{virtualImageURL: true, virtualMachineClass: true, diskStorageClass: true},
+				enabledModules: set.New("virtualization"),
+			},
+			expectNotDisabled: set.New("virtualization/"),
+		},
+		{
+			name: "virtualization off without virtual image URL",
+			args: args{
+				presence:       appPresence{virtualMachineClass: true, diskStorageClass: true},
+				enabledModules: set.New("virtualization"),
+			},
+			expectDisabled: set.New("virtualization/"),
+		},
+		{
+			name: "virtualization off without default vmclass",
+			args: args{
+				presence:       appPresence{virtualImageURL: true, diskStorageClass: true},
+				enabledModules: set.New("virtualization"),
+			},
+			expectDisabled: set.New("virtualization/"),
+		},
+		{
+			name: "virtualization off without disk storageclass",
+			args: args{
+				presence:       appPresence{virtualImageURL: true, virtualMachineClass: true},
+				enabledModules: set.New("virtualization"),
+			},
+			expectDisabled: set.New("virtualization/"),
 		},
 
 		// prometheus-longterm -> extensions/prometheus-longterm

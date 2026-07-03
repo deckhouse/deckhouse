@@ -25,6 +25,10 @@ const known: { [name: string]: IGroupData } = {
 		name: "Extensions",
 		description: "The availability of extensions apps",
 	},
+	virtualization: {
+		name: "Virtualization",
+		description: "The availability of virtualization VM lifecycle operations",
+	},
 	"load-balancing": {
 		name: "Load Balancing",
 		description: "The availability of traffic load balancing and its configuration controllers",

@@ -59,6 +59,7 @@ func TestLoader_Groups(t *testing.T) {
 		"load-balancing",
 		"monitoring-and-autoscaling",
 		"synthetic",
+		"virtualization",
 	}
 	assert.Equal(t, allGroups, unfiltered.Groups())
 
@@ -73,6 +74,7 @@ func TestLoader_Groups(t *testing.T) {
 		"load-balancing",
 		"monitoring-and-autoscaling",
 		"synthetic",
+		"virtualization",
 	}
 	assert.Equal(t, notAllGroups, filtered.Groups())
 }
@@ -118,6 +120,7 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
+		{Group: "virtualization", Probe: "vm-lifecycle"},
 	}
 
 	assert.Equal(t, allProbesSorted, unfiltered.Probes())
@@ -162,6 +165,7 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
+		{Group: "virtualization", Probe: "vm-lifecycle"},
 	}
 
 	assert.Equal(t, filteredProbesSorted, filtered.Probes())

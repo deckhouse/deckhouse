@@ -57,11 +57,17 @@ type Config struct {
 }
 
 type DynamicProbesConfig struct {
-	IngressControllers []string
-	NodeGroups         []string
-	Zones              []string
-	ZonePrefix         string
-	Converge           ConvergeProbeConfig
+	IngressControllers  []string
+	NodeGroups          []string
+	Zones               []string
+	ZonePrefix          string
+	Converge            ConvergeProbeConfig
+	VirtualizationProbe VirtualizationProbeConfig
+}
+
+type VirtualizationProbeConfig struct {
+	VirtualImageURL         string
+	VirtualMachineClassName string
 }
 
 type ConvergeProbeConfig struct {
@@ -105,6 +111,10 @@ func (a *Agent) Start(ctx context.Context) error {
 			WindowSize:                  a.config.DynamicProbes.Converge.WindowSize,
 			FreezeThreshold:             a.config.DynamicProbes.Converge.FreezeThreshold,
 			AllowedTasksPerTimeInterval: a.config.DynamicProbes.Converge.AllowedTasksPerTimeInterval,
+		},
+		VirtualizationProbe: probe.VirtualizationProbeConfig{
+			VirtualImageURL:         a.config.DynamicProbes.VirtualizationProbe.VirtualImageURL,
+			VirtualMachineClassName: a.config.DynamicProbes.VirtualizationProbe.VirtualMachineClassName,
 		},
 	}
 

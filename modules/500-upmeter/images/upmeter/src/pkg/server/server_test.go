@@ -63,6 +63,7 @@ func Test_newProbeLister(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
+		{Group: "virtualization", Probe: "vm-lifecycle"},
 	}
 
 	allGroupsSorted := []string{
@@ -72,6 +73,7 @@ func Test_newProbeLister(t *testing.T) {
 		"load-balancing",
 		"monitoring-and-autoscaling",
 		"synthetic",
+		"virtualization",
 	}
 
 	assert.Equal(t, allProbesSorted, pl.Probes())
@@ -125,6 +127,7 @@ func Test_newProbeLister_with_dynamic(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
+		{Group: "virtualization", Probe: "vm-lifecycle"},
 	}
 
 	allGroupsSorted := []string{
@@ -136,6 +139,7 @@ func Test_newProbeLister_with_dynamic(t *testing.T) {
 		"nginx",
 		"nodegroups",
 		"synthetic",
+		"virtualization",
 	}
 
 	assert.Equal(t, allProbesSorted, pl.Probes())

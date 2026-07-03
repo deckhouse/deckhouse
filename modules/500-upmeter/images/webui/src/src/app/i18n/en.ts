@@ -103,6 +103,14 @@ const langPack: LangPack = {
             <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
     },
+    virtualization: {
+      ...GROUP_DEFAULT_TOOLTIP,
+      title: "Virtualization",
+      description: `
+            <p>Checks the availability of virtualization components and VM lifecycle operations.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
+            `,
+    },
     "load-balancing": {
       ...GROUP_DEFAULT_TOOLTIP,
       title: "Load balancing",
@@ -400,6 +408,17 @@ const langPack: LangPack = {
         reasonDown: "either no ready Pods present, or Dex responds with invalid data",
         reasonUnknown:
           "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+    },
+    virtualization: {
+      "vm-lifecycle": {
+        title: "VM lifecycle",
+        description: "Creates a temporary VM, verifies migration, attaches an extra disk, resizes it, detaches it, then cleans up.",
+        reasonUp: "temporary VM was created and lifecycle operations completed successfully",
+        reasonDown: "temporary VM creation, migration, disk attachment, disk resize or disk detachment failed",
+        reasonUnknown:
+          "error occurred during VM lifecycle check, kube-apiserver is not available, or previous probe run has not finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
     },

@@ -31,7 +31,7 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 
 	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
-	return []runnerConfig{
+	runners := []runnerConfig{
 		{
 			group:  groupExtensions,
 			probe:  "cluster-scaling",
@@ -222,4 +222,6 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 			},
 		},
 	}
+
+	return runners
 }
