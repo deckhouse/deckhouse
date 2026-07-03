@@ -28,22 +28,29 @@ func ConfigHash(paths []string) string {
 	const hashLen = 8
 
 	resolvedPaths := fs.RevealWildcardPaths(paths)
-	sort.Strings(resolvedPaths)
 
-	h := sha256.New()
+	digests := make([]string, 0, len(resolvedPaths))
 	for _, path := range resolvedPaths {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			log.WarnF("cannot read config file %s for preflight cache hash: %v\n", path, err)
 			continue
 		}
-		if _, err := h.Write(data); err != nil {
-			log.WarnF("cannot hash config file %s for preflight cache hash: %v\n", path, err)
-		}
+		sum := sha256.Sum256(data)
+		digests = append(digests, hex.EncodeToString(sum[:]))
+	}
+	sort.Strings(digests)
+
+	h := sha256.New()
+	for _, d := range digests {
+		h.Write([]byte(d))
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
 	if len(hash) > hashLen {
-		return hash[:hashLen]
+		hash = hash[:hashLen]
 	}
+
+	log.DebugF("computed config hash %s over %d config file(s)\n", hash, len(digests))
+
 	return hash
 }
