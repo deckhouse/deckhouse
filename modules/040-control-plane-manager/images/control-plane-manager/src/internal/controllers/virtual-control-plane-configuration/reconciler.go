@@ -95,6 +95,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
 	}
 
+	joinToken, res, err := r.reconcileNodeJoinSecret(ctx, vcp)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp)
 	if err != nil || !res.IsZero() {
 		return res, err
@@ -105,6 +110,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	if res, err := r.reconcileControlPlaneNodes(ctx, vcp, pkiSecret, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	// Least-critical step, kept last so it never blocks control-plane bring-up.
+	if res, err := r.reconcileJoinScript(ctx, vcp, apiserverService, pkiSecret, configSecret, joinToken); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -195,6 +205,17 @@ func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *control
 
 func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+
+	serviceType := corev1.ServiceTypeClusterIP
+	if vcp.Spec.Expose != nil {
+		switch vcp.Spec.Expose.Type {
+		case "NodePort":
+			serviceType = corev1.ServiceTypeNodePort
+		case "LoadBalancer":
+			serviceType = corev1.ServiceTypeLoadBalancer
+		}
+	}
+
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-apiserver",
@@ -204,7 +225,7 @@ func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) 
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
+			Type: serviceType,
 			Selector: map[string]string{
 				"app": "kube-apiserver",
 			},
@@ -229,7 +250,16 @@ func isAPIServerServiceInSync(current, target *corev1.Service) bool {
 
 	return current.Spec.Type == target.Spec.Type &&
 		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
-		equality.Semantic.DeepEqual(current.Spec.Ports, target.Spec.Ports)
+		equality.Semantic.DeepEqual(portsWithoutNodePort(current.Spec.Ports), portsWithoutNodePort(target.Spec.Ports))
+}
+
+func portsWithoutNodePort(ports []corev1.ServicePort) []corev1.ServicePort {
+	out := make([]corev1.ServicePort, len(ports))
+	copy(out, ports)
+	for i := range out {
+		out[i].NodePort = 0
+	}
+	return out
 }
 
 func applyAPIServerServiceTarget(current, target *corev1.Service) {
@@ -243,14 +273,74 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 
 	current.Spec.Type = target.Spec.Type
 	current.Spec.Selector = target.Spec.Selector
+	if target.Spec.Type == corev1.ServiceTypeNodePort {
+		for i := range target.Spec.Ports {
+			if i < len(current.Spec.Ports) && current.Spec.Ports[i].NodePort != 0 {
+				target.Spec.Ports[i].NodePort = current.Spec.Ports[i].NodePort
+			}
+		}
+	}
 	current.Spec.Ports = target.Spec.Ports
+}
+
+// externalAPIEndpoint returns the host and port for joining nodes to the virtual control plane
+func (r *reconciler) externalAPIEndpoint(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (string, int32, error) {
+	if vcp.Spec.Expose == nil {
+		return "", 0, nil
+	}
+
+	switch vcp.Spec.Expose.Type {
+	case "NodePort":
+		var nodePort int32
+		for _, p := range apiserverService.Spec.Ports {
+			if p.Port == 6443 {
+				nodePort = p.NodePort
+			}
+		}
+		if nodePort == 0 {
+			return "", 0, nil
+		}
+		nodeList := &corev1.NodeList{}
+		if err := r.client.List(ctx, nodeList); err != nil {
+			return "", 0, fmt.Errorf("list host nodes: %w", err)
+		}
+		for i := range nodeList.Items {
+			for _, a := range nodeList.Items[i].Status.Addresses {
+				if a.Type == corev1.NodeInternalIP {
+					return a.Address, nodePort, nil
+				}
+			}
+		}
+		return "", 0, nil
+	case "LoadBalancer":
+		for _, ing := range apiserverService.Status.LoadBalancer.Ingress {
+			if ing.IP != "" {
+				return ing.IP, 6443, nil
+			}
+			if ing.Hostname != "" {
+				return ing.Hostname, 6443, nil
+			}
+		}
+		return "", 0, nil
+	default:
+		return "", 0, nil
+	}
 }
 
 func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (*corev1.Secret, reconcile.Result, error) {
 	target := buildTargetPKISecret(vcp)
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		data, err := buildTargetPKISecretData(vcp, apiserverService)
+		host, _, err := r.externalAPIEndpoint(ctx, vcp, apiserverService)
+		if err != nil {
+			return nil, reconcile.Result{}, err
+		}
+		var extraSANs []string
+		if host != "" {
+			extraSANs = append(extraSANs, host)
+		}
+
+		data, err := buildTargetPKISecretData(vcp, apiserverService, extraSANs)
 		if err != nil {
 			return nil, reconcile.Result{}, fmt.Errorf("generate PKI Secret data: %w", err)
 		}
@@ -285,7 +375,7 @@ func buildTargetPKISecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1
 	}
 }
 
-func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (map[string][]byte, error) {
+func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service, extraSANs []string) (map[string][]byte, error) {
 	advertiseAddress := net.ParseIP(apiserverService.Spec.ClusterIP)
 	if advertiseAddress == nil {
 		return nil, fmt.Errorf("invalid apiserver Service ClusterIP: %q", apiserverService.Spec.ClusterIP)
@@ -304,6 +394,7 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 		advertiseAddress,
 		constants.DefaultTenantServiceSubnetCIDR,
 		pki.WithPKIDir(pkiDir),
+		pki.WithAPIServerCertSANs(extraSANs),
 	); err != nil {
 		return nil, fmt.Errorf("create PKI bundle: %w", err)
 	}

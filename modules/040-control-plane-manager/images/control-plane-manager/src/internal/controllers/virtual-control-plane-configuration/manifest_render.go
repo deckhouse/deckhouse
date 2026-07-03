@@ -30,8 +30,9 @@ import (
 
 // imagesTable mirrors the "images" key of the global config Secret produced by the virtual-control-plane.yaml Helm template.
 type imagesTable struct {
-	Versioned map[string]versionedImages `json:"versioned"`
-	Fixed     fixedImages                `json:"fixed"` // independent of the Kubernetes version
+	Versioned        map[string]versionedImages `json:"versioned"`
+	Fixed            fixedImages                `json:"fixed"` // independent of the Kubernetes version
+	RegistryPackages registryPackagesTable      `json:"registrypackages"`
 }
 
 type versionedImages struct {
@@ -42,6 +43,22 @@ type versionedImages struct {
 
 type fixedImages struct {
 	Kine string `json:"kine"`
+}
+
+type registryPackagesTable struct {
+	Versioned map[string]registryPackagesVersioned `json:"versioned"`
+	Fixed     registryPackagesFixed                `json:"fixed"`
+}
+
+type registryPackagesVersioned struct {
+	Kubelet string `json:"kubelet"`
+	Crictl  string `json:"crictl"`
+}
+
+type registryPackagesFixed struct {
+	Containerd string `json:"containerd"`
+	TomlMerge  string `json:"tomlMerge"`
+	RppGet     string `json:"rppGet"`
 }
 
 func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane) (map[string][]byte, error) {
