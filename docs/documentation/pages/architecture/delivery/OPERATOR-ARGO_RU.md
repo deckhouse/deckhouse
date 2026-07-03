@@ -63,7 +63,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - [NamespaceManagement](/modules/operator-argo/cr.html#namespacemanagement) — определение правил управления неймспейсами для экземпляра Argo CD. Оператор следит за кастомным ресурсом NamespaceManagement и соответствующим образом обновляет ConfigMap `argocd-cmd-params-cm`;
    - [NotificationsConfiguration](/modules/operator-argo/cr.html#notificationsconfiguration) — определение параметров уведомлений о событиях в Argo CD и приложениях. Оператор читает кастомные ресурсы NotificationsConfiguration и на основе них обновляет конфигурацию в ConfigMap `argocd-notifications-cm`.
 
-   `argocd-operator-controller-manager` создаёт ресурсы Deployment, Secret, ConfigMap, StatefulSet и другие для каждого кастомного ресурса ArgoCD, добавляя имя этого ресурса в качестве префикса для создаваемых ресурсов.
+   Argocd-operator-controller-manager создаёт ресурсы Deployment, Secret, ConfigMap, StatefulSet и другие для каждого кастомного ресурса ArgoCD, добавляя имя этого ресурса в качестве префикса для создаваемых ресурсов.
 
    Состоит из следующих контейнеров:
 
@@ -71,10 +71,10 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к метрикам `manager`.
 
 {% alert level="info" %}
-Следующие компоненты описывают ресурсы, которые создаёт `argocd-operator-controller-manager` на основе конфигурации, заданной в кастомном ресурсе ArgoCD. Для описания используется префикс `<ArgoCD name>`, который будет заменяться контроллером на имя ресурса ArgoCD.
+Следующие компоненты описывают ресурсы, которые создаёт argocd-operator-controller-manager на основе конфигурации, заданной в кастомном ресурсе ArgoCD. Для описания используется префикс `<ArgoCD name>`, который будет заменяться контроллером на имя ресурса ArgoCD.
 {% endalert %}
 
-1. **&lt;ArgoCD name&gt;-server** (Deployment) — основной компонент взаимодействия с экземпляром Argo CD. &lt;ArgoCD name&gt;-server предоставляет REST/gRPC API и пользовательский веб-интерфейс для управления Argo CD. Компонент позволяет управлять кастомными ресурсами Application, ApplicationSet и AppProject через предоставляемые интерфейсы (веб, API, CLI).
+1. **&lt;ArgoCD name&gt;-server** (Deployment) — argocd-server, основной компонент взаимодействия с экземпляром Argo CD. Argocd-server предоставляет REST/gRPC API и пользовательский веб-интерфейс для управления Argo CD. Компонент позволяет управлять кастомными ресурсами Application, ApplicationSet и AppProject через предоставляемые интерфейсы (веб, API, CLI).
 
    Оператор создаёт компонент, если в параметре [`.spec.server.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enabled) кастомного ресурса ArgoCD задано значение `true` (значение по умолчанию — `true`).
 
@@ -85,7 +85,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - **argocd-server** — основной контейнер;
    - **argocd-server-sidecar** — опциональный набор сайдкар-контейнеров, задаваемых пользователем в параметре [`.spec.server.sidecarContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-sidecarcontainers) кастомного ресурса ArgoCD.
 
-1. **&lt;ArgoCD name&gt;-repo-server** (Deployment) — компонент, отвечающий за обработку шаблонов, генерацию манифестов приложений и работу с внешними репозиториями, используемыми в Argo CD. &lt;ArgoCD name&gt;-repo-server отвечает за синхронизацию манифестов приложений из указанных репозиториев и передачу их в соответствующие компоненты для последующего развёртывания.
+1. **&lt;ArgoCD name&gt;-repo-server** (Deployment) — argocd-repo-server, компонент, отвечающий за обработку шаблонов, генерацию манифестов приложений и работу с внешними репозиториями, используемыми в Argo CD. Argocd-repo-server отвечает за синхронизацию манифестов приложений из указанных репозиториев и передачу их в соответствующие компоненты для последующего развёртывания.
 
    Оператор создаёт компонент, если в параметре [`.spec.repo.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-repo-enabled) кастомного ресурса ArgoCD задано значение `true` (значение по умолчанию — `true`).
 
@@ -96,7 +96,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - **argocd-repo-server** — основной контейнер, выполняющий операции по генерации и обработке манифестов, а также работу с удалёнными Git-репозиториями приложений;
    - **argocd-repo-server-sidecar** — опциональный набор сайдкар-контейнеров, задаваемых пользователем в параметре [`.spec.repo.sidecarContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-repo-sidecarcontainers) кастомного ресурса ArgoCD и позволяющих расширять функциональность repo-server.
 
-1. **&lt;ArgoCD name&gt;-application-controller** (StatefulSet) — компонент, отвечающий за синхронизацию и управление состоянием приложений, определённых в Argo CD. &lt;ArgoCD name&gt;-application-controller обеспечивает идемпотентное применение манифестов Kubernetes, управление процессом развёртывания, отката, автоматического восстановления, а также отслеживание состояния ресурсов в кластере.
+1. **&lt;ArgoCD name&gt;-application-controller** (StatefulSet) — argocd-application-controller, компонент, отвечающий за синхронизацию и управление состоянием приложений, определённых в Argo CD. Argocd-application-controller обеспечивает идемпотентное применение манифестов Kubernetes, управление процессом развёртывания, отката, автоматического восстановления, а также отслеживание состояния ресурсов в кластере.
 
    Оператор создаёт компонент, если в параметре [`.spec.controller.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-controller-enabled) кастомного ресурса ArgoCD задано значение `true` (значение по умолчанию — `true`).
 
@@ -106,36 +106,36 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - **argocd-application-controller** — основной контейнер, реализующий логику синхронизации кастомных ресурсов Application и создаваемых на их основе ресурсов;
    - **application-controller-sidecar** — опциональный набор сайдкар-контейнеров, задаваемых пользователем в параметре [`.spec.controller.sidecarContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-controller-sidecarcontainers) кастомного ресурса ArgoCD, которые позволяют расширить стандартные возможности контроллера.
 
-1. **&lt;ArgoCD name&gt;-applicationset-controller** (Deployment) — опциональный компонент, состоящий из одного контейнера **applicationset-controller** и отвечающий за управление кастомным ресурсом [ApplicationSet](/modules/operator-argo/cr.html#applicationset) в Argo CD. Он позволяет автоматически создавать, обновлять или удалять ресурсы Application на основе заданных шаблонов и генераторов (например, генераторов Git, List, Matrix и Cluster). Это облегчает массовое управление похожими приложениями, которые должны быть развёрнуты в различных окружениях или кластерах.
+1. **&lt;ArgoCD name&gt;-applicationset-controller** (Deployment) — argocd-applicationset-controller, опциональный компонент, состоящий из одного контейнера **applicationset-controller** и отвечающий за управление кастомным ресурсом [ApplicationSet](/modules/operator-argo/cr.html#applicationset) в Argo CD. Он позволяет автоматически создавать, обновлять или удалять ресурсы Application на основе заданных шаблонов и генераторов (например, генераторов Git, List, Matrix и Cluster). Это облегчает массовое управление похожими приложениями, которые должны быть развёрнуты в различных окружениях или кластерах.
 
    Оператор создаёт компонент, если в параметре [`.spec.applicationSet.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-applicationset-enabled) кастомного ресурса ArgoCD задано значение `true` (значение по умолчанию — `true`).
 
-   Более подробную информацию о компоненте можно найти в [документации applicationset-controller](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/).
+   Более подробную информацию о компоненте можно найти [в документации applicationset-controller](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/).
 
-1. **&lt;ArgoCD name&gt;-argocd-image-updater-controller** (Deployment) — опциональный компонент, состоящий из одного контейнера **argocd-image-updater** и предназначенный для автоматического обновления образов контейнеров в приложениях Argo CD при появлении новых версий в реестрах образов. Компонент отслеживает изменения тегов образов и при обнаружении новой версии обновляет соответствующие ресурсы Application в Argo CD (например, значения тегов образов в манифестах или `Helm values`) через запрос на слияние (pull request) в Git-репозиторий либо напрямую, в зависимости от выбранного способа работы.
+1. **&lt;ArgoCD name&gt;-argocd-image-updater-controller** (Deployment) — argocd-image-updater-controller, опциональный компонент, состоящий из одного контейнера **argocd-image-updater** и предназначенный для автоматического обновления образов контейнеров в приложениях Argo CD при появлении новых версий в реестрах образов. Компонент отслеживает изменения тегов образов и при обнаружении новой версии обновляет соответствующие ресурсы Application в Argo CD (например, значения тегов образов в манифестах или Helm values) через запрос на слияние (pull request) в Git-репозиторий либо напрямую, в зависимости от выбранного способа работы.
 
-   `<ArgoCD name>-argocd-image-updater-controller` выполняет следующие функции:
+   Argocd-image-updater-controller выполняет следующие функции:
 
    - управляет кастомным ресурсом [ImageUpdater](/modules/operator-argo/cr.html#imageupdater), описывающим параметры для автоматического обновления образов контейнеров приложений;
    - периодически проверяет указанные в приложениях образы контейнеров в поддерживаемых реестрах (Docker Hub, Quay.io, Harbor и др.);
    - поддерживает фильтрацию тегов образов по шаблонам и стратегиям обновления (`semver`, `latest` и др.);
-   - при обнаружении новой версии образа автоматически выполняет `write-back` (то есть записывает новое значение тега образа) в Argo CD Application или в Git-репозиторий в зависимости от настроенного метода.
+   - при обнаружении новой версии образа автоматически выполняет write-back (то есть записывает новое значение тега образа) в Argo CD Application или в Git-репозиторий в зависимости от настроенного метода.
 
    Для корректной работы компоненту требуются права доступа к Git-репозиториям и, при необходимости, к приватным реестрам образов. Учётные данные для доступа к реестрам образов можно хранить в секретах Kubernetes.
 
    Для включения компонента необходимо задать в параметре [`.spec.imageUpdater.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-imageupdater-enabled) кастомного ресурса ArgoCD значение `true`.
 
-   Более подробную информацию о компоненте можно найти в [документации argocd-image-updater](https://argocd-image-updater.readthedocs.io/).
+   Более подробную информацию о компоненте можно найти [в документации argocd-image-updater](https://argocd-image-updater.readthedocs.io/).
 
-1. **&lt;ArgoCD name&gt;-notifications-controller** (Deployment) — опциональный контроллер, состоящий из одного контейнера **argocd-notifications-controller** и реализующий отправку уведомлений о событиях в Argo CD (например, об успешной синхронизации приложения, ошибках развёртывания, изменениях статуса и др.) во внешние системы уведомлений, включая электронную почту, Slack, Microsoft Teams, Telegram, OpsGenie, Webhook и другие.
+1. **&lt;ArgoCD name&gt;-notifications-controller** (Deployment) — опциональный контроллер, состоящий из одного контейнера **argocd-notifications-controller** и реализующий отправку уведомлений о событиях в Argo CD (например, об успешной синхронизации приложения, ошибках развёртывания, изменениях статуса и др.) во внешние системы уведомлений, включая электронную почту, Slack, Microsoft Teams, Telegram, OpsGenie, вебхуки и другие.
 
-   Оператор `argocd-operator-controller-manager` формирует настройки для уведомлений на основе кастомных ресурсов [NotificationsConfiguration](/modules/operator-argo/cr.html#notificationsconfiguration) и сохраняет их в ConfigMap `argocd-notifications-cm` и Secret `argocd-notifications-secret`, которые используются контроллером для формирования и отправки уведомлений.
+   Основной оператор argocd-operator-controller-manager модуля формирует настройки для уведомлений на основе кастомных ресурсов [NotificationsConfiguration](/modules/operator-argo/cr.html#notificationsconfiguration) и сохраняет их в ресурсах ConfigMap `argocd-notifications-cm` и Secret `argocd-notifications-secret`, которые используются контроллером для формирования и отправки уведомлений.
 
    Для включения компонента необходимо задать в параметре [`.spec.notifications.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-notifications-enabled) кастомного ресурса ArgoCD значение `true`.
 
-   Более подробную информацию о механизмах работы можно найти в [документации по Argo CD Notifications](https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/).
+   Более подробную информацию о механизмах работы можно найти [в документации по Argo CD Notifications](https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/).
 
-1. **&lt;ArgoCD name&gt;-dex-server** (Deployment) — опциональный компонент для аутентификации пользователей в Argo CD, выступающий в роли OIDC-провайдера (OpenID Connect) на базе Dex. Компонент реализует возможность входа пользователей через различные внешние провайдеры аутентификации (LDAP, GitHub, GitLab, SAML, Azure AD и др.), а также поддерживает работу со статическими пользователями, определёнными в конфигурации Dex.
+1. **&lt;ArgoCD name&gt;-dex-server** (Deployment) — argocd-dex-server, опциональный компонент для аутентификации пользователей в Argo CD, выступающий в роли OIDC-провайдера (OpenID Connect) на базе [Dex](https://github.com/dexidp/dex). Компонент реализует возможность входа пользователей через различные внешние провайдеры аутентификации (LDAP, GitHub, GitLab, SAML, Azure AD и др.), а также поддерживает работу со статическими пользователями, определёнными в конфигурации Dex.
 
    Состоит из следующих контейнеров:
 
@@ -147,14 +147,14 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    {% alert level="warning" %}
    Для аутентификации пользователей Argo CD в DKP модуль `operator-argo` поддерживает интеграцию с модулем [`user-authn`](/modules/user-authn/) (встроенная аутентификация DKP). Другие внешние провайдеры через Dex в данной конфигурации не используются.
 
-   Подробнее см. в [примерах использования модуля `operator-argo`](/modules/operator-argo/examples.html#аутентификация).
+   Подробнее с примерами использования модуля `operator-argo` можно ознакомиться [в разделе документации модуля](/modules/operator-argo/examples.html#аутентификация).
    {% endalert %}
 
-1. **&lt;ArgoCD name&gt;-redis** (Deployment) — обязательный компонент, состоящий из одного контейнера **redis** и отвечающий за хранение данных об очередях задач и состоянии сессий в Argo CD. &lt;ArgoCD name&gt;-redis реализует отдельный экземпляр базы данных [Redis](https://redis.io/).
+1. **&lt;ArgoCD name&gt;-redis** (Deployment) — argocd-redis, обязательный компонент, состоящий из одного контейнера **redis** и отвечающий за хранение данных об очередях задач и состоянии сессий в Argo CD. Argocd-redis реализует отдельный экземпляр базы данных [Redis](https://github.com/redis/redis).
 
-   `argocd-operator-controller-manager` разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `false`.
+   Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `false`.
 
-1. **&lt;ArgoCD name&gt;-redis-ha-server** (StatefulSet) — обязательный компонент для развёртывания Redis в режиме высокой доступности (HA) в составе Argo CD. Реализует отказоустойчивый кластер Redis с репликацией и автоматическим переключением (`failover`) с помощью механизма [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/).
+1. **&lt;ArgoCD name&gt;-redis-ha-server** (StatefulSet) — argocd-redis-ha-server, обязательный компонент для развёртывания Redis в режиме высокой доступности (HA) в составе Argo CD. Реализует отказоустойчивый кластер Redis с репликацией и автоматическим переключением (failover) с помощью механизма [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/).
 
    Состоит из следующих контейнеров:
 
@@ -162,16 +162,16 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - **redis** — основной контейнер, реализующий экземпляр Redis-сервера;
    - **sentinel** — вспомогательный контейнер, запускающий [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/) для мониторинга состояния экземпляров Redis и автоматического переключения на реплику при отказе основного экземпляра.
 
-   `argocd-operator-controller-manager` разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `true`.
+   Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `true`.
 
-1. **&lt;ArgoCD name&gt;-redis-ha-haproxy** (Deployment) — дополнительный компонент для балансировки нагрузки и распределения трафика к экземплярам кластера Redis (`redis-ha-server`).
+1. **&lt;ArgoCD name&gt;-redis-ha-haproxy** (Deployment) — argocd-redis-ha-haproxy, дополнительный компонент для балансировки нагрузки и распределения трафика к экземплярам кластера Redis (redis-ha-server).
 
    Состоит из следующих контейнеров:
 
    - **config-init** — init-контейнер, подготавливающий конфигурацию для HAProxy перед запуском основного контейнера;
-   - **haproxy** — контейнер, работающий в роли прокси-сервера и обеспечивающий прозрачную маршрутизацию запросов клиентов к доступным `master`/`replica`-экземплярам Redis, а также автоматизацию переключения между ними при `failover`.
+   - **haproxy** — контейнер, работающий в роли прокси-сервера и обеспечивающий прозрачную маршрутизацию запросов клиентов к доступным master/replica-экземплярам Redis, а также автоматизацию переключения между ними при failover.
 
-   `argocd-operator-controller-manager` разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `true`.
+   Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) кастомного ресурса ArgoCD принимает значение `true`.
 
    {% alert level="info" %}
    Для реализации безопасного и масштабируемого мультикластера в Argo CD используются следующие компоненты:
@@ -183,40 +183,40 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
 1. **&lt;ArgoCD name&gt;-agent-agent** (Deployment) — опциональный компонент, состоящий из одного контейнера **&lt;ArgoCD name&gt;-agent-agent** и отвечающий за выполнение операций над управляемыми ресурсами Kubernetes-кластера по заданию из Argo CD. Компонент устанавливает подключение к Argo CD Principal, синхронизирует приложения и управляет их состоянием на основе команд, поступающих от Argo CD Principal.
 
-   Подробнее с архитектурой мультикластерной конфигурации Argo CD можно ознакомиться в [документации Argo CD](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
+   Подробнее с архитектурой мультикластерной конфигурации Argo CD можно ознакомиться [в документации Argo CD](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
 
-   `argocd-operator-controller-manager` разворачивает этот компонент, если параметр [`.spec.argoCDAgent.agent.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-argocdagent-agent-enabled) кастомного ресурса ArgoCD принимает значение `true`. В одном ресурсе ArgoCD не допускается одновременное использование Argo CD Agent и Argo CD Principal.
+   Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.argoCDAgent.agent.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-argocdagent-agent-enabled) кастомного ресурса ArgoCD принимает значение `true`. В одном ресурсе ArgoCD не допускается одновременное использование Argo CD Agent и Argo CD Principal.
 
-1. **&lt;ArgoCD name&gt;-agent-principal** (Deployment) — опциональный компонент, состоящий из одного контейнера **&lt;ArgoCD name&gt;-agent-principal** и обеспечивающий работу Argo CD в [мультикластерной конфигурации](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
+1. **&lt;ArgoCD name&gt;-agent-principal** (Deployment) — argocd-principal, опциональный компонент, состоящий из одного контейнера **&lt;ArgoCD name&gt;-agent-principal** и обеспечивающий работу Argo CD [в мультикластерной конфигурации](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
 
    При включении этого компонента `argocd-operator-controller-manager` перенастраивает все компоненты, использующие подключение к базе Redis, на использование Redis-прокси. Компонент `<ArgoCD name>-agent-principal` реализует Redis-прокси и маршрутизирует запросы к базе данных на основе анализа ключей Redis: в зависимости от значения ключей запрос направляется или в локальный экземпляр Redis, или в один из удалённых Argo CD Agent.
 
-   `argocd-operator-controller-manager` разворачивает этот компонент, если параметр [`.spec.argoCDAgent.principal.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-argocdagent-principal-enabled) кастомного ресурса ArgoCD принимает значение `true`. В одном ресурсе ArgoCD не допускается одновременное использование Argo CD Agent и Argo CD Principal.
+   Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.argoCDAgent.principal.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-argocdagent-principal-enabled) кастомного ресурса ArgoCD принимает значение `true`. В одном ресурсе ArgoCD не допускается одновременное использование Argo CD Agent и Argo CD Principal.
 
-1. **&lt;Export name&gt;** (Job/CronJob) — опциональный компонент, реализованный в виде Job или CronJob и создающий под из одного контейнера **argocd-export**. Компонент создаёт резервную копию настроек и состояния экземпляра Argo CD.
+1. **&lt;Export name&gt;** (Job/CronJob) — argocd-export, опциональный компонент, реализованный в виде Job или CronJob и создающий под из одного контейнера **argocd-export**. Компонент создаёт резервную копию настроек и состояния экземпляра Argo CD.
 
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
-1. Внешние репозитории образов — получение списка образов.
-1. Внешние репозитории кода/манифестов:
+1. **Внешние репозитории образов** — получение списка образов.
+1. **Внешние репозитории кода**:
     - получение манифестов развёртывания приложения из репозиториев;
     - обновление параметров образа контейнера (поле `image`) в Helm-чарте.
-1. Внешний Argo CD Principal:
+1. **Внешний Argo CD Principal**:
     - подключение к управляющему кластеру Argo CD;
     - получение запросов на обработку;
     - передача результатов выполнения запросов.
-1. **kube-apiserver**:
+1. **Kube-apiserver**:
     - управление кастомными ресурсами Application, ApplicationSet, AppProject, ArgoCD, ArgoCDExport, ImageUpdater, NamespaceManagement, NotificationsConfiguration, а также Secret, ConfigMap;
     - управление ресурсами, которые создаются при развёртывании пользовательского приложения, описанного в кастомном ресурсе Application;
     - авторизация запросов на получение метрик.
-1. **Модуль [user-authn](/modules/user-authn/)** — перенаправление пользователя для аутентификации.
+1. **Модуль [`user-authn`](/modules/user-authn/)** — перенаправление пользователя для аутентификации.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **prometheus-main** — сбор метрик, предоставляемых оператором и экземплярами Argo CD.
-1. Внешний Argo CD Agent:
+1. **Prometheus-main** — сбор метрик, предоставляемых оператором и экземплярами Argo CD.
+1. **Внешний Argo CD Agent**:
     - подключение к управляющему кластеру Argo CD;
     - получение запросов на обработку;
     - передача результатов выполнения запросов.
