@@ -39,19 +39,29 @@ const (
 
 // Virtual control plane manager constants
 const (
-	VirtualControlPlaneManagerName            = "virtual-control-plane-manager"
-	VirtualConfigurationController            = "virtual-control-plane-configuration-controller"
-	VirtualControlPlaneNodeController         = "virtual-control-plane-node-controller"
-	VirtualControlPlaneApproverControllerName = "virtual_control_plane_approver_controller"
-	VirtualControlPlaneNamespacePrefix        = "vcp-"
-	VirtualControlPlaneConfigSecretName       = "d8-virtual-control-plane-config"
-	VirtualRenderedConfigSecretName           = "d8-vcp-config-virtual"
-	VirtualPKISecretName                      = "d8-pki-virtual"
-	VirtualKubeconfigSecretName               = "d8-kubeconfig-virtual"
-	VirtualAdminKubeconfigSecretName          = "d8-admin-kubeconfig-virtual"
-	VirtualControlPlaneNodeOrdinalLabelKey    = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
-	DefaultTenantClusterDomain                = "cluster.virtual"
-	DefaultTenantServiceSubnetCIDR            = "10.96.0.0/12"
+	VirtualControlPlaneManagerName         = "virtual-control-plane-manager"
+	VirtualConfigurationController         = "virtual-control-plane-configuration-controller"
+	VirtualControlPlaneNodeController      = "virtual-control-plane-node-controller"
+	VirtualControlPlaneNamespacePrefix     = "vcp-"
+	VirtualControlPlaneConfigSecretName    = "d8-virtual-control-plane-config"
+	VirtualRenderedConfigSecretName        = "d8-vcp-config-virtual"
+	VirtualPKISecretName                   = "d8-pki-virtual"
+	VirtualKubeconfigSecretName            = "d8-kubeconfig-virtual"
+	VirtualAdminKubeconfigSecretName       = "d8-admin-kubeconfig-virtual"
+	VirtualControlPlaneNodeOrdinalLabelKey = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
+	VirtualControlPlaneScopeLabelKey       = "control-plane.deckhouse.io/virtual-control-plane"
+	VirtualJoinScriptSecretName            = "d8-vcp-join-script"
+	VirtualBootstrapTokenGroup             = "system:bootstrappers:d8:vcp"
+	DefaultTenantClusterDomain             = "cluster.virtual"
+	DefaultTenantServiceSubnetCIDR         = "10.96.0.0/12"
+
+	RegistryPackagesProxyPort          int32 = 4219
+	RegistryPackagesProxyBootstrapPort int32 = 4282
+)
+
+var (
+	VirtualBootstrapTokenTTL        = 24 * time.Hour
+	VirtualBootstrapTokenRegenBelow = 6 * time.Hour
 )
 
 const (

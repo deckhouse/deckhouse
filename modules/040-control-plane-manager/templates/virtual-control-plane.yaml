@@ -13,7 +13,23 @@
         "scheduler"         (printf "%s@%s" $reg (get $dig (printf "kubeScheduler%s" $sfx)))) }}
   {{- end }}
 {{- end }}
-{{- $imagesTable := dict "versioned" $versioned "fixed" (dict "kine" (printf "%s@%s" $reg (get $dig "kine"))) }}
+{{- $rp := .Values.global.modulesImages.digests.registrypackages | default dict }}
+{{- $rpVersioned := dict }}
+{{- range $ver, $meta := $vm.k8s }}
+  {{- $sfx := $ver | toString | replace "." "" }}
+  {{- $kKey := printf "kubelet%s%v" $sfx ($meta.patch | toString) }}
+  {{- $cKey := printf "crictl%s" $sfx }}
+  {{- if hasKey $rp $kKey }}
+    {{- $_ := set $rpVersioned ($ver | toString) (dict
+        "kubelet" (get $rp $kKey)
+        "crictl"  (get $rp $cKey)) }}
+  {{- end }}
+{{- end }}
+{{- $rpFixed := dict
+    "containerd" (get $rp "containerd224")
+    "tomlMerge"  (get $rp "tomlMerge01")
+    "rppGet"     (get $rp "rppGet") }}
+{{- $imagesTable := dict "versioned" $versioned "fixed" (dict "kine" (printf "%s@%s" $reg (get $dig "kine"))) "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed) }}
 ---
 apiVersion: v1
 kind: Secret
@@ -29,12 +45,19 @@ stringData:
   cluster-domain: {{ .Values.global.clusterConfiguration.clusterDomain | quote }}
   service-subnet-cidr: {{ .Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
   default-kubernetes-version: {{ .Values.controlPlaneManager.internal.effectiveKubernetesVersion | quote }}
+  cluster-uuid: {{ .Values.global.discovery.clusterUUID | default "" | quote }}
+  minget: {{ .Files.Get "candi/bashible/bootstrap/minget" | b64enc | quote }}
+  registry-address: {{ .Values.global.modulesImages.registry.address | quote }}
+  registry-path: {{ .Values.global.modulesImages.registry.path | quote }}
   components: |
     - kube-apiserver
     - kube-controller-manager
     - kube-scheduler
 data:
   {{- range $path, $_ := .Files.Glob "virtual-control-plane-templates/*.yaml.tpl" }}
+  {{ base $path }}: {{ $.Files.Get $path | b64enc }}
+  {{- end }}
+  {{- range $path, $_ := .Files.Glob "virtual-control-plane-templates/*.sh.tpl" }}
   {{ base $path }}: {{ $.Files.Get $path | b64enc }}
   {{- end }}
   images: {{ $imagesTable | toYaml | b64enc }}

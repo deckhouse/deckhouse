@@ -277,3 +277,18 @@ func validateCurrentKubeConfig(kubeConfigFilePath string, desiredConfig *clientc
 
 	return nil
 }
+
+func BuildBootstrapKubeletConfig(caPEM []byte, serverURL, token string) ([]byte, error) {
+	cfg := clientcmdapi.NewConfig()
+	cfg.Clusters["default"] = &clientcmdapi.Cluster{
+		Server:                   serverURL,
+		CertificateAuthorityData: caPEM,
+	}
+	cfg.AuthInfos["kubelet-bootstrap"] = &clientcmdapi.AuthInfo{Token: token}
+	cfg.Contexts["kubelet-bootstrap@default"] = &clientcmdapi.Context{
+		Cluster:  "default",
+		AuthInfo: "kubelet-bootstrap",
+	}
+	cfg.CurrentContext = "kubelet-bootstrap@default"
+	return clientcmd.Write(*cfg)
+}

@@ -31,6 +31,7 @@ spec:
         - kube-apiserver
         - --etcd-servers=http://127.0.0.1:2379
         - --client-ca-file=/pki/ca.crt
+        - --enable-bootstrap-token-auth=true
         - --tls-cert-file=/pki/apiserver.crt
         - --tls-private-key-file=/pki/apiserver.key
         - --kubelet-client-certificate=/pki/apiserver-kubelet-client.crt
