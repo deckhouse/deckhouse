@@ -13,7 +13,7 @@
         "scheduler"         (printf "%s@%s" $reg (get $dig (printf "kubeScheduler%s" $sfx)))) }}
   {{- end }}
 {{- end }}
-{{- $imagesTable := dict "versioned" $versioned "fixed" (dict "kine" "rancher/kine:v0.14.14" "postgres" "postgres:15-alpine") }}
+{{- $imagesTable := dict "versioned" $versioned "fixed" (dict "kine" (printf "%s@%s" $reg (get $dig "kine"))) }}
 ---
 apiVersion: v1
 kind: Secret

@@ -41,8 +41,7 @@ type versionedImages struct {
 }
 
 type fixedImages struct {
-	Kine     string `json:"kine"`
-	Postgres string `json:"postgres"`
+	Kine string `json:"kine"`
 }
 
 func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane) (map[string][]byte, error) {
@@ -106,7 +105,6 @@ func buildManifestReplacer(vcp *controlplanev1alpha1.VirtualControlPlane, versio
 		"${IMAGE_KUBE_CONTROLLER_MANAGER}", versioned.ControllerManager,
 		"${IMAGE_KUBE_SCHEDULER}", versioned.Scheduler,
 		"${IMAGE_KINE}", fixed.Kine,
-		"${IMAGE_POSTGRES}", fixed.Postgres,
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", namespace,
 		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
