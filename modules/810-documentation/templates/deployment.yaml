@@ -73,9 +73,6 @@ spec:
         env:
           - name: HUGO_ENVIRONMENT
             value: production
-          # Soft memory limit for the Go runtime: makes the GC run more
-          # aggressively as the heap approaches the limit, keeping peak RSS just
-          # under the VPA maxAllowed (2Gi) so a large hugo build is not OOM-killed.
           - name: GOMEMLIMIT
             value: "1800MiB"
           - name: POD_IP

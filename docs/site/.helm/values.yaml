@@ -46,10 +46,6 @@ docsBuilder:
   highAvailability:
     _default: false
     web-production: true
-  # Soft memory limit (GOMEMLIMIT) for the builder's Go runtime. Kept a bit below
-  # resources.limits.memory.moduleslibrary.builder so the GC runs aggressively as
-  # the heap approaches the cgroup hard limit instead of overshooting it and being
-  # OOM-killed. Must be updated together with that limit.
   goMemLimit:
     _default: "1800MiB"
     web-production: "3600MiB"

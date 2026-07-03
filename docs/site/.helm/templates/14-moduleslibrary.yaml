@@ -95,9 +95,6 @@ spec:
           env:
             - name: HUGO_ENVIRONMENT
               value: production
-            # Soft memory limit for the Go runtime: makes the GC collect before the
-            # heap overshoots the cgroup memory limit, which otherwise OOM-kills the
-            # builder during a full hugo rebuild.
             - name: GOMEMLIMIT
               value: {{ pluck .Values.web.env .Values.docsBuilder.goMemLimit | first | default .Values.docsBuilder.goMemLimit._default | quote }}
             - name: POD_IP
