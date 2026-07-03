@@ -15,23 +15,24 @@
 package rpp
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
 	"strings"
-
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 type loggerWrapper struct {
-	logger log.Logger
+	logger *slog.Logger
 }
 
-func newLogger(logger log.Logger) *loggerWrapper {
+func newLogger(logger *slog.Logger) *loggerWrapper {
 	return &loggerWrapper{
 		logger: logger,
 	}
 }
 
 func (w *loggerWrapper) Errorf(format string, args ...any) {
-	w.logger.ErrorF(format, args...)
+	w.logger.ErrorContext(context.Background(), fmt.Sprintf(format, args...))
 }
 
 func (w *loggerWrapper) Infof(format string, args ...any) {
@@ -40,15 +41,15 @@ func (w *loggerWrapper) Infof(format string, args ...any) {
 		return
 	}
 
-	w.logger.InfoF(format, args...)
+	w.logger.InfoContext(context.Background(), fmt.Sprintf(format, args...))
 }
 
 func (w *loggerWrapper) Warnf(format string, args ...any) {
-	w.logger.WarnF(format, args...)
+	w.logger.WarnContext(context.Background(), fmt.Sprintf(format, args...))
 }
 
 func (w *loggerWrapper) Debugf(format string, args ...any) {
-	w.logger.DebugF(format, args...)
+	w.logger.DebugContext(context.Background(), fmt.Sprintf(format, args...))
 }
 
 func (w *loggerWrapper) Error(msg string, args ...any) {
@@ -56,17 +57,17 @@ func (w *loggerWrapper) Error(msg string, args ...any) {
 }
 
 type interactiveLoggerWrapper struct {
-	logger log.Logger
+	logger *slog.Logger
 }
 
-func newInteractiveLogger(logger log.Logger) *interactiveLoggerWrapper {
+func newInteractiveLogger(logger *slog.Logger) *interactiveLoggerWrapper {
 	return &interactiveLoggerWrapper{
 		logger: logger,
 	}
 }
 
 func (w *interactiveLoggerWrapper) Errorf(format string, args ...any) {
-	w.logger.DebugF(format, args...)
+	w.logger.DebugContext(context.Background(), fmt.Sprintf(format, args...))
 }
 
 func (w *interactiveLoggerWrapper) Infof(format string, args ...any) {
@@ -75,17 +76,17 @@ func (w *interactiveLoggerWrapper) Infof(format string, args ...any) {
 		return
 	}
 
-	w.logger.DebugF(format, args...)
+	w.logger.DebugContext(context.Background(), fmt.Sprintf(format, args...))
 }
 
 func (w *interactiveLoggerWrapper) Warnf(format string, args ...any) {
-	w.logger.DebugF(format, args...)
+	w.logger.DebugContext(context.Background(), fmt.Sprintf(format, args...))
 }
 
 func (w *interactiveLoggerWrapper) Debugf(format string, args ...any) {
-	w.logger.DebugF(format, args...)
+	w.logger.DebugContext(context.Background(), fmt.Sprintf(format, args...))
 }
 
 func (w *interactiveLoggerWrapper) Error(msg string, args ...any) {
-	w.logger.DebugF("%s", msg)
+	w.logger.DebugContext(context.Background(), fmt.Sprintf("%s", msg))
 }

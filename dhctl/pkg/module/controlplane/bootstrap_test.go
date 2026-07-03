@@ -26,7 +26,7 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
@@ -211,13 +211,11 @@ func TestPrepare(t *testing.T) {
 				assertError = require.Error
 			}
 
-			logger := log.NewInMemoryLoggerWithParent(log.NewDummyLogger(true))
-
 			s := newTestModuleSettings(tst.mode)
 
 			n := tst.node(t)
 
-			preparator := NewBootstrapPreparator(s, n, log.SimpleLoggerProvider(logger))
+			preparator := NewBootstrapPreparator(s, n, dhlog.FromContext(t.Context()))
 			preparator.WithLoopsParams(LoopsParams{
 				CreateSigDir: retry.NewEmptyParams(),
 			})

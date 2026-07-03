@@ -24,7 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func TestConfigForControlPlaneTemplates_NoModuleConfig(t *testing.T) {
@@ -119,8 +119,8 @@ func TestConfigForControlPlaneTemplatesAPIServerSign(t *testing.T) {
 	})
 
 	cfg := getTestTemplateConfigWithEdition(
-		t, 
-		m, 
+		t,
+		m,
 		"cse",
 		cseSpec,
 		"",
@@ -197,9 +197,7 @@ func getTestTemplateConfig(t *testing.T, c *config.MetaConfig, nodeIP string) *T
 
 func getTestTemplateConfigWithEdition(t *testing.T, c *config.MetaConfig, edition, spec, nodeIP string) *TemplateConfig {
 	store := newTestSchemaStore(spec)
-	logger := log.NewInMemoryLoggerWithParent(log.NewDummyLogger(true))
-
-	extractor := NewSettingsExtractor(c, store, edition, log.SimpleLoggerProvider(logger))
+	extractor := NewSettingsExtractor(c, store, edition, dhlog.FromContext(t.Context()))
 
 	r, err := extractor.TemplateConfigForBootstrap(nodeIP)
 	require.NoError(t, err, "should return template config")

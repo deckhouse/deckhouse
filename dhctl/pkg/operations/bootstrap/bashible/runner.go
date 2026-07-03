@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"time"
@@ -25,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
@@ -59,15 +59,15 @@ type NodeInfo struct {
 }
 
 type Runner struct {
-	loggerProvider log.LoggerProvider
-	nodeInterface  libcon.Interface
-	loopsParams    LoopsParams
+	logger        *slog.Logger
+	nodeInterface libcon.Interface
+	loopsParams   LoopsParams
 }
 
-func NewRunner(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *Runner {
+func NewRunner(nodeInterface libcon.Interface, logger *slog.Logger) *Runner {
 	return &Runner{
-		nodeInterface:  nodeInterface,
-		loggerProvider: loggerProvider,
+		nodeInterface: nodeInterface,
+		logger:        logger,
 	}
 }
 
@@ -111,7 +111,7 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 			return err
 		}
 
-		r.loggerProvider().DebugF("cat %s stdout: '%s'; stderr: '%s'\n", endPipelineFileMark, stdout, stderr)
+		r.logger.DebugContext(ctx, fmt.Sprintf("cat %s stdout: '%s'; stderr: '%s'\n", endPipelineFileMark, stdout, stderr))
 
 		isReady = strings.Contains(string(stdout), "OK")
 
@@ -192,7 +192,7 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 			TracerName: "bashible",
 			Span:       span,
 			Node:       r.nodeInterface,
-			Logger:     r.loggerProvider(),
+			Logger:     r.logger,
 			GlobalOpts: params.GlobalOpts,
 		})
 		if err != nil {
@@ -210,22 +210,22 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 		writeTelemetryCmd.Sudo(ctx)
 
 		if err := writeTelemetryCmd.Run(ctx); err != nil {
-			r.loggerProvider().ErrorF("failed to write telemetry.env: %v", err)
+			r.logger.ErrorContext(ctx, fmt.Sprintf("failed to write telemetry.env: %v", err))
 		}
 	}
 
 	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
-			logger := r.loggerProvider()
+			logger := r.logger
 
-			logger.DebugF("Stopping Bashible if needed")
+			logger.DebugContext(ctx, "Stopping Bashible if needed")
 
 			if err := r.cleanupPreviousBashibleIfNeed(ctx); err != nil {
 				return err
 			}
 
-			logger.DebugF("Starting Bashible bundle execution routine")
+			logger.DebugContext(ctx, "Starting Bashible bundle execution routine")
 
 			return r.attemptExecuteBundle(ctx, params, relaySpanUpdater)
 		})
@@ -260,18 +260,16 @@ func (r *Runner) attemptExecuteBundle(
 }
 
 func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
-	logger := r.loggerProvider()
-
-	return logger.Process("bootstrap", "Clean up previous Bashible run if needed", func() error {
-		logger.DebugF("Getting Bashible PIDs")
+	return dhlog.RunProcess(ctx, r.logger, "Clean up previous Bashible run if needed", func(context.Context) error {
+		r.logger.DebugContext(ctx, "Getting Bashible PIDs")
 		pids, err := r.getBashiblePIDs(ctx)
 		if err != nil {
 			return err
 		}
 
-		logger.DebugLn("Got Bashible PIDs: %v", pids)
+		r.logger.DebugContext(ctx, fmt.Sprintf("Got Bashible PIDs: %v\n", pids))
 		if len(pids) == 0 {
-			logger.InfoF("Bashible instance not found. Starting it!")
+			r.logger.InfoContext(ctx, "Bashible instance not found. Starting it!")
 			return nil
 		}
 
@@ -284,7 +282,7 @@ func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
 }
 
 func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
-	logger := r.loggerProvider()
+	logger := r.logger
 
 	var psStrings []string
 	h := func(l string) {
@@ -300,11 +298,11 @@ func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
 
 	var res []string
 	for _, l := range psStrings {
-		logger.DebugF("ps string: '%s'\n", l)
+		logger.DebugContext(ctx, fmt.Sprintf("ps string: '%s'\n", l))
 
 		parts := strings.SplitN(l, "|", 2)
 		if len(parts) < 2 {
-			logger.DebugLn("Skipping ps line without PID")
+			logger.DebugContext(ctx, "Skipping ps line without PID")
 			continue
 		}
 
@@ -313,7 +311,7 @@ func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
 		}
 
 		pid := strings.TrimSpace(parts[1])
-		logger.DebugF("Found bashible PID: %s\n", pid)
+		logger.DebugContext(ctx, fmt.Sprintf("Found bashible PID: %s\n", pid))
 
 		res = append(res, pid)
 	}
@@ -327,13 +325,12 @@ func (r *Runner) killBashible(ctx context.Context, pids []string) error {
 }
 
 func (r *Runner) runCmd(ctx context.Context, cmd libcon.Command, desc string) error {
-	logger := r.loggerProvider()
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
 		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
 		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
-			logger.DebugF("'%s' got exit code: %d and stderr %s", desc, ee.ExitCode(), string(ee.Stderr))
+			r.logger.DebugContext(ctx, fmt.Sprintf("'%s' got exit code: %d and stderr %s", desc, ee.ExitCode(), string(ee.Stderr)))
 			if ee.ExitCode() == 255 {
 				return err
 			}

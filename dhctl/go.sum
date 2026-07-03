@@ -167,10 +167,14 @@ github.com/deckhouse/lib-connection v0.11.1-0.20260702081437-fc75b2579731 h1:Fnq
 github.com/deckhouse/lib-connection v0.11.1-0.20260702081437-fc75b2579731/go.mod h1:uLPegvx24Y19XibgHMFmAYM4h29WP6B75N0Y62/8/TA=
 github.com/deckhouse/lib-connection v0.11.1-0.20260702115358-3929f17498d7 h1:NEQT2YmLG9rQcGu53CHwodKiJGpEeHrax11yUIwvr+Q=
 github.com/deckhouse/lib-connection v0.11.1-0.20260702115358-3929f17498d7/go.mod h1:uLPegvx24Y19XibgHMFmAYM4h29WP6B75N0Y62/8/TA=
+github.com/deckhouse/lib-connection v0.11.1-0.20260703071959-3dd961a10d05 h1:RxyN7YH/SXJeZB5wXBLIOfQ7YcpiUSN/FQxvLsB18H4=
+github.com/deckhouse/lib-connection v0.11.1-0.20260703071959-3dd961a10d05/go.mod h1:0HmHc/+d36sqFCszcNfIl1TdjOaBly0c32FCJBTxRf4=
 github.com/deckhouse/lib-dhctl v0.19.0 h1:CwOkDB5KZ5q9lYCpZGMqVS5tap0WueqvX8LxOA6W3x4=
 github.com/deckhouse/lib-dhctl v0.19.0/go.mod h1:SJLU8vWHDlxZW1cjOGfWpRRK75Yc/DvQuK2y5z6MCMM=
 github.com/deckhouse/lib-dhctl v0.19.1-0.20260701151330-d191ab1f6589 h1:RDWAwTGqrPLEwYCN7fyWPGcDeYNKQGq40cQLMQpAtXE=
 github.com/deckhouse/lib-dhctl v0.19.1-0.20260701151330-d191ab1f6589/go.mod h1:SJLU8vWHDlxZW1cjOGfWpRRK75Yc/DvQuK2y5z6MCMM=
+github.com/deckhouse/lib-dhctl v0.19.1-0.20260703052224-0e12fb294938 h1:gbAXLTCsDCaI6qaMSYFNdwKTk5s3wQF1h8wJ9wUaCU4=
+github.com/deckhouse/lib-dhctl v0.19.1-0.20260703052224-0e12fb294938/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
 github.com/deckhouse/lib-gossh v0.3.0/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.10.4 h1:1C61nXevgQiUnmv5Is+XP9Octu05XWKgjFi6gmL7miM=
