@@ -376,10 +376,10 @@ def main() -> int:
 
     missing_compact = get_missing_compact_key_images(changed)
     if missing_compact:
-        print("ERROR: failed to map changed module images to images_digests.json keys:")
+        print("WARNING: failed to map changed module images to images_digests.json keys:")
         for item in missing_compact:
             print(f"  {item['werf_image_name']}  {item['digest']}  {item['commit']}")
-        return 1
+        print("WARNING: unmapped images will be skipped by scanners that use changed_compact")
 
     changed_compact = build_changed_compact(changed)
 
