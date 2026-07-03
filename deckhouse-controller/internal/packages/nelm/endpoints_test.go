@@ -41,7 +41,7 @@ kind: Ingress
 metadata:
   name: app
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "true"
+    packages.deckhouse.io/application-endpoint: "true"
 spec:
   tls:
   - hosts:
@@ -65,7 +65,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "Web UI"
+    packages.deckhouse.io/application-endpoint: "Web UI"
 spec:
   tls:
   - hosts:
@@ -87,7 +87,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "true"
+    packages.deckhouse.io/application-endpoint: "true"
 spec:
   rules:
   - host: app.example.com
@@ -104,7 +104,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "true"
+    packages.deckhouse.io/application-endpoint: "true"
 spec:
   tls:
   - hosts:
@@ -137,7 +137,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "false"
+    packages.deckhouse.io/application-endpoint: "false"
 spec:
   rules:
   - host: app.example.com
@@ -151,7 +151,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "true"
+    packages.deckhouse.io/application-endpoint: "true"
 spec:
   rules:
   - http:
@@ -168,7 +168,7 @@ kind: Service
 metadata:
   name: app
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "true"
+    packages.deckhouse.io/application-endpoint: "true"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -189,7 +189,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "Dashboard"
+    packages.deckhouse.io/application-endpoint: "Dashboard"
 spec:
   tls:
   - hosts:
@@ -225,7 +225,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    packages.deckhouse.io/is-application-endpoint: "true"
+    packages.deckhouse.io/application-endpoint: "true"
 spec:
   rules:
   - host: app.example.com
