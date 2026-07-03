@@ -214,7 +214,7 @@ It is also important to get the Ingress controller and the application's Ingress
 Available in Enterprise Edition and Certified Security Edition Pro only.
 {% endalert %}
 
-Deckhouse supports two schemes of inter-cluster interaction:
+DKP supports two schemes of inter-cluster interaction:
 
 - [federation](#federation)
 - [multicluster](#multicluster)
@@ -307,14 +307,14 @@ Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deploymen
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 - Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
-- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This Deckhouse module takes care of the corresponding communication channel.
+- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This DKP module takes care of the corresponding communication channel.
 
 #### Enabling the multicluster
 
 Enabling the multicluster (via the `istio.multicluster.enabled = true` module parameter) results in the following activities:
 
 - A proxy is added to the cluster to publish access to the API server via the standard Ingress resource:
-  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. Deckhouse automatically exchanges trusted public keys during the mutual configuration of the multicluster.
+  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. DKP automatically exchanges trusted public keys during the mutual configuration of the multicluster.
   - The proxy itself has read-only access to a limited set of resources.
 - A service gets added to the cluster that exports the following cluster metadata to the outside:
   - Istio root certificate (accessible without authentication).
@@ -361,7 +361,7 @@ Compared to the sidecar mode, ambient mode reduces per-Pod overhead (no sidecar 
 ### Components
 
 - `ztunnel` — a DaemonSet that runs one Pod per node and transparently tunnels traffic of the ambient workloads on that node over [HBONE](https://istio.io/latest/docs/ambient/architecture/) (HTTP-Based Overlay Network Encapsulation) with mutual TLS. It provides L4 features without a sidecar.
-- waypoint proxy — an optional L7 proxy deployed per namespace (or for a subset of its workloads/services). In Deckhouse it is provisioned through the [`WaypointInstance`](cr.html#waypointinstance) Custom Resource, which is a Deckhouse abstraction on top of the native Istio waypoint provisioning. It adds declarative management of replicas (`Static`/`HPA`), resources (`Static`/`VPA`), node placement, and disruption budgets per waypoint instance.
+- waypoint proxy — an optional L7 proxy deployed per namespace (or for a subset of its workloads/services). In DKP it is provisioned through the [`WaypointInstance`](cr.html#waypointinstance) Custom Resource, which is a DKP abstraction on top of the native Istio waypoint provisioning. It adds declarative management of replicas (`Static`/`HPA`), resources (`Static`/`VPA`), node placement, and disruption budgets per waypoint instance.
 
 ### Prerequisites
 

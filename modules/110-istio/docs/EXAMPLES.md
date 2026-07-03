@@ -654,7 +654,7 @@ spec:
       enabled: true
 ```
 
-Once enabled, the module runs the `ztunnel` DaemonSet and the waypoint controller. Workloads are not enrolled automatically — see the steps below.
+Once enabled, the module runs the `ztunnel` DaemonSet and the waypoint controller. To enroll workloads into the ambient mesh, follow the steps below.
 
 ### Enrolling workloads into the ambient (L4) mesh
 
@@ -709,7 +709,7 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 ### Disabling ambient mesh
 
 {% alert level="warning" %}
-Before disabling ambient mode, delete all `WaypointInstance` resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources, which leaves orphaned waypoints (Deckhouse raises the `D8IstioActiveWaypointsWithAmbientDisabled` alert in that case).
+Before disabling ambient mode, delete all `WaypointInstance` resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources, which leaves orphaned waypoints (Deckhouse Kubernetes Platform (DKP) raises the `D8IstioActiveWaypointsWithAmbientDisabled` alert in that case).
 {% endalert %}
 
 ```shell
@@ -906,7 +906,7 @@ spec:
 
 #### Example — disable span export for ingress-only namespaces
 
-In Deckhouse, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
+In DKP, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -947,7 +947,7 @@ UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. Do not 
 
 ### Upgrading Istio control-plane
 
-* Deckhouse allows you to install different control-plane versions simultaneously:
+* DKP allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
   * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:

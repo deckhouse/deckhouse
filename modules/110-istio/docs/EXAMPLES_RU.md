@@ -635,7 +635,7 @@ spec:
 
 {% alert level="warning" %}Поддержка ambient mesh является экспериментальной и не рекомендуется для использования в production-окружении.{% endalert %}
 
-Об упомянутых ниже понятиях (`ztunnel`, прокси waypoint) см. [обзор ambient mesh](./#ambient-mesh).
+Понятия (`ztunnel`, прокси waypoint), упомянутые ниже, описаны в [обзоре ambient mesh](./#ambient-mesh).
 
 ### Включение ambient mesh
 
@@ -656,7 +656,7 @@ spec:
       enabled: true
 ```
 
-После включения модуль запускает DaemonSet `ztunnel` и контроллер waypoint. Рабочие нагрузки не подключаются автоматически — см. шаги ниже.
+После включения модуль запускает DaemonSet `ztunnel` и контроллер waypoint. Чтобы подключить рабочие нагрузки к сети ambient, выполните следующие шаги.
 
 ### Подключение рабочих нагрузок к сети ambient (L4)
 
@@ -711,7 +711,7 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 ### Отключение ambient mesh
 
 {% alert level="warning" %}
-Перед отключением режима ambient удалите все ресурсы `WaypointInstance`. При отключенном режиме ambient контроллер waypoint не запущен и не может согласовывать или удалять ресурсы waypoint, что приводит к осиротевшим waypoint (в этом случае Deckhouse генерирует алерт `D8IstioActiveWaypointsWithAmbientDisabled`).
+Перед отключением режима ambient удалите все ресурсы `WaypointInstance`. При отключенном режиме ambient контроллер waypoint не запущен и не может согласовывать или удалять ресурсы waypoint, что приводит к осиротевшим waypoint (в этом случае Deckhouse Kubernetes Platform (DKP) генерирует алерт `D8IstioActiveWaypointsWithAmbientDisabled`).
 {% endalert %}
 
 ```shell
@@ -719,7 +719,7 @@ d8 k get waypointinstance -A
 d8 k -n myns delete waypointinstance main
 ```
 
-Затем верните параметру `ambient.enabled` значение `false` в ModuleConfig `istio`.
+Затем верните значение `false` для параметра `ambient.enabled` в ModuleConfig `istio`.
 
 ## Управление поведением data plane
 
@@ -829,7 +829,7 @@ spec:
 - При `telemetryAPI.enabled: false` и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — только прежний режим: `meshConfig.defaultConfig.tracing.zipkin` из [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector). OTLP требует режима Telemetry API.
 - При `telemetryAPI.enabled: true` и `tracing.enabled: true` модуль создаёт `deckhouse-tracing`, если заданы [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) `service` и `port`, или при [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (при одновременной настройке приоритет у OpenTelemetry). `defaultConfig.tracing` не заполняется; в `Telemetry` `d8-main` добавляется `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, по умолчанию `1.0`).
 
-Нестандартные провайдеры — через `Telemetry` с `selector` в неймспейсе приложения, не второй CR без селектора в `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). См. [настройку трассировки через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+Нестандартные провайдеры — через `Telemetry` с `selector` в неймспейсе приложения, не второй CR без селектора в `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). Подробнее о [настройке трассировки через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/) — в документации Istio.
 
 #### Пример — Telemetry API + Jaeger через Zipkin
 
@@ -908,7 +908,7 @@ spec:
 
 #### Пример — отключить отправку спанов (например, у ingress)
 
-В Deckhouse при включённом модуле `ingress-nginx` модуль Istio дополнительно создаёт `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx` и выставляет `tracing.disableSpanReporting`, чтобы контроллер с `istio-proxy` не отправлял span'ы в бэкенд трассировки. Другие случаи — своим объектом:
+В DKP при включённом модуле `ingress-nginx` модуль Istio дополнительно создаёт `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx` и выставляет `tracing.disableSpanReporting`, чтобы контроллер с `istio-proxy` не отправлял спаны в бэкенд трассировки. Другие случаи — своим объектом:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -949,7 +949,7 @@ UID `1337` зарезервирован Istio для сайдкар-контей
 
 ### Обновление control plane Istio
 
-* Deckhouse Kubernetes Platform (DKP) позволяет установить несколько версий control plane одновременно:
+* DKP позволяет установить несколько версий control plane одновременно:
   * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [`globalVersion`](configuration.html#parameters-globalversion).
   * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x21`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
