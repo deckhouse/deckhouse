@@ -76,10 +76,12 @@ func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.Vir
 
 	rendered := make(map[string][]byte)
 	for key, value := range globalData {
-		if !strings.HasSuffix(key, ".yaml.tpl") {
-			continue
+		switch {
+		case strings.HasSuffix(key, ".yaml.tpl"), strings.HasSuffix(key, ".sh.tpl"):
+			rendered[key] = []byte(replacer.Replace(string(value)))
+		case key == "images", key == "cluster-uuid", key == "minget":
+			rendered[key] = value
 		}
-		rendered[key] = []byte(replacer.Replace(string(value)))
 	}
 
 	return rendered, nil
