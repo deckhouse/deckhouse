@@ -38,6 +38,10 @@ positive:
           envoyExtAuthzGrpc:
             service: authservice.d8-istio.svc.cluster.local
             port: 10003
+    - jwksResolverAdditionalRootCA: |
+        -----BEGIN CERTIFICATE-----
+        MIIDXTCCAkWgAwIBAgIJAN...
+        -----END CERTIFICATE-----
   values:
     - {}
 negative:
