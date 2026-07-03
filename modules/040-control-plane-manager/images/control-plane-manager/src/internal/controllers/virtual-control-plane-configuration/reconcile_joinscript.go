@@ -142,5 +142,6 @@ func (r *reconciler) registryPackagesProxyData(ctx context.Context) (token, addr
 			}
 		}
 	}
-	return token, strings.Join(a, " "), strings.Join(b, " "), nil
+
+	return token, strings.Join(a, ","), strings.Join(b, " "), nil
 }

@@ -23,6 +23,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"time"
 
@@ -283,10 +284,10 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 	current.Spec.Ports = target.Spec.Ports
 }
 
-// externalAPIEndpoint returns the host and port for joining nodes to the virtual control plane
-func (r *reconciler) externalAPIEndpoint(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (string, int32, error) {
+// apiEndpointHosts returns all addresses joining nodes may use to reach the virtual apiserver, sorted for determinism, together with the port to connect to.
+func (r *reconciler) apiEndpointHosts(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) ([]string, int32, error) {
 	if vcp.Spec.Expose == nil {
-		return "", 0, nil
+		return nil, 0, nil
 	}
 
 	switch vcp.Spec.Expose.Type {
@@ -298,46 +299,66 @@ func (r *reconciler) externalAPIEndpoint(ctx context.Context, vcp *controlplanev
 			}
 		}
 		if nodePort == 0 {
-			return "", 0, nil
+			return nil, 0, nil
 		}
 		nodeList := &corev1.NodeList{}
 		if err := r.client.List(ctx, nodeList); err != nil {
-			return "", 0, fmt.Errorf("list host nodes: %w", err)
+			return nil, 0, fmt.Errorf("list host nodes: %w", err)
 		}
+		seen := map[string]struct{}{}
+		var hosts []string
 		for i := range nodeList.Items {
 			for _, a := range nodeList.Items[i].Status.Addresses {
-				if a.Type == corev1.NodeInternalIP {
-					return a.Address, nodePort, nil
+				if a.Type != corev1.NodeInternalIP || a.Address == "" {
+					continue
 				}
+				if _, ok := seen[a.Address]; ok {
+					continue
+				}
+				seen[a.Address] = struct{}{}
+				hosts = append(hosts, a.Address)
 			}
 		}
-		return "", 0, nil
+		sort.Strings(hosts)
+		return hosts, nodePort, nil
 	case "LoadBalancer":
 		for _, ing := range apiserverService.Status.LoadBalancer.Ingress {
 			if ing.IP != "" {
-				return ing.IP, 6443, nil
+				return []string{ing.IP}, 6443, nil
 			}
 			if ing.Hostname != "" {
-				return ing.Hostname, 6443, nil
+				return []string{ing.Hostname}, 6443, nil
 			}
 		}
-		return "", 0, nil
+		return nil, 0, nil
 	default:
-		return "", 0, nil
+		return nil, 0, nil
 	}
+}
+
+// externalAPIEndpoint returns the host and port for joining nodes to the virtual control plane.
+func (r *reconciler) externalAPIEndpoint(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (string, int32, error) {
+	hosts, port, err := r.apiEndpointHosts(ctx, vcp, apiserverService)
+	if err != nil || len(hosts) == 0 {
+		return "", port, err
+	}
+	return hosts[0], port, nil
+}
+
+// apiServerCertExtraSANs returns every address that joining nodes may use to reach the virtual apiserver
+func (r *reconciler) apiServerCertExtraSANs(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) ([]string, error) {
+	hosts, _, err := r.apiEndpointHosts(ctx, vcp, apiserverService)
+	return hosts, err
 }
 
 func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (*corev1.Secret, reconcile.Result, error) {
 	target := buildTargetPKISecret(vcp)
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		host, _, err := r.externalAPIEndpoint(ctx, vcp, apiserverService)
+
+		extraSANs, err := r.apiServerCertExtraSANs(ctx, vcp, apiserverService)
 		if err != nil {
 			return nil, reconcile.Result{}, err
-		}
-		var extraSANs []string
-		if host != "" {
-			extraSANs = append(extraSANs, host)
 		}
 
 		data, err := buildTargetPKISecretData(vcp, apiserverService, extraSANs)

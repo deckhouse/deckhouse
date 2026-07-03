@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# VCP node join (Phase 1). Idempotent one-shot. Package install mirrors the parent
-# cluster path via registry-packages-proxy; install details are hardened on live nodes.
 
 if [[ $EUID -ne 0 ]]; then echo "run as root" >&2; exit 1; fi
 if [[ -f /etc/kubernetes/kubelet.conf ]]; then echo "already joined"; exit 0; fi
@@ -22,9 +20,17 @@ export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="${VCP_CLUSTER_UUID}"
 
 # --- fetch rpp-get via embedded minget ---
 echo -n "${VCP_MINGET_B64}" | base64 -d > "${BIN_DIR}/minget"
+if [[ ! -s "${BIN_DIR}/minget" ]]; then
+  echo "embedded minget binary is empty; the deckhouse image is missing candi/bashible/bootstrap/minget" >&2
+  exit 1
+fi
 chmod +x "${BIN_DIR}/minget"
 first_bootstrap="${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES%% *}"
-"${BIN_DIR}/minget" "http://${first_bootstrap}/${VCP_CLUSTER_UUID}/rpp-get?digest=${VCP_RPP_GET_DIGEST}" > "${BIN_DIR}/rpp-get"
+"${BIN_DIR}/minget" "${first_bootstrap}/${VCP_CLUSTER_UUID}/rpp-get?digest=${VCP_RPP_GET_DIGEST}" > "${BIN_DIR}/rpp-get"
+if [[ ! -s "${BIN_DIR}/rpp-get" ]]; then
+  echo "fetched rpp-get binary is empty; check registry-packages-proxy connectivity to ${first_bootstrap}" >&2
+  exit 1
+fi
 chmod +x "${BIN_DIR}/rpp-get"
 
 # --- install core packages ---
