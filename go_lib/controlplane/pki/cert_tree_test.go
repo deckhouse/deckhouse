@@ -28,7 +28,7 @@ import (
 func TestCreateRootCertIfNotExists_CreatesNew(t *testing.T) {
 	dir := t.TempDir()
 	cfg := makeTestConfig(t, dir)
-	spec := getRootCertSpec(CACertName)
+	spec := getRootCertSpec(CACertBaseName)
 
 	var rep PKIApplyReport
 	cert, key, err := createRootCertIfNotExists(cfg, spec, &rep)
@@ -49,7 +49,7 @@ func TestCreateRootCertIfNotExists_CreatesNew(t *testing.T) {
 func TestCreateRootCertIfNotExists_ReusesExisting(t *testing.T) {
 	dir := t.TempDir()
 	cfg := makeTestConfig(t, dir)
-	spec := getRootCertSpec(CACertName)
+	spec := getRootCertSpec(CACertBaseName)
 
 	var rep PKIApplyReport
 	cert1, _, err := createRootCertIfNotExists(cfg, spec, &rep)
@@ -69,7 +69,7 @@ func TestCreateRootCertIfNotExists_ReusesExisting(t *testing.T) {
 func TestCreateRootCertIfNotExists_FailsOnInvalidCA(t *testing.T) {
 	dir := t.TempDir()
 	cfg := makeTestConfig(t, dir)
-	spec := getRootCertSpec(CACertName)
+	spec := getRootCertSpec(CACertBaseName)
 
 	// Write a soon-to-expire CA so that validateCert fails.
 	expiredCert, expiredKey := makeExpiringSoonCACert(t, "kubernetes")
@@ -89,7 +89,7 @@ func TestCreateLeafCertIfNotExists_CreatesNew(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	spec := getLeafCertSpec(ApiserverCertName)
+	spec := getLeafCertSpec(ApiserverCertBaseName)
 
 	var rep PKIApplyReport
 	err := createLeafCertIfNotExists(cfg, spec, caCert, caKey, &rep)
@@ -107,7 +107,7 @@ func TestCreateLeafCertIfNotExists_SkipsValid(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	spec := getLeafCertSpec(ApiserverCertName)
+	spec := getLeafCertSpec(ApiserverCertBaseName)
 
 	var rep PKIApplyReport
 	err := createLeafCertIfNotExists(cfg, spec, caCert, caKey, &rep)
@@ -132,7 +132,7 @@ func TestCreateLeafCertIfNotExists_SkipsValid(t *testing.T) {
 
 func TestCreateRootCertIfNotExists_ReusesExistingOnAlgorithmChange(t *testing.T) {
 	dir := t.TempDir()
-	spec := getRootCertSpec(CACertName)
+	spec := getRootCertSpec(CACertBaseName)
 
 	var rep PKIApplyReport
 	cert1, _, err := createRootCertIfNotExists(makeTestConfig(t, dir, WithEncryptionAlgorithmType(constants.EncryptionAlgorithmRSA2048)), spec, &rep)
@@ -152,7 +152,7 @@ func TestCreateRootCertIfNotExists_ReusesExistingOnAlgorithmChange(t *testing.T)
 func TestCreateLeafCertIfNotExists_RegeneratesOnAlgorithmChange(t *testing.T) {
 	dir := t.TempDir()
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	spec := getLeafCertSpec(ApiserverCertName)
+	spec := getLeafCertSpec(ApiserverCertBaseName)
 
 	var rep PKIApplyReport
 	err := createLeafCertIfNotExists(makeTestConfig(t, dir, WithEncryptionAlgorithmType(constants.EncryptionAlgorithmRSA2048)), spec, caCert, caKey, &rep)
@@ -178,7 +178,7 @@ func TestCreateLeafCertIfNotExists_RegeneratesInvalid(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	spec := getLeafCertSpec(ApiserverCertName)
+	spec := getLeafCertSpec(ApiserverCertBaseName)
 
 	// Put a soon-to-expire cert on disk so validation fails.
 	stale, staleKey := makeExpiringSoonLeafCert(t, "kube-apiserver", caCert, caKey)
