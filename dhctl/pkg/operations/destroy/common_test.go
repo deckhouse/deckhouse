@@ -43,7 +43,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis"
-	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta2"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi"
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
@@ -642,14 +642,14 @@ spec:
         nodeDrainTimeoutSeconds: 600
         nodeVolumeDetachTimeoutSeconds: 600
 `)
-	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(t.Context(), md, metav1.CreateOptions{})
+	_, err := kubeCl.Dynamic().Resource(capi.V1beta2.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(t.Context(), md, metav1.CreateOptions{})
 	require.NoError(t, err)
 	createdResources = append(createdResources, testCreatedResource{
 		name: md.GetName(),
 		ns:   md.GetNamespace(),
 		kind: "CAPIMachineDeployment",
 		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
-			_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Get(ctx, md.GetName(), metav1.GetOptions{})
+			_, err := kubeCl.Dynamic().Resource(capi.V1beta2.MachineDeploymentGVR).Namespace(md.GetNamespace()).Get(ctx, md.GetName(), metav1.GetOptions{})
 			return err
 		},
 	})
