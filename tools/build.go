@@ -487,7 +487,7 @@ type edition struct {
 	ModulesDir       string         `yaml:"modulesDir,omitempty"`
 	BuildIncludes    *buildIncludes `yaml:"buildIncludes,omitempty"`
 	ExcludeModules   []string       `yaml:"excludeModules,omitempty"`
-	AvailableModules []string       `yaml:"AvailableModules,omitempty"`
+	AvailableModules []string       `yaml:"availableModules,omitempty"`
 	ExcludeEditions  []string       `yaml:"excludeEditions,omitempty"`
 }
 

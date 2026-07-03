@@ -66,7 +66,7 @@ editions:
   modulesDir: "ee/cse/modules"
   excludeEditions:
   - FE
-  AvailableModules:
+  availableModules:
   - admission-policy-engine
   - cert-manager
   - chrony
