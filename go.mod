@@ -68,7 +68,6 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gammazero/deque v1.1.0
 	github.com/go-logr/logr v1.4.3
-	github.com/go-openapi/swag v0.26.0
 	github.com/go-openapi/swag/loading v0.26.0
 	github.com/go-openapi/swag/yamlutils v0.26.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
@@ -108,6 +107,7 @@ require (
 	github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/go-openapi/swag v0.26.0 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.0 // indirect
 	github.com/go-openapi/swag/conv v0.26.0 // indirect
 	github.com/go-openapi/swag/fileutils v0.26.0 // indirect
