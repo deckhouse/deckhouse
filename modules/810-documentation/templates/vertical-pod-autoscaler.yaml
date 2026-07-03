@@ -37,6 +37,9 @@ spec:
         {{- include "builder_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 200m
-        memory: 500Mi
+        # A full hugo rebuild covers every external module's docs at once, so peak
+        # RSS scales with the number of modules. 500Mi was too low and caused OOM
+        # kills; GOMEMLIMIT on the container keeps the Go heap just under this cap.
+        memory: 2Gi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
