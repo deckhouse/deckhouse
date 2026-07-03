@@ -36,7 +36,7 @@ The web UI  provider details page has a **Check connection** action. It creates 
 The check verifies that:
 
 - the referenced [DexProvider](cr.html#dexprovider) exists and is enabled;
-- the in-cluster Dex discovery endpoint is reachable;
+- the Dex discovery endpoint inside the cluster is reachable;
 - the external provider endpoint is reachable.
 
 For OIDC providers, the check also reads the discovery document and JWKS. For LDAP providers, it verifies TCP/TLS/StartTLS reachability and, when Kerberos is enabled, that the keytab Secret exists. The check does not perform a full login flow and does not validate a test user password.
@@ -444,14 +444,14 @@ spec:
 
 To configure the SAML Identity Provider:
 
-1. Register Dex as a Service Provider (SP) in your IdP with the following settings:
+1. Register Dex as a Service Provider (SP) with your identity provider using the following settings:
    - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
    - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
-   - **NameID format**: `persistent` or `emailAddress`
+   - **Name identifier format**: `persistent` or `emailAddress`
 
-1. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
+1. Configure attribute mapping in the identity provider to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
 
-1. Export the IdP signing certificate and specify it in the `rootCAData` field of the DexProvider resource.
+1. Export the identity provider signing certificate and specify it in the `rootCAData` field of the DexProvider resource.
 
 {% alert level="info" %}
 SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the `user-authn` module configuration.
