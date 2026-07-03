@@ -224,21 +224,36 @@ func TestIsGranted_SystemNamespaceBypass(t *testing.T) {
 }
 
 func TestIsGranted_SystemRequestBypass(t *testing.T) {
-	// A module's Helm release applies its resources into project namespaces as the deckhouse-controller
-	// (group system:serviceaccounts:d8-system). Denying — or, with failurePolicy: Fail, even stalling —
-	// such a request fails the install and addon-operator retries it forever, deadlocking the module's
-	// queue. A system request must therefore ALWAYS pass, even for a value a project user would be
-	// denied. (At the apiserver level matchConditions skip the webhook for these writers entirely; this
-	// asserts the handler-level backstop.)
+	// The deckhouse-controller SA (group system:serviceaccounts:d8-system) applies every module's Helm
+	// release server-side; a denial here fails the install and addon-operator retries it forever,
+	// deadlocking the module's queue. Such a request must ALWAYS pass, even for a value a user would be
+	// denied (forbidden class under a None default).
 	v := isGranted(t, projectNS("proj", map[string]string{"env": "prod"}), lbDef(v1alpha1.AvailabilityNone), lbRef(v1alpha1.DefaultingNone), lbGrant())
 	r := review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)
 	r.Request.UserInfo.Groups = []string{"system:serviceaccounts:d8-system"}
 	if resp := serve(t, v, "/is-granted", r); !resp.Allowed {
-		t.Fatal("a system (d8-system) writer must bypass the grant allow-list — it must never lock a module's Helm release")
+		t.Fatal("a system (d8-system) request must bypass the grant allow-list — never lock a module's Helm release")
 	}
-	// A normal project user with the same forbidden value is still denied (fast, terminal — no retry).
+	// A plain user with the same forbidden value is still denied (fast, terminal — no retry, no lock).
 	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); resp.Allowed {
 		t.Fatal("a normal user must still be denied an ungranted value")
+	}
+	// system:masters is NOT an automated writer: a human cluster-admin stays subject to the guardrail.
+	rm := review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)
+	rm.Request.UserInfo.Groups = []string{"system:masters"}
+	if resp := serve(t, v, "/is-granted", rm); resp.Allowed {
+		t.Fatal("system:masters must remain subject to the grant guardrail (not an automated system writer)")
+	}
+}
+
+func TestIsGranted_ManagedByNamespaceBypass(t *testing.T) {
+	// An auto-wrapped (managed-by-namespace) project is a plain orphan namespace wrapped only for
+	// accounting; it must behave like an ordinary namespace and NOT enforce the grant allow-list
+	// (allowNamespacesWithoutProjects, card-16) — even an ungranted value from a normal user passes.
+	ns := projectNS("proj", map[string]string{"env": "prod", "multitenancy.deckhouse.io/project-managed-by-namespace": "true"})
+	v := isGranted(t, ns, lbDef(v1alpha1.AvailabilityNone), lbRef(v1alpha1.DefaultingNone), lbGrant())
+	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); !resp.Allowed {
+		t.Fatal("a managed-by-namespace (auto-wrapped) project must bypass the grant allow-list")
 	}
 }
 
@@ -433,6 +448,36 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 	pvc := raw(t, map[string]any{"apiVersion": "v1", "kind": "PersistentVolumeClaim", "metadata": map[string]any{"name": "p", "namespace": "proj"}, "spec": map[string]any{}})
 	if resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", pvc, nil)); len(resp.Patch) != 0 {
 		t.Fatalf("must not coerce to an unavailable default, got patch %s", resp.Patch)
+	}
+}
+
+func TestDecodeReview_RejectsOversizeBody(t *testing.T) {
+	p := NewProtectValidator(logr.Discard(), "system:serviceaccount:d8-multitenancy-manager:coc")
+	// a body larger than the limit must be rejected before it is fully buffered into memory.
+	huge := bytes.Repeat([]byte("a"), maxAdmissionRequestBytes+1024)
+	body := []byte(`{"kind":"AdmissionReview","request":{"uid":"1","name":"`)
+	body = append(body, huge...)
+	body = append(body, []byte(`"}}`)...)
+
+	req := httptest.NewRequest(http.MethodPost, "/protect", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	p.ServeHTTP(rec, req)
+	if rec.Code == http.StatusOK {
+		t.Fatalf("an oversize body must be rejected, got status %d", rec.Code)
+	}
+}
+
+func TestDecodeReview_RejectsWrongKind(t *testing.T) {
+	p := NewProtectValidator(logr.Discard(), "system:serviceaccount:d8-multitenancy-manager:coc")
+	body := []byte(`{"kind":"NotAReview","request":{"uid":"1"}}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/protect", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	p.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("a non-AdmissionReview payload must be rejected with 400, got status %d", rec.Code)
 	}
 }
 

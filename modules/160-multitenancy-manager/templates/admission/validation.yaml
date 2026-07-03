@@ -29,7 +29,7 @@ webhooks:
       - apiGroups:
           - deckhouse.io
         apiVersions:
-          - v1alpha2
+          - v1alpha3
         resources:
           - projects
         operations:
@@ -47,13 +47,89 @@ webhooks:
         name: multitenancy-manager
         namespace: d8-multitenancy-manager
         port: 9443
-        path: /validate/v1alpha2/projects
-  - name: projecttemplates.multitenancy-webhook.deckhouse.io
+        path: /validate/v1alpha3/projects
+  - name: projectrolebindings.multitenancy-webhook.deckhouse.io
     rules:
       - apiGroups:
           - deckhouse.io
         apiVersions:
-          - v1alpha1
+          - v1alpha3
+        resources:
+          - projectrolebindings
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        scope: Namespaced
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/projectrolebindings
+  - name: projectnamespaces.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha3
+        resources:
+          - projectnamespaces
+        operations:
+          - CREATE
+          - UPDATE
+        scope: Namespaced
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/projectnamespaces
+  - name: clusterprojectrolebindings.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha3
+        resources:
+          - clusterprojectrolebindings
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/clusterprojectrolebindings
+  - name: projecttemplates.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        # Only the full-fidelity storage version is listed. With matchPolicy: Equivalent the apiserver
+        # losslessly up-converts a v1alpha1 request to v1alpha2 before delivery, so the handler always
+        # receives the structured fields (grantPolicies, fromParam, podSecurityStandard, ...). Listing
+        # v1alpha1 here would let the apiserver deliver the lossy v1alpha1 view, stripping those fields
+        # and silently bypassing the structured validations.
+        apiVersions:
+          - v1alpha2
         resources:
           - projecttemplates
         operations:

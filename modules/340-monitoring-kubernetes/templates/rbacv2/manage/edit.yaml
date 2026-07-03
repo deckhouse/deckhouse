@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: monitoring-kubernetes
     rbac.deckhouse.io/aggregate-to-observability-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.monitoring-kubernetes.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-monitoring
-  name: d8:manage:permission:module:monitoring-kubernetes:edit
+  name: d8:system-capability:monitoring-kubernetes:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module monitoring-kubernetes: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль monitoring-kubernetes: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the monitoring-kubernetes module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля monitoring-kubernetes."
 rules:
 - apiGroups:
   - deckhouse.io

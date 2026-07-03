@@ -52,11 +52,14 @@ To create projects, the following [Custom Resources](https://kubernetes.io/docs/
 * [Project](./cr.html#project) — a resource that describes a specific project.
 
 When creating a [Project](./cr.html#project) resource from a specific [ProjectTemplate](./cr.html#projecttemplate), the following happens:
-1. The [parameters](./cr.html#project-v1alpha2-spec-parameters) passed are validated against the OpenAPI specification (the [`parametersSchema.openAPIV3Schema`
+1. The [parameters](./cr.html#project-v1alpha3-spec-parameters) passed are validated against the OpenAPI specification (the [`parametersSchema.openAPIV3Schema`
 ](./cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) field of [ProjectTemplate](./cr.html#projecttemplate));
-1. Rendering of the [resources template](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [`parameters`](./cr.html#project-v1alpha2-spec-parameters) field of the [Project](./cr.html#project) resource;
+1. Rendering of the [resources template](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [`parameters`](./cr.html#project-v1alpha3-spec-parameters) field of the [Project](./cr.html#project) resource;
 1. A `Namespace` is created with a name matching the name of [Project](./cr.html#project);
 1. All resources described in the template are created in sequence.
+1. The standard fields of the project are applied independently of the template: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) is reconciled into a `ResourceQuota`, and [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) into an auto-managed [ProjectRoleBinding](./cr.html#projectrolebinding).
+
+The Project API is served as `deckhouse.io/v1alpha3`. A conversion webhook keeps older `v1alpha1`/`v1alpha2` manifests working by lifting `parameters.administrators` and `parameters.resourceQuota` into the standard fields. The `projectTemplateName` field is optional: a project without a template only manages its namespace and standard fields.
 
 > **Attention!** When changing the project template, all created projects will be updated according to the new template.
 

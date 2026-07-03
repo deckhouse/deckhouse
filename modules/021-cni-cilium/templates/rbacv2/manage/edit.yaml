@@ -1,8 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/aggregate-to-networking-as" "manager" "rbac.deckhouse.io/kind" "manage" "rbac.deckhouse.io/level" "module" "rbac.deckhouse.io/namespace" "d8-cni-cilium")) | nindent 2 }}
-  name: d8:manage:permission:module:cni-cilium:edit
+  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/capability" "system-capability.cni-cilium.edit" "rbac.deckhouse.io/aggregate-to-networking-as" "manager" "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "system" "rbac.deckhouse.io/namespace" "d8-cni-cilium")) | nindent 2 }}
+  name: d8:system-capability:cni-cilium:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module cni-cilium: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль cni-cilium: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the cni-cilium module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля cni-cilium."
 rules:
 - apiGroups:
   - deckhouse.io

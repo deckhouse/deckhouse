@@ -27,7 +27,7 @@ spec:
   - to:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: test
+          projects.deckhouse.io/project: test
   - ports:
     - port: 53
       protocol: UDP
@@ -45,7 +45,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: test
+          projects.deckhouse.io/project: test
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: d8-monitoring
@@ -85,7 +85,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          kubernetes.io/metadata.name: test
+          projects.deckhouse.io/project: test
   policies:
     requiredResources:
       requests:
@@ -108,41 +108,10 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          kubernetes.io/metadata.name: test
+          projects.deckhouse.io/project: test
   policies:
     runAsUser:
       ranges:
       - max: 2
         min: 1
       rule: MustRunAs
-
----
-apiVersion: deckhouse.io/v1alpha1
-kind: AuthorizationRule
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure
-  name: user-gmail.com
-  namespace: test
-spec:
-  accessLevel: Admin
-  subjects:
-  - kind: User
-    name: user@gmail.com
-
----
-apiVersion: v1
-kind: ResourceQuota
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure
-  name: all-pods
-  namespace: test
-spec:
-  hard:
-    limits.memory: 15Gi
-    requests.cpu: 1

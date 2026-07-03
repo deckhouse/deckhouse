@@ -69,6 +69,25 @@ rules:
   resources: ["accessiblenamespaces"]
   verbs: ["get", "list"]
 ---
+# ClusterRole for clients who can run reverse-RBAC ("who-can") queries.
+# WhoCan discloses which subjects are granted an action, so it is an elevated
+# capability: this ClusterRole is intentionally NOT bound to system:authenticated
+# and must be granted explicitly to trusted UI/service accounts or administrators.
+# WhoCan is cluster-scoped and DELIBERATELY BYPASSES multi-tenancy filtering: the
+# target namespace is carried in spec.resourceAttributes.namespace, so a grantee
+# can resolve the subjects of ANY namespace (including other tenants). For this
+# reason this ClusterRole must NEVER be bound to tenant-scoped (project) admins;
+# bind it only to cluster-trusted identities.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:who-can-checker
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+rules:
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["whocans"]
+  verbs: ["create"]
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
