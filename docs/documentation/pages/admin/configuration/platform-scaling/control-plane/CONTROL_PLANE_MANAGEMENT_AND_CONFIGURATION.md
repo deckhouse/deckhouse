@@ -252,7 +252,7 @@ After applying the resource, the GRUB settings will be updated and the cluster n
 
 ## etcd periodic defragmentation configuration
 
-In clusters with three or more etcd members (3 or more master nodes, or 2 or more master nodes if an etcd arbitrator is present), this feature is enabled by default. Defragmentation runs once a day at exactly 1:00 a.m. server time.
+In clusters with three or more etcd members (3 or more master nodes, or 2 or more master nodes if an etcd-arbiter is present), this feature is enabled by default. Defragmentation runs once a day at exactly 1:00 a.m. server time.
 
 {% alert level="warning" %}
 Enabling periodic defragmentation in a cluster with a single master node causes the control plane to be temporarily unavailable each time it runs.
