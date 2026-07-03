@@ -52,19 +52,12 @@ docsBuilder:
     web-stage: "3600MiB"
     web-test: "3600MiB"
     web-test2: "3600MiB"
-  # HUGO_MEMORYLIMIT (in GB) caps hugo's in-memory cache budget. Hugo otherwise
-  # defaults it to node_RAM/4 (not cgroup-aware) and retains that much cache as
-  # live heap, which GOMEMLIMIT/GC cannot reclaim, so RSS blows past the container
-  # limit and gets OOM-killed. Keep it ~50% of the builder memory limit.
   hugoMemoryLimit:
     _default: "1"
     web-production: "2"
     web-stage: "2"
     web-test: "2"
     web-test2: "2"
-  # HUGO_NUMWORKERMULTIPLIER caps hugo's render/worker pools. Hugo otherwise sizes
-  # them from the node's CPU count (not cgroup/GOMAXPROCS-aware), keeping far more
-  # pages in flight than the builder's tiny CPU budget, which inflates peak RSS.
   hugoNumWorkerMultiplier:
     _default: "2"
 

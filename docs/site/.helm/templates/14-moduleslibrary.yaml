@@ -96,10 +96,6 @@ spec:
             - name: HUGO_ENVIRONMENT
               value: production
             - name: GOMEMLIMIT
-              value: {{ pluck .Values.web.env .Values.docsBuilder.goMemLimit | first | default .Values.docsBuilder.goMemLimit._default | quote }}
-            # Make hugo aware of the container limits: without these it budgets
-            # in-memory caches from node RAM and sizes worker pools from node CPUs,
-            # both far above what the container is allotted → OOM (see values.yaml).
             - name: HUGO_MEMORYLIMIT
               value: {{ pluck .Values.web.env .Values.docsBuilder.hugoMemoryLimit | first | default .Values.docsBuilder.hugoMemoryLimit._default | quote }}
             - name: HUGO_NUMWORKERMULTIPLIER

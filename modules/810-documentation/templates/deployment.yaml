@@ -75,10 +75,6 @@ spec:
             value: production
           - name: GOMEMLIMIT
             value: "1800MiB"
-          # Make hugo aware of the container limits: without these it budgets
-          # in-memory caches from node RAM (node_RAM/4) and sizes worker pools from
-          # the node's CPU count, both far above this container's allotment → OOM.
-          # HUGO_MEMORYLIMIT (GB) stays below GOMEMLIMIT — it bounds only hugo caches.
           - name: HUGO_MEMORYLIMIT
             value: "1"
           - name: HUGO_NUMWORKERMULTIPLIER
