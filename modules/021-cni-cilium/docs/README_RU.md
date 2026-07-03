@@ -132,3 +132,8 @@ Deckhouse Kubernetes Platform позволяет настраивать эксп
 {% alert level="warning" %}
 Создание или изменение ресурса HubbleMonitoringConfig приведёт **к перезапуску всех агентов Cilium** в кластере.
 {% endalert %}
+
+После применения манифеста:
+
+* метрики Hubble станут доступны в Prometheus. Все экспортируемые метрики имеют префикс `hubble_*`;
+* логи Hubble будут записываться на каждом узле в файл `/var/log/cilium/hubble/flow.log`.
