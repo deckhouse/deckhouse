@@ -8,4 +8,6 @@ https://github.com/cert-manager/cert-manager/pull/5158
 
 ### 999-fix-cve.patch
 
-Reserved for CVE fixes specific to current upstream version.
+Fix CVEs:
+- CVE-2026-27145
+- CVE-2026-42504
