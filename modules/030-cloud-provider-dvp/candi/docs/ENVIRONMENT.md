@@ -11,18 +11,9 @@ The provider supports working with only one disk in the virtual machine template
 {% endalert %}
 
 {% alert level="warning" %}
-If the operating system image includes `cloud-init`, it is recommended to disable the `update-hostname` module or change its run frequency from `always` to `once-per-instance`.
+If the `update-hostname` module of the `cloud-init` package is not disabled, it is recommended to change its run frequency from `always` to `once-per-instance`.
 
-By default, the `update-hostname` module runs on every virtual machine boot and updates the hostname based on the virtual machine metadata.
-
-To disable automatic hostname updates, add the following setting to the `cloud-init` configuration:
-
-```yaml
-#cloud-config
-preserve_hostname: true
-```
-
-Alternatively, change the run frequency of the `update-hostname` module in the `/etc/cloud/cloud.cfg` file:
+To do this, modify the `update-hostname` module configuration in the `/etc/cloud/cloud.cfg` file:
 
 ```yaml
 cloud_init_modules:

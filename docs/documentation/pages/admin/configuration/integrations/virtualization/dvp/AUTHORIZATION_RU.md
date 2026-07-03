@@ -11,18 +11,9 @@ lang: ru
 {% endalert %}
 
 {% alert level="warning" %}
-Если используемый образ ОС содержит `cloud-init`, рекомендуется отключить модуль `update-hostname` или изменить частоту его запуска с `always` на `once-per-instance`.
+Если модуль `update-hostname` пакета `cloud-init` не отключён, рекомендуется изменить частоту его запуска с `always` на `once-per-instance`.
 
-По умолчанию модуль `update-hostname` запускается при каждой загрузке виртуальной машины и обновляет hostname на основании её метаданных.
-
-Чтобы отключить автоматическое обновление hostname, задайте в конфигурации `cloud-init`:
-
-```yaml
-#cloud-config
-preserve_hostname: true
-```
-
-Или измените частоту запуска модуля `update-hostname` в файле `/etc/cloud/cloud.cfg`:
+Для этого измените конфигурацию модуля `update-hostname` в файле `/etc/cloud/cloud.cfg`:
 
 ```yaml
 cloud_init_modules:
