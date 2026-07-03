@@ -22,14 +22,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"integrity-containerd-configurator/internal/configwriter"
+	"integrity-containerd-configurator/internal/configapplier"
 )
 
 // Reconciler watches ContainerdIntegrityPolicy resources and writes containerd config on the node.
 type Reconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Writer *configwriter.Writer
+	Scheme    *runtime.Scheme
+	FSApplier *configapplier.FSApplier
 }
 
 // +kubebuilder:rbac:groups=deckhouse.io,resources=containerdintegritypolicies,verbs=get;list;watch
@@ -43,9 +43,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("list ContainerdIntegrityPolicies: %w", err)
 	}
 
-	desired := configwriter.AggregatePolicies(policyList.Items)
+	desired := configapplier.AggregatePolicies(policyList.Items)
 
-	applyResult, err := r.Writer.Apply(desired)
+	applyResult, err := r.FSApplier.Apply(desired)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("apply containerd integrity config: %w", err)
 	}

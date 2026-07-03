@@ -22,7 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"integrity-containerd-configurator/internal/configwriter"
+	"integrity-containerd-configurator/internal/configapplier"
 	"integrity-containerd-configurator/internal/controller"
 )
 
@@ -42,7 +42,7 @@ func main() {
 	var debugging bool
 
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.StringVar(&configDir, "config-dir", configwriter.IntegrityNSConfigDir, "Directory for containerd integrity config files.")
+	flag.StringVar(&configDir, "config-dir", configapplier.IntegrityNSConfigDir, "Directory for containerd integrity config files.")
 	flag.BoolVar(&debugging, "debug", false, "If set, enables debug logging.")
 
 	flag.Parse()
@@ -64,9 +64,9 @@ func main() {
 	}
 
 	if err = (&controller.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Writer: configwriter.NewWriter(configDir),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		FSApplier: configapplier.NewFSApplier(configDir),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error("unable to create controller", log.Err(err), "controller", "ContainerdIntegrityConfigurator")
 		os.Exit(1)
