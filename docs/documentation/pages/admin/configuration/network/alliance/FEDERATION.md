@@ -35,6 +35,7 @@ Available only in DKP Enterprise Edition (EE).
   This is done using `ServiceEntry` resources.
   A `ServiceEntry` describes the public `ingressgateway` address of cluster B
   so that services in cluster A can reach the `bar` service in cluster B.
+  The module creates ServiceEntries automatically (see below).
 
 <div data-presentation="../../../../presentations/istio/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
