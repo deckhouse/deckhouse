@@ -730,6 +730,53 @@ properties:
               user_agent: "%REQ(USER-AGENT)%"
               authority: "%REQ(:AUTHORITY)%"
               upstream_host: "%UPSTREAM_HOST%"
+      extensionProviders:
+        type: array
+        description: |
+          Additional Istio extension providers to register in the mesh configuration.
+
+          The provider name `main-access-log-format` is reserved by Deckhouse.
+        default: []
+        x-examples:
+        - - name: authservice-grpc
+            envoyExtAuthzGrpc:
+              service: authservice.example.svc.cluster.local
+              port: 10003
+        items:
+          type: object
+          additionalProperties: false
+          required: ["name", "envoyExtAuthzGrpc"]
+          properties:
+            name:
+              type: string
+              description: Unique extension provider name.
+              pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+            envoyExtAuthzGrpc:
+              type: object
+              additionalProperties: false
+              description: External authorization provider that implements Envoy ext_authz gRPC API.
+              required: ["service", "port"]
+              properties:
+                service:
+                  type: string
+                  description: Service that implements Envoy ext_authz gRPC API. The format is `[<hostname>]/[<namespace>]`.
+                port:
+                  type: integer
+                  description: Service port.
+                  minimum: 1
+                  maximum: 65535
+                failOpen:
+                  type: boolean
+                  description: Allow requests when the authorization service is unavailable or returns a 5xx error.
+                timeout:
+                  type: string
+                  description: Maximum duration the proxy waits for the authorization service response.
+                statusOnError:
+                  type: string
+                  description: HTTP status returned to the client when communication with the authorization service fails.
+                clearRouteCache:
+                  type: boolean
+                  description: Clear route cache to let the external authorization service affect routing decisions.
       trafficRedirectionSetupMode:
         type: string
         description: |
