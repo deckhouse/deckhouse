@@ -21,6 +21,8 @@ cloud_init_modules:
   ...
 ```
 
+The `update-hostname` module can also be disabled completely by removing it from the `cloud_init_modules` module list in the `/etc/cloud/cloud.cfg` file.
+
 {% endalert %}
 
 ## Creating a user

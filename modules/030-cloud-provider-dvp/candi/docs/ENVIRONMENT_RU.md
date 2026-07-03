@@ -21,6 +21,8 @@ cloud_init_modules:
   ...
 ```
 
+Также модуль `update-hostname` можно полностью отключить, удалив его из списка модулей `cloud_init_modules` в файле `/etc/cloud/cloud.cfg`.
+
 {% endalert %}
 
 ## Создание пользователя
