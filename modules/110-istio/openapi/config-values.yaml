@@ -403,7 +403,7 @@ properties:
     x-examples:
     - |
       -----BEGIN CERTIFICATE-----
-      MIIDXTCCAkWgAwIBAgIJAN...
+      ...
       -----END CERTIFICATE-----
   controlPlane:
     type: object
