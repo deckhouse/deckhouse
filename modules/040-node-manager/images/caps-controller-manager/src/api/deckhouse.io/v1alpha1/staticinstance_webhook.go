@@ -40,7 +40,7 @@ func (r *StaticInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		WithDefaulter(&StaticInstanceCustomDefaulter{}).
-		WithValidator(&StaticInstanceCustomValidator{}).
+		WithValidator(&StaticInstanceCustomValidator{Reader: mgr.GetAPIReader()}).
 		Complete()
 }
 
@@ -64,13 +64,15 @@ func (*StaticInstanceCustomDefaulter) Default(_ context.Context, obj runtime.Obj
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-type StaticInstanceCustomValidator struct{}
+type StaticInstanceCustomValidator struct {
+	Reader client.Reader
+}
 
 // +kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-staticinstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=update;delete,versions=v1alpha1,name=vstaticinstance.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomValidator = &StaticInstanceCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (*StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	staticInstance, ok := obj.(*StaticInstance)
 	if !ok {
 		return nil, fmt.Errorf("expected an StaticInstance object but got %T", obj)
@@ -78,17 +80,17 @@ func (*StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj ru
 
 	staticinstancelog.Info("validate create", "name", staticInstance.GetName())
 
-	mgr, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Kubernetes config: %w", err)
+	existing := &StaticInstance{}
+	err := v.Reader.Get(ctx, client.ObjectKey{Name: staticInstance.Name}, existing)
+	switch {
+	case err == nil:
+		staticinstancelog.Info("StaticInstance already exists, skipping address validation", "name", staticInstance.GetName())
+		return nil, nil
+	case !apierrors.IsNotFound(err):
+		return nil, fmt.Errorf("failed to get StaticInstance %q: %w", staticInstance.GetName(), err)
 	}
 
-	cli, err := client.New(mgr, client.Options{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
-	}
-
-	if err := staticInstance.validateAddressIfNoSkipBootstrap(ctx, cli); err != nil {
+	if err := staticInstance.validateAddressIfNoSkipBootstrap(ctx, v.Reader); err != nil {
 		return nil, field.Forbidden(field.NewPath("spec", "address"), err.Error())
 	}
 
@@ -145,7 +147,7 @@ func (*StaticInstanceCustomValidator) ValidateDelete(_ context.Context, obj runt
 // validateAddressIfNoSkipBootstrap ensures that if StaticInstance does NOT have
 // annotation "static.node.deckhouse.io/skip-bootstrap-phase",
 // then its spec.address must NOT match any existing Node address.
-func (r *StaticInstance) validateAddressIfNoSkipBootstrap(ctx context.Context, cli client.Client) error {
+func (r *StaticInstance) validateAddressIfNoSkipBootstrap(ctx context.Context, cli client.Reader) error {
 	if _, hasSkipBootstrap := r.Annotations["static.node.deckhouse.io/skip-bootstrap-phase"]; hasSkipBootstrap {
 		staticinstancelog.Info("skip-bootstrap annotation found, skipping address validation", "name", r.Name)
 		return nil
