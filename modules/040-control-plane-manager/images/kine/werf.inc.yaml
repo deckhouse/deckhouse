@@ -26,8 +26,10 @@ secrets:
 mount:
 {{ include "mount points for golang builds" . }}
 shell:
-  install:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache gcc musl-dev
+  install:
   - cd /src
   - |
     GOPROXY=$(cat /run/secrets/GOPROXY) \
@@ -48,3 +50,4 @@ import:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kine"]
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
