@@ -176,20 +176,20 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    {% alert level="info" %}
    Для реализации безопасного и масштабируемого мультикластера в Argo CD используются следующие компоненты:
    - Principal — это центральная точка управления: хранит состояние и раздает задания;
-   - Agent — это исполнитель в каждом целевом кластере: применяет манифесты и отчитывается обратно.
+   - Agent — это исполнитель в каждом целевом кластере: применяет манифесты и возвращает результат обработки в Principal.
 
-   Такой подход позволяет управлять множеством кластеров без прямого доступа центрального Argo CD в каждый API сервера, что уменьшает требования к количеству открытых входящих доступов, обеспечивает изоляцию и обеспечивает отказоустойчивость.
+   Такой подход позволяет управлять множеством кластеров без прямого доступа с центрального Argo CD в Kubernetes API каждого кластера, что уменьшает требования к количеству открытых входящих доступов, обеспечивает изоляцию и обеспечивает отказоустойчивость.
    {% endalert %}
 
-1. **&lt;ArgoCD name&gt;-agent-agent** (Deployment) — опциональный компонент, состоящий из одного контейнера **&lt;ArgoCD name&gt;-agent-agent** и отвечающий за выполнение операций над управляемыми ресурсами Kubernetes-кластера по заданию из Argo CD. Компонент устанавливает подключение к Argo CD Principal, синхронизирует приложения и управляет их состоянием на основе команд, поступающих от Argo CD Principal.
+1. **&lt;ArgoCD name&gt;-agent-agent** (Deployment) — argocd-agent-agent, опциональный компонент, состоящий из одного контейнера **&lt;ArgoCD name&gt;-agent-agent** и отвечающий за выполнение операций над управляемыми ресурсами Kubernetes-кластера по заданию из Argo CD. Компонент устанавливает подключение к Argo CD Principal, синхронизирует приложения и управляет их состоянием на основе команд, поступающих от Argo CD Principal.
 
    Подробнее с архитектурой мультикластерной конфигурации Argo CD можно ознакомиться [в документации Argo CD](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
 
    Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.argoCDAgent.agent.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-argocdagent-agent-enabled) кастомного ресурса ArgoCD принимает значение `true`. В одном ресурсе ArgoCD не допускается одновременное использование Argo CD Agent и Argo CD Principal.
 
-1. **&lt;ArgoCD name&gt;-agent-principal** (Deployment) — argocd-principal, опциональный компонент, состоящий из одного контейнера **&lt;ArgoCD name&gt;-agent-principal** и обеспечивающий работу Argo CD [в мультикластерной конфигурации](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
+1. **&lt;ArgoCD name&gt;-agent-principal** (Deployment) — argocd-agent-principal, опциональный компонент, состоящий из одного контейнера **&lt;ArgoCD name&gt;-agent-principal** и обеспечивающий работу Argo CD [в мультикластерной конфигурации](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
 
-   При включении этого компонента `argocd-operator-controller-manager` перенастраивает все компоненты, использующие подключение к базе Redis, на использование Redis-прокси. Компонент `<ArgoCD name>-agent-principal` реализует Redis-прокси и маршрутизирует запросы к базе данных на основе анализа ключей Redis: в зависимости от значения ключей запрос направляется или в локальный экземпляр Redis, или в один из удалённых Argo CD Agent.
+   При включении этого компонента argocd-operator-controller-manager перенастраивает все компоненты, использующие подключение к базе Redis, на использование Redis-прокси. Компонент argocd-agent-principal реализует Redis-прокси и маршрутизирует запросы к базе данных на основе анализа ключей Redis: в зависимости от значения ключей запрос направляется или в локальный экземпляр Redis, или в один из удалённых Argo CD Agent.
 
    Argocd-operator-controller-manager разворачивает этот компонент, если параметр [`.spec.argoCDAgent.principal.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-argocdagent-principal-enabled) кастомного ресурса ArgoCD принимает значение `true`. В одном ресурсе ArgoCD не допускается одновременное использование Argo CD Agent и Argo CD Principal.
 
