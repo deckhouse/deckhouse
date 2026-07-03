@@ -51,6 +51,8 @@ const (
 	moduleLabelKey = "module"
 )
 
+var ErrCRDsNotFound = fmt.Errorf("no crds found")
+
 // Service applies CRDs found in package paths and reports the GroupVersionKinds
 // of Deckhouse-managed CRDs. It records the GVKs each module applies at install
 // time, so GetManagedGVKs is served from memory without listing the cluster.
@@ -74,6 +76,19 @@ func NewService(client *client.Client, logger *log.Logger) *Service {
 		logger: logger.Named(tracer),
 		gvks:   make(map[string][]string),
 	}
+}
+
+func (s *Service) HasCRDs(path string) error {
+	crds, err := getCRDsFromPath(path, crdFilters)
+	if err != nil {
+		return fmt.Errorf("scan crds dir: %w", err)
+	}
+
+	if len(crds) == 0 {
+		return ErrCRDsNotFound
+	}
+
+	return nil
 }
 
 // Install scans the package's crds directory and applies every CRD manifest
