@@ -200,8 +200,24 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
+	storageClasses = filterStorageClassesForCSICompatibility(input, storageClasses)
+
 	input.Logger.Info("Found vSphere storage classes using cloud_provider_discovery_data", slog.Any("data", storageClasses))
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
+}
+
+func filterStorageClassesForCSICompatibility(input *go_hook.HookInput, storageClasses []storageClass) []storageClass {
+	if v, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.compatibilityFlag"); ok && v.String() == "Legacy" {
+		return storageClasses
+	}
+	filtered := make([]storageClass, 0, len(storageClasses))
+	for _, sc := range storageClasses {
+		if sc.DatastoreType == "DatastoreCluster" {
+			continue
+		}
+		filtered = append(filtered, sc)
+	}
+	return filtered
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names

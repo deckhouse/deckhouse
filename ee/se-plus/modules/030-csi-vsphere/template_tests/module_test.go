@@ -95,6 +95,43 @@ internal:
     vmFolderPath: dev/test
 `
 
+const moduleValuesDatastoreOnly = `
+host: myhost
+username: myuname
+password: myPaSsWd
+vmFolderPath: dev/test
+regionTagCategory: myregtagcat
+zoneTagCategory: myzonetagcat
+region: myreg
+zones: ["zone-a"]
+internal:
+  storageClasses:
+  - name: aaa-datastore
+    datastoreType: Datastore
+    datastoreURL: ds:///vmfs/volumes/aaa/
+    path: /dc/datastore/aaa
+    zones: ["zone-a"]
+  - name: bbb-datastore
+    datastoreType: Datastore
+    datastoreURL: ds:///vmfs/volumes/bbb/
+    path: /dc/datastore/bbb
+    zones: ["zone-a"]
+  compatibilityFlag: ""
+  providerDiscoveryData:
+    datacenter: X1
+    zones: ["zone-a"]
+  providerClusterConfiguration:
+    provider:
+      server: myhost
+      username: myuname
+      password: myPaSsWd
+      insecure: true
+    regionTagCategory: myregtagcat
+    zoneTagCategory: myzonetagcat
+    region: myreg
+    vmFolderPath: dev/test
+`
+
 const moduleValuesB = `
     host: myhost
     username: myuname
@@ -250,6 +287,30 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("Vsphere DatastoreCluster filtered by hook: first Datastore gets default annotation", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("csiVsphere", moduleValuesDatastoreOnly)
+			f.HelmRender()
+		})
+
+		It("first StorageClass gets default annotation, second does not", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			scAaa := f.KubernetesGlobalResource("StorageClass", "aaa-datastore")
+			scBbb := f.KubernetesGlobalResource("StorageClass", "bbb-datastore")
+
+			Expect(scAaa.Exists()).To(BeTrue())
+			Expect(scBbb.Exists()).To(BeTrue())
+
+			Expect(scAaa.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+			Expect(scBbb.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 		})
 	})
 

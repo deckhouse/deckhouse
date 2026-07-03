@@ -116,6 +116,23 @@ csiVsphere:
     - .*
     default: other-bar
 `
+		initValuesStringF = `
+csiVsphere:
+  internal:
+    providerClusterConfiguration:
+      provider:
+        server: test.test.com
+        username: test
+        password: test
+        insecure: true
+      region: Test
+      regionTagCategory: test-region
+      zoneTagCategory: test-zone
+      sshPublicKey: test
+      vmFolderPath: test
+  storageClass:
+    compatibilityFlag: Legacy
+`
 	)
 
 	//nolint:misspell
@@ -190,6 +207,92 @@ data:
 			Expect(f.ValuesGet("csiVsphere.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
+	"datastoreType": "Datastore",
+    "datastoreURL":"ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+	"name": "test-1-lun101-b39d82fa",
+	"path": "/DCTEST/datastore/test_1_Lun101",
+	"zones": [
+	  "ZONE-TEST"
+	]
+  },
+  {
+	"datastoreType": "Datastore",
+    "datastoreURL":"ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+	"name": "test-1-lun101-b39d82fa-gold-policy",
+	"path": "/DCTEST/datastore/test_1_Lun101",
+	"storagePolicyName": "Gold Policy",
+	"zones": [
+	  "ZONE-TEST"
+	]
+  },
+  {
+	"datastoreType": "Datastore",
+    "datastoreURL":"ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+	"name": "test-1-lun102-0403073a",
+	"path": "/DCTEST/datastore/test_1_Lun102",
+	"zones": [
+	  "ZONE-TEST"
+	]
+  },
+  {
+	"datastoreType": "Datastore",
+    "datastoreURL":"ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+	"name": "test-1-lun102-0403073a-gold-policy",
+	"path": "/DCTEST/datastore/test_1_Lun102",
+	"storagePolicyName": "Gold Policy",
+	"zones": [
+	  "ZONE-TEST"
+	]
+  }
+]
+`))
+		})
+	})
+
+	b := HookExecutionConfigInit(initValuesStringB, `{}`)
+
+	Context("Cluster has minimal csiVsphere configuration with excluded storage classes", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.KubeStateSet(state))
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("Should discover volumeTypes without excluded", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("csiVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	e := HookExecutionConfigInit(initValuesStringE, `{}`)
+
+	Context("When all discovered storage classes are excluded", func() {
+		BeforeEach(func() {
+			e.BindingContexts.Set(e.KubeStateSet(state))
+			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
+			e.RunHook()
+		})
+
+		It("Should result empty storageClasses list", func() {
+			Expect(e).To(ExecuteSuccessfully())
+			Expect(e.ValuesGet("csiVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	legacyF := HookExecutionConfigInit(initValuesStringF, `{}`)
+
+	Context("Legacy CSI mode: DatastoreCluster entries are preserved", func() {
+		BeforeEach(func() {
+			legacyF.BindingContexts.Set(legacyF.KubeStateSet(state))
+			legacyF.BindingContexts.Set(legacyF.GenerateBeforeHelmContext())
+			legacyF.RunHook()
+		})
+
+		It("Should keep DatastoreCluster entries in Legacy mode", func() {
+			Expect(legacyF).To(ExecuteSuccessfully())
+			Expect(legacyF.ValuesGet("csiVsphere.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
 	"datastoreType": "DatastoreCluster",
 	"datastoreURL": "",
 	"name": "test-1-k8s-3cf5ce84",
@@ -248,58 +351,6 @@ data:
   }
 ]
 `))
-		})
-	})
-
-	b := HookExecutionConfigInit(initValuesStringB, `{}`)
-
-	Context("Cluster has minimal csiVsphere configuration with excluded storage classes", func() {
-		BeforeEach(func() {
-			b.BindingContexts.Set(b.KubeStateSet(state))
-			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
-			b.RunHook()
-		})
-
-		It("Should discover volumeTypes without excluded", func() {
-			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("csiVsphere.internal.storageClasses").String()).To(MatchJSON(`
-[
-  {
-	"datastoreType": "DatastoreCluster",
-	"datastoreURL": "",
-	"name": "test-1-k8s-3cf5ce84",
-	"path": "/DCTEST/datastore/test_1_k8s",
-	"zones": [
-	  "ZONE-TEST"
-	]
-  },
-  {
-	"datastoreType": "DatastoreCluster",
-	"datastoreURL": "",
-	"name": "test-1-k8s-3cf5ce84-gold-policy",
-	"path": "/DCTEST/datastore/test_1_k8s",
-	"storagePolicyName": "Gold Policy",
-	"zones": [
-	  "ZONE-TEST"
-	]
-  }
-]
-`))
-		})
-	})
-
-	e := HookExecutionConfigInit(initValuesStringE, `{}`)
-
-	Context("When all discovered storage classes are excluded", func() {
-		BeforeEach(func() {
-			e.BindingContexts.Set(e.KubeStateSet(state))
-			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
-			e.RunHook()
-		})
-
-		It("Should result empty storageClasses list", func() {
-			Expect(e).To(ExecuteSuccessfully())
-			Expect(e.ValuesGet("csiVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
 		})
 	})
 })
