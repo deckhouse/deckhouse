@@ -25,8 +25,8 @@ import (
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 )
 
-// ContainerdIntegrityPolicyReconciler reconciles a ContainerdIntegrityPolicy object.
-type ContainerdIntegrityPolicyReconciler struct {
+// Reconciler reconciles a ContainerdIntegrityPolicy object.
+type Reconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -35,7 +35,7 @@ type ContainerdIntegrityPolicyReconciler struct {
 // +kubebuilder:rbac:groups=deckhouse.io,resources=containerdintegritypolicies/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 
-func (r *ContainerdIntegrityPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
 	policy := &deckhousev1alpha1.ContainerdIntegrityPolicy{}
@@ -65,7 +65,7 @@ func (r *ContainerdIntegrityPolicyReconciler) Reconcile(ctx context.Context, req
 	return ctrl.Result{}, nil
 }
 
-func (r *ContainerdIntegrityPolicyReconciler) listMatchingNamespaces(
+func (r *Reconciler) listMatchingNamespaces(
 	ctx context.Context,
 	policy *deckhousev1alpha1.ContainerdIntegrityPolicy,
 ) ([]string, error) {
@@ -89,7 +89,7 @@ func (r *ContainerdIntegrityPolicyReconciler) listMatchingNamespaces(
 	return matchedNamespaces, nil
 }
 
-func (r *ContainerdIntegrityPolicyReconciler) enqueuePoliciesForNamespace(
+func (r *Reconciler) enqueuePoliciesForNamespace(
 	ctx context.Context,
 	obj client.Object,
 ) []reconcile.Request {
@@ -118,7 +118,7 @@ func (r *ContainerdIntegrityPolicyReconciler) enqueuePoliciesForNamespace(
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ContainerdIntegrityPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&deckhousev1alpha1.ContainerdIntegrityPolicy{}).
 		Watches(

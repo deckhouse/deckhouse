@@ -59,7 +59,7 @@ type ContainerdIntegrityPolicyControllerTestSuite struct {
 	ctx context.Context
 
 	client      client.Client
-	reconciler  *ContainerdIntegrityPolicyReconciler
+	reconciler  *Reconciler
 	policyNames []string
 
 	testDataFileName string
@@ -143,7 +143,7 @@ func (suite *ContainerdIntegrityPolicyControllerTestSuite) setupController(yamlD
 		WithStatusSubresource(&deckhousev1alpha1.ContainerdIntegrityPolicy{}).
 		Build()
 
-	suite.reconciler = &ContainerdIntegrityPolicyReconciler{
+	suite.reconciler = &Reconciler{
 		Client: k8sClient,
 		Scheme: scheme,
 	}
