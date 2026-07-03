@@ -27,6 +27,7 @@ import (
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/certs"
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 
@@ -296,38 +297,15 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 }
 
 func readPKIBundleSecretData(pkiDir string) (map[string][]byte, error) {
-	files := map[string]string{
-		"ca.crt":                       "ca.crt",
-		"ca.key":                       "ca.key",
-		"apiserver.crt":                "apiserver.crt",
-		"apiserver.key":                "apiserver.key",
-		"apiserver-kubelet-client.crt": "apiserver-kubelet-client.crt",
-		"apiserver-kubelet-client.key": "apiserver-kubelet-client.key",
-		"front-proxy-ca.crt":           "front-proxy-ca.crt",
-		"front-proxy-ca.key":           "front-proxy-ca.key",
-		"front-proxy-client.crt":       "front-proxy-client.crt",
-		"front-proxy-client.key":       "front-proxy-client.key",
-		"etcd-ca.crt":                  "etcd/ca.crt",
-		"etcd-ca.key":                  "etcd/ca.key",
-		"etcd-server.crt":              "etcd/server.crt",
-		"etcd-server.key":              "etcd/server.key",
-		"etcd-peer.crt":                "etcd/peer.crt",
-		"etcd-peer.key":                "etcd/peer.key",
-		"etcd-healthcheck-client.crt":  "etcd/healthcheck-client.crt", // TODO: возможно откажемся
-		"etcd-healthcheck-client.key":  "etcd/healthcheck-client.key", // TODO: возможно откажемся
-		"apiserver-etcd-client.crt":    "apiserver-etcd-client.crt",
-		"apiserver-etcd-client.key":    "apiserver-etcd-client.key",
-		"sa.key":                       "sa.key",
-		"sa.pub":                       "sa.pub",
-	}
+	layout := certs.VirtualCertsFileLayout()
 
-	data := make(map[string][]byte, len(files))
-	for secretKey, relPath := range files {
+	data := make(map[string][]byte, len(layout))
+	for flatKey, relPath := range layout {
 		content, err := os.ReadFile(filepath.Join(pkiDir, relPath))
 		if err != nil {
 			return nil, fmt.Errorf("read PKI file %s: %w", relPath, err)
 		}
-		data[secretKey] = content
+		data[flatKey] = content
 	}
 
 	return data, nil

@@ -79,7 +79,7 @@ type PKIParams struct {
 // - leaf certs regenerated only if: missing, expires < 30 days, or SANs changed
 // - CA certs are never auto-regenerated
 // certTree limits the cert tree to a specific component's certs (if nil - the full tree is used)
-func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.LeafCertName) (pki.PKIApplyReport, error) {
+func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertBaseName][]pki.LeafCertBaseName) (pki.PKIApplyReport, error) {
 	ip := net.ParseIP(params.AdvertiseAddress)
 	if ip == nil {
 		return pki.PKIApplyReport{}, fmt.Errorf("invalid advertise address: %s", params.AdvertiseAddress)

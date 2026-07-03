@@ -119,12 +119,12 @@ func (e *StepExecutor) observeKubeconfigExpirations(ctx context.Context, out map
 	return nil
 }
 
-func componentLeafCerts(component controlplanev1alpha1.OperationComponent) []pki.LeafCertName {
+func componentLeafCerts(component controlplanev1alpha1.OperationComponent) []pki.LeafCertBaseName {
 	tree := componentCertTree[component]
 	if len(tree) == 0 {
 		return nil
 	}
-	var leafs []pki.LeafCertName
+	var leafs []pki.LeafCertBaseName
 	for _, names := range tree {
 		leafs = append(leafs, names...)
 	}
