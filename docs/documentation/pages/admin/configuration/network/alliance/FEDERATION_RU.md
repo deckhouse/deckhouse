@@ -55,7 +55,7 @@ lang: ru
 * В каждом кластере создать набор ресурсов [IstioFederation](/modules/istio/cr.html#istiofederation) для описания других кластеров.
   * После успешного автосогласования между кластерами в ресурсе IstioFederation будут записаны необходимые служебные данные в `status.metadataCache.public` и `status.metadataCache.private`.
 * Каждый сервис, который считается публичным в рамках федерации, пометить лейблом `federation.istio.deckhouse.io/public-service: ""`.
-  * В остальных кластерах из состава федерации для каждого такого сервиса создадутся соответствующие `ServiceEntry` и DestinationRule, указывающие на `ingressgateway` исходного кластера.
+  * В остальных кластерах из состава федерации для каждого такого сервиса автоматически создадутся соответствующие `ServiceEntry` и DestinationRule, указывающие на `ingressgateway` исходного кластера.
   * Лейбл должен быть с пустым значением. Другие ресурсы, например Deployment, Pod или VirtualService, для публикации сервиса в федерации помечать не нужно.
 
 {% alert level="warning" %}

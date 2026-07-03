@@ -32,7 +32,7 @@ Available only in DKP Enterprise Edition (EE).
 * Federation requires mutual trust between clusters.
   It requires a mutual root certificate exchange: cluster A must trust cluster B, and vice versa.
 * Configuring inter-cluster access to services requires exchanging information about public services.
-  This is done using `ServiceEntry` resources.
+  In vanilla istio this is done using `ServiceEntry` resources.
   A `ServiceEntry` describes the public `ingressgateway` address of cluster B
   so that services in cluster A can reach the `bar` service in cluster B.
   The module creates ServiceEntries automatically (see below).
