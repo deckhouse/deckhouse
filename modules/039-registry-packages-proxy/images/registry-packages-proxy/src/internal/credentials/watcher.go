@@ -106,7 +106,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 		})
 	}
 
-	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	secretWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch secrets: %v", err)
 		return
@@ -168,7 +168,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{})
 	}
 
-	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch module sources: %v", err)
 		return

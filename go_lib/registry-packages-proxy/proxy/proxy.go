@@ -722,7 +722,7 @@ func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, image
 //
 // into its components. <image-path> may contain slashes; the split anchors on the final
 // /tags segment.
-func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag string, err error) {
+func parseCLIPath(urlPath string) (string, cliAction, string, error) {
 	if !strings.HasPrefix(urlPath, cliImagesPathPrefix) {
 		return "", cliActionUnknown, "", errors.New("not a CLI path")
 	}
@@ -740,7 +740,7 @@ func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag strin
 	}
 
 	// imagePath is the part of the path before the tags segment
-	imagePath = rest[:idx]
+	imagePath := rest[:idx]
 	if imagePath == "" {
 		return "", cliActionUnknown, "", errors.New("empty image path")
 	}
@@ -751,7 +751,7 @@ func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag strin
 	case suffix == "" || suffix == "/":
 		return imagePath, cliActionListTags, "", nil
 	case strings.HasPrefix(suffix, "/"):
-		tag = strings.Trim(suffix[1:], "/")
+		tag := strings.Trim(suffix[1:], "/")
 		if tag == "" || strings.Contains(tag, "/") {
 			return "", cliActionUnknown, "", errors.New("invalid tag")
 		}
@@ -1014,7 +1014,7 @@ func (p *Proxy) fetchIcon(w http.ResponseWriter, r *http.Request, cfg *registry.
 // example:
 // - /v1/packages/deckhouse/my-package/metadata/icon/ -> packagesMetadataActionGetIcon, deckhouse, my-package, ""
 // - /v1/packages/deckhouse/my-package/metadata/icon/v0.0.1 -> packagesMetadataActionGetIcon, deckhouse, my-package, "v0.0.1"
-func parsePackagesPath(urlPath string) (action packagesAction, packageRepositoryName, packageName, version string, err error) {
+func parsePackagesPath(urlPath string) (packagesAction, string, string, string, error) {
 	if !strings.HasPrefix(urlPath, packagesPathPrefix) {
 		return packagesMetadataActionUnknown, "", "", "", errors.New("not a packages metadata path")
 	}
@@ -1061,6 +1061,8 @@ type tarEntryMatcher func(header *tar.Header) bool
 // entry path. Leading "./" and "/" segments in the header name are stripped
 // before comparison so archives produced by different tools (`tar` strips
 // "./", BuildKit doesn't) match the same target.
+//
+//nolint:unparam // general-purpose matcher paired with baseNameMatcher; callers currently pass a single path.
 func exactNameMatcher(filePath string) tarEntryMatcher {
 	want := normalizeTarName(filePath)
 	return func(header *tar.Header) bool {
