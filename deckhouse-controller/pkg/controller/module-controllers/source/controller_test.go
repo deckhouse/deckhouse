@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -91,6 +92,65 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	}
 }
 
+// fakeModuleManager is a configurable moduleManager for tests. modulePaths maps a
+// module name to the filesystem path it is registered with in the module manager;
+// a module absent from the map is treated as not registered (GetModule returns nil).
+// With an empty map no module is registered as embedded, so isEmbeddedModule always
+// returns false and the release-ensure flow behaves as if only external sources exist.
+type fakeModuleManager struct {
+	modulePaths map[string]string
+}
+
+func (fakeModuleManager) AreModulesInited() bool { return true }
+
+func (m fakeModuleManager) GetModule(name string) *addonmodules.BasicModule {
+	path, ok := m.modulePaths[name]
+	if !ok {
+		return nil
+	}
+	return &addonmodules.BasicModule{Path: path}
+}
+
+func TestIsEmbeddedModule(t *testing.T) {
+	const downloadedModulesDir = "/deckhouse/downloaded/"
+
+	tests := []struct {
+		name        string
+		modulePaths map[string]string
+		module      string
+		want        bool
+	}{
+		{
+			name:        "embedded module registered under /deckhouse/modules",
+			modulePaths: map[string]string{"dashboard": "/deckhouse/modules/500-dashboard"},
+			module:      "dashboard",
+			want:        true,
+		},
+		{
+			name:        "downloaded module registered under downloadedModulesDir",
+			modulePaths: map[string]string{"dashboard": "/deckhouse/downloaded/modules/dashboard/v1.76.4"},
+			module:      "dashboard",
+			want:        false,
+		},
+		{
+			name:        "module not registered in the module manager",
+			modulePaths: map[string]string{},
+			module:      "dashboard",
+			want:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &reconciler{
+				downloadedModulesDir: downloadedModulesDir,
+				moduleManager:        fakeModuleManager{modulePaths: tt.modulePaths},
+			}
+			assert.Equal(t, tt.want, r.isEmbeddedModule(tt.module))
+		})
+	}
+}
+
 func (suite *ControllerTestSuite) setupTestController(raw string, options ...reconcilerOption) {
 	manifests := releaseutil.SplitManifests(raw)
 
@@ -120,6 +180,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 			Bundle: "Default",
 		},
 		metricStorage: metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
+		moduleManager: fakeModuleManager{},
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{

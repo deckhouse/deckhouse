@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -173,6 +174,28 @@ func (r *reconciler) needToEnsureRelease(
 	sourceModule v1alpha1.AvailableModule,
 	meta *downloader.ModuleDownloadResult,
 	releaseExists bool) bool {
+	// Do not create/pre-stage an external release for a module whose embedded copy is
+	// still shipped with Deckhouse: the embedded copy is the source of truth while
+	// present, and an external release would activate a duplicate of the module (e.g.
+	// the d8-dashboard namespace and its ingresses), colliding with it.
+	//
+	// The module.Properties.Source guard below is not enough on its own: at the first
+	// reconcile Source can still be empty (a startup race with the embedded module
+	// loader, which only sets Source == "Embedded" while it is unset), and once an
+	// external release is staged Source gets pinned to that source, so the race is lost
+	// permanently. The module manager, in contrast, has the embedded copy registered
+	// before Source is set (preflight waits for AreModulesInited), so it is a reliable
+	// signal that does not depend on the racy CR field. After the embedded copy is
+	// dropped on a Deckhouse upgrade the module is no longer registered as embedded and
+	// the external release is staged as usual.
+	if r.isEmbeddedModule(module.Name) {
+		r.logger.Debug("module is shipped embedded, skip external release ensure",
+			slog.String("source_name", source.Name),
+			slog.String("name", module.Name))
+
+		return false
+	}
+
 	// check the active source
 	if module.Properties.Source != "" && module.Properties.Source != source.Name {
 		r.logger.Debug("source not active, skip module",
@@ -202,6 +225,23 @@ func (r *reconciler) needToEnsureRelease(
 	}
 
 	return sourceModule.Checksum != meta.Checksum || !releaseExists
+}
+
+// isEmbeddedModule reports whether a copy of the module is currently shipped embedded
+// with Deckhouse. It relies on the module manager instead of Module.Properties.Source:
+// the embedded copy is registered in the module manager before the source field is set
+// on the Module resource (preflight waits for AreModulesInited), so this signal is not
+// affected by the startup race between the source controller and the embedded module
+// loader. A module downloaded from an external source lives under downloadedModulesDir,
+// so its path prefix distinguishes it from an embedded copy (shipped under
+// /deckhouse/modules).
+func (r *reconciler) isEmbeddedModule(moduleName string) bool {
+	basicModule := r.moduleManager.GetModule(moduleName)
+	if basicModule == nil {
+		return false
+	}
+
+	return !strings.HasPrefix(basicModule.GetPath(), r.downloadedModulesDir)
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {
