@@ -125,7 +125,7 @@ func (p *BootstrapPreparator) PrepareModule(ctx context.Context) error {
 	}
 
 	if signatureMode == NoSignatureMode {
-		logger.DebugContext(context.Background(), fmt.Sprintf("No signature mode provided. Skipping signature preparation"))
+		logger.DebugContext(context.Background(), "No signature mode provided. Skipping signature preparation")
 		return nil
 	}
 

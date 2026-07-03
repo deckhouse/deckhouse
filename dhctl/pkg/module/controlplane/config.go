@@ -77,7 +77,7 @@ func (e *SettingsExtractor) SignatureMode() (string, error) {
 
 	defaultMode := e.findDefaultSignatureMode(schema)
 
-	logger.DebugContext(context.Background(), fmt.Sprintf("Got ee edition, trying to extract signature mode"))
+	logger.DebugContext(context.Background(), "Got ee edition, trying to extract signature mode")
 
 	mc := e.cfg.FindModuleConfig(moduleName)
 

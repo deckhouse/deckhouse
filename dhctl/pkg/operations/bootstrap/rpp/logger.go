@@ -88,5 +88,5 @@ func (w *interactiveLoggerWrapper) Debugf(format string, args ...any) {
 }
 
 func (w *interactiveLoggerWrapper) Error(msg string, args ...any) {
-	w.logger.DebugContext(context.Background(), fmt.Sprintf("%s", msg))
+	w.logger.DebugContext(context.Background(), msg)
 }
