@@ -48,4 +48,4 @@ Auditing uses:
 Integrity control of running containers can detect threats such as launching command-line shells inside containers or pods,
 discovering containers running in privileged mode, mounting insecure paths into containers, or attempts to read sensitive data.
 
-For more details on configuring runtime audit, refer to [Runtime audit](../../admin/configuration/security/events/runtime-audit.html).
+For more details on configuring runtime audit, refer to ["Runtime audit"](../../admin/configuration/security/events/runtime-audit.html).

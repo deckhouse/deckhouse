@@ -1,7 +1,7 @@
 ---
 title: Рантайм-аудит
 permalink: ru/admin/configuration/security/events/runtime-audit.html
-description: "Настройка рантайм-аудита в Deckhouse Kubernetes Platform. Мониторинг runtime безопасности, обнаружение угроз на основе событий ядра Linux и аудита Kubernetes API."
+description: "Настройка рантайм-аудита в Deckhouse Kubernetes Platform. Мониторинг рантайма, обнаружение угроз на основе событий ядра Linux и аудита Kubernetes API."
 lang: ru
 ---
 
@@ -24,7 +24,7 @@ DKP использует два основных источника событи
 - события ядра Linux — с помощью eBPF-драйвера для [системы обнаружения угроз Falco](https://falco.org/);
 - события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) и вебхук-интерфейс.
 
-Подробности об архитектуре рантайм-аудита можно найти [в разделе Архитектура](../../../../architecture/security/runtime-audit.html).
+Подробности об архитектуре рантайм-аудита можно найти [в разделе «Архитектура рантайм-аудита»](../../../../architecture/security/runtime-audit.html).
 
 ## Минимальные требования
 
@@ -52,10 +52,12 @@ DKP использует два основных источника событи
 На некоторых системах могут не работать пробы eBPF.
 {% endalert %}
 
-## Как включить рантайм-аудит
+## Включение рантайм-аудита
+
+Чтобы включить рантайм-аудит, выполните следующие шаги:
 
 1. Убедитесь, что узлы соответствуют [минимальным требованиям](#минимальные-требования).
-1. Включите аудит в Deckhouse, используя следующую конфигурацию:
+1. Включите модуль `runtime-audit-engine`, используя следующую конфигурацию:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -90,23 +92,23 @@ DKP использует два основных источника событи
    apiVersion: v1
    kind: Config
    clusters:
-   - name: webhook
-     cluster:
-       certificate-authority-data: BASE64_CA
-       server: "https://127.0.0.1:9765/k8s-audit"
+     - name: webhook
+       cluster:
+         certificate-authority-data: BASE64_CA
+         server: "https://127.0.0.1:9765/k8s-audit"
    users:
-   - name: webhook
+     - name: webhook
    contexts:
-   - context:
-      cluster: webhook
-      user: webhook
-     name: webhook
+     - context:
+         cluster: webhook
+         user: webhook
+       name: webhook
    current-context: webhook
    ```
 
 1. Укажите путь к созданному файлу конфигурации с помощью флага `--audit-webhook-config-file` в манифесте `kube-apiserver`.
 1. (**Опционально**) Чтобы собирать события аудита API Kubernetes не только из системных,
-   но и пользовательских пространств имён,
+   но и пользовательских неймспейсов,
    настройте [политики аудита](./kubernetes-api-audit.html#настройка-собственной-политики-аудита).
 
 ## Работа с правилами аудита
@@ -121,11 +123,11 @@ DKP использует два основных источника событи
     (`fstec`, в формате [кастомного ресурса FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules));
 
   Чтобы настроить список встроенных правил,
-  используйте [параметр `settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) модуля [`runtime-audit-engine`](/modules/runtime-audit-engine/).
+  используйте [параметр `settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) модуля `runtime-audit-engine`.
 
 - **пользовательские правила**, которые задаются через [кастомный ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
-Подробности о работе правил рантайм-аудита можно найти [в разделе Архитектура](../../../../architecture/security/runtime-audit.html).
+Подробности о работе правил рантайм-аудита можно найти [в разделе «Архитектура рантайм-аудита»](../../../../architecture/security/runtime-audit.html).
 
 ### Добавление пользовательского правила
 
@@ -142,19 +144,19 @@ metadata:
   name: ownership-permissions
 spec:
   rules:
-  - macro:
-      name: spawned_process
-      condition: (evt.type in (execve, execveat) and evt.dir=<)
-  - rule:
-      name: Detect Ownership Change
-      desc: detect file permission/ownership change
-      condition: >
-        spawned_process and proc.name in (chmod, chown) and proc.args contains "/tmp/"
-      output: >
-        The file or directory below has had its permissions or ownership changed (user=%user.name
-        command=%proc.cmdline file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline gparent=%proc.aname[2])
-      priority: Warning
-      tags: [filesystem]
+    - macro:
+        name: spawned_process
+        condition: (evt.type in (execve, execveat) and evt.dir=<)
+    - rule:
+        name: Detect Ownership Change
+        desc: detect file permission/ownership change
+        condition: >
+          spawned_process and proc.name in (chmod, chown) and proc.args contains "/tmp/"
+        output: >
+          The file or directory below has had its permissions or ownership changed (user=%user.name
+          command=%proc.cmdline file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline gparent=%proc.aname[2])
+        priority: Warning
+        tags: [filesystem]
 ```
 
 Дополнительные примеры правил можно найти на следующих ресурсах:
@@ -182,14 +184,14 @@ go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
   ```yaml
   # /path/to/falco/rule_example.yaml
   - macro: spawned_process
-    condition: (evt.type in (execve, execveat) and evt.dir=<)
+      condition: (evt.type in (execve, execveat) and evt.dir=<)
 
   - rule: Linux Cgroup Container Escape Vulnerability (CVE-2022-0492)
-    desc: "This rule detects an attempt to exploit a container escape vulnerability in the Linux Kernel."
-    condition: container.id != "" and proc.name = "unshare" and spawned_process and evt.args contains "mount" and evt.args contains "-o rdma" and evt.args contains "/release_agent"
-    output: "Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-0492) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)"
-    priority: CRITICAL
-    tags: [process, mitre_privilege_escalation]
+      desc: "This rule detects an attempt to exploit a container escape vulnerability in the Linux Kernel."
+      condition: container.id != "" and proc.name = "unshare" and spawned_process and evt.args contains "mount" and evt.args contains "-o rdma" and evt.args contains "/release_agent"
+      output: "Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-0492) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)"
+      priority: CRITICAL
+      tags: [process, mitre_privilege_escalation]
   ```
 
 - Ресурс с правилом после конвертации:
@@ -273,17 +275,17 @@ metadata:
   name: falco-critical-alerts
 spec:
   groups:
-  - name: falco-critical-alerts
-    rules:
-    - alert: FalcoCriticalAlertsAreFiring
-      for: 1m
-      annotations:
-        description: |
-          There is a suspicious activity on a node {{ $labels.node }}.
-          Check your events journal for more details.
-        summary: Falco detected a critical security incident.
-      expr: |
-        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
+    - name: falco-critical-alerts
+      rules:
+        - alert: FalcoCriticalAlertsAreFiring
+          for: 1m
+          annotations:
+            description: |
+              There is a suspicious activity on a node {{ $labels.node }}.
+              Check your events journal for more details.
+            summary: Falco detected a critical security incident.
+          expr: |
+            sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}

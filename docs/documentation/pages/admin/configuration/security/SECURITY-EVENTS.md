@@ -9,51 +9,48 @@ normalization, and delivery of security events extracted from logs of applicatio
 and Kubernetes infrastructure components.
 
 A security event is a structured record of an action or fact that is significant from an information security perspective.
-DKP allows you to:
 
-- Collect security events from various sources (pod logs, node files, Kubernetes API audit);
-- Normalize events to a unified format with a mandatory minimum set of attributes;
-- Enrich events with contextual data;
-- Filter events by sources and severity level;
-- Deliver events to storage and analytics systems (Loki, Elasticsearch, Kafka, Splunk, Vector, etc.).
+DKP lets you:
 
-## Module responsible for security events
+- Collect security events from various sources (pod logs, node files, Kubernetes API audit).
+- Bring events to a unified format with a mandatory minimum set of attributes.
+- Enrich events with contextual data.
+- Filter events by sources and severity level.
+- Deliver events to storage and analytics systems (Loki, Elasticsearch, Kafka, Splunk, Vector, and others).
 
 The [`security-events-manager`](/modules/security-events-manager/) module is responsible for collecting, processing, and delivering security events.
-This module uses the auxiliary [`log-shipper`](/modules/log-shipper/) module for log collection.
+The auxiliary [`log-shipper`](/modules/log-shipper/) module is used for log collection.
 
 ## Dependencies and requirements
 
 The `security-events-manager` module requires the following DKP modules:
 
-- [`log-shipper`](/modules/log-shipper/) — collects logs from pod sources and node files, performs preliminary record selection;
-- [`loki`](/modules/loki/) — provides in-cluster storage for security events (used by default as a destination).
+- [`log-shipper`](/modules/log-shipper/): Collects logs from pod sources and node files, performs preliminary record selection.
+- [`loki`](/modules/loki/): Provides in-cluster storage for security events (used by default as a destination).
 
-{% alert level="warning" %}
-The `security-events-manager` module is in the `Experimental` stage and may change in future releases.
-{% endalert %}
-
-For details about the security events architecture, refer to [Architecture](../../../../architecture/security/security-events.html).
+For details about the security events architecture, refer to ["Security events architecture"](../../../../architecture/security/security-events.html).
 
 ## Data sources for security events
 
 The `security-events-manager` module collects data from two types of sources:
 
-- **Container sources** — application logs in Kubernetes pods. Collection is performed via the `log-shipper` module, which selects records by pod labels and namespaces.
-- **Cluster sources** — node files and system service logs not bound to a specific namespace. For example:
-  - `/var/log/kube-audit/audit.log` — Kubernetes API audit logs;
-  - `/var/log/auth.log` — node system authentication events.
+- **Container sources**: Application logs in Kubernetes pods. Collection is performed via the `log-shipper` module, which selects records by pod labels and namespaces.
+- **Cluster sources**: Node files and system service logs not bound to a specific namespace. For example:
+  - `/var/log/kube-audit/audit.log`: Kubernetes API audit log.
+  - `/var/log/auth.log`: Node system authentication event log.
 
-A two-tier collection scheme is used:
+Collection is made in two steps:
 
 1. The `log-shipper` module performs preliminary selection of log records using simple comparison operators (`In`, `NotIn`, `Regex`, `NotRegex`, `Exists`, `DoesNotExist`) and forwards them to the `security-events-manager` gateway.
-1. The `security-events-manager` gateway performs field recognition (parsing), processing, transformation to a unified model, and delivery.
+1. The `security-events-manager` gateway parses the records, transforms them to a unified model, and delivers to a configured destination.
 
-Because log parsing is resource-intensive, it is performed only for records pre-selected as potentially containing security events.
+Since log parsing is resource-intensive, it is performed only for records pre-selected as potentially containing security events.
 
 ## Enabling security events
 
-1. Enable the required dependency modules if they are not already enabled:
+To enable security events, follow these steps:
+
+1. Enable the required modules if they are not yet enabled:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -82,23 +79,23 @@ Because log parsing is resource-intensive, it is performed only for records pre-
      enabled: true
    ```
 
-All available module parameters are listed in the [`security-events-manager`](/modules/security-events-manager/configuration.html) module documentation.
+All available `security-events-manager` parameters are listed in the [module documentation](/modules/security-events-manager/configuration.html).
 
-## Configuring collection sources
+## Configuring event sources
 
 Log collection and processing are configured through the following custom resources:
 
-- [`PodSecurityEventShipper`](/modules/security-events-manager/cr.html#podsecurityeventshipper) — for container sources (pod logs in a specific namespace);
-- [`ClusterSecurityEventShipper`](/modules/security-events-manager/cr.html#clustersecurityeventshipper) — for cluster sources (node files, system services).
+- [PodSecurityEventShipper](/modules/security-events-manager/cr.html#podsecurityeventshipper): For container sources (pod logs in a specific namespace).
+- [ClusterSecurityEventShipper](/modules/security-events-manager/cr.html#clustersecurityeventshipper): For cluster sources (node files, system service logs).
 
 These resources configure:
 
-1. Log source (`source` and `input` fields);
-1. Preliminary record selection rules (`produces` field);
-1. Parsing rules (`parser` field or `parserRef` with a reference to `SecurityEventLoggingTransformationRules` / `ClusterSecurityEventLoggingTransformationRules`);
-1. Transformation and enrichment rules (`transform` and `enrich` fields).
+- Log source (`source` and `input` fields)
+- Preliminary record selection rules (`produces` field)
+- Parsing rules (`parser` or `parserRef` field with a reference to SecurityEventLoggingTransformationRules or ClusterSecurityEventLoggingTransformationRules)
+- Transformation and enrichment rules (`transform` and `enrich` fields)
 
-Example of a container source configuration:
+PodSecurityEventShipper configuration example defining a container source:
 
 ```yaml
 apiVersion: security.deckhouse.io/v1alpha1
@@ -123,7 +120,7 @@ spec:
             - ".*K8s Pod Created.*"
 ```
 
-Example of a cluster source configuration:
+ClusterSecurityEventShipper configuration example defining a cluster source:
 
 ```yaml
 apiVersion: security.deckhouse.io/v1alpha1
@@ -145,22 +142,22 @@ spec:
             - ".*\"code\":401.*"
 ```
 
-## Configuring security event delivery
+## Configuring event delivery
 
-After events are formed, you must define where they should be delivered.
+After events are formed, you should define the destinations they will be delivered to.
 For this, you need to:
 
 1. Configure security event destinations.
 1. Configure event delivery rules to destinations.
 
-### Destination configuration
+### Configuring a destination
 
-Destinations are configured via the [`ClusterSecurityEventDestination`](/modules/security-events-manager/cr.html#clustersecurityeventdestination) resource.
+Destinations are configured via the [ClusterSecurityEventDestination](/modules/security-events-manager/cr.html#clustersecurityeventdestination) resource.
 
-Destination types are aligned with the `log-shipper` ecosystem (Loki, Elasticsearch, Kafka, Splunk, Vector, File, etc.).
-For in-cluster security event storage, automatic `Loki` destination configuration is available when the corresponding module option is enabled.
+The `security-events-manager` module supports all destination types available in the `log-shipper` ecosystem (Loki, Elasticsearch, Kafka, Splunk, Vector, File, and others).
+For in-cluster security event storage, automatic Loki destination configuration is available when the corresponding module option is enabled.
 
-Example:
+ClusterSecurityEventDestination configuration example defining the Loki destination:
 
 ```yaml
 apiVersion: security.deckhouse.io/v1alpha1
@@ -180,20 +177,20 @@ spec:
       ca: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t...
 ```
 
-### Delivery rule configuration
+### Configuring event delivery rules
 
-When configuring delivery rules, you need to define:
+When configuring security event delivery rules, you need to define:
 
-- Which source events are sent;
-- Minimum severity level for sending;
-- Target destinations.
+- Sources that will be sending the events
+- Minimum severity level for sending
+- Target destinations
 
-For this, use the [`ClusterSecurityEventConfig`](/modules/security-events-manager/cr.html#clustersecurityeventconfig) resource.
-The resource defines sources (exact names or masks), minimum `severity`, and an array of destinations
-(resources of type [`ClusterSecurityEventDestination`](/modules/security-events-manager/cr.html#clustersecurityeventdestination))
-that receive selected events.
+For this, use the [ClusterSecurityEventConfig](/modules/security-events-manager/cr.html#clustersecurityeventconfig) resource.
+It defines sources (in the format of exact names or masks), minimum severity level, and an array of destinations
+(resources of type [ClusterSecurityEventDestination](/modules/security-events-manager/cr.html#clustersecurityeventdestination))
+that will receive the selected events.
 
-Example:
+ClusterSecurityEventConfig configuration example for sending events from the `kube-audit`, `runtime-audit-engine` and `user-authn` sources to the `cluster-loki` destination:
 
 ```yaml
 apiVersion: security.deckhouse.io/v1alpha1
@@ -206,7 +203,7 @@ spec:
     - clusterSecurityEventShipper/kube-audit/kube-audit
     - podSecurityEventShipper/d8-runtime-audit-engine/runtime-audit-engine/falco
     - podSecurityEventShipper/d8-user-authn/user-authn/dex
-  # OR
+  # Alternatively, use masks.
   # enabledSourcesMasks:
   #   - clusterSecurityEventShipper/kube-audit/*
   #   - podSecurityEventShipper/*
@@ -217,47 +214,47 @@ spec:
 
 ## Default module settings
 
-If module settings are not explicitly specified, the following objects are created in the cluster:
+If the module settings are not explicitly specified, the following objects are created in the cluster:
 
-1. `ClusterSecurityEventConfig` — configures security event delivery to destinations. The following settings are used by default:
+- [ClusterSecurityEventConfig](/modules/security-events-manager/cr.html#clustersecurityeventconfig): Configures security event delivery to destinations. By default, an object with the following configuration is created:
 
-    ```yaml
-    apiVersion: security.deckhouse.io/v1alpha1
-    kind: ClusterSecurityEventConfig
-    metadata:
-      name: default
-    spec:
-      defaultSeverityThreshold: Medium
-      destinations:
-        - cluster-loki
-      enabledSourcesMasks:
-        - podSecurityEventShipper/*
-        - clusterSecurityEventShipper/*
-    ```
+  ```yaml
+  apiVersion: security.deckhouse.io/v1alpha1
+  kind: ClusterSecurityEventConfig
+  metadata:
+    name: default
+  spec:
+    defaultSeverityThreshold: Medium
+    destinations:
+      - cluster-loki
+    enabledSourcesMasks:
+      - podSecurityEventShipper/*
+      - clusterSecurityEventShipper/*
+  ```
 
-    Configuration of these parameters is controlled by module setting [`securityEventConfig`](/modules/security-events-manager/configuration.html#securityeventconfig).
+  This object configuration is controlled by the module parameter [`securityEventConfig`](/modules/security-events-manager/configuration.html#parameters-securityeventconfig).
 
-1. `ClusterSecurityEventDestination` — configures security event storage. By default, an object is generated that allows sending security events to the in-cluster `loki` service:
+- [ClusterSecurityEventDestination](/modules/security-events-manager/cr.html#clustersecurityeventdestination): Configures security event destination. By default, the following object is generated that allows sending events to the in-cluster Loki service:
 
-    ```yaml
-    apiVersion: security.deckhouse.io/v1alpha1
-    kind: ClusterSecurityEventDestination
-    metadata:
-      name: cluster-loki
-    spec:
-      type: Loki
-      loki:
-        auth:
-          strategy: Bearer
-          token: <token> # Filled automatically
-        endpoint: https://loki.d8-monitoring:3100
-    ```
+  ```yaml
+  apiVersion: security.deckhouse.io/v1alpha1
+  kind: ClusterSecurityEventDestination
+  metadata:
+    name: cluster-loki
+  spec:
+    type: Loki
+    loki:
+      auth:
+        strategy: Bearer
+        token: <token> # Filled automatically.
+      endpoint: https://loki.d8-monitoring:3100
+  ```
 
-    You can disable generation of the default destination via the dedicated parameter [`clusterSecurityEventDestination.clusterLoki`](/modules/security-events-manager/configuration.html#clustersecurityeventdestination).
+  You can disable generation of the default destination via the dedicated parameter [`clusterSecurityEventDestination.clusterLoki`](/modules/security-events-manager/configuration.html#parameters-clustersecurityeventdestination-clusterloki).
 
-## Implemented security events
+## Supported security events
 
-The module ships with a built-in set of security event detection rules
+The `security-events-manager` module ships with a built-in set of security event detection rules
 covering authentication, configuration, RBAC, runtime, and other categories.
 For the up-to-date list of implemented security events, their codes, severity levels, and descriptions,
-refer to the [`security-events-manager`](/modules/security-events-manager/security_events.html) module documentation.
+refer to the [module documentation](/modules/security-events-manager/security_events.html).

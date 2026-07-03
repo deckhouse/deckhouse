@@ -1,7 +1,7 @@
 ---
 title: Runtime audit
 permalink: en/admin/configuration/security/events/runtime-audit.html
-description: "Configure runtime audit in Deckhouse Kubernetes Platform. Runtime monitoring, threat detection based on Linux kernel events and Kubernetes API audit."
+description: "Configuring runtime audit in Deckhouse Kubernetes Platform. Runtime monitoring, threat detection based on Linux kernel events and Kubernetes API audit."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides built-in tools for detecting security threats
@@ -23,7 +23,7 @@ DKP uses two main sources of events:
 - Linux kernel events — via the eBPF driver for the [Falco](https://falco.org/) threat detection system.
 - [Kubernetes API audit](./kubernetes-api-audit.html) events — via integration with [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) and a webhook interface.
 
-For details about the runtime audit architecture, refer to [Architecture](../../../../architecture/security/runtime-audit.html).
+For details about the runtime audit architecture, refer to ["Runtime audit architecture"](../../../../architecture/security/runtime-audit.html).
 
 ## Minimum requirements
 
@@ -52,8 +52,10 @@ On some systems, eBPF probes may not work.
 
 ## Enabling runtime audit
 
+To enable the runtime audit, follow these steps:
+
 1. Make sure the nodes meet the [minimum requirements](#minimum-requirements).
-1. Enable auditing in Deckhouse using the following configuration:
+1. Enable the `runtime-audit-engine` module using the following configuration:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -88,17 +90,17 @@ To configure the webhook for receiving audit events from `kube-apiserver`:
    apiVersion: v1
    kind: Config
    clusters:
-   - name: webhook
-     cluster:
-       certificate-authority-data: BASE64_CA
-       server: "https://127.0.0.1:9765/k8s-audit"
+     - name: webhook
+       cluster:
+         certificate-authority-data: BASE64_CA
+         server: "https://127.0.0.1:9765/k8s-audit"
    users:
-   - name: webhook
+     - name: webhook
    contexts:
-   - context:
-      cluster: webhook
-      user: webhook
-     name: webhook
+     - context:
+         cluster: webhook
+         user: webhook
+       name: webhook
    current-context: webhook
    ```
 
@@ -119,7 +121,7 @@ DKP includes:
 
 - **Custom rules**, defined via the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
-For more information on how runtime audit rules work, refer to [Architecture](../../../../architecture/security/runtime-audit.html).
+For more information on how runtime audit rules work, refer to ["Runtime audit architecture"](../../../../architecture/security/runtime-audit.html).
 
 ### Adding a custom rule
 
@@ -136,19 +138,19 @@ metadata:
   name: ownership-permissions
 spec:
   rules:
-  - macro:
-      name: spawned_process
-      condition: (evt.type in (execve, execveat) and evt.dir=<)
-  - rule:
-      name: Detect Ownership Change
-      desc: detect file permission/ownership change
-      condition: >
-        spawned_process and proc.name in (chmod, chown) and proc.args contains "/tmp/"
-      output: >
-        The file or directory below has had its permissions or ownership changed (user=%user.name
-        command=%proc.cmdline file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline gparent=%proc.aname[2])
-      priority: Warning
-      tags: [filesystem]
+    - macro:
+        name: spawned_process
+        condition: (evt.type in (execve, execveat) and evt.dir=<)
+    - rule:
+        name: Detect Ownership Change
+        desc: detect file permission/ownership change
+        condition: >
+          spawned_process and proc.name in (chmod, chown) and proc.args contains "/tmp/"
+        output: >
+          The file or directory below has had its permissions or ownership changed (user=%user.name
+          command=%proc.cmdline file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline gparent=%proc.aname[2])
+        priority: Warning
+        tags: [filesystem]
 ```
 
 For more rule examples, see:
@@ -177,14 +179,14 @@ Example conversion result:
   ```yaml
   # /path/to/falco/rule_example.yaml
   - macro: spawned_process
-    condition: (evt.type in (execve, execveat) and evt.dir=<)
+      condition: (evt.type in (execve, execveat) and evt.dir=<)
 
   - rule: Linux Cgroup Container Escape Vulnerability (CVE-2022-0492)
-    desc: "This rule detects an attempt to exploit a container escape vulnerability in the Linux Kernel."
-    condition: container.id != "" and proc.name = "unshare" and spawned_process and evt.args contains "mount" and evt.args contains "-o rdma" and evt.args contains "/release_agent"
-    output: "Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-0492) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)"
-    priority: CRITICAL
-    tags: [process, mitre_privilege_escalation]
+      desc: "This rule detects an attempt to exploit a container escape vulnerability in the Linux Kernel."
+      condition: container.id != "" and proc.name = "unshare" and spawned_process and evt.args contains "mount" and evt.args contains "-o rdma" and evt.args contains "/release_agent"
+      output: "Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-0492) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)"
+      priority: CRITICAL
+      tags: [process, mitre_privilege_escalation]
   ```
 
 - Converted resource:
@@ -269,17 +271,17 @@ metadata:
   name: falco-critical-alerts
 spec:
   groups:
-  - name: falco-critical-alerts
-    rules:
-    - alert: FalcoCriticalAlertsAreFiring
-      for: 1m
-      annotations:
-        description: |
-          There is a suspicious activity on a node {{ $labels.node }}.
-          Check your events journal for more details.
-        summary: Falco detected a critical security incident.
-      expr: |
-        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
+    - name: falco-critical-alerts
+      rules:
+        - alert: FalcoCriticalAlertsAreFiring
+          for: 1m
+          annotations:
+            description: |
+              There is a suspicious activity on a node {{ $labels.node }}.
+              Check your events journal for more details.
+            summary: Falco detected a critical security incident.
+          expr: |
+            sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}

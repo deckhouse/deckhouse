@@ -55,10 +55,3 @@ and stores them in the `/etc/falco/rules.d/` directory inside the Pod.
 When a new rule is added, Falco automatically reloads the configuration.
 
 ![Shell-operator handling Falco rules](../../images/runtime-audit-engine/falco_shop.svg)
-
-## Relation to the security-events-manager module
-
-The runtime audit (`runtime-audit-engine`) is one of the security event sources
-for the [`security-events-manager`](security-events.html) module.
-Events detected by Falco agents can be collected, normalized, and delivered
-to storage and analytics systems via the unified security events processing pipeline.
