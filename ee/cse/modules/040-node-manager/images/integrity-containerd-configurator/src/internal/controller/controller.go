@@ -13,7 +13,6 @@ import (
 	"slices"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,7 +36,7 @@ type Reconciler struct {
 // +kubebuilder:rbac:groups=deckhouse.io,resources=containerdintegritypolicies/status,verbs=get
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	logger := log.Default().With("reconcile")
+	logger := log.Default().With("controller", "containerdintegritypolicy", "name", req.Name)
 
 	policyList := &deckhousev1alpha1.ContainerdIntegrityPolicyList{}
 	if err := r.List(ctx, policyList); err != nil {
