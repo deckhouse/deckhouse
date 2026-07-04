@@ -1213,22 +1213,73 @@ alerts:
         Excessive Deckhouse restarts detected.
       severity: "9"
       markupFormat: markdown
+    - name: D8DeckhouseQueueIsHungCritical
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The critical module queue head has remained unchanged for more than 10 minutes.
+
+        Affected queue:
+
+        - Module: `{{ $labels.module }}`
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+      summary: |
+        Critical module queue {{ $labels.module }} (type {{ $labels.task_type }}, hook {{ $labels.hook }}) is hung.
+      severity: "4"
+      markupFormat: markdown
     - name: D8DeckhouseQueueIsHung
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse cannot finish processing of the `{{ $labels.queue }}` queue, which currently has {{ $value }} pending task(s).
+        The module queue head has remained unchanged for more than 10 minutes.
 
-        To investigate the issue, check the logs by running the following command:
+        Affected queue:
+
+        - Module: `{{ $labels.module }}`
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
 
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
-        The {{ $labels.queue }} Deckhouse queue is stuck with {{ $value }} pending task(s).
-      severity: "7"
+        Module queue {{ $labels.module }} (type {{ $labels.task_type }}, hook {{ $labels.hook }}) is hung.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8DeckhouseQueueIsHungGlobal
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The global/parallel task head has remained unchanged for more than 10 minutes.
+
+        Affected task:
+
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+      summary: |
+        Global/Parallel task {{ $labels.task_type }} (hook {{ $labels.hook }}) is hung.
+      severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseSelfTargetAbsent
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml

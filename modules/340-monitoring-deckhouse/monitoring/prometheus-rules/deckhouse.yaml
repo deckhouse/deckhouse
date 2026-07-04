@@ -165,11 +165,21 @@
 
         This alert often indicates that the Deckhouse Pod is experiencing connectivity issues with the Internet.
 
-  - alert: D8DeckhouseQueueIsHung
-    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])) != 0
+  - record: d8:deckhouse_queue_is_hung:with_head
+    expr: |
+      (max by (pod, instance, queue) (
+        min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])
+      ) != 0)
+      * on(pod, instance, queue) group_left(module, task_type, hook)
+        max by (pod, instance, queue, module, task_type, hook) (deckhouse_tasks_queue_head_info)
+
+  - alert: D8DeckhouseQueueIsHungCritical
+    expr: |
+      d8:deckhouse_queue_is_hung:with_head
+      * on(module) group_left() max by (module) (deckhouse_mm_module_info{critical="true", module!=""})
     for: 10m
     labels:
-      severity_level: "7"
+      severity_level: "4"
       tier: cluster
       d8_module: deckhouse
       d8_component: deckhouse
@@ -178,12 +188,80 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_labels_as_annotations: "instance,pod"
-      summary: The `{{ $labels.queue }}` Deckhouse queue is stuck with {{ $value }} pending task(s).
+      plk_labels_as_annotations: "module,task_type,hook"
+      summary: Critical module queue `{{ $labels.module }}` (type `{{ $labels.task_type }}`, hook `{{ $labels.hook }}`) is hung.
       description: |
-        Deckhouse cannot finish processing of the `{{ $labels.queue }}` queue, which currently has {{ $value }} pending task(s).
+        The critical module queue head has remained unchanged for more than 10 minutes.
 
-        To investigate the issue, check the logs by running the following command:
+        Affected queue:
+
+        - Module: `{{ $labels.module }}`
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+
+  - alert: D8DeckhouseQueueIsHung
+    expr: |
+      d8:deckhouse_queue_is_hung:with_head
+      * on(module) group_left() max by (module) (deckhouse_mm_module_info{critical="false", module!=""})
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "module,task_type,hook"
+      summary: Module queue `{{ $labels.module }}` (type `{{ $labels.task_type }}`, hook `{{ $labels.hook }}`) is hung.
+      description: |
+        The module queue head has remained unchanged for more than 10 minutes.
+
+        Affected queue:
+
+        - Module: `{{ $labels.module }}`
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+
+  - alert: D8DeckhouseQueueIsHungGlobal
+    expr: |
+      d8:deckhouse_queue_is_hung:with_head{module=""}
+    for: 10m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "module,task_type,hook"
+      summary: Global/Parallel task `{{ $labels.task_type }}` (hook `{{ $labels.hook }}`) is hung.
+      description: |
+        The global/parallel task head has remained unchanged for more than 10 minutes.
+
+        Affected task:
+
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
 
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
