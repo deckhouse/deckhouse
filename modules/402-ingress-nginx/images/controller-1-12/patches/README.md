@@ -138,10 +138,6 @@ This patch fixes rewrite-target CVE-2026-3288 in Ingress-NGINX
 
 https://github.com/kubernetes/kubernetes/issues/137560
 
-### 025-stable-config-hash-metric-02.patch
-
-This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value
-
 ### 026-fix-cve-2026-4342.patch
 
 This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.
@@ -160,3 +156,10 @@ This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redir
 This patch fixes CVE-2025-15566
 
 https://github.com/kubernetes/kubernetes/issues/136789
+
+### 030-fix-service-informer-panic.patch
+This patch fixes a panic when the service informer receives a service tombstone from the kube-api.
+
+### 031-fix-config-hash-drift.patch
+
+This patch updates the approach of calculating config hash so that it doesn't get stale.

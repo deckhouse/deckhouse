@@ -1,0 +1,463 @@
+diff --git a/internal/ingress/controller/config_hash_template.go b/internal/ingress/controller/config_hash_template.go
+new file mode 100644
+index 000000000..36e2acfbd
+--- /dev/null
++++ b/internal/ingress/controller/config_hash_template.go
+@@ -0,0 +1,129 @@
++/*
++Copyright 2025 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package controller
++
++import (
++	"fmt"
++
++	"github.com/cespare/xxhash/v2"
++
++	ngx_config "k8s.io/ingress-nginx/internal/ingress/controller/config"
++	"k8s.io/ingress-nginx/pkg/apis/ingress"
++)
++
++// hashTemplateConfig renders nginx.conf from a prepared template config with
++// checksum and PEM sha comment fields cleared, then hashes the result.
++func (n *NGINXController) hashTemplateConfig(tc *ngx_config.TemplateConfig) (uint64, error) {
++	hashTC := copyTemplateConfigForHash(tc)
++	content, err := n.t.Write(hashTC)
++	if err != nil {
++		return 0, err
++	}
++
++	return xxhash.Sum64(content), nil
++}
++
++// hashRenderedTemplateConfiguration renders nginx.conf with checksum, PEM sha
++// comments, and per-node AUTO values normalized, then hashes the result.
++func (n *NGINXController) hashRenderedTemplateConfiguration(ingressCfg ingress.Configuration) (uint64, error) {
++	cfg := n.store.GetBackendConfiguration()
++	cfg.Resolver = n.resolver
++
++	tc, err := n.buildTemplateConfig(cfg, ingressCfg)
++	if err != nil {
++		return 0, err
++	}
++
++	return n.hashTemplateConfig(tc)
++}
++
++// copyTemplateConfigForHash returns a copy of the template config suitable for
++// hashing: checksum and PEM sha comments cleared, and per-node/per-pod AUTO
++// values zeroed so pods sharing the same ingress config produce the same hash.
++func copyTemplateConfigForHash(tc *ngx_config.TemplateConfig) *ngx_config.TemplateConfig {
++	if tc == nil {
++		return nil
++	}
++
++	out := *tc
++	normalizeTemplateConfigForHash(&out)
++
++	if tc.Cfg.DefaultSSLCertificate != nil {
++		cert := *tc.Cfg.DefaultSSLCertificate
++		cert.PemSHA = ""
++		out.Cfg.DefaultSSLCertificate = &cert
++	}
++
++	out.Servers = copyServersForTemplateHash(tc.Servers)
++
++	return &out
++}
++
++// normalizeTemplateConfigForHash blanks values that are resolved per node or per
++// pod when left at AUTO/DEFAULT in the shared configmap or deployment.
++func normalizeTemplateConfigForHash(tc *ngx_config.TemplateConfig) {
++	tc.Cfg.Checksum = ""
++	tc.Cfg.Resolver = nil
++	tc.Cfg.MaxWorkerOpenFiles = 0
++	tc.Cfg.MaxWorkerConnections = 0
++	tc.Cfg.WorkerProcesses = ""
++	tc.Cfg.WorkerCPUAffinity = ""
++	tc.Cfg.DisableIpv6DNS = false
++	tc.Cfg.DisableIpv6 = false
++
++	tc.BacklogSize = 0
++	tc.IsIPV6Enabled = false
++}
++
++func copyServersForTemplateHash(servers []*ingress.Server) []*ingress.Server {
++	if len(servers) == 0 {
++		return nil
++	}
++
++	out := make([]*ingress.Server, len(servers))
++	for i, s := range servers {
++		if s == nil {
++			continue
++		}
++
++		srv := *s
++		srv.CertificateAuth.CASHA = ""
++		srv.CertificateAuth.CRLSHA = ""
++		srv.ProxySSL.CASHA = ""
++
++		if len(s.Locations) > 0 {
++			locs := make([]*ingress.Location, len(s.Locations))
++			for j, loc := range s.Locations {
++				if loc == nil {
++					continue
++				}
++				l := *loc
++				l.ProxySSL.CASHA = ""
++				locs[j] = &l
++			}
++			srv.Locations = locs
++		}
++
++		out[i] = &srv
++	}
++
++	return out
++}
++
++func checksumFromTemplateHash(hash uint64) string {
++	return fmt.Sprintf("%v", hash)
++}
+diff --git a/internal/ingress/controller/config_hash_template_test.go b/internal/ingress/controller/config_hash_template_test.go
+new file mode 100644
+index 000000000..5d1bd6b70
+--- /dev/null
++++ b/internal/ingress/controller/config_hash_template_test.go
+@@ -0,0 +1,118 @@
++/*
++Copyright 2025 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package controller
++
++import (
++	"net"
++	"testing"
++
++	ngx_config "k8s.io/ingress-nginx/internal/ingress/controller/config"
++	"k8s.io/ingress-nginx/internal/ingress/defaults"
++	"k8s.io/ingress-nginx/internal/ingress/annotations/authtls"
++	"k8s.io/ingress-nginx/internal/ingress/annotations/proxyssl"
++	"k8s.io/ingress-nginx/internal/ingress/resolver"
++	"k8s.io/ingress-nginx/pkg/apis/ingress"
++)
++
++func TestCopyTemplateConfigForHashClearsChecksumAndPEMFields(t *testing.T) {
++	tc := &ngx_config.TemplateConfig{
++		BacklogSize:   4096,
++		IsIPV6Enabled: true,
++		Cfg: ngx_config.Configuration{
++			Backend: defaults.Backend{
++				Resolver: []net.IP{net.ParseIP("10.0.0.10")},
++			},
++			Checksum:             "12345",
++			MaxWorkerOpenFiles:   65536,
++			MaxWorkerConnections: 49152,
++			WorkerProcesses:      "8",
++			WorkerCPUAffinity:    "auto",
++			DisableIpv6DNS:       true,
++			DisableIpv6:          false,
++			DefaultSSLCertificate: &ingress.SSLCert{
++				PemSHA: "default-pem-sha",
++			},
++		},
++		Servers: []*ingress.Server{
++			{
++				CertificateAuth: authtls.Config{
++					AuthSSLCert: resolver.AuthSSLCert{
++						CASHA:  "ca-sha",
++						CRLSHA: "crl-sha",
++					},
++				},
++				ProxySSL: proxyssl.Config{
++					AuthSSLCert: resolver.AuthSSLCert{
++						CASHA: "proxy-ca-sha",
++					},
++				},
++				Locations: []*ingress.Location{
++					{
++						ProxySSL: proxyssl.Config{
++							AuthSSLCert: resolver.AuthSSLCert{
++								CASHA: "location-proxy-ca-sha",
++							},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	hashTC := copyTemplateConfigForHash(tc)
++
++	if hashTC.Cfg.Checksum != "" {
++		t.Fatalf("expected empty checksum, got %q", hashTC.Cfg.Checksum)
++	}
++	if len(hashTC.Cfg.Resolver) != 0 {
++		t.Fatalf("expected empty resolver, got %v", hashTC.Cfg.Resolver)
++	}
++	if hashTC.Cfg.MaxWorkerOpenFiles != 0 || hashTC.Cfg.MaxWorkerConnections != 0 {
++		t.Fatalf("expected zero worker limits, got open=%d conn=%d", hashTC.Cfg.MaxWorkerOpenFiles, hashTC.Cfg.MaxWorkerConnections)
++	}
++	if hashTC.Cfg.WorkerProcesses != "" || hashTC.Cfg.WorkerCPUAffinity != "" {
++		t.Fatalf("expected empty worker process settings, got processes=%q affinity=%q", hashTC.Cfg.WorkerProcesses, hashTC.Cfg.WorkerCPUAffinity)
++	}
++	if hashTC.Cfg.DisableIpv6DNS || hashTC.Cfg.DisableIpv6 {
++		t.Fatalf("expected ipv6 dns/disable flags cleared for hash pass")
++	}
++	if hashTC.BacklogSize != 0 || hashTC.IsIPV6Enabled {
++		t.Fatalf("expected zero backlog and disabled ipv6 template flag")
++	}
++	if hashTC.Cfg.DefaultSSLCertificate == nil || hashTC.Cfg.DefaultSSLCertificate.PemSHA != "" {
++		t.Fatalf("expected cleared default SSL PemSHA")
++	}
++	if hashTC.Servers[0].CertificateAuth.CASHA != "" || hashTC.Servers[0].CertificateAuth.CRLSHA != "" {
++		t.Fatalf("expected cleared server certificate auth PEM sha fields")
++	}
++	if hashTC.Servers[0].ProxySSL.CASHA != "" {
++		t.Fatalf("expected cleared server proxy SSL PEM sha")
++	}
++	if hashTC.Servers[0].Locations[0].ProxySSL.CASHA != "" {
++		t.Fatalf("expected cleared location proxy SSL PEM sha")
++	}
++
++	if tc.Cfg.Checksum != "12345" {
++		t.Fatalf("copy should not mutate original checksum")
++	}
++	if len(tc.Cfg.Resolver) != 1 || tc.BacklogSize != 4096 || !tc.IsIPV6Enabled {
++		t.Fatalf("copy should not mutate original AUTO fields")
++	}
++	if tc.Cfg.DefaultSSLCertificate.PemSHA != "default-pem-sha" {
++		t.Fatalf("copy should not mutate original default SSL PemSHA")
++	}
++}
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index 94d212e68..75fb13e22 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -23,7 +23,6 @@ import (
+ 	"strings"
+ 	"time"
+ 
+-	"github.com/mitchellh/hashstructure/v2"
+ 	apiv1 "k8s.io/api/core/v1"
+ 	networking "k8s.io/api/networking/v1"
+ 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+@@ -186,14 +185,11 @@ func (n *NGINXController) syncIngress(interface{}) error {
+ 	n.metricCollector.SetSSLExpireTime(servers)
+ 	n.metricCollector.SetSSLInfo(servers)
+ 
+-	hash, err := hashstructure.Hash(pcfg, hashstructure.FormatV1, &hashstructure.HashOptions{
+-		TagName: "json",
+-	})
+-	if err != nil {
+-		klog.Errorf("unexpected error hashing configuration: %v", err)
+-	}
+-
+ 	if n.runningConfig.Equal(pcfg) {
++		hash, err := n.hashRenderedTemplateConfiguration(*pcfg)
++		if err != nil {
++			klog.Errorf("unexpected error hashing rendered configuration: %v", err)
++		}
+ 		if !n.lastConfigSuccess {
+ 			n.metricCollector.ConfigSuccess(hash, true)
+ 			n.lastConfigSuccess = true
+@@ -207,12 +203,10 @@ func (n *NGINXController) syncIngress(interface{}) error {
+ 	if !utilingress.IsDynamicConfigurationEnough(pcfg, n.runningConfig) {
+ 		klog.InfoS("Configuration changes detected, backend reload required")
+ 
+-		pcfg.ConfigurationChecksum = fmt.Sprintf("%v", hash)
+-
+-		err = n.OnUpdate(*pcfg)
++		reloadHash, err := n.OnUpdate(*pcfg)
+ 		if err != nil {
+ 			n.metricCollector.IncReloadErrorCount()
+-			n.metricCollector.ConfigSuccess(hash, false)
++			n.metricCollector.ConfigSuccess(reloadHash, false)
+ 			n.lastConfigSuccess = false
+ 			klog.Errorf("Unexpected failure reloading the backend:\n%v", err)
+ 			n.recorder.Eventf(k8s.IngressPodDetails, apiv1.EventTypeWarning, "RELOAD", fmt.Sprintf("Error reloading NGINX: %v", err))
+@@ -220,7 +214,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
+ 		}
+ 
+ 		klog.InfoS("Backend successfully reloaded")
+-		n.metricCollector.ConfigSuccess(hash, true)
++		n.metricCollector.ConfigSuccess(reloadHash, true)
+ 		n.metricCollector.IncReloadCount()
+ 		n.lastConfigSuccess = true
+ 
+@@ -243,7 +237,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
+ 	}
+ 
+ 	retriesRemaining := retry.Steps
+-	err = wait.ExponentialBackoff(retry, func() (bool, error) {
++	err := wait.ExponentialBackoff(retry, func() (bool, error) {
+ 		err := n.configureDynamically(pcfg)
+ 		if err == nil {
+ 			klog.V(2).Infof("Dynamic reconfiguration succeeded.")
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index 58998ad75..5a258b378 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -457,10 +457,24 @@ func (n *NGINXController) DefaultEndpoint() ingress.Endpoint {
+ 	}
+ }
+ 
+-// generateTemplate returns the nginx configuration file content
++// generateTemplate returns the nginx configuration file content.
+ //
+ //nolint:gocritic // the cfg shouldn't be changed, and shouldn't be mutated by other processes while being rendered.
+ func (n *NGINXController) generateTemplate(cfg ngx_config.Configuration, ingressCfg ingress.Configuration) ([]byte, error) {
++	tc, err := n.buildTemplateConfig(cfg, ingressCfg)
++	if err != nil {
++		return nil, err
++	}
++
++	tc.Cfg.Checksum = ingressCfg.ConfigurationChecksum
++
++	return n.t.Write(tc)
++}
++
++// buildTemplateConfig assembles the data passed to the NGINX configuration template.
++//
++//nolint:gocritic // the cfg shouldn't be changed, and shouldn't be mutated by other processes while being rendered.
++func (n *NGINXController) buildTemplateConfig(cfg ngx_config.Configuration, ingressCfg ingress.Configuration) (*ngx_config.TemplateConfig, error) {
+ 	if n.cfg.EnableSSLPassthrough {
+ 		servers := []*tcpproxy.TCPServer{}
+ 		for _, pb := range ingressCfg.PassthroughBackends {
+@@ -638,9 +652,7 @@ func (n *NGINXController) generateTemplate(cfg ngx_config.Configuration, ingress
+ 		StreamSnippets:           append(ingressCfg.StreamSnippets, cfg.StreamSnippet),
+ 	}
+ 
+-	tc.Cfg.Checksum = ingressCfg.ConfigurationChecksum
+-
+-	return n.t.Write(tc)
++	return tc, nil
+ }
+ 
+ // testTemplate checks if the NGINX configuration inside the byte array is valid
+@@ -678,51 +690,63 @@ Error: %v
+ // OnUpdate is called by the synchronization loop whenever configuration
+ // changes were detected. The received backend Configuration is merged with the
+ // configuration ConfigMap before generating the final configuration file.
+-// Returns nil in case the backend was successfully reloaded.
++// Returns the template-derived configuration hash when the backend was
++// successfully reloaded.
+ //
+ //nolint:gocritic // the cfg shouldn't be changed, and shouldn't be mutated by other processes while being rendered.
+-func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
++func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) (uint64, error) {
+ 	cfg := n.store.GetBackendConfiguration()
+ 	cfg.Resolver = n.resolver
+ 
+ 	workerSerialReloads := cfg.WorkerSerialReloads
+ 	if workerSerialReloads && n.workersReloading {
+-		return errors.New("worker reload already in progress, requeuing reload")
++		return 0, errors.New("worker reload already in progress, requeuing reload")
+ 	}
+ 
+-	content, err := n.generateTemplate(cfg, ingressCfg)
++	tc, err := n.buildTemplateConfig(cfg, ingressCfg)
+ 	if err != nil {
+-		return err
++		return 0, err
++	}
++
++	hash, err := n.hashTemplateConfig(tc)
++	if err != nil {
++		return 0, err
++	}
++	tc.Cfg.Checksum = checksumFromTemplateHash(hash)
++
++	content, err := n.t.Write(tc)
++	if err != nil {
++		return 0, err
+ 	}
+ 
+ 	err = n.createLuaConfig(&cfg)
+ 	if err != nil {
+-		return err
++		return 0, err
+ 	}
+ 	err = createOpentelemetryCfg(&cfg)
+ 	if err != nil {
+-		return err
++		return 0, err
+ 	}
+ 
+ 	err = n.testTemplate(content)
+ 	if err != nil {
+-		return err
++		return 0, err
+ 	}
+ 
+ 	if klog.V(2).Enabled() {
+ 		src, err := os.ReadFile(cfgPath)
+ 		if err != nil {
+-			return err
++			return 0, err
+ 		}
+ 		if !bytes.Equal(src, content) {
+ 			tmpfile, err := os.CreateTemp("", "new-nginx-cfg")
+ 			if err != nil {
+-				return err
++				return 0, err
+ 			}
+ 			defer tmpfile.Close()
+ 			err = os.WriteFile(tmpfile.Name(), content, file.ReadWriteByUser)
+ 			if err != nil {
+-				return err
++				return 0, err
+ 			}
+ 			//nolint:gosec //Ignore G204 error
+ 			diffOutput, err := exec.Command("diff", "-I", "'# Configuration.*'", "-u", cfgPath, tmpfile.Name()).CombinedOutput()
+@@ -748,12 +772,12 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
+ 
+ 	err = os.WriteFile(cfgPath, content, file.ReadWriteByUser)
+ 	if err != nil {
+-		return err
++		return 0, err
+ 	}
+ 
+ 	o, err := n.command.ExecCommand("-s", "reload").CombinedOutput()
+ 	if err != nil {
+-		return fmt.Errorf("%v\n%v", err, string(o))
++		return 0, fmt.Errorf("%v\n%v", err, string(o))
+ 	}
+ 
+ 	// Reload status checking runs in a separate goroutine to avoid blocking the sync queue
+@@ -761,7 +785,7 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
+ 		go n.awaitWorkersReload()
+ 	}
+ 
+-	return nil
++	return hash, nil
+ }
+ 
+ // awaitWorkersReload checks if the number of workers has returned to the expected count

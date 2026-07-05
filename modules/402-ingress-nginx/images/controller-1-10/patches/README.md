@@ -161,10 +161,6 @@ This patch fixes rewrite-target CVE-2026-3288 in Ingress-NGINX
 
 https://github.com/kubernetes/kubernetes/issues/137560
 
-### 028-stable-config-hash-metric-02.patch
-
-This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value
-
 ### 029-fix-cve-2026-4342.patch
 
 This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.
@@ -179,3 +175,10 @@ The fix is to use registration when checking if informer has been synced.
 This patch fixes CVE-2025-15566
 
 https://github.com/kubernetes/kubernetes/issues/136789
+
+### 032-fix-service-informer-panic.patch
+This patch fixes a panic when the service informer receives a service tombstone from the kube-api.
+
+### 033-fix-config-hash-drift.patch
+
+This patch updates the approach of calculating config hash so that it doesn't get stale.

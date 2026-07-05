@@ -1,0 +1,40 @@
+From: ingress-nginx patch <noreply@kubernetes.io>
+Subject: [PATCH] Store: Handle panics in service deletion handler
+
+Backport of kubernetes/ingress-nginx#14056 (371cb3891).
+
+When the Service informer delivers a cache.DeletedFinalStateUnknown
+tombstone on delete, the handler logged an error but continued with a
+nil *corev1.Service, causing a nil pointer dereference panic.
+
+Target: controller-v1.10.4 (f08a1c4fdac2e0ef6053333b24191c50cc51f30c)
+
+---
+ internal/ingress/controller/store/store.go | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/internal/ingress/controller/store/store.go b/internal/ingress/controller/store/store.go
+index d4bd6136f..07318c0aa 100644
+--- a/internal/ingress/controller/store/store.go
++++ b/internal/ingress/controller/store/store.go
+@@ -814,7 +814,17 @@ func New(
+ 		DeleteFunc: func(obj interface{}) {
+ 			svc, ok := obj.(*corev1.Service)
+ 			if !ok {
+-				klog.Errorf("unexpected type: %T", obj)
++				// If we reached here it means the service was deleted but its final state is unrecorded.
++				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
++				if !ok {
++					klog.ErrorS(nil, "Error obtaining object from tombstone", "key", obj)
++					return
++				}
++				svc, ok = tombstone.Obj.(*corev1.Service)
++				if !ok {
++					klog.Errorf("Tombstone contained object that is not a Service: %#v", obj)
++					return
++				}
+ 			}
+ 			if svc.Spec.Type == corev1.ServiceTypeExternalName {
+ 				updateCh.In() <- Event{
+-- 
+2.43.0

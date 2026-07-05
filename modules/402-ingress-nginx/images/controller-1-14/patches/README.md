@@ -155,3 +155,7 @@ The fix is to use registration when checking if informer has been synced.
 ### 025-santize-xff-headers-when-redirecting-from-www.patch
 
 This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.
+
+### 027-fix-config-hash-drift.patch
+
+This patch updates the approach of calculating config hash so that it doesn't get stale.
