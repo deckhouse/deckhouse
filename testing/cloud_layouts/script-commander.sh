@@ -1035,6 +1035,9 @@ function wait_upmeter_green() {
     upmeter_data_exists=$(echo "$response" | jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[]' 2>/dev/null)
     if [[ -n $upmeter_data_exists ]]; then
       statuses=$(jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[] | .probes[] | "\(.probe):\(.availability)"' <<< "$response")
+    else if [[ "$i" -eq "$iterations" ]]; then
+        echo "Maximum iterations reached. Upmeter don't ready."
+        return 1
     else
       echo "  Upmeter don't ready"
       sleep "$sleep_interval"
