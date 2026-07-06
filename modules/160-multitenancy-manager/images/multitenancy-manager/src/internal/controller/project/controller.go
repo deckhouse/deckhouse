@@ -39,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
 )
@@ -84,22 +84,39 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 
 	r.logger.Info("initialize project controller")
 	return ctrl.NewControllerManagedBy(runtimeManager).
-		For(&v1alpha2.Project{}).
+		For(&v1alpha3.Project{}).
 		WithEventFilter(predicate.Or[client.Object](
 			predicate.AnnotationChangedPredicate{},
 			predicate.GenerationChangedPredicate{},
 			customPredicate[client.Object]{logger: logger})).
 		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
-			if _, ok := object.GetLabels()[v1alpha2.ResourceLabelTemplate]; ok {
+			// an additional namespace of a real project (owned, but not the main namespace) appeared
+			// or disappeared: re-reconcile that project so status.namespaces is refreshed, which in
+			// turn re-fans-out the PRB/CPRB RoleBindings into (or out of) the namespace.
+			if proj, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]; ok && object.GetName() != proj {
+				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: proj}}}
+			}
+			if _, ok := object.GetLabels()[v1alpha3.ResourceLabelTemplate]; ok {
 				return nil
 			}
-			if _, ok := object.GetAnnotations()[v1alpha2.NamespaceAnnotationAdopt]; ok {
+			if _, ok := object.GetAnnotations()[v1alpha3.NamespaceAnnotationAdopt]; ok {
 				return nil
 			}
 			if strings.HasPrefix(object.GetName(), projectmanager.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), projectmanager.DeckhouseNamespacePrefix) {
 				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DeckhouseProjectName}}}
 			}
 			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DefaultProjectName}}}
+		})).
+		Watches(&corev1.ResourceQuota{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+			// only the controller-managed project quota triggers a project re-reconcile (to refresh status.usage)
+			if object.GetName() != v1alpha3.ProjectQuotaName {
+				return nil
+			}
+			project, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]
+			if !ok {
+				return nil
+			}
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: project}}}
 		})).
 		Complete(projectController)
 }
@@ -118,7 +135,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	r.init.Wait()
 
 	r.logger.Info("reconcile the project", "project", req.Name)
-	project := new(v1alpha2.Project)
+	project := new(v1alpha3.Project)
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("the project not found", "project", req.Name)
@@ -161,7 +178,7 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	}
 
 	// skip projects that do not require sync
-	if val, ok := e.ObjectNew.GetAnnotations()[v1alpha2.ProjectAnnotationRequireSync]; ok && val == "true" {
+	if val, ok := e.ObjectNew.GetAnnotations()[v1alpha3.ProjectAnnotationRequireSync]; ok && val == "true" {
 		return true
 	}
 
