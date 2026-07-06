@@ -1,0 +1,112 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    backup.deckhouse.io/cluster-config: "true"
+  name: projectrolebindings.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: ProjectRoleBinding
+    listKind: ProjectRoleBindingList
+    plural: projectrolebindings
+    singular: projectrolebinding
+    shortNames:
+      - prb
+  scope: Namespaced
+  versions:
+    - name: v1alpha3
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .spec.roleRef.name
+          name: Role
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            ProjectRoleBinding grants a role to subjects across all namespaces of a single project.
+
+            It must be created in the project's main namespace (the namespace whose name equals the project name).
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - subjects
+                - roleRef
+              x-kubernetes-validations:
+                - rule: "self.roleRef.kind == 'ClusterRole'"
+                  message: "roleRef.kind must be ClusterRole."
+              properties:
+                subjects:
+                  description: |
+                    Subjects (users, groups or service accounts) the role is granted to.
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - kind
+                      - name
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                          - User
+                          - Group
+                          - ServiceAccount
+                      name:
+                        type: string
+                        minLength: 1
+                      namespace:
+                        type: string
+                      apiGroup:
+                        type: string
+                roleRef:
+                  description: |
+                    Reference to the granted ClusterRole. Only project-scoped roles (`d8:project:*`) are allowed.
+                  type: object
+                  required:
+                    - kind
+                    - name
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - ClusterRole
+                    name:
+                      type: string
+                      minLength: 1
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
+                        type: string

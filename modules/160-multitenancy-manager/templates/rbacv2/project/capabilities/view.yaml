@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:project-capability:multitenancy-manager:view
+  annotations:
+    en.meta.deckhouse.io/title: "Project: view structure"
+    ru.meta.deckhouse.io/title: "Проект: просмотр структуры"
+    en.meta.deckhouse.io/description: "Read-only access to the project structure: namespaces and role bindings of the project."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к структуре проекта: пространствам имён и привязкам ролей проекта."
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "project-capability.multitenancy-manager.view"
+    rbac.deckhouse.io/scope: project
+    rbac.deckhouse.io/aggregate-to-project-as: viewer
+rules:
+  - apiGroups:
+      - deckhouse.io
+    resources:
+      - projectnamespaces
+      - projectrolebindings
+    verbs:
+      - get
+      - list
+      - watch

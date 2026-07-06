@@ -7,12 +7,14 @@ title: "Модуль multitenancy-manager: примеры использован
 
 В Deckhouse Kubernetes Platform есть набор шаблонов для создания проектов:
 
+- `simple` — минимальный шаблон, создающий только пространство имён проекта (с возможностью задать дополнительные лейблы и аннотации). Используйте его, когда нужно лишь изолированное пространство имён, управляемое как проект, а доступ и ограничения настраиваются через [стандартные поля](#стандартные-поля-проекта) и [привязки ролей проекта](#предоставление-доступа-внутри-проекта).
+
+  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/simple.yaml).
+
 - `default` — шаблон для базовых сценариев использования проектов:
-  - ограничение ресурсов;
   - сетевая изоляция;
   - автоматические алерты и сбор логов;
-  - выбор профиля безопасности;
-  - настройка администраторов проекта.
+  - выбор профиля безопасности.
 
     Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
 
@@ -37,35 +39,44 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 ## Создание проекта
 
-1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename).
-1. В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) ресурса Project укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса ProjectTemplate.
+1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha3-spec-projecttemplatename).
+1. Задайте [стандартные поля](#стандартные-поля-проекта) — [.spec.administrators](cr.html#project-v1alpha3-spec-administrators) и [.spec.quota](cr.html#project-v1alpha3-spec-quota), — которые теперь управляются непосредственно ресурсом Project независимо от шаблона.
+1. В параметре [.spec.parameters](cr.html#project-v1alpha3-spec-parameters) ресурса Project укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса ProjectTemplate.
 
    Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha2
+   apiVersion: deckhouse.io/v1alpha3
    kind: Project
    metadata:
      name: my-project
    spec:
      description: This is an example from the Deckhouse documentation.
      projectTemplateName: default
+     # Стандартные поля, управляемые самим ресурсом Project.
+     administrators:
+       - kind: Group
+         name: k8s-admins
+     quota:
+       requests.cpu: "5"
+       requests.memory: 5Gi
+       requests.storage: 1Gi
+       limits.cpu: "5"
+       limits.memory: 5Gi
+     # Параметры конкретного шаблона.
      parameters:
-       resourceQuota:
-         requests:
-           cpu: 5
-           memory: 5Gi
-           storage: 1Gi
-         limits:
-           cpu: 5
-           memory: 5Gi
        networkPolicy: Isolated
        podSecurityProfile: Restricted
        extendedMonitoringEnabled: true
-       administrators:
-       - subject: Group
-         name: k8s-admins
    ```
+
+   {% endraw %}
+
+   {% alert level="info" %}
+   API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Старые манифесты `v1alpha1`/`v1alpha2` продолжают работать: webhook конвертации автоматически переносит `parameters.administrators` и `parameters.resourceQuota` в стандартные поля `.spec.administrators` и `.spec.quota`.
+   {% endalert %}
+
+   {% raw %}
 
 1. Для проверки статуса проекта выполните команду:
 
@@ -115,6 +126,71 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 {% endalert %}
 
 {% raw %}
+
+## Стандартные поля проекта
+
+Администраторы проекта и квоты ресурсов больше не являются параметрами шаблона — это поля верхнего уровня ресурса [Project](cr.html#project), работающие с любым шаблоном (включая `simple` и проекты без шаблона):
+
+- `.spec.administrators` — список субъектов (`kind: User` или `kind: Group` и `name`), получающих административный доступ к проекту. Контроллер реализует этот доступ через автоматически создаваемый [ProjectRoleBinding](cr.html#projectrolebinding) в пространстве имён проекта.
+- `.spec.quota` — набор жёстких лимитов [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) (например, `requests.cpu`, `limits.memory`). Контроллер поддерживает `ResourceQuota` в пространстве имён проекта и сообщает текущее потребление в `.status.usage`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: my-project
+spec:
+  projectTemplateName: simple
+  administrators:
+    - kind: Group
+      name: k8s-admins
+  quota:
+    requests.cpu: "5"
+    requests.memory: 5Gi
+    limits.cpu: "10"
+    limits.memory: 10Gi
+```
+
+{% alert level="warning" %}
+Объекты `ResourceQuota` и `AuthorizationRule`, описанные внутри шаблонов проектов, больше не отрисовываются: такие ресурсы теперь управляются исключительно через `.spec.quota` и `.spec.administrators`. Существующие шаблоны, в которых они объявлены, продолжают работать, но эти объекты отфильтровываются при рендеринге.
+{% endalert %}
+
+## Предоставление доступа внутри проекта
+
+Чтобы предоставить доступ к пространствам имён проекта помимо администраторов проекта, используйте привязки ролей, которые ссылаются на кластерные роли и автоматически разворачиваются в нужные пространства имён проектов:
+
+- [ProjectRoleBinding](cr.html#projectrolebinding) (пространство имён, короткое имя `prb`) — предоставляет роль в рамках **одного** проекта. Должен создаваться в главном пространстве имён проекта (имя которого совпадает с именем проекта). Контроллер создаёт `RoleBinding` в каждом пространстве имён этого проекта.
+- [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (кластерный, короткое имя `cprb`) — предоставляет роль во **всех** невиртуальных проектах. Контроллер создаёт `RoleBinding` в каждом пространстве имён каждого проекта и сообщает количество затронутых проектов в `.status.boundProjects`.
+
+`roleRef` должен ссылаться на `ClusterRole`, имя которого начинается с одного из разрешённых префиксов (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). Проверка на повышение привилегий (через `SubjectAccessReview`) гарантирует, что запрашивающий пользователь имеет право привязать роль.
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: viewers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: User
+      name: viewer@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
+metadata:
+  name: platform-viewers
+spec:
+  subjects:
+    - kind: Group
+      name: platform
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+```
 
 ## Создание собственного шаблона для проекта
 
