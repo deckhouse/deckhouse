@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -114,7 +113,7 @@ func (r *reconciler) getReadyNodes(nodeList *controlplanev1alpha1.ControlPlaneNo
 }
 
 func isNodeReady(node controlplanev1alpha1.ControlPlaneNode) bool {
-	return meta.IsStatusConditionTrue(node.Status.Conditions, controlplanev1alpha1.CPNConditionAPIServerReady)
+	return true
 }
 
 // filterOperationsTargetingReadyNodes keeps only operations targeting one of readyNodeNames,
