@@ -28,9 +28,9 @@ import (
 	otattribute "go.opentelemetry.io/otel/attribute"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -104,14 +104,14 @@ func (p *Preparator) call(ctx context.Context, subcommand string, input config.P
 
 	// The request/response carry provider Vars (decoded credentials,
 	// kubeconfigDataBase64, etc.); never attach them to spans or logs.
-	log.DebugF("external.%s binary=%s request_bytes=%d\n", subcommand, p.binaryPath, len(payload))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("external.%s binary=%s request_bytes=%d", subcommand, p.binaryPath, len(payload)))
 
 	stdout, err := p.run(ctx, subcommand, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	log.DebugF("external.%s binary=%s response_bytes=%d\n", subcommand, p.binaryPath, len(stdout))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("external.%s binary=%s response_bytes=%d", subcommand, p.binaryPath, len(stdout)))
 	return stdout, nil
 }
 
@@ -159,7 +159,7 @@ func (p *Preparator) run(ctx context.Context, subcommand string, stdin []byte) (
 	}
 
 	if stderr.Len() > 0 {
-		log.WarnF("provider binary stderr subcommand=%s output=%s\n", subcommand, stderr.String())
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("provider binary stderr subcommand=%s output=%s", subcommand, stderr.String()))
 	}
 
 	return stdout.Bytes(), nil

@@ -42,6 +42,7 @@ var (
 	_ Step = (*renewKubeconfigsStep)(nil)
 	_ Step = (*syncManifestsStep)(nil)
 	_ Step = (*joinEtcdClusterStep)(nil)
+	_ Step = (*defragEtcdStep)(nil)
 	_ Step = (*waitPodReadyStep)(nil)
 	_ Step = (*certObserveStep)(nil)
 	_ Step = (*renewSignatureStep)(nil)
@@ -78,6 +79,7 @@ func defaultSteps() map[controlplanev1alpha1.StepName]Step {
 		controlplanev1alpha1.StepRenewKubeconfigs: &renewKubeconfigsStep{},
 		controlplanev1alpha1.StepSyncManifests:    &syncManifestsStep{},
 		controlplanev1alpha1.StepJoinEtcdCluster:  &joinEtcdClusterStep{},
+		controlplanev1alpha1.StepDefragEtcd:       &defragEtcdStep{},
 		controlplanev1alpha1.StepWaitPodReady:     &waitPodReadyStep{},
 		controlplanev1alpha1.StepCertObserve:      &certObserveStep{},
 		controlplanev1alpha1.StepRenewSignature:   &renewSignatureStep{},
@@ -256,6 +258,16 @@ func syncAnnotationsOnly(component controlplanev1alpha1.OperationComponent, anno
 		return nil, fmt.Errorf("update checksum annotations: %w", err)
 	}
 	return []fileWriteResult{manifestResult}, nil
+}
+
+// defragEtcdStep defragments the local etcd data store if fragmentation exceeds the threshold.
+// No-op for non-Etcd components. Requires the etcd pod to be Ready before running.
+type defragEtcdStep struct {
+	defragEtcd func(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error)
+}
+
+func (c *defragEtcdStep) Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+	return c.defragEtcd(ctx, env.State, logger)
 }
 
 // waitPodReadyStep waits for the static pod to become ready with the expected checksum annotations.

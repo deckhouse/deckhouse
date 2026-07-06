@@ -220,14 +220,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiVsphereSyncer135":       "imageHash-common-csiVsphereSyncer135",
 		"csiVsphereSyncer136":       "imageHash-common-csiVsphereSyncer136",
 		"debugContainer":            "imageHash-common-debugContainer",
-		"distroless":                "imageHash-common-distroless",
 		"init":                      "imageHash-common-init",
-		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
-		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
 		"redisStatic":               "imageHash-common-redisStatic",
-		"shellOperator":             "imageHash-common-shellOperator",
 		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
 	},
 	"controlPlaneManager": map[string]interface{}{
@@ -307,12 +303,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"helper":               "imageHash-localPathProvisioner-helper",
 		"localPathProvisioner": "imageHash-localPathProvisioner-localPathProvisioner",
 	},
-	"logShipper": map[string]interface{}{
-		"vector": "imageHash-logShipper-vector",
-	},
-	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
-	},
 	"metallb": map[string]interface{}{
 		"l2lbController":    "imageHash-metallb-l2lbController",
 		"l2lbSpeaker":       "imageHash-metallb-l2lbSpeaker",
@@ -354,7 +344,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"clusterAutoscaler135":     "imageHash-nodeManager-clusterAutoscaler135",
 		"clusterAutoscaler136":     "imageHash-nodeManager-clusterAutoscaler136",
 		"d8ShutdownInhibitor":      "imageHash-nodeManager-d8ShutdownInhibitor",
-		"earlyOom":                 "imageHash-nodeManager-earlyOom",
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"kubernetesApiProxy":       "imageHash-nodeManager-kubernetesApiProxy",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
@@ -376,26 +365,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"openvpn":             "imageHash-openvpn-openvpn",
 		"ovpnAdmin":           "imageHash-openvpn-ovpnAdmin",
 		"pmacct":              "imageHash-openvpn-pmacct",
-	},
-	"operatorPrometheus": map[string]interface{}{
-		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
-		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
-	},
-	"prometheus": map[string]interface{}{
-		"alertmanager":                "imageHash-prometheus-alertmanager",
-		"alertsReceiver":              "imageHash-prometheus-alertsReceiver",
-		"grafanaDashboardProvisioner": "imageHash-prometheus-grafanaDashboardProvisioner",
-		"grafanaV10":                  "imageHash-prometheus-grafanaV10",
-		"memcached":                   "imageHash-prometheus-memcached",
-		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
-		"mimir":                       "imageHash-prometheus-mimir",
-		"prometheus":                  "imageHash-prometheus-prometheus",
-		"promxy":                      "imageHash-prometheus-promxy",
-		"trickster":                   "imageHash-prometheus-trickster",
-	},
-	"prometheusMetricsAdapter": map[string]interface{}{
-		"k8sPrometheusAdapter":   "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",
-		"prometheusReverseProxy": "imageHash-prometheusMetricsAdapter-prometheusReverseProxy",
 	},
 	"registry": map[string]interface{}{
 		"dockerAuth":          "imageHash-registry-dockerAuth",

@@ -426,6 +426,10 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 
 Using the [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy), you can create security policies that define container behavior restrictions in the cluster, such as host network access, privileges, AppArmor usage, and more.
 
+{% alert level="info" %}
+Detailed information on pod and container security settings (such as `hostNetwork`, `hostPID`, `hostIPC` and others), available values, and practical suggestions are available on the ["Pod and container security settings"](../../../user/security/pod-settings.html) page.
+{% endalert %}
+
 Example security policy:
 
 ```yaml
@@ -991,7 +995,7 @@ To enable container image signature verification in a DKP cluster:
 
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
-   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 1. Create an [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) that restricts running pods from third-party registries:
 
@@ -1014,7 +1018,7 @@ To enable container image signature verification in a DKP cluster:
 
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
-   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 1. Add a label to the namespace where signature verification should be enabled (specify your namespace):
 

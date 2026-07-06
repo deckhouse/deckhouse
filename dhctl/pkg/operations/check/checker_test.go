@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
@@ -556,7 +555,6 @@ type testCheckClusterConfig struct {
 	kubeCl              *client.KubernetesClient
 	commanderMetaConfig *config.MetaConfig
 	checker             *Checker
-	logger              *log.InMemoryLogger
 }
 
 func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) *testCheckClusterConfig {
@@ -575,7 +573,6 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 		{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
 		config.ModuleConfigGVR: "ModuleConfigList",
 	})
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
 
 	// Cloud-cluster parseConfigFromCluster fetches d8-system/deckhouse-registry
 	// unconditionally; seed it so the retry-loop doesn't trip the 600 s
@@ -617,9 +614,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 		testCheckClusterConfigBase: p.testCheckClusterConfigBase,
 		commanderMetaConfig:        commanderMetaConfig,
 		kubeCl:                     kubeCl,
-		logger:                     logger,
 		checker: NewChecker(&Params{
-			Logger:        logger,
 			StateCache:    cache.Global(),
 			CommanderMode: true,
 			IsDebug:       false,

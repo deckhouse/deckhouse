@@ -21,12 +21,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
 
-func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger, globalOptions *options.GlobalOptions, operation string) (*config.MetaConfig, error) {
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
+func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, globalOptions *options.GlobalOptions, operation string) (*config.MetaConfig, error) {
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	metaConfig, err := config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,

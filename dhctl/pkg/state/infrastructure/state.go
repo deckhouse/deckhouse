@@ -29,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -36,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -124,7 +125,7 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 			}
 
 			if _, ok := nodeState.Labels[global.InfrastructureStateBackupLabelKey]; ok {
-				log.DebugF("Found backup state secret %s for node: %s. Skipping.\n", secretName, name)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found backup state secret %s for node: %s. Skipping.", secretName, name))
 				continue
 			}
 
@@ -275,7 +276,6 @@ func SaveNodeInfrastructureState(
 	kubeCl *client.KubernetesClient,
 	nodeName, nodeGroup string,
 	tfState, settings []byte,
-	logger log.Logger,
 ) error {
 	if len(tfState) == 0 {
 		return ErrNoInfrastructureState
@@ -302,7 +302,6 @@ func SaveNodeInfrastructureState(
 		},
 	}
 	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 450, 1*time.Second).
-		WithLogger(logger).
 		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
 }
 
@@ -459,7 +458,7 @@ func saveLegacyProviderDiscoveryData(ctx context.Context, kubeCl *client.Kuberne
 			metav1.PatchOptions{},
 		)
 		if k8errors.IsNotFound(err) {
-			log.WarnLn("Skipping cloud discovery data update: legacy Secret d8-provider-cluster-configuration not present (mc-flow cluster)")
+			dhlog.FromContext(ctx).WarnContext(ctx, "Skipping cloud discovery data update: legacy Secret d8-provider-cluster-configuration not present (mc-flow cluster)")
 			return nil
 		}
 		return err

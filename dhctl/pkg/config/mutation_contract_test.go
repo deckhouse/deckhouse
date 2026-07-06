@@ -37,7 +37,7 @@ func (p *fakeMutatingPreparator) Prepare(_ context.Context, _ ProviderInput) (pr
 }
 
 func fakePreparatorProvider(p MetaConfigPreparator) MetaConfigPreparatorProvider {
-	return func(_, _ string) MetaConfigPreparator { return p }
+	return func(_ context.Context, _, _ string) MetaConfigPreparator { return p }
 }
 
 func TestPrepareMutationMergeContract(t *testing.T) {

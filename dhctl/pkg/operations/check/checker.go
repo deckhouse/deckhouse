@@ -20,10 +20,10 @@ import (
 	"reflect"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	"sigs.k8s.io/yaml"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -32,14 +32,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 type externalPhasedContext interface {
-	CompleteSubPhase(completedSubPhase phases.OperationSubPhase)
+	CompleteSubPhase(ctx context.Context, completedSubPhase phases.OperationSubPhase)
 }
 
 type Params struct {
@@ -58,7 +57,6 @@ type Params struct {
 	InfrastructureContext *infrastructure.Context
 
 	TmpDir  string
-	Logger  log.Logger
 	IsDebug bool
 
 	// Options carries the per-operation parsed configuration. RPC handlers
@@ -73,16 +71,9 @@ type Checker struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	ExternalPhasedContext  externalPhasedContext
-
-	logger log.Logger
 }
 
 func NewChecker(params *Params) *Checker {
-	logger := params.Logger
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
-	}
-
 	if params.Options != nil && params.Options.Global.ProgressFilePath != "" {
 		params.OnProgressFunc = phases.WriteProgress(params.Options.Global.ProgressFilePath)
 	}
@@ -101,7 +92,6 @@ func NewChecker(params *Params) *Checker {
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationCheck, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		logger: logger,
 	}
 }
 
@@ -119,7 +109,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		return nil, cleaner, err
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger, infrastructureprovider.DhctlOperationConverge)
+	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
@@ -138,11 +128,10 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 			TmpDir:           c.TmpDir,
 			GlobalOptions:    &c.Options.Global,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           c.logger,
 			IsDebug:          c.IsDebug,
 		})
 
-		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, c.logger).
+		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter).
 			WithUseTfCache(c.Options.Cache.UseTfCache).
 			WithDebug(c.IsDebug)
 	}
@@ -225,7 +214,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("Unable to get static/provider cluster config: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger, &c.Options.Global, infrastructureprovider.DhctlOperationConverge)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, &c.Options.Global, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}
@@ -252,7 +241,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	for _, check := range checks {
 		if err := check(); err != nil {
 			syncStatus = CheckStatusOutOfSync
-			c.logger.LogInfoLn(err.Error())
+			dhlog.FromContext(ctx).InfoContext(ctx, err.Error())
 		}
 	}
 
@@ -358,7 +347,7 @@ func (c *Checker) switchPhase(ctx context.Context, s phases.OperationPhase) func
 
 	return func() {
 		if c.ExternalPhasedContext != nil {
-			c.ExternalPhasedContext.CompleteSubPhase(phases.OperationSubPhase(s))
+			c.ExternalPhasedContext.CompleteSubPhase(ctx, phases.OperationSubPhase(s))
 		}
 	}
 }

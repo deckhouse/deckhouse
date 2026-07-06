@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -71,7 +72,7 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	f := fsm.New("initial", s.bootstrapServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.BootstrapRequest)
 	sendCh := make(chan *pb.BootstrapResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.BootstrapResponse, any]{
@@ -115,10 +116,10 @@ connectionProcessor:
 					result := s.bootstrapSafe(ctx, &bootstrapParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}})
 				}()
 
 			case *pb.BootstrapRequest_Continue:
@@ -130,13 +131,13 @@ connectionProcessor:
 				}
 				switch message.Continue.Continue {
 				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New("bad continue message"))
 				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
+					sendPhaseSwitch(ctx, phaseSwitcher.next, nil)
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.ErrStopOperationCondition
+					sendPhaseSwitch(ctx, phaseSwitcher.next, phases.ErrStopOperationCondition)
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New(message.Continue.Err))
 				}
 
 			case *pb.BootstrapRequest_Cancel:
@@ -169,12 +170,19 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	ctx, span := telemetry.StartSpan(ctx, "grpc.bootstrap")
 	defer span.End()
 
+	// grpc.bootstrap is the root span of a commander-driven run; tag it with the
+	// commander identity so the whole trace is filterable by it.
+	span.SetAttributes(telemetry.CommanderSpanAttributes(
+		p.request.Options.CommanderMode,
+		p.request.Options.CommanderUuid,
+	)...)
+
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	loggerFor := initDhctlLogger(ctx, p)
+	ctx = initDhctlLoggerCtx(ctx, p)
 
 	opts := newRequestOptions(
 		s.params.CacheDir,
@@ -183,7 +191,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
 
-	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
 
 	var (
@@ -192,7 +200,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		postBootstrapScriptPath string
 		cleanup                 func() error
 	)
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing configuration", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing configuration", func(ctx context.Context) error {
 		for _, cfg := range []string{
 			p.request.ClusterConfig,
 			p.request.InitConfig,
@@ -234,7 +242,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	}
 
 	var initialState phases.DhctlState
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing DHCTL state", func(ctx context.Context) error {
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
@@ -249,8 +257,8 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
 		if err != nil {
 			return fmt.Errorf("preparing providers: %w", err)
 		}
@@ -275,7 +283,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	span.SetAttributes(opts.ToSpanAttributes()...)
 
-	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+	bootstrapper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 		InitialState:               initialState,
 		ResetInitialState:          true,
 		DisableBootstrapClearCache: true,
@@ -285,7 +293,6 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		CommanderUUID:              commanderUUID,
 		KubernetesInitParams:       nil,
 		TmpDir:                     s.params.TmpDir,
-		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
 		SSHProviderInitializer:     sshProviderInitializer,
 		KubeProvider:               kubeProvider,

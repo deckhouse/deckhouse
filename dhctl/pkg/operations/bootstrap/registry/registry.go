@@ -99,7 +99,7 @@ func InitFromConfig(
 ) (Stop, error) {
 	nop := func() {}
 
-	docs, err := config.FetchDocuments(configPaths)
+	docs, err := config.FetchDocuments(ctx, configPaths)
 	if err != nil {
 		return nop, err
 	}

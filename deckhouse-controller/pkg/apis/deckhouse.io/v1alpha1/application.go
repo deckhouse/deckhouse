@@ -29,6 +29,10 @@ const (
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
 
 	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
+
+	// ApplicationAnnotationEndpoint marks an Ingress in the application chart
+	// as an application endpoint; its hosts and paths are reflected in status.urls.
+	ApplicationAnnotationEndpoint = "packages.deckhouse.io/application-endpoint"
 )
 
 var (
@@ -67,10 +71,10 @@ type Application struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of an Application.
+	// Defines the application configuration.
 	Spec ApplicationSpec `json:"spec"`
 
-	// Status of an Application.
+	// Application status.
 	Status ApplicationStatus `json:"status,omitempty"`
 }
 
@@ -110,6 +114,11 @@ type ApplicationStatus struct {
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
+	// URLs of application endpoints, collected from Ingress resources of the
+	// application chart annotated with packages.deckhouse.io/is-application-endpoint.
+	// +optional
+	URLs []ApplicationStatusURL `json:"urls,omitempty"`
+
 	// Nelm tracking.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
@@ -121,7 +130,7 @@ type ApplicationStatus struct {
 	// +optional
 	LastAppliedConfiguration runtime.RawExtension `json:"lastAppliedConfiguration"`
 
-	// Conditions represent the latest available observations of the application's state.
+	// Conditions reflecting the latest observations of the application state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -148,6 +157,19 @@ type ApplicationStatusSummary struct {
 	// state. Empty when no action is required.
 	// +optional
 	Tip string `json:"tip,omitempty"`
+}
+
+// ApplicationStatusURL is a single application endpoint built from an Ingress
+// of the application chart.
+type ApplicationStatusURL struct {
+	// URL of the application endpoint.
+	URL string `json:"url"`
+
+	// Description of the endpoint, taken from the value of the
+	// packages.deckhouse.io/is-application-endpoint annotation.
+	// Empty when the annotation value is "true".
+	// +optional
+	Description string `json:"description,omitempty"`
 }
 
 type ApplicationStatusVersion struct {

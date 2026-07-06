@@ -606,9 +606,33 @@ entries:
                         ru: Федерация
                       url: /admin/configuration/network/alliance/federation.html
                 - title:
-                     en: Network policy configuration
-                     ru: Настройка сетевых политик
-                  url: /admin/configuration/network/policy/configuration.html
+                    en: Network policies
+                    ru: Сетевые политики
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/network/policy/configuration.html
+                    - title:
+                        en: Kubernetes NetworkPolicy
+                        ru: Kubernetes NetworkPolicy
+                      url: /admin/configuration/network/policy/kubernetes_networkpolicy.html
+                    - title:
+                        en: CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy
+                        ru: CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy
+                      url: /admin/configuration/network/policy/cilium_networkpolicy.html
+                    - title:
+                        en: Host firewall on nodes
+                        ru: Host firewall на узлах
+                      url: /admin/configuration/network/policy/host_firewall.html
+                    - title:
+                        en: Common policy examples
+                        ru: Типовые примеры политик
+                      url: /admin/configuration/network/policy/examples.html
+                    - title:
+                        en: Diagnostics and observability
+                        ru: Диагностика и наблюдаемость политик
+                      url: /admin/configuration/network/policy/troubleshooting.html
                 - title:
                     en: SDN
                     ru: SDN
@@ -770,16 +794,20 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/security/
                 - title:
-                    en: Security events
-                    ru: События безопасности
+                    en: Audit and security events
+                    ru: Аудит и события безопасности
                   folders:
+                    - title:
+                        en: Security events
+                        ru: События безопасности
+                      url: /admin/configuration/security/events/security-events.html
                     - title:
                         en: Kubernetes API event audit
                         ru: Аудит событий API Kubernetes
                       url: /admin/configuration/security/events/kubernetes-api-audit.html
                     - title:
-                        en: Security event audit
-                        ru: Аудит событий безопасности
+                        en: Runtime audit
+                        ru: Рантайм-аудит
                       url: /admin/configuration/security/events/runtime-audit.html
                 - title:
                     en: Security policies
@@ -1036,6 +1064,10 @@ entries:
                 en: Using TLS certificates
                 ru: Использование TLS-сертификатов
               url: /user/security/tls.html
+            - title:
+                en: Pod and container security settings
+                ru: Параметры безопасности подов и контейнеров
+              url: /user/security/pod-settings.html
         - title:
             en: Interfaces
             ru: Интерфейсы
@@ -1279,6 +1311,10 @@ entries:
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
             - title:
+                en: Registry module
+                ru: Модуль registry
+              url: /architecture/deckhouse/registry.html
+            - title:
                 en: Direct mode of registry module
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
@@ -1443,9 +1479,13 @@ entries:
                 ru: Контроль целостности
               url: /architecture/security/integrity-control.html
             - title:
-                en: Security events audit
-                ru: Аудит событий безопасности
+                en: Runtime audit
+                ru: Рантайм-аудит
               url: /architecture/security/runtime-audit.html
+            - title:
+                en: Security events
+                ru: События безопасности
+              url: /architecture/security/security-events.html
             - title:
                 en: Admission-policy-engine module
                 ru: Модуль admission-policy-engine

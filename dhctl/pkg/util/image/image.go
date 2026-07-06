@@ -41,7 +41,8 @@ import (
 	otattribute "go.opentelemetry.io/otel/attribute"
 	ottrace "go.opentelemetry.io/otel/trace"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
@@ -287,7 +288,7 @@ func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, im
 		return cached, fmt.Errorf("saving tar.gz: %w", err)
 	}
 
-	log.DebugF("checksum: %s\n", checksum)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("checksum: %s", checksum))
 	if err = saveHash(imgName, checksum, cacheDir); err != nil {
 		return cached, fmt.Errorf("saving checksum to file: %w", err)
 	}
@@ -360,7 +361,7 @@ func saveImageAsTarGz(_ context.Context, imageRef string, outPath string, img v1
 	return checksum, nil
 }
 
-func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remote.Option, error) {
+func getOptsFromRegistryConfig(ctx context.Context, ref name.Reference, cfg *RegistryConfig) ([]remote.Option, error) {
 	var opts []remote.Option
 	registry := ref.Context().RegistryStr()
 	auth, err := authFromRegistry(cfg, registry)
@@ -369,7 +370,7 @@ func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remot
 	}
 	opts = append(opts, remote.WithAuth(auth))
 	if cfg.ca != "" {
-		transport, err := registryutil.NewRegistryTransport(cfg.scheme, cfg.ca)
+		transport, err := registryutil.NewRegistryTransport(ctx, cfg.scheme, cfg.ca)
 		if err != nil {
 			return nil, err
 		}
@@ -398,10 +399,10 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 		span.AddEvent("image.restored_from_cache")
 		return extractImage(img, destDir)
 	}
-	log.DebugF("Could not use local image. Reason: %s\n", err.Error())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Could not use local image. Reason: %s", err.Error()))
 	span.AddEvent("image.cache_miss", ottrace.WithAttributes(otattribute.String("reason", err.Error())))
 
-	opts, err := getOptsFromRegistryConfig(ref, &regConfig)
+	opts, err := getOptsFromRegistryConfig(ctx, ref, &regConfig)
 	if err != nil {
 		return err
 	}
@@ -410,7 +411,7 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	if err != nil {
 		return fmt.Errorf("getting manifest descriptor for %q: %w", ref.String(), err)
 	}
-	log.DebugF("hash: %s\n", desc.Digest.String())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("hash: %s", desc.Digest.String()))
 	span.SetAttributes(otattribute.String("image.digest", desc.Digest.String()))
 
 	img, err = pullImage(ctx, ref, opts, imgName, destDir, cacheDir, showProgress)

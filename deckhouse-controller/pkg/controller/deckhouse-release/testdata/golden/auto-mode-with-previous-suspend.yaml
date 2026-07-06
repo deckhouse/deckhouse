@@ -12,7 +12,6 @@ spec:
   version: v1.70.17
 status:
   approved: true
-  message: ""
   phase: Deployed
   transitionTime: "2021-12-08T08:34:01Z"
 ---
@@ -26,7 +25,6 @@ spec:
   version: v1.71.5
 status:
   approved: false
-  message: ""
   phase: Suspended
   transitionTime: null
 ---
@@ -40,7 +38,6 @@ spec:
   version: v1.71.7
 status:
   approved: false
-  message: ""
   phase: Pending
   transitionTime: null
 ---
@@ -68,7 +65,6 @@ spec:
   version: v1.72.5
 status:
   approved: false
-  message: ""
   phase: Suspended
   transitionTime: null
 ---

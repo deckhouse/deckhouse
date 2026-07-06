@@ -10,14 +10,8 @@ metadata:
   resourceVersion: "999"
 spec:
   registry:
-    ca: ""
-    dockerCfg: ""
     repo: ""
 status:
-  message: ""
-  modules: null
-  modulesCount: 0
-  phase: ""
   syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -40,10 +34,8 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   phase: Superseded
   pullDuration: 0s
-  size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -69,10 +61,8 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
   phase: Deployed
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1

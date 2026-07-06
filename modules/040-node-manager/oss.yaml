@@ -12,7 +12,7 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: cluster-api
-  version: 1.11.3
+  version: 1.12.9
 
 - name: Cluster Autoscaler
   link: https://github.com/gardener/autoscaler

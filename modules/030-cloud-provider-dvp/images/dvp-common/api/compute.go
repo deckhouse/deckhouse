@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
@@ -40,11 +42,16 @@ const (
 	attachmentDiskNameLabel    = "virtualMachineDiskName"
 	attachmentMachineNameLabel = "virtualMachineName"
 	DVPLoadBalancerLabelPrefix = "dvp.deckhouse.io/"
+
+	DeckhouseManagedByLabelKey   = "deckhouse.io/managed-by"
+	DeckhouseManagedByLabelValue = "deckhouse"
 )
 
 const (
 	// DefaultVMDeletionTimeout is the maximum time to wait for VM deletion
 	DefaultVMDeletionTimeout = 10 * time.Minute
+	// DefaultDiskAttachTimeout is the maximum time to wait for a VirtualDisk to attach to a VM
+	DefaultDiskAttachTimeout = 10 * time.Minute
 )
 
 type ComputeService struct {
@@ -181,35 +188,21 @@ func (c *ComputeService) DeleteVM(ctx context.Context, name string) error {
 	return nil
 }
 
-func (c *ComputeService) GetDisksForDetachAndDelete(ctx context.Context, vm *v1alpha2.VirtualMachine, detachDisks bool) ([]string, []string, error) {
+func (c *ComputeService) GetDisksForDetachAndDelete(_ context.Context, vm *v1alpha2.VirtualMachine, detachDisks bool) ([]string, []string, error) {
 	disksToDetach := make([]string, 0)
 	disksToDelete := make([]string, 0)
-	vmHostname, err := c.GetVMHostname(vm)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	vmbdas, err := c.listVMBDAByHostname(ctx, vmHostname)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	vmbdasMap := make(map[string]struct{})
-
-	for _, vdbda := range vmbdas {
-		vmbdasMap[vdbda.Spec.BlockDeviceRef.Name] = struct{}{}
-	}
 
 	for _, device := range vm.Status.BlockDeviceRefs {
-		if !device.Attached || device.Kind != v1alpha2.DiskDevice {
+		if device.Kind != v1alpha2.DiskDevice {
 			continue
 		}
-		if _, ok := vmbdasMap[device.Name]; !ok || !detachDisks {
-			disksToDelete = append(disksToDelete, device.Name)
+		if device.Hotplugged {
+			if detachDisks {
+				disksToDetach = append(disksToDetach, device.Name)
+			}
 			continue
 		}
-
-		disksToDetach = append(disksToDetach, device.Name)
+		disksToDelete = append(disksToDelete, device.Name)
 	}
 
 	return disksToDetach, disksToDelete, nil
@@ -294,16 +287,19 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		return err
 	}
 
+	vmBDAName := fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname)
+
 	vmbda, err := c.getVMBDA(ctx, diskName, vmHostname)
 	if vmbda != nil && err == nil {
-		return nil
+		// vmBDA already exists but may be InProgress — wait for it instead of returning OK prematurely.
+		waitCtx, cancel := context.WithTimeout(ctx, DefaultDiskAttachTimeout)
+		defer cancel()
+		return c.WaitDiskAttaching(waitCtx, vmBDAName)
 	}
 
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
-
-	vmBDAName := fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname)
 
 	vmbda = &v1alpha2.VirtualMachineBlockDeviceAttachment{
 		TypeMeta: metav1.TypeMeta{
@@ -343,12 +339,9 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		return err
 	}
 
-	err = c.WaitDiskAttaching(ctx, vmBDAName)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	attachCtx, cancel := context.WithTimeout(ctx, DefaultDiskAttachTimeout)
+	defer cancel()
+	return c.WaitDiskAttaching(attachCtx, vmBDAName)
 }
 
 func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, vmName string) error {
@@ -404,22 +397,11 @@ func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostna
 	return &vmbdas.Items[0], nil
 }
 
-func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname string) ([]v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s", attachmentMachineNameLabel, vmHostname))
-	if err != nil {
-		return nil, err
+func isDeckhouseManagedSecret(secret *corev1.Secret) bool {
+	if secret.Labels == nil {
+		return false
 	}
-
-	var vmbdas v1alpha2.VirtualMachineBlockDeviceAttachmentList
-	err = c.client.List(ctx, &vmbdas, &client.ListOptions{
-		LabelSelector: selector,
-		Namespace:     c.namespace,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return vmbdas.Items, nil
+	return secret.Labels[DeckhouseManagedByLabelKey] == DeckhouseManagedByLabelValue
 }
 
 func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte, vmName string, vmUID types.UID) error {
@@ -428,7 +410,7 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 			Name:      name,
 			Namespace: c.namespace,
 			Labels: map[string]string{
-				"deckhouse.io/managed-by":       "deckhouse",
+				DeckhouseManagedByLabelKey:      DeckhouseManagedByLabelValue,
 				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
 				"dvp.deckhouse.io/hostname":     vmHostname,
 			},
@@ -441,25 +423,70 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 				},
 			},
 		},
+		Immutable:  ptr.To(true),
 		Type:       v1alpha2.SecretTypeCloudInit,
 		StringData: map[string]string{"userData": string(userData)},
 	}
 
-	// Try to create, if already exists then update
-	if _, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
-		if k8serrors.IsAlreadyExists(err) {
-			// Secret already exists, update it instead
-			existing, getErr := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
-			if getErr != nil {
-				return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
-			}
-			existing.StringData = map[string]string{"userData": string(userData)}
+	_, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{})
+	if err == nil {
+		return nil
+	}
+	if !k8serrors.IsAlreadyExists(err) {
+		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+
+	// Secret already exists — load it and decide what to do.
+	existing, getErr := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	if getErr != nil {
+		return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
+	}
+
+	// Not managed by Deckhouse (legacy or user-created): keep as-is and continue reconcile.
+	if !isDeckhouseManagedSecret(existing) {
+		klog.Warningf(
+			"cloud-init secret %s/%s already exists without %s=%s; leaving unchanged and continuing with existing userData",
+			c.namespace, name, DeckhouseManagedByLabelKey, DeckhouseManagedByLabelValue,
+		)
+		return nil
+	}
+
+	if bytes.Equal(existing.Data["userData"], userData) {
+		if existing.Immutable == nil || !*existing.Immutable {
+			existing.Immutable = ptr.To(true)
 			if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
-				return fmt.Errorf("update '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
+				return fmt.Errorf("patch immutable on existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
 			}
+		}
+		return nil
+	}
+
+	// Immutable secret with different data: delete and recreate.
+	if delErr := c.clientset.CoreV1().Secrets(c.namespace).Delete(ctx, name, metav1.DeleteOptions{}); delErr != nil && !k8serrors.IsNotFound(delErr) {
+		return fmt.Errorf("delete stale '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, delErr)
+	}
+	if _, createErr := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); createErr != nil && !k8serrors.IsAlreadyExists(createErr) {
+		return fmt.Errorf("recreate '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, createErr)
+	}
+	return nil
+}
+
+func (c *ComputeService) EnsureCloudInitSecretImmutable(ctx context.Context, name string) error {
+	secret, err := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+		return fmt.Errorf("get '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+
+	if !isDeckhouseManagedSecret(secret) || (secret.Immutable != nil && *secret.Immutable) {
+		return nil
+	}
+
+	secret.Immutable = ptr.To(true)
+	if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, secret, metav1.UpdateOptions{}); updateErr != nil {
+		return fmt.Errorf("patch immutable on '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
 	}
 	return nil
 }

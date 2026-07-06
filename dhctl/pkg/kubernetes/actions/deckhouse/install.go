@@ -32,12 +32,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -64,7 +65,10 @@ func prepareDeckhouseDeploymentForUpdate(
 		// It helps to reduce wait time on bootstrap process restarting,
 		// and prevents a race condition when deckhouse's Pod is scheduled
 		// on the non-approved node, so the bootstrap process never finishes.
-		params := deckhouseDeploymentParamsFromCfg(cfg)
+		params, err := deckhouseDeploymentParamsFromCfg(cfg)
+		if err != nil {
+			return err
+		}
 		params.DeployTime = manifests.GetDeckhouseDeployTime(currentManifestInCluster)
 
 		resDeployment = manifests.ParameterizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
@@ -78,11 +82,18 @@ func prepareDeckhouseDeploymentForUpdate(
 func controllerDeploymentTask(
 	kubeCl *client.KubernetesClient,
 	cfg *config.DeckhouseInstaller,
-) actions.ManifestTask {
+) (actions.ManifestTask, error) {
+	// Build the manifest up front so the image-tag error surfaces here instead of inside the
+	// Manifest callback (which has no way to return an error).
+	deployment, err := CreateDeckhouseDeploymentManifest(cfg)
+	if err != nil {
+		return actions.ManifestTask{}, err
+	}
+
 	return actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
 		Manifest: func() any {
-			return CreateDeckhouseDeploymentManifest(cfg)
+			return deployment
 		},
 		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(ctx, manifest.(*appsv1.Deployment), metav1.CreateOptions{})
@@ -98,7 +109,7 @@ func controllerDeploymentTask(
 
 			return err
 		},
-	}
+	}, nil
 }
 
 func LockDeckhouseQueueBeforeCreatingModuleConfigs(
@@ -214,7 +225,7 @@ func CreateDeckhouseManifests(
 						_, err = kubeCl.RbacV1().ClusterRoles().Create(ctx, manifest.(*rbacv1.ClusterRole), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -239,7 +250,7 @@ func CreateDeckhouseManifests(
 						_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, manifest.(*rbacv1.ClusterRoleBinding), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -264,7 +275,7 @@ func CreateDeckhouseManifests(
 						_, err = kubeCl.CoreV1().ServiceAccounts("d8-system").Create(ctx, manifest.(*apiv1.ServiceAccount), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -338,7 +349,7 @@ func CreateDeckhouseManifests(
 				Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 
 			if err != nil && apierrors.IsAlreadyExists(err) {
-				log.InfoLn("Already exists. Skip!")
+				dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				return nil
 			}
 			return err
@@ -375,7 +386,7 @@ func CreateDeckhouseManifests(
 					Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 
 				if err != nil && apierrors.IsAlreadyExists(err) {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 					return nil
 				}
 
@@ -406,7 +417,7 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -440,7 +451,7 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -470,7 +481,7 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -542,7 +553,7 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -584,7 +595,7 @@ func CreateDeckhouseManifests(
 							Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -652,12 +663,12 @@ func CreateDeckhouseManifests(
 							CoreV1().Services("kube-system").
 							Create(ctx, manifest.(*apiv1.Service), metav1.CreateOptions{})
 						if err != nil && strings.Contains(err.Error(), "provided IP is already allocated") {
-							log.InfoLn("Service for DNS already exists. Skip!")
+							dhlog.FromContext(ctx).InfoContext(ctx, "Service for DNS already exists. Skip!")
 							return nil
 						}
 					}
 				} else {
-					log.InfoLn("Already exists. Skip!")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				}
 
 				return err
@@ -688,37 +699,39 @@ func CreateDeckhouseManifests(
 		tasks = append(tasks, *lockCmTask)
 	}
 
-	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
+	// The deckhouse controller Deployment is kept out of the prerequisite task
+	// list and applied only after all of them exist. The pod and its hooks read
+	// those resources on startup (registry pull secret, RBAC/ServiceAccount,
+	// cluster-configuration secrets, d8-cluster-uuid, ...); racing the Deployment
+	// against them can yield a pod that cannot pull images, or hooks that observe
+	// half-initialized state — e.g. an empty global.discovery.clusterUUID, which
+	// makes node-manager render node bootstrap scripts without the cluster-UUID
+	// prefix for registry-packages-proxy and hangs CAPS-adopted nodes ~20m.
+	deploymentTask, err := controllerDeploymentTask(kubeCl, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	result := &ManifestsResult{}
 
+	// ModuleConfigs are applied last: their CRD is installed by the running
+	// deckhouse pod, so these retry-wait for it to appear.
+	var moduleConfigTasks []actions.ManifestTask
 	if len(cfg.ModuleConfigs) > 0 {
 		prepareModuleConfig(ctx, cfg.ModuleConfigs[0], result)
-		tasks = append(tasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
+		moduleConfigTasks = append(moduleConfigTasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
 
 		for i := 1; i < len(cfg.ModuleConfigs); i++ {
 			prepareModuleConfig(ctx, cfg.ModuleConfigs[i], result)
-			tasks = append(tasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[i], ""))
+			moduleConfigTasks = append(moduleConfigTasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[i], ""))
 		}
 	}
 
-	err = log.ProcessCtx(ctx, "default", "Create Manifests", func(ctx context.Context) error {
-		if len(tasks) == 0 {
-			return nil
-		}
-
-		// The first task is the d8-system Namespace; everything else (RBAC,
-		// SAs, ConfigMaps, ModuleConfigs, the controller Deployment, etc.) is
-		// either cluster-scoped or namespace-scoped to d8-system. Run the
-		// Namespace serially first, then fan out the remaining tasks through
-		// errgroup. Tasks use Get-then-Create or simple Create-or-Update flows
-		// and target distinct API resources, so they are independent.
-		// Retry interval was 5s, which dominates the create-manifests phase
-		// whenever a task hits a transient error (e.g. ModuleConfig CRD not yet
-		// installed by the deckhouse Deployment that is being applied in
-		// parallel). The total deadline stays the same (60 attempts × 1s = 60s
-		// per task) but the loop reacts to the CRD appearing in ~1s instead of
-		// dead-waiting 5s.
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Manifests", func(ctx context.Context) error {
+		// Tasks use Get-then-Create or simple Create-or-Update flows and target
+		// distinct API resources. Retry interval is 1s (was 5s): the loop reacts to
+		// a transient error clearing (e.g. the ModuleConfig CRD appearing) in ~1s
+		// instead of dead-waiting; the total deadline stays 600 attempts × 1s.
 		runTask := func(task actions.ManifestTask) error {
 			return retry.NewSilentLoop(task.Name, 600, 1*time.Second).RunContext(
 				ctx,
@@ -728,39 +741,57 @@ func CreateDeckhouseManifests(
 			)
 		}
 
-		if err := runTask(tasks[0]); err != nil {
+		// runParallel applies independent tasks concurrently, capping the number of
+		// parallel writes so we don't hammer the freshly bootstrapped apiserver.
+		runParallel := func(parallelTasks []actions.ManifestTask) error {
+			const maxParallel = 8
+			eg, egCtx := errgroup.WithContext(ctx)
+			eg.SetLimit(maxParallel)
+
+			var logMu sync.Mutex
+			for i := range parallelTasks {
+				task := parallelTasks[i]
+				eg.Go(func() error {
+					if egCtx.Err() != nil {
+						return egCtx.Err()
+					}
+					if err := runTask(task); err != nil {
+						logMu.Lock()
+						dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("manifest task %q failed: %v", task.Name, err))
+						logMu.Unlock()
+						return err
+					}
+					return nil
+				})
+			}
+
+			return eg.Wait()
+		}
+
+		if len(tasks) > 0 {
+			// The d8-system Namespace comes first; everything else lives in it or
+			// references it.
+			if err := runTask(tasks[0]); err != nil {
+				return err
+			}
+
+			// All deckhouse prerequisites (RBAC, ServiceAccount, registry pull
+			// secret, cluster-configuration secrets, d8-cluster-uuid, queue lock,
+			// ...) are independent of each other and applied concurrently — but
+			// before the controller Deployment below, which reads them on startup.
+			if err := runParallel(tasks[1:]); err != nil {
+				return err
+			}
+		}
+
+		// The controller Deployment, once all its prerequisites exist.
+		if err := runTask(deploymentTask); err != nil {
 			return err
 		}
 
-		rest := tasks[1:]
-		if len(rest) == 0 {
-			return nil
-		}
-
-		// Cap concurrency to avoid hammering the freshly-bootstrapped
-		// apiserver with too many parallel writes.
-		const maxParallel = 8
-		eg, egCtx := errgroup.WithContext(ctx)
-		eg.SetLimit(maxParallel)
-
-		var logMu sync.Mutex
-		for i := range rest {
-			task := rest[i]
-			eg.Go(func() error {
-				if egCtx.Err() != nil {
-					return egCtx.Err()
-				}
-				if err := runTask(task); err != nil {
-					logMu.Lock()
-					log.ErrorF("manifest task %q failed: %v\n", task.Name, err)
-					logMu.Unlock()
-					return err
-				}
-				return nil
-			})
-		}
-
-		return eg.Wait()
+		// ModuleConfigs last: their CRD is installed by the now-running deckhouse
+		// pod, so these retry-wait for it to appear.
+		return runParallel(moduleConfigTasks)
 	})
 	if err != nil {
 		return nil, err
@@ -774,7 +805,7 @@ func WaitForReadiness(ctx context.Context, kubeCl *client.KubernetesClient, time
 }
 
 func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesClient, excludeNode string, timeout time.Duration) error {
-	return log.ProcessCtx(ctx, "default", "Waiting for Deckhouse to become Ready", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Waiting for Deckhouse to become Ready", func(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
@@ -792,11 +823,11 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 					if errors.Is(err, ErrTimedOut) {
 						return err
 					}
-					log.InfoLn(err.Error())
+					dhlog.FromContext(ctx).InfoContext(ctx, err.Error())
 				}
 
 				if ok {
-					log.Success("Deckhouse pod is Ready!\n")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse pod is Ready!\n")
 					return nil
 				}
 
@@ -807,25 +838,36 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 }
 
 func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
-	task := controllerDeploymentTask(kubeCl, cfg)
+	task, err := controllerDeploymentTask(kubeCl, cfg)
+	if err != nil {
+		return err
+	}
 
-	return log.ProcessCtx(ctx, "default", "Create Deployment", task.CreateOrUpdate)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Deployment", task.CreateOrUpdate)
 }
 
-func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
+func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) (manifests.DeckhouseDeploymentParams, error) {
+	image, err := cfg.GetInclusterImage(context.Background(), true)
+	if err != nil {
+		return manifests.DeckhouseDeploymentParams{}, err
+	}
+
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetInclusterImage(true),
+		Registry:           image,
 		LogLevel:           cfg.LogLevel,
 		Bundle:             cfg.Bundle,
 		KubeadmBootstrap:   cfg.KubeadmBootstrap,
 		MasterNodeSelector: cfg.MasterNodeSelector,
-	}
+	}, nil
 }
 
-func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.Deployment {
-	params := deckhouseDeploymentParamsFromCfg(cfg)
+func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) (*appsv1.Deployment, error) {
+	params, err := deckhouseDeploymentParamsFromCfg(cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	return manifests.DeckhouseDeployment(params)
+	return manifests.DeckhouseDeployment(params), nil
 }
 
 func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {

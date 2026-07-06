@@ -31,6 +31,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
@@ -39,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -62,7 +62,7 @@ func LoadConfigFromFile(
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
-	docs, err := FetchDocuments(paths)
+	docs, err := FetchDocuments(ctx, paths)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func ParseConfig(
 			continue // skip wildcard paths, we revealed them in the previous step
 		}
 
-		log.DebugF("Have config file %s\n", path)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Have config file %s", path))
 		fileContent, err := os.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("loading config file: %v", err)
@@ -180,7 +180,7 @@ func ParseConfigFromCluster(
 	var metaConfig *MetaConfig
 	var err error
 
-	return metaConfig, log.ProcessCtx(ctx, "common", "Get cluster configuration", func(ctx context.Context) error {
+	return metaConfig, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Get cluster configuration", func(ctx context.Context) error {
 		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 50, 1*time.Second).
 			RunContext(ctx, func() error {
 				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions, operation)
@@ -322,7 +322,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 //	    ModuleConfig
 //
 // if validation schema for ModuleConfig or another resources not found returns ErrSchemaNotFound error
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ...ValidateOption) (bool, error) {
+func parseDocument(ctx context.Context, doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ...ValidateOption) (bool, error) {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return false, nil
@@ -334,26 +334,26 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 	var index SchemaIndex
 	err := yaml.Unmarshal(docData, &index)
 	if err != nil {
-		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s", err, numerateManifestLines(docData))
 	}
 
 	if index.Kind == ModuleConfigKind {
 		moduleConfig := ModuleConfig{}
 		err = yaml.Unmarshal(docData, &moduleConfig)
 		if err != nil {
-			return false, fmt.Errorf("Module config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			return false, fmt.Errorf("Module config document unmarshal failed: %v\ndata: \n%s", err, numerateManifestLines(docData))
 		}
 
-		log.DebugF("Found ModuleConfig in config file %s\n", moduleConfig.Name)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found ModuleConfig in config file %s", moduleConfig.Name))
 
 		if !options.skipSchemaValidation {
 			_, err = schemaStore.Validate(&docData, opts...)
 			if err != nil {
 				if errors.Is(err, ErrSchemaNotFound) {
-					log.DebugF("Schema not found for module %s\n", moduleConfig.Name)
+					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Schema not found for module %s", moduleConfig.Name))
 					return false, nil
 				}
-				return false, fmt.Errorf("Module config validation failed: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
+				return false, fmt.Errorf("Module config validation failed: %w\ndata: \n%s", err, numerateManifestLines(docData))
 			}
 		}
 
@@ -367,31 +367,31 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 			if errors.Is(err, ErrSchemaNotFound) {
 				return false, nil
 			}
-			return false, fmt.Errorf("Config document validation failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			return false, fmt.Errorf("Config document validation failed: %v\ndata: \n%s", err, numerateManifestLines(docData))
 		}
 	}
 
 	var data map[string]json.RawMessage
 	if err = yaml.Unmarshal(docData, &data); err != nil {
-		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s", err, numerateManifestLines(docData))
 	}
 
 	found := false
 	switch {
 	case index.Kind == "InitConfiguration":
-		log.DebugLn("Found InitConfiguration")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Found InitConfiguration")
 		metaConfig.InitClusterConfig = data
 		found = true
 	case index.Kind == "ClusterConfiguration":
-		log.DebugLn("Found ClusterConfiguration")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Found ClusterConfiguration")
 		metaConfig.ClusterConfig = data
 		found = true
 	case index.Kind == "StaticClusterConfiguration":
-		log.DebugLn("Found StaticClusterConfiguration")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Found StaticClusterConfiguration")
 		metaConfig.StaticClusterConfig = data
 		found = true
 	case strings.HasSuffix(index.Kind, "ClusterConfiguration"):
-		log.DebugF("Found %s\n", index.Kind)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found %s", index.Kind))
 		metaConfig.ProviderClusterConfig = data
 		found = true
 	}
@@ -459,7 +459,8 @@ func detectMergedDocuments(doc string) error {
 
 func ParseConfigFromData(
 	ctx context.Context,
-	configData string, preparatorProvider MetaConfigPreparatorProvider,
+	configData string,
+	preparatorProvider MetaConfigPreparatorProvider,
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
@@ -484,7 +485,7 @@ func ParseConfigFromData(
 			continue
 		}
 
-		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
+		found, err := parseDocument(ctx, doc, &metaConfig, schemaStore, opts...)
 		if err != nil {
 			if !options.collectAllErrors {
 				return nil, err
@@ -496,7 +497,7 @@ func ParseConfigFromData(
 			var index SchemaIndex
 			_ = yaml.Unmarshal([]byte(doc), &index)
 			if index.Kind != "" && index.Version != "" {
-				log.DebugF("Found resource for resourcesYaml %s/%s\n", index.Kind, index.Version)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found resource for resourcesYaml %s/%s", index.Kind, index.Version))
 			}
 			resourcesDocs = append(resourcesDocs, doc)
 		}
@@ -515,13 +516,13 @@ func ParseConfigFromData(
 	// init configuration can be empty, but we need default from openapi spec
 	// Note: InitConfiguration can also be provided via ModuleConfig deckhouse (registry settings)
 	if len(metaConfig.InitClusterConfig) == 0 {
-		log.DebugF("Init configuration not found, using empty")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Init configuration not found, using empty")
 		doc := `
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
+		found, err := parseDocument(ctx, doc, &metaConfig, schemaStore, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -647,16 +648,16 @@ func withDownloadDir(globalOptions *options.GlobalOptions) *options.GlobalOption
 	return &cp
 }
 
-func FetchDocuments(paths []string) ([]string, error) {
+func FetchDocuments(ctx context.Context, paths []string) ([]string, error) {
 	paths = fs.RevealWildcardPaths(paths)
-
 	content := ""
+
 	for _, path := range paths {
 		if strings.Contains(path, "*") {
 			continue // skip wildcard paths, we revealed them in the previous step
 		}
 
-		log.DebugF("Have config file %s\n", path)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Have config file %s", path))
 		fileContent, err := os.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("loading config file: %w", err)
@@ -669,7 +670,7 @@ func FetchDocuments(paths []string) ([]string, error) {
 
 	for _, doc := range docs {
 		if err := detectMergedDocuments(doc); err != nil {
-			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
+			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s", err, numerateManifestLines([]byte(doc)))
 		}
 	}
 	return docs, nil
@@ -812,7 +813,7 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOpti
 		return err
 	}
 
-	err = image.PrepareFiles(filepath.Join(globalOptions.DownloadDir, "deckhouse"))
+	err = image.PrepareFiles(ctx, filepath.Join(globalOptions.DownloadDir, "deckhouse"))
 	if err != nil {
 		return err
 	}
@@ -929,7 +930,7 @@ func unpackProviderBundle(ctx context.Context, provider, digest string, conf *im
 	digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
 	if _, err := os.Stat(digestDir); err != nil {
 		imgName := conf.GetRegistry() + "@" + digest
-		log.DebugF("Downloading provider bundle for %s\n", provider)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Downloading provider bundle for %s", provider))
 		if err := downloadProviderBundle(ctx, imgName, digestDir, globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress); err != nil {
 			return fmt.Errorf("download provider bundle %s: %w", imgName, err)
 		}
@@ -957,7 +958,7 @@ func switchProviderSymlink(linkPath, target string) error {
 }
 
 // prepare CandiDir if not exists
-func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger, globalOptions *options.GlobalOptions) error {
+func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, globalOptions *options.GlobalOptions) error {
 	// test only
 	if globalOptions == nil {
 		return nil

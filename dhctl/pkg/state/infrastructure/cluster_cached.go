@@ -23,7 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -31,17 +30,15 @@ import (
 type KubeTerraStateLoader struct {
 	kubeProvider kubernetes.KubeClientProviderWithCtx
 	stateCache   state.Cache
-	logger       log.Logger
 	operation    string
 
 	forceFromCache bool
 }
 
-func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, logger log.Logger, operation string) *KubeTerraStateLoader {
+func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, operation string) *KubeTerraStateLoader {
 	return &KubeTerraStateLoader{
 		kubeProvider: kubeProvider,
 		stateCache:   stateCache,
-		logger:       logger,
 		operation:    operation,
 
 		forceFromCache: false,
@@ -77,7 +74,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, globalOpt
 		return nil, err
 	}
 
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(s.logger)
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	metaConfig, err = config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,

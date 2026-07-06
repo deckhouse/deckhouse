@@ -1,6 +1,8 @@
+# WERF version for CI workflows. Read at runtime from this file by read_werf_version_step.
+WERF_VERSION: "v2.73.2"
+
 {!{ define "werf_envs" }!}
 # <template: werf_envs>
-WERF_VERSION: "v2.73.1"
 WERF_ENV: "FE"
 TEST_TIMEOUT: "15m"
 # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.

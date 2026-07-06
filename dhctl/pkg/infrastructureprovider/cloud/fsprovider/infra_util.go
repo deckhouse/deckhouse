@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 )
@@ -39,13 +38,11 @@ var (
 type InfrastructureUtilProvider struct {
 	m sync.Mutex
 
-	logger      log.Logger
 	binariesDir string
 }
 
-func newInfrastructureUtilProvider(logger log.Logger, binariesDir string) *InfrastructureUtilProvider {
+func newInfrastructureUtilProvider(binariesDir string) *InfrastructureUtilProvider {
 	return &InfrastructureUtilProvider{
-		logger:      logger,
 		binariesDir: binariesDir,
 	}
 }
@@ -64,7 +61,7 @@ func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *conf
 
 	bundled := filepath.Join(p.binariesDir, binaryName)
 	if _, err := os.Stat(bundled); err == nil {
-		return fsutils.CreateLinkIfNotExists(bundled, checkIsExecFile, destination, p.logger)
+		return fsutils.CreateLinkIfNotExists(ctx, bundled, checkIsExecFile, destination)
 	}
 
 	downloaded := filepath.Join(conf.DownloadRootDir, binaryName)
@@ -74,7 +71,7 @@ func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *conf
 		}
 	}
 
-	return fsutils.CreateLinkIfNotExists(downloaded, checkIsExecFile, destination, p.logger)
+	return fsutils.CreateLinkIfNotExists(ctx, downloaded, checkIsExecFile, destination)
 }
 
 func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string, showProgress bool) error {

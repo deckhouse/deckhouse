@@ -27,7 +27,6 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.73.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -453,9 +452,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -770,9 +794,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -905,15 +954,40 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
-      - name: Set up Go 1.25
+      - name: Set up Go 1.26
         uses: actions/setup-go@v5.4.0
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
+
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
 
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -1029,9 +1103,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -1322,9 +1421,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -1615,9 +1739,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -1908,9 +2057,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -2201,9 +2375,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -2494,9 +2693,34 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
       # <template: werf_install_step>
       - name: Install werf-dk CLI
         run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
@@ -2771,6 +2995,26 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -2857,6 +3101,26 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+            exit 1
+          fi
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -3022,7 +3286,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:e3ce5d01ca717933f9f9e232bb39e0699fae86b4ef0da4520ee251cc4be956b8"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:98aced736e6cc63e0185affd88f7a4f3225f1e6f494e8bb509061e590d2849e0"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -3137,7 +3401,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run node-controller tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:e3ce5d01ca717933f9f9e232bb39e0699fae86b4ef0da4520ee251cc4be956b8"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:98aced736e6cc63e0185affd88f7a4f3225f1e6f494e8bb509061e590d2849e0"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

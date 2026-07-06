@@ -36,7 +36,7 @@ jobs:
   get-tags:
     name: Get tags for scanning
     runs-on: [self-hosted, regular]
-    if: github.repository == 'deckhouse/deckhouse'
+    if: ${{ false }}
     outputs:
       tags: ${{ steps.set-manual-tag.outputs.tags || steps.get-tags.outputs.tags || steps.set-default.outputs.tags }}
     steps:
@@ -117,7 +117,7 @@ jobs:
 
   # <template: drweb_scan_job>
   drweb-scan:
-    name: Dr.Web Scan ${{ matrix.branch }}
+    name: Dr.Web Scan
     runs-on: [self-hosted, antivirus]
     if: github.repository == 'deckhouse/deckhouse'
     # Weekly/release mode: no changed_images upstream; full-scan every matrix entry.
@@ -130,6 +130,7 @@ jobs:
       id-token: write
     outputs:
       scan_id: ${{ steps.scan.outputs.scan_id }}
+      skipped: ${{ steps.scan.outputs.skipped }}
     steps:
       # <template: import_secrets>
       - name: Split repository name
@@ -187,9 +188,15 @@ jobs:
           SCAN_DIR=/opt/actions-runners/scans/drweb
           echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
           echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
+          echo "skipped=false" >> $GITHUB_OUTPUT
           echo $CONTAINER_NAME
-          docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
-            scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          if [[ -n "${ONLY_IMAGES:-}" ]]; then
+            docker exec -e ONLY_IMAGES="${ONLY_IMAGES}" ${CONTAINER_NAME} \
+              scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          else
+            docker exec ${CONTAINER_NAME} \
+              scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          fi
           # Drop container-uid ownership so the host-side Upload/Cleanup steps below
           # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
           # touch the bind-mounted scan artifacts under the runner's UID (this step
@@ -216,7 +223,7 @@ jobs:
           echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
 
       - name: Upload scan artifacts
-        if: github.repository == 'deckhouse/deckhouse' && always()
+        if: github.repository == 'deckhouse/deckhouse' && always() && steps.scan.outputs.skipped != 'true'
         uses: actions/upload-artifact@v4.4.0
         with:
           name: drweb-scan-results-${{ steps.scan.outputs.scan_id }}
@@ -243,7 +250,7 @@ jobs:
 
   # <template: kaspersky_scan_job>
   kaspersky-scan:
-    name: Kaspersky Scan ${{ matrix.branch }}
+    name: Kaspersky Scan
     runs-on: [self-hosted, antivirus]
     if: github.repository == 'deckhouse/deckhouse'
     # Weekly/release mode: no changed_images upstream; full-scan every matrix entry.
@@ -256,6 +263,7 @@ jobs:
       id-token: write
     outputs:
       scan_id: ${{ steps.scan.outputs.scan_id }}
+      skipped: ${{ steps.scan.outputs.skipped }}
     steps:
       # <template: import_secrets>
       - name: Split repository name
@@ -313,9 +321,15 @@ jobs:
           SCAN_DIR=/opt/actions-runners/scans/kaspersky
           echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
           echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
+          echo "skipped=false" >> $GITHUB_OUTPUT
           echo $CONTAINER_NAME
-          docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
-            scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          if [[ -n "${ONLY_IMAGES:-}" ]]; then
+            docker exec -e ONLY_IMAGES="${ONLY_IMAGES}" ${CONTAINER_NAME} \
+              scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          else
+            docker exec ${CONTAINER_NAME} \
+              scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          fi
           # Drop container-uid ownership so the host-side Upload/Cleanup steps below
           # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
           # touch the bind-mounted scan artifacts under the runner's UID (this step
@@ -342,7 +356,7 @@ jobs:
           echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
 
       - name: Upload scan artifacts
-        if: github.repository == 'deckhouse/deckhouse' && always()
+        if: github.repository == 'deckhouse/deckhouse' && always() && steps.scan.outputs.skipped != 'true'
         uses: actions/upload-artifact@v4.4.0
         with:
           name: kaspersky-scan-results-${{ steps.scan.outputs.scan_id }}

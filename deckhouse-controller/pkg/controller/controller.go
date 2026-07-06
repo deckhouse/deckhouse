@@ -77,27 +77,26 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
 
-	deckhouseNamespace  = "d8-system"
-	kubernetesNamespace = "kube-system"
-
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	defaultModuleVersion    = "v2.0.0"
 
-	envEnablePackageSystem  = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
-	envEnableModulePackages = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
+	// gracefulShutdownTimeout bounds the controller-runtime manager shutdown.
+	gracefulShutdownTimeout = 10 * time.Second
 )
 
 type DeckhouseController struct {
 	runtimeManager     manager.Manager
 	preflightCountDown *sync.WaitGroup
 
-	moduleLoader *moduleloader.Loader
+	moduleLoader   *moduleloader.Loader
+	packageRuntime *packageruntime.Runtime
 
 	deckhouseConfigCh <-chan utils.Values
 
@@ -152,13 +151,13 @@ func NewDeckhouseController(
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
 		},
-		GracefulShutdownTimeout: ptr.To(10 * time.Second),
+		GracefulShutdownTimeout: ptr.To(gracefulShutdownTimeout),
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// for ModuleDocumentation controller
 				&coordv1.Lease{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
 						},
 					},
@@ -166,10 +165,10 @@ func NewDeckhouseController(
 				// for ModuleRelease controller and DeckhouseRelease controller
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
 						},
-						kubernetesNamespace: {
+						app.NamespaceKubeSystem: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"name": "d8-cluster-configuration"}),
 						},
 					},
@@ -177,7 +176,7 @@ func NewDeckhouseController(
 				// for DeckhouseRelease controller
 				&corev1.Pod{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "deckhouse"}),
 						},
 					},
@@ -185,7 +184,7 @@ func NewDeckhouseController(
 				// for DeckhouseRelease controller
 				&corev1.ConfigMap{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
 						},
 					},
@@ -204,7 +203,7 @@ func NewDeckhouseController(
 	}
 
 	// Package system controllers (feature flag)
-	if os.Getenv(envEnablePackageSystem) == "true" {
+	if app.PackageSystemEnabled() {
 		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
@@ -213,7 +212,7 @@ func NewDeckhouseController(
 	}
 
 	// Module package controllers (feature flag)
-	if os.Getenv(envEnableModulePackages) == "true" {
+	if app.ModulePackagesEnabled() {
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
@@ -239,7 +238,7 @@ func NewDeckhouseController(
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
 	// set chrooted environment for modules
-	if len(os.Getenv("ADDON_OPERATOR_SHELL_CHROOT_DIR")) > 0 {
+	if len(os.Getenv(app.EnvShellChrootDir)) > 0 {
 		setModulesEnvironment(operator)
 	}
 
@@ -345,7 +344,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	pkgRuntime, err := packageruntime.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
+	pkgRuntime, err := packageruntime.New(runtimeManager.GetClient(), edition, operator.ModuleManager, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -362,7 +361,7 @@ func NewDeckhouseController(
 	})
 
 	// Package system controllers (feature flag)
-	if os.Getenv(envEnablePackageSystem) == "true" {
+	if app.PackageSystemEnabled() {
 		logger.Info("Package system controllers are enabled")
 
 		pkgRuntime.Run()
@@ -389,7 +388,7 @@ func NewDeckhouseController(
 	}
 
 	// Module package controllers (feature flag)
-	if os.Getenv(envEnableModulePackages) == "true" {
+	if app.ModulePackagesEnabled() {
 		logger.Info("Module package controllers are enabled")
 
 		err = modulepackage.RegisterController(runtimeManager, dc, logger.Named("module-package-controller"))
@@ -424,6 +423,7 @@ func NewDeckhouseController(
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
 		moduleLoader:       loader,
+		packageRuntime:     pkgRuntime,
 		preflightCountDown: preflightCountDown,
 
 		deckhouseConfigCh: deckhouseConfigCh,
@@ -451,6 +451,11 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
+	// load initial configuration from cluster state
+	if err := c.loadInitialConfiguration(ctx); err != nil {
+		return fmt.Errorf("load initial configuration: %w", err)
+	}
+
 	// sync fs with cluster state, restore or delete modules
 	if err := c.moduleLoader.Sync(ctx); err != nil {
 		return fmt.Errorf("init module loader: %w", err)
@@ -463,6 +468,29 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
 	go c.syncDeckhouseSettings()
+
+	return nil
+}
+
+// loadInitialConfiguration seeds the runtime with the ModuleConfig state already
+// present in the cluster, before the module loader starts syncing packages. At
+// this point no package is tracked yet, so UpdateModulesSettings records only the
+// enabled/disabled intent (it lives in the global module and is read by the
+// scheduler's config rule the moment a package registers); the per-package
+// settings are dropped here and supplied later by the loader via UpdateModule.
+func (c *DeckhouseController) loadInitialConfiguration(ctx context.Context) error {
+	configs := new(v1alpha1.ModuleConfigList)
+	if err := c.runtimeManager.GetClient().List(ctx, configs); err != nil {
+		return fmt.Errorf("list module configs: %w", err)
+	}
+
+	for _, conf := range configs.Items {
+		if conf.DeletionTimestamp != nil {
+			continue
+		}
+
+		c.packageRuntime.UpdateModulesSettings(conf.Name, conf.Spec.Settings.GetMap(), conf.Spec.Enabled)
+	}
 
 	return nil
 }

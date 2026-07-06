@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/name212/govalue"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
@@ -28,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type DhctlOperation = string
@@ -40,38 +39,33 @@ const (
 )
 
 type PreparatorProviderParams struct {
-	logger log.Logger
 }
 
-func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
-	return PreparatorProviderParams{logger: logger}
+func NewPreparatorProviderParams() PreparatorProviderParams {
+	return PreparatorProviderParams{}
 }
 
 func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
-	return PreparatorProviderParams{logger: log.NewSilentLogger()}
+	return PreparatorProviderParams{}
 }
 
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
-	logger := params.logger
-	if govalue.IsNil(logger) {
-		logger = log.NewSilentLogger()
-	}
-	return func(provider, downloadRootDir string) config.MetaConfigPreparator {
-		return selectPreparator(provider, downloadRootDir, logger)
+	return func(ctx context.Context, provider, downloadRootDir string) config.MetaConfigPreparator {
+		return selectPreparator(ctx, provider, downloadRootDir)
 	}
 }
 
-func selectPreparator(provider, downloadRootDir string, logger log.Logger) config.MetaConfigPreparator {
+func selectPreparator(ctx context.Context, provider, downloadRootDir string) config.MetaConfigPreparator {
 	switch provider {
 	case "":
 		// static cluster
-		return config.DummyPreparatorProvider()("", "")
+		return config.DummyPreparatorProvider()(ctx, "", "")
 	case yandex.ProviderName:
 		// Top-level dhctl path (bootstrap/converge/check): validate cluster
 		// prefix. The hook-side caller passes false.
-		return yandex.NewMetaConfigPreparator(true, logger)
+		return yandex.NewMetaConfigPreparator(true)
 	case vcd.ProviderName:
-		return vcd.NewMetaConfigPreparator(logger)
+		return vcd.NewMetaConfigPreparator()
 	default:
 		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
 			return external.NewBinaryPreparator(binaryPath)
@@ -80,7 +74,7 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger) confi
 		if downloadRootDir != "" {
 			searched = providerdir.ValidatorPath(downloadRootDir, provider)
 		}
-		logger.LogErrorF("external validator for provider %q not found at %q\n", provider, searched)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("external validator for provider %q not found at %q", provider, searched))
 		return &missingExternalValidatorPreparator{provider: provider, searchedPath: searched}
 	}
 }

@@ -1,18 +1,16 @@
-/*
-Copyright 2025 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package v1alpha2
 
@@ -40,7 +38,7 @@ func (r *StaticInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		WithDefaulter(&StaticInstanceCustomDefaulter{}).
-		WithValidator(&StaticInstanceCustomValidator{}).
+		WithValidator(&StaticInstanceCustomValidator{Reader: mgr.GetAPIReader()}).
 		Complete()
 }
 
@@ -66,7 +64,9 @@ func (r *StaticInstanceCustomDefaulter) Default(_ context.Context, obj runtime.O
 
 var _ webhook.CustomValidator = &StaticInstanceCustomValidator{}
 
-type StaticInstanceCustomValidator struct{}
+type StaticInstanceCustomValidator struct {
+	Reader client.Reader
+}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticInstanceCustomValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
@@ -78,16 +78,17 @@ func (r *StaticInstanceCustomValidator) ValidateCreate(_ context.Context, obj ru
 
 	ctx := context.Background()
 
-	mgr, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Kubernetes config: %w", err)
-	}
-	cli, err := client.New(mgr, client.Options{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+	existing := &StaticInstance{}
+	err := r.Reader.Get(ctx, client.ObjectKey{Name: staticInstance.Name}, existing)
+	switch {
+	case err == nil:
+		staticinstancelog.Info("StaticInstance already exists, skipping address validation", "name", staticInstance.Name)
+		return nil, nil
+	case !apierrors.IsNotFound(err):
+		return nil, fmt.Errorf("failed to get StaticInstance %q: %w", staticInstance.Name, err)
 	}
 
-	if err := staticInstance.validateAddressIfNoSkipBootstrap(ctx, cli); err != nil {
+	if err := staticInstance.validateAddressIfNoSkipBootstrap(ctx, r.Reader); err != nil {
 		return nil, field.Forbidden(field.NewPath("spec", "address"), err.Error())
 	}
 	return nil, nil
@@ -139,7 +140,7 @@ func (r *StaticInstanceCustomValidator) ValidateDelete(_ context.Context, obj ru
 // validateAddressIfNoSkipBootstrap ensures that if StaticInstance does NOT have
 // annotation "static.node.deckhouse.io/skip-bootstrap-phase",
 // then its spec.address must NOT match any existing Node address.
-func (r *StaticInstance) validateAddressIfNoSkipBootstrap(ctx context.Context, cli client.Client) error {
+func (r *StaticInstance) validateAddressIfNoSkipBootstrap(ctx context.Context, cli client.Reader) error {
 	if _, hasSkipBootstrap := r.Annotations["static.node.deckhouse.io/skip-bootstrap-phase"]; hasSkipBootstrap {
 		staticinstancelog.Info("skip-bootstrap annotation found, skipping address validation", "name", r.Name)
 		return nil

@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,7 +49,7 @@ func TestSplitResources_CredentialSecretGoesToBefore(t *testing.T) {
 	})
 	regularResource := newResource(t, "deckhouse.io/v1alpha1", "ModuleConfig", "user-authn", "", nil)
 
-	before, after := splitResourcesOnPreAndPostDeckhouseInstall(template.Resources{credSecret, regularResource})
+	before, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, regularResource})
 
 	// before queue must contain the credential Secret AND a namespace stub for d8-cloud-provider-dvp.
 	require.Len(t, before, 2)
@@ -66,7 +67,7 @@ func TestSplitResources_NonCredentialSecretGoesToAfter(t *testing.T) {
 		"type": "Opaque",
 	})
 
-	before, after := splitResourcesOnPreAndPostDeckhouseInstall(template.Resources{plainSecret})
+	before, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{plainSecret})
 
 	require.Empty(t, before)
 	require.Len(t, after, 1)
@@ -79,7 +80,7 @@ func TestSplitResources_BeforeAnnotationStillRespected(t *testing.T) {
 		"dhctl.deckhouse.io/bootstrap-resource-place": "before-deckhouse",
 	})
 
-	before, after := splitResourcesOnPreAndPostDeckhouseInstall(template.Resources{annotated})
+	before, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{annotated})
 
 	require.Empty(t, after)
 	// Namespace stub for kube-system is added even though kube-system always exists; harmless.
@@ -97,7 +98,7 @@ func TestSplitResources_ExplicitNamespaceNotDuplicated(t *testing.T) {
 		"dhctl.deckhouse.io/bootstrap-resource-place": "before-deckhouse",
 	})
 
-	before, _ := splitResourcesOnPreAndPostDeckhouseInstall(template.Resources{credSecret, explicitNS})
+	before, _ := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, explicitNS})
 
 	// Only one Namespace entry — the user-provided one, no auto-stub.
 	nsCount := 0

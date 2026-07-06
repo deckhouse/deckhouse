@@ -313,7 +313,7 @@ func TestWaypointInstanceLifecycle(t *testing.T) {
 	}
 
 	// Use apiReader (uncached) to read child resources. The manager's cache
-	// is label-filtered to app=d8-waypoint and would also work, but
+	// is label-filtered to app=waypoint and would also work, but
 	// bypassing it removes a potential cache-staleness flake source.
 	reader := te.mgr.GetAPIReader()
 

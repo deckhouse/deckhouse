@@ -24,10 +24,11 @@ import (
 	"strings"
 	"sync"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const (
@@ -37,7 +38,6 @@ const (
 type modulesProvider struct {
 	m sync.Mutex
 
-	logger           log.Logger
 	cloudProviderDir string
 	// downloadRootDir is the root for OCI-unpacked provider trees. When a
 	// provider's modules aren't bundled under cloudProviderDir, copyDir falls
@@ -46,9 +46,8 @@ type modulesProvider struct {
 	downloadRootDir string
 }
 
-func newModulesProvider(logger log.Logger, cloudProviderDir, downloadRootDir string) *modulesProvider {
+func newModulesProvider(cloudProviderDir, downloadRootDir string) *modulesProvider {
 	return &modulesProvider{
-		logger:           logger,
 		cloudProviderDir: cloudProviderDir,
 		downloadRootDir:  downloadRootDir,
 	}
@@ -62,15 +61,15 @@ func newModulesProvider(logger log.Logger, cloudProviderDir, downloadRootDir str
 // optional (if layouts do not use common modules)
 //
 //	terraform-modules/
-func (p *modulesProvider) DownloadModules(_ context.Context, params cloud.DownloadModulesParams, destination string) error {
+func (p *modulesProvider) DownloadModules(ctx context.Context, params cloud.DownloadModulesParams, destination string) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	if err := p.copyDir(fsproviderpath.LayoutsDir, params, destination); err != nil {
+	if err := p.copyDir(ctx, fsproviderpath.LayoutsDir, params, destination); err != nil {
 		return err
 	}
 
-	return p.copyDir(infraModulesDir, params, destination)
+	return p.copyDir(ctx, infraModulesDir, params, destination)
 }
 
 // DownloadSpecs
@@ -82,9 +81,14 @@ func (p *modulesProvider) DownloadSpecs(ctx context.Context, _ cloud.DownloadSpe
 	return fmt.Errorf("DownloadSpecs not implemented")
 }
 
-func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams, destination string) error {
+func (p *modulesProvider) copyDir(ctx context.Context, dir string, params cloud.DownloadModulesParams, destination string) error {
 	cloudName := strings.ToLower(params.Settings.CloudName())
-	sourceDir := path.Join(p.cloudProviderDir, cloudName, dir)
+	sourceDir := path.Join(
+		p.cloudProviderDir,
+		cloudName,
+		dir,
+	)
+
 	destinationDir := path.Join(destination, dir)
 
 	stat, err := os.Stat(sourceDir)
@@ -103,7 +107,7 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 		}
 		if stat == nil {
 			if dir == infraModulesDir {
-				p.logger.LogDebugF("Copying cloud-providers modules (dir %s) from %s to %s skipped. Not found\n", dir, sourceDir, destinationDir)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s skipped. Not found", dir, sourceDir, destinationDir))
 				return nil
 			}
 			return err
@@ -114,12 +118,12 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 		return fmt.Errorf("Copying cloud-providers modules (dir %s) from %s to %s failed: not a dir", dir, sourceDir, destinationDir)
 	}
 
-	p.logger.LogDebugF("Copying cloud-providers modules (dir %s) from %s to %s\n", dir, sourceDir, destinationDir)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s", dir, sourceDir, destinationDir))
 
 	// todo replace with os.CopyFS with go 1.25
 	err = copyFS(destinationDir, os.DirFS(sourceDir), sourceDir)
 	if errors.Is(err, fs.ErrExist) {
-		p.logger.LogDebugF("Copying cloud-providers modules (dir %s) from %s to %s skipped. Exists\n", dir, sourceDir, destinationDir)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s skipped. Exists", dir, sourceDir, destinationDir))
 		return nil
 	}
 

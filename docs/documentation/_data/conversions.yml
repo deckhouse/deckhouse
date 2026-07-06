@@ -131,18 +131,17 @@ node-manager:
         ru: Удалите `allowedKubernetesVersions` и `allowedBundles`.
       conversions:
         - del(.allowedKubernetesVersions, .allowedBundles)
+    - version: 3
+      description:
+        en: Delete `earlyOomEnabled`.
+        ru: Удалите `earlyOomEnabled`.
+      conversions:
+        - del(.earlyOomEnabled)
 openvpn:
     - version: 2
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
         - del(.storageClass)
-prometheus:
-    - version: 2
-      description:
-        en: Remove the `.auth.password` field. If the `.auth` object becomes empty after this change, delete it.
-        ru: Удалите поле `.auth.password`. Если в результате объект `.auth` становится пуст, удалите его.
-      conversions:
-        - del(.auth.password) | if .auth == {} then del(.auth) end
 upmeter:
     - version: 2
       conversions:

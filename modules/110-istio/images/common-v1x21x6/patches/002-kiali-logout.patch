@@ -1,0 +1,80 @@
+diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
+index 1b4fa6f..8e8efb7 100644
+--- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
++++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
+@@ -9,6 +9,8 @@ import { AuthStrategy } from '../../../types/Auth';
+ import moment from 'moment';
+ import { KialiDispatch } from 'types/Redux';
+ import { LoginThunkActions } from '../../../actions/LoginThunkActions';
++import { LoginActions } from '../../../actions/LoginActions';
++import { store } from '../../../store/ConfigStore';
+ import { connect } from 'react-redux';
+ import * as API from '../../../services/Api';
+ import { kialiStyle } from 'styles/StyleUtils';
+@@ -34,6 +36,14 @@ const dropdownStyle = kialiStyle({
+   paddingRight: 0
+ });
+ 
++
++const DEX_LOGOUT_STORAGE_KEY = 'kiali-dex-logout';
++
++const headerAuthLogoutURL = (): string => {
++  const redirectURL = encodeURIComponent(`${window.location.origin}/`);
++  return `/logout?rd=${redirectURL}`;
++};
++
+ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+   constructor(props: UserProps) {
+     super(props);
+@@ -55,6 +65,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+       this.setState({ timeCountDownSeconds: this.timeLeft() / MILLISECONDS });
+     }, 1000);
+ 
++    window.addEventListener('storage', this.handleStorageLogout);
++
+     this.setState({
+       checkSessionTimerId: checkSessionTimerId,
+       timeLeftTimerId: timeLeftTimerId
+@@ -69,6 +81,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+     if (this.state.timeLeftTimerId) {
+       clearInterval(this.state.timeLeftTimerId);
+     }
++
++    window.removeEventListener('storage', this.handleStorageLogout);
+   }
+ 
+   timeLeft = (): number => {
+@@ -87,7 +101,23 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+     }
+   };
+ 
++
++  handleStorageLogout = (event: StorageEvent) => {
++    if (event.key !== DEX_LOGOUT_STORAGE_KEY || !event.newValue) {
++      return;
++    }
++    // Do not call /logout or reload here: only the tab that clicked Logout runs sign_out.
++    // Mark this tab as logged out locally to stop XHR polling without racing oauth2-proxy CSRF.
++    store.dispatch(LoginActions.sessionExpired());
++  };
++
+   handleLogout = () => {
++    if (authenticationConfig.strategy === AuthStrategy.header) {
++      localStorage.setItem(DEX_LOGOUT_STORAGE_KEY, String(Date.now()));
++      window.location.assign(headerAuthLogoutURL());
++      return;
++    }
++
+     if (authenticationConfig.logoutEndpoint) {
+       API.logout()
+         .then(_ => {
+@@ -123,8 +153,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+   render() {
+     const { isDropdownOpen } = this.state;
+ 
+-    const canLogout =
+-      authenticationConfig.strategy !== AuthStrategy.anonymous && authenticationConfig.strategy !== AuthStrategy.header;
++    const canLogout = authenticationConfig.strategy !== AuthStrategy.anonymous;
+ 
+     const userDropdownItems = (
+       <DropdownItem key={'user_logout_option'} onClick={this.handleLogout} isDisabled={!canLogout}>

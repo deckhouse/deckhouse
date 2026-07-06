@@ -27,6 +27,8 @@ node-controller/src/
 │   │   └── controllers/controllers.go # Blank imports triggering init()
 │   ├── controller/
 │   │   ├── bashiblecleanup/           # Removes bashible init artifacts from nodes
+│   │   ├── capi/                      # CAPI v1beta2 resources (Cluster, MachineDeployment, MHC)
+│   │   ├── crdmigration/              # Migrates CAPI CRDs to v1beta2 storage + conversion webhooks
 │   │   ├── draining/                  # Handles node drain lifecycle
 │   │   ├── fencing/                   # Fencing of unresponsive nodes
 │   │   ├── nodegroup/                 # NodeGroup status reconciliation
@@ -37,6 +39,10 @@ node-controller/src/
 │       ├── nodegroup_webhook.go       # Validation webhook (17 checks)
 │       └── nodegroup_conversion_handler.go  # Conversion webhook v1↔v1alpha*
 └── docs/
+    ├── architecture.md                # This file
+    ├── controller-capi.md             # CAPI controllers
+    ├── controller-crd-migration.md    # CAPI CRD migration
+    └── controller-*.md                # Per-controller docs
 ```
 
 ## Controller Registration

@@ -143,6 +143,10 @@ linters-settings:
           - images/caps-controller-manager/src/bin/controller-gen
           - images/bashible-apiserver/src/hack/update-codegen.sh
           - images/bashible-apiserver/src/hack/kube_codegen.sh
+          - images/node-controller/src/api/machine.sapcloud.io/v1alpha1/register.go
+          - images/node-controller/src/api/machine.sapcloud.io/v1alpha1/shared_types.go
+          - images/node-controller/src/api/machine.sapcloud.io/v1alpha1/doc.go
+          - images/node-controller/src/api/machine.sapcloud.io/v1alpha1/machine_types.go
   openapi:
     exclude-rules:
       enum:

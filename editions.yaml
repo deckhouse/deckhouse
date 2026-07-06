@@ -64,7 +64,9 @@ editions:
 - name: CSE
   versionMapFile: "ee/cse/candi/version_map.yml"
   modulesDir: "ee/cse/modules"
-  AvailableModules:
+  excludeEditions:
+  - FE
+  availableModules:
   - admission-policy-engine
   - cert-manager
   - chrony
@@ -81,19 +83,14 @@ editions:
   - kube-dns
   - local-path-provisioner
   - log-shipper
-  - loki
   - metallb
   - monitoring-custom
   - monitoring-kubernetes
-  - monitoring-ping
   - multitenancy-manager
   - namespace-configurator
   - node-local-dns
   - node-manager
-  - operator-prometheus
   - priority-class
-  - prometheus
-  - prometheus-metrics-adapter
   - registry
   - registrypackages
   - registry-packages-proxy

@@ -258,6 +258,11 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		return status.NewError(conditionReasonRenderFailed, err)
 	}
 
+	// Collect application endpoint URLs from the rendered manifests. Done
+	// before the shouldUpgrade check so URLs are refreshed even when the
+	// upgrade itself is skipped.
+	s.status.UpdateURLs(pkg.GetName(), extractEndpointURLs(renderedManifests))
+
 	// Calculate checksum to detect changes in rendered manifests
 	checksum := addonutils.CalculateStringsChecksum(renderedManifests)
 

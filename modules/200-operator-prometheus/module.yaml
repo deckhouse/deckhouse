@@ -1,8 +1,0 @@
-name: operator-prometheus
-stage: General Availability
-subsystems:
-- observability
-namespace: d8-operator-prometheus
-descriptions:
-  en: Manages the lifecycle of the monitoring system in the cluster.
-  ru: Управляет жизненным циклом системы мониторинга в кластере.

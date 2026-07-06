@@ -20,20 +20,15 @@ import (
 
 	"github.com/name212/govalue"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudProviderGetter {
-	// early panic if log is not provided
-	_, err := params.getLogger()
-	if err != nil {
-		panic(err)
-	}
-
 	return func(ctx context.Context, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error) {
 		if metaConfig == nil {
 			return nil, fmt.Errorf("Cannot get CloudProvider. metaConfig must not be nil")
@@ -52,20 +47,12 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Cannot get CloudProvider. clusterUUID must not be empty")
 		}
 
-		providersCache, err := params.getProvidersCache()
-		if err != nil {
-			return nil, fmt.Errorf("Cannot get CloudProvider. providers cache get error: %w", err)
-		}
-
-		logger, err := params.getLogger()
-		if err != nil {
-			return nil, fmt.Errorf("Cannot get CloudProvider. logger get error: %w", err)
-		}
+		providersCache := params.getProvidersCache(ctx)
 
 		if metaConfig.ProviderName == "" {
-			return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, logger, func(_ context.Context, clusterUUID string, _ *config.MetaConfig, l log.Logger) (infrastructure.CloudProvider, error) {
-				l.LogDebugF("Returning DummyCloudProvider because provider name is empty. Probably it is a static cluster: %s\n", clusterUUID)
-				return infrastructure.NewDummyCloudProvider(l), nil
+			return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, func(ctx context.Context, clusterUUID string, _ *config.MetaConfig) (infrastructure.CloudProvider, error) {
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Returning DummyCloudProvider because provider name is empty. Probably it is a static cluster: %s", clusterUUID))
+				return infrastructure.NewDummyCloudProvider(), nil
 			})
 		}
 
@@ -77,27 +64,24 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, metaConfig.ProviderName)
 		}
 
-		return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, logger, func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, l log.Logger) (infrastructure.CloudProvider, error) {
-			tmpDir, err := params.getTmpDir()
+		return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error) {
+			tmpDir, err := params.getTmpDir(ctx)
 			if err != nil {
 				return nil, err
 			}
 
 			additionalParams := params.getAdditionalParams()
-			diParams, err := params.getFSDIParams()
+			diParams, err := params.getFSDIParams(ctx)
 			if err != nil {
 				return nil, err
 			}
 
-			di, err := fsprovider.GetDi(l, diParams)
+			di, err := fsprovider.GetDi(ctx, diParams)
 			if err != nil {
 				return nil, fmt.Errorf("Cannot get fs.GetDI: %w", err)
 			}
 
-			err = params.setVersionsContentProviderGetter(di)
-			if err != nil {
-				return nil, err
-			}
+			params.setVersionsContentProviderGetter(ctx, di)
 
 			set, err := di.SettingsProvider.GetSettings(ctx, metaConfig.ProviderName, params.AdditionalParams)
 			if err != nil {
@@ -107,7 +91,6 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			p := cloud.ProviderParams{
 				MetaConfig:       metaConfig,
 				UUID:             clusterUUID,
-				Logger:           l,
 				DI:               di,
 				TmpDir:           tmpDir,
 				IsDebug:          params.IsDebug,
@@ -116,7 +99,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			}
 
 			provider := cloud.NewProvider(p)
-			l.LogDebugF("Cloud %s initialized and added to cache. Root dir is %s\n", provider.String(), provider.RootDir())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cloud %s initialized and added to cache. Root dir is %s", provider.String(), provider.RootDir()))
 
 			return provider, nil
 		})

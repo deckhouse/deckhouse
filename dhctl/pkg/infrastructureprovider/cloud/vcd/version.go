@@ -23,18 +23,19 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/vmware/go-vcloud-director/v3/govcd"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/version"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func VersionContentProvider(ctx context.Context, s settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
-	client, err := newVcdCloudClientFromMetaConfig(metaConfig, logger)
+func VersionContentProvider(ctx context.Context, s settings.ProviderSettings, metaConfig *config.MetaConfig) ([]byte, string, error) {
+	client, err := newVcdCloudClientFromMetaConfig(metaConfig)
 	if err != nil {
 		return nil, "", err
 	}
-	return versionContentProviderWithClient(ctx, client, s, logger)
+	return versionContentProviderWithClient(ctx, client, s)
 }
 
 type cloudClient interface {
@@ -45,7 +46,7 @@ type vcdCloudClient struct {
 	client *govcd.VCDClient
 }
 
-func newVcdCloudClientFromMetaConfig(m *config.MetaConfig, logger log.Logger) (cloudClient, error) {
+func newVcdCloudClientFromMetaConfig(m *config.MetaConfig) (cloudClient, error) {
 	if m.ClusterType != config.CloudClusterType || len(m.ProviderClusterConfig) == 0 {
 		return nil, fmt.Errorf("current cluster type is not a cloud type")
 	}
@@ -53,10 +54,10 @@ func newVcdCloudClientFromMetaConfig(m *config.MetaConfig, logger log.Logger) (c
 		return nil, fmt.Errorf("current provider type is not VCD")
 	}
 
-	return newVcdCloudClient(m.ProviderClusterConfig, logger)
+	return newVcdCloudClient(m.ProviderClusterConfig)
 }
 
-func newVcdCloudClient(pcc map[string]json.RawMessage, _ log.Logger) (cloudClient, error) {
+func newVcdCloudClient(pcc map[string]json.RawMessage) (cloudClient, error) {
 	raw, ok := pcc["provider"]
 	if !ok {
 		return nil, fmt.Errorf("unable to unmarshal provider configuration: provider key missing")
@@ -87,13 +88,13 @@ func (v *vcdCloudClient) GetVersion(context.Context) (string, error) {
 	return apiVersion, nil
 }
 
-func versionConstraintAction(apiVersion string, logger log.Logger, action func(legacy bool) error) error {
+func versionConstraintAction(ctx context.Context, apiVersion string, action func(legacy bool) error) error {
 	ver, err := semver.NewVersion(apiVersion)
 	if err != nil {
 		return fmt.Errorf("failed to parse VCD API version '%s': %v", apiVersion, err)
 	}
 
-	logger.LogDebugF("VCD API version '%s'\n", apiVersion)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("VCD API version '%s'", apiVersion))
 
 	const versionConstraintStr = "<37.2"
 
@@ -103,15 +104,15 @@ func versionConstraintAction(apiVersion string, logger log.Logger, action func(l
 	}
 
 	if versionConstraint.Check(ver) {
-		logger.LogDebugF("Using legacy VCD version %s (%s). Using legacy mode (true)\n", ver, versionConstraintStr)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using legacy VCD version %s (%s). Using legacy mode (true)", ver, versionConstraintStr))
 		return action(true)
 	}
 
-	logger.LogDebugF("Using latest VCD version %s (%s)\n", ver, versionConstraintStr)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using latest VCD version %s (%s)", ver, versionConstraintStr))
 	return action(false)
 }
 
-func versionContentProviderWithClient(ctx context.Context, client cloudClient, s settings.ProviderSettings, logger log.Logger) ([]byte, string, error) {
+func versionContentProviderWithClient(ctx context.Context, client cloudClient, s settings.ProviderSettings) ([]byte, string, error) {
 	apiVersion, err := client.GetVersion(ctx)
 	if err != nil {
 		return nil, "", err
@@ -120,7 +121,7 @@ func versionContentProviderWithClient(ctx context.Context, client cloudClient, s
 	var content []byte
 	var resultVersion string
 
-	err = versionConstraintAction(apiVersion, logger, func(legacy bool) error {
+	err = versionConstraintAction(ctx, apiVersion, func(legacy bool) error {
 		versions := s.Versions()
 		if len(versions) != 2 {
 			return fmt.Errorf("expected 2 versions, got %d", len(versions))

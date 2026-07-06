@@ -27,9 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -61,7 +61,7 @@ func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProv
 		}
 
 		if attempt == 1 || hasMember {
-			log.InfoF("Current members: [%s]\n", strings.Join(names, ", "))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Current members: [%s]", strings.Join(names, ", ")))
 		}
 
 		if hasMember {

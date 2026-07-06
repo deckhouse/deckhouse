@@ -495,7 +495,7 @@ There are two ways to solve this problem:
 2. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
 {% alert level="info" %}
-Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
+Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.
 
 To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
@@ -652,7 +652,7 @@ The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at l
 - cgroup v2 is disabled
 - EROFS file system is unavailable.
 
-The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
+The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `/etc/containerd/conf.d/` (if CRI containerd v1 is used on the cluster nodes) or `/etc/containerd/conf2.d/` (if CRI containerd v2 is used on the cluster nodes) directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NodeGroupConfiguration (NGC) resources through which they may have been added.
 
 If the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/) is used, an additional reason why the CRI may fail to switch can be the `containerd-dvcr-config.sh` NGC. If the virtualization platform is already installed and running, this NGC can be removed.
 
@@ -769,11 +769,20 @@ The example of `NodeGroupConfiguration` uses functions of the script [032_config
 Adding custom settings causes a restart of the containerd service.
 {% endalert %}
 
-Bashible on nodes merges main Deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
+Bashible on nodes merges main DKP containerd configuration with the following configuration files:
+
+- `/etc/containerd/conf.d/*.toml`: If containerd v1 is used as the CRI on the cluster nodes.
+- `/etc/containerd/conf2.d/*.toml`: If containerd v2 is used as the CRI on the cluster nodes.
 
 {% alert level="warning" %}
 You can override the values of the parameters that are specified in the file `/etc/containerd/deckhouse.toml`, but you will have to ensure their functionality on your own. Also, it is better not to change the configuration for the master nodes (nodeGroup `master`).
 {% endalert %}
+
+The following are configuration examples of the NodeGroupConfiguration resources adding a custom configuration file for a corresponding containerd version.
+
+{% tabs containerd_version %}
+{% tab "For containerd v1" %}
+{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -809,6 +818,52 @@ spec:
     - "worker"
   weight: 31
 ```
+
+{% endraw %}
+{% endtab %}
+{% tab "For containerd v2" %}
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-option-config.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    mkdir -p /etc/containerd/conf2.d
+    bb-sync-file /etc/containerd/conf2.d/runtimeclass.toml - << "EOF"
+    [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm]
+      runtime_type = "io.containerd.runc.v2"
+      [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm.options]
+        BinaryName = ""
+        SystemdCgroup = true
+        ShmSize = 17179869184
+    EOF
+  nodeGroups:
+    - "worker"
+  weight: 31
+```
+
+{% endraw %}
+{% endtab %}
+{% endtabs %}
 
 ### How to add configuration for an additional registry?
 
@@ -1486,6 +1541,58 @@ You cannot create an Instance resource yourself, but you can delete it. In this 
 ## When is a node reboot required?
 
 Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).
+
+## How to enable a delay before a node shutdown or restart while critical pods are running on it?
+
+{% alert level="info" %}
+Available in the **EE** edition.
+{% endalert %}
+
+{% alert level="warning" %}
+To decide whether to block a node shutdown, DKP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
+{% endalert %}
+
+To enable the mechanism that delays a pod's restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the Pod (for a Deployment, specify the label in the pod template).
+
+Example of a Pod manifest with the `pod.deckhouse.io/inhibit-node-shutdown` label:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-stateful-app
+  labels:
+    app: my-stateful-app
+    pod.deckhouse.io/inhibit-node-shutdown: "true"
+spec:
+  containers:
+    - name: app
+      image: my-registry/my-app:1.0.0
+```
+
+{% alert level="warning" %}
+The block only applies to pods labeled with `pod.deckhouse.io/inhibit-node-shutdown` that are in the `Running` phase on the node. Kubelet shuts down the pods without this label according to the standard graceful shutdown process.
+{% endalert %}
+
+### Searching pods that prevent shutdown and performing the node troubleshooting
+
+To search the pods that are preventing a node shutdown, use the following command:
+
+```shell
+d8 k get po -A -l pod.deckhouse.io/inhibit-node-shutdown -o wide
+```
+
+To view the `GracefulShutdownPostpone` condition on a node, use the following command:
+
+```shell
+d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
+```
+
+Possible values of the `reason` field:
+
+- `WaitingForShutdownSignal`: The shutdown blocking mechanism is running on the node, but the blocking has not yet begun.
+- `PodsWithLabelAreRunningOnNode`: The shutdown has been blocked because there are pods with the label `pod.deckhouse.io/inhibit-node-shutdown` still running on the node.
+- `NoRunningPodsWithLabel`: The blocking has been released and the shutdown can continue.
 
 ## How the fencing mechanism handles different node types?
 

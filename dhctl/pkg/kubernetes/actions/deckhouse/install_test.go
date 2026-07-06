@@ -28,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestDeckhouseInstall(t *testing.T) {
@@ -42,7 +41,6 @@ func TestDeckhouseInstall(t *testing.T) {
 		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
-	log.InitLogger("json", false)
 	fakeClient := client.NewFakeKubernetesClient()
 
 	tests := []struct {
@@ -518,4 +516,39 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Len(t, mcs.Items, 2)
 		})
 	})
+}
+
+// When a cluster UUID is provided, the d8-cluster-uuid ConfigMap must be
+// created. It is applied serially, ahead of the parallel manifest fan-out (so it
+// lands before the deckhouse Deployment): node-manager renders the node bootstrap
+// script from global.discovery.clusterUUID, and an empty UUID makes CAPS-adopted
+// nodes stall the whole StaticInstanceBootstrapTimeout (~20m) on a 404 from
+// registry-packages-proxy. This guards against the extraction regressing that task.
+func TestDeckhouseInstallCreatesClusterUUIDConfigMap(t *testing.T) {
+	ctx := context.Background()
+	require.NoError(t, os.Setenv("DHCTL_TEST", "yes"))
+	require.NoError(t, os.Setenv("DHCTL_TEST_VERSION_TAG", "1.54.1"))
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
+	}()
+
+	fakeClient := client.NewFakeKubernetesClient()
+
+	const clusterUUID = "3c179956-30ee-4b90-bc14-71a7bc73ab6d"
+
+	_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
+		UUID: clusterUUID,
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithModeUnmanaged(),
+			registry_mocks.WithLegacyMode(),
+		),
+	}, func() error {
+		return nil
+	})
+	require.NoError(t, err)
+
+	cm, err := fakeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-uuid", metav1.GetOptions{})
+	require.NoError(t, err, "d8-cluster-uuid ConfigMap must be created when UUID is set")
+	require.Equal(t, clusterUUID, cm.Data["cluster-uuid"])
 }

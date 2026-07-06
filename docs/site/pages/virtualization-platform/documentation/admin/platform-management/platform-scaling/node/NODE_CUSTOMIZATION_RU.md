@@ -161,7 +161,12 @@ rm /var/lib/bashible/configuration_checksum
 
 Полезные особенности некоторых скриптов:
 
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также **перезапуск** сервиса. Следует учитывать что директория `/etc/containerd/conf.d/` не создается автоматически, а также что создание файлов в этой директории следует производить в скриптах с приоритетом менее `32`.
+- [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — объединяет конфигурационные файлы containerd и **перезапускает** сервис. Размещение конфигурационных файлов зависит от CRI на узлах кластера:
+
+  - `/etc/containerd/conf.d/*.toml` — для containerd v1;
+  - `/etc/containerd/conf2.d/*.toml` — для containerd v2.
+  
+  Следует учитывать, что директории с конфигурационными файлами не создаются автоматически. Файлы в них нужно добавлять в скриптах с приоритетом менее `32`.
 
 ## Как использовать containerd с поддержкой Nvidia GPU
 
@@ -404,11 +409,20 @@ Done
 Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
 {% endalert %}
 
-`bashible` на узлах объединяет конфигурацию `containerd` для DVP с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
+Bashible на узлах объединяет конфигурацию containerd для DVP с конфигурацией из файла:
+
+- `/etc/containerd/conf.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v1;
+- `/etc/containerd/conf2.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v2.
 
 {% alert level="warning" %}
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`. При этом корректную работу таких изменений необходимо обеспечить самостоятельно. Рекомендуется **не изменять** конфигурацию на управляющих (master) узлах (NodeGroup `master`).
 {% endalert %}
+
+Далее приведены примеры конфигурации ресурсов NodeGroupConfiguration, добавляющих кастомный конфигурационный файл для соответствующей версии containerd.
+
+{% tabs containerd_version %}
+{% tab "Для containerd v1" %}
+{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -444,6 +458,52 @@ spec:
     - "worker"
   weight: 31
 ```
+
+{% endraw %}
+{% endtab %}
+{% tab "Для containerd v2" %}
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-option-config.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    mkdir -p /etc/containerd/conf2.d
+    bb-sync-file /etc/containerd/conf2.d/runtimeclass.toml - << "EOF"
+    [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm]
+      runtime_type = "io.containerd.runc.v2"
+      [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm.options]
+        BinaryName = ""
+        SystemdCgroup = true
+        ShmSize = 17179869184
+    EOF
+  nodeGroups:
+    - "worker"
+  weight: 31
+```
+
+{% endraw %}
+{% endtab %}
+{% endtabs %}
 
 ## Добавление конфигурации для дополнительного registry
 

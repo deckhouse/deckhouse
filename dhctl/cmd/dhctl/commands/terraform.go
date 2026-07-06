@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -27,7 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
@@ -45,8 +46,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 
 		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
-		logger := log.GetDefaultLogger()
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -61,7 +61,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
@@ -77,9 +77,9 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 			Address:       opts.Converge.ListenAddress,
 			Path:          opts.Converge.MetricsPath,
 			Interval:      opts.Converge.CheckInterval,
-			Logger:        logger,
 			KubeCl:        kubeCl,
 			GlobalOptions: &opts.Global,
+			IsDebug:       opts.Global.IsDebug,
 		})
 
 		exporter.Start(ctx)
@@ -97,8 +97,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		logger := log.GetDefaultLogger()
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -113,13 +112,13 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 
-		logger.LogInfoLn("Check started ...\n")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Check started ...")
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
@@ -127,7 +126,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
-		preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
+		preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,
 			kubeCl,
@@ -147,7 +146,6 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           logger,
 			IsDebug:          opts.Global.IsDebug,
 			GlobalOptions:    &opts.Global,
 		})
@@ -161,7 +159,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			ctx,
 			kubeCl,
 			metaConfig,
-			infrastructure.NewContextWithProvider(providerGetter, logger).
+			infrastructure.NewContextWithProvider(providerGetter).
 				WithUseTfCache(opts.Cache.UseTfCache).
 				WithDebug(opts.Global.IsDebug),
 			check.CheckStateOptions{},
@@ -181,8 +179,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		fmt.Print(string(data))
 
 		if provider.NeedToUseTofu() && needMigrationToTofu {
-			// todo(log): why do not use logger?
-			fmt.Printf("\nNeed to migrate to tofu: %v\n", needMigrationToTofu)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Need to migrate to tofu: %v", needMigrationToTofu), dhlog.ShowInCompacted())
 		}
 
 		return provider.Cleanup()

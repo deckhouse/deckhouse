@@ -25,7 +25,6 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var versionsForTest = []string{legacyVersion, "3.14.1"}
@@ -59,7 +58,7 @@ func TestVersionsContentLegacy(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, version, err := versionContentProviderWithClient(context.TODO(), testGetLegacyClient(), set, log.GetDefaultLogger())
+	content, version, err := versionContentProviderWithClient(context.TODO(), testGetLegacyClient(), set)
 
 	require.NoError(t, err)
 	require.Equal(t, version, legacyVersion)
@@ -83,7 +82,7 @@ func TestVersionsContentCurrent(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, version, err := versionContentProviderWithClient(context.TODO(), testGetCurrentClient(), set, log.GetDefaultLogger())
+	content, version, err := versionContentProviderWithClient(context.TODO(), testGetCurrentClient(), set)
 
 	require.NoError(t, err)
 	require.Equal(t, version, versionsForTest[1])
@@ -108,7 +107,7 @@ func TestVCDClientProvider(t *testing.T) {
 	}
 
 	assertError := func(t *testing.T, pcc map[string]json.RawMessage) {
-		_, err := newVcdCloudClient(pcc, log.GetDefaultLogger())
+		_, err := newVcdCloudClient(pcc)
 		require.Error(t, err)
 	}
 
@@ -121,7 +120,7 @@ func TestVCDClientProvider(t *testing.T) {
 
 	// valid url
 	pcc := makeInputWithServer("https://my-server:8080")
-	c, err := newVcdCloudClient(pcc, log.GetDefaultLogger())
+	c, err := newVcdCloudClient(pcc)
 	require.NoError(t, err)
 	require.False(t, govalue.IsNil(c))
 }

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package cache
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -34,7 +35,14 @@ const (
 	tokenPath = saPath + "token"
 	apiV1Path = "/api/v1"
 
+	// kubernetesAPIAddress is the fallback used when the caller doesn't provide one
+	// (e.g. running outside the user-authz-webhook DaemonSet's env).
 	kubernetesAPIAddress = "https://kubernetes.default"
+
+	// requestTimeout bounds a single discovery/healthz request so it fails fast and
+	// deterministically well within the container's livenessProbe budget, instead of
+	// relying on the much larger transport-level dial/handshake timeouts.
+	requestTimeout = 2 * time.Second
 )
 
 type Cache interface {
@@ -109,7 +117,16 @@ type NamespacedDiscoveryCache struct {
 	kubernetesAPIAddress string
 }
 
-func NewNamespacedDiscoveryCache(logger *log.Logger) *NamespacedDiscoveryCache {
+// NewNamespacedDiscoveryCache builds a cache client talking to apiAddress (e.g.
+// config.Host from the same rest.InClusterConfig() the caller already builds for its
+// own clientset), so this client and the caller's are provably pointed at the same
+// apiserver endpoint. Falls back to the "kubernetes.default" DNS name if apiAddress
+// is empty.
+func NewNamespacedDiscoveryCache(logger *log.Logger, apiAddress string) *NamespacedDiscoveryCache {
+	if apiAddress == "" {
+		apiAddress = kubernetesAPIAddress
+	}
+
 	c := &NamespacedDiscoveryCache{
 		logger:            logger,
 		data:              make(map[string]*namespacedCacheEntry),
@@ -117,18 +134,35 @@ func NewNamespacedDiscoveryCache(logger *log.Logger) *NamespacedDiscoveryCache {
 		coreResources:     new(coreResourcesCache),
 		now:               time.Now,
 
-		kubernetesAPIAddress: kubernetesAPIAddress,
+		kubernetesAPIAddress: apiAddress,
 	}
 	c.initClient()
 	return c
 }
 
+// newGetRequest builds a GET request against path with a bounded requestTimeout, so
+// callers fail fast on a slow/unreachable apiserver instead of blocking on the much
+// larger transport-level dial/handshake timeouts. The caller must call the returned
+// cancel func once done with the request.
+func (c *NamespacedDiscoveryCache) newGetRequest(path string) (*http.Request, context.CancelFunc, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.kubernetesAPIAddress+path, nil)
+	if err != nil {
+		cancel()
+		return nil, nil, err
+	}
+
+	return req, cancel, nil
+}
+
 func (c *NamespacedDiscoveryCache) Check() error {
 	return Retry(func() (bool, error) {
-		req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+"/version", nil)
+		req, cancel, err := c.newGetRequest("/version")
 		if err != nil {
 			return false, fmt.Errorf("check Kubernetes API create request: %w", err)
 		}
+		defer cancel()
 
 		if err := c.execRequest(req, "check API", nil); err != nil {
 			return true, err
@@ -194,10 +228,11 @@ func (c *NamespacedDiscoveryCache) renewCache(apiGroup string) error {
 	}
 
 	return Retry(func() (bool, error) {
-		req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+path, nil)
+		req, cancel, err := c.newGetRequest(path)
 		if err != nil {
 			return false, fmt.Errorf("renew cache prepare request: %w", err)
 		}
+		defer cancel()
 
 		if err := c.renewCacheOnce(apiGroup, req); err != nil {
 			return true, err
@@ -213,10 +248,11 @@ func (c *NamespacedDiscoveryCache) getAvailableAPIGroupVerionsInDescendingOrder(
 	availableVersions := make([]string, 0)
 
 	err := Retry(func() (bool, error) {
-		req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+path, nil)
+		req, cancel, err := c.newGetRequest(path)
 		if err != nil {
 			return false, fmt.Errorf("build request for available apigroup versions: %w", err)
 		}
+		defer cancel()
 
 		var apiGroupVersions APIGroupResponse
 		if err = c.execRequest(req, "request available apigroup versions", &apiGroupVersions); err != nil {
@@ -248,10 +284,11 @@ func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource strin
 	for _, version := range availableVersions {
 		path := fmt.Sprintf("/apis/%s/%s", group, version)
 		if err := Retry(func() (bool, error) {
-			req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+path, nil)
+			req, cancel, err := c.newGetRequest(path)
 			if err != nil {
 				return false, fmt.Errorf("request %s %s/%s version build error: %w", resource, group, version, err)
 			}
+			defer cancel()
 
 			var apiResourceList APIResourceList
 			if err = c.execRequest(req, "request list of resources", &apiResourceList); err != nil {
@@ -321,10 +358,11 @@ func getResourceNameBeforeSlash(resourceName string) string {
 func (c *NamespacedDiscoveryCache) requestCoreResources() (CoreResourcesDict, error) {
 	var coreResources CoreResourcesDict
 	if err := Retry(func() (bool, error) {
-		req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+apiV1Path, nil)
+		req, cancel, err := c.newGetRequest(apiV1Path)
 		if err != nil {
 			return false, fmt.Errorf("build request for core resources: %w", err)
 		}
+		defer cancel()
 
 		var apiResourceList APIResourceList
 		if err = c.execRequest(req, "request list of core resources", &apiResourceList); err != nil {

@@ -22,12 +22,10 @@ import (
 	v1_type "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
 
 func TestDeckhouseInstall(t *testing.T) {
-	log.InitLogger("json", false)
 
 	t.Run("creates secret when initialize", func(t *testing.T) {
 		fakeClient := NewFakeKubernetesClient()
