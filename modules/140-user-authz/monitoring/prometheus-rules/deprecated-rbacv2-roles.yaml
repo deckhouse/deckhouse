@@ -1,8 +1,10 @@
 - name: d8.user-authz.rbacv2.deprecated-roles
   rules:
+  # Bindings to a deprecated ROLE name that still works via a one-release compat alias — nudge to
+  # migrate before the alias is removed next release.
   - alert: D8UserAuthzDeprecatedRBACv2RoleInUse
     expr: |
-      max by (binding_kind, binding_name, namespace, role_name) (d8_rbacv2_deprecated_role_in_use) > 0
+      max by (binding_kind, binding_name, namespace, role_name) (d8_rbacv2_deprecated_role_in_use{aliased="true"}) > 0
     for: 15m
     labels:
       severity_level: "7"
@@ -18,7 +20,7 @@
       description: |-
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references the deprecated RBACv2 ClusterRole `{{ $labels.role_name }}`.
 
-        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. The old names are kept as compatibility aliases for ONE release and will be removed in the next one — after that this binding will grant nothing.
+        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for ONE release and will be removed in the next one — after that this binding will grant nothing.
 
         Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
         ```bash
@@ -27,3 +29,31 @@
         ```
 
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
+
+  # Bindings to a deprecated CAPABILITY name — capabilities are aggregation building blocks, were never
+  # meant to be bound directly and have NO compat alias, so the binding already grants nothing. Higher
+  # urgency than the aliased-role case.
+  - alert: D8UserAuthzDeprecatedRBACv2CapabilityInUse
+    expr: |
+      max by (binding_kind, binding_name, namespace, role_name) (d8_rbacv2_deprecated_role_in_use{aliased="false"}) > 0
+    for: 15m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: rbacv2
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_deprecated_rbacv2_cap: "D8UserAuthzDeprecatedRBACv2CapabilityInUse,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_deprecated_rbacv2_cap: "D8UserAuthzDeprecatedRBACv2CapabilityInUse,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A binding references a deprecated RBACv2 capability that no longer grants access.
+      description: |-
+        The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} binds the deprecated RBACv2 capability `{{ $labels.role_name }}` directly.
+
+        Capabilities (`d8:manage:permission:*`, `d8:use:capability:*`) are aggregation building blocks — they are meant to be composed into the `d8:{system,subsystem,namespace,project}:*` roles, not bound directly. They were renamed and have NO compatibility alias, so this binding **already grants nothing** after the upgrade.
+
+        Recreate the binding against the appropriate new role (or a custom role aggregating the new capability). Because `roleRef` is immutable, delete and recreate the binding:
+        ```bash
+        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        ```

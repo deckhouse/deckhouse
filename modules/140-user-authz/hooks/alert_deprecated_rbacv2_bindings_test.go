@@ -92,6 +92,39 @@ subjects:
   name: bob@example.com
   apiGroup: rbac.authorization.k8s.io
 `
+	// CRB to a deprecated per-module CAPABILITY — no alias, must be flagged as not-aliased.
+	crbDeprecatedManageCap = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: legacy-modcap
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:manage:permission:module:prometheus:view
+subjects:
+- kind: Group
+  name: ops
+  apiGroup: rbac.authorization.k8s.io
+`
+	// RoleBinding to a deprecated namespace CAPABILITY — no alias, must be flagged as not-aliased.
+	rbDeprecatedUseCap = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: legacy-nscap
+  namespace: team-a
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:use:capability:kubernetes:view_secrets
+subjects:
+- kind: User
+  name: alice@example.com
+  apiGroup: rbac.authorization.k8s.io
+`
 )
 
 var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func() {
@@ -148,6 +181,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 					"binding_name": "legacy-observability",
 					"namespace":    "",
 					"role_name":    "d8:manage:observability:manager",
+					"aliased":      "true",
 				},
 			}))
 		})
@@ -173,6 +207,59 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 					"binding_name": "legacy-viewer",
 					"namespace":    "team-a",
 					"role_name":    "d8:use:role:viewer",
+					"aliased":      "true",
+				},
+			}))
+		})
+	})
+
+	Context("A ClusterRoleBinding to a deprecated per-module capability (no alias)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbDeprecatedManageCap))
+			f.RunHook()
+		})
+
+		It("Flags it as not aliased (binding no longer grants access)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   deprecatedRBACv2Metric,
+				Group:  deprecatedRBACv2Metric,
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{
+					"binding_kind": "ClusterRoleBinding",
+					"binding_name": "legacy-modcap",
+					"namespace":    "",
+					"role_name":    "d8:manage:permission:module:prometheus:view",
+					"aliased":      "false",
+				},
+			}))
+		})
+	})
+
+	Context("A RoleBinding to a deprecated namespace capability (no alias)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(rbDeprecatedUseCap))
+			f.RunHook()
+		})
+
+		It("Flags the use-capability RB as not aliased", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   deprecatedRBACv2Metric,
+				Group:  deprecatedRBACv2Metric,
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{
+					"binding_kind": "RoleBinding",
+					"binding_name": "legacy-nscap",
+					"namespace":    "team-a",
+					"role_name":    "d8:use:capability:kubernetes:view_secrets",
+					"aliased":      "false",
 				},
 			}))
 		})

@@ -38,11 +38,41 @@ import (
 
 const deprecatedRBACv2Metric = "d8_rbacv2_deprecated_role_in_use"
 
-// deprecatedRoleNamePrefixes are the legacy RBACv2 role-name prefixes replaced by the new model.
-// A ClusterRole roleRef starting with any of these is served (for one release) by a compat alias.
+// Legacy RBACv2 name families replaced by the new model. Two tiers matter for the operator:
+//
+//   - ALIASED (roles): d8:manage:<all|subsystem>:<level> and d8:use:role:<level>[:kubernetes] are kept
+//     alive for one release by the compat aliases (templates/rbacv2-compat/). A binding to these still
+//     works — the alert only nudges the operator to migrate before the aliases are removed.
+//
+//   - NOT ALIASED (capabilities): d8:manage:permission:* and d8:use:capability:* are aggregation
+//     building blocks that were never meant to be bound directly and have NO compat alias. A binding
+//     to these no longer grants access after the upgrade — the alert flags it as needing an immediate
+//     fix. (d8:manage:permission:* is a subset of the d8:manage: prefix, so it is matched there and
+//     then reclassified as a capability below.)
+//
+// d8:use:dict is intentionally absent: the handle_dict_bindings hook migrates its bindings to d8:dict.
 var deprecatedRoleNamePrefixes = []string{
 	"d8:manage:",
 	"d8:use:role:",
+	"d8:use:capability:",
+}
+
+// capabilityNamePrefixes are the deprecated names that are capabilities (no compat alias). A binding
+// to one of these does NOT keep working after the upgrade.
+var capabilityNamePrefixes = []string{
+	"d8:manage:permission:",
+	"d8:use:capability:",
+}
+
+// aliasedForOneRelease reports whether a deprecated role name is kept working by a compat alias (a
+// role) as opposed to a capability that has no alias and stops granting access after the upgrade.
+func aliasedForOneRelease(name string) bool {
+	for _, prefix := range capabilityNamePrefixes {
+		if strings.HasPrefix(name, prefix) {
+			return false
+		}
+	}
+	return true
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -71,6 +101,9 @@ type deprecatedBinding struct {
 	BindingName string `json:"binding_name"`
 	Namespace   string `json:"namespace"`
 	RoleName    string `json:"role_name"`
+	// Aliased is "true" when the referenced name is still served by a one-release compat alias (a
+	// role) and "false" when it is a capability with no alias (the binding no longer grants access).
+	Aliased string `json:"aliased"`
 }
 
 func deprecatedRoleName(name string) bool {
@@ -94,6 +127,7 @@ func filterDeprecatedClusterRoleBinding(obj *unstructured.Unstructured) (go_hook
 		BindingKind: "ClusterRoleBinding",
 		BindingName: binding.Name,
 		RoleName:    binding.RoleRef.Name,
+		Aliased:     boolLabel(aliasedForOneRelease(binding.RoleRef.Name)),
 	}, nil
 }
 
@@ -110,7 +144,15 @@ func filterDeprecatedRoleBinding(obj *unstructured.Unstructured) (go_hook.Filter
 		BindingName: binding.Name,
 		Namespace:   binding.Namespace,
 		RoleName:    binding.RoleRef.Name,
+		Aliased:     boolLabel(aliasedForOneRelease(binding.RoleRef.Name)),
 	}, nil
+}
+
+func boolLabel(v bool) string {
+	if v {
+		return "true"
+	}
+	return "false"
 }
 
 func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput) error {
@@ -128,6 +170,7 @@ func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput)
 					"binding_name": binding.BindingName,
 					"namespace":    binding.Namespace,
 					"role_name":    binding.RoleName,
+					"aliased":      binding.Aliased,
 				},
 				metrics.WithGroup(deprecatedRBACv2Metric),
 			)
