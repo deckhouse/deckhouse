@@ -1926,40 +1926,6 @@
       }
     },
     {
-      "title": "The monitoring-deckhouse module",
-      "description": "Monitoring of Deckhouse Kubernetes Platform components and services.",
-      "module": "monitoring-deckhouse",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "monitoring-deckhouse/",
-      "ru": {
-        "title": "Модуль monitoring-deckhouse",
-        "description": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "monitoring-deckhouse",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "descriptions": {
-          "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
-          "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
-        },
-        "requirements": {
-          "modules": {
-            "prometheus": ">= 0.0.0"
-          }
-        },
-        "oss": []
-      }
-    },
-    {
       "title": "The monitoring-kubernetes module",
       "description": "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform.",
       "module": "monitoring-kubernetes",
@@ -2160,7 +2126,7 @@
       },
       "metadata": {
         "name": "node-local-dns",
-        "stage": "General Availability",
+        "stage": "Experimental",
         "subsystems": [
           "networking"
         ],
@@ -2224,7 +2190,7 @@
             "logo": "/images/logos/kubernetes.svg",
             "license": "Apache License 2.0",
             "id": "cluster-api",
-            "version": "1.11.3"
+            "version": "1.12.9"
           },
           {
             "name": "Cluster Autoscaler",
@@ -2336,140 +2302,6 @@
       }
     },
     {
-      "title": "The operator-prometheus module",
-      "description": "Installation and management of the monitoring system in the Deckhouse Kubernetes Platform cluster.",
-      "module": "operator-prometheus",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability",
-        "ssdlc"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "operator-prometheus/",
-      "ru": {
-        "title": "Модуль operator-prometheus",
-        "description": "Установка и управление системой мониторинга в кластере Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "operator-prometheus",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-operator-prometheus",
-        "descriptions": {
-          "en": "Manages the lifecycle of the monitoring system in the cluster.",
-          "ru": "Управляет жизненным циклом системы мониторинга в кластере."
-        },
-        "oss": [
-          {
-            "name": "Prometheus Operator",
-            "link": "https://github.com/prometheus-operator/prometheus-operator",
-            "description": "Kubernetes native deployment and management of Prometheus and related monitoring components.",
-            "logo": "https://avatars.githubusercontent.com/u/66682517?s=200&v=4",
-            "license": "Apache License 2.0"
-          }
-        ]
-      }
-    },
-    {
-      "title": "The Prometheus monitoring module",
-      "type": [
-        "instruction"
-      ],
-      "search": "prometheus",
-      "description": "Monitoring of the Deckhouse Kubernetes Platform cluster using Prometheus and Grafana.",
-      "webIfaces": [
-        {
-          "name": "grafana"
-        }
-      ],
-      "module": "prometheus",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability",
-        "ssdlc"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "prometheus/",
-      "ru": {
-        "title": "Prometheus-мониторинг",
-        "type": [
-          "instruction"
-        ],
-        "search": "prometheus",
-        "description": "Мониторинг кластера Deckhouse Kubernetes Platform на базе Prometheus и Grafana.",
-        "webIfaces": [
-          {
-            "name": "grafana"
-          }
-        ]
-      },
-      "metadata": {
-        "name": "prometheus",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "descriptions": {
-          "en": "Provides ready-made alerts, dashboards, and the ability to customize monitoring system components, including data storage and visualization.",
-          "ru": "Предоставляет готовые алерты и дашборды, а также возможность настройки компонентов системы мониторинга, включая хранение и визуализацию данных."
-        },
-        "requirements": {
-          "modules": {
-            "operator-prometheus": ">= 0.0.0"
-          }
-        },
-        "oss": [
-          {
-            "name": "Prometheus",
-            "link": "https://github.com/prometheus/prometheus",
-            "description": "A systems and service monitoring system.",
-            "logo": "/images/logos/prometheus-icon-color.svg",
-            "license": "Apache License 2.0"
-          },
-          {
-            "name": "Grafana",
-            "link": "https://github.com/grafana/grafana",
-            "description": "An open-source platform for monitoring and observability.",
-            "logo": "https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg",
-            "license": "GNU Affero General Public License v3.0"
-          },
-          {
-            "name": "Trickster",
-            "link": "https://github.com/trickstercache/trickster",
-            "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-            "logo": "https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg",
-            "license": "Apache License 2.0"
-          },
-          {
-            "name": "Mimir",
-            "link": "https://github.com/grafana/mimir",
-            "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-            "logo": "https://grafana.com/static/img/logos/logo-mimir.svg",
-            "license": "AGPL-3.0 license"
-          },
-          {
-            "name": "Promxy",
-            "link": "https://github.com/jacksontj/promxy",
-            "logo": "/images/logos/prometheus-icon-color.svg",
-            "description": "Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).",
-            "license": "MIT License"
-          },
-          {
-            "name": "Memcached",
-            "link": "https://github.com/memcached/memcached",
-            "logo": "/images/logos/memcached-icon.svg",
-            "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
-            "license": "BSD-3-Clause license"
-          }
-        ]
-      }
-    },
-    {
       "title": "Registry Module",
       "description": "Configuration management of DKP component registry.",
       "module": "registry",
@@ -2490,7 +2322,7 @@
         "name": "registry",
         "critical": true,
         "weight": 38,
-        "stage": "Preview",
+        "stage": "Experimental",
         "subsystems": [
           "infrastructure"
         ],
