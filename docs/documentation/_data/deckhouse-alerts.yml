@@ -2866,6 +2866,45 @@ alerts:
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8UserAuthzDeprecatedRBACv2CapabilityInUse
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/deprecated-rbacv2-roles.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} binds the deprecated RBACv2 capability `{{ $labels.role_name }}` directly.
+
+        Capabilities (`d8:manage:permission:*`, `d8:use:capability:*`) are aggregation building blocks — they are meant to be composed into the `d8:{system,subsystem,namespace,project}:*` roles, not bound directly. They were renamed and have NO compatibility alias, so this binding **already grants nothing** after the upgrade.
+
+        Recreate the binding against the appropriate new role (or a custom role aggregating the new capability). Because `roleRef` is immutable, delete and recreate the binding:
+        ```bash
+        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        ```
+      summary: |
+        A binding references a deprecated RBACv2 capability that no longer grants access.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8UserAuthzDeprecatedRBACv2RoleInUse
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/deprecated-rbacv2-roles.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references the deprecated RBACv2 ClusterRole `{{ $labels.role_name }}`.
+
+        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for ONE release and will be removed in the next one — after that this binding will grant nothing.
+
+        Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
+        ```bash
+        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
+        ```
+
+        Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
+      summary: |
+        A binding still references a deprecated RBACv2 role.
+      severity: "7"
+      markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
       moduleUrl: 140-user-authz

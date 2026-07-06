@@ -194,14 +194,7 @@ read:
     - deckhouse.io/applications
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
-    - deckhouse.io/clusterdaemonsetmetrics
-    - deckhouse.io/clusterdeploymentmetrics
-    - deckhouse.io/clusteringressmetrics
-    - deckhouse.io/clusterpodmetrics
     - deckhouse.io/clusterprojectrolebindings
-    - deckhouse.io/clusterservicemetrics
-    - deckhouse.io/clusterstatefulsetmetrics
-    - deckhouse.io/daemonsetmetrics
     - deckhouse.io/deckhousereleases
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
@@ -225,7 +218,7 @@ read:
     - deckhouse.io/operationpolicies
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/podmetrics
+    - deckhouse.io/projectnamespaces
     - deckhouse.io/projectrolebindings
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
@@ -580,6 +573,7 @@ write:
     - deckhouse.io/localpathprovisioners
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
+    - deckhouse.io/projectnamespaces
     - deckhouse.io/projectrolebindings
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
