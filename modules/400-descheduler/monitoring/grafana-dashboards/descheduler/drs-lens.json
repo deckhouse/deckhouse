@@ -1401,7 +1401,7 @@
       "title": "Evictions by namespace",
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 68
       },
@@ -1435,8 +1435,8 @@
       "title": "Evictions by node",
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
+        "w": 12,
+        "x": 12,
         "y": 68
       },
       "datasource": {
@@ -1464,51 +1464,12 @@
       }
     },
     {
-      "id": 45,
-      "type": "timeseries",
-      "title": "Loop duration",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 68
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "rate(descheduler_loop_duration_seconds_sum{job=\"descheduler\"}[$__rate_interval]) / rate(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[$__rate_interval])",
-          "legendFormat": "avg"
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.95, rate(descheduler_loop_duration_seconds_bucket{job=\"descheduler\"}[$__rate_interval]))",
-          "legendFormat": "p95"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
       "id": 46,
       "type": "timeseries",
       "title": "Strategy duration (avg)",
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 76
       },
@@ -1519,64 +1480,30 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (strategy, profile)(rate(descheduler_strategy_duration_seconds_sum{job=\"descheduler\"}[$__rate_interval])) / sum by (strategy, profile)(rate(descheduler_strategy_duration_seconds_count{job=\"descheduler\"}[$__rate_interval]))",
+          "expr": "sum by (strategy, profile)(increase(descheduler_strategy_duration_seconds_sum{job=\"descheduler\"}[15m])) / sum by (strategy, profile)(increase(descheduler_strategy_duration_seconds_count{job=\"descheduler\"}[15m]))",
           "legendFormat": "{{profile}}/{{strategy}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "spanNulls": true
+          }
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
         }
       }
-    },
-    {
-      "id": 47,
-      "type": "table",
-      "title": "Build info",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 76
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "descheduler_build_info{job=\"descheduler\"}",
-          "format": "table",
-          "instant": true
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": true
-            },
-            "renameByName": {}
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "options": {}
     },
     {
       "id": 104,
