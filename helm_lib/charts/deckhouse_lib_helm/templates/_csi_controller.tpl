@@ -53,11 +53,6 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- define "syncer_resources" }}
-cpu: 10m
-memory: 25Mi
-{{- end }}
-
 {{- define "snapshotter_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -82,7 +77,6 @@ memory: 50Mi
   {{- $snapshotterEnabled := dig "snapshotterEnabled" true $config }}
   {{- $snapshotterSnapshotNamePrefix := dig "snapshotterSnapshotNamePrefix" false $config }}
   {{- $resizerEnabled := dig "resizerEnabled" true $config }}
-  {{- $syncerEnabled := dig "syncerEnabled" false $config }}
   {{- $topologyEnabled := dig "topologyEnabled" true $config }}
   {{- $capacityEnabled := dig "capacityEnabled" true $config }}
   {{- $runAsRootUser := dig "runAsRootUser" false $config }}
@@ -101,7 +95,6 @@ memory: 50Mi
   {{- $csiControllerHaMode := $config.csiControllerHaMode | default false }}
   {{- $additionalCsiControllerPodAnnotations := $config.additionalCsiControllerPodAnnotations | default false }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
-  {{- $additionalSyncerEnvs := $config.additionalSyncerEnvs }}
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
@@ -127,9 +120,6 @@ memory: 50Mi
   {{- $attacherImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalAttacher" $kubernetesSemVer) }}
 
   {{- $resizerImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalResizer" $kubernetesSemVer) }}
-
-  {{- $syncerImageName := join "" (list "csiVsphereSyncer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $syncerImage := include "helm_lib_module_common_image_no_fail" (list $context $syncerImageName) }}
 
   {{- $snapshotterImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalSnapshotter" $kubernetesSemVer) }}
 
@@ -169,14 +159,6 @@ spec:
     - containerName: "resizer"
       minAllowed:
         {{- include "resizer_resources" $context | nindent 8 }}
-      maxAllowed:
-        cpu: 20m
-        memory: 50Mi
-    {{- end }}
-    {{- if $syncerEnabled }}
-    - containerName: "syncer"
-      minAllowed:
-        {{- include "syncer_resources" $context | nindent 8 }}
       maxAllowed:
         cpu: 20m
         memory: 50Mi
@@ -398,33 +380,6 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "resizer_resources" $context | nindent 12 }}
-  {{- end }}
-            {{- end }}
-            {{- if $syncerEnabled }}
-      - name: syncer
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
-        image: {{ $syncerImage | quote }}
-        args:
-        - "--leader-election"
-        - "--leader-election-lease-duration=30s"
-        - "--leader-election-renew-deadline=20s"
-        - "--leader-election-retry-period=10s"
-    {{- if $additionalControllerArgs }}
-        {{- $additionalControllerArgs | toYaml | nindent 8 }}
-    {{- end }}
-    {{- if $additionalSyncerEnvs }}
-        env:
-        {{- $additionalSyncerEnvs | toYaml | nindent 8 }}
-    {{- end }}
-    {{- if $additionalControllerVolumeMounts }}
-        volumeMounts:
-        {{- $additionalControllerVolumeMounts | toYaml | nindent 8 }}
-    {{- end }}
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "syncer_resources" $context | nindent 12 }}
   {{- end }}
             {{- end }}
     {{- if $snapshotterEnabled }}
