@@ -1884,45 +1884,6 @@
       }
     },
     {
-      "title": "The loki module",
-      "description": "Log storage in the Deckhouse Kubernetes Platform cluster based on Grafana Loki.",
-      "module": "loki",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "logging",
-        "observability",
-        "ssdlc"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "loki/",
-      "ru": {
-        "title": "Модуль loki",
-        "description": "Хранилище логов в кластере Deckhouse Kubernetes Platform на базе Grafana Loki."
-      },
-      "metadata": {
-        "name": "loki",
-        "stage": "Preview",
-        "subsystems": [
-          "infrastructure"
-        ],
-        "namespace": "d8-monitoring",
-        "descriptions": {
-          "en": "Deploys operational log storage based on Grafana Loki in the cluster. Provides centralized log collection and access via Grafana for short-term log retention.",
-          "ru": "Разворачивает хранилище логов на базе Grafana Loki в кластере. Обеспечивает централизованный сбор логов и доступ к ним через Grafana для краткосрочного хранения."
-        },
-        "oss": [
-          {
-            "name": "Loki",
-            "link": "https://github.com/grafana/loki",
-            "description": "Loki: like Prometheus, but for logs.",
-            "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
-            "license": "GNU Affero General Public License v3.0"
-          }
-        ]
-      }
-    },
-    {
       "title": "The metallb module",
       "description": "Load balancing for services in bare metal clusters.",
       "module": "metallb",

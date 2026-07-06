@@ -212,3 +212,35 @@ properties:
             * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
             * Use this parameter only in exceptional circumstances.
             * This parameter is applied during module activation.
+  applications:
+    description: |
+      Common parameters of the Deckhouse ecosystem applications.
+    additionalProperties: false
+    default: {}
+    type: object
+    properties:
+      publicDomainTemplate:
+        type: string
+        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        description: |
+          DNS name template with three `%s` keys used as the dynamic parts of the string.
+          
+          Whenever a DNS is generated:
+
+          - First key is replaced with the component name.
+          - Second key is replaced with the application instance name.
+          - Third key is replaced with the application's namespace.
+
+          The Deckhouse ecosystem applications use this template when creating Ingress resources.
+
+          For example, given the template `%s.%s.%s.kube.company.my`, the `web` component of an application instance named `grafana` running in the `monitoring` namespace will get an Ingress resource at the address `web.grafana.monitoring.kube.company.my`.
+
+          **Usage notes:**
+
+          - If this parameter is not specified, Ingress resources will not be created.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](cr.html#clusterconfiguration-clusterdomain) parameter. Changing the `clusterDomain` value is not recommended unless necessary.
+          - Before using the template, configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the service web interfaces.
+          - If the template domain matches the domain of the node network, use only A records to assign addresses of the frontend nodes to the platform service web interfaces.
+          For example, if the nodes are registered under the `company.my` zone, the template must be `%s.%s.%s.company.my`.
+        x-doc-examples: [ "%s.%s.%s.company.my", "%s.%s.%s.kube.company.my" ]
+        x-examples: [ "%s.%s.%s.kube.company.my" ]

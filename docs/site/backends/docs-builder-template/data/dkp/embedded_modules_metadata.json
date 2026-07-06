@@ -1347,27 +1347,6 @@
         }
       ]
     },
-    "loki": {
-      "name": "loki",
-      "stage": "Preview",
-      "subsystems": [
-        "infrastructure"
-      ],
-      "namespace": "d8-monitoring",
-      "descriptions": {
-        "en": "Deploys operational log storage based on Grafana Loki in the cluster. Provides centralized log collection and access via Grafana for short-term log retention.",
-        "ru": "Разворачивает хранилище логов на базе Grafana Loki в кластере. Обеспечивает централизованный сбор логов и доступ к ним через Grafana для краткосрочного хранения."
-      },
-      "oss": [
-        {
-          "name": "Loki",
-          "link": "https://github.com/grafana/loki",
-          "description": "Loki: like Prometheus, but for logs.",
-          "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
-          "license": "GNU Affero General Public License v3.0"
-        }
-      ]
-    },
     "metallb": {
       "name": "metallb",
       "stage": "General Availability",
@@ -2338,16 +2317,6 @@
       "versions": [],
       "modules": [
         "local-path-provisioner"
-      ]
-    },
-    "Loki": {
-      "link": "https://github.com/grafana/loki",
-      "description": "Loki: like Prometheus, but for logs.",
-      "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
-      "license": "GNU Affero General Public License v3.0",
-      "versions": [],
-      "modules": [
-        "loki"
       ]
     },
     "Memcached": {

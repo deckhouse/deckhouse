@@ -83,7 +83,6 @@ editions:
   - kube-dns
   - local-path-provisioner
   - log-shipper
-  - loki
   - metallb
   - monitoring-custom
   - monitoring-kubernetes
@@ -91,9 +90,7 @@ editions:
   - namespace-configurator
   - node-local-dns
   - node-manager
-  - operator-prometheus
   - priority-class
-  - prometheus
   - registry
   - registrypackages
   - registry-packages-proxy
