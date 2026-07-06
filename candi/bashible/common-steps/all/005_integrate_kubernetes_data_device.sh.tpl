@@ -41,6 +41,16 @@ function get_data_device_secret() {
   fi
 }
 
+function resolve_symlink() {
+    local path="$1"
+
+    if [[ -L "$path" ]]; then
+        readlink -f "$path"
+    else
+        echo "$path"
+    fi
+}
+
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
   exit 0
 fi
@@ -99,6 +109,22 @@ if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
   >&2 echo "Could not autodetect a single unused disk, candidates: $DATA_DEVICE"
   return 1
 fi
+
+# If $DATA_DEVICE points to a symlink, resolve it to the real device path.
+# Otherwise the `mount | grep $DATA_DEVICE` checks below would fail, because `mount`
+# reports the real path. Example:
+# ```bash
+#     ~# ls -l $DATA_DEVICE
+#        lrwxrwxrwx 1 root root 9 Jul  6 11:27 /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_0bfa67a18b15ba86c823528a24dc844d -> ../../sdc
+#     ~# mount | grep $DATA_DEVICE
+#     ~#
+#     ~# DATA_DEVICE=$(resolve_symlink $DATA_DEVICE)
+#     ~# echo $DATA_DEVICE
+#        /dev/sdc
+#     ~# mount | grep $DATA_DEVICE
+#        /dev/sdc on /mnt/kubernetes-data type ext4 (rw,relatime,discard,x-systemd.automount)
+# ```
+DATA_DEVICE="$(resolve_symlink "$DATA_DEVICE")"
 
 mkdir -p /mnt/kubernetes-data
 
