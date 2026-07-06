@@ -6,6 +6,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+fromCacheVersion: "2026-07-07"
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
@@ -29,6 +30,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
 final: false
 from: {{ index $.Images "builder/golang-bookworm" }}
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -66,6 +68,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 final: false
 from: {{ index $.Images "builder/golang-bookworm" }}
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -100,6 +103,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
 final: false
 fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -142,6 +146,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -206,6 +211,7 @@ shell:
     ln -s /usr/lib /out/lib
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
+fromCacheVersion: "2026-07-07"
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact

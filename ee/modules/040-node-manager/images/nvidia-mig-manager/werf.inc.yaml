@@ -8,6 +8,7 @@
 ---
 image: {{ $.ModuleName }}/nvidia-mig-manager-{{ $image_version }}
 fromImage: common/distroless
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /usr/bin
@@ -62,6 +63,7 @@ import:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact
+fromCacheVersion: "2026-07-07"
 final: false
 secrets:
 - id: SOURCE_REPO
@@ -74,6 +76,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
 final: false
+fromCacheVersion: "2026-07-07"
 fromImage: {{ $.ModuleName }}/builder-cuda
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}

@@ -4,6 +4,7 @@
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+fromCacheVersion: "2026-07-07"
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -16,6 +17,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 fromImage: {{ .ModuleName }}/builder-cuda
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
