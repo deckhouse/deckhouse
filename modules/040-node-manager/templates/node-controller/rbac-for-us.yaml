@@ -206,6 +206,28 @@ rules:
   - get
   - list
   - watch
+# InstanceClasses + catalog - read for bashible-apiserver-context blob (check #2 known-class-names,
+# check #3 scale-from-zero capacity, and the resolved instanceClass overlay). Missing read makes
+# cloud NodeGroups fail validation and diverges the blob -> bashible checksum churn -> node re-bootstrap.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - awsinstanceclasses
+  - azureinstanceclasses
+  - dvpinstanceclasses
+  - gcpinstanceclasses
+  - yandexinstanceclasses
+  - dynamixinstanceclasses
+  - huaweicloudinstanceclasses
+  - openstackinstanceclasses
+  - vcdinstanceclasses
+  - vsphereinstanceclasses
+  - zvirtinstanceclasses
+  - instancetypescatalogs
+  verbs:
+  - get
+  - list
+  - watch
 # ConfigMaps - read for cluster configuration
 - apiGroups:
   - ""
@@ -277,6 +299,47 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
+# Namespaced write access for the bashible-apiserver-context Secret, the single-writer
+# replacement for the helm define bashible_input_data. Scoped to d8-cloud-instance-manager
+# (least privilege) instead of widening the cluster-wide secret read to cluster-wide write.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:node-controller:bashible-context
+  namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+  - update
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:node-controller:bashible-context
+  namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:node-controller:bashible-context
 subjects:
 - kind: ServiceAccount
   name: node-controller

@@ -114,78 +114,10 @@ spec:
         - name: tmp
           emptyDir: {}
 
-
-{{- define "bashible_input_data" }}
-{{- $deckhouseValues := .Values.deckhouse | default dict }}
-    deckhouse:
-      channel: {{ get $deckhouseValues "releaseChannel" | default "unknown" | quote }}
-      version: {{ .Values.global.deckhouseVersion | quote }}
-      edition: {{ .Values.global.deckhouseEdition | quote }}
-    podSubnetNodeCIDRPrefix: {{ $.Values.global.clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
-    clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
-    clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
-
-    {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-    cloudProvider:
-      {{- $.Values.nodeManager.internal.cloudProvider | toYaml | nindent 6 }}
-    {{- end }}
-    {{- if hasKey $.Values.global.clusterConfiguration "proxy" }}
-    proxy:
-      {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpProxy" }}
-      httpProxy: {{ $.Values.global.clusterConfiguration.proxy.httpProxy | quote }}
-      {{- end }}
-      {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpsProxy" }}
-      httpsProxy: {{ $.Values.global.clusterConfiguration.proxy.httpsProxy | quote }}
-      {{- end }}
-      {{- $noProxy := list "127.0.0.1" "169.254.169.254" $.Values.global.clusterConfiguration.clusterDomain $.Values.global.clusterConfiguration.podSubnetCIDR $.Values.global.clusterConfiguration.serviceSubnetCIDR }}
-      {{- if hasKey $.Values.global.clusterConfiguration.proxy "noProxy" }}
-        {{- $noProxy = concat $noProxy $.Values.global.clusterConfiguration.proxy.noProxy }}
-      {{- end }}
-      noProxy:
-        {{- $noProxy | toYaml | nindent 8 }}
-    {{- end }}
-    clusterUUID: "{{ .Values.global.discovery.clusterUUID | default "00000000-0000-0000-0000-000000000000" }}"
-    bootstrapTokens:
-      {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
-    apiserverEndpoints:
-      {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
-    clusterMasterEndpoints:
-      {{- $.Values.nodeManager.internal.clusterMasterEndpoints | default (list) | toYaml | nindent 6 }}
-    {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscoveryCert" }}
-    apiserverProxyCerts:
-      crt: |
-        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt | nindent 8 }}
-      key: |
-        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key | nindent 8 }}
-    {{- end }}
-    {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
-    packagesProxy:
-      token: {{ $.Values.nodeManager.internal.packagesProxy.token | toYaml }}
-    {{- end }}
-    {{- if $.Values.nodeManager.internal.kubernetesCA }}
-    kubernetesCA: |
-      {{- $.Values.nodeManager.internal.kubernetesCA | nindent 6 }}
-    {{- end }}
-    allowedBundles:
-      {{- $.Values.nodeManager.internal.allowedBundles | toYaml | nindent 6 }}
-    nodeGroups:
-      {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
-    nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
-    {{- if hasKey $.Values.nodeManager.internal "allowedKubeletFeatureGates" }}
-    allowedKubeletFeatureGates:
-      {{- $.Values.nodeManager.internal.allowedKubeletFeatureGates | toYaml | nindent 6 }}
-    {{- end }}
-{{- end }}
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: bashible-apiserver-context
-  namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
-data:
-  input.yaml: |-
-    {{- include "bashible_input_data" . | b64enc | nindent 4 }}
+# The bashible-apiserver-context Secret (input.yaml) is now assembled and written by
+# node-controller (internal/controller/nodegroup/bashiblecontext), the single writer
+# that replaced the former helm define bashible_input_data. Do not re-add a helm-rendered
+# copy here: two writers on one Secret would flap and churn the bashible bootstrap checksum.
 ---
 apiVersion: v1
 kind: ConfigMap
