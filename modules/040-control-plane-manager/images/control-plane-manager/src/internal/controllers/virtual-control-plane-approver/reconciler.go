@@ -46,6 +46,8 @@ func newReconciler(cl client.Client) *reconciler {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log.FromContext(ctx).Info("Reconcile started")
+
 	nodeList := &controlplanev1alpha1.ControlPlaneNodeList{}
 	if err := r.client.List(ctx, nodeList, client.InNamespace(request.Namespace)); err != nil {
 		return reconcile.Result{}, err
@@ -85,16 +87,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, nil
 }
 
-// Readiness mirrors cpnplanner's per-component condition semantics (see cpnplanner/status.go):
-// a virtual ControlPlaneNode is considered ready for approval purposes once its KubeAPIServer
-// component is reporting APIServerReady=True. KubeAPIServer is the first stage of VirtualPipeline
-// and workload components (kube-controller-manager/kube-scheduler) run alongside it on the same
-// node, so APIServerReady is a reasonable proxy for "this node is usable". This is a judgment call
-// for this first draft: there is no existing "is this ControlPlaneNode ready overall" helper to
-// reuse verbatim, so this criterion should be revisited if it proves too strict/loose in practice.
-//
-// Arbiters is always 0: the virtual control plane has no etcd/arbiter concept (see VirtualPipeline),
-// the field is only kept for Nodes API-shape parity with the normal pipeline.
 func (r *reconciler) getReadyNodes(nodeList *controlplanev1alpha1.ControlPlaneNodeList) (approver.Nodes, map[string]struct{}) {
 	readyNodeNames := make(map[string]struct{}, len(nodeList.Items))
 	for _, node := range nodeList.Items {
@@ -110,11 +102,6 @@ func isNodeReady(node controlplanev1alpha1.ControlPlaneNode) bool {
 	return true
 }
 
-// filterOperationsTargetingReadyNodes keeps only operations targeting one of readyNodeNames,
-// mirroring operationsMatchingReadyNodes from the normal operations-approver controller. The
-// type-label narrowing that controller expresses via a second label requirement is already
-// handled here by the cache scope (see the Reconcile comment above), so this only needs to
-// filter by node name.
 func filterOperationsTargetingReadyNodes(
 	operations []controlplanev1alpha1.ControlPlaneOperation,
 	readyNodeNames map[string]struct{},

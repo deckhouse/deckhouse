@@ -17,16 +17,12 @@ limitations under the License.
 package virtualcontrolplanenode
 
 import (
-	"log/slog"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
@@ -41,7 +37,6 @@ func BuildController(mgr manager.Manager) error {
 		mgr.GetScheme(),
 		cpnplanner.VirtualOperationBuilder{},
 		nil,
-		log.Default().With(slog.String("controller", constants.VirtualControlPlaneNodeController)),
 	)
 
 	return ctrl.NewControllerManagedBy(mgr).
