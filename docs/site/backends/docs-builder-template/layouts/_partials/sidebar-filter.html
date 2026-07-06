@@ -35,31 +35,31 @@
                 <label for="editionCSEPro">CSE Pro</label>
             </div>
         </div>
-    </div>
-    <div class="filter__container filter__container--stages">
-        <h3 class="filter__container--title closing-title">{{ T "stage_filter" | humanize }}</h3>
-        <div class="filter__checkboxes filter__checkboxes--stages">
-            <input type="checkbox" id="stagesSelectAll" data-select-all="true">
-            <label class="filter__checkboxes--all" for="stagesSelectAll">{{ T "stage_filter_all_selected" | humanize }}</label>
-            <input type="checkbox" id="experimental" value="experimental">
-            <label for="experimental">
-                Experimental
-                <img src="/images/experimental.svg">
-            </label>
-            <input type="checkbox" id="preview" value="preview">
-            <label for="preview">
-                Preview
-                <img src="/images/preview.svg">
-            </label>
-            <input type="checkbox" id="generalAvailability" value="generalAvailability">
-            <label for="generalAvailability">
-                General Availability (GA)
-            </label>
-            <input type="checkbox" id="deprecated" value="deprecated">
-            <label for="deprecated">
-                Deprecated
-                <img src="/images/deprecated.svg">
-            </label>
+        <div class="filter__container filter__container--stages">
+            <h3 class="filter__container--title closing-title">{{ T "stage_filter" | humanize }}</h3>
+            <div class="filter__checkboxes filter__checkboxes--stages">
+                <input type="checkbox" id="stagesSelectAll" data-select-all="true">
+                <label class="filter__checkboxes--all" for="stagesSelectAll">{{ T "stage_filter_all_selected" | humanize }}</label>
+                <input type="checkbox" id="experimental" value="experimental">
+                <label for="experimental">
+                    Experimental
+                    <img src="/images/experimental.svg">
+                </label>
+                <input type="checkbox" id="preview" value="preview">
+                <label for="preview">
+                    Preview
+                    <img src="/images/preview.svg">
+                </label>
+                <input type="checkbox" id="generalAvailability" value="generalAvailability">
+                <label for="generalAvailability">
+                    General Availability (GA)
+                </label>
+                <input type="checkbox" id="deprecated" value="deprecated">
+                <label for="deprecated">
+                    Deprecated
+                    <img src="/images/deprecated.svg">
+                </label>
+            </div>
         </div>
         <div class="filter__container filter__container--tags">
             <h3 class="filter__container--title closing-title">{{ T "tags_filter" | humanize }}</h3>
@@ -70,9 +70,9 @@
             <!-- <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button> -->
         </div>
         <div class="filter__block--apply">
-        <div class="filter__container filter__container--apply">
-            <button type="button" class="apply-filter" disabled>Применить</button>
+            <div class="filter__container filter__container--apply">
+                <button type="button" class="apply-filter" disabled>Применить</button>
+            </div>
         </div>
-    </div>
     </div>
 </div>

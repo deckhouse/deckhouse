@@ -108,7 +108,7 @@
             position: fixed;
             top: 51px;
             min-width: 100%;
-            padding: 20px 20px 0;
+            padding: 20px 20px 50px;
             z-index: 100;
         }
 
@@ -125,16 +125,11 @@
             }
         }
 
-        &--filters {
-            @include breakpoints.max-w(l) {
-                margin-bottom: 20px;
-            }
-        }
-
         &--apply {
             display: none;
             position: sticky;
             bottom: 20px;
+            margin-top: 50px;
             background-color: #fff;
             box-shadow: 0 0 30px 30px #fff;
             cursor: pointer;
@@ -171,6 +166,11 @@
 
             @include breakpoints.max-w(l) {
                 display: block;
+            }
+
+            @include breakpoints.max-w(xs) {
+                bottom: 10px;
+                margin-top: 40px;
             }
         }
     }
@@ -503,7 +503,7 @@
             }
 
             @include breakpoints.max-w(l) {
-                margin-bottom: 40px;
+                margin-bottom: 0;
             }
 
             &__en {
