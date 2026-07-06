@@ -38,9 +38,9 @@ func NewStore() *Store {
 }
 
 // NeedUpdate reports whether the package needs processing: true if the package
-// is new, the version changed, or the settings checksum differs.
-// Used as a fast-path check before the more expensive Update call.
-func (s *Store) NeedUpdate(name, version, checksum string) bool {
+// is new, the version changed, the settings checksum differs, or the maintenance
+// mode changed. Used as a fast-path check before the more expensive Update call.
+func (s *Store) NeedUpdate(name, version, checksum, maintenance string) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return true
@@ -54,6 +54,10 @@ func (s *Store) NeedUpdate(name, version, checksum string) bool {
 		return true
 	}
 
+	if pkg.maintenance != maintenance {
+		return true
+	}
+
 	return false
 }
 
@@ -63,19 +67,21 @@ func (s *Store) NeedUpdate(name, version, checksum string) bool {
 //  1. Package not in store → creates entry, returns root context
 //  2. Version differs → cancels all in-flight tasks, returns new root context
 //
-// Returns nil when only settings changed (no new context needed — settings are
-// stored and will be picked up by the scheduler via GetPendingSettings on next
-// Reschedule, or by the next Configure task in the schedule pipeline).
+// Returns nil when only settings or maintenance changed (no new context needed —
+// the new values are stored and will be picked up by the scheduler via
+// GetPendingSettings/GetPendingMaintenance on next Reschedule, or by the next
+// Configure task in the schedule pipeline).
 //
-// Callers should check for nil: a nil return with a settings-only change means
-// the caller should trigger Reschedule to re-apply settings through the scheduler.
-func (s *Store) Update(name, version string, settings addonutils.Values) context.Context {
+// Callers should check for nil: a nil return with a settings- or maintenance-only
+// change means the caller should trigger Reschedule to re-apply them.
+func (s *Store) Update(name, version string, settings addonutils.Values, maintenance string) context.Context {
 	pkg, ok := s.packages[name]
 	if !ok {
 		s.packages[name] = &Package{
-			version:  version,
-			settings: settings,
-			cancels:  make(map[int]context.CancelFunc),
+			version:     version,
+			settings:    settings,
+			maintenance: maintenance,
+			cancels:     make(map[int]context.CancelFunc),
 		}
 
 		ctx := s.packages[name].newContext(EventUpdate)
@@ -85,6 +91,7 @@ func (s *Store) Update(name, version string, settings addonutils.Values) context
 	if pkg.version != version {
 		pkg.version = version
 		pkg.settings = settings
+		pkg.maintenance = maintenance
 
 		ctx := pkg.newContext(EventUpdate)
 		return ctx
@@ -93,6 +100,8 @@ func (s *Store) Update(name, version string, settings addonutils.Values) context
 	if pkg.settings.Checksum() != settings.Checksum() {
 		pkg.settings = settings
 	}
+
+	pkg.maintenance = maintenance
 
 	return nil
 }
@@ -137,6 +146,7 @@ func (s *Store) HandleEvent(event int, name string) context.Context {
 	if event == EventRemove {
 		pkg.version = ""
 		pkg.settings = make(addonutils.Values)
+		pkg.maintenance = ""
 	}
 
 	return pkg.newContext(event)
@@ -148,6 +158,13 @@ func (s *Store) HandleEvent(event int, name string) context.Context {
 // and schedule are automatically picked up.
 func (s *Store) GetPendingSettings(name string) addonutils.Values {
 	return s.packages[name].settings
+}
+
+// GetPendingMaintenance returns the latest maintenance mode stored for a package.
+// Called by schedulePackage to pass the current mode into the Run task. Empty
+// means the package is managed normally.
+func (s *Store) GetPendingMaintenance(name string) string {
+	return s.packages[name].maintenance
 }
 
 // Delete removes a package entry from the store if it still exists and is in

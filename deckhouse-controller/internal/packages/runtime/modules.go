@@ -98,11 +98,12 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	name := module.Name
 	version := module.Definition.Version
 
-	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum()) {
+	// Modules do not support maintenance mode, so it is always empty here.
+	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), "") {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.Settings)
+	ctx := r.packages.Update(name, version, module.Settings, "")
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return

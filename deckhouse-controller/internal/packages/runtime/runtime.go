@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -121,6 +122,8 @@ type Runtime struct {
 
 	addonModuleManager moduleManagerI
 
+	metricStorage metricsstorage.Storage // Publishes the application maintenance gauge
+
 	logger *log.Logger
 }
 
@@ -139,7 +142,7 @@ type moduleManagerI interface {
 
 // New creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
+func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -149,6 +152,7 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	// Initialize foundational services
 	r.addonModuleManager = moduleManager
 	r.grantResolver = grants.NewResolver(cli)
+	r.metricStorage = metricStorage
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
@@ -688,17 +692,22 @@ func (r *Runtime) schedulePackage(name string) {
 	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
 	settings := r.packages.GetPendingSettings(name)
+	maintenance := nelm.MaintenanceState(r.packages.GetPendingMaintenance(name))
 
 	if pkg := r.apps[name]; pkg != nil {
+		// Only applications support maintenance; publish (or clear) the gauge so the
+		// ApplicationIsInMaintenanceMode alert reflects the current mode.
+		r.setMaintenanceMetric(name, maintenance)
+
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), maintenance, r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, r.nelmService, r.status, r.logger), onDone)
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, maintenance, r.nelmService, r.status, r.logger), onDone)
 	}
 }
 
@@ -721,12 +730,37 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.status.SetConditionFalse(name, status.ConditionRequirementsMet, reason, msg)
 
 	if pkg := r.apps[name]; pkg != nil {
+		// A disabled application no longer reconciles anything, so drop its maintenance gauge.
+		r.setMaintenanceMetric(name, nelm.Managed)
+
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
 	}
+}
+
+// applicationMaintenanceMetric is set to 1 while an application runs under
+// maintenance; the ApplicationIsInMaintenanceMode alert fires on it.
+const applicationMaintenanceMetric = "deckhouse_application_maintenance"
+
+// setMaintenanceMetric publishes the maintenance gauge for an application, or clears
+// it when the application is managed normally. The application's package name is used
+// as the metric group so it can be expired independently of other applications.
+func (r *Runtime) setMaintenanceMetric(name string, state nelm.MaintenanceState) {
+	if state != nelm.NoResourceReconciliation {
+		r.metricStorage.Grouped().ExpireGroupMetrics(name)
+		return
+	}
+
+	// name is "<namespace>.<instance>"; a namespace never contains a dot.
+	namespace, instance, _ := strings.Cut(name, ".")
+	r.metricStorage.Grouped().GaugeSet(name, applicationMaintenanceMetric, 1, map[string]string{
+		"namespace": namespace,
+		"name":      instance,
+		"state":     string(state),
+	})
 }
 
 // Stop performs graceful shutdown of all operator subsystems.
