@@ -130,7 +130,10 @@ mkdir -p /mnt/kubernetes-data
 
 # always format the device to ensure it's clean, because etcd will not join the cluster if the device
 # contains a filesystem with etcd database from a previous installation
-mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
+# Idempotency: skip formatting if the device is already mounted (see the next step)
+if ! mount | grep -q $DATA_DEVICE; then
+  mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
+fi
 
 if grep -qv kubernetes-data /etc/fstab; then
   cat >> /etc/fstab << EOF
