@@ -227,16 +227,32 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return reqs
 	})
 
-	enqueueByOwnedNamespace := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-		name, ok := obj.GetLabels()[v1alpha3.ResourceLabelProjectNamespace]
-		if !ok {
-			return nil
-		}
+	// A namespace change re-enqueues ProjectNamespaces. An owned (additional) namespace — labelled with
+	// both the project and the project-namespace — maps to its own ProjectNamespace. The project's MAIN
+	// namespace carries the project label but NO project-namespace label; it is the source of the
+	// inherited policy/grant labels (Pod Security Standard, monitoring/scanning, grant-template), so a
+	// change to it must re-sync EVERY ProjectNamespace of the project. Without this, inherited labels
+	// drift on additional namespaces whenever they change post-creation (e.g. PSS flipped from Baseline
+	// to Privileged, or a feature toggled), because the ProjectNamespace is otherwise only reconciled on
+	// its own spec change or on a change to the project's namespace-name set.
+	enqueueByProjectNamespace := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		project, ok := obj.GetLabels()[v1alpha3.ResourceLabelProject]
 		if !ok {
 			return nil
 		}
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: project, Name: name}}}
+		if name, ok := obj.GetLabels()[v1alpha3.ResourceLabelProjectNamespace]; ok {
+			return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: project, Name: name}}}
+		}
+		list := &v1alpha3.ProjectNamespaceList{}
+		if err := r.List(ctx, list, client.InNamespace(project)); err != nil {
+			ctrllog.FromContext(ctx).Error(err, "list ProjectNamespaces for main-namespace drift", "project", project)
+			return nil
+		}
+		reqs := make([]reconcile.Request, 0, len(list.Items))
+		for i := range list.Items {
+			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: list.Items[i].Namespace, Name: list.Items[i].Name}})
+		}
+		return reqs
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -245,7 +261,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// external drift of the created namespace.
 		For(&v1alpha3.ProjectNamespace{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&v1alpha3.Project{}, enqueueByProject, builder.WithPredicates(rolebinding.ProjectFanoutPredicate())).
-		Watches(&corev1.Namespace{}, enqueueByOwnedNamespace).
+		Watches(&corev1.Namespace{}, enqueueByProjectNamespace).
 		Named("project-namespace").
 		Complete(r)
 }
