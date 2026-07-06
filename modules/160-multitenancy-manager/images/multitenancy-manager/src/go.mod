@@ -11,6 +11,7 @@ require (
 	github.com/go-openapi/validate v0.24.0
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.11.1
+	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	sigs.k8s.io/controller-runtime v0.21.0
