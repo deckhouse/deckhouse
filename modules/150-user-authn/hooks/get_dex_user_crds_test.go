@@ -665,9 +665,64 @@ username: admin
 		})
 	})
 
+	Context("Fresh cluster with a User but no namespace yet", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@example.com
+  password: $2a$10$E/MjyzFi6GZkta9GHd8zCeuYigbLenXv18jkxOZ6vhoWsKnaxNJou
+`))
+			f.RunHook()
+		})
+		It("Should not fail and must defer Password creation until the namespace exists", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// The namespace is created by Helm only after this hook on a fresh
+			// cluster. Creating a Password before it exists would fail the hook and
+			// deadlock the module queue, so the Password is deferred.
+			Expect(f.KubernetesResource("Password", "d8-user-authn", "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf").Exists()).To(BeFalse())
+			// Values are still filled so Helm can render and create the namespace.
+			Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).ToNot(MatchJSON("[]"))
+		})
+
+		Context("and the namespace appears", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-user-authn
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@example.com
+  password: $2a$10$E/MjyzFi6GZkta9GHd8zCeuYigbLenXv18jkxOZ6vhoWsKnaxNJou
+`))
+				f.RunHook()
+			})
+			It("Should create the Password object once the namespace exists", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesResource("Password", "d8-user-authn", "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf").Exists()).To(BeTrue())
+			})
+		})
+	})
+
 	Context("With a new User and no existing Password", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-user-authn
 ---
 apiVersion: deckhouse.io/v1
 kind: User
@@ -702,6 +757,11 @@ spec:
 	Context("With an existing user-changed Password and a group change", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-user-authn
 ---
 apiVersion: deckhouse.io/v1
 kind: User
@@ -766,6 +826,11 @@ username: admin
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-user-authn
+---
 apiVersion: dex.coreos.com/v1
 email: ghost@example.com
 hash: aGFzaA==
@@ -808,6 +873,11 @@ username: external
 			// rotated after account creation, which must survive the rename instead
 			// of being reverted to the immutable creation-time spec.password.
 			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-user-authn
 ---
 apiVersion: deckhouse.io/v1
 kind: User
@@ -865,6 +935,11 @@ username: admin
 			// rejected by the CRD pattern, but the hook must never hard-fail on it:
 			// returning an error would retry forever and block the module queue.
 			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-user-authn
 ---
 apiVersion: deckhouse.io/v1
 kind: User
