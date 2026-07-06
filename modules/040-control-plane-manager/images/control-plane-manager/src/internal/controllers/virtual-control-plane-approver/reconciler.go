@@ -67,10 +67,14 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
+	log.FromContext(ctx).Info("node names", "nodeNames", nodeNames)
+
 	operations.Items = filterOperationsTargetingReadyNodes(operations.Items, nodeNames)
 	if len(operations.Items) == 0 {
 		return reconcile.Result{}, nil
 	}
+
+	log.FromContext(ctx).Info("operations", "operations", operations.Items)
 
 	approvable := r.approver.SelectApprovable(operations.Items, nodes)
 
