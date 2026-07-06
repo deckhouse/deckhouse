@@ -26,12 +26,12 @@ prints a `Forbidden` error for the denied ones — that is the demo.
 
 ## What is configured for project `demo`
 
-| Resource              | Allowed                                                         | Default      | Defaulting |
-|-----------------------|----------------------------------------------------------------|--------------|------------|
-| storageclasses        | `local`                                                        | `local`      | Coerce     |
-| clusterissuers        | `selfsigned`                                                   | `selfsigned` | FillEmpty (Certificate) / None (Ingress annotation) |
-| loadbalancerclasses   | `internal`                                                     | —            | FillEmpty  |
-| clusterroles          | d8:use:role:* + user-authz access (user,priv-user,editor,admin) | —            | None       |
+| Resource              | Allowed                                                          | Default      | Defaulting |
+|-----------------------|-----------------------------------------------------------------|--------------|------------|
+| storageclasses        | `local`                                                         | `local`      | Coerce     |
+| clusterissuers        | `selfsigned`                                                    | `selfsigned` | FillEmpty (Certificate) / None (Ingress annotation) |
+| loadbalancerclasses   | `internal`                                                      | —            | FillEmpty  |
+| clusterroles          | d8:namespace:* + user-authz access (user,priv-user,editor,admin) | —            | None       |
 
 Key difference: the storageclasses PVC path uses `defaulting: Coerce` (the built-in DefaultStorageClass
 admission pre-fills `storageClassName`), so a disallowed/omitted storage class is rewritten to `local`.

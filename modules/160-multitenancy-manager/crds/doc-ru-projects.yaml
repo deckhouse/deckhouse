@@ -73,3 +73,75 @@ spec:
                         type: string
                 state:
                   description: Короткое описание состояния проекта, например, Error, Deployed, и т.д.
+    - name: v1alpha3
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                description:
+                  description: |
+                    Произвольное описание назначения проекта. Укажите пустую строку, если описание не требуется.
+                projectTemplateName:
+                  description: |
+                    Имя ресурса [ProjectTemplate](cr.html#projecttemplate), который определяет, какие ресурсы будут созданы в проекте.
+
+                    Необязательное. Если не указано, контроллер обеспечивает только создание пространства имён проекта и применение стандартных полей (`administrators`, `quota`).
+                administrators:
+                  description: |
+                    Пользователи и группы, получающие административный доступ к проекту.
+
+                    Для каждого элемента контроллер создаёт управляемый `ProjectRoleBinding`, выдающий роль `d8:project:admin`.
+                  items:
+                    properties:
+                      kind:
+                        description: Тип субъекта.
+                      name:
+                        description: Имя субъекта.
+                quota:
+                  description: |
+                    Квота ресурсов проекта, применяемая как `ResourceQuota` с именем `d8-project-quota` в пространстве имён проекта.
+
+                    Ключи и значения соответствуют формату `ResourceQuota.spec.hard`, например `requests.cpu: "100"`.
+                parameters:
+                  description: |
+                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
+
+                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
+            status:
+              properties:
+                namespaces:
+                  description: Пространства имён, принадлежащие проекту.
+                  items:
+                    properties:
+                      name:
+                        description: Имя пространства имён.
+                      kind:
+                        description: Тип пространства имён (Main или Additional).
+                usage:
+                  description: Текущее использование квоты проекта.
+                observedGeneration:
+                  description: Последний generation проекта.
+                templateGeneration:
+                  description: Последний generation шаблона.
+                resources:
+                  description: Список срендеренных и пропущенных ресурсов.
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
+                        type: string
+                state:
+                  description: Короткое описание состояния проекта, например, Error, Deployed, и т.д.
