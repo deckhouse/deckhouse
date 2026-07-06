@@ -252,17 +252,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/500-upmeter
-  to: /deckhouse/modules/500-upmeter
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
   excludePaths:
@@ -843,15 +832,4 @@
   to: /deckhouse/modules/150-user-authn/openapi/values.yaml
   stageDependencies:
     install:
-        - '**/*'
-- add: /ee/cse/modules/500-upmeter/templates/webui
-  to: /deckhouse/modules/500-upmeter/templates/webui
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
         - '**/*'
