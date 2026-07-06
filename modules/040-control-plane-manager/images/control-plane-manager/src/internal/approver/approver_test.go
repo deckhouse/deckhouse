@@ -44,7 +44,7 @@ func TestApprover_ConcurrencyLimits(t *testing.T) {
 			newOperation("etcd-1", "n1", controlplanev1alpha1.OperationComponentEtcd, false),
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 1})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 1})
 		// etcd stage wide-blocks apiserver once reserved, so only etcd-1 is admitted this round.
 		require.Equal(t, []string{"etcd-1"}, approvedNames(result))
 	})
@@ -56,7 +56,7 @@ func TestApprover_ConcurrencyLimits(t *testing.T) {
 			newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.ElementsMatch(t, []string{"a1", "a2"}, approvedNames(result))
 	})
 }
@@ -69,7 +69,7 @@ func TestApprover_Etcd(t *testing.T) {
 		ops := []controlplanev1alpha1.ControlPlaneOperation{
 			newOperation("etcd-1", "node-a", controlplanev1alpha1.OperationComponentEtcd, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"etcd-1"}, approvedNames(result))
 	})
 
@@ -79,7 +79,7 @@ func TestApprover_Etcd(t *testing.T) {
 			newOperation("etcd-1", "node-a", controlplanev1alpha1.OperationComponentEtcd, false),
 			newOperation("etcd-2", "node-b", controlplanev1alpha1.OperationComponentEtcd, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"etcd-1"}, approvedNames(result))
 	})
 
@@ -89,7 +89,7 @@ func TestApprover_Etcd(t *testing.T) {
 			newOperation("etcd-1", "node-a", controlplanev1alpha1.OperationComponentEtcd, false),
 			newOperation("etcd-2", "node-a", controlplanev1alpha1.OperationComponentEtcd, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"etcd-1"}, approvedNames(result))
 	})
 
@@ -99,8 +99,34 @@ func TestApprover_Etcd(t *testing.T) {
 			newOperation("etcd-running", "node-a", controlplanev1alpha1.OperationComponentEtcd, true),
 			newOperation("etcd-new", "node-b", controlplanev1alpha1.OperationComponentEtcd, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Empty(t, result)
+	})
+
+	// blocks() for clusterWide stages checks hasAnyReservation() (approvedTotal > 0), not queued
+	// operations, so a merely-queued etcd reservation does not by itself block the rest of the
+	// pipeline cluster-wide. This is intentional and matches old behavior.
+	//
+	// Note: in practice a queued-only (no admitted) etcd reservation is unreachable here, because
+	// etcd concurrency limit is always 1 (see etcdConcurrencyLimit) and queuing only happens once
+	// approvedTotal >= limit, i.e. an etcd op can only be queued once another one is already
+	// admitted. So this test seeds one admitted etcd (via the second etcd op getting queued
+	// behind it) and asserts that apiserver is blocked because of that admitted reservation — the
+	// queued second etcd op contributes nothing extra to the block, demonstrating the asymmetry
+	// documented on stageGate.blocks even though a "queued but not admitted" state can't be
+	// constructed standalone.
+	t.Run("queued etcd reservation adds no extra cluster-wide block beyond the already-admitted one", func(t *testing.T) {
+		t.Parallel()
+		ops := []controlplanev1alpha1.ControlPlaneOperation{
+			// etcd-1 is admitted (etcd concurrency limit is 1).
+			newOperation("etcd-1", "node-a", controlplanev1alpha1.OperationComponentEtcd, false),
+			// etcd-2 hits the limit and is merely queued, not admitted.
+			newOperation("etcd-2", "node-b", controlplanev1alpha1.OperationComponentEtcd, false),
+			// apiserver is wide-blocked solely by etcd-1's admitted reservation.
+			newOperation("a1", "node-c", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
+		}
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
+		require.Equal(t, []string{"etcd-1"}, approvedNames(result))
 	})
 }
 
@@ -113,7 +139,7 @@ func TestApprover_StageOrdering(t *testing.T) {
 			newOperation("e1", "n1", controlplanev1alpha1.OperationComponentEtcd, false),
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"e1"}, approvedNames(result))
 	})
 
@@ -123,7 +149,7 @@ func TestApprover_StageOrdering(t *testing.T) {
 			newOperation("e1", "n1", controlplanev1alpha1.OperationComponentEtcd, false),
 			newOperation("a1", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"e1"}, approvedNames(result))
 	})
 
@@ -132,7 +158,7 @@ func TestApprover_StageOrdering(t *testing.T) {
 		ops := []controlplanev1alpha1.ControlPlaneOperation{
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"a1"}, approvedNames(result))
 	})
 
@@ -142,7 +168,7 @@ func TestApprover_StageOrdering(t *testing.T) {
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"a1"}, approvedNames(result))
 	})
 
@@ -152,7 +178,7 @@ func TestApprover_StageOrdering(t *testing.T) {
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("k1", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.ElementsMatch(t, []string{"a1", "k1"}, approvedNames(result))
 	})
 
@@ -169,7 +195,7 @@ func TestApprover_StageOrdering(t *testing.T) {
 			// kcm on n1 must be blocked (apiserver approved on n1)
 			newOperation("k2", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.ElementsMatch(t, []string{"a1", "a2"}, approvedNames(result))
 	})
 
@@ -179,7 +205,7 @@ func TestApprover_StageOrdering(t *testing.T) {
 			newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
 			newOperation("s1", "n2", controlplanev1alpha1.OperationComponentKubeScheduler, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.ElementsMatch(t, []string{"k1", "s1"}, approvedNames(result))
 	})
 }
@@ -195,7 +221,7 @@ func TestApprover_WorkloadConcurrencyAndPerNode(t *testing.T) {
 			newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.ElementsMatch(t, []string{"a1", "a2"}, approvedNames(result))
 	})
 
@@ -205,7 +231,7 @@ func TestApprover_WorkloadConcurrencyAndPerNode(t *testing.T) {
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("a2", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(NormalPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(NormalPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"a1"}, approvedNames(result))
 	})
 }
@@ -216,7 +242,7 @@ func TestApprover_PartitionAndOrder(t *testing.T) {
 	t.Run("unapproved operation is returned when admitted", func(t *testing.T) {
 		t.Parallel()
 		op := newOperation("x", "n1", controlplanev1alpha1.OperationComponentEtcd, false)
-		result := NewApprover(NormalPipeline).SelectApprovable([]controlplanev1alpha1.ControlPlaneOperation{op}, NodeCounts{Masters: 1})
+		result := NewApprover(NormalPipeline).SelectApprovable([]controlplanev1alpha1.ControlPlaneOperation{op}, Nodes{Masters: 1})
 		require.Len(t, result, 1)
 		require.Equal(t, "x", result[0].Name)
 	})
@@ -226,9 +252,9 @@ func TestApprover_PartitionAndOrder(t *testing.T) {
 		seeded := newOperation("x", "n1", controlplanev1alpha1.OperationComponentEtcd, true)
 		newEtcd := newOperation("y", "n2", controlplanev1alpha1.OperationComponentEtcd, false)
 		result := NewApprover(NormalPipeline).SelectApprovable(
-			[]controlplanev1alpha1.ControlPlaneOperation{seeded, newEtcd}, NodeCounts{Masters: 1})
+			[]controlplanev1alpha1.ControlPlaneOperation{seeded, newEtcd}, Nodes{Masters: 1})
 		// seeded op is not returned (already approved), and it occupies the etcd stage,
-		// so the new unapproved etcd op is blocked (wideBlock).
+		// so the new unapproved etcd op is blocked (clusterWide).
 		require.Empty(t, result)
 	})
 
@@ -243,7 +269,7 @@ func TestApprover_PartitionAndOrder(t *testing.T) {
 		})
 		newEtcd := newOperation("y", "n2", controlplanev1alpha1.OperationComponentEtcd, false)
 		result := NewApprover(NormalPipeline).SelectApprovable(
-			[]controlplanev1alpha1.ControlPlaneOperation{completed, newEtcd}, NodeCounts{Masters: 1})
+			[]controlplanev1alpha1.ControlPlaneOperation{completed, newEtcd}, Nodes{Masters: 1})
 		require.Equal(t, []string{"y"}, approvedNames(result))
 	})
 
@@ -253,8 +279,8 @@ func TestApprover_PartitionAndOrder(t *testing.T) {
 		etcd := newOperation("zzz-etcd", "n2", controlplanev1alpha1.OperationComponentEtcd, false)
 		kcm := newOperation("m-kcm", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false)
 		result := NewApprover(NormalPipeline).SelectApprovable(
-			[]controlplanev1alpha1.ControlPlaneOperation{api, etcd, kcm}, NodeCounts{Masters: 1})
-		// etcd is processed first (pipeline order) and admitted; being wideBlock it then blocks
+			[]controlplanev1alpha1.ControlPlaneOperation{api, etcd, kcm}, Nodes{Masters: 1})
+		// etcd is processed first (pipeline order) and admitted; being clusterWide it then blocks
 		// every later stage (apiserver, kcm) regardless of node for the rest of this call.
 		require.Equal(t, []string{"zzz-etcd"}, approvedNames(result))
 	})
@@ -270,7 +296,7 @@ func TestApprover_VirtualPipeline(t *testing.T) {
 			newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(VirtualPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(VirtualPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		// same concurrency/per-node rules as the normal pipeline test: limit is nodes-1 == 2.
 		require.ElementsMatch(t, []string{"a1", "a2"}, approvedNames(result))
 	})
@@ -281,7 +307,7 @@ func TestApprover_VirtualPipeline(t *testing.T) {
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("a2", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(VirtualPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(VirtualPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.Equal(t, []string{"a1"}, approvedNames(result))
 	})
 
@@ -291,7 +317,7 @@ func TestApprover_VirtualPipeline(t *testing.T) {
 			newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
 			newOperation("s1", "n2", controlplanev1alpha1.OperationComponentKubeScheduler, false),
 		}
-		result := NewApprover(VirtualPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(VirtualPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.ElementsMatch(t, []string{"k1", "s1"}, approvedNames(result))
 	})
 
@@ -301,7 +327,7 @@ func TestApprover_VirtualPipeline(t *testing.T) {
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("k1", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
 		}
-		result := NewApprover(VirtualPipeline).SelectApprovable(ops, NodeCounts{Masters: 3})
+		result := NewApprover(VirtualPipeline).SelectApprovable(ops, Nodes{Masters: 3})
 		require.ElementsMatch(t, []string{"a1", "k1"}, approvedNames(result))
 	})
 }

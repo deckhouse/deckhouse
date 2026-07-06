@@ -28,20 +28,19 @@ const (
 // A pipeline slice (see pipeline.go) is the single source of truth for stage order, membership, and per-stage
 // concurrency policy.
 type pipelineStage struct {
-	components         []controlplanev1alpha1.OperationComponent
-	concurrencyLimitFn func(nodes NodeCounts, c controlplanev1alpha1.OperationComponent) int
-	// wideBlock marks a stage whose occupancy blocks the whole pipeline regardless of node —
+	components []controlplanev1alpha1.OperationComponent
+	// clusterWide marks a stage whose occupancy blocks the whole pipeline regardless of node —
 	// e.g. one in-flight etcd operation affects the whole quorum, not just the node it runs on.
 	// Defaults to false: block only the same node.
-	wideBlock bool
+	clusterWide bool
 }
 
 // stageGate is the runtime Chain of Responsibility node built from a pipelineStage: it decides whether a
 // candidate operation passes or is held back, then hands off to the next gate.
 type stageGate struct {
-	components map[controlplanev1alpha1.OperationComponent]*componentOccupancy
-	wideBlock  bool
-	next       *stageGate
+	components  map[controlplanev1alpha1.OperationComponent]*componentOccupancy
+	clusterWide bool
+	next        *stageGate
 }
 
 // componentOccupancy is the reservation bookkeeping for a single component within a gate.
@@ -53,8 +52,8 @@ type componentOccupancy struct {
 }
 
 // buildGateChain builds the linked chain of stageGates from pipeline, computing each stage's
-// concurrency limit via stage.concurrencyLimitFn(nodes, component).
-func buildGateChain(pipeline []pipelineStage, nodes NodeCounts) *stageGate {
+// concurrency limit via getConcurrencyLimit(nodes, component).
+func buildGateChain(pipeline []pipelineStage, nodes Nodes) *stageGate {
 	if len(pipeline) == 0 {
 		return nil
 	}
@@ -65,14 +64,14 @@ func buildGateChain(pipeline []pipelineStage, nodes NodeCounts) *stageGate {
 
 		for _, c := range stage.components {
 			components[c] = &componentOccupancy{
-				limit:           stage.concurrencyLimitFn(nodes, c),
+				limit:           getConcurrencyLimit(nodes, c),
 				approvedPerNode: make(map[string]int),
 			}
 		}
 
 		gates[i] = &stageGate{
-			components: components,
-			wideBlock:  stage.wideBlock,
+			components:  components,
+			clusterWide: stage.clusterWide,
 		}
 		if i > 0 {
 			gates[i-1].next = gates[i]
@@ -136,18 +135,15 @@ func (gate *stageGate) tryAdmit(unapprovedOperation controlplanev1alpha1.Control
 }
 
 func (gate *stageGate) handles(component controlplanev1alpha1.OperationComponent) bool {
-	if _, exists := gate.components[component]; !exists {
-		return false
-	}
-
-	return true
+	_, exists := gate.components[component]
+	return exists
 }
 
 // blocks reports whether this gate's current occupancy should hold back the candidate operation:
 // any reservation at all for wide-block stages, or a reservation on the same node for ordinary
 // per-node stages.
 func (gate *stageGate) blocks(nodeName string) bool {
-	if gate.wideBlock {
+	if gate.clusterWide {
 		return gate.hasAnyReservation()
 	}
 

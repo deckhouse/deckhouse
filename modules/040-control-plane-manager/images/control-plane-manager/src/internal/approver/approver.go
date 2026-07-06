@@ -29,13 +29,13 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 )
 
-// NodeCounts describes the node inventory relevant to approval decisions.
-type NodeCounts struct {
+// Nodes describes the node inventory relevant to approval decisions.
+type Nodes struct {
 	Masters  int
 	Arbiters int
 }
 
-func (c NodeCounts) IsZero() bool {
+func (c Nodes) IsZero() bool {
 	return c.Masters+c.Arbiters == 0
 }
 
@@ -47,7 +47,7 @@ type Approver struct {
 
 // NewApprover builds an Approver for the given pipeline (see NormalPipeline, VirtualPipeline).
 func NewApprover(pipeline []pipelineStage) *Approver {
-	return &Approver{pipeline: pipeline}
+	return &Approver{pipeline: slices.Clone(pipeline)}
 }
 
 // SelectApprovable partitions operations, replays already-approved/in-flight ones through the
@@ -56,7 +56,7 @@ func NewApprover(pipeline []pipelineStage) *Approver {
 // operation; the caller is responsible for mutating and persisting the result.
 func (a *Approver) SelectApprovable(
 	operations []controlplanev1alpha1.ControlPlaneOperation,
-	nodes NodeCounts,
+	nodes Nodes,
 ) []controlplanev1alpha1.ControlPlaneOperation {
 	approvedOperations, unapprovedOperations := partitionOperationsByApprovalState(operations)
 	sortOperationsByPipelineOrder(a.pipeline, approvedOperations)
@@ -75,9 +75,14 @@ func (a *Approver) SelectApprovable(
 	return approvable
 }
 
-func partitionOperationsByApprovalState(operations []controlplanev1alpha1.ControlPlaneOperation) ([]controlplanev1alpha1.ControlPlaneOperation, []controlplanev1alpha1.ControlPlaneOperation) {
-	approvedOperations := make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
-	unapprovedOperations := make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
+func partitionOperationsByApprovalState(
+	operations []controlplanev1alpha1.ControlPlaneOperation,
+) (
+	approvedOperations []controlplanev1alpha1.ControlPlaneOperation,
+	unapprovedOperations []controlplanev1alpha1.ControlPlaneOperation,
+) {
+	approvedOperations = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
+	unapprovedOperations = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
 
 	for _, operation := range operations {
 		if operation.Spec.Approved && !operation.IsTerminal() {

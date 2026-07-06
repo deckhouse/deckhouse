@@ -41,6 +41,7 @@ const (
 	VirtualControlPlaneManagerName         = "virtual-control-plane-manager"
 	VirtualConfigurationController         = "virtual-control-plane-configuration-controller"
 	VirtualControlPlaneNodeController      = "virtual-control-plane-node-controller"
+	VirtualControlPlaneApproverController  = "virtual-control-plane-approver-controller"
 	VirtualControlPlaneNamespacePrefix     = "vcp-"
 	VirtualControlPlaneConfigSecretName    = "d8-virtual-control-plane-config"
 	VirtualRenderedConfigSecretName        = "d8-vcp-config-virtual"

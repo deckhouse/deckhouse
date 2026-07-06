@@ -20,54 +20,41 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 )
 
-// NormalPipeline is the approval pipeline for a normal (non-virtual) control plane: etcd gates
-// everything else (wide-block), then kube-apiserver, then kube-controller-manager/kube-scheduler.
-var NormalPipeline = []pipelineStage{
-	{
-		components: []controlplanev1alpha1.OperationComponent{
-			controlplanev1alpha1.OperationComponentEtcd,
-		},
-		concurrencyLimitFn: getConcurrencyLimit,
-		wideBlock:          true, // etcd affects the whole quorum, not just its own node
+// etcdStage wide-blocks everything else: one in-flight etcd operation affects the whole quorum,
+// not just its own node.
+var etcdStage = pipelineStage{
+	components: []controlplanev1alpha1.OperationComponent{
+		controlplanev1alpha1.OperationComponentEtcd,
 	},
-	{
-		components: []controlplanev1alpha1.OperationComponent{
-			controlplanev1alpha1.OperationComponentKubeAPIServer,
-		},
-		concurrencyLimitFn: getConcurrencyLimit,
-	},
-	{
-		components: []controlplanev1alpha1.OperationComponent{
-			controlplanev1alpha1.OperationComponentKubeControllerManager,
-			controlplanev1alpha1.OperationComponentKubeScheduler,
-		},
-		concurrencyLimitFn: getConcurrencyLimit,
+	clusterWide: true, // etcd affects the whole quorum, not just its own node
+}
+
+var apiServerStage = pipelineStage{
+	components: []controlplanev1alpha1.OperationComponent{
+		controlplanev1alpha1.OperationComponentKubeAPIServer,
 	},
 }
 
-// VirtualPipeline drops the Etcd stage entirely: virtual control-plane has no etcd component, so
-// KubeAPIServer becomes the first stage (its own per-node/concurrency limits are sufficient, no
-// wide-block stage needed).
-var VirtualPipeline = []pipelineStage{
-	{
-		components: []controlplanev1alpha1.OperationComponent{
-			controlplanev1alpha1.OperationComponentKubeAPIServer,
-		},
-		concurrencyLimitFn: getConcurrencyLimit,
-	},
-	{
-		components: []controlplanev1alpha1.OperationComponent{
-			controlplanev1alpha1.OperationComponentKubeControllerManager,
-			controlplanev1alpha1.OperationComponentKubeScheduler,
-		},
-		concurrencyLimitFn: getConcurrencyLimit,
+var workloadStage = pipelineStage{
+	components: []controlplanev1alpha1.OperationComponent{
+		controlplanev1alpha1.OperationComponentKubeControllerManager,
+		controlplanev1alpha1.OperationComponentKubeScheduler,
 	},
 }
+
+// NormalPipeline is the approval pipeline for a normal (non-virtual) control plane: etcd gates
+// everything else (cluster-wide), then kube-apiserver, then kube-controller-manager/kube-scheduler.
+var NormalPipeline = []pipelineStage{etcdStage, apiServerStage, workloadStage}
+
+// VirtualPipeline drops etcdStage entirely: virtual control-plane has no etcd component, so
+// KubeAPIServer becomes the first stage (its own per-node/concurrency limits are sufficient, no
+// cluster-wide stage needed).
+var VirtualPipeline = []pipelineStage{apiServerStage, workloadStage}
 
 // Arbiters run etcd only; workload components (apiserver, etc.) run on master nodes exclusively.
 // For etcd the limit accounts for the full quorum membership (masters + arbiters).
 // For all other components only master nodes count.
-func getConcurrencyLimit(nodes NodeCounts, c controlplanev1alpha1.OperationComponent) int {
+func getConcurrencyLimit(nodes Nodes, c controlplanev1alpha1.OperationComponent) int {
 	switch c {
 	case controlplanev1alpha1.OperationComponentEtcd:
 		return etcdConcurrencyLimit(nodes.Masters + nodes.Arbiters)

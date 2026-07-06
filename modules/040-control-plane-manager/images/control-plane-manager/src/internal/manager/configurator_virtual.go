@@ -30,6 +30,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	virtualcontrolplaneapprover "control-plane-manager/internal/controllers/virtual-control-plane-approver"
 	virtualcontrolplaneconfiguration "control-plane-manager/internal/controllers/virtual-control-plane-configuration"
 	virtualcontrolplanenode "control-plane-manager/internal/controllers/virtual-control-plane-node"
 	virtualcontrolplaneoperation "control-plane-manager/internal/controllers/virtual-control-plane-operation"
@@ -88,6 +89,10 @@ func (c *virtualConfigurator) configureRuntimeManager(runtimeManager runtimemana
 
 	if err := virtualcontrolplaneoperation.BuildController(runtimeManager); err != nil {
 		return fmt.Errorf("build virtual-control-plane-operation controller: %w", err)
+	}
+
+	if err := virtualcontrolplaneapprover.BuildController(runtimeManager); err != nil {
+		return fmt.Errorf("build virtual-control-plane-approver controller: %w", err)
 	}
 
 	return nil
