@@ -9,6 +9,7 @@ import:
   add: /integrity-containerd-configurator
   to: /integrity-containerd-configurator
   before: setup
+{{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
