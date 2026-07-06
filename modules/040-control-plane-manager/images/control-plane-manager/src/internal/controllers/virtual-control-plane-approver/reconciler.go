@@ -78,6 +78,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	approvable := r.approver.SelectApprovable(operations.Items, nodes)
 
+	log.FromContext(ctx).Info("approvable", "approvable", approvable)
+
 	for _, op := range approvable {
 		original := op.DeepCopy()
 		op.Spec.Approved = true
