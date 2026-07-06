@@ -489,7 +489,7 @@ func (c *DeckhouseController) loadInitialConfiguration(ctx context.Context) erro
 			continue
 		}
 
-		c.packageRuntime.UpdateModulesSettings(conf.Name, conf.Spec.Settings.GetMap(), conf.Spec.Enabled)
+		c.packageRuntime.UpdateModulesSettings(conf.Name, conf.Spec.Version, conf.Spec.Settings.GetMap(), conf.Spec.Enabled)
 	}
 
 	return nil

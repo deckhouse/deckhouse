@@ -43,10 +43,11 @@ const (
 // App represents an application instance as received from the Application controller.
 // It carries the user-specified package identity, version constraints, and settings.
 type App struct {
-	Name       string
-	Namespace  string
-	Definition apps.Definition
-	Settings   addonutils.Values
+	Name            string
+	Namespace       string
+	Definition      apps.Definition
+	Settings        addonutils.Values
+	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -80,7 +81,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.Settings)
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
