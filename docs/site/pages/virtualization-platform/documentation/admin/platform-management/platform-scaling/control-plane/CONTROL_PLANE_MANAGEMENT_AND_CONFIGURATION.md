@@ -251,13 +251,13 @@ After applying the resource, the GRUB settings will be updated and the cluster n
 
 ## etcd periodic defragmentation configuration
 
-In clusters with three or more etcd members (3 or more master nodes, or 2 or more master nodes if an etcd-arbiter is present), this feature is enabled by default. Defragmentation runs once a day at exactly 1:00 a.m. server time.
+In clusters with three or more etcd members (3 and more master nodes or 2 and more master nodes if an etcd-arbiter is present), this feature is enabled by default. Defragmentation runs once a day at exactly 1:00 a.m. server time.
 
 {% alert level="warning" %}
 Enabling periodic defragmentation in a cluster with a single master node causes the control plane to be temporarily unavailable each time it runs.
 {% endalert %}
 
-To configure periodic etcd defragmentation, use the [`defrag`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag) parameter in the `control-plane-manager` module configuration. Specify the desired defragmentation frequency in the [`cronSchedule`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag-cronschedule) parameter using the cron (UTC) format.
+To configure periodic etcd defragmentation, use the [`etcd.defrag`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag) parameter in the `control-plane-manager` module configuration. Specify the desired defragmentation frequency in the [`etcd.defrag.cronSchedule`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag-cronschedule) parameter using the cron (UTC) format.
 
 Example configuration of the `control-plane-manager` module with settings for etcd defragmentation once a day at 4:00 a.m. server time:
 
@@ -273,8 +273,8 @@ spec:
     apiserver:
       bindToWildcard: true
       certSANs:
-      - bakery.infra
-      - devs.infra
+        - bakery.infra
+        - devs.infra
       publishAPI: {}
     etcd:
       defrag: 

@@ -259,10 +259,10 @@ spec:
 В кластерах с тремя и более членами etcd (3 и более master-узлов или 2 и более master-узлов при наличии etcd-арбитра) эта функция включена по умолчанию. Дефрагментация выполняется раз в сутки ровно в 1:00 ночи по времени сервера.
 
 {% alert level="warning" %}
-Включение периодической дефрагментации в кластере с одним master-узлом приводит к кратковременной недоступности управляющего слоя каждый раз во время ее выполнения.
+Включение периодической дефрагментации в кластере с одним master-узлом приводит к кратковременной недоступности control plane каждый раз во время ее выполнения.
 {% endalert %}
 
-Для настройки периодической дефрагментации etcd используйте параметр [`defrag`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag) в конфигурации модуля `control-plane-manager`. Желаемую периодичность дефрагментации укажите в параметре [`cronSchedule`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag-cronschedule) в формате cron (UTC).
+Для настройки периодической дефрагментации etcd используйте параметр [`etcd.defrag`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag) в конфигурации модуля `control-plane-manager`. Желаемую периодичность дефрагментации укажите в параметре [`etcd.defrag.cronSchedule`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag-cronschedule) в формате cron (UTC).
 
 Пример конфигурации модуля `control-plane-manager` с настройками периодичности дефрагментации etcd раз в сутки в 4:00 ночи по времени сервера:
 
@@ -278,8 +278,8 @@ spec:
     apiserver:
       bindToWildcard: true
       certSANs:
-      - bakery.infra
-      - devs.infra
+        - bakery.infra
+        - devs.infra
       publishAPI: {}
     etcd:
       defrag: 
