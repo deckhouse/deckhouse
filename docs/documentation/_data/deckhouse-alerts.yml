@@ -326,48 +326,6 @@ alerts:
         CPU steal on node {{ $labels.node }} is too high.
       severity: "4"
       markupFormat: default
-    - name: CustomPodMonitorFoundInCluster
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
-      edition: ce
-      description: |-
-        There are PodMonitors in the Deckhouse namespace that were not created by Deckhouse.
-
-        To resolve the issue, move these PodMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
-
-        To list all PodMonitors in the Deckhouse namespace, run the following command:
-
-        ```bash
-        d8 k get podmonitors --all-namespaces -l heritage!=deckhouse
-        ```
-
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
-      summary: |
-        Deckhouse namespace contains PodMonitors not created by Deckhouse.
-      severity: "9"
-      markupFormat: markdown
-    - name: CustomServiceMonitorFoundInD8Namespace
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
-      edition: ce
-      description: |-
-        There are ServiceMonitors in the Deckhouse namespace that were not created by Deckhouse.
-
-        To resolve the issue, move these ServiceMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
-
-        To list all ServiceMonitors in the Deckhouse namespace, run the following command:
-
-        ```bash
-        d8 k get servicemonitors --all-namespaces -l heritage!=deckhouse
-        ```
-
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
-      summary: |
-        Deckhouse namespace contains ServiceMonitors not created by Deckhouse.
-      severity: "9"
-      markupFormat: markdown
     - name: D8AdmissionPolicyEngineNotBootstrapped
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/bootstrap.yaml
       moduleUrl: 015-admission-policy-engine
@@ -665,33 +623,33 @@ alerts:
         Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs or retries longer than 10 minutes.
       severity: "4"
       markupFormat: markdown
-    - name: D8CustomPrometheusRuleFoundInCluster
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
-      edition: ce
-      description: |-
-        There are PrometheusRules in the Deckhouse namespace that were not created by Deckhouse.
-
-        To resolve the issue, replace these PrometheusRules with the CustomPrometheusRules object.
-
-        To list all PrometheusRules in the Deckhouse namespace, run the following command:
-
-        ```bash
-        d8 k get prometheusrules --all-namespaces -l heritage!=deckhouse
-        ```
-
-        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
-      summary: |
-        Deckhouse namespace contains PrometheusRules not created by Deckhouse.
-      severity: "9"
-      markupFormat: markdown
     - name: D8DeckhouseConfigInvalid
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: "Deckhouse configuration contains errors.\n\nSteps to troubleshoot:\n\n1. Check Deckhouse logs by running the following command:\n\n   ```bash\n   d8 k -n d8-system logs -f -l app=deckhouse\n   ```\n\n1. Edit the Deckhouse global configuration:\n\n   ```bash\n   d8 k edit mc global\n   ```\n   \n   Or edit configuration of a specific module:\n\n   ```bash\n   d8 k edit mc <MODULE_NAME>\n   ```\n"
+      description: |
+        Deckhouse configuration contains errors.
+
+        Steps to troubleshoot:
+
+        1. Check Deckhouse logs by running the following command:
+
+           ```bash
+           d8 k -n d8-system logs -f -l app=deckhouse
+           ```
+
+        1. Edit the Deckhouse global configuration:
+
+           ```bash
+           d8 k edit mc global
+           ```
+
+           Or edit configuration of a specific module:
+
+           ```bash
+           d8 k edit mc <MODULE_NAME>
+           ```
       summary: |
         Deckhouse configuration is invalid.
       severity: "5"
@@ -898,7 +856,16 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: "Initial config for module {{ $labels.module }} is not valid. \n\nYou can get more details via\n\n```bash\nd8 k get mr -l module={{ $labels.module }}\n```\n\nProvided error: {{ $labels.error }}\n"
+      description: |
+        Initial config for module {{ $labels.module }} is not valid.
+
+        You can get more details via
+
+        ```bash
+        d8 k get mr -l module={{ $labels.module }}
+        ```
+
+        Provided error: {{ $labels.error }}
       summary: |
         Module configuration failed for module {{ $labels.module }}.
       severity: "5"
@@ -1003,7 +970,24 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: "Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.\n\nSteps to investigate:\n\n1. Check Deckhouse logs for more information by running:\n\n   ```bash\n   d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch\n   ```\n\n1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.\n   \n   To compare the snapshot with the actual node objects for this hook, run the following command:\n\n   ```bash\n   diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'|sort) <(d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '.\"040-node-manager/hooks/handle_node_templates.go\"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)\n   ```\n"
+      description: |
+        Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.
+
+        Steps to investigate:
+
+        1. Check Deckhouse logs for more information by running:
+
+           ```bash
+           d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch
+           ```
+
+        1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.
+
+           To compare the snapshot with the actual node objects for this hook, run the following command:
+
+           ```bash
+           diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)
+           ```
       summary: |
         Possible API server connection error in the client-go informer.
       severity: "5"
@@ -1162,121 +1146,6 @@ alerts:
       summary: |
         Etcd request latency (p99) has exceeded 800 ms multiple times in the past hour.
       severity: "5"
-      markupFormat: markdown
-    - name: D8GrafanaDeploymentReplicasUnavailable
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        The number of Grafana replicas is lower than the specified number.
-
-        The Deployment is in the `MinimumReplicasUnavailable` state.
-
-        Troubleshooting options:
-
-        - To check the Deployment's status:
-
-          ```shell
-          d8 k -n d8-monitoring get deployment grafana-v10 -o json | jq .status
-          ```
-
-        - To check a Pod's status:
-
-          ```shell
-          d8 k -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
-          ```
-      summary: |
-        One or more Grafana Pods are NOT Running.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8GrafanaDeprecatedCustomDashboardDefinition
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        The ConfigMap `grafana-dashboard-definitions-custom` has been found in the `d8-monitoring` namespace.
-        This indicates that a deprecated method for registering custom dashboards in Grafana is used.
-
-        **This method is no longer supported**.
-
-        Migrate to using the custom [GrafanaDashboardDefinition resource](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) instead.
-      summary: |
-        Deprecated ConfigMap for Grafana dashboards detected.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8GrafanaPodIsNotReady
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: ""
-      summary: |
-        The Grafana Pod is NOT Ready.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8GrafanaPodIsRestartingTooOften
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        Grafana has restarted {{ $value }} times in the last hour.
-
-        Frequent restarts indicate a problem. Grafana is expected to run continuously without interruption.
-
-        To investigate the issue, check the logs:
-
-        ```shell
-        d8 k -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
-        ```
-      summary: |
-        Excessive Grafana restarts detected.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8GrafanaTargetAbsent
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        Grafana visualizes metrics collected by Prometheus. Grafana is critical for some tasks,
-        such as monitoring the state of applications and the cluster as a whole. Additionally,
-        Grafana's unavailability can negatively impact users who actively use it in their work.
-
-        The recommended course of action:
-
-        1. Check the availability and status of Grafana Pods:
-
-           ```shell
-           d8 k -n d8-monitoring get pods -l app=grafana-v10
-           ```
-
-        2. Check the availability of the Grafana Deployment:
-
-           ```shell
-           d8 k -n d8-monitoring get deployment grafana-v10
-           ```
-
-        3. Examine the status of the Grafana Deployment:
-
-           ```shell
-           d8 k -n d8-monitoring describe deployment grafana-v10
-           ```
-      summary: |
-        Grafana target is missing in Prometheus.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8GrafanaTargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: ""
-      summary: |
-        Prometheus is unable to scrape Grafana metrics.
-      severity: "6"
       markupFormat: markdown
     - name: D8HasModuleConfigAllowedToDisable
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
@@ -2667,27 +2536,6 @@ alerts:
         Okmeter agent is not Ready.
       severity: "6"
       markupFormat: markdown
-    - name: D8OldPrometheusCustomTargetFormat
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
-      edition: ce
-      description: |-
-        Deckhouse has detected that services with the `prometheus-custom-target` label are being used to collect metrics in the cluster.
-
-        The label format has been changed. To resolve the issue, replace the `prometheus-custom-target` label with `prometheus.deckhouse.io/custom-target`.
-
-        To list all services labeled with `prometheus-custom-target`, run the following command:
-
-        ```bash
-        d8 k get service --all-namespaces --show-labels | grep prometheus-custom-target
-        ```
-
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
-      summary: |
-        Services with the prometheus-custom-target label are being used for metric collection.
-      severity: "9"
-      markupFormat: markdown
     - name: D8OldPrometheusTargetFormat
       sourceFile: ee/fe/modules/340-monitoring-applications/monitoring/prometheus-rules/warnings/warnings.yaml
       moduleUrl: 340-monitoring-applications
@@ -2750,203 +2598,6 @@ alerts:
       summary: |
         Node {{ $labels.node }} cannot begin the update.
       severity: "8"
-      markupFormat: markdown
-    - name: D8PrometheusConfigReloadFailed
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/base.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        The Prometheus configuration reload has failed in the `d8-monitoring` namespace.
-
-        This usually happens when:
-        - Invalid scrape configuration (e.g., from ServiceMonitor/PodMonitor resources).
-        - Invalid RemoteWrite configuration.
-
-        Prometheus will continue running with the old configuration, but new rules, targets, or remote write endpoints will not be active.
-        Troubleshooting steps:
-
-        1. Check the Prometheus container logs for configuration errors:
-
-           ```shell
-           d8 k -n d8-monitoring logs prometheus-main-0 -c prometheus
-           ```
-
-        2. If using remote write, verify the remote write configuration.
-
-        Note: In HA configurations with multiple Prometheus replicas, check prometheus-main-1 logs as well.
-      summary: |
-        Prometheus configuration reload failed.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8PrometheusLongtermFederationTargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/longterm-target-down.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        The `prometheus-longterm` instance is unable to scrape the `/federate` endpoint from Prometheus.
-
-        Troubleshooting options:
-
-        - Check the `prometheus-longterm` logs.
-        - Open the corresponding web UI to check scrape errors.
-      summary: |
-        Prometheus-longterm cannot scrape Prometheus.
-      severity: "5"
-      markupFormat: default
-    - name: D8PrometheusLongtermTargetAbsent
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/base.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        The `prometheus-longterm` component is used to display historical monitoring data and is not crucial.
-        However, its extended downtime may prevent access to statistics.
-
-        This issue is often caused by problems with disk availability. For example, if the disk cannot be mounted to a Node.
-
-        Troubleshooting steps:
-
-        1. Check the StatefulSet status:
-
-           ```shell
-           d8 k -n d8-monitoring describe statefulset prometheus-longterm
-           ```
-
-        2. Inspect the PersistentVolumeClaim (if used):
-
-           ```shell
-           d8 k -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
-           ```
-
-        3. Inspect the Pod's state:
-
-           ```shell
-           d8 k -n d8-monitoring describe pod prometheus-longterm-0
-           ```
-      summary: |
-        Prometheus-longterm target is missing in Prometheus.
-      severity: "7"
-      markupFormat: markdown
-    - name: D8PrometheusOperatorPodIsNotReady
-      sourceFile: modules/200-operator-prometheus/monitoring/prometheus-rules/operator.yaml
-      moduleUrl: 200-operator-prometheus
-      module: operator-prometheus
-      edition: ce
-      description: |
-        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
-        However, all existing and configured components will continue to operate normally.
-        This problem will not affect alerting or monitoring in the short term (for a few days).
-
-        Troubleshooting steps:
-
-        1. Analyze the Deployment details:
-
-           ```shell
-           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
-           ```
-
-        2. Examine the Pod's to determine why it is not running:
-
-           ```shell
-           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
-           ```
-      summary: |
-        The prometheus-operator Pod is NOT Ready.
-      severity: "7"
-      markupFormat: markdown
-    - name: D8PrometheusOperatorPodIsNotRunning
-      sourceFile: modules/200-operator-prometheus/monitoring/prometheus-rules/operator.yaml
-      moduleUrl: 200-operator-prometheus
-      module: operator-prometheus
-      edition: ce
-      description: |
-        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
-        However, all existing and configured components will continue to operate normally.
-        This problem will not affect alerting or monitoring in the short term (for a few days).
-
-        Troubleshooting steps:
-
-        1. Analyze the Deployment details:
-
-           ```shell
-           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
-           ```
-
-        2. Examine the Pod's to determine why it is not running:
-
-           ```shell
-           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
-           ```
-      summary: |
-        The prometheus-operator Pod is NOT Running.
-      severity: "7"
-      markupFormat: markdown
-    - name: D8PrometheusOperatorTargetAbsent
-      sourceFile: modules/200-operator-prometheus/monitoring/prometheus-rules/operator.yaml
-      moduleUrl: 200-operator-prometheus
-      module: operator-prometheus
-      edition: ce
-      description: |
-        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
-        However, all existing and configured components will continue to operate normally.
-        This problem will not affect alerting or monitoring in the short term (for a few days).
-
-        To resolve the issue, analyze the Deployment details:
-
-        ```shell
-        d8 k -n d8-operator-prometheus describe deployment prometheus-operator
-        ```
-      summary: |
-        Prometheus-operator target is missing in Prometheus.
-      severity: "7"
-      markupFormat: markdown
-    - name: D8PrometheusOperatorTargetDown
-      sourceFile: modules/200-operator-prometheus/monitoring/prometheus-rules/operator.yaml
-      moduleUrl: 200-operator-prometheus
-      module: operator-prometheus
-      edition: ce
-      description: |-
-        The `prometheus-operator` Pod is unavailable.
-
-        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
-        However, all existing and configured components will continue to operate normally.
-        This problem will not affect alerting or monitoring in the short term (for a few days).
-
-        Troubleshooting steps:
-
-        1. Analyze the Deployment details:
-
-           ```shell
-           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
-           ```
-
-        2. Examine the Pod's to determine why it is not running:
-
-           ```shell
-           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
-           ```
-      summary: |
-        Prometheus is unable to scrape prometheus-operator metrics.
-      severity: "8"
-      markupFormat: markdown
-    - name: D8ReservedNodeLabelOrTaintFound
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/reserved-domain.tpl
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
-      edition: ce
-      description: |-
-        Deckhouse has detected that node {{ $labels.name }} is using one of the following:
-        - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
-        - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
-
-        This alert may fire if the corresponding module is missing or disabled in the cluster. It can be safely ignored if you are preparing nodes to enable a module that is currently disabled.
-
-        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
-      summary: |
-        Node {{ $labels.name }} is using a reserved label or taint.
-      severity: "6"
       markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml
@@ -3236,80 +2887,6 @@ alerts:
       summary: |
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
-      markupFormat: markdown
-    - name: D8TricksterTargetAbsent
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/base.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        The following modules use the Trickster component:
-
-        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `d8 k`.
-        * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
-        * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
-
-        Troubleshooting steps:
-
-        1. Inspect the Deployment's stats:
-
-           ```shell
-           d8 k -n d8-monitoring describe deployment trickster
-           ```
-
-        2. Inspect the Pod's stats:
-
-           ```shell
-           d8 k -n d8-monitoring describe pod -l app=trickster
-           ```
-
-        3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
-
-           Make sure Prometheus is running:
-
-           ```shell
-           d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
-           ```
-      summary: |
-        Trickster target is missing in Prometheus.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8TricksterTargetAbsent
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/base.tpl
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        The following modules use the Trickster component:
-
-        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `d8 k`.
-        * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
-        * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
-
-        Troubleshooting steps:
-
-        1. Inspect the Deployment's stats:
-
-           ```shell
-           d8 k -n d8-monitoring describe deployment trickster
-           ```
-
-        2. Inspect the Pod's stats:
-
-           ```shell
-           d8 k -n d8-monitoring describe pod -l app=trickster
-           ```
-
-        3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
-
-           Make sure Prometheus is running:
-
-           ```shell
-           d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
-           ```
-      summary: |
-        Trickster target is missing in Prometheus.
-      severity: "5"
       markupFormat: markdown
     - name: D8UpmeterAgentPodIsNotReady
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
@@ -3736,39 +3313,83 @@ alerts:
         Deckhouse memory usage is too high.
       severity: "3"
       markupFormat: markdown
+    - name: DeckhouseMigratedModuleNotDownloaded
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and is available in a ModuleSource registry, but it has not been downloaded yet (no deployed ModuleRelease exists). DeckhouseRelease will be locked until the module is downloaded.
+
+        This alert is usually temporary while the module source controller downloads the module from the registry. If the alert persists, this may indicate:
+
+        - The module's update policy or ModuleSource is misconfigured, preventing the module from being downloaded.
+        - A network issue is preventing the module from being downloaded.
+
+        To investigate the issue, do the following:
+
+        - Check the ModuleRelease objects for the module:
+
+          ```bash
+          d8 k get mr -l module={{ $labels.module }}
+          ```
+
+        - Check the configured ModuleSources:
+
+          ```bash
+          d8 k get modulesources
+          ```
+
+        - Check the `deckhouse` logs for more details:
+
+          ```bash
+          d8 k -n d8-system logs -f -l app=deckhouse
+          ```
+      summary: |
+        Migrated module {{ $labels.module }} has not been downloaded yet.
+      severity: "6"
+      markupFormat: markdown
     - name: DeckhouseMigratedModuleNotFound
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and was not found in any available ModuleSource registry. DeckhouseRelease will be locked until the module becomes available in one of the configured ModuleSource registries.
 
         This may indicate:
-        - The module source registry is not properly configured.
+
+        - A ModuleSource registry is misconfigured.
         - The module has not been published to the registry yet.
-        - There is a network issue preventing access to the registry.
+        - A network issue is preventing access to the registry.
 
-        Please check:
-        1. ModuleSource configurations: `d8 k get modulesources`.
-        2. Registry accessibility and credentials.
-        3. Module availability in the configured registries.
+        To investigate the issue, do the following:
 
-        To investigate, run the following commands:
+        - Check the configured ModuleSources:
 
-        ```bash
-        # Check ModuleSource status
-        d8 k get modulesources
+          ```bash
+          d8 k get modulesources
+          ```
 
-        # Check available modules in all sources
-        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
-        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+        - List the available module sources:
 
-        # Check Deckhouse logs for more details
-        d8 k -n d8-system logs -f -l app=deckhouse
-        ```
+          ```bash
+          d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+          ```
+
+        - List the modules available in a specific source:
+
+          ```bash
+          d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+          ```
+
+        - Check the `deckhouse` logs for more details:
+
+          ```bash
+          d8 k -n d8-system logs -f -l app=deckhouse
+          ```
       summary: |
-        Migrated module {{ $labels.module }} not found in registry.
+        Migrated module {{ $labels.module }} was not found in any ModuleSource registry.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
@@ -3809,20 +3430,6 @@ alerts:
       summary: |
         Module update has failed. Module is not valid.
       severity: "4"
-      markupFormat: markdown
-    - name: DeckhouseModuleUseEmptyDir
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/emptydir.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        The Deckhouse module `{{ $labels.module }}` is using `emptyDir` as its storage.
-
-        If the associated Pod is removed from the node for any reason, the data in the `emptyDir` is deleted permanently.
-        Consider using persistent storage if data durability is critical for the module.
-      summary: |
-        Deckhouse module {{ $labels.module }} is using emptyDir for storage.
-      severity: "9"
       markupFormat: markdown
     - name: DeckhouseReleaseDisruptionApprovalRequired
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
@@ -4017,66 +3624,6 @@ alerts:
         File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are exhausting soon.
       severity: "4"
       markupFormat: default
-    - name: GrafanaDashboardAlertRulesDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        Before upgrading to Grafana 10, migrate outdated alerts from Grafana to an external alertmanager (or `exporter-alertmanager` stack).
-
-        To list all deprecated alert rules, use the following expression:
-
-        ```prometheus
-        sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0
-        ```
-
-        Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated resources are migrated.
-      summary: |
-        Deprecated Grafana alerts detected.
-      severity: "8"
-      markupFormat: markdown
-    - name: GrafanaDashboardPanelIntervalDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        Before upgrading to Grafana 10, update outdated panel expressions that use `$interval_rv`, `interval_sx3`, or `interval_sx4` to the new variable `$__rate_interval`.
-
-        To list all deprecated panel intervals, use the following expression:
-
-        ```prometheus
-        sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0
-        ```
-
-        Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated intervals are removed.
-      summary: |
-        Deprecated Grafana panel intervals detected.
-      severity: "8"
-      markupFormat: markdown
-    - name: GrafanaDashboardPluginsDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        Before upgrading to Grafana 10, make sure that the currently installed plugins will work correctly with Grafana 10.
-
-        To list all potentially outdated plugins, use the following expression:
-
-        ```prometheus
-        sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0
-        ```
-
-        The `flant-statusmap-panel` plugin is deprecated and no longer supported.
-        It's recommended that you migrate to the [state timeline plugin](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/) instead.
-
-        Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated resources are migrated.
-      summary: |
-        Deprecated Grafana plugins detected.
-      severity: "8"
-      markupFormat: markdown
     - name: HelmReleasesHasResourcesWithDeprecatedVersions
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/helm/deprecated-versions.yaml
       moduleUrl: 340-monitoring-kubernetes
@@ -4233,18 +3780,6 @@ alerts:
       summary: |
         Scheduler is down.
       severity: "3"
-      markupFormat: default
-    - name: K8STooManyNodes
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/nodes.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        The cluster is currently running {{ $value }} nodes,
-        which is close to the maximum of {{ print "d8_max_nodes_amount{}" | query | first | value }} allowed nodes.
-      summary: |
-        Node count is approaching the maximum allowed.
-      severity: "7"
       markupFormat: default
     - name: KubeEtcdHighFsyncDurations
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
@@ -4671,32 +4206,6 @@ alerts:
         A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
-    - name: LokiDiscardedSamplesWarning
-      sourceFile: modules/462-loki/monitoring/prometheus-rules/discards.yaml
-      moduleUrl: 462-loki
-      module: loki
-      edition: ce
-      description: |-
-        Loki is discarding samples during ingestion because they fail validation.
-        Samples are being discarded because of `{{ $labels.reason }}` at a rate of {{ .Value | humanize }} samples per second.
-        For more information, refer to the [`loki` FAQ](/modules/loki/faq.html).
-      summary: |
-        Loki is discarding samples during ingestion.
-      severity: "4"
-      markupFormat: markdown
-    - name: LokiInsufficientDiskForRetention
-      sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
-      moduleUrl: 462-loki
-      module: loki
-      edition: ce
-      description: |-
-        Not enough disk space to retain logs for 168 hours. Current effective retention period is {{ $value }} hours.
-
-        You need either decrease expected `retentionPeriodHours` or increase resize Loki PersistentVolumeClaim
-      summary: |
-        Not enough disk space to retain logs for 168 hours
-      severity: "4"
-      markupFormat: markdown
     - name: ModuleAtConflict
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 002-deckhouse
@@ -5773,145 +5282,6 @@ alerts:
         Incorrect state of Pod {{ $labels.namespace }}/{{ $labels.pod }} running on node {{ $labels.node }}.
       severity: "6"
       markupFormat: markdown
-    - name: PrometheusDirectAccessDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        The DKP cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, for example, for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance).
-        This approach is deprecated and the direct access to Prometheus will not be possible in the future DKP releases.
-
-        To resolve this issue, remove the deprecated Ingress and use the `observability` module to manage Prometheus metrics access.
-
-        Refer to the [module documentation](https://deckhouse.io/modules/observability/metrics.html#external-access-to-metrics) for instructions.
-      summary: |
-        Deprecated Ingress with direct Prometheus access found in cluster.
-      severity: "6"
-      markupFormat: markdown
-    - name: PrometheusDiskUsage
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-storage.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        Deckhouse has detected that the Prometheus disk is over 95% full.
-
-        To check the current usage, run the following command:
-
-        ```shell
-        d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
-        ```
-
-        Consider expanding disk size following the [guide](https://deckhouse.io/modules/prometheus/faq.html#how-to-expand-disk-size).
-      summary: |
-        Prometheus disk usage exceeds 95%.
-      severity: "4"
-      markupFormat: markdown
-    - name: PrometheusLongtermRotatingEarlierThanConfiguredRetentionDays
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-storage.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        The `prometheus-longterm` instance is rotating data earlier than specified by the `longtermRetentionDays` parameter.
-
-        Troubleshooting options:
-
-        - Increase the Prometheus disk size.
-        - Reduce the number of metrics collected.
-        - Lower the `longtermRetentionDays` parameter in the module configuration.
-      summary: |
-        Prometheus-longterm data is rotating earlier than the configured retention period.
-      severity: "4"
-      markupFormat: markdown
-    - name: PrometheusMainRotatingEarlierThanConfiguredRetentionDays
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-storage.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        The `prometheus-main` instance is rotating data earlier than specified by the `retentionDays` parameter.
-
-        Troubleshooting options:
-
-        - Increase the Prometheus disk size.
-        - Reduce the number of metrics collected.
-        - Lower the `retentionDays` parameter in the module configuration.
-      summary: |
-        Prometheus-main data is rotating earlier than the configured retention period.
-      severity: "4"
-      markupFormat: markdown
-    - name: PrometheusRemoteWriteEndpointUnavailable
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-remote-write.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
-
-        To troubleshoot you can:
-         1. Get list of all Prometheus pods:
-            ```shell
-            d8 k -n d8-monitoring get pods -l "app.kubernetes.io/name=prometheus"
-            ```
-
-            Review logs of each prometheus pod to find the detailed error information:
-            ```shell
-            d8 k -n {{ $labels.namespace }} logs `<pod-name>` -f
-            ```
-
-         2. Get logs from all Prometheus pods to find detailed information:
-            ```shell
-            d8 k -n {{ $labels.namespace }} logs -l "app.kubernetes.io/name=prometheus"
-            ```
-      summary: |
-        Prometheus remote write endpoint is unavailable.
-      severity: "7"
-      markupFormat: markdown
-    - name: PrometheusScapeConfigDeclarationDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |-
-        Defining additional scrape configurations using Secrets will be deprecated in `prometheus-operator` versions later than v0.65.1.
-
-        Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/implemented/202212-scrape-config.md) instead.
-      summary: |
-        AdditionalScrapeConfigs from Secrets will be deprecated soon.
-      severity: "8"
-      markupFormat: markdown
-    - name: PrometheusServiceMonitorDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        The Kubernetes cluster uses the modern `EndpointSlice` network mechanism, but the ServiceMonitor `{{ $labels.namespace }}/{{ $labels.name }}` still uses relabeling rules based on the old `Endpoints` mechanism (starting with `__meta_kubernetes_endpoints_`).
-
-        Support for the old relabeling rules will be removed in a future Deckhouse release (1.60).
-        To avoid issues, update your ServiceMonitor to use `EndpointSlice`-based relabeling.
-
-        Update relabeling rules as follows:
-
-        ```shell
-        __meta_kubernetes_endpoints_name -> __meta_kubernetes_endpointslice_name
-        __meta_kubernetes_endpoints_label_XXX -> __meta_kubernetes_endpointslice_label_XXX
-        __meta_kubernetes_endpoints_labelpresent_XXX -> __meta_kubernetes_endpointslice_labelpresent_XXX
-        __meta_kubernetes_endpoints_annotation_XXX -> __meta_kubernetes_endpointslice_annotation_XXX
-        __meta_kubernetes_endpoints_annotationpresent_XXX -> __meta_kubernetes_endpointslice_annotationpresent_XXX
-        __meta_kubernetes_endpoint_node_name -> __meta_kubernetes_endpointslice_endpoint_topology_kubernetes_io_hostname
-        __meta_kubernetes_endpoint_ready -> __meta_kubernetes_endpointslice_endpoint_conditions_ready
-        __meta_kubernetes_endpoint_port_name -> __meta_kubernetes_endpointslice_port_name
-        __meta_kubernetes_endpoint_port_protocol -> __meta_kubernetes_endpointslice_port_protocol
-        __meta_kubernetes_endpoint_address_target_kind -> __meta_kubernetes_endpointslice_address_target_kind
-        __meta_kubernetes_endpoint_address_target_name -> __meta_kubernetes_endpointslice_address_target_name
-        ```
-      summary: |
-        Deprecated Prometheus ServiceMonitor detected.
-      severity: "8"
-      markupFormat: markdown
     - name: SecurityPolicyViolation
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
       moduleUrl: 015-admission-policy-engine
@@ -5977,58 +5347,6 @@ alerts:
       summary: |
         Multiple default StorageClasses found in the cluster.
       severity: "6"
-      markupFormat: markdown
-    - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
-      summary: |
-        A target is down.
-      severity: "5"
-      markupFormat: default
-    - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
-      summary: |
-        A target is down.
-      severity: "6"
-      markupFormat: default
-    - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
-      summary: |
-        A target is down.
-      severity: "7"
-      markupFormat: default
-    - name: TargetSampleLimitExceeded
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        One or more targets are down because the Prometheus sample limit was exceeded during a scrape.
-      summary: |
-        Scrapes are exceeding the sample limit.
-      severity: "6"
-      markupFormat: markdown
-    - name: TargetSampleLimitExceeded
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        The target is close to exceeding the Prometheus’s sampling limit. Less than 10% of the allowed samples are left.
-      summary: |
-        Sampling limit is nearly reached.
-      severity: "7"
       markupFormat: markdown
     - name: UnmetCloudConditions
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
@@ -6108,18 +5426,14 @@ modules-having-alerts:
     - documentation
     - istio
     - kube-dns
-    - loki
     - metallb
     - monitoring-applications
-    - monitoring-custom
     - monitoring-kubernetes
     - multitenancy-manager
     - node-local-dns
     - node-manager
     - okmeter
     - openvpn
-    - operator-prometheus
-    - prometheus
     - secret-copier
     - terraform-manager
     - upmeter

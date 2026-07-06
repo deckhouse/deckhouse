@@ -20,6 +20,8 @@ package controller
 
 import (
 	envmgr "github.com/flant/addon-operator/pkg/module_manager/environment_manager"
+
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 func getChrootObjectDescriptors() []envmgr.ObjectDescriptor {
@@ -30,7 +32,7 @@ func getChrootObjectDescriptors() []envmgr.ObjectDescriptor {
 			TargetEnvironment: envmgr.EnabledScriptEnvironment,
 		},
 		{
-			Source:            "/deckhouse/shell_lib.sh",
+			Source:            app.PathShellLibScript,
 			Type:              envmgr.File,
 			TargetEnvironment: envmgr.EnabledScriptEnvironment,
 		},

@@ -393,10 +393,10 @@ runs-on: [self-hosted, regular]
 steps:
 {!{ tmpl.Exec "started_at_output"  $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
-  - name: Set up Go 1.25
+  - name: Set up Go 1.26
     uses: {!{ index (ds "actions") "actions/setup-go" }!}
     with:
-      go-version: '1.25'
+      go-version: '1.26'
       cache: false
 {!{ tmpl.Exec "werf_setup_steps" $ctx | strings.Indent 2 }!}
 

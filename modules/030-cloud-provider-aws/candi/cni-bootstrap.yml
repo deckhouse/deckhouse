@@ -1,4 +1,6 @@
 schemaVersion: 1
-name: simple-bridge
+name: cilium
 config:
-  default: {}
+  default:
+    tunnelMode: VXLAN
+    masqueradeMode: BPF

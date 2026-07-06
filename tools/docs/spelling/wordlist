@@ -99,6 +99,7 @@ autoscalers
 autoscaling
 autounattend
 autoverification
+AvailableClusterResource
 Avi
 aws
 AWS
@@ -251,6 +252,8 @@ ClusterLoggingConfig
 ClusterName
 ClusterObservabilityAlert
 ClusterPodLoggingConfig
+ClusterResourceGrant
+ClusterResourceGrantPolicy
 ClusterRole
 ClusterRoleBinding
 clusterType
@@ -290,6 +293,8 @@ ContainerResourcePolicy
 contraire
 controlPlaneConfigurator
 controlPlaneManager
+ControlPlaneNode
+ControlPlaneOperation
 cooldown
 CoreDNS
 CPM
@@ -378,6 +383,7 @@ Datastreams
 DCGM
 DDTHH
 de
+debian
 Debian
 deckhouse
 Deckhouse
@@ -441,6 +447,7 @@ dropdown
 DRS
 dryrun
 Dryrun
+ds
 DSA
 DSL
 DSR
@@ -564,6 +571,7 @@ GCP
 GCPClusterConfiguration
 GCPInstanceClass
 GCPInstanceClasses
+gdm
 GeeseFS
 GELF
 Gemfile
@@ -599,6 +607,7 @@ GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
 Grafanas
+GrantableClusterResourceDefinition
 GraphQL
 Graylog
 grep
@@ -824,6 +833,7 @@ LetsEncrypt
 LFS
 libc
 lifecycle
+lightdm
 linkTitle
 linstor
 Linstor
@@ -1316,6 +1326,7 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
+sddm
 SDN
 sds
 Searchable
@@ -1366,6 +1377,7 @@ smokeMini
 snaphost
 Snapshotter
 SNAT
+softdog
 SomeRegion
 SonarQube
 Sonatype
@@ -1516,6 +1528,7 @@ TrustDomain
 tuf
 tunnelMode
 txt
+ubuntu
 Ubuntu
 UDP
 UEFI
@@ -1677,6 +1690,7 @@ worktree
 worseness
 WSL
 www
+Xorg
 xz
 Yadro
 YadroStorageClass
@@ -1714,6 +1728,7 @@ ZvirtInstanceClass
 автоподменой
 авторизовывать
 авторизовываться
+авторизующий
 автоскейлерам
 автоскейлинг
 автосогласования
@@ -1866,6 +1881,7 @@ ZvirtInstanceClass
 высокодоступный
 высокодоступных
 высокоуровневой
+высокоуровневые
 высокоуровневыми
 высокоуровневых
 г
@@ -2040,6 +2056,7 @@ ZvirtInstanceClass
 контеинеризации
 контеинеризация
 контейнер
+контейнера
 контейнеризации
 контейнеризация
 контейнеризированных
@@ -2141,6 +2158,7 @@ ZvirtInstanceClass
 мультимастерной
 мультимастерном
 мультимастерный
+мультимастерными
 мультиплатформенной
 мультитенантности
 мультитенантность
@@ -2211,9 +2229,11 @@ ZvirtInstanceClass
 оверпровижининг
 оверселлинг
 оверселлинга
+одномастерными
 одностраничных
 однострочник
 одноузлового
+одноузловом
 ООМ
 опциональные
 Опциональные
@@ -2275,11 +2295,13 @@ ZvirtInstanceClass
 перегенерировать
 Перегенерируйте
 передеплоятся
+перезагрузится
 Перезаказ
 перезапускает
 перезапускается
 перезапускать
 перезапускаться
+перезапускающий
 перезапустились
 перезапустился
 перезапустится
@@ -2314,6 +2336,7 @@ ZvirtInstanceClass
 пересоздает
 пересоздаёт
 пересоздается
+пересоздаётся
 пересоздайте
 пересоздастся
 переупорядочивание
@@ -2570,6 +2593,7 @@ ZvirtInstanceClass
 таймаутом
 таймауту
 таймауты
+тайминги
 таргетов
 тегирование
 тегирования
@@ -2704,9 +2728,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-ControlPlaneNode
-ControlPlaneOperation
-авторизующий
-мультимастерными
-одномастерными
-перезапускающий

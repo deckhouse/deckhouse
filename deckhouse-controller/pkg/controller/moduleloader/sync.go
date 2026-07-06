@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"slices"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -154,7 +154,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			return fmt.Errorf("set the module version '%s': %w", module.Name, err)
 		}
 
-		currentNode := os.Getenv("DECKHOUSE_NODE_NAME")
+		currentNode := app.NodeName()
 		if len(currentNode) == 0 {
 			return errors.New("determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")
 		}
@@ -244,11 +244,13 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 		}
 
 		// update module version
+		moduleExists := true
 		module := new(v1alpha1.Module)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("get the module '%s': %w", moduleName, err)
 			}
+			moduleExists = false
 			l.logger.Warn("module is missing, skip setting version", slog.String("name", release.Spec.ModuleName))
 		} else {
 			l.logger.Debug("set module version", slog.String("name", moduleName), slog.String("version", release.GetModuleVersion()))
@@ -267,8 +269,49 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 			return fmt.Errorf("get the module source '%s' for the module '%s': %w", source.Name, moduleName, err)
 		}
 
+		// While the embedded copy of the module is still shipped on the filesystem
+		// it wins the module search path, so a downloaded module of the same name
+		// must only be staged (no symlink/mount), not activated. Once the embedded
+		// copy is dropped on Deckhouse upgrade, this restore activates the staged
+		// module instead.
+		if l.installer.IsEmbeddedPresent(moduleName) {
+			l.logger.Info("module is still embedded, stage the release without activating it", slog.String("name", moduleName))
+			if err = l.installer.StageFromRegistry(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+				return fmt.Errorf("stage the module '%s': %w", moduleName, err)
+			}
+
+			// The embedded copy is still serving the module, so it must keep rendering
+			// images from the embedded registry (digests baked into the Deckhouse image).
+			// Do NOT inject the source registry here: that would make the embedded module
+			// pull <sourceRepo>/modules/<name>@<embeddedDigest>, a path that does not exist
+			// (the digest belongs to the embedded image, not the source's module image),
+			// breaking the module with ImagePullBackOff. The source registry is injected
+			// only once the embedded copy is dropped and the module is activated (below).
+			continue
+		}
+
 		if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
 			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
+		}
+
+		// The embedded copy is gone (otherwise it would have been staged above),
+		// so the module is now served from the downloaded source. Flip its active
+		// source off the "Embedded" sentinel: this keeps the controller-side view
+		// (module.IsEmbedded()) consistent with the on-disk reality reported by
+		// IsEmbeddedPresent, and hands the module over to the regular source-owned
+		// flow (release ensuring, source switching). This is the single point where
+		// a migrated module transitions from embedded to external.
+		if moduleExists && module.IsEmbedded() {
+			l.logger.Info("embedded copy is gone, switch the module active source", slog.String("name", moduleName), slog.String("source_name", source.Name))
+			err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
+				if module.Properties.Source == v1alpha1.ModuleSourceEmbedded {
+					module.Properties.Source = source.Name
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("switch the active source for the module '%s': %w", moduleName, err)
+			}
 		}
 
 		l.registries[moduleName] = utils.BuildRegistryValue(source)

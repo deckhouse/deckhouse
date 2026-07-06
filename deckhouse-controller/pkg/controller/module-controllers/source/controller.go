@@ -52,9 +52,9 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -91,7 +91,7 @@ func RegisterController(
 		moduleManager:        mm,
 		edition:              edition,
 		metricStorage:        metricStorage,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		downloadedModulesDir: app.DownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
 		deckhouseSettings:    deckhouseSettings,
 	}
@@ -452,7 +452,58 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
+		// Resolve which source an embedded module should be pre-staged from while its
+		// embedded copy is still shipped. The module keeps Source == "Embedded", so the
+		// choice is driven by the operator's ModuleConfig .spec.source, the only real
+		// source, or the canonical "deckhouse" source - see resolveEmbeddedTargetSource.
+		// Being offered by several sources is not automatically a conflict: "deckhouse"
+		// + a mirror like "deckhouse-upstream-ee", or "Embedded" + one real source, both
+		// resolve cleanly. A real conflict only arises from a stale .spec.source or from
+		// several non-default sources with no selection.
+		var embeddedTargetSource string
+		if module.IsEmbedded() {
+			chosenSource, err := r.getConfiguredModuleSource(ctx, moduleName)
+			if err != nil {
+				logger.Error("failed to get module config, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+
+			var conflict bool
+			embeddedTargetSource, conflict = resolveEmbeddedTargetSource(chosenSource, module.Properties.AvailableSources)
+			if conflict {
+				// Skip pre-staging with a diagnostic warning; do NOT raise a user-facing
+				// ModuleAtConflict alert. This branch is embedded-only (see the
+				// module.IsEmbedded() guard), and the embedded copy keeps serving the
+				// module regardless of which source a future release would come from, so
+				// this is a deferred pre-staging decision, not a runtime conflict. The
+				// module-config controller likewise skips embedded modules when setting the
+				// conflict metric; firing d8_module_at_conflict here would both contradict
+				// that and - because this runs once per source - register the same
+				// module-labelled series under several metric groups, making the whole self
+				// /metrics page fail to collect (up=0 -> D8DeckhouseSelfTargetDown).
+				if chosenSource != "" {
+					logger.Warn("embedded module's configured source does not offer the module, cannot pre-stage a release until the ModuleConfig .spec.source is fixed",
+						slog.String("name", moduleName),
+						slog.String("configured_source", chosenSource),
+						slog.Any("available_sources", module.Properties.AvailableSources))
+				} else {
+					logger.Warn("embedded module is offered by several non-default sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved",
+						slog.String("name", moduleName),
+						slog.Any("available_sources", module.Properties.AvailableSources))
+				}
+
+				availableModule.Checksum = meta.Checksum
+				availableModule.Version = meta.ModuleVersion
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+		}
+
+		if r.needToEnsureRelease(source, module, availableModule, meta, exists, embeddedTargetSource) {
 			logger.Debug("ensure release")
 
 			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
@@ -473,7 +524,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 
 			err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-				module.Properties.Source = source.Name
+				// Keep an embedded module pinned to its embedded copy while it is
+				// still shipped: the release is only pre-staged on the filesystem,
+				// not activated. The active source is switched to the external one
+				// only after the embedded copy is dropped on Deckhouse upgrade.
+				if !module.IsEmbedded() {
+					module.Properties.Source = source.Name
+				}
 
 				return nil
 			})

@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", function() {
   let registryImagesRepo = sessionStorage.getItem('dhctl-registry-images-repo')
   let registrySchemeHTTP = sessionStorage.getItem('dhctl-registry-scheme-http')
   let registryCA = sessionStorage.getItem('dhctl-registry-ca')
+  let privateRegistryUser = sessionStorage.getItem('dhctl-private-registry-user')
+  let privateRegistryPassword = sessionStorage.getItem('dhctl-private-registry-password')
 
   if (noProxyAddressList && noProxyAddressList.length > 0) {
     noProxyAddressList = noProxyAddressList.replaceAll(' ', '')
@@ -77,27 +79,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // trim right / symbol
     // for example: registry.deckhouse.io/deckhouse/ce/ -> registry.deckhouse.io/deckhouse/ce
     const cleanedRegistryImagesRepo = registryImagesRepo.replace(/\/+$/, '');
-    update_parameter('dhctl-registry-docker-cfg', 'registryDockerCfg', '<YOUR_PRIVATE_ACCESS_STRING_IS_HERE>', null, '[config-yml]');
     update_parameter('dhctl-registry-images-repo', 'imagesRepo', '<IMAGES_REPO_URI>', null, '[config-yml]');
-    if (registryCA && registryCA.length > 0) {
-      console.warn("registryCA: ", registryCA);
-      update_parameter('dhctl-registry-ca', 'registryCA', '<REGISTRY_CA>', null, '[config-yml]', 4);
-    }
-    if (registrySchemeHTTP && registrySchemeHTTP === 'true') {
-      update_parameter('HTTP', 'registryScheme', 'HTTPS', null, null);
-      updateTextInSnippet('[config-yml]', /registryScheme: HTTPS.+\n---/s, "registryScheme: HTTP\n---");
-    }
-
-    if ((registrySchemeHTTP && registrySchemeHTTP === 'true') || !registryCA || (registryCA && registryCA.length < 1)) {
-      // delete the registryCA parameter
-      $('code span.na').filter(function () {
-        return (this.innerText === "registryScheme");
-      }).each(function (index) {
-        delete_elements($(this).next().next().next(), 3);
-        updateTextInSnippet('[config-yml]', /(registryScheme: HTTP[S]?).+\<REGISTRY_CA\>\n---/s, "$1\n---");
-      });
-
-    }
 
     $('.highlight code').filter(function () {
       return this.innerText.match('<IMAGES_REPO_URI>');
@@ -108,6 +90,31 @@ document.addEventListener("DOMContentLoaded", function() {
     updateTextInSnippet('[docker-run-ce]', '<IMAGES_REPO_URI>', cleanedRegistryImagesRepo);
     updateTextInSnippet('[docker-run-windows-ce]', '<IMAGES_REPO_URI>', cleanedRegistryImagesRepo);
     updateTextInSnippet('[docker-login-windows]', '<IMAGES_REPO_URI>', cleanedRegistryImagesRepo);
+  }
+
+  if (privateRegistryUser && privateRegistryUser.length > 0) {
+  update_parameter('dhctl-private-registry-user', 'username', '<REGISTRY_USERNAME>', null, '[config-yml]');
+  }
+
+  if (privateRegistryPassword && privateRegistryPassword.length > 0) {
+  update_parameter('dhctl-private-registry-password', 'password', '<REGISTRY_PASSWORD>', null, '[config-yml]');
+  }
+
+  if (registrySchemeHTTP && registrySchemeHTTP === 'true') {
+    update_parameter('HTTP', 'scheme', 'HTTPS', null, null);
+    updateTextInSnippet('[config-yml]', /scheme: HTTPS.+\n---/s, "scheme: HTTP\n---");
+  } else if (registryCA && registryCA.length > 0) {
+    update_parameter('dhctl-registry-ca', 'ca', '<REGISTRY_CA>', null, '[config-yml]', 10);
+  }
+
+  if (registrySchemeHTTP && registrySchemeHTTP === 'true') {
+    // delete the registryCA parameter for HTTP registry
+    $('code span.na').filter(function () {
+      return (this.innerText === "scheme");
+    }).each(function (index) {
+      delete_elements($(this).next().next().next(), 3);
+      updateTextInSnippet('[config-yml]', /(scheme: HTTP[S]?).+\<REGISTRY_CA\>\n---/s, "$1\n---");
+    });
   }
 
   // delete empty lines in snippet

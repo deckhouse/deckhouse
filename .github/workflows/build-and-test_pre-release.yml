@@ -691,10 +691,10 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
-      - name: Set up Go 1.25
+      - name: Set up Go 1.26
         uses: actions/setup-go@v5.4.0
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
 
 
@@ -2939,7 +2939,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:e3ce5d01ca717933f9f9e232bb39e0699fae86b4ef0da4520ee251cc4be956b8"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:98aced736e6cc63e0185affd88f7a4f3225f1e6f494e8bb509061e590d2849e0"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

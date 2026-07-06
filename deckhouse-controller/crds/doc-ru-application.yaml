@@ -101,3 +101,20 @@ spec:
                     version:
                       description: |
                         Семантическая версия установленного приложения.
+                urls:
+                  description: |
+                    URL эндпоинтов приложения, собранные из Ingress-ресурсов
+                    чарта приложения с аннотацией `packages.deckhouse.io/is-application-endpoint`.
+                  items:
+                    description: |
+                      Один эндпоинт приложения, построенный на основе Ingress-ресурса чарта приложения.
+                    properties:
+                      description:
+                        description: |
+                          Описание эндпоинта, взятое из значения аннотации
+                          `packages.deckhouse.io/is-application-endpoint`.
+
+                          Пустое, если значение аннотации равно `"true"`.
+                      url:
+                        description: |
+                          URL-адрес эндпоинта приложения.

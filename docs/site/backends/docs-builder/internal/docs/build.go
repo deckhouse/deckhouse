@@ -31,6 +31,9 @@ import (
 )
 
 func (svc *Service) Build() error {
+	svc.buildMu.Lock()
+	defer svc.buildMu.Unlock()
+
 	start := time.Now()
 	status := "ok"
 	defer func() {
@@ -47,6 +50,10 @@ func (svc *Service) Build() error {
 		return fmt.Errorf("hugo build: %w", err)
 	}
 
+	syncer := fsync.NewSyncer()
+	syncer.NoChmod = true
+	syncer.NoTimes = true
+
 	for _, lang := range []string{"ru", "en"} {
 		// Sync modules folder
 		glob := filepath.Join(svc.destDir, "public", lang, "modules/*")
@@ -55,13 +62,9 @@ func (svc *Service) Build() error {
 			return fmt.Errorf("clear %s: %w", svc.destDir, err)
 		}
 
-		syncer := fsync.NewSyncer()
-		syncer.NoChmod = true
-		syncer.NoTimes = true
-
 		oldLocation := filepath.Join(svc.baseDir, "public", lang, "modules")
 		newLocation := filepath.Join(svc.destDir, "public", lang, "modules")
-		err = syncer.Sync(newLocation, oldLocation)
+		err = syncDir(syncer, oldLocation, newLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
 		}
@@ -75,7 +78,7 @@ func (svc *Service) Build() error {
 
 		searchOldLocation := filepath.Join(svc.baseDir, "public", lang, "search")
 		searchNewLocation := filepath.Join(svc.destDir, "public", lang, "search")
-		err = syncer.Sync(searchNewLocation, searchOldLocation)
+		err = syncDir(syncer, searchOldLocation, searchNewLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", searchOldLocation, searchNewLocation, err)
 		}
@@ -152,6 +155,23 @@ func (svc *Service) parseModulePath(modulePath string) ( /*moduleName*/ string /
 	}
 
 	return s[len(s)-2], s[len(s)-1]
+}
+
+// syncDir mirrors src into dst. If src does not exist, it is treated as an
+// empty source and the sync is skipped: Hugo does not create an output
+// directory for a language that has no module or search pages, and the
+// preceding removeGlob has already cleared any stale content in dst. Erroring
+// out on a missing source would fail the whole build in that legitimate case.
+func syncDir(syncer *fsync.Syncer, src, dst string) error {
+	if _, err := os.Stat(src); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return fmt.Errorf("stat %s: %w", src, err)
+	}
+
+	return syncer.Sync(dst, src)
 }
 
 func removeGlob(path string) error {

@@ -75,7 +75,7 @@ script_file="/run/ctr-prefetch.sh"
 {{- $base := $.registry.imagesBase }}
 {{- $caCurrent := printf "clusterAutoscaler%s" $k8s }}
 {{- $cpmNames := list "etcd" (printf "controlPlaneManager%s" $k8s) (printf "kubeApiserver%s" $k8s) (printf "kubeControllerManager%s" $k8s) (printf "kubeScheduler%s" $k8s) }}
-{{- $commonRest := list "kubeRbacProxy" "iptablesWrapper" "init" "shellOperator" "distroless" }}
+{{- $commonRest := list "kubeRbacProxy" "init" }}
 {{- $kpNames := list (printf "kubeProxy%s" $k8s) "iptablesWrapperInit" "initContainer" }}
 {{- $commonNamed := list (printf "csiExternalProvisioner%s" $k8s) (printf "csiExternalAttacher%s" $k8s) (printf "csiExternalResizer%s" $k8s) (printf "csiExternalSnapshotter%s" $k8s) (printf "csiLivenessprobe%s" $k8s) (printf "csiNodeDriverRegistrar%s" $k8s) "checkKernelVersion" "cniMigrationInitChecker" "vxlanOffloadingFixer" }}
 cat > "$script_file" <<'EOSCRIPT'
