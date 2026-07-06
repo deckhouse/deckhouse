@@ -10,7 +10,7 @@ title: "Модуль user-authz: FAQ"
 
 ## Как ограничить права пользователю конкретными пространствами имён?
 
-Чтобы ограничить права пользователя конкретными пространствами имён в экспериментальной ролевой модели, используйте в `RoleBinding` [use-роль](./#use-роли) с соответствующим уровнем доступа. [Пример...](usage.html#пример-назначения-административных-прав-пользователю-в-рамках-пространства-имён).
+Чтобы ограничить права пользователя конкретными пространствами имён в экспериментальной ролевой модели, используйте в `RoleBinding` [namespace-роль](./#namespace-роли) с соответствующим уровнем доступа. [Пример...](usage.html#пример-назначения-административных-прав-пользователю-в-рамках-пространства-имён).
 
 В текущей ролевой модели используйте параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [ClusterAuthorizationRule](cr.html#clusterauthorizationrule).
 
@@ -80,39 +80,37 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: custom:manage:mycustom:manager
+  name: d8:custom:subsystem:mycustom:manager
   labels:
     rbac.deckhouse.io/use-role: admin
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: subsystem
-    rbac.deckhouse.io/subsystem: custom
-    rbac.deckhouse.io/aggregate-to-all-as: manager
+    rbac.deckhouse.io/kind: custom-role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: mycustom
+    rbac.deckhouse.io/aggregate-to-system-as: manager
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        rbac.deckhouse.io/kind: manage
         rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
     - matchLabels:
-        rbac.deckhouse.io/kind: manage
         rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
     - matchLabels:
-        rbac.deckhouse.io/kind: manage
+        rbac.deckhouse.io/scope: system
         module: user-authn
 rules: []
 ```
 
 В начале указаны лейблы для новой роли:
 
-- показывает, какую роль хук должен использовать при создании use ролей:
+- показывает, какую namespace-роль хук должен использовать при создании `RoleBinding` в пространствах имён модулей:
 
   ```yaml
   rbac.deckhouse.io/use-role: admin
   ```
 
-- показывает, что роль должна обрабатываться как manage-роль:
+- показывает, что роль является кастомной (кастомные роли не определяют собственных правил, а только агрегируют capabilities):
 
   ```yaml
-  rbac.deckhouse.io/kind: manage
+  rbac.deckhouse.io/kind: custom-role
   ```
 
   > Этот лейбл обязателен.
@@ -120,19 +118,19 @@ rules: []
 - показывает, что роль является ролью подсистемы, и обрабатываться будет соответственно:
 
   ```yaml
-  rbac.deckhouse.io/level: subsystem
+  rbac.deckhouse.io/scope: subsystem
   ```
 
 - указывает подсистему, за которую отвечает роль:
 
   ```yaml
-  rbac.deckhouse.io/subsystem: custom
+  rbac.deckhouse.io/subsystem: mycustom
   ```
 
-- позволяет `manage:all`-роли агрегировать эту роль в себя:
+- позволяет роли `d8:system:manager` агрегировать эту роль в себя:
 
   ```yaml
-  rbac.deckhouse.io/aggregate-to-all-as: manager
+  rbac.deckhouse.io/aggregate-to-system-as: manager
   ```
 
 Далее указаны селекторы, именно они реализуют агрегацию:
@@ -140,14 +138,13 @@ rules: []
 - агрегирует роль менеджера из подсистемы `deckhouse`:
 
   ```yaml
-  rbac.deckhouse.io/kind: manage
   rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
   ```
 
-- агрегирует все правила от модуля user-authn:
+- агрегирует все системные (scope `system`) capabilities модуля user-authn:
 
   ```yaml
-   rbac.deckhouse.io/kind: manage
+   rbac.deckhouse.io/scope: system
    module: user-authn
   ```
 
@@ -155,8 +152,8 @@ rules: []
 
 Особенности:
 
-* ограничений на имя роли нет, но для читаемости лучше использовать этот стиль;
-* use-роли будут созданы в пространстве имён агрегированных подсистем и модуля, тип роли выбран лейблом.
+* кастомные роли и capabilities должны иметь префикс имени `d8:custom:` (остальное пространство имён `d8:` зарезервировано за встроенными объектами Deckhouse);
+* `RoleBinding` с namespace-ролью (`d8:namespace:<уровень>`) будут созданы в пространствах имён модулей агрегированных подсистем, уровень задаётся лейблом `rbac.deckhouse.io/use-role`.
 
 ### Расширение пользовательской роли
 
@@ -165,50 +162,46 @@ rules: []
 Первым делом нужно дополнить роль новым селектором:
 
 ```yaml
-rbac.deckhouse.io/kind: manage
-rbac.deckhouse.io/aggregate-to-custom-as: manager
+rbac.deckhouse.io/aggregate-to-mycustom-as: manager
 ```
 
-Этот селектор позволит агрегировать роли к новой подсистеме через указание этого лейбла. После добавления нового селектора роль будет выглядеть так:
+Этот селектор позволит агрегировать capabilities к новой подсистеме через указание этого лейбла. После добавления нового селектора роль будет выглядеть так:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
-   name: custom:manage:mycustom:manager
+   name: d8:custom:subsystem:mycustom:manager
    labels:
      rbac.deckhouse.io/use-role: admin
-     rbac.deckhouse.io/kind: manage
-     rbac.deckhouse.io/level: subsystem
-     rbac.deckhouse.io/subsystem: custom
-     rbac.deckhouse.io/aggregate-to-all-as: manager
+     rbac.deckhouse.io/kind: custom-role
+     rbac.deckhouse.io/scope: subsystem
+     rbac.deckhouse.io/subsystem: mycustom
+     rbac.deckhouse.io/aggregate-to-system-as: manager
  aggregationRule:
    clusterRoleSelectors:
      - matchLabels:
-         rbac.deckhouse.io/kind: manage
          rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
      - matchLabels:
-         rbac.deckhouse.io/kind: manage
          rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
      - matchLabels:
-         rbac.deckhouse.io/kind: manage
+         rbac.deckhouse.io/scope: system
          module: user-authn
      - matchLabels:
-         rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-custom-as: manager
+         rbac.deckhouse.io/aggregate-to-mycustom-as: manager
  rules: []
  ```
 
- Далее нужно создать новую роль, в которой следует определить права для нового ресурса. Например, только чтение:
+ Далее нужно создать новую capability, в которой следует определить права для нового ресурса. Например, только чтение:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-custom-as: manager
-     rbac.deckhouse.io/kind: manage
-   name: custom:manage:permission:mycustom:superresource:view
+     rbac.deckhouse.io/aggregate-to-mycustom-as: manager
+     rbac.deckhouse.io/kind: custom-capability
+   name: d8:custom:capability:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -220,17 +213,17 @@ rbac.deckhouse.io/aggregate-to-custom-as: manager
    - watch
  ```
 
-Роль дополнит своими правами роль подсистемы, дав права на просмотр нового объекта.
+Capability дополнит своими правами роль подсистемы, дав права на просмотр нового объекта.
 
 Особенности:
 
-* ограничений на имя роли нет, но для читаемости лучше использовать этот стиль.
+* кастомные capabilities должны иметь префикс имени `d8:custom:`; остальная часть имени не ограничена, но для читаемости лучше использовать этот стиль.
 
-### Расширение существующих manage subsystem-ролей
+### Расширение существующих подсистемных ролей
 
 Если необходимо расширить существующую роль, нужно выполнить те же шаги, что и в пункте выше, но изменив лейблы и название роли.
 
-Пример для расширения роли менеджера из подсистемы `deckhouse`(`d8:manage:deckhouse:manager`):
+Пример для расширения роли менеджера из подсистемы `deckhouse` (`d8:subsystem:deckhouse:manager`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -238,8 +231,8 @@ kind: ClusterRole
 metadata:
   labels:
     rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-    rbac.deckhouse.io/kind: manage
-  name: custom:manage:permission:mycustommodule:superresource:view
+    rbac.deckhouse.io/kind: custom-capability
+  name: d8:custom:capability:mycustommodule:superresource:view
 rules:
 - apiGroups:
   - mygroup.io
@@ -251,17 +244,17 @@ rules:
   - watch
 ```
 
-Таким образом новая роль расширит роль `d8:manage:deckhouse`.
+Таким образом новая capability расширит роль `d8:subsystem:deckhouse:manager`.
 
-### Расширение manage subsystem-ролей с добавлением нового пространства имён
+### Расширение подсистемных ролей с добавлением нового пространства имён
 
-Если необходимо добавить новое пространство имён (для создания в нём use-роли с помощью хука), потребуется добавить лишь один лейбл:
+Если необходимо добавить новое пространство имён (для создания в нём хуком `RoleBinding` с namespace-ролью), потребуется добавить лишь один лейбл:
 
 ```yaml
 "rbac.deckhouse.io/namespace": namespace
 ```
 
-Этот лейбл сообщает хуку, что в этом пространстве имён нужно создать use-роль:
+Этот лейбл сообщает хуку, что в этом пространстве имён нужно создать `RoleBinding` с namespace-ролью:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
@@ -269,9 +262,9 @@ rules:
  metadata:
    labels:
      rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-     rbac.deckhouse.io/kind: manage
+     rbac.deckhouse.io/kind: custom-capability
      rbac.deckhouse.io/namespace: namespace
-   name: custom:manage:permission:mycustom:superresource:view
+   name: d8:custom:capability:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -283,20 +276,20 @@ rules:
    - watch
  ```
 
-Хук мониторит `ClusterRoleBinding` и при создании биндинга ходит по всем manage-ролям, чтобы найти все объединенные в них роли с помощью проверки правила агрегации. Затем он берёт пространство имён из лейбла `rbac.deckhouse.io/namespace` и создает use-роль в этом пространстве имён.
+Хук мониторит `ClusterRoleBinding` и при создании биндинга ходит по всем системным и подсистемным ролям, чтобы найти все объединенные в них capabilities с помощью проверки правила агрегации. Затем он берёт пространство имён из лейбла `rbac.deckhouse.io/namespace` и создает `RoleBinding` с namespace-ролью в этом пространстве имён.
 
-### Расширение существующих use-ролей
+### Расширение существующих namespace-ролей
 
-Если ресурс принадлежит пространству имён, необходимо расширить use-роль вместо manage-роли. Разница лишь в лейблах и имени:
+Если ресурс принадлежит пространству имён, необходимо расширить namespace-роль вместо системной/подсистемной. Разница лишь в лейблах и имени:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-kubernetes-as: user
-     rbac.deckhouse.io/kind: use
-   name: custom:use:capability:mycustom:superresource:view
+     rbac.deckhouse.io/aggregate-to-namespace-as: user
+     rbac.deckhouse.io/kind: custom-capability
+   name: d8:custom:namespace-capability:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -308,4 +301,4 @@ rules:
    - watch
  ```
 
-Эта роль дополнит роль `d8:use:role:user:kubernetes`.
+Эта capability дополнит роль `d8:namespace:user`.

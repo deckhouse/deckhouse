@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace:admin
+  annotations:
+    en.meta.deckhouse.io/title: "Namespace Administrator"
+    ru.meta.deckhouse.io/title: "Администратор пространства имён"
+    en.meta.deckhouse.io/description: "Namespace Manager plus RBAC management (Role, RoleBinding) within the namespace."
+    ru.meta.deckhouse.io/description: "Права менеджера плюс управление RBAC (Role, RoleBinding) в пределах пространства имён."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/delegatable: "true"
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: superadmin
+    rbac.deckhouse.io/aggregate-to-project-as: admin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-namespace-as: admin
+rules: []

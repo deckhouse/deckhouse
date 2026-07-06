@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace:superadmin
+  annotations:
+    en.meta.deckhouse.io/title: "Namespace Superadmin"
+    ru.meta.deckhouse.io/title: "Суперадминистратор пространства имён"
+    en.meta.deckhouse.io/description: "Namespace Administrator plus management of system resources placed in the namespace (Dex pods, VM pods/PVCs, managed service endpoints)."
+    ru.meta.deckhouse.io/description: "Права администратора плюс управление системными ресурсами в пространстве имён (поды Dex, поды/PVC виртуальных машин, endpoints managed-сервисов)."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/delegatable: "true"
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-project-as: superadmin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-namespace-as: superadmin
+rules: []
