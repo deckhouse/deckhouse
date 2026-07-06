@@ -96,13 +96,12 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("reconciling node topology", "node", req.Name)
 
-	var node corev1.Node
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: req.Name}, &node); err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.V(1).Info("node not found, skipping", "node", req.Name)
-			return ctrl.Result{}, nil
-		}
-
+	node := &corev1.Node{}
+	err := r.Client.Get(ctx, req.NamespacedName, node)
+	if apierrors.IsNotFound(err) {
+		return ctrl.Result{}, r.deleteNodeTopologyIfExists(ctx, req.Name)
+	}
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -123,7 +122,7 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	var nodeTopology v1.NodeTopology
-	err := r.Client.Get(ctx, client.ObjectKey{Name: node.Name}, &nodeTopology)
+	err = r.Client.Get(ctx, client.ObjectKey{Name: node.Name}, &nodeTopology)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, err
@@ -305,4 +304,23 @@ func effectiveChangedPredicate() predicate.Funcs {
 			)
 		},
 	}
+}
+
+func (r *Controller) deleteNodeTopologyIfExists(ctx context.Context, nodeName string) error {
+	nodeTopology := &v1.NodeTopology{}
+
+	err := r.Client.Get(ctx, client.ObjectKey{Name: nodeName}, nodeTopology)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	err = r.Client.Delete(ctx, nodeTopology)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+
+	return err
 }

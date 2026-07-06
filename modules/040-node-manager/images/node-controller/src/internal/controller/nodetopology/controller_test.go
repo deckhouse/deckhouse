@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -324,6 +325,31 @@ func TestReconcile_ExistingEffectiveStateOutOfSync(t *testing.T) {
 		reasonDesiredDiffersFromEffective,
 		messageDesiredDiffersFromEffective,
 	)
+}
+
+func TestReconcile_NodeNotFound_DeletesNodeTopology(t *testing.T) {
+	nodeTopology := &v1.NodeTopology{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-node",
+		},
+		Status: v1.NodeTopologyStatus{
+			NodeName:  "test-node",
+			NodeGroup: "test-node-group",
+			Desired: &v1.NodeTopologyState{
+				TopologyManager: &v1.NodeTopologyManagerState{
+					Enabled: ptr.To(false),
+				},
+			},
+		},
+	}
+
+	r := newReconciler(t, nodeTopology)
+
+	doReconcile(t, r, "test-node")
+
+	if nodeTopologyExists(t, r, "test-node") {
+		t.Fatal("expected NodeTopology to be deleted")
+	}
 }
 
 func TestNodeGroupToNodes_ReturnsOnlyNodesFromNodeGroup(t *testing.T) {
