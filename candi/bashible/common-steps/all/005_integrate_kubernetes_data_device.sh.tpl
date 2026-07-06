@@ -114,23 +114,23 @@ fi
 # Otherwise the `mount | grep $DATA_DEVICE` checks below would fail, because `mount`
 # reports the real path. Example:
 # ```bash
-#     ~# ls -l $DATA_DEVICE
-#        lrwxrwxrwx 1 root root 9 Jul  6 11:27 /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_0bfa67a18b15ba86c823528a24dc844d -> ../../sdc
-#     ~# mount | grep $DATA_DEVICE
-#     ~#
-#     ~# DATA_DEVICE=$(resolve_symlink $DATA_DEVICE)
-#     ~# echo $DATA_DEVICE
-#        /dev/sdc
-#     ~# mount | grep $DATA_DEVICE
-#        /dev/sdc on /mnt/kubernetes-data type ext4 (rw,relatime,discard,x-systemd.automount)
+#   ~# ls -l $DATA_DEVICE
+#      lrwxrwxrwx 1 root root 9 Jul  6 11:27 /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_0bfa67a18b15ba86c823528a24dc844d -> ../../sdc
+#   ~# mount | grep $DATA_DEVICE
+#   ~#
+#   ~# DATA_DEVICE=$(resolve_symlink $DATA_DEVICE)
+#   ~# echo $DATA_DEVICE
+#      /dev/sdc
+#   ~# mount | grep $DATA_DEVICE
+#      /dev/sdc on /mnt/kubernetes-data type ext4 (rw,relatime,discard,x-systemd.automount)
 # ```
 DATA_DEVICE="$(resolve_symlink "$DATA_DEVICE")"
 
 mkdir -p /mnt/kubernetes-data
 
-# always format the device to ensure it's clean, because etcd will not join the cluster if the device
-# contains a filesystem with etcd database from a previous installation
-# Idempotency: skip formatting if the device is already mounted (see the next step)
+# Always format the device to ensure it's clean, because etcd will not join the cluster if the device
+# contains a filesystem with etcd database from a previous installation.
+# Idempotency: skip formatting if the device is already mounted (in the next step)
 if ! mount | grep -q $DATA_DEVICE; then
   mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
 fi
