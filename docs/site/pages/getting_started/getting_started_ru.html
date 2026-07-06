@@ -12,16 +12,18 @@ toc: false
 
 <div class="main-tabs-container">
   <div class="main-tabs">
-    <a class="main-tab" href="/gs/installer/">{{ site.data.i18n.getting_started_nav.gui_installer[page.lang] }}</a>
-    <a class="main-tab active" href="/gs/">{{ site.data.i18n.getting_started_nav.manual_cli[page.lang] }}</a>
+    <button id="tab-button-manual-install" class="main-tab active" onclick="openInstallTab(event, 'tab-manual-install');">Вручную из командной строки</button>
+    <button id="tab-button-gui-install" class="main-tab" onclick="openInstallTab(event, 'tab-gui-install');">
+      C помощью графического установщика
+    </button>
   </div>
 </div>
+<div id="tab-gui-install" class="tab-content">
+{% include getting_started/global/partials/installer/installer_block.html %}
+</div>
+<div id="tab-manual-install" class="tab-content active">
 <p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
-  Kubernetes Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
-
-{% alert level="info" %}
-Дополнительные материалы по администрированию и обучению работе с платформой представлены в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
-{% endalert %}
+  Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
 
 <p>Установка платформы Deckhouse Kubernetes Platform возможна как на физические серверы (bare metal), так и в инфраструктуру одного
   из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться,
@@ -68,3 +70,100 @@ toc: false
     </div>
   </div>
 </div>
+</div>
+
+<script>
+  function openInstallTab(evt, installTabName) {
+      const url = new URL(window.location.href);
+      if (installTabName == 'tab-manual-install') {
+        url.hash = '';
+      }
+      if (installTabName == 'tab-gui-install') {
+        url.hash = 'gui-install';
+      }
+      window.history.replaceState(null, '', url.toString());
+      document.getElementById("tab-manual-install").classList.remove("active");
+      document.getElementById("tab-gui-install").classList.remove("active");
+
+      document.getElementById("tab-button-manual-install").classList.remove("active");
+      document.getElementById("tab-button-gui-install").classList.remove("active");
+
+      document.getElementById(installTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+      if (installTabName === "tab-gui-install" && window.refreshInstallerCarousels) {
+        window.requestAnimationFrame(function() {
+          window.refreshInstallerCarousels();
+        });
+      }
+  }
+
+  function getHashValue() {
+      const hash = window.location.hash;
+      return hash.substring(1);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+      const hashValue = getHashValue();
+      if (hashValue == "gui-install") {
+        document.getElementById("tab-manual-install").classList.remove("active");
+        document.getElementById("tab-gui-install").classList.add("active");
+        document.getElementById("tab-button-manual-install").classList.remove("active");
+        document.getElementById("tab-button-gui-install").classList.add("active");
+        if (window.refreshInstallerCarousels) {
+          window.requestAnimationFrame(function() {
+            window.refreshInstallerCarousels();
+          });
+        }
+      }
+  });
+</script>
+
+<h2>Демо: слайдер на 15 изображений</h2>
+
+{% sliders "Пример слайдера с 15 слайдами" %}
+{% slider img="/images/gs/installer/cloud-install-log.png" alt="cloud install log" %}
+Слайд 1 — журнал установки в облаке.
+{% endslider %}
+{% slider img="/images/gs/installer/cloud-install-process.png" alt="cloud install process" %}
+Слайд 2 — процесс установки в облаке.
+{% endslider %}
+{% slider img="/images/gs/installer/cloud-mega-setup.png" alt="cloud mega setup" %}
+Слайд 3 — расширенные настройки облака.
+{% endslider %}
+{% slider img="/images/gs/installer/console.png" alt="console" %}
+Слайд 4 — консоль управления.
+{% endslider %}
+{% slider img="/images/gs/installer/dns-settings.png" alt="dns settings" %}
+Слайд 5 — настройки DNS.
+{% endslider %}
+{% slider img="/images/gs/installer/dvp-cloud-example.png" alt="dvp cloud example" %}
+Слайд 6 — пример конфигурации DVP.
+{% endslider %}
+{% slider img="/images/gs/installer/dvp-cloud-extended.png" alt="dvp cloud extended" %}
+Слайд 7 — расширенная конфигурация DVP.
+{% endslider %}
+{% slider img="/images/gs/installer/dvp-cloud-infrastructure.png" alt="dvp cloud infrastructure" %}
+Слайд 8 — инфраструктура DVP.
+{% endslider %}
+{% slider img="/images/gs/installer/dvp-cloud-settings.png" alt="dvp cloud settings" %}
+Слайд 9 — настройки DVP.
+{% endslider %}
+{% slider img="/images/gs/installer/dvp-open-console.png" alt="dvp open console" %}
+Слайд 10 — открытие консоли DVP.
+{% endslider %}
+{% slider img="/images/gs/installer/enable-rosetta.png" alt="enable rosetta" %}
+Слайд 11 — включение Rosetta.
+{% endslider %}
+{% slider img="/images/gs/installer/enter-license-key.png" alt="enter license key" %}
+Слайд 12 — ввод лицензионного ключа.
+{% endslider %}
+{% slider img="/images/gs/installer/extended-settings.png" alt="extended settings" %}
+Слайд 13 — расширенные настройки.
+{% endslider %}
+{% slider img="/images/gs/installer/infrastructure_main_page.png" alt="infrastructure main page" %}
+Слайд 14 — главная страница инфраструктуры.
+{% endslider %}
+{% slider img="/images/gs/installer/ingress-create.png" alt="ingress create" %}
+Слайд 15 — создание Ingress.
+{% endslider %}
+{% endsliders %}

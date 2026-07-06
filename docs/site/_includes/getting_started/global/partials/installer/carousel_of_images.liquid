@@ -1,0 +1,13 @@
+{%- assign installer_data = site.data.getting_started.installer.screenshots -%}
+{%- assign filter_group = include.group | default: '' | strip -%}
+{% sliders %}
+{%- for block in installer_data.screenshots -%}
+  {%- if filter_group == '' or block.group == filter_group -%}
+    {%- for item in block.items -%}
+{% slider img="/images/gs/installer/{{ item.filename }}" alt="{{ item.title | default: '' | escape }}" %}
+{{ item.title | default: '' }}
+{% endslider %}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endfor -%}
+{% endsliders %}
