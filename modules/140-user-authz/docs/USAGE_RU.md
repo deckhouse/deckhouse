@@ -8,7 +8,7 @@ title: "Модуль user-authz: примеры конфигурации"
 Пример использует [экспериментальную ролевую модель](./#экспериментальная-ролевая-модель).
 {% endalert %}
 
-Для назначения прав администратору кластера используйте роль `d8:manage:all:manager` в `ClusterRoleBinding`.
+Для назначения прав администратору кластера используйте роль `d8:system:manager` в `ClusterRoleBinding`.
 
 Пример назначения прав администратору кластера (User `jane`):
 
@@ -23,7 +23,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -46,7 +46,7 @@ roleRef:
 Пример использует [экспериментальную ролевую модель](./#экспериментальная-ролевая-модель).
 {% endalert %}
 
-Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:manage:networking:manager` в `ClusterRoleBinding`.
+Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:subsystem:networking:manager` в `ClusterRoleBinding`.
 
 Пример назначения прав сетевому администратору (User `jane`):
 
@@ -61,7 +61,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:networking:manager
+  name: d8:subsystem:networking:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -159,7 +159,7 @@ roleRef:
 Пример использует [экспериментальную ролевую модель](./#экспериментальная-ролевая-модель).
 {% endalert %}
 
-Для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в `RoleBinding` в соответствующем пространстве имён.
+Для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:namespace:admin` в `RoleBinding` в соответствующем пространстве имён.
 
 Пример назначения прав разработчику приложений (User `app-developer`) в пространстве имён `myapp`:
 
@@ -175,7 +175,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:use:role:admin
+  name: d8:namespace:admin
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -294,7 +294,7 @@ spec:
 {% endalert %}
 
 {% offtopic title="Экспериментальная ролевая модель" %}
-Роли `d8:use:role:*` назначаются только через `RoleBinding` в **конкретном** неймспейсе — отдельное `RoleBinding` нужно на каждый неймспейс (или автоматизируйте выдачу). Роли `d8:manage:*` не распространяются на неймспейсы пользовательских приложений — только на системные (`d8-*`, `kube-*`) в рамках подсистемы.
+Роли `d8:namespace:*` назначаются только через `RoleBinding` в **конкретном** неймспейсе — отдельное `RoleBinding` нужно на каждый неймспейс (или автоматизируйте выдачу). Роли `d8:system:*` / `d8:subsystem:*` не распространяются на неймспейсы пользовательских приложений — только на системные (`d8-*`, `kube-*`) в рамках подсистемы.
 {% endofftopic %}
 
 ## Создание пользователя

@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:networking:superadmin
+  annotations:
+    en.meta.deckhouse.io/title: "Networking: Superadmin"
+    ru.meta.deckhouse.io/title: "Суперадминистратор подсистемы сети"
+    en.meta.deckhouse.io/description: "Full control over the Networking subsystem, including its system resources."
+    ru.meta.deckhouse.io/description: "Полный контроль над подсистемы сети, включая её системные ресурсы."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: superadmin
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: networking
+    rbac.deckhouse.io/aggregate-to-system-as: superadmin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-networking-as: superadmin
+rules: []
