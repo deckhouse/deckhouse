@@ -57,6 +57,16 @@ import:
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.21
   before: install
+- image: istio/istioctl-v1x25x2-build-artifact
+  add: /src/istio/out/istioctl
+  to: /usr/bin/istioctl-1.25
+  before: install
+{{- if ne $.Env "CSE" }}
+- image: istio/istioctl-v1x27x9-build-artifact
+  add: /src/istio/out/istioctl
+  to: /usr/bin/istioctl-1.27
+  before: install
+{{- end }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/bin
   to: /usr/bin

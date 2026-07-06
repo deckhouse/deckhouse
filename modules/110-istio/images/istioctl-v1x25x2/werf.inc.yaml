@@ -1,0 +1,50 @@
+---
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-25" $ ) }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
+# Based on https://github.com/istio/istio/blob/1.25.2/istioctl/docker/Dockerfile.istioctl
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: {{ index $.Images "builder/golang" }}
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio
+  to: /src/istio
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  - pm install git binutils
+  install:
+  - cd /src/istio/
+  - git apply --verbose /patches/001-deckhouse-default-istio-namespace.patch
+  - echo {{ $istioVersion }} > version
+  - export VERSION={{ $istioVersion }}
+  - export BUILDINFO=$(mktemp)
+  - |
+    cat > "${BUILDINFO}" <<EOF
+    istio.io/istio/pkg/version.buildVersion={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildGitRevision={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildStatus=Clean
+    istio.io/istio/pkg/version.buildTag={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildHub=docker.io/istio
+    istio.io/istio/pkg/version.buildOS=linux
+    istio.io/istio/pkg/version.buildArch=amd64
+    EOF
+  - export GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-extldflags -static -s -w'
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/istioctl/cmd/istioctl/
+  - strip /src/istio/out/istioctl
+  - chmod 0700 /src/istio/out/istioctl
+  - chown 1337:1337 /src/istio/out/istioctl
