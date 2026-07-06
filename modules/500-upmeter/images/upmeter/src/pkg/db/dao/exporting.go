@@ -128,6 +128,24 @@ func (dao *ExportDAO) DeleteUpTo(syncID string, slot time.Time) error {
 	return nil
 }
 
+func (dao *ExportDAO) DeleteBefore(syncID string, slot time.Time) error {
+	ctx := dao.ctx.Start()
+	defer ctx.Stop()
+
+	const q = `
+	DELETE FROM export_episodes
+	WHERE sync_id = @sync_id AND timeslot < @timeslot
+	`
+	_, err := ctx.StmtRunner().Exec(q,
+		sql.Named("sync_id", syncID),
+		sql.Named("timeslot", slot.Unix()),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // getExportEpisode fetches entity. Input entity is used as filter by sync_id, timeslot, group_name and probe_name.
 func getExportEpisode(ctx *dbcontext.DbContext, filter ExportEntity) (*ExportEntity, error) {
 	const query = `

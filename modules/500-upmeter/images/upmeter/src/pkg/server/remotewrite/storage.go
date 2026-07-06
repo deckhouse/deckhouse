@@ -69,3 +69,8 @@ func (s *storage) Get(syncID SyncIdentifier) ([]*check.Episode, error) {
 func (s *storage) Delete(syncID SyncIdentifier, slot time.Time) error {
 	return s.dao.DeleteUpTo(string(syncID), slot)
 }
+
+// DeleteBefore removes episodes strictly older than slot, keeping the boundary slot itself.
+func (s *storage) DeleteBefore(syncID SyncIdentifier, slot time.Time) error {
+	return s.dao.DeleteBefore(string(syncID), slot)
+}
