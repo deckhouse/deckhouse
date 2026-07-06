@@ -70,10 +70,11 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("project template validation failed: %v", err))
 		}
 
-		// every structured fromParam reference must point at a parameter declared in parametersSchema,
-		// otherwise the field would silently render empty for every project
+		// every structured fromParam reference must point at a parameter declared in parametersSchema
+		// AND be type-compatible with the field, otherwise the field would silently render empty (or
+		// fail to render) for every project on this template
 		for _, ref := range template.Spec.FromParamRefs() {
-			if err := validate.ParamPath(schema, ref.Param); err != nil {
+			if err := validate.ParamPath(schema, ref.Param, ref.Type); err != nil {
 				return admission.Denied(fmt.Sprintf("the '%s' project template field '%s' %v", template.Name, ref.Field, err))
 			}
 		}

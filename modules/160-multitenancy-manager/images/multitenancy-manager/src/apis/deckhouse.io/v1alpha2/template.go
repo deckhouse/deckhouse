@@ -177,40 +177,46 @@ type ParamRef struct {
 	Field string
 	// Param is the referenced parameter name (the fromParam value), possibly dotted.
 	Param string
+	// Type is the OpenAPI type the field resolves the parameter into ("string", "boolean",
+	// "object", "array"). The admission webhook uses it to reject a parameter whose declared
+	// schema type cannot satisfy the field (e.g. a boolean field bound to a string parameter),
+	// which would otherwise fail only at project render time.
+	Type string
 }
 
 // FromParamRefs returns every fromParam reference set on the structured fields. It is used by the
-// admission webhook to verify each referenced parameter is declared in spec.parametersSchema, and is
-// safe to call on a v1alpha1-shaped template (it simply returns nothing).
+// admission webhook to verify each referenced parameter is declared in spec.parametersSchema (and is
+// type-compatible with the field), and is safe to call on a v1alpha1-shaped template (it simply
+// returns nothing).
 func (p *ProjectTemplateSpec) FromParamRefs() []ParamRef {
 	var refs []ParamRef
-	add := func(field, param string) {
+	add := func(field, param, fieldType string) {
 		if param != "" {
-			refs = append(refs, ParamRef{Field: field, Param: param})
+			refs = append(refs, ParamRef{Field: field, Param: param, Type: fieldType})
 		}
 	}
 
-	add("podSecurityStandard", p.PodSecurityStandard.Ref())
-	add("nodeSelector", p.NodeSelector.Ref())
-	add("tolerations", p.Tolerations.Ref())
-	add("allowedUIDs", p.AllowedUIDs.Ref())
-	add("allowedGIDs", p.AllowedGIDs.Ref())
+	add("podSecurityStandard", p.PodSecurityStandard.Ref(), "string")
+	add("nodeSelector", p.NodeSelector.Ref(), "object")
+	add("tolerations", p.Tolerations.Ref(), "array")
+	add("allowedUIDs", p.AllowedUIDs.Ref(), "object")
+	add("allowedGIDs", p.AllowedGIDs.Ref(), "object")
 	if p.NetworkPolicy != nil {
-		add("networkPolicy.mode", p.NetworkPolicy.Mode.Ref())
+		add("networkPolicy.mode", p.NetworkPolicy.Mode.Ref(), "string")
 	}
 	if p.NamespaceMetadata != nil {
-		add("namespaceMetadata.labels", p.NamespaceMetadata.Labels.Ref())
-		add("namespaceMetadata.annotations", p.NamespaceMetadata.Annotations.Ref())
+		add("namespaceMetadata.labels", p.NamespaceMetadata.Labels.Ref(), "object")
+		add("namespaceMetadata.annotations", p.NamespaceMetadata.Annotations.Ref(), "object")
 	}
 	if p.Features != nil {
-		add("features.monitoring", p.Features.Monitoring.Ref())
-		add("features.vulnerabilityScanning", p.Features.VulnerabilityScanning.Ref())
+		add("features.monitoring", p.Features.Monitoring.Ref(), "boolean")
+		add("features.vulnerabilityScanning", p.Features.VulnerabilityScanning.Ref(), "boolean")
 	}
 	if p.LogShipping != nil {
-		add("logShipping.clusterDestinationRef", p.LogShipping.ClusterDestinationRef.Ref())
+		add("logShipping.clusterDestinationRef", p.LogShipping.ClusterDestinationRef.Ref(), "string")
 	}
 	if p.RuntimeAudit != nil {
-		add("runtimeAudit.enabled", p.RuntimeAudit.Enabled.Ref())
+		add("runtimeAudit.enabled", p.RuntimeAudit.Enabled.Ref(), "boolean")
 	}
 	return refs
 }

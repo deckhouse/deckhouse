@@ -120,12 +120,18 @@ func MergeDefaults(schema *spec.Schema, projectValues map[string]any) map[string
 }
 
 // ParamPath verifies that a (optionally dotted) fromParam reference resolves to a parameter declared
-// in the loaded parametersSchema. It walks the schema's properties segment by segment; descent stops
-// successfully as soon as it reaches a free-form node (additionalProperties or
-// x-kubernetes-preserve-unknown-fields), since the remaining segments address user-defined keys that
-// the schema cannot enumerate. A segment that is neither a declared property nor under a free-form
-// node is reported as undefined.
-func ParamPath(schema *spec.Schema, path string) error {
+// in the loaded parametersSchema, and that the parameter's declared type can satisfy the field it is
+// bound to. It walks the schema's properties segment by segment; descent stops successfully as soon
+// as it reaches a free-form node (additionalProperties or x-kubernetes-preserve-unknown-fields),
+// since the remaining segments address user-defined keys the schema cannot enumerate (the type check
+// is skipped there — the value shape is user-defined). A segment that is neither a declared property
+// nor under a free-form node is reported as undefined.
+//
+// fieldType is the OpenAPI type the field renders the parameter into ("string", "boolean", "object",
+// "array"); empty fieldType or a parameter without a declared type skips the compatibility check.
+// Without this check a template binding e.g. a boolean field to a string parameter would be accepted
+// at admission and fail only when every project on the template renders.
+func ParamPath(schema *spec.Schema, path, fieldType string) error {
 	if path == "" {
 		return errors.New("empty fromParam reference")
 	}
@@ -146,6 +152,14 @@ func ParamPath(schema *spec.Schema, path string) error {
 		}
 		node = &child
 		walked = append(walked, segment)
+	}
+
+	if fieldType != "" && len(node.Type) > 0 && !node.Type.Contains(fieldType) {
+		// "integer" satisfies a "number" field; anything else must match exactly.
+		if !(fieldType == "number" && node.Type.Contains("integer")) {
+			return fmt.Errorf("references parameter '%s' of type '%s', but the field requires type '%s'",
+				path, strings.Join(node.Type, ","), fieldType)
+		}
 	}
 	return nil
 }

@@ -190,6 +190,78 @@ func TestHandle_FromParamValidation(t *testing.T) {
 	})
 }
 
+// TestHandle_FromParamTypeValidation pins the fromParam type-compatibility check: a field bound to a
+// parameter whose declared schema type cannot satisfy it must be denied at admission, not at project
+// render time. A parameter without a declared type is accepted (shape is unknown, render decides).
+func TestHandle_FromParamTypeValidation(t *testing.T) {
+	ctx := context.Background()
+
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"strParam":     map[string]any{"type": "string"},
+			"boolParam":    map[string]any{"type": "boolean"},
+			"untypedParam": map[string]any{},
+		},
+	}
+
+	tmpl := func(mutate func(*v1alpha2.ProjectTemplateSpec)) *v1alpha2.ProjectTemplate {
+		out := &v1alpha2.ProjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "tmpl"},
+			Spec:       v1alpha2.ProjectTemplateSpec{ParametersSchema: v1alpha2.ParametersSchema{OpenAPIV3Schema: schema}},
+		}
+		mutate(&out.Spec)
+		return out
+	}
+
+	t.Run("boolean field bound to a string parameter is denied", func(t *testing.T) {
+		v := newValidator(t)
+		resp := v.Handle(ctx, createRequest(t, tmpl(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.RuntimeAudit = &v1alpha2.RuntimeAuditSpec{Enabled: v1alpha2.FromParamRef[bool]("strParam")}
+		})))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "runtimeAudit.enabled")
+		assert.Contains(t, resp.Result.Message, "requires type 'boolean'")
+	})
+
+	t.Run("string field bound to a boolean parameter is denied", func(t *testing.T) {
+		v := newValidator(t)
+		resp := v.Handle(ctx, createRequest(t, tmpl(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.PodSecurityStandard = v1alpha2.FromParamRef[string]("boolParam")
+		})))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "podSecurityStandard")
+		assert.Contains(t, resp.Result.Message, "requires type 'string'")
+	})
+
+	t.Run("object field bound to a string parameter is denied", func(t *testing.T) {
+		v := newValidator(t)
+		resp := v.Handle(ctx, createRequest(t, tmpl(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.NodeSelector = v1alpha2.FromParamRef[map[string]string]("strParam")
+		})))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "nodeSelector")
+		assert.Contains(t, resp.Result.Message, "requires type 'object'")
+	})
+
+	t.Run("matching types are allowed", func(t *testing.T) {
+		v := newValidator(t)
+		resp := v.Handle(ctx, createRequest(t, tmpl(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.PodSecurityStandard = v1alpha2.FromParamRef[string]("strParam")
+			s.RuntimeAudit = &v1alpha2.RuntimeAuditSpec{Enabled: v1alpha2.FromParamRef[bool]("boolParam")}
+		})))
+		assert.True(t, resp.Allowed, resp.Result.Message)
+	})
+
+	t.Run("a parameter without a declared type is allowed for any field", func(t *testing.T) {
+		v := newValidator(t)
+		resp := v.Handle(ctx, createRequest(t, tmpl(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.RuntimeAudit = &v1alpha2.RuntimeAuditSpec{Enabled: v1alpha2.FromParamRef[bool]("untypedParam")}
+		})))
+		assert.True(t, resp.Allowed, resp.Result.Message)
+	})
+}
+
 func TestHandle_DeleteInUseTemplate(t *testing.T) {
 	ctx := context.Background()
 	project := &v1alpha3.Project{
