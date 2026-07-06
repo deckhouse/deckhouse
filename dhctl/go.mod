@@ -17,8 +17,8 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry-bundle v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
-	github.com/deckhouse/lib-connection v0.11.1-0.20260703071959-3dd961a10d05
-	github.com/deckhouse/lib-dhctl v0.19.1-0.20260703052224-0e12fb294938
+	github.com/deckhouse/lib-connection v0.12.0
+	github.com/deckhouse/lib-dhctl v0.20.0
 	github.com/deckhouse/lib-gossh v0.3.0
 	github.com/deckhouse/module-sdk v0.10.4
 	github.com/flant/kube-client v1.6.0
@@ -92,7 +92,6 @@ require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/araddon/dateparse v0.0.0-20190622164848-0fb0a474d195 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/avelino/slugify v0.0.0-20180501145920-855f152bd774 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
@@ -218,7 +217,6 @@ require (
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vbatts/tar-split v0.12.2 // indirect
 	github.com/weppos/publicsuffix-go v0.50.1-0.20250829105427-5340293a34a1 // indirect
-	github.com/werf/logboek v0.6.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
