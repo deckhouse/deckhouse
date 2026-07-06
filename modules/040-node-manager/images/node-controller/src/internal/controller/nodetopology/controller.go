@@ -39,6 +39,12 @@ const (
 
 	reasonEffectiveStateNotCollected  = "EffectiveStateNotCollected"
 	messageEffectiveStateNotCollected = "Effective topology state has not been collected yet."
+
+	reasonDesiredMatchesEffective  = "DesiredMatchesEffective"
+	messageDesiredMatchesEffective = "Desired and effective topology settings match."
+
+	reasonDesiredDiffersFromEffective  = "DesiredDiffersFromEffective"
+	messageDesiredDiffersFromEffective = "Desired topology settings differ from effective topology settings."
 )
 
 func init() {
@@ -132,7 +138,11 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	nodeTopology.Status.NodeName = node.Name
 	nodeTopology.Status.NodeGroup = nodeGroupName
 	nodeTopology.Status.Desired = desiredTopologyState(&nodeGroup)
-	nodeTopology.Status.Conditions = setInSyncUnknown(nodeTopology.Status.Conditions)
+	nodeTopology.Status.Conditions = setInSyncCondition(
+		nodeTopology.Status.Desired,
+		nodeTopology.Status.Effective,
+		nodeTopology.Status.Conditions,
+	)
 
 	if err := r.Client.Status().Patch(ctx, &nodeTopology, patch); err != nil {
 		return ctrl.Result{}, err
@@ -164,28 +174,87 @@ func desiredTopologyState(nodeGroup *v1.NodeGroup) *v1.NodeTopologyState {
 	return state
 }
 
-func setInSyncUnknown(conditions []metav1.Condition) []metav1.Condition {
-	now := metav1.Now()
-
+func setInSyncCondition(desired, effective *v1.NodeTopologyState, conditions []metav1.Condition) []metav1.Condition {
 	condition := metav1.Condition{
-		Type:               conditionInSync,
-		Status:             metav1.ConditionUnknown,
-		Reason:             reasonEffectiveStateNotCollected,
-		Message:            messageEffectiveStateNotCollected,
-		LastTransitionTime: now,
+		Type: conditionInSync,
 	}
 
-	for i := range conditions {
-		if conditions[i].Type == conditionInSync {
-			if conditions[i].Status == condition.Status &&
-				conditions[i].Reason == condition.Reason &&
-				conditions[i].Message == condition.Message {
-				condition.LastTransitionTime = conditions[i].LastTransitionTime
-			}
+	if effective == nil || effective.TopologyManager == nil {
+		condition.Status = metav1.ConditionUnknown
+		condition.Reason = reasonEffectiveStateNotCollected
+		condition.Message = messageEffectiveStateNotCollected
 
-			conditions[i] = condition
-			return conditions
+		return setCondition(conditions, condition)
+	}
+
+	if topologyStatesEqual(desired, effective) {
+		condition.Status = metav1.ConditionTrue
+		condition.Reason = reasonDesiredMatchesEffective
+		condition.Message = messageDesiredMatchesEffective
+
+		return setCondition(conditions, condition)
+	}
+
+	condition.Status = metav1.ConditionFalse
+	condition.Reason = reasonDesiredDiffersFromEffective
+	condition.Message = messageDesiredDiffersFromEffective
+
+	return setCondition(conditions, condition)
+}
+
+func topologyStatesEqual(a, b *v1.NodeTopologyState) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
+	return topologyManagerStatesEqual(a.TopologyManager, b.TopologyManager)
+}
+
+func topologyManagerStatesEqual(a, b *v1.NodeTopologyManagerState) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
+	if boolValue(a.Enabled) != boolValue(b.Enabled) {
+		return false
+	}
+
+	if a.Policy != b.Policy {
+		return false
+	}
+
+	if a.Scope != b.Scope {
+		return false
+	}
+
+	return true
+}
+
+func boolValue(value *bool) bool {
+	if value == nil {
+		return false
+	}
+
+	return *value
+}
+
+func setCondition(conditions []metav1.Condition, condition metav1.Condition) []metav1.Condition {
+	now := metav1.Now()
+	condition.LastTransitionTime = now
+
+	for i := range conditions {
+		if conditions[i].Type != condition.Type {
+			continue
 		}
+
+		if conditions[i].Status == condition.Status &&
+			conditions[i].Reason == condition.Reason &&
+			conditions[i].Message == condition.Message {
+			condition.LastTransitionTime = conditions[i].LastTransitionTime
+		}
+
+		conditions[i] = condition
+		return conditions
 	}
 
 	return append(conditions, condition)

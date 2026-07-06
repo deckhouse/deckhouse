@@ -437,3 +437,97 @@ EOF
 
 # CIS becnhmark purposes
 chmod 600 /var/lib/kubelet/config.yaml
+
+function bb-convert-topology-manager-policy-to-api-value() {
+  case "$1" in
+    "none")
+      echo -n "None"
+      ;;
+    "best-effort")
+      echo -n "BestEffort"
+      ;;
+    "restricted")
+      echo -n "Restricted"
+      ;;
+    "single-numa-node")
+      echo -n "SingleNumaNode"
+      ;;
+    *)
+      echo -n ""
+      ;;
+  esac
+}
+
+function bb-convert-topology-manager-scope-to-api-value() {
+  case "$1" in
+    "container")
+      echo -n "Container"
+      ;;
+    "pod")
+      echo -n "Pod"
+      ;;
+    *)
+      echo -n ""
+      ;;
+  esac
+}
+
+function bb-patch-node-topology-effective-state() {
+  if ! type bb-curl-kube >/dev/null 2>&1 || ! test -f /etc/kubernetes/kubelet.conf ; then
+    return 0
+  fi
+
+  local node_name
+  node_name="$(bb-d8-node-name)"
+
+  if ! bb-curl-kube "/apis/deckhouse.io/v1/nodetopologies/${node_name}" >/dev/null 2>&1; then
+    bb-log-info "NodeTopology ${node_name} does not exist, skipping effective topology state patch"
+    return 0
+  fi
+
+  local raw_policy
+  local raw_scope
+  local policy
+  local scope
+  local enabled
+
+  raw_policy="$(grep -E '^topologyManagerPolicy:' /var/lib/kubelet/config.yaml | awk '{print $2}' || true)"
+  raw_scope="$(grep -E '^topologyManagerScope:' /var/lib/kubelet/config.yaml | awk '{print $2}' || true)"
+
+  policy="$(bb-convert-topology-manager-policy-to-api-value "${raw_policy}")"
+  scope="$(bb-convert-topology-manager-scope-to-api-value "${raw_scope}")"
+
+  if [[ -n "${raw_policy}" ]]; then
+    enabled="true"
+  else
+    enabled="false"
+  fi
+
+  if [[ -n "${raw_policy}" && -z "${policy}" ]]; then
+    bb-log-warning "Unknown topologyManagerPolicy '${raw_policy}', skipping effective topology state patch"
+    return 0
+  fi
+
+  if [[ -n "${raw_scope}" && -z "${scope}" ]]; then
+    bb-log-warning "Unknown topologyManagerScope '${raw_scope}', skipping effective topology state patch"
+    return 0
+  fi
+
+  bb-curl-kube "/apis/deckhouse.io/v1/nodetopologies/${node_name}/status?fieldManager=bashible-node-topology&force=true" \
+    -X PATCH \
+    -H "Content-Type: application/apply-patch+yaml" \
+    --data-binary @- >/dev/null <<EOF || true
+apiVersion: deckhouse.io/v1
+kind: NodeTopology
+metadata:
+  name: ${node_name}
+status:
+  effective:
+    topologyManager:
+      enabled: ${enabled}
+      policy: "${policy}"
+      scope: "${scope}"
+EOF
+}
+
+bb-patch-node-topology-effective-state

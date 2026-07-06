@@ -120,6 +120,16 @@ func makeNodeGroup(name string, topologyManager *v1.TopologyManagerSpec) *v1.Nod
 	}
 }
 
+func makeNodeTopologyState(enabled bool, policy, scope string) *v1.NodeTopologyState {
+	return &v1.NodeTopologyState{
+		TopologyManager: &v1.NodeTopologyManagerState{
+			Enabled: &enabled,
+			Policy:  policy,
+			Scope:   scope,
+		},
+	}
+}
+
 func TestReconcile_NodeNotFound_NoError(t *testing.T) {
 	r := newReconciler(t)
 
@@ -257,45 +267,92 @@ func TestReconcile_ExistingNodeTopology_UpdatesStatus(t *testing.T) {
 	assertInSyncUnknownCondition(t, updated)
 }
 
-func TestSetInSyncUnknown_PreservesLastTransitionTimeWhenConditionUnchanged(t *testing.T) {
-	transitionTime := metav1.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-
-	conditions := []metav1.Condition{
-		{
-			Type:               conditionInSync,
-			Status:             metav1.ConditionUnknown,
-			Reason:             reasonEffectiveStateNotCollected,
-			Message:            messageEffectiveStateNotCollected,
-			LastTransitionTime: transitionTime,
+func TestReconcile_ExistingEffectiveStateInSync(t *testing.T) {
+	node := makeNode("node-1", "worker")
+	nodeGroup := makeNodeGroup("worker", &v1.TopologyManagerSpec{
+		Policy: "SingleNumaNode",
+		Scope:  "Container",
+	})
+	nodeTopology := &v1.NodeTopology{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+		Status: v1.NodeTopologyStatus{
+			NodeName:  "node-1",
+			NodeGroup: "worker",
+			Effective: makeNodeTopologyState(true, "SingleNumaNode", "Container"),
 		},
 	}
+	r := newReconciler(t, node, nodeGroup, nodeTopology)
 
-	updated := setInSyncUnknown(conditions)
+	doReconcile(t, r, "node-1")
 
-	if len(updated) != 1 {
-		t.Fatalf("expected 1 condition, got %d", len(updated))
+	updated := getNodeTopology(t, r, "node-1")
+
+	assertCondition(
+		t,
+		updated.Status.Conditions,
+		metav1.ConditionTrue,
+		reasonDesiredMatchesEffective,
+		messageDesiredMatchesEffective,
+	)
+}
+
+func TestReconcile_ExistingEffectiveStateOutOfSync(t *testing.T) {
+	node := makeNode("node-1", "worker")
+	nodeGroup := makeNodeGroup("worker", &v1.TopologyManagerSpec{
+		Policy: "SingleNumaNode",
+		Scope:  "Container",
+	})
+	nodeTopology := &v1.NodeTopology{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+		Status: v1.NodeTopologyStatus{
+			NodeName:  "node-1",
+			NodeGroup: "worker",
+			Effective: makeNodeTopologyState(false, "", ""),
+		},
 	}
-	if !updated[0].LastTransitionTime.Equal(&transitionTime) {
-		t.Fatalf("expected lastTransitionTime to be preserved, got %s", updated[0].LastTransitionTime.String())
-	}
+	r := newReconciler(t, node, nodeGroup, nodeTopology)
+
+	doReconcile(t, r, "node-1")
+
+	updated := getNodeTopology(t, r, "node-1")
+
+	assertCondition(
+		t,
+		updated.Status.Conditions,
+		metav1.ConditionFalse,
+		reasonDesiredDiffersFromEffective,
+		messageDesiredDiffersFromEffective,
+	)
 }
 
 func assertInSyncUnknownCondition(t *testing.T, nodeTopology *v1.NodeTopology) {
 	t.Helper()
 
-	for _, condition := range nodeTopology.Status.Conditions {
+	assertCondition(
+		t,
+		nodeTopology.Status.Conditions,
+		metav1.ConditionUnknown,
+		reasonEffectiveStateNotCollected,
+		messageEffectiveStateNotCollected,
+	)
+}
+
+func assertCondition(t *testing.T, conditions []metav1.Condition, status metav1.ConditionStatus, reason, message string) {
+	t.Helper()
+
+	for _, condition := range conditions {
 		if condition.Type != conditionInSync {
 			continue
 		}
 
-		if condition.Status != metav1.ConditionUnknown {
-			t.Fatalf("expected InSync status Unknown, got %q", condition.Status)
+		if condition.Status != status {
+			t.Fatalf("expected InSync status %q, got %q", status, condition.Status)
 		}
-		if condition.Reason != reasonEffectiveStateNotCollected {
-			t.Fatalf("expected InSync reason %q, got %q", reasonEffectiveStateNotCollected, condition.Reason)
+		if condition.Reason != reason {
+			t.Fatalf("expected InSync reason %q, got %q", reason, condition.Reason)
 		}
-		if condition.Message != messageEffectiveStateNotCollected {
-			t.Fatalf("expected InSync message %q, got %q", messageEffectiveStateNotCollected, condition.Message)
+		if condition.Message != message {
+			t.Fatalf("expected InSync message %q, got %q", message, condition.Message)
 		}
 		if condition.LastTransitionTime.IsZero() {
 			t.Fatal("expected InSync lastTransitionTime to be set")
@@ -339,5 +396,57 @@ func TestNodeGroupToNodes_ReturnsOnlyNodesFromNodeGroup(t *testing.T) {
 	}
 	if got["node-4"] {
 		t.Fatal("did not expect request for node-4")
+	}
+}
+
+func TestSetInSyncCondition_EffectiveStateNotCollected(t *testing.T) {
+	desired := makeNodeTopologyState(true, "SingleNumaNode", "Container")
+
+	updated := setInSyncCondition(desired, nil, nil)
+
+	assertCondition(t, updated, metav1.ConditionUnknown, reasonEffectiveStateNotCollected, messageEffectiveStateNotCollected)
+}
+
+func TestSetInSyncCondition_DesiredMatchesEffective(t *testing.T) {
+	desired := makeNodeTopologyState(true, "SingleNumaNode", "Container")
+	effective := makeNodeTopologyState(true, "SingleNumaNode", "Container")
+
+	updated := setInSyncCondition(desired, effective, nil)
+
+	assertCondition(t, updated, metav1.ConditionTrue, reasonDesiredMatchesEffective, messageDesiredMatchesEffective)
+}
+
+func TestSetInSyncCondition_DesiredDiffersFromEffective(t *testing.T) {
+	desired := makeNodeTopologyState(true, "SingleNumaNode", "Container")
+	effective := makeNodeTopologyState(false, "", "")
+
+	updated := setInSyncCondition(desired, effective, nil)
+
+	assertCondition(t, updated, metav1.ConditionFalse, reasonDesiredDiffersFromEffective, messageDesiredDiffersFromEffective)
+}
+
+func TestSetInSyncCondition_PreservesLastTransitionTimeWhenConditionUnchanged(t *testing.T) {
+	transitionTime := metav1.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	desired := makeNodeTopologyState(true, "SingleNumaNode", "Container")
+	effective := makeNodeTopologyState(true, "SingleNumaNode", "Container")
+
+	conditions := []metav1.Condition{
+		{
+			Type:               conditionInSync,
+			Status:             metav1.ConditionTrue,
+			Reason:             reasonDesiredMatchesEffective,
+			Message:            messageDesiredMatchesEffective,
+			LastTransitionTime: transitionTime,
+		},
+	}
+
+	updated := setInSyncCondition(desired, effective, conditions)
+
+	if len(updated) != 1 {
+		t.Fatalf("expected 1 condition, got %d", len(updated))
+	}
+	if !updated[0].LastTransitionTime.Equal(&transitionTime) {
+		t.Fatalf("expected lastTransitionTime to be preserved, got %s", updated[0].LastTransitionTime.String())
 	}
 }

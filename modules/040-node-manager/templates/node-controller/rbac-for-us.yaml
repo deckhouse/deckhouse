@@ -39,7 +39,7 @@ rules:
   - get
   - update
   - patch
-  # NodeTopologies - per-node topology status
+# NodeTopologies - per-node topology status
 - apiGroups:
     - deckhouse.io
   resources:
