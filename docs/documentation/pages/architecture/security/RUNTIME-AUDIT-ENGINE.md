@@ -5,7 +5,7 @@ search: security audit, audit rules, falco, runtime-audit-engine
 description: Architecture of the runtime-audit-engine module in Deckhouse Kubernetes Platform.
 ---
 
-The [`runtime-audit-engine`](/modules/runtime-audit-engine/) module implements [security event auditing](./runtime-audit.html) in Deckhouse Kubernetes Platform (DKP) based on the [Falco](https://falco.org/) threat detection system. The module collects Linux kernel events and Kubernetes API audit events (using the `k8saudit` plugin), enriches them with Kubernetes Pod metadata, and generates security events according to configured rules. Audit rules are defined using the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
+The [`runtime-audit-engine`](/modules/runtime-audit-engine/) module implements [runtime auditing](./runtime-audit.html) in Deckhouse Kubernetes Platform (DKP) based on the [Falco](https://falco.org/) threat detection system. The module collects Linux kernel events and Kubernetes API audit events (using the `k8saudit` plugin), enriches them with Kubernetes Pod metadata, and generates security events according to configured rules. Audit rules are defined using the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
 When the module is enabled, the `control-plane-configurator` ConfigMap is created in the `d8-runtime-audit-engine` namespace with the audit webhook URL and CA. The [`control-plane-manager`](/modules/control-plane-manager/) module detects this ConfigMap and configures the control plane to send Kubernetes API audit events to the `runtime-audit-engine` module.
 
@@ -34,8 +34,8 @@ The `runtime-audit-engine` module consists of the following components:
    - **falco**: Main container that collects security events from cluster nodes and containerized applications in DKP based on the [Falco](https://falco.org/) threat detection system.
    - **falcosidekick**: Sidecar container that receives events from the `falco` component and exports audit events as Prometheus metrics.
    - **rules-loader**: Sidecar container that performs the following operations:
-      - watches [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resources and stores them in the shared `/etc/falco/rules.d/` Pod directory for processing by the `falco` component;
-      - validates the FalcoAuditRules custom resource.
+      - Watches [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resources and stores them in the shared `/etc/falco/rules.d/` Pod directory for processing by the `falco` component.
+      - Validates the FalcoAuditRules custom resource.
    - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC (Role-Based Access Control) that provides secure access to component metrics.
 
    {% alert level="warning" %}

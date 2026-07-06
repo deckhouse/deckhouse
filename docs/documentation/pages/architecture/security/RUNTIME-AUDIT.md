@@ -30,7 +30,7 @@ Each cluster node runs a Falco Pod with the following components:
   and exports them as metrics to external systems.
 - `kube-rbac-proxy`: Protects the `falcosidekick` metrics endpoint from unauthorized access.
 
-For a detailed architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/), which implements DKP security event audit, refer to [the corresponding documentation section](./runtime-audit-engine.html).
+For a detailed architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module, which implements DKP security event audit, refer to the [corresponding documentation section](./runtime-audit-engine.html).
 
 ## Audit rules
 
