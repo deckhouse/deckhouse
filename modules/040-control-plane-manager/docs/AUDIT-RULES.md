@@ -340,9 +340,6 @@ users:
   - system:serviceaccount:d8-system:terraform-auto-converger
   - system:serviceaccount:d8-system:terraform-state-exporter
   - system:serviceaccount:d8-system:webhook-handler
-  - system:serviceaccount:d8-upmeter:smoke-mini
-  - system:serviceaccount:d8-upmeter:upmeter
-  - system:serviceaccount:d8-upmeter:upmeter-agent
   - system:serviceaccount:d8-user-authn:basic-auth-proxy
   - system:serviceaccount:d8-user-authn:dex
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
@@ -427,7 +424,6 @@ namespaces:
   - d8-openvpn
   - d8-service-with-healthchecks
   - d8-system
-  - d8-upmeter
   - d8-user-authn
   - d8-user-authz
   - kube-system
@@ -820,9 +816,6 @@ rules:
       - system:serviceaccount:d8-system:terraform-auto-converger
       - system:serviceaccount:d8-system:terraform-state-exporter
       - system:serviceaccount:d8-system:webhook-handler
-      - system:serviceaccount:d8-upmeter:smoke-mini
-      - system:serviceaccount:d8-upmeter:upmeter
-      - system:serviceaccount:d8-upmeter:upmeter-agent
       - system:serviceaccount:d8-user-authn:basic-auth-proxy
       - system:serviceaccount:d8-user-authn:dex
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
@@ -899,7 +892,6 @@ rules:
       - d8-openvpn
       - d8-service-with-healthchecks
       - d8-system
-      - d8-upmeter
       - d8-user-authn
       - d8-user-authz
       - kube-system
