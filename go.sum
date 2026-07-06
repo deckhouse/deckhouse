@@ -159,10 +159,10 @@ github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7 h1:vi6Wxo7djSckxxcK1oWiZfx7hfRqAbowR6rM0rozO/s=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
-github.com/deckhouse/lib-connection v0.11.1-0.20260703071959-3dd961a10d05 h1:RxyN7YH/SXJeZB5wXBLIOfQ7YcpiUSN/FQxvLsB18H4=
-github.com/deckhouse/lib-connection v0.11.1-0.20260703071959-3dd961a10d05/go.mod h1:0HmHc/+d36sqFCszcNfIl1TdjOaBly0c32FCJBTxRf4=
-github.com/deckhouse/lib-dhctl v0.19.1-0.20260703052224-0e12fb294938 h1:gbAXLTCsDCaI6qaMSYFNdwKTk5s3wQF1h8wJ9wUaCU4=
-github.com/deckhouse/lib-dhctl v0.19.1-0.20260703052224-0e12fb294938/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
+github.com/deckhouse/lib-connection v0.12.0 h1:bUOQOPtqDcT0rINgMzVHxh4AASkaZVv/dDoImzqZ0ow=
+github.com/deckhouse/lib-connection v0.12.0/go.mod h1:6fNsoXGoxiuSZRMhB1m2NWs1Q70tlmJNdm0MHmjBips=
+github.com/deckhouse/lib-dhctl v0.20.0 h1:ahubdw6pdgg/9GGKCgU68d+6VSv04ZEhzt6+xQIDO48=
+github.com/deckhouse/lib-dhctl v0.20.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
 github.com/deckhouse/lib-gossh v0.3.0/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.11.1 h1:dMhL08TbKNhtBdI+1eVVk7iR2OnRp4mSoeyEMg6uVtQ=
