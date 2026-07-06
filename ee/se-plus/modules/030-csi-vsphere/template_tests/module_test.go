@@ -95,7 +95,7 @@ internal:
     vmFolderPath: dev/test
 `
 
-const moduleValuesDatastoreOnly = `
+const moduleValuesDCClusterFirst = `
 host: myhost
 username: myuname
 password: myPaSsWd
@@ -106,15 +106,20 @@ region: myreg
 zones: ["zone-a"]
 internal:
   storageClasses:
-  - name: aaa-datastore
-    datastoreType: Datastore
-    datastoreURL: ds:///vmfs/volumes/aaa/
-    path: /dc/datastore/aaa
+  - name: aaa-dscluster
+    datastoreType: DatastoreCluster
+    datastoreURL: ""
+    path: /dc/datastore/aaa-dscluster
     zones: ["zone-a"]
   - name: bbb-datastore
     datastoreType: Datastore
     datastoreURL: ds:///vmfs/volumes/bbb/
     path: /dc/datastore/bbb
+    zones: ["zone-a"]
+  - name: ccc-datastore
+    datastoreType: Datastore
+    datastoreURL: ds:///vmfs/volumes/ccc/
+    path: /dc/datastore/ccc
     zones: ["zone-a"]
   compatibilityFlag: ""
   providerDiscoveryData:
@@ -290,27 +295,24 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 		})
 	})
 
-	Context("Vsphere DatastoreCluster filtered by hook: first Datastore gets default annotation", func() {
+	Context("Vsphere: DatastoreCluster at index 0 is not rendered (defense-in-depth)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("csiVsphere", moduleValuesDatastoreOnly)
+			f.ValuesSetFromYaml("csiVsphere", moduleValuesDCClusterFirst)
 			f.HelmRender()
 		})
 
-		It("first StorageClass gets default annotation, second does not", func() {
+		It("DatastoreCluster StorageClass is not created; Datastore StorageClasses are rendered", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			scAaa := f.KubernetesGlobalResource("StorageClass", "aaa-datastore")
+			scDC := f.KubernetesGlobalResource("StorageClass", "aaa-dscluster")
 			scBbb := f.KubernetesGlobalResource("StorageClass", "bbb-datastore")
+			scCcc := f.KubernetesGlobalResource("StorageClass", "ccc-datastore")
 
-			Expect(scAaa.Exists()).To(BeTrue())
+			Expect(scDC.Exists()).To(BeFalse())
 			Expect(scBbb.Exists()).To(BeTrue())
-
-			Expect(scAaa.Field("metadata.annotations").String()).To(MatchYAML(`
-storageclass.kubernetes.io/is-default-class: "true"
-`))
-			Expect(scBbb.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+			Expect(scCcc.Exists()).To(BeTrue())
 		})
 	})
 
