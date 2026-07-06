@@ -14,6 +14,7 @@ metadata:
     rbac.deckhouse.io/delegatable: "true"
     rbac.deckhouse.io/kind: role
     rbac.deckhouse.io/scope: project
+    rbac.deckhouse.io/aggregate-to-project-as: superadmin
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
