@@ -30,7 +30,7 @@ from deckhouse import hook
 from dotmap import DotMap
 
 KIND_LABEL = "rbac.deckhouse.io/kind"
-# Card 6 / ADR-1: administrators may override the DISPLAY title/description of a built-in role by
+# Administrators may override the DISPLAY title/description of a built-in role by
 # setting these annotations on it. The "d8:" prefix is otherwise reserved, so we allow an UPDATE to a
 # built-in role iff it touches ONLY annotations under this prefix (never rules/aggregation/labels).
 CUSTOM_META_PREFIX = "custom.meta.deckhouse.io/"
@@ -92,7 +92,7 @@ def _as_dict(obj) -> dict:
 def _only_custom_meta_annotation_change(old: dict, new: dict) -> bool:
     """True when old→new differ ONLY in custom.meta.deckhouse.io/* annotations: rules, aggregationRule,
     labels and every non-custom.meta annotation are byte-for-byte unchanged. This lets a platform admin
-    set a display title/description on a built-in d8: role (card 6) without being able to change its
+    set a display title/description on a built-in d8: role without being able to change its
     permissions through the same reserved-prefix bypass."""
     if (old.get("rules") or []) != (new.get("rules") or []):
         return False
@@ -124,7 +124,7 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     # The d8: name prefix is reserved; users may only create objects under d8:custom:.
     if name.startswith("d8:") and not name.startswith("d8:custom:"):
-        # Card 6 exception: allow an UPDATE of a built-in role that changes ONLY its
+        # Exception: allow an UPDATE of a built-in role that changes ONLY its
         # custom.meta.deckhouse.io/* annotations (display title/description) — no privilege change.
         if request.operation == "UPDATE" and _only_custom_meta_annotation_change(
             _as_dict(request.oldObject), obj

@@ -39,7 +39,7 @@ import (
 // TestNativeRender proves the schema-based (v1alpha2) built-in templates, rendered natively from
 // their structured fields (controller/internal/render) and run through the same post-renderer as the
 // legacy helm path, produce the objects the legacy resourcesTemplate path produced — the golden
-// testdata resources.yaml. This is the no-regression guarantee for the ADR-3 rewrite.
+// testdata resources.yaml. This is the no-regression guarantee for the native-render rewrite.
 //
 // String leaves are whitespace-normalized before comparison: the helm folded-scalar render of the
 // Falco rule condition carries template-induced blank lines that a native render does not (and should

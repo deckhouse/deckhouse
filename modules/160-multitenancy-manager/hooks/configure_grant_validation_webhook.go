@@ -43,7 +43,7 @@ const validatingWebhookConfigurationName = "cluster-objects-grants-validator"
 //
 // Auto-wrapped (managed-by-namespace) projects are EXCLUDED: they are plain orphan
 // namespaces wrapped only for accounting and must behave like ordinary namespaces
-// (allowNamespacesWithoutProjects, card-16). Enforcing the grant allow-list there
+// (allowNamespacesWithoutProjects). Enforcing the grant allow-list there
 // breaks the legacy access-level RoleBindings (d8:user-authz:*) that the user-authz
 // Helm release emits for CARs/AuthorizationRules targeting such a namespace: the
 // release then fails on this webhook and retries forever, deadlocking the user-authz

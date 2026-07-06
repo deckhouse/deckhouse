@@ -27,7 +27,7 @@ import (
 
 // isStructured reports whether a schema-based (v1alpha2) ProjectTemplate is rendered natively from its
 // structured fields (controller/internal/render). A template that still carries a Helm resourcesTemplate
-// string is rendered through the legacy helm engine path instead; both are supported per ADR-3, with
+// string is rendered through the legacy helm engine path instead; both are supported, with
 // resourcesTemplate kept as a deprecated escape hatch.
 func isStructured(t *v1alpha2.ProjectTemplate) bool {
 	//nolint:staticcheck // SA1019: reading the deprecated escape-hatch field is how we pick the render path.

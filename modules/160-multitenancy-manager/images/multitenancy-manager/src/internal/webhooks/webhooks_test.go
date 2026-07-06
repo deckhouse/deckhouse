@@ -249,7 +249,7 @@ func TestIsGranted_SystemRequestBypass(t *testing.T) {
 func TestIsGranted_ManagedByNamespaceBypass(t *testing.T) {
 	// An auto-wrapped (managed-by-namespace) project is a plain orphan namespace wrapped only for
 	// accounting; it must behave like an ordinary namespace and NOT enforce the grant allow-list
-	// (allowNamespacesWithoutProjects, card-16) — even an ungranted value from a normal user passes.
+	// (allowNamespacesWithoutProjects) — even an ungranted value from a normal user passes.
 	ns := projectNS("proj", map[string]string{"env": "prod", "multitenancy.deckhouse.io/project-managed-by-namespace": "true"})
 	v := isGranted(t, ns, lbDef(v1alpha1.AvailabilityNone), lbRef(v1alpha1.DefaultingNone), lbGrant())
 	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); !resp.Allowed {

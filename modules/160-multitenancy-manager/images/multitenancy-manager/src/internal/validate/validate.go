@@ -156,7 +156,7 @@ func ParamPath(schema *spec.Schema, path, fieldType string) error {
 
 	if fieldType != "" && len(node.Type) > 0 && !node.Type.Contains(fieldType) {
 		// "integer" satisfies a "number" field; anything else must match exactly.
-		if !(fieldType == "number" && node.Type.Contains("integer")) {
+		if fieldType != "number" || !node.Type.Contains("integer") {
 			return fmt.Errorf("references parameter '%s' of type '%s', but the field requires type '%s'",
 				path, strings.Join(node.Type, ","), fieldType)
 		}

@@ -112,7 +112,7 @@ func main() {
 		fatal(logger, err, "register template controller")
 	}
 
-	// register the schema-based template grant materializer (ADR-3): turns a v1alpha2 template's
+	// register the schema-based template grant materializer: turns a v1alpha2 template's
 	// resources/grantPolicies into managed ClusterResourceGrantPolicy objects.
 	if err = (&templategrantscontroller.Reconciler{
 		Client: runtimeManager.GetClient(),

@@ -17,8 +17,8 @@ limitations under the License.
 // Package projectnamespace reconciles ProjectNamespace objects by creating and owning an additional
 // namespace "<project>-<spec.name>" for the project. The namespace carries the project ownership
 // labels, so the project controller picks it up into Project.status.namespaces (kind Additional) and
-// the PRB/CPRB reconcilers fan their service RoleBindings into it. Template (Helm) resources are NOT
-// rendered into additional namespaces - that multi-namespace templating strategy is Card 20 (research).
+// the PRB/CPRB reconcilers fan their service RoleBindings into it. Namespaced template objects are
+// rendered into every project namespace, so the additional namespace also receives them.
 package projectnamespace
 
 import (

@@ -245,7 +245,7 @@ func (m *Manager) syncParameters(ctx context.Context, namespace *corev1.Namespac
 // finalizer (so the namespace deletion is observed and cascades to the project) and stamps the
 // project-managed-by-namespace marker label on the namespace itself. The marker lets the
 // d8-multitenancy-manager admission policy tell a namespace-managed namespace apart from a regular
-// project's main namespace: per card-16/ADR-2 the namespace is the source of truth, so the user may
+// project's main namespace: the namespace is the source of truth, so the user may
 // edit its labels/annotations and delete it (cascading the project), whereas a regular project's
 // namespace stays protected. The marker carries the multitenancy.deckhouse.io/ prefix, so it is
 // filtered out of the spec.parameters.namespace mirror and never feeds a reconcile loop.

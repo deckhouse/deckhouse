@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-# Anti-escalation guard for namespaced Role and ClusterRole objects (RBAC v2, card 17).
+# Anti-escalation guard for namespaced Role and ClusterRole objects (RBAC v2).
 #
 # A namespace administrator holds the d8:namespace-capability:kubernetes:manage_security capability,
 # which grants full CRUD on namespaced `roles`/`rolebindings` but NOT `escalate`/`bind`/`*`. Native
@@ -38,7 +38,7 @@ from dotmap import DotMap
 
 PROTECTED_GROUP = "deckhouse.io"
 # Project-management resources whose mutation confers project-level powers. projectnamespaces does
-# not have a CRD yet (card 12) and is listed here defensively for forward compatibility.
+# not have a CRD yet and is listed here defensively for forward compatibility.
 PROTECTED_RESOURCES = {
     "projects",
     "projecttemplates",

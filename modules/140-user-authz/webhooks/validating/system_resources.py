@@ -15,12 +15,12 @@
 # limitations under the License.
 
 
-# Superadmin: protect system resources placed inside user/project namespaces (RBAC v2, card 18 / ADR-1).
+# Superadmin: protect system resources placed inside user/project namespaces (RBAC v2).
 #
 # Deckhouse places system components (Dex authenticator pods, virtualization VM pods/PVCs/kvvm/kvvmi,
 # managed-service endpoints, etc.) INTO user/project namespaces. Those objects are marked with the
-# label `deckhouse.io/system-resource: "true"` (the marking convention defined by this card; adding
-# it to each module's resources is a separate cross-module effort — see the status doc). A label
+# label `deckhouse.io/system-resource: "true"` (adding it to each module's resources is a separate
+# cross-module effort). A label
 # (not an annotation) is used so the system-pods snapshot can select marked pods server-side instead
 # of watching every pod. This hook ENFORCES the marking at admission time:
 #
@@ -45,9 +45,9 @@
 # ClusterRoles (d8:namespace:superadmin / d8:project:superadmin / d8:system:superadmin), scoped to the
 # request namespace for RoleBindings; OR membership in a cluster-admin/system group. The relevant
 # bindings are kept in the `superadmin-rolebindings` / `superadmin-clusterrolebindings` snapshots.
-# Limitations are documented in the status doc (snapshot freshness; only the built-in superadmin
-# ClusterRoles are recognised — a custom role aggregating the superadmin lineage is not detected; group
-# membership is matched by name as presented in request.userInfo.groups).
+# Known limitations: snapshot freshness; only the built-in superadmin ClusterRoles are recognised — a
+# custom role aggregating the superadmin lineage is not detected; group membership is matched by name
+# as presented in request.userInfo.groups.
 #
 # Out of scope (documented as follow-ups): the GET/LIST "visibility" split (admin+ sees vendor-API
 # system resources, everyone sees shared-API ones) is a READ/authorization concern that admission

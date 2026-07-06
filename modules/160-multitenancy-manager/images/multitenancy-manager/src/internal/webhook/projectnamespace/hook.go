@@ -106,7 +106,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 
 	// spec.features is validated to be a subset of the project features. The Project resource does
 	// not model features in this codebase, so this is a no-op placeholder until project features
-	// exist (Card 12 / ADR-2); spec.features is carried through as-is.
+	// exist; spec.features is carried through as-is.
 
 	return admission.Allowed("")
 }

@@ -219,9 +219,16 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			dict := f.KubernetesGlobalResource("ClusterRole", "d8:dict")
 			Expect(dict.Exists()).To(BeTrue())
 
-			// The legacy names must be gone after the hard rename.
-			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:manager").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin").Exists()).To(BeFalse())
+			// The legacy role names are kept for one release as deprecated compatibility aliases so
+			// existing bindings to them keep working; they must carry the deprecation marker.
+			legacyManage := f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:manager")
+			Expect(legacyManage.Exists()).To(BeTrue())
+			Expect(legacyManage.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))
+			legacyUse := f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin")
+			Expect(legacyUse.Exists()).To(BeTrue())
+			Expect(legacyUse.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))
+
+			// d8:use:dict has no alias: its bindings are migrated to d8:dict by the dict-bindings hook.
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:dict").Exists()).To(BeFalse())
 		})
 

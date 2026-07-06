@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-# ClusterRoleBinding guard for RBAC v2 (card 14 / ADR-2).
+# ClusterRoleBinding guard for RBAC v2.
 #
 # A ClusterRoleBinding grants its role in EVERY namespace of the cluster. Two families of built-in
 # roles must therefore never be bound through a ClusterRoleBinding:

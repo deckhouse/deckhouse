@@ -33,7 +33,7 @@ spec:
           && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
           && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
           != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
-    # A namespace-managed project (card-16 / ADR-2) is owned by its namespace, not the other way
+    # A namespace-managed project is owned by its namespace, not the other way
     # round: the user must be able to edit that namespace's labels/annotations (they sync into
     # spec.parameters.namespace) and delete the namespace (cascading project deletion). The
     # controller stamps such namespaces with the project-managed-by-namespace marker label, so this

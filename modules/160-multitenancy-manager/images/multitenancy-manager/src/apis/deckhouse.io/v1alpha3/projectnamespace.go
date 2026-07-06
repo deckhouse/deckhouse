@@ -55,7 +55,7 @@ type ProjectNamespaceSpec struct {
 	// Features is an optional subset of the project features to enable for the namespace. The
 	// "subset of project features" validation is a no-op placeholder: the Project resource does not
 	// model features in this codebase, so the field is carried through as-is until project features
-	// exist (see Card 12 / ADR-2).
+	// exist.
 	Features []string `json:"features,omitempty"`
 }
 

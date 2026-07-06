@@ -13,7 +13,7 @@
   immutable, so we cannot rewrite their bindings for them). Aliases carry rbac.deckhouse.io/deprecated
   so the deprecation hook/alert and the console can flag them.
 
-  NOTE (intentional, not a bug): card 23 moved serviceaccounts/token:create and impersonate from admin
+  NOTE (intentional, not a bug): the role model moved serviceaccounts/token:create and impersonate from admin
   to superadmin. The d8:use:role:admin -> d8:namespace:admin alias therefore no longer grants those two
   disaster-grade primitives. This is called out in the migration alert/docs.
 

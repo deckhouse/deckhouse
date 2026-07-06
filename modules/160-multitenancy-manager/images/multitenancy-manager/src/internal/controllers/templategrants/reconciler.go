@@ -17,7 +17,7 @@ limitations under the License.
 // Package templategrants materializes the cluster-resource grant fields of a schema-based
 // ProjectTemplate (deckhouse.io/v1alpha2) into managed ClusterResourceGrantPolicy objects.
 //
-// ADR-3 contract (the behaviour the CRD promises, independent of how it is implemented):
+// Contract (the behaviour the CRD promises, independent of how it is implemented):
 //   - One managed policy PER SOURCE, never merged:
 //   - template.spec.resources      -> "template-<tmpl>-inline"
 //   - each template.spec.grantPolicies[i] (a library policy without a projectSelector)

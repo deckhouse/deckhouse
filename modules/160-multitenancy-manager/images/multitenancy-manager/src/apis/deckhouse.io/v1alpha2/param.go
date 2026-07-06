@@ -26,7 +26,7 @@ import (
 // Param is a leaf field of a schema-based ProjectTemplate that is either a literal value of type T
 // or a reference to a Project parameter: {fromParam: "name"}.
 //
-// This is the ADR-3 "union-type on leaves" parametrization. A template declares its structure with
+// This is the "union-type on leaves" parametrization. A template declares its structure with
 // typed literal values, and any individual leaf may instead defer its value to a per-project
 // parameter (declared and validated by spec.parametersSchema). The built-in templates use fromParam
 // for every overridable field so they keep exactly the per-project surface they had as v1alpha1

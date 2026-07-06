@@ -283,7 +283,7 @@ class TestClusterRolesValidation(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
 
     def test_admin_can_aggregate_disabled_role_into_custom_role(self):
-        # Card 5: a role annotated rbac.deckhouse.io/disabled-for-direct-use-in-projects must not be
+        # A role annotated rbac.deckhouse.io/disabled-for-direct-use-in-projects must not be
         # granted directly via a (Cluster)ProjectRoleBinding, but an administrator may still
         # aggregate it into their own custom role. This webhook validates only the custom-role
         # object (name/kind/rules/selectors/lineage) and never inspects the disabled annotation on
@@ -299,7 +299,7 @@ class TestClusterRolesValidation(unittest.TestCase):
         )
         tests.assert_validation_allowed(self, out, None)
 
-    # Card 6: an administrator may override a BUILT-IN role's display name by setting only the
+    # An administrator may override a BUILT-IN role's display name by setting only the
     # custom.meta.deckhouse.io/* annotations on it, despite the reserved "d8:" prefix.
     def test_admin_can_set_custom_meta_on_builtin_role(self):
         old = _cr(

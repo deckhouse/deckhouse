@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Package render builds the per-namespace objects of a schema-based ProjectTemplate
-// (deckhouse.io/v1alpha2) directly from its structured fields — the ADR-3 replacement for the
+// (deckhouse.io/v1alpha2) directly from its structured fields — the replacement for the
 // Helm resourcesTemplate string. There is no template language in the path: each structured field
 // maps to a concrete object (or a label/annotation), and a fromParam leaf is resolved against the
 // project's effective parameters (the parametersSchema defaults merged with Project.spec.parameters).

@@ -1,5 +1,5 @@
 ---
-# Schema-based ProjectTemplate (ADR-3). The built-in templates declare their per-namespace objects as
+# Schema-based ProjectTemplate. The built-in templates declare their per-namespace objects as
 # structured fields rendered natively by the controller (no Helm resourcesTemplate). Every field that
 # used to be a per-project parameter is wired to that parameter via {fromParam: <name>}, so the
 # template keeps exactly the override surface it had as v1alpha1 while gaining a typed, declarative
