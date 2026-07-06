@@ -1594,7 +1594,7 @@
     {
       "id": 50,
       "type": "timeseries",
-      "title": "Happiness vs Imbalance",
+      "title": "Avg happiness per workload",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1608,23 +1608,50 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "avg(descheduler:workload_happiness_score)",
-          "legendFormat": "avg score"
-        },
-        {
-          "refId": "B",
-          "expr": "descheduler:cluster_imbalance_score{resource=\"cpu\"} * 100",
-          "legendFormat": "imbalance cpu x100"
-        },
-        {
-          "refId": "C",
-          "expr": "descheduler:cluster_imbalance_score{resource=\"memory\"} * 100",
-          "legendFormat": "imbalance mem x100"
+          "expr": "descheduler:workload_happiness_score{namespace=~\"$namespace\"}",
+          "legendFormat": "{{namespace}}/{{workload_kind}}/{{workload_name}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Cluster imbalance",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 85
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler:cluster_imbalance_score",
+          "legendFormat": "{{resource}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0
         },
         "overrides": []
       },
@@ -1641,9 +1668,9 @@
       "title": "Events",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 85
+        "w": 24,
+        "x": 0,
+        "y": 93
       },
       "datasource": {
         "type": "prometheus",
