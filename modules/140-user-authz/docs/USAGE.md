@@ -8,7 +8,7 @@ title: "The user-authz module: usage"
 The example uses the [experimental role-based](./#experimental-role-based-model).
 {% endalert %}
 
-To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
+To grant access to a cluster administrator, use the role `d8:system:manager` in `ClusterRoleBinding`.
 
 Example of assigning rights to a cluster administrator (User `jane`):
 
@@ -23,7 +23,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -46,7 +46,7 @@ The user will be able to:
 The example uses the [experimental role-based](./#experimental-role-based-model).
 {% endalert %}
 
-To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:manager` in `ClusterRoleBinding`.
+To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:subsystem:networking:manager` in `ClusterRoleBinding`.
 
 Example of assigning rights to a network administrator (User `jane`):
 
@@ -61,7 +61,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:networking:manager
+  name: d8:subsystem:networking:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -159,7 +159,7 @@ The user will be able to:
 The example uses the [experimental role-based](./#experimental-role-based-model).
 {% endalert %}
 
-To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:use:role:admin` in `RoleBinding` in the corresponding namespace.
+To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:namespace:admin` in `RoleBinding` in the corresponding namespace.
 
 Example of assigning rights to an application developer (User `app-developer`) in namespace `myapp`:
 
@@ -175,7 +175,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:use:role:admin
+  name: d8:namespace:admin
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -294,7 +294,7 @@ Namespace restrictions from `ClusterAuthorizationRule` are enforced by the autho
 {% endalert %}
 
 {% offtopic title="Experimental role-based model" %}
-`d8:use:role:*` roles must be bound with `RoleBinding` in a **specific** namespace — use one `RoleBinding` per namespace (or automate the process). `d8:manage:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
+`d8:namespace:*` roles must be bound with `RoleBinding` in a **specific** namespace — use one `RoleBinding` per namespace (or automate the process). `d8:system:*` / `d8:subsystem:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
 {% endofftopic %}
 
 ## Creating a user
