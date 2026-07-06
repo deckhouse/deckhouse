@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly discovery_namespace="${ISTIOCTL_DISCOVERY_NAMESPACE:-d8-istio}"
+readonly discovery_service="${ISTIOCTL_DISCOVERY_SERVICE:-istiod}"
+readonly global_version_annotation="istio.deckhouse.io/global-version"
+
+normalize_version() {
+  case "${1:-}" in
+    1.21|1.21.*|v1.21|v1.21.*|v1x21*) echo "1.21" ;;
+    1.25|1.25.*|v1.25|v1.25.*|v1x25*) echo "1.25" ;;
+    1.27|1.27.*|v1.27|v1.27.*|v1x27*) echo "1.27" ;;
+    *) return 1 ;;
+  esac
+}
+
+discover_global_version() {
+  if [[ -n "${ISTIOCTL_VERSION:-}" ]]; then
+    echo "${ISTIOCTL_VERSION}"
+    return 0
+  fi
+
+  local token_file="/var/run/secrets/kubernetes.io/serviceaccount/token"
+  local ca_file="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+  if [[ -z "${KUBERNETES_SERVICE_HOST:-}" || ! -r "${token_file}" || ! -r "${ca_file}" ]]; then
+    return 1
+  fi
+
+  local api_port="${KUBERNETES_SERVICE_PORT_HTTPS:-${KUBERNETES_SERVICE_PORT:-443}}"
+  local token
+  token="$(< "${token_file}")"
+
+  curl -fsS --cacert "${ca_file}" \
+    -H "Authorization: Bearer ${token}" \
+    "https://${KUBERNETES_SERVICE_HOST}:${api_port}/api/v1/namespaces/${discovery_namespace}/services/${discovery_service}" \
+    | jq -r --arg annotation "${global_version_annotation}" '.metadata.annotations[$annotation] // empty'
+}
+
+global_version="$(discover_global_version || true)"
+if ! istioctl_minor="$(normalize_version "${global_version}")"; then
+  echo "Unable to detect supported Istio globalVersion." >&2
+  echo "Set ISTIOCTL_VERSION to one of: 1.21, 1.25, 1.27, or run a versioned binary directly." >&2
+  exit 1
+fi
+
+istioctl_binary="/usr/bin/istioctl-${istioctl_minor}"
+if [[ ! -x "${istioctl_binary}" ]]; then
+  echo "Detected Istio globalVersion ${global_version}, but ${istioctl_binary} is not available." >&2
+  exit 1
+fi
+
+exec "${istioctl_binary}" "$@"

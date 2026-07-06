@@ -27,10 +27,17 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/istioctl
+  to: /out/usr/bin/istioctl
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - pm install baselayout -d /out
   - pm install curl bash jq yq sed grep gawk procps iproute2 findutils coreutils openssl vim less ethtool pwru gnu-glibc-locale util-linux -d /out
+  - chmod 0755 /out/usr/bin/istioctl
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
@@ -45,6 +52,10 @@ import:
   includePaths:
   - etcdctl
   - etcdutl
+  before: install
+- image: istio/istioctl-v1x21x6-build-artifact
+  add: /src/istio/out/istioctl
+  to: /usr/bin/istioctl-1.21
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/bin

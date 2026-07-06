@@ -48,5 +48,3 @@ shell:
   - strip /src/istio/out/istioctl
   - chmod 0700 /src/istio/out/istioctl
   - chown 1337:1337 /src/istio/out/istioctl
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
