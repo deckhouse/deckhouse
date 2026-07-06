@@ -92,8 +92,13 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 		return ctx
 	}
 
-	if pkg.settings.Checksum() != settings.Checksum() {
+	checksumChanged := pkg.settings.Checksum() != settings.Checksum()
+	versionChanged := pkg.settingsVersion != settingsVersion
+
+	if checksumChanged {
 		pkg.settings = settings
+	}
+	if checksumChanged || versionChanged {
 		pkg.settingsVersion = settingsVersion
 	}
 
@@ -102,8 +107,9 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 
 // UpdateSettings stores new pending settings and their schema version for an
 // already-tracked package without touching its version or context tree.
-// Returns true if the settings checksum changed and the caller should Reschedule,
-// false if nothing changed or the package is not tracked yet.
+// Returns true if the settings checksum or settingsVersion changed and the
+// caller should Reschedule, false if nothing changed or the package is not
+// tracked yet.
 //
 // Unlike Update, this never creates or cancels a context: in-flight deploy and
 // load tasks are left running. It is the settings-only counterpart to Update,
@@ -115,11 +121,16 @@ func (s *Store) UpdateSettings(name string, settingsVersion int, settings addonu
 		return false
 	}
 
-	if pkg.settings.Checksum() == settings.Checksum() {
+	checksumChanged := pkg.settings.Checksum() != settings.Checksum()
+	versionChanged := pkg.settingsVersion != settingsVersion
+
+	if !checksumChanged && !versionChanged {
 		return false
 	}
 
-	pkg.settings = settings
+	if checksumChanged {
+		pkg.settings = settings
+	}
 	pkg.settingsVersion = settingsVersion
 
 	return true
