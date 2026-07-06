@@ -1696,11 +1696,6 @@
           "refId": "D",
           "expr": "count(max by (node)(kube_node_status_condition{condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1)) or vector(0)",
           "legendFormat": "nodes under pressure"
-        },
-        {
-          "refId": "E",
-          "expr": "increase(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[1m]) > 0",
-          "legendFormat": "cycle"
         }
       ],
       "fieldConfig": {
