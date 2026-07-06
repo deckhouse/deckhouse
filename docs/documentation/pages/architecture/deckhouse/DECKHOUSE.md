@@ -91,16 +91,16 @@ The module consists of the following components:
 
     The component watches [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) and [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) custom resources and, based on them, generates hook Python files for [shell-operator](https://github.com/flant/shell-operator) from templates. When `kube-apiserver` sends resource validation or conversion requests, shell-operator runs the required hook and returns the processing result.
 
-1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the CNI migration process and records the current state in the CNIMigration custom resource. Migration to `flannel`, `cni-simple-bridge`, and `cilium` is supported. For details, refer to the [CNI switching guide](/products/kubernetes-platform/guides/cni-migration.html).
+1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the network plugin (CNI) switching process in the DKP cluster and records the current state in the CNIMigration custom resource. Migration to Flannel, Simple bridge, and Cilium is supported. For details on switching CNI in the cluster, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
 
     {% alert level="info" %}
-    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command. For details, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
+    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command.
     {% endalert %}
 
 1. **Cni-migration-agent** (DaemonSet): An optional component running on all cluster nodes, consisting of a single **agent** container. The component watches the CNIMigration custom resource and manages the CNINodeMigration custom resource that reflects migration state for a specific node.
 
     {% alert level="info" %}
-    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command. For details, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
+    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command.
     {% endalert %}
 
 ## Module interactions
@@ -109,7 +109,7 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
    - Working with custom resources in the `deckhouse.io` API group.
-   - Watching Pods and DaemonSets.
+   - Watching Pod and DaemonSet resources during network plugin switching.
    - Watching resources described in the ObjectKeeper custom resource.
    - Creating and updating Lease resources.
    - Creating, deleting, modifying, and watching resources described in DKP modules.
@@ -117,7 +117,9 @@ The module interacts with the following components:
 
 1. [**Documentation**](/modules/documentation/): Updating documentation when a DKP module is added or updated.
 
-1. **Image registry**: Retrieving modules along with metadata.
+1. **Image registry**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in Unmanaged mode.
+
+1. **`registry` module**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in one of the Direct, Proxy, or Local modes.
 
 The module is interacted with by the following external components:
 

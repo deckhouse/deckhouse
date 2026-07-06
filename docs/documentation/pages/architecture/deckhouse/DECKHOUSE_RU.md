@@ -92,16 +92,16 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 
     Компонент следит за кастомными ресурсами [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) и [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) и на их основе создаёт из шаблона Python-файлы хуков для [shell-operator](https://github.com/flant/shell-operator). При получении запросов от `kube-apiserver` на валидацию или конверсию ресурсов shell-operator запускает необходимый хук и возвращает результат обработки.
 
-1. **Cni-migration-manager** (Deployment) — опциональный компонент, запускающийся на control-plane узлах и состоящий из одного контейнера **manager**. Компонент управляет процессом миграции CNI и фиксирует текущее состояние в кастомном ресурсе CNIMigration. Поддерживается миграция на `flannel`, `cni-simple-bridge`, `cilium`. Подробнее можно ознакомиться [в руководстве переключения CNI в кластере](/products/kubernetes-platform/guides/cni-migration.html).
+1. **Cni-migration-manager** (Deployment) — опциональный компонент, запускающийся на control-plane узлах и состоящий из одного контейнера **manager**. Компонент управляет процессом смены сетевого плагина (CNI) в кластере DKP и фиксирует текущее состояние в кастомном ресурсе CNIMigration. Поддерживается миграция на плагины Flannel, Simple bridge, Cilium. Подробнее с переключением CNI в кластере можно ознакомиться [в соответствующем руководстве](/products/kubernetes-platform/guides/cni-migration.html).
 
     {% alert level="info" %}
-    Компонент создаётся глобальным хуком `detect-cni-migration` при наличии кастомного ресурса CNIMigration. Ресурс CNIMigration создаётся администратором в ручную или при использовании команды `d8 network cni-migration switch --to-cni <target cni>`. Подробнее можно ознакомиться [в соответствующем руководстве](/products/kubernetes-platform/guides/cni-migration.html).
+    Компонент создаётся глобальным хуком `detect-cni-migration` при наличии кастомного ресурса CNIMigration. Ресурс CNIMigration создаётся администратором вручную или при использовании команды `d8 network cni-migration switch --to-cni <target cni>`.
     {% endalert %}
 
 1. **Cni-migration-agent** (DaemonSet) — опциональный компонент, запускающийся на всех узлах кластера и состоящий из одного контейнера **agent**. Компонент следит за кастомным ресурсом CNIMigration и управляет кастомным ресурсом CNINodeMigration, отражающим текущее состояние миграции на конкретном узле.
 
     {% alert level="info" %}
-    Компонент создаётся глобальным хуком `detect-cni-migration` при наличии кастомного ресурса CNIMigration. Ресурс CNIMigration создаётся администратором в ручную или при использовании команды `d8 network cni-migration switch --to-cni <target cni>`. Подробнее можно ознакомиться [в соответствующем руководстве](/products/kubernetes-platform/guides/cni-migration.html).
+    Компонент создаётся глобальным хуком `detect-cni-migration` при наличии кастомного ресурса CNIMigration. Ресурс CNIMigration создаётся администратором вручную или при использовании команды `d8 network cni-migration switch --to-cni <target cni>`.
     {% endalert %}
 
 ## Взаимодействия модуля
@@ -110,7 +110,7 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 
 1. **Kube-apiserver**:
    - работа с кастомными ресурсами API-группы `deckhouse.io`;
-   - отслеживание Pod и DaemonSet;
+   - отслеживание ресурсов Pod и DaemonSet при смене сетевого плагина;
    - отслеживание ресурсов, описанных в кастомном ресурсе ObjectKeeper;
    - создание и обновление ресурса Lease;
    - создание, удаление, изменение и отслеживание ресурсов, описанных в модулях DKP;
@@ -118,7 +118,9 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 
 1. [**Documentation**](/modules/documentation/) — обновление документации при добавлении или обновлении модуля DKP.
 
-1. **Хранилище образов** — получение модулей вместе с метаданными.
+1. **Хранилище образов** — получение образов компонент модулей вместе с метаданными, в случае если модуль [`registry`](/modules/registry/) установлен в режиме Unmanaged.
+
+1. **Модуль `registry`** — получение образов компонент модулей вместе с метаданными, в случае если модуль [`registry`](/modules/registry/) установлен в одном из режимов Direct, Proxy или Local.
 
 С модулем взаимодействуют следующие внешние компоненты:
 

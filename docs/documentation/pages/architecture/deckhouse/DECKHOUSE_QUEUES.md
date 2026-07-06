@@ -1,5 +1,5 @@
 ---
-title: Deckhouse queues
+title: Queuing mechanism
 permalink: en/architecture/deckhouse/queues.html
 search: deckhouse, deckhouse-controller, modules, queue
 description: Description of queue processing in the Deckhouse controller in Deckhouse Kubernetes Platform.
@@ -77,7 +77,7 @@ Based on these attributes, the Deckhouse controller scheduler defines processing
 - For non-critical modules, module weight is not considered and tasks are put into `parallel_queue_0..19`.
 - For all modules, dependencies on other modules are considered.
 
-If critical modules can be processed in parallel, the Deckhouse controller scheduler places the `ParallelModuleRun` task into the `main` queue with the list of modules. The `ParallelModuleRun` task starts a `ModuleRun` task for each module in `parallel_queue_0..19` and waits for completion, thereby blocking the `main` queue. If an error occurs while processing a `ModuleRun` task, the scheduler moves this task to the end of the queue and starts the next queue task.
+If critical modules can be processed in parallel, the Deckhouse controller scheduler places the ParallelModuleRun task into the `main` queue with the list of modules. The ParallelModuleRun task starts a ModuleRun task for each module in `parallel_queue_0..19` and waits for completion, thereby blocking the `main` queue. If an error occurs while processing a ModuleRun task, the scheduler moves this task to the end of the queue and starts the next queue task.
 
 The process of installing critical modules is shown in the following diagram:
 
