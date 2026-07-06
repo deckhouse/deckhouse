@@ -1388,24 +1388,6 @@
       },
       "oss": []
     },
-    "monitoring-deckhouse": {
-      "name": "monitoring-deckhouse",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-monitoring",
-      "descriptions": {
-        "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
-        "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
-      },
-      "requirements": {
-        "modules": {
-          "prometheus": ">= 0.0.0"
-        }
-      },
-      "oss": []
-    },
     "monitoring-kubernetes": {
       "name": "monitoring-kubernetes",
       "stage": "General Availability",
@@ -1519,7 +1501,7 @@
     },
     "node-local-dns": {
       "name": "node-local-dns",
-      "stage": "General Availability",
+      "stage": "Experimental",
       "subsystems": [
         "networking"
       ],
@@ -1565,7 +1547,7 @@
           "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0",
           "id": "cluster-api",
-          "version": "1.11.3"
+          "version": "1.12.9"
         },
         {
           "name": "Cluster Autoscaler",
@@ -1629,93 +1611,11 @@
         }
       ]
     },
-    "operator-prometheus": {
-      "name": "operator-prometheus",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-operator-prometheus",
-      "descriptions": {
-        "en": "Manages the lifecycle of the monitoring system in the cluster.",
-        "ru": "Управляет жизненным циклом системы мониторинга в кластере."
-      },
-      "oss": [
-        {
-          "name": "Prometheus Operator",
-          "link": "https://github.com/prometheus-operator/prometheus-operator",
-          "description": "Kubernetes native deployment and management of Prometheus and related monitoring components.",
-          "logo": "https://avatars.githubusercontent.com/u/66682517?s=200&v=4",
-          "license": "Apache License 2.0"
-        }
-      ]
-    },
-    "prometheus": {
-      "name": "prometheus",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-monitoring",
-      "descriptions": {
-        "en": "Provides ready-made alerts, dashboards, and the ability to customize monitoring system components, including data storage and visualization.",
-        "ru": "Предоставляет готовые алерты и дашборды, а также возможность настройки компонентов системы мониторинга, включая хранение и визуализацию данных."
-      },
-      "requirements": {
-        "modules": {
-          "operator-prometheus": ">= 0.0.0"
-        }
-      },
-      "oss": [
-        {
-          "name": "Prometheus",
-          "link": "https://github.com/prometheus/prometheus",
-          "description": "A systems and service monitoring system.",
-          "logo": "/images/logos/prometheus-icon-color.svg",
-          "license": "Apache License 2.0"
-        },
-        {
-          "name": "Grafana",
-          "link": "https://github.com/grafana/grafana",
-          "description": "An open-source platform for monitoring and observability.",
-          "logo": "https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg",
-          "license": "GNU Affero General Public License v3.0"
-        },
-        {
-          "name": "Trickster",
-          "link": "https://github.com/trickstercache/trickster",
-          "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-          "logo": "https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg",
-          "license": "Apache License 2.0"
-        },
-        {
-          "name": "Mimir",
-          "link": "https://github.com/grafana/mimir",
-          "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-          "logo": "https://grafana.com/static/img/logos/logo-mimir.svg",
-          "license": "AGPL-3.0 license"
-        },
-        {
-          "name": "Promxy",
-          "link": "https://github.com/jacksontj/promxy",
-          "logo": "/images/logos/prometheus-icon-color.svg",
-          "description": "Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).",
-          "license": "MIT License"
-        },
-        {
-          "name": "Memcached",
-          "link": "https://github.com/memcached/memcached",
-          "logo": "/images/logos/memcached-icon.svg",
-          "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
-          "license": "BSD-3-Clause license"
-        }
-      ]
-    },
     "registry": {
       "name": "registry",
       "critical": true,
       "weight": 38,
-      "stage": "Preview",
+      "stage": "Experimental",
       "subsystems": [
         "infrastructure"
       ],
@@ -1965,7 +1865,7 @@
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
       "versions": [
-        "1.11.3"
+        "1.12.9"
       ],
       "modules": [
         "node-manager"
@@ -2143,16 +2043,6 @@
         "cni-cilium"
       ]
     },
-    "Grafana": {
-      "link": "https://github.com/grafana/grafana",
-      "description": "An open-source platform for monitoring and observability.",
-      "logo": "https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg",
-      "license": "GNU Affero General Public License v3.0",
-      "versions": [],
-      "modules": [
-        "prometheus"
-      ]
-    },
     "Huawei Cloud provider": {
       "link": "https://github.com/kubernetes-sigs/cloud-provider-huaweicloud",
       "description": "Cloud Controller Manager for Huawei Cloud.",
@@ -2319,16 +2209,6 @@
         "local-path-provisioner"
       ]
     },
-    "Memcached": {
-      "link": "https://github.com/memcached/memcached",
-      "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
-      "logo": "/images/logos/memcached-icon.svg",
-      "license": "BSD-3-Clause license",
-      "versions": [],
-      "modules": [
-        "prometheus"
-      ]
-    },
     "MetalLB": {
       "link": "https://github.com/metallb/metallb",
       "description": "A load-balancer implementation for bare metal Kubernetes clusters, using standard routing protocols.",
@@ -2371,16 +2251,6 @@
       ],
       "modules": [
         "cloud-provider-azure"
-      ]
-    },
-    "Mimir": {
-      "link": "https://github.com/grafana/mimir",
-      "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-      "logo": "https://grafana.com/static/img/logos/logo-mimir.svg",
-      "license": "AGPL-3.0 license",
-      "versions": [],
-      "modules": [
-        "prometheus"
       ]
     },
     "Node exporter": {
@@ -2461,36 +2331,6 @@
         "openvpn"
       ]
     },
-    "Prometheus": {
-      "link": "https://github.com/prometheus/prometheus",
-      "description": "A systems and service monitoring system.",
-      "logo": "/images/logos/prometheus-icon-color.svg",
-      "license": "Apache License 2.0",
-      "versions": [],
-      "modules": [
-        "prometheus"
-      ]
-    },
-    "Prometheus Operator": {
-      "link": "https://github.com/prometheus-operator/prometheus-operator",
-      "description": "Kubernetes native deployment and management of Prometheus and related monitoring components.",
-      "logo": "https://avatars.githubusercontent.com/u/66682517?s=200&v=4",
-      "license": "Apache License 2.0",
-      "versions": [],
-      "modules": [
-        "operator-prometheus"
-      ]
-    },
-    "Promxy": {
-      "link": "https://github.com/jacksontj/promxy",
-      "description": "Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).",
-      "logo": "/images/logos/prometheus-icon-color.svg",
-      "license": "MIT License",
-      "versions": [],
-      "modules": [
-        "prometheus"
-      ]
-    },
     "Shell operator": {
       "link": "https://github.com/flant/shell-operator",
       "description": "A tool for running event-driven scripts in a Kubernetes cluster",
@@ -2511,16 +2351,6 @@
       "versions": [],
       "modules": [
         "terraform-manager"
-      ]
-    },
-    "Trickster": {
-      "link": "https://github.com/trickstercache/trickster",
-      "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-      "logo": "https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg",
-      "license": "Apache License 2.0",
-      "versions": [],
-      "modules": [
-        "prometheus"
       ]
     },
     "VMware Cloud Director Cloud provider": {

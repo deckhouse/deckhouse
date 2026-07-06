@@ -1,7 +1,7 @@
 name: registry
 critical: true
 weight: 38
-stage: Preview
+stage: Experimental
 subsystems:
   - infrastructure
 namespace: d8-system
