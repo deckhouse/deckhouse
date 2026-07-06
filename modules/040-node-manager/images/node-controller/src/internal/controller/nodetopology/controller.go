@@ -20,13 +20,16 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -60,6 +63,12 @@ func (r *Controller) SetupWatches(w register.Watcher) {
 		&v1.NodeGroup{},
 		handler.EnqueueRequestsFromMapFunc(r.nodeGroupToNodes),
 		builder.WithPredicates(),
+	)
+
+	w.Watches(
+		&v1.NodeTopology{},
+		handler.EnqueueRequestsFromMapFunc(r.nodeTopologyToNode),
+		builder.WithPredicates(effectiveChangedPredicate()),
 	)
 }
 
@@ -258,4 +267,42 @@ func setCondition(conditions []metav1.Condition, condition metav1.Condition) []m
 	}
 
 	return append(conditions, condition)
+}
+
+func (r *Controller) nodeTopologyToNode(_ context.Context, obj client.Object) []reconcile.Request {
+	return []reconcile.Request{
+		{
+			NamespacedName: client.ObjectKey{Name: obj.GetName()},
+		},
+	}
+}
+
+func effectiveChangedPredicate() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool {
+			return false
+		},
+		DeleteFunc: func(event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldNodeTopology, ok := e.ObjectOld.(*v1.NodeTopology)
+			if !ok {
+				return false
+			}
+
+			newNodeTopology, ok := e.ObjectNew.(*v1.NodeTopology)
+			if !ok {
+				return false
+			}
+
+			return !equality.Semantic.DeepEqual(
+				oldNodeTopology.Status.Effective,
+				newNodeTopology.Status.Effective,
+			)
+		},
+	}
 }

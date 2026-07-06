@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -325,45 +326,6 @@ func TestReconcile_ExistingEffectiveStateOutOfSync(t *testing.T) {
 	)
 }
 
-func assertInSyncUnknownCondition(t *testing.T, nodeTopology *v1.NodeTopology) {
-	t.Helper()
-
-	assertCondition(
-		t,
-		nodeTopology.Status.Conditions,
-		metav1.ConditionUnknown,
-		reasonEffectiveStateNotCollected,
-		messageEffectiveStateNotCollected,
-	)
-}
-
-func assertCondition(t *testing.T, conditions []metav1.Condition, status metav1.ConditionStatus, reason, message string) {
-	t.Helper()
-
-	for _, condition := range conditions {
-		if condition.Type != conditionInSync {
-			continue
-		}
-
-		if condition.Status != status {
-			t.Fatalf("expected InSync status %q, got %q", status, condition.Status)
-		}
-		if condition.Reason != reason {
-			t.Fatalf("expected InSync reason %q, got %q", reason, condition.Reason)
-		}
-		if condition.Message != message {
-			t.Fatalf("expected InSync message %q, got %q", message, condition.Message)
-		}
-		if condition.LastTransitionTime.IsZero() {
-			t.Fatal("expected InSync lastTransitionTime to be set")
-		}
-
-		return
-	}
-
-	t.Fatal("expected InSync condition")
-}
-
 func TestNodeGroupToNodes_ReturnsOnlyNodesFromNodeGroup(t *testing.T) {
 	node1 := makeNode("node-1", "worker")
 	node2 := makeNode("node-2", "worker")
@@ -396,6 +358,95 @@ func TestNodeGroupToNodes_ReturnsOnlyNodesFromNodeGroup(t *testing.T) {
 	}
 	if got["node-4"] {
 		t.Fatal("did not expect request for node-4")
+	}
+}
+
+func TestNodeTopologyToNode_ReturnsNodeRequest(t *testing.T) {
+	nodeTopology := &v1.NodeTopology{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+	}
+
+	r := newReconciler(t)
+
+	requests := r.nodeTopologyToNode(context.Background(), nodeTopology)
+
+	if len(requests) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests))
+	}
+	if requests[0].Name != "node-1" {
+		t.Fatalf("expected request for node-1, got %q", requests[0].Name)
+	}
+}
+
+func TestEffectiveChangedPredicate_UpdateEffectiveChanged_ReturnsTrue(t *testing.T) {
+	oldNodeTopology := &v1.NodeTopology{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+		Status: v1.NodeTopologyStatus{
+			Effective: nil,
+		},
+	}
+
+	newNodeTopology := &v1.NodeTopology{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+		Status: v1.NodeTopologyStatus{
+			Effective: makeNodeTopologyState(false, "", ""),
+		},
+	}
+
+	p := effectiveChangedPredicate()
+
+	if !p.Update(event.UpdateEvent{
+		ObjectOld: oldNodeTopology,
+		ObjectNew: newNodeTopology,
+	}) {
+		t.Fatal("expected predicate to return true when effective state changed")
+	}
+}
+
+func TestEffectiveChangedPredicate_UpdateOnlyConditionsChanged_ReturnsFalse(t *testing.T) {
+	effective := makeNodeTopologyState(false, "", "")
+
+	oldNodeTopology := &v1.NodeTopology{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+		Status: v1.NodeTopologyStatus{
+			Effective: effective,
+			Conditions: []metav1.Condition{
+				{
+					Type:   conditionInSync,
+					Status: metav1.ConditionUnknown,
+					Reason: reasonEffectiveStateNotCollected,
+				},
+			},
+		},
+	}
+
+	newNodeTopology := oldNodeTopology.DeepCopy()
+	newNodeTopology.Status.Conditions = []metav1.Condition{
+		{
+			Type:   conditionInSync,
+			Status: metav1.ConditionTrue,
+			Reason: reasonDesiredMatchesEffective,
+		},
+	}
+
+	p := effectiveChangedPredicate()
+
+	if p.Update(event.UpdateEvent{
+		ObjectOld: oldNodeTopology,
+		ObjectNew: newNodeTopology,
+	}) {
+		t.Fatal("expected predicate to return false when only conditions changed")
+	}
+}
+
+func TestEffectiveChangedPredicate_UpdateNonNodeTopology_ReturnsFalse(t *testing.T) {
+	p := effectiveChangedPredicate()
+
+	if p.Update(event.UpdateEvent{
+		ObjectOld: makeNode("node-1", "worker"),
+		ObjectNew: makeNode("node-1", "worker"),
+	}) {
+		t.Fatal("expected predicate to return false for non-NodeTopology objects")
 	}
 }
 
@@ -449,4 +500,43 @@ func TestSetInSyncCondition_PreservesLastTransitionTimeWhenConditionUnchanged(t 
 	if !updated[0].LastTransitionTime.Equal(&transitionTime) {
 		t.Fatalf("expected lastTransitionTime to be preserved, got %s", updated[0].LastTransitionTime.String())
 	}
+}
+
+func assertInSyncUnknownCondition(t *testing.T, nodeTopology *v1.NodeTopology) {
+	t.Helper()
+
+	assertCondition(
+		t,
+		nodeTopology.Status.Conditions,
+		metav1.ConditionUnknown,
+		reasonEffectiveStateNotCollected,
+		messageEffectiveStateNotCollected,
+	)
+}
+
+func assertCondition(t *testing.T, conditions []metav1.Condition, status metav1.ConditionStatus, reason, message string) {
+	t.Helper()
+
+	for _, condition := range conditions {
+		if condition.Type != conditionInSync {
+			continue
+		}
+
+		if condition.Status != status {
+			t.Fatalf("expected InSync status %q, got %q", status, condition.Status)
+		}
+		if condition.Reason != reason {
+			t.Fatalf("expected InSync reason %q, got %q", reason, condition.Reason)
+		}
+		if condition.Message != message {
+			t.Fatalf("expected InSync message %q, got %q", message, condition.Message)
+		}
+		if condition.LastTransitionTime.IsZero() {
+			t.Fatal("expected InSync lastTransitionTime to be set")
+		}
+
+		return
+	}
+
+	t.Fatal("expected InSync condition")
 }

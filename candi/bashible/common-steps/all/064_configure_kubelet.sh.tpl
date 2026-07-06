@@ -513,10 +513,16 @@ function bb-patch-node-topology-effective-state() {
     return 0
   fi
 
-  bb-curl-kube "/apis/deckhouse.io/v1/nodetopologies/${node_name}/status?fieldManager=bashible-node-topology&force=true" \
-    -X PATCH \
-    -H "Content-Type: application/apply-patch+yaml" \
-    --data-binary @- >/dev/null <<EOF || true
+  if [[ "${enabled}" == "true" && -z "${scope}" ]]; then
+     bb-log-warning "topologyManagerScope is empty, skipping effective topology state patch"
+     return 0
+  fi
+
+  if [[ "${enabled}" == "true" ]]; then
+    bb-curl-kube "/apis/deckhouse.io/v1/nodetopologies/${node_name}/status?fieldManager=bashible-node-topology&force=true" \
+      -X PATCH \
+      -H "Content-Type: application/apply-patch+yaml" \
+      --data-binary @- >/dev/null <<EOF || true
 apiVersion: deckhouse.io/v1
 kind: NodeTopology
 metadata:
@@ -524,10 +530,25 @@ metadata:
 status:
   effective:
     topologyManager:
-      enabled: ${enabled}
+      enabled: true
       policy: "${policy}"
       scope: "${scope}"
 EOF
+  else
+    bb-curl-kube "/apis/deckhouse.io/v1/nodetopologies/${node_name}/status?fieldManager=bashible-node-topology&force=true" \
+      -X PATCH \
+      -H "Content-Type: application/apply-patch+yaml" \
+      --data-binary @- >/dev/null <<EOF || true
+apiVersion: deckhouse.io/v1
+kind: NodeTopology
+metadata:
+  name: ${node_name}
+status:
+  effective:
+    topologyManager:
+      enabled: false
+EOF
+  fi
 }
 
 bb-patch-node-topology-effective-state
