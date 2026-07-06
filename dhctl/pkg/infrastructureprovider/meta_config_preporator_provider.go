@@ -19,9 +19,8 @@ import (
 	"fmt"
 	"os"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
@@ -50,9 +49,7 @@ func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
 }
 
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
-	return func(ctx context.Context, provider, downloadRootDir string) config.MetaConfigPreparator {
-		return selectPreparator(ctx, provider, downloadRootDir)
-	}
+	return selectPreparator
 }
 
 func selectPreparator(ctx context.Context, provider, downloadRootDir string) config.MetaConfigPreparator {

@@ -60,7 +60,7 @@ type Context struct {
 
 	providerGetter infrastructure.CloudProviderGetter
 
-	opts   *options.GlobalOptions
+	opts *options.GlobalOptions
 
 	// metaConfig is memoised per converge run: repeat pipeline steps must not
 	// re-fetch cluster resources and re-run the external provider validator.

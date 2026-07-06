@@ -21,9 +21,8 @@ import (
 	"fmt"
 	"regexp"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )

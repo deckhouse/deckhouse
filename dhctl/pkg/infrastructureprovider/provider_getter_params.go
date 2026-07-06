@@ -135,10 +135,6 @@ func (p *CloudProviderGetterParams) getTmpDir(ctx context.Context) (string, erro
 	return preparedTmpDir, nil
 }
 
-func (p *CloudProviderGetterParams) isDebug() bool {
-	return p.IsDebug
-}
-
 func (p *CloudProviderGetterParams) getAdditionalParams() cloud.ProviderAdditionalParams {
 	return p.AdditionalParams
 }
