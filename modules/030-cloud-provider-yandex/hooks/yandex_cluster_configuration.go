@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -37,6 +38,6 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
-}, cluster_configuration.NewConfig(func(_, _ string) config.MetaConfigPreparator {
-	return yandex.NewMetaConfigPreparator(false, nil)
+}, cluster_configuration.NewConfig(func(_ context.Context, _, _ string) config.MetaConfigPreparator {
+	return yandex.NewMetaConfigPreparator(false)
 }))
