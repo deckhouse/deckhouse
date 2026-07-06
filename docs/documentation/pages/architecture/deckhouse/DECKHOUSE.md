@@ -109,7 +109,7 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
    - Working with custom resources in the `deckhouse.io` API group.
-   - Watching Pod and DaemonSet resources during network plugin switching.
+   - Watching Pod and DaemonSet resources, as well as restarting Pods when the network plugin is changed.
    - Watching resources described in the ObjectKeeper custom resource.
    - Creating and updating Lease resources.
    - Creating, deleting, modifying, and watching resources described in DKP modules.
