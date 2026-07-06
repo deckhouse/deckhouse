@@ -19,6 +19,7 @@ package validation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -613,5 +614,5 @@ func rejectResult(msg string) (*kwhvalidating.ValidatorResult, error) {
 	return &kwhvalidating.ValidatorResult{
 		Valid:   false,
 		Message: msg,
-	}, nil
+	}, errors.New(msg)
 }
