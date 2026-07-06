@@ -52,7 +52,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	nodes, readyNodeNames := r.getReadyNodes(nodeList)
+	nodes, nodeNames := r.getReadyNodes(nodeList)
 	if nodes.IsZero() {
 		log.FromContext(ctx).V(1).Info("no ready virtual control plane nodes found")
 		return reconcile.Result{}, nil
@@ -67,7 +67,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	operations.Items = filterOperationsTargetingReadyNodes(operations.Items, readyNodeNames)
+	operations.Items = filterOperationsTargetingReadyNodes(operations.Items, nodeNames)
 	if len(operations.Items) == 0 {
 		return reconcile.Result{}, nil
 	}

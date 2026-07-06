@@ -25,13 +25,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	operationsapprover "control-plane-manager/internal/controllers/operations-approver"
 )
 
 const (
@@ -56,38 +55,10 @@ func BuildController(mgr manager.Manager) error {
 				},
 			),
 		}).
-		Named(constants.VirtualControlPlaneApproverController).
+		Named(constants.VirtualControlPlaneApproverControllerName).
 		For(
 			&controlplanev1alpha1.ControlPlaneOperation{},
-			builder.WithPredicates(getPredicates()),
+			builder.WithPredicates(operationsapprover.OperationPredicate()),
 		).
 		Complete(r)
-}
-
-func getPredicates() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(event.CreateEvent) bool {
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldOperation, okOld := e.ObjectOld.(*controlplanev1alpha1.ControlPlaneOperation)
-			newOperation, okNew := e.ObjectNew.(*controlplanev1alpha1.ControlPlaneOperation)
-
-			if !okOld || !okNew {
-				return false
-			}
-
-			if !oldOperation.IsTerminal() && newOperation.IsTerminal() {
-				return true
-			}
-
-			return false
-		},
-		DeleteFunc: func(event.DeleteEvent) bool {
-			return false
-		},
-		GenericFunc: func(event.GenericEvent) bool {
-			return false
-		},
-	}
 }
