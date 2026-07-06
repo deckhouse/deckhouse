@@ -1,0 +1,328 @@
+- name: descheduler.drs-lens.happiness
+  rules:
+  # RS -> its controller owner of any kind (e.g. Deployment, Rollout).
+  # Anchor: one series per ReplicaSet that has a controller owner.
+  - record: descheduler:replicaset_workload
+    expr: |
+      max by (namespace, replicaset, workload_kind, workload_name) (
+        label_replace(label_replace(
+          kube_replicaset_owner{job="kube-state-metrics", owner_is_controller="true", owner_kind!="<none>"},
+          "workload_kind", "$1", "owner_kind", "(.*)"),
+          "workload_name", "$1", "owner_name", "(.*)")
+      )
+
+  # Anchor: one series per live pod in descheduler scope (excludes d8-*/kube-system
+  # namespaces and Succeeded pods), resolved to its owning workload.
+  # Branch 1: pod's controller owner is not a ReplicaSet (StatefulSet, DaemonSet,
+  # Job, bare pod via owner_kind="<none>", etc.) - used directly.
+  # Branch 2: pod's controller owner is a ReplicaSet that itself has a controller
+  # owner (e.g. Deployment, Rollout) - resolved one hop further.
+  # Branch 3: pod's controller owner is an orphan ReplicaSet (no controller owner)
+  # - the ReplicaSet itself is reported as the workload.
+  - record: descheduler:pod_workload
+    expr: |
+      max by (namespace, pod, node, workload_kind, workload_name) (
+        (
+            label_replace(label_replace(
+              kube_pod_owner{job="kube-state-metrics", namespace!~"d8-.*|kube-system",
+                             owner_kind!="ReplicaSet", owner_is_controller=~"true|<none>"},
+              "workload_kind", "$1", "owner_kind", "(.*)"),
+              "workload_name", "$1", "owner_name", "(.*)")
+          or
+            label_replace(
+              kube_pod_owner{job="kube-state-metrics", namespace!~"d8-.*|kube-system",
+                             owner_kind="ReplicaSet", owner_is_controller="true"},
+              "replicaset", "$1", "owner_name", "(.*)")
+            * on (namespace, replicaset) group_left (workload_kind, workload_name)
+            descheduler:replicaset_workload
+          or
+            label_replace(label_replace(
+              (
+                label_replace(
+                  kube_pod_owner{job="kube-state-metrics", namespace!~"d8-.*|kube-system",
+                                 owner_kind="ReplicaSet", owner_is_controller="true"},
+                  "replicaset", "$1", "owner_name", "(.*)")
+                unless on (namespace, replicaset) descheduler:replicaset_workload
+              ),
+              "workload_kind", "$1", "owner_kind", "(.*)"),
+              "workload_name", "$1", "owner_name", "(.*)")
+        )
+        * on (namespace, pod) group_left (node)
+        topk by (namespace, pod) (1, kube_pod_info{job="kube-state-metrics"})
+      )
+      unless on (namespace, pod)
+        (kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"} == 1)
+
+  # Anchor: one series per workload, counting its currently live pods (replicas).
+  - record: descheduler:workload_replicas
+    expr: count by (namespace, workload_kind, workload_name) (descheduler:pod_workload)
+
+  # --- per-pod helper rules ---
+
+  # Helper: keeps only pods that restarted within the last 15m; value = rounded restart count over 15m.
+  - record: descheduler:pod_restarts_15m
+    expr: |
+      round(sum by (namespace, pod) (
+        increase(kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace!~"d8-.*|kube-system"}[15m])
+      )) > 0
+
+  # Helper: pods OOM-killed within the last 15m; primary source is klog_pod_oomkill,
+  # fallback is last_terminated_reason gated by a recent restart.
+  - record: descheduler:pod_oom_15m
+    expr: |
+      max by (namespace, pod) (
+        label_replace(
+          increase(klog_pod_oomkill{namespace!~"d8-.*|kube-system"}[15m]),
+          "pod", "$1", "pod_name", "(.+)") > 0
+      )
+      or
+      (
+        max by (namespace, pod) (
+          kube_pod_container_status_last_terminated_reason{job="kube-state-metrics",
+            namespace!~"d8-.*|kube-system", reason="OOMKilled"} == 1
+        )
+        and on (namespace, pod) (descheduler:pod_restarts_15m > 0)
+      )
+
+  # --- state penalties (per namespace, workload_kind, workload_name) ---
+
+  # Weighted average over pod phases; max 60.
+  - record: descheduler:workload_phase_penalty
+    expr: |
+      sum by (namespace, workload_kind, workload_name) (
+        (
+            (kube_pod_status_phase{job="kube-state-metrics", phase="Pending"} == 1) * 40
+          or (kube_pod_status_phase{job="kube-state-metrics", phase="Failed"}  == 1) * 60
+          or (kube_pod_status_phase{job="kube-state-metrics", phase="Unknown"} == 1) * 50
+        )
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+      / descheduler:workload_replicas
+
+  # 30 x share of not-ready pods; container-level penalty absorbed by pod Ready=False; max 30.
+  - record: descheduler:workload_readiness_penalty
+    expr: |
+      30 * sum by (namespace, workload_kind, workload_name) (
+        (kube_pod_status_ready{job="kube-state-metrics", condition="false"} == 1)
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+      / descheduler:workload_replicas
+
+  # 20 x share(pods with >0 restarts) + 15 x share(pods with >=3 restarts); max 35.
+  - record: descheduler:workload_restart_penalty
+    expr: |
+      sum by (namespace, workload_kind, workload_name) (
+        (
+            (descheduler:pod_restarts_15m > bool 0) * 20
+          + (descheduler:pod_restarts_15m >= bool 3) * 15
+        )
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+      / descheduler:workload_replicas
+
+  # 35 x share of pods OOM-killed within 15m; max 35.
+  - record: descheduler:workload_oom_penalty
+    expr: |
+      35 * sum by (namespace, workload_kind, workload_name) (
+        (descheduler:pod_oom_15m > bool 0)
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+      / descheduler:workload_replicas
+
+  # --- resource aggregates and ratios (rolled up over the anchor) ---
+
+  - record: descheduler:workload_cpu_request_cores
+    expr: |
+      sum by (namespace, workload_kind, workload_name) (
+        kube_pod_container_resource_requests{job="kube-state-metrics", resource="cpu", unit="core"}
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+
+  - record: descheduler:workload_cpu_usage_cores
+    expr: |
+      sum by (namespace, workload_kind, workload_name) (
+        rate(container_cpu_usage_seconds_total{job="kubelet", container!~"|POD"}[5m])
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+
+  - record: descheduler:workload_memory_request_bytes
+    expr: |
+      sum by (namespace, workload_kind, workload_name) (
+        kube_pod_container_resource_requests{job="kube-state-metrics", resource="memory", unit="byte"}
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+
+  - record: descheduler:workload_memory_usage_bytes
+    expr: |
+      sum by (namespace, workload_kind, workload_name) (
+        container_memory_working_set_bytes{job="kubelet", container!~"|POD"}
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+
+  # ratios -- the `> 0` guard: zero/absent denominator yields no series (handled in penalties)
+  - record: descheduler:workload_cpu_usage_ratio
+    expr: descheduler:workload_cpu_usage_cores / (descheduler:workload_cpu_request_cores > 0)
+
+  - record: descheduler:workload_memory_request_usage_ratio
+    expr: descheduler:workload_memory_usage_bytes / (descheduler:workload_memory_request_bytes > 0)
+
+  # MAX over pods: OOM proximity is per-pod physics
+  - record: descheduler:workload_memory_limit_usage_ratio
+    expr: |
+      max by (namespace, workload_kind, workload_name) (
+        (
+          sum by (namespace, pod) (
+            container_memory_working_set_bytes{job="kubelet", container!~"|POD", namespace!~"d8-.*|kube-system"})
+          / (sum by (namespace, pod) (
+              kube_pod_container_resource_limits{job="kube-state-metrics", resource="memory", unit="byte",
+                                                 namespace!~"d8-.*|kube-system"}) > 0)
+        )
+        * on (namespace, pod) group_left (workload_kind, workload_name)
+        max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
+      )
+
+  # --- resource penalties ---
+  # "no request" = the workload has NO aggregate series at all (detected via unless -- absent series != 0)
+
+  - record: descheduler:workload_cpu_penalty
+    expr: |
+      clamp_max(
+          ((descheduler:workload_replicas unless descheduler:workload_cpu_request_cores) > bool 0) * 10
+        or
+          (
+              (descheduler:workload_cpu_usage_ratio > bool 1) * 15
+            + (descheduler:workload_cpu_usage_ratio > bool 2) * 10
+          ),
+        25)
+
+  - record: descheduler:workload_memory_penalty
+    expr: |
+      clamp_max(
+          ((descheduler:workload_replicas unless descheduler:workload_memory_request_bytes) > bool 0) * 10
+        or
+          (
+              (descheduler:workload_memory_request_usage_ratio > bool 1) * 10
+            + ((descheduler:workload_memory_limit_usage_ratio > bool 0.8) * 20
+                or descheduler:workload_memory_request_usage_ratio * 0)
+            + ((descheduler:workload_memory_limit_usage_ratio > bool 0.95) * 15
+                or descheduler:workload_memory_request_usage_ratio * 0)
+          ),
+        35)
+
+  # --- node/eviction penalties ---
+
+  # node penalty: sum(node weight of each pod's node)/replicas; node weight = max of conditions; max 50
+  - record: descheduler:workload_node_penalty
+    expr: |
+      sum by (namespace, workload_kind, workload_name) (
+        descheduler:pod_workload
+        * on (node) group_left ()
+        max by (node) (
+            (kube_node_status_condition{job="kube-state-metrics", condition="MemoryPressure", status="true"} == 1) * 20
+          or (kube_node_status_condition{job="kube-state-metrics", condition="DiskPressure",   status="true"} == 1) * 15
+          or (kube_node_status_condition{job="kube-state-metrics", condition="PIDPressure",    status="true"} == 1) * 15
+          or (kube_node_status_condition{job="kube-state-metrics", condition="Ready",          status!="true"} == 1) * 50
+          or (kube_node_spec_unschedulable{job="kube-state-metrics"} == 1) * 10
+        )
+      )
+      / descheduler:workload_replicas
+
+  # eviction penalty: binary, native from the workload-scoped metric; max 25
+  - record: descheduler:workload_eviction_penalty
+    expr: |
+      max by (namespace, workload_kind, workload_name) (
+          (increase(descheduler_pod_evictions_total{job="descheduler", result="success"}[15m]) > bool 0) * 10
+        or (increase(descheduler_pod_evictions_total{job="descheduler", result="error"}[15m])   > bool 0) * 25
+        or (increase(descheduler_pod_evictions_total{job="descheduler", result="blocked"}[15m]) > bool 0) * 15
+      )
+
+  # --- final score ---
+  # Each term defaults to 0 via `or replicas*0` -- an absent penalty series must not drop the workload.
+  # Intersection with the anchor drops eviction-penalty series of deleted workloads (they live 15m after deletion).
+  - record: descheduler:workload_happiness_score
+    expr: |
+      clamp_min(clamp_max(
+        100
+        - (descheduler:workload_phase_penalty     or descheduler:workload_replicas * 0)
+        - (descheduler:workload_readiness_penalty or descheduler:workload_replicas * 0)
+        - (descheduler:workload_restart_penalty   or descheduler:workload_replicas * 0)
+        - (descheduler:workload_oom_penalty       or descheduler:workload_replicas * 0)
+        - (descheduler:workload_cpu_penalty       or descheduler:workload_replicas * 0)
+        - (descheduler:workload_memory_penalty    or descheduler:workload_replicas * 0)
+        - (descheduler:workload_node_penalty      or descheduler:workload_replicas * 0)
+        - (descheduler:workload_eviction_penalty  or descheduler:workload_replicas * 0)
+      , 100), 0)
+
+  # buckets -- filter form (series exists only for workloads in the category; value = score); count via count()
+  - record: descheduler:workload_happiness_bucket
+    labels: { bucket: happy }
+    expr: descheduler:workload_happiness_score >= 80
+  - record: descheduler:workload_happiness_bucket
+    labels: { bucket: warning }
+    expr: (descheduler:workload_happiness_score >= 60) and (descheduler:workload_happiness_score < 80)
+  - record: descheduler:workload_happiness_bucket
+    labels: { bucket: unhappy }
+    expr: descheduler:workload_happiness_score < 60
+
+- name: descheduler.drs-lens.balance
+  rules:
+  # --- per-node ratios ---
+  - record: descheduler:node_pod_allocation_ratio
+    expr: |
+      count by (node) (kube_pod_info{job="kube-state-metrics"})
+        / on (node) group_left ()
+        max by (node) (kube_node_status_allocatable{job="kube-state-metrics", resource="pods", unit="integer"})
+
+  # by(node) aggregation is mandatory for node-exporter metrics: the instance label survives relabeling
+  - record: descheduler:node_cpu_usage_ratio
+    expr: 1 - avg by (node) (rate(node_cpu_seconds_total{job="node-exporter", mode="idle"}[5m]))
+
+  - record: descheduler:node_memory_usage_ratio
+    expr: |
+      1 - (
+        max by (node) (node_memory_MemAvailable_bytes{job="node-exporter"})
+        / max by (node) (node_memory_MemTotal_bytes{job="node-exporter"})
+      )
+
+  - record: descheduler:node_cpu_request_ratio
+    expr: |
+      sum by (node) (kube_pod_container_resource_requests{job="kube-state-metrics", resource="cpu", unit="core"})
+        / on (node) group_left ()
+        max by (node) (kube_node_status_allocatable{job="kube-state-metrics", resource="cpu", unit="core"})
+
+  - record: descheduler:node_memory_request_ratio
+    expr: |
+      sum by (node) (kube_pod_container_resource_requests{job="kube-state-metrics", resource="memory", unit="byte"})
+        / on (node) group_left ()
+        max by (node) (kube_node_status_allocatable{job="kube-state-metrics", resource="memory", unit="byte"})
+
+  # --- cluster aggregates ---
+  # cluster imbalance: spread between the most and least loaded node, per resource
+  - record: descheduler:cluster_imbalance_score
+    labels: { resource: pods }
+    expr: max(descheduler:node_pod_allocation_ratio) - min(descheduler:node_pod_allocation_ratio)
+  - record: descheduler:cluster_imbalance_score
+    labels: { resource: cpu }
+    expr: max(descheduler:node_cpu_usage_ratio) - min(descheduler:node_cpu_usage_ratio)
+  - record: descheduler:cluster_imbalance_score
+    labels: { resource: memory }
+    expr: max(descheduler:node_memory_usage_ratio) - min(descheduler:node_memory_usage_ratio)
+
+  # dispersion complement to the max-min spread
+  - record: descheduler:cluster_imbalance_stddev
+    labels: { resource: pods }
+    expr: stddev(descheduler:node_pod_allocation_ratio)
+  - record: descheduler:cluster_imbalance_stddev
+    labels: { resource: cpu }
+    expr: stddev(descheduler:node_cpu_usage_ratio)
+  - record: descheduler:cluster_imbalance_stddev
+    labels: { resource: memory }
+    expr: stddev(descheduler:node_memory_usage_ratio)

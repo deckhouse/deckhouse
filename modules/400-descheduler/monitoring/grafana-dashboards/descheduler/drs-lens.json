@@ -1,0 +1,1696 @@
+{
+  "title": "Descheduler / DRS-Lens",
+  "uid": "descheduler-drs-lens",
+  "schemaVersion": 39,
+  "editable": false,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "ds_prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "label": "Prometheus",
+        "current": {}
+      },
+      {
+        "name": "profile",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "query": {
+          "query": "label_values(descheduler_pod_evictions_total{job=\"descheduler\"}, profile)",
+          "refId": "var-profile"
+        },
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {}
+      },
+      {
+        "name": "strategy",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "query": {
+          "query": "label_values(descheduler_pod_evictions_total{job=\"descheduler\"}, strategy)",
+          "refId": "var-strategy"
+        },
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {}
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "query": {
+          "query": "label_values(descheduler:workload_happiness_score, namespace)",
+          "refId": "var-namespace"
+        },
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {}
+      },
+      {
+        "name": "node",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "query": {
+          "query": "label_values(kube_pod_info, node)",
+          "refId": "var-node"
+        },
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {}
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Descheduler cycle",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": false,
+        "iconColor": "blue",
+        "expr": "sum(increase(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[1m])) > 0",
+        "titleFormat": "descheduler cycle"
+      },
+      {
+        "name": "Eviction success",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": true,
+        "iconColor": "green",
+        "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", result=\"success\"}[1m])) > 0",
+        "titleFormat": "eviction success"
+      },
+      {
+        "name": "Eviction error",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": true,
+        "iconColor": "red",
+        "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", result=\"error\"}[1m])) > 0",
+        "titleFormat": "eviction error"
+      },
+      {
+        "name": "Eviction blocked",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": true,
+        "iconColor": "orange",
+        "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", result=\"blocked\"}[1m])) > 0",
+        "titleFormat": "eviction blocked"
+      },
+      {
+        "name": "OOM burst",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": false,
+        "iconColor": "purple",
+        "expr": "sum(increase(klog_pod_oomkill[5m])) > 3",
+        "titleFormat": "OOM burst"
+      },
+      {
+        "name": "Unhappy spike",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": false,
+        "iconColor": "yellow",
+        "expr": "delta(count(descheduler:workload_happiness_bucket{bucket=\"unhappy\"})[10m:]) > 5",
+        "titleFormat": "unhappy spike"
+      },
+      {
+        "name": "Imbalance jump",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": false,
+        "iconColor": "yellow",
+        "expr": "abs(delta(descheduler:cluster_imbalance_score{resource=\"cpu\"}[10m:])) > 0.2",
+        "titleFormat": "imbalance jump"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Summary",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Happy workloads",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"happy\", namespace=~\"$namespace\"})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Warning workloads",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"warning\", namespace=~\"$namespace\"})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Unhappy workloads",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"unhappy\", namespace=~\"$namespace\"})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "gauge",
+      "title": "Avg happiness score",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg(descheduler:workload_happiness_score{namespace=~\"$namespace\"})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Evictions (range)",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__range]))",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Failed/blocked evictions",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", result=~\"error|blocked\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__range]))",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Imbalance CPU",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler:cluster_imbalance_score{resource=\"cpu\"}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Imbalance Memory",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler:cluster_imbalance_score{resource=\"memory\"}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Imbalance Pods",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler:cluster_imbalance_score{resource=\"pods\"}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Last cycle duration (avg)",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(descheduler_loop_duration_seconds_sum{job=\"descheduler\"}[$__rate_interval]) / rate(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[$__rate_interval])",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Descheduler version",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler_build_info{job=\"descheduler\"}",
+          "instant": true,
+          "legendFormat": "{{version}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "name"
+      }
+    },
+    {
+      "id": 12,
+      "type": "bargauge",
+      "title": "Top-10 unhappy workloads",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "bottomk(10, descheduler:workload_happiness_score{namespace=~\"$namespace\"})",
+          "instant": true,
+          "legendFormat": "{{namespace}}/{{workload_kind}}/{{workload_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "bargauge",
+      "title": "Top namespaces by unhappy",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, count by (namespace)(descheduler:workload_happiness_bucket{bucket=\"unhappy\", namespace=~\"$namespace\"}))",
+          "instant": true,
+          "legendFormat": "{{namespace}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Workloads Happiness",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Workloads by bucket",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"happy\", namespace=~\"$namespace\"})",
+          "legendFormat": "happy"
+        },
+        {
+          "refId": "B",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"warning\", namespace=~\"$namespace\"})",
+          "legendFormat": "warning"
+        },
+        {
+          "refId": "C",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"unhappy\", namespace=~\"$namespace\"})",
+          "legendFormat": "unhappy"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 80
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Avg score by namespace",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg by (namespace)(descheduler:workload_happiness_score{namespace=~\"$namespace\"})",
+          "legendFormat": "{{namespace}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "Workloads",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_happiness_score{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_replicas{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_phase_penalty{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_readiness_penalty{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "E",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_restart_penalty{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "F",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_oom_penalty{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "G",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_cpu_penalty{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "H",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_memory_penalty{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "I",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_node_penalty{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "J",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_eviction_penalty{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "score",
+              "Value #B": "replicas",
+              "Value #C": "phase",
+              "Value #D": "readiness",
+              "Value #E": "restarts",
+              "Value #F": "oom",
+              "Value #G": "cpu",
+              "Value #H": "memory",
+              "Value #I": "node",
+              "Value #J": "eviction"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "score"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 60
+                    },
+                    {
+                      "color": "green",
+                      "value": 80
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "score",
+            "desc": false
+          }
+        ]
+      }
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Cluster Balance",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Imbalance (max-min)",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler:cluster_imbalance_score{resource=\"cpu\"}",
+          "legendFormat": "{{resource}}"
+        },
+        {
+          "refId": "B",
+          "expr": "descheduler:cluster_imbalance_score{resource=\"memory\"}",
+          "legendFormat": "{{resource}}"
+        },
+        {
+          "refId": "C",
+          "expr": "descheduler:cluster_imbalance_score{resource=\"pods\"}",
+          "legendFormat": "{{resource}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Imbalance (stddev)",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler:cluster_imbalance_stddev{resource=\"cpu\"}",
+          "legendFormat": "{{resource}}"
+        },
+        {
+          "refId": "B",
+          "expr": "descheduler:cluster_imbalance_stddev{resource=\"memory\"}",
+          "legendFormat": "{{resource}}"
+        },
+        {
+          "refId": "C",
+          "expr": "descheduler:cluster_imbalance_stddev{resource=\"pods\"}",
+          "legendFormat": "{{resource}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "heatmap",
+      "title": "Node CPU usage",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler:node_cpu_usage_ratio{node=~\"$node\"}",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false
+      }
+    },
+    {
+      "id": 34,
+      "type": "heatmap",
+      "title": "Node Memory usage",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler:node_memory_usage_ratio{node=~\"$node\"}",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false
+      }
+    },
+    {
+      "id": 33,
+      "type": "table",
+      "title": "Nodes",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (node) (descheduler:node_cpu_usage_ratio{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "max by (node) (descheduler:node_cpu_request_ratio{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "expr": "max by (node) (descheduler:node_memory_usage_ratio{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "expr": "max by (node) (descheduler:node_memory_request_ratio{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "E",
+          "expr": "max by (node) (descheduler:node_pod_allocation_ratio{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "F",
+          "expr": "count by (node)(max by (namespace, workload_kind, workload_name, node)(descheduler:pod_workload{node=~\"$node\"}) and on (namespace, workload_kind, workload_name) descheduler:workload_happiness_bucket{bucket=\"unhappy\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "G",
+          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{job=\"descheduler\", node=~\"$node\"}[$__range]))",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "H",
+          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{job=\"descheduler\", node=~\"$node\", result=~\"error|blocked\"}[$__range]))",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "I",
+          "expr": "count by (node) (kube_node_status_condition{job=\"kube-state-metrics\", condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1)",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "cpu use",
+              "Value #B": "cpu req",
+              "Value #C": "mem use",
+              "Value #D": "mem req",
+              "Value #E": "pods",
+              "Value #F": "unhappy wl",
+              "Value #G": "evictions",
+              "Value #H": "failed",
+              "Value #I": "pressure conds"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unhappy wl"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "evictions"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pressure conds"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {}
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "Descheduler Actions",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 59
+      },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Evictions by result",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 60
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result)(increase(descheduler_pod_evictions_total{job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 80
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Evictions by strategy",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 60
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (strategy)(increase(descheduler_pod_evictions_total{job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "legendFormat": "{{strategy}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Evictions by profile",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 60
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (profile)(increase(descheduler_pod_evictions_total{job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "legendFormat": "{{profile}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Evictions by namespace",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 68
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (namespace)(increase(descheduler_pod_evictions_total{job=\"descheduler\", namespace=~\"$namespace\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "legendFormat": "{{namespace}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "Evictions by node",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 68
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{job=\"descheduler\", node=~\"$node\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "Loop duration",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 68
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(descheduler_loop_duration_seconds_sum{job=\"descheduler\"}[$__rate_interval]) / rate(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[$__rate_interval])",
+          "legendFormat": "avg"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, rate(descheduler_loop_duration_seconds_bucket{job=\"descheduler\"}[$__rate_interval]))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 46,
+      "type": "timeseries",
+      "title": "Strategy duration (avg)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 76
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (strategy, profile)(rate(descheduler_strategy_duration_seconds_sum{job=\"descheduler\"}[$__rate_interval])) / sum by (strategy, profile)(rate(descheduler_strategy_duration_seconds_count{job=\"descheduler\"}[$__rate_interval]))",
+          "legendFormat": "{{profile}}/{{strategy}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 47,
+      "type": "table",
+      "title": "Build info",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 76
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "descheduler_build_info{job=\"descheduler\"}",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 104,
+      "type": "row",
+      "title": "Operations Timeline",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 84
+      },
+      "panels": []
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "Happiness vs Imbalance",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 85
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg(descheduler:workload_happiness_score)",
+          "legendFormat": "avg score"
+        },
+        {
+          "refId": "B",
+          "expr": "descheduler:cluster_imbalance_score{resource=\"cpu\"} * 100",
+          "legendFormat": "imbalance cpu x100"
+        },
+        {
+          "refId": "C",
+          "expr": "descheduler:cluster_imbalance_score{resource=\"memory\"} * 100",
+          "legendFormat": "imbalance mem x100"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Events",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 85
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result)(increase(descheduler_pod_evictions_total{job=\"descheduler\"}[5m]))",
+          "legendFormat": "evictions {{result}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(increase(klog_pod_oomkill[5m]))",
+          "legendFormat": "oom kills"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(descheduler:pod_restarts_15m) or vector(0)",
+          "legendFormat": "restarts (15m)"
+        },
+        {
+          "refId": "D",
+          "expr": "count(max by (node)(kube_node_status_condition{condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1)) or vector(0)",
+          "legendFormat": "nodes under pressure"
+        },
+        {
+          "refId": "E",
+          "expr": "increase(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[1m]) > 0",
+          "legendFormat": "cycle"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ]
+}
