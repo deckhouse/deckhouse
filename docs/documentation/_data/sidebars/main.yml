@@ -1327,7 +1327,7 @@ entries:
                 ru: Обзор
               url: /architecture/delivery/
             - title:
-                en: operator-argo module
+                en: Operator-argo module
                 ru: Модуль operator-argo
               url: /architecture/delivery/operator-argo.html
         - title:

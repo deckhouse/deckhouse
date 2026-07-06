@@ -1,5 +1,5 @@
 ---
-title: operator-argo module
+title: Operator-argo module
 permalink: en/architecture/delivery/operator-argo.html
 search: operator-argo, GitOps, Argo CD, application deployment
 description: Architecture of the operator-argo module in Deckhouse Kubernetes Platform.
@@ -18,7 +18,7 @@ The module works with the following custom resources:
 - [NamespaceManagement](/modules/operator-argo/cr.html#namespacemanagement): Defines namespace management rules for an Argo CD instance.
 - [NotificationsConfiguration](/modules/operator-argo/cr.html#notificationsconfiguration): Defines notification settings for events in Argo CD and applications.
 
-For more details on module settings and usage examples, refer to [the module documentation](/modules/operator-argo/).
+For more details on module settings and usage examples, refer to the [module documentation](/modules/operator-argo/).
 
 ## Module architecture
 
@@ -30,27 +30,27 @@ The following simplifications are made in the diagram:
 * Only the main containers of each component are shown in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) module and its interactions with other DKP components are shown in the following diagrams.
+The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) module and its interactions with other DKP components are shown in the following diagrams:
 
-Main module operator:
+- Main module operator:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Operator-argo module operator architecture](../../images/architecture/delivery/c4-l2-operator-argo-operator.svg)
+  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+  ![Operator-argo module operator architecture](../../images/architecture/delivery/c4-l2-operator-argo-operator.svg)
 
-Argo CD instance deployment scenario with Redis in a non-HA configuration:
+- Argo CD instance deployment scenario with Redis in a non-HA configuration:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Operator-argo module architecture with Redis non-HA](../../images/architecture/delivery/c4-l2-operator-argo.svg)
+  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+  ![Operator-argo module architecture with Redis non-HA](../../images/architecture/delivery/c4-l2-operator-argo.svg)
 
-Argo CD instance deployment scenario with Redis in an HA configuration (the diagram shows only differences from the primary deployment scenario):
+- Argo CD instance deployment scenario with Redis in an HA configuration (the diagram shows only differences from the primary deployment scenario):
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Operator-argo module architecture with Redis HA](../../images/architecture/delivery/c4-l2-operator-argo-ha.svg)
+  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+  ![Operator-argo module architecture with Redis HA](../../images/architecture/delivery/c4-l2-operator-argo-ha.svg)
 
-Argo CD instance deployment scenario in a [principal cluster](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) for a multicluster setup (the diagram shows only differences from the primary deployment scenario):
+- Argo CD instance deployment scenario in a [principal cluster](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) for a multicluster setup (the diagram shows only differences from the primary deployment scenario):
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Operator-argo module architecture with Principal](../../images/architecture/delivery/c4-l2-operator-argo-principal.svg)
+  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+  ![Operator-argo module architecture with Principal](../../images/architecture/delivery/c4-l2-operator-argo-principal.svg)
 
 ## Module components
 
@@ -80,7 +80,7 @@ The module consists of the following components:
    It consists of the following containers:
 
    - **argocd-server-init**: Optional set of init containers defined by the user in the [`.spec.server.initContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-initcontainers) parameter of the ArgoCD custom resource.
-   - **rollout-extension**: Optional init container that loads the UI extension for the [Rollout](https://argoproj.github.io/argo-rollouts/features/specification/) custom resource. The module does not provide a controller for this custom resource. Such controller must be installed and configured separately. `argocd-operator-controller-manager` adds rollout-extension if [`.spec.server.enableRolloutsUI`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enablerolloutsui) is set to `true`.
+   - **rollout-extension**: Optional init container that loads the UI extension for the [Rollout](https://argoproj.github.io/argo-rollouts/features/specification/) custom resource. The module does not provide a controller for this custom resource. Such controller must be installed and configured separately. Argocd-operator-controller-manager adds rollout-extension if [`.spec.server.enableRolloutsUI`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enablerolloutsui) is set to `true`.
    - **argocd-server**: Main container.
    - **argocd-server-sidecar**: Optional set of sidecar containers defined by the user in the [`.spec.server.sidecarContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-sidecarcontainers) parameter of the ArgoCD custom resource.
 
@@ -109,22 +109,22 @@ The module consists of the following components:
 
    The operator creates this component if the [`.spec.applicationSet.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-applicationset-enabled) parameter of the ArgoCD custom resource is set to `true` (default value is `true`).
 
-   For more details about the component, refer to [the applicationset-controller documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/).
+   For more details about the component, refer to the [applicationset-controller documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/).
 
 1. **&lt;ArgoCD name&gt;-argocd-image-updater-controller** (Deployment): Argocd-image-updater-controller. Optional component consisting of a single **argocd-image-updater** container and intended for automatic container image updates in Argo CD applications when new versions appear in image registries. The component tracks image tag changes and, when a new version is found, updates corresponding Application resources in Argo CD (for example, image tags in manifests or Helm values) via a pull request to a Git repository or directly, depending on the selected workflow.
 
    Argocd-image-updater-controller performs the following functions:
 
-   - manages the [ImageUpdater](/modules/operator-argo/cr.html#imageupdater) custom resource that defines settings for automatic updates of application container images;
-   - periodically checks application container images in supported registries (Docker Hub, Quay.io, Harbor, and others);
-   - supports filtering image tags by patterns and update strategies (`semver`, `latest`, and others);
-   - when a new image version is found, automatically performs write-back (writes the new image tag value) to Argo CD Application or a Git repository depending on the configured method.
+   - Manages the [ImageUpdater](/modules/operator-argo/cr.html#imageupdater) custom resource that defines settings for automatic updates of application container images.
+   - Periodically checks application container images in supported registries (Docker Hub, Quay.io, Harbor, and others).
+   - Supports filtering image tags by patterns and update strategies (`semver`, `latest`, and others).
+   - When a new image version is found, automatically performs write-back (writes the new image tag value) to Argo CD Application or a Git repository depending on the configured method.
 
    For correct operation, the component requires access to Git repositories and, if needed, private image registries. Credentials for accessing image registries can be stored in Kubernetes Secrets.
 
    To enable the component, set [`.spec.imageUpdater.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-imageupdater-enabled) to `true` in the ArgoCD custom resource.
 
-   For more details about the component, refer to [the argocd-image-updater documentation](https://argocd-image-updater.readthedocs.io/).
+   For more details about the component, refer to the [argocd-image-updater documentation](https://argocd-image-updater.readthedocs.io/).
 
 1. **&lt;ArgoCD name&gt;-notifications-controller** (Deployment): Optional controller consisting of a single **argocd-notifications-controller** container that sends notifications about Argo CD events (for example, successful application sync, deployment failures, status changes, and others) to external notification systems, including email, Slack, Microsoft Teams, Telegram, OpsGenie, Webhook, and others.
 
@@ -132,7 +132,7 @@ The module consists of the following components:
 
    To enable the component, set [`.spec.notifications.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-notifications-enabled) to `true` in the ArgoCD custom resource.
 
-   For more details on operation, refer to [the Argo CD Notifications documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/).
+   For more details on operation, refer to the [Argo CD Notifications documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/).
 
 1. **&lt;ArgoCD name&gt;-dex-server** (Deployment): Argocd-dex-server. Optional component for user authentication in Argo CD, acting as an OIDC provider (OpenID Connect) based on [Dex](https://github.com/dexidp/dex). The component enables user login through various external authentication providers (LDAP, GitHub, GitLab, SAML, Azure AD, and others) and supports static users defined in Dex configuration.
 
@@ -146,7 +146,7 @@ The module consists of the following components:
    {% alert level="warning" %}
    For Argo CD user authentication in DKP, the `operator-argo` module supports integration with the [`user-authn`](/modules/user-authn/) module (built-in DKP authentication). Other external providers via Dex are not used in this configuration.
 
-   For more details about module usage examples, refer to [the corresponding documentation section](/modules/operator-argo/examples.html#authentication).
+   For more details about module usage examples, refer to the [corresponding documentation section](/modules/operator-argo/examples.html#authentication).
    {% endalert %}
 
 1. **&lt;ArgoCD name&gt;-redis** (Deployment): Argocd-regis. Mandatory component consisting of a single **redis** container and responsible for storing task queue data and session state in Argo CD. Argocd-regis provides a dedicated [Redis](https://github.com/redis/redis) database instance.
@@ -182,7 +182,7 @@ The module consists of the following components:
 
 1. **&lt;ArgoCD name&gt;-agent-agent** (Deployment): Argocd-agent-agent. Optional component consisting of a single **&lt;ArgoCD name&gt;-agent-agent** container and responsible for executing operations on managed Kubernetes cluster resources based on requests from Argo CD. The component establishes connection to Argo CD Principal, synchronizes applications, and manages their state based on commands received from Argo CD Principal.
 
-   For details on Argo CD multicluster architecture, refer to [the Argo CD documentation](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
+   For details on Argo CD multicluster architecture, refer to the [Argo CD documentation](https://argocd-agent.readthedocs.io/stable/concepts/architecture/#architectural-diagram).
 
    Argocd-operator-controller-manager deploys this component if [`.spec.argoCDAgent.agent.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-argocdagent-agent-enabled) in the ArgoCD custom resource is `true`. Argo CD Agent and Argo CD Principal cannot be enabled simultaneously in a single ArgoCD resource.
 
@@ -216,6 +216,6 @@ The following external components interact with the module:
 
 1. **Prometheus-main**: Collects metrics provided by the operator and Argo CD instances.
 1. **External Argo CD Agent**:
-    - connects to Argo CD principal cluster;
-    - receives processing requests;
-    - sends back processing results.
+    - Connects to Argo CD principal cluster.
+    - Receives processing requests.
+    - Sends back processing results.

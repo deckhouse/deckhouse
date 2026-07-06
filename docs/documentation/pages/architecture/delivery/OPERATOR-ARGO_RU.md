@@ -31,27 +31,27 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 * На схеме изображены только основные контейнеры каждого компонента.
 {% endalert %}
 
-Архитектура модуля [`operator-argo`](/modules/operator-argo/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующих диаграммах.
+Архитектура модуля [`operator-argo`](/modules/operator-argo/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующих диаграммах:
 
-Основной оператор модуля:
+- Основной оператор модуля:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура оператора модуля operator-argo](../../images/architecture/delivery/c4-l2-operator-argo-operator.ru.svg)
+  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+  ![Архитектура оператора модуля operator-argo](../../images/architecture/delivery/c4-l2-operator-argo-operator.ru.svg)
 
-Вариант развёртывания экземпляра Argo CD с базой данных Redis в неотказоустойчивой конфигурации:
+- Вариант развёртывания экземпляра Argo CD с базой данных Redis в неотказоустойчивой конфигурации:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля operator-argo с Redis non-HA](../../images/architecture/delivery/c4-l2-operator-argo.ru.svg)
+  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+  ![Архитектура модуля operator-argo с Redis non-HA](../../images/architecture/delivery/c4-l2-operator-argo.ru.svg)
 
-Вариант развёртывания экземпляра Argo CD с отказоустойчивой конфигурацией Redis (на диаграмме отражены только отличия от основного варианта развёртывания):
+- Вариант развёртывания экземпляра Argo CD с отказоустойчивой конфигурацией Redis (на диаграмме отражены только отличия от основного варианта развёртывания):
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля operator-argo с Redis HA](../../images/architecture/delivery/c4-l2-operator-argo-ha.ru.svg)
+  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+  ![Архитектура модуля operator-argo с Redis HA](../../images/architecture/delivery/c4-l2-operator-argo-ha.ru.svg)
 
-Вариант развёртывания экземпляра Argo CD в [управляющем кластере](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) в мультикластерной конфигурации (на диаграмме отражены только отличия от основного варианта развёртывания):
+- Вариант развёртывания экземпляра Argo CD в [управляющем кластере](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) в мультикластерной конфигурации (на диаграмме отражены только отличия от основного варианта развёртывания):
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля operator-argo с Principal](../../images/architecture/delivery/c4-l2-operator-argo-principal.ru.svg)
+  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+  ![Архитектура модуля operator-argo с Principal](../../images/architecture/delivery/c4-l2-operator-argo-principal.ru.svg)
 
 ## Компоненты модуля
 
@@ -81,7 +81,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    Состоит из следующих контейнеров:
 
    - **argocd-server-init** — опциональный набор init-контейнеров, задаваемых пользователем в параметре [`.spec.server.initContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-initcontainers) кастомного ресурса ArgoCD;
-   - **rollout-extension** — опциональный init-контейнер, загружающий расширение UI для работы с кастомным ресурсом [Rollout](https://argoproj.github.io/argo-rollouts/features/specification/). Модуль не предоставляет контроллер, обрабатывающий этот кастомный ресурс. Контроллер должен быть установлен и настроен дополнительно. `argocd-operator-controller-manager` добавляет rollout-extension, если значение параметра [`.spec.server.enableRolloutsUI`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enablerolloutsui) принимает значение `true`;
+   - **rollout-extension** — опциональный init-контейнер, загружающий расширение UI для работы с кастомным ресурсом [Rollout](https://argoproj.github.io/argo-rollouts/features/specification/). Модуль не предоставляет контроллер, обрабатывающий этот кастомный ресурс. Контроллер должен быть установлен и настроен отдельно. Argocd-operator-controller-manager добавляет rollout-extension, если значение параметра [`.spec.server.enableRolloutsUI`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-enablerolloutsui) принимает значение `true`;
    - **argocd-server** — основной контейнер;
    - **argocd-server-sidecar** — опциональный набор сайдкар-контейнеров, задаваемых пользователем в параметре [`.spec.server.sidecarContainers`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-sidecarcontainers) кастомного ресурса ArgoCD.
 
@@ -112,7 +112,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
    Более подробную информацию о компоненте можно найти [в документации applicationset-controller](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/).
 
-1. **&lt;ArgoCD name&gt;-argocd-image-updater-controller** (Deployment) — argocd-image-updater-controller, опциональный компонент, состоящий из одного контейнера **argocd-image-updater** и предназначенный для автоматического обновления образов контейнеров в приложениях Argo CD при появлении новых версий в реестрах образов. Компонент отслеживает изменения тегов образов и при обнаружении новой версии обновляет соответствующие ресурсы Application в Argo CD (например, значения тегов образов в манифестах или Helm values) через запрос на слияние (pull request) в Git-репозиторий либо напрямую, в зависимости от выбранного способа работы.
+1. **&lt;ArgoCD name&gt;-argocd-image-updater-controller** (Deployment) — argocd-image-updater-controller, опциональный компонент, состоящий из одного контейнера **argocd-image-updater** и предназначенный для автоматического обновления образов контейнеров в приложениях Argo CD при появлении новых версий в хранилищах образов. Компонент отслеживает изменения тегов образов и при обнаружении новой версии обновляет соответствующие ресурсы Application в Argo CD (например, значения тегов образов в манифестах или Helm values) через запрос на слияние (pull request) в Git-репозиторий либо напрямую, в зависимости от выбранного способа работы.
 
    Argocd-image-updater-controller выполняет следующие функции:
 
@@ -121,7 +121,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - поддерживает фильтрацию тегов образов по шаблонам и стратегиям обновления (`semver`, `latest` и др.);
    - при обнаружении новой версии образа автоматически выполняет write-back (то есть записывает новое значение тега образа) в Argo CD Application или в Git-репозиторий в зависимости от настроенного метода.
 
-   Для корректной работы компоненту требуются права доступа к Git-репозиториям и, при необходимости, к приватным реестрам образов. Учётные данные для доступа к реестрам образов можно хранить в секретах Kubernetes.
+   Для корректной работы компоненту требуются права доступа к Git-репозиториям и, при необходимости, к приватным хранилищам образов. Учётные данные для доступа к хранилищам образов можно хранить в секретах Kubernetes.
 
    Для включения компонента необходимо задать в параметре [`.spec.imageUpdater.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-imageupdater-enabled) кастомного ресурса ArgoCD значение `true`.
 
@@ -178,7 +178,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    - Principal — это центральная точка управления: хранит состояние и раздает задания;
    - Agent — это исполнитель в каждом целевом кластере: применяет манифесты и возвращает результат обработки в Principal.
 
-   Такой подход позволяет управлять множеством кластеров без прямого доступа с центрального Argo CD в Kubernetes API каждого кластера, что уменьшает требования к количеству открытых входящих доступов, обеспечивает изоляцию и обеспечивает отказоустойчивость.
+   Такой подход позволяет управлять множеством кластеров без прямого доступа с центрального Argo CD в Kubernetes API каждого кластера, что уменьшает требования к количеству открытых входящих доступов, обеспечивает изоляцию и отказоустойчивость.
    {% endalert %}
 
 1. **&lt;ArgoCD name&gt;-agent-agent** (Deployment) — argocd-agent-agent, опциональный компонент, состоящий из одного контейнера **&lt;ArgoCD name&gt;-agent-agent** и отвечающий за выполнение операций над управляемыми ресурсами Kubernetes-кластера по заданию из Argo CD. Компонент устанавливает подключение к Argo CD Principal, синхронизирует приложения и управляет их состоянием на основе команд, поступающих от Argo CD Principal.
@@ -199,7 +199,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
 Модуль взаимодействует со следующими компонентами:
 
-1. **Внешние репозитории образов** — получение списка образов.
+1. **Внешние хранилища образов** — получение списка образов.
 1. **Внешние репозитории кода**:
     - получение манифестов развёртывания приложения из репозиториев;
     - обновление параметров образа контейнера (поле `image`) в Helm-чарте.
