@@ -614,5 +614,5 @@ func rejectResult(msg string) (*kwhvalidating.ValidatorResult, error) {
 	return &kwhvalidating.ValidatorResult{
 		Valid:   false,
 		Message: msg,
-	}, errors.New(msg)
+	}, errors.New("error during resource validation")
 }
