@@ -22,7 +22,7 @@
   transition: top .15s ease-in-out;
 
   &:has(div.breadcrumbs__left) {
-    padding: 25px 0;
+    padding: 15px 0;
     margin: 0;
 
     @include breakpoints.max-w(l) {
@@ -30,8 +30,8 @@
       margin-top: 24px;
     }
 
-    @include breakpoints.max-w(xs) {
-      gap: 10px;
+    @media screen and (width < 480px) {
+      gap: 20px;
     }
   }
 
@@ -39,7 +39,7 @@
     position: sticky;
   }
 
-  @include breakpoints.max-w(xs) {
+  @media screen and (width < 480px) {
     flex-direction: column;
     align-items: start;
     margin: 0 0 45px;
@@ -123,10 +123,6 @@
 
     @include breakpoints.max-w(xl) {
       min-width: 250px;
-    }
-
-    @include breakpoints.max-w(l) {
-      min-width: 297px;
       margin: 0;
     }
 
@@ -136,7 +132,7 @@
       gap: 10px;
     }
 
-    @include breakpoints.max-w(xs) {
+    @media screen and (width < 480px) {
       min-width: 100%;
       gap: 25px;
       justify-content: space-between;
@@ -157,33 +153,24 @@
 
   .searchV3 {
     margin-left: auto;
-    width: 297px;
-    min-width: 297px;
-    margin-right: 28px;
+    width: 320px;
+    min-width: 320px;
 
     @include breakpoints.max-w(xl) {
-      width: 250px;
-      min-width: 250px;
+      width: 260px;
+      min-width: 260px;
     }
 
     @include breakpoints.max-w(l) {
-      margin-right: 0;
       z-index: 20;
     }
 
     @include breakpoints.max-w(m) {
-      width: 215px;
-      min-width: 215px;
+      width: 220px;
+      min-width: 220px;
     }
 
-    @include breakpoints.max-w(s) {
-      width: 180px;
-      min-width: 180px;
-      margin-left: 0;
-    }
-
-    @include breakpoints.max-w(xs) {
-      justify-content: space-between;
+    @media screen and (width < 480px) {
       width: 100%;
       min-width: 100%;
     }
@@ -211,24 +198,8 @@
     width: 297px;
     margin-right: 64px;
 
-    @include breakpoints.max-w(xxl) {
-      margin-right: 54px;
-    }
-
-    @include breakpoints.max-w(xl) {
-      width: 250px;
-    }
-
-    @media screen and (width < 1100px) {
-      margin-right: 38px;
-    }
-
-    @include breakpoints.max-w(m) {
-      width: 215px;
-    }
-
-    @include breakpoints.max-w(s) {
-      width: 180px;
+    @include breakpoints.max-w(l) {
+      margin-right: 0px;
     }
 
     &--link {
@@ -627,6 +598,11 @@
     @include breakpoints.max-w(l) {
       width: 320px;
       min-width: 320px;
+    }
+
+    @include breakpoints.max-w(m) {
+      width: 100%;
+      min-width: 100%;
     }
   }
 }

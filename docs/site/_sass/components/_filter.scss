@@ -279,6 +279,12 @@
                     height: 0;
                     margin: 0;
                 }
+
+                @include breakpoints.max-w(m) {
+                    min-width: calc(100% - 52px);
+                    height: 0;
+                    margin: 0;
+                }
             }
 
             &--filter {

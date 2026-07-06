@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const navigationContainer = document.querySelector('.navigation__container');
 
-    if (!navigationContainer && sidebarAndToc.length === 0) {
+    if (!navigationContainer) {
         return;
     }
 
@@ -39,9 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isScroll = true;
 
     function hideNavigation() {
-        if (navigationContainer) {
-            navigationContainer.classList.add('hidden');
-        }
+        navigationContainer.classList.add('hidden');
         lastScroll = window.scrollY;
         sidebarAndToc.forEach(e => {
             e.classList.remove('top');
@@ -71,18 +69,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const scrollWindowTop = window.scrollY;
         if (scrollWindowTop > lastScroll) {
-            if (navigationContainer) {
-                navigationContainer.classList.add('hidden');
-            }
+            navigationContainer.classList.add('hidden');
             lastScroll = scrollWindowTop;
             sidebarAndToc.forEach(e => {
                 e.classList.remove('top');
                 e.style.removeProperty('--scroll-top');
             });
         } else {
-            if (navigationContainer) {
-                navigationContainer.classList.remove('hidden');
-            }
+            navigationContainer.classList.remove('hidden');
             lastScroll = scrollWindowTop;
             sidebarAndToc.forEach(e => {
                 e.style.setProperty('--scroll-top', `${newTopValue}px`);
