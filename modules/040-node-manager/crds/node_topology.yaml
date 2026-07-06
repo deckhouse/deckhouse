@@ -59,11 +59,14 @@ spec:
                   properties:
                     topologyManager:
                       type: object
+                      description: Expected topology manager settings.
                       properties:
                         enabled:
                           type: boolean
+                          description: Whether topology manager is enabled.
                         policy:
                           type: string
+                          description: Topology manager policy.
                           enum:
                             - None
                             - BestEffort
@@ -71,6 +74,7 @@ spec:
                             - SingleNumaNode
                         scope:
                           type: string
+                          description: Topology manager scope.
                           enum:
                             - Container
                             - Pod
@@ -80,11 +84,14 @@ spec:
                   properties:
                     topologyManager:
                       type: object
+                      description: Effective topology manager settings.
                       properties:
                         enabled:
                           type: boolean
+                          description: Whether topology manager is enabled.
                         policy:
                           type: string
+                          description: Topology manager policy.
                           enum:
                             - None
                             - BestEffort
@@ -92,6 +99,7 @@ spec:
                             - SingleNumaNode
                         scope:
                           type: string
+                          description: Topology manager scope.
                           enum:
                             - Container
                             - Pod
