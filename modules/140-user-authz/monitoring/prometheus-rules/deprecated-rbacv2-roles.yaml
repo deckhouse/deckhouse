@@ -1,0 +1,29 @@
+- name: d8.user-authz.rbacv2.deprecated-roles
+  rules:
+  - alert: D8UserAuthzDeprecatedRBACv2RoleInUse
+    expr: |
+      max by (binding_kind, binding_name, namespace, role_name) (d8_rbacv2_deprecated_role_in_use) > 0
+    for: 15m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: rbacv2
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2RoleInUse,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2RoleInUse,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A binding still references a deprecated RBACv2 role.
+      description: |-
+        The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references the deprecated RBACv2 ClusterRole `{{ $labels.role_name }}`.
+
+        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. The old names are kept as compatibility aliases for ONE release and will be removed in the next one — after that this binding will grant nothing.
+
+        Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
+        ```bash
+        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
+        ```
+
+        Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.

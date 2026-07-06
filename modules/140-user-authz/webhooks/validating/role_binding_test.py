@@ -74,6 +74,14 @@ class TestRoleBindingValidation(unittest.TestCase):
     def test_custom_project_role_denied(self):
         self.assert_denied("d8:custom:project:team-x", "scoped role")
 
+    def test_legacy_use_role_denied(self):
+        # d8:use:role:* is the legacy name of the namespace lineage (kept as a compat alias); a CRB to
+        # it grants namespace rules cluster-wide, so it must be denied like d8:namespace:*.
+        self.assert_denied("d8:use:role:admin", "scoped role")
+
+    def test_legacy_use_role_kubernetes_denied(self):
+        self.assert_denied("d8:use:role:viewer:kubernetes", "scoped role")
+
     # --- capabilities: denied cluster-wide regardless of scope -----------------------------------
     def test_namespace_capability_denied(self):
         self.assert_denied("d8:namespace-capability:kubernetes:view_resources", "capability")
@@ -104,6 +112,12 @@ class TestRoleBindingValidation(unittest.TestCase):
 
     def test_subsystem_role_allowed(self):
         out = self.run_hook(binding_context("d8:subsystem:observability:manager"))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_legacy_manage_alias_allowed(self):
+        # d8:manage:* is the legacy name of the cluster-scoped system/subsystem lineage (compat alias);
+        # a ClusterRoleBinding to it is legitimate, unlike the namespace-scoped d8:use:role:*.
+        out = self.run_hook(binding_context("d8:manage:observability:manager"))
         tests.assert_validation_allowed(self, out, None)
 
     # --- non-d8 and non-ClusterRole refs: untouched ----------------------------------------------

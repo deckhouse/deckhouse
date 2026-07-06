@@ -49,9 +49,17 @@ from dotmap import DotMap
 
 # Scoped built-in roles (and their custom variants) that must be granted in a bounded scope, never
 # cluster-wide. Matched as name prefixes on a ClusterRole roleRef.
+#
+# `d8:use:role:` is the LEGACY name of the namespace lineage (renamed to d8:namespace:*). It is kept
+# alive for one release by the compatibility aliases in templates/rbacv2-compat/ and grants
+# namespace-scoped rules, so — exactly like d8:namespace:* — it must not be bound cluster-wide via a
+# ClusterRoleBinding. (The legacy system-side alias d8:manage:* maps to the cluster-scoped
+# system/subsystem roles and is intentionally NOT listed: a CRB to it is legitimate.) Remove the
+# d8:use:role: prefix together with the aliases next release.
 SCOPED_ROLE_PREFIXES = (
     "d8:namespace:",
     "d8:project:",
+    "d8:use:role:",
     "d8:custom:namespace:",
     "d8:custom:project:",
 )

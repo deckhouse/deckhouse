@@ -1,0 +1,65 @@
+{{- /*
+  RBACv2 legacy compatibility aliases (one release only).
+
+  The RBACv2 role model was renamed: d8:manage:<subsystem|all>:<level> -> d8:{system,subsystem}:...
+  and d8:use:role:<level>[:kubernetes] -> d8:namespace:<level>. Clusters that ran the PREVIOUS
+  RBACv2 already have their own (Cluster)RoleBindings whose roleRef points at the OLD names. If the
+  old ClusterRole objects simply disappear, those bindings become inert and users silently lose
+  access.
+
+  These aliases keep the OLD names alive for exactly one release. Each alias is an empty ClusterRole
+  whose aggregationRule reuses the NEW role's selector, so it aggregates the very same capabilities as
+  its new-model counterpart — the client's existing bindings keep working unchanged (roleRef is
+  immutable, so we cannot rewrite their bindings for them). Aliases carry rbac.deckhouse.io/deprecated
+  so the deprecation hook/alert and the console can flag them.
+
+  NOTE (intentional, not a bug): card 23 moved serviceaccounts/token:create and impersonate from admin
+  to superadmin. The d8:use:role:admin -> d8:namespace:admin alias therefore no longer grants those two
+  disaster-grade primitives. This is called out in the migration alert/docs.
+
+  They live under templates/rbacv2-compat/ (NOT templates/rbacv2/) so the RBACv2 template-contract CI
+  invariant — which requires the new naming — does not scan them. Remove this whole directory (and the
+  deprecation hook/alert) in the next release.
+*/ -}}
+{{- $aliases := list -}}
+
+{{- /* d8:manage:all:<level> -> system lineage */ -}}
+{{- range $level := list "viewer" "manager" -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:manage:all:%s" $level) "selector" "aggregate-to-system-as" "level" $level "target" (printf "d8:system:%s" $level)) -}}
+{{- end -}}
+
+{{- /* d8:manage:<subsystem>:<level> -> subsystem lineage */ -}}
+{{- range $subsystem := list "deckhouse" "infrastructure" "kubernetes" "networking" "observability" "security" "storage" -}}
+  {{- range $level := list "viewer" "manager" -}}
+    {{- $aliases = append $aliases (dict "name" (printf "d8:manage:%s:%s" $subsystem $level) "selector" (printf "aggregate-to-%s-as" $subsystem) "level" $level "target" (printf "d8:subsystem:%s:%s" $subsystem $level)) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* d8:use:role:<level> and the kubernetes-suffixed variant -> namespace lineage */ -}}
+{{- range $level := list "viewer" "user" "manager" "admin" -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level)) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level)) -}}
+{{- end -}}
+
+{{- range $alias := $aliases }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $alias.name | quote }}
+  annotations:
+    en.meta.deckhouse.io/title: "Deprecated: {{ $alias.name }}"
+    ru.meta.deckhouse.io/title: "Устарело: {{ $alias.name }}"
+    en.meta.deckhouse.io/description: "Deprecated RBACv2 role kept for one release for backward compatibility. Migrate bindings to {{ $alias.target }}."
+    ru.meta.deckhouse.io/description: "Устаревшая роль RBACv2, оставленная на один релиз для обратной совместимости. Переведите привязки на {{ $alias.target }}."
+    rbac.deckhouse.io/deprecated-replaced-by: {{ $alias.target | quote }}
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/deprecated: "true"
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/{{ $alias.selector }}: {{ $alias.level | quote }}
+rules: []
+{{- end }}
