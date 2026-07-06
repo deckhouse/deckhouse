@@ -125,6 +125,8 @@
   {{- warnf "No embedded modules found!" }}
 {{- end }}
 
+{{- warnf "modulesList - %s" ($modulesList | jsonify (dict "indent" "  ")) }}
+
       <div class="block__tile">
       {{- range (sort $modulesList "module" "asc") }}
         {{- $moduleStage := "" }}
