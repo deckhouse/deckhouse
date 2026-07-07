@@ -17,14 +17,18 @@ limitations under the License.
 package virtualcontrolplaneapprover
 
 import (
+	"context"
 	"time"
 
 	"golang.org/x/time/rate"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -34,11 +38,28 @@ import (
 )
 
 const (
-	// maxConcurrentReconciles is 1: approval decisions must be serialized to avoid races between
-	// concurrent reconciles reserving the same pipeline stage slots (mirrors operations-approver).
-	maxConcurrentReconciles = 1
+	maxConcurrentReconciles = 10
 	cacheSyncTimeout        = 3 * time.Minute
+	approverRequestName     = "approver"
 )
+
+func rateLimiter() workqueue.TypedRateLimiter[reconcile.Request] {
+	return workqueue.NewTypedMaxOfRateLimiter(
+		workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](100*time.Millisecond, 3*time.Second),
+		&workqueue.TypedBucketRateLimiter[reconcile.Request]{
+			Limiter: rate.NewLimiter(rate.Limit(maxConcurrentReconciles), maxConcurrentReconciles),
+		},
+	)
+}
+
+func mapToNamespace(_ context.Context, obj client.Object) []reconcile.Request {
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      approverRequestName,
+		},
+	}}
+}
 
 func BuildController(mgr manager.Manager) error {
 	r := newReconciler(mgr.GetClient())
@@ -48,16 +69,12 @@ func BuildController(mgr manager.Manager) error {
 			MaxConcurrentReconciles: maxConcurrentReconciles,
 			CacheSyncTimeout:        cacheSyncTimeout,
 			NeedLeaderElection:      ptr.To(true),
-			RateLimiter: workqueue.NewTypedMaxOfRateLimiter(
-				workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](100*time.Millisecond, 3*time.Second),
-				&workqueue.TypedBucketRateLimiter[reconcile.Request]{
-					Limiter: rate.NewLimiter(rate.Limit(1), 1),
-				},
-			),
+			RateLimiter:             rateLimiter(),
 		}).
 		Named(constants.VirtualControlPlaneApproverControllerName).
-		For(
+		Watches(
 			&controlplanev1alpha1.ControlPlaneOperation{},
+			handler.EnqueueRequestsFromMapFunc(mapToNamespace),
 			builder.WithPredicates(operationsapprover.OperationPredicate()),
 		).
 		Complete(r)
