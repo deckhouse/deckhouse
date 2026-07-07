@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -170,7 +171,9 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 
 func getKubernetesVersion(data []byte) (string, error) {
 	if err := validation.ValidateData([]string{}, data); err != nil {
-		return "", err
+		if !errors.Is(err, validation.ErrSchemaNotFound) {
+			return "", err
+		}
 	}
 	res := make(map[any]any)
 	err := yaml.Unmarshal(data, &res)

@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -83,7 +84,9 @@ func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hoo
 
 func internalNetworkFromStaticConfiguration(data []byte) (any, error) {
 	if err := validation.ValidateData([]string{}, data); err != nil {
-		return "", err
+		if !errors.Is(err, validation.ErrSchemaNotFound) {
+			return "", err
+		}
 	}
 	res := make(map[any]any)
 	err := yaml.Unmarshal(data, &res)
