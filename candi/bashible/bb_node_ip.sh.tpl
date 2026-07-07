@@ -20,7 +20,12 @@ function discover_internal_network_cidrs() {
 
   physical_iface="$(ls -l /sys/class/net/ | grep -vE "virtual|total" | grep "devices" | awk '{print $9}')"
   if [[ "$(wc -l <<< "${physical_iface}")" -eq 1 ]]; then
-    discovered_internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
+    # Derive CIDRs from globally-scoped addresses of the interface. Unlike
+    # `ip route show scope link proto kernel`, this also covers IPv6 subnets
+    # configured via SLAAC/RA (proto ra), which are required for dual-stack.
+    # Temporary (privacy-extension) and deprecated addresses are skipped as
+    # they are not suitable for a stable node IP.
+    discovered_internal_network_cidrs="$(ip -o addr show scope global dev "${physical_iface}" | grep -vwE 'temporary|deprecated' | awk '{print $4}')"
     echo "$discovered_internal_network_cidrs"
   else
     echo "Cannot discover internal network CIDRs: node has more than one interface and StaticClusterConfiguration.internalNetworkCIDRs is not set" >&2
