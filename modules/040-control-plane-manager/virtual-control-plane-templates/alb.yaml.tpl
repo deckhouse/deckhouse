@@ -71,19 +71,19 @@ spec:
   listeners:
   - name: api
     port: 443
-    protocol: HTTPS
+    protocol: TLS
     hostname: ${VCP_API_HOST}
     tls:
       mode: Passthrough
   - name: konn
     port: 443
-    protocol: HTTPS
+    protocol: TLS
     hostname: ${VCP_KONN_HOST}
     tls:
       mode: Passthrough
   - name: pkg
     port: 443
-    protocol: HTTPS
+    protocol: TLS
     hostname: ${VCP_PKG_HOST}
     tls:
       mode: Passthrough
