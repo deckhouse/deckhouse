@@ -111,3 +111,8 @@ To enable export, [create a HubbleMonitoringConfig resource](examples.html#hubbl
 {% alert level="warning" %}
 Creating or modifying the HubbleMonitoringConfig resource will restart all Cilium agents in the cluster.
 {% endalert %}
+
+After the manifest is applied:
+
+* Hubble metrics become available in Prometheus. All exported metrics have the `hubble_*` prefix;
+* Hubble logs are written to the `/var/log/cilium/hubble/flow.log` file on each node.

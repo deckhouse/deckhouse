@@ -46,6 +46,20 @@ docsBuilder:
   highAvailability:
     _default: false
     web-production: true
+  goMemLimit:
+    _default: "1800MiB"
+    web-production: "3600MiB"
+    web-stage: "3600MiB"
+    web-test: "3600MiB"
+    web-test2: "3600MiB"
+  hugoMemoryLimit:
+    _default: "1"
+    web-production: "2"
+    web-stage: "2"
+    web-test: "2"
+    web-test2: "2"
+  hugoNumWorkerMultiplier:
+    _default: "2"
 
 vpa:
   updateMode:

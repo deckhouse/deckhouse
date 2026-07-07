@@ -18,6 +18,5 @@ operatorPrometheusEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
-upmeterEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerEnabled: true
