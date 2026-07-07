@@ -437,8 +437,41 @@ properties:
     type: object
     description: |
       Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
-      To create a certificate, you can use the [example](/products/kubernetes-platform/documentation/v1/user/security/tls.html#certificate-generation-example), in which `basicConstraints = CA:FALSE` needs to be replaced with `basicConstraints = CA:TRUE`.
+
+      The certificate can be provided in one of two ways:
+      - inline via the `cert` and `key` fields (with optional `chain` and `root`);
+      - by referencing an existing Secret via the `secretRef` field.
+
+      These two ways are mutually exclusive.
+
+      Regardless of how it is provided, the CA is validated the same way: the signing certificate must be a single CA certificate (`basicConstraints = CA:TRUE`) whose key matches it, and, when an intermediate CA is used, the `root` must actually anchor the `cert` through the `chain`. Invalid material hard-blocks the module rather than being pushed to istiod.
+
+      Removing `cert`/`secretRef` from the configuration does **not** revert the mesh to an auto-generated self-signed CA: the module keeps the last-published CA so an already-working mesh is never rotated implicitly — rotating the mesh root breaks mTLS cluster-wide until every workload re-trusts it. To deliberately return to a self-signed CA, remove the `cert`/`secretRef` configuration, delete the `d8-istio/cacerts` Secret **and** restart the Deckhouse pod. The module then generates a fresh self-signed CA. This is a mesh-wide trust change and triggers a rollout.
     default: {}
+    oneOf:
+    # Empty: no CA configured (a self-signed CA is generated). None of the inline fields or
+    # secretRef may be present, so partial inline config (e.g. key/chain/root without cert) is
+    # rejected instead of being silently ignored by the hook.
+    - not:
+        anyOf:
+        - required: [cert]
+        - required: [key]
+        - required: [chain]
+        - required: [root]
+        - required: [secretRef]
+    # Inline: cert and key are both mandatory (the hook validates the key pair); secretRef must
+    # not be set (mutually exclusive).
+    - required: [cert, key]
+      not:
+        required: [secretRef]
+    # secretRef: none of the inline fields may be set (mutually exclusive).
+    - required: [secretRef]
+      not:
+        anyOf:
+        - required: [cert]
+        - required: [key]
+        - required: [chain]
+        - required: [root]
     properties:
       cert:
         type: string
@@ -451,7 +484,34 @@ properties:
         description: A certificate chain in PEM format if `cert` is an intermediate certificate.
       root:
         type: string
-        description: The root certificate in PEM format if `cert` is an intermediate certificate.
+        description: |
+          The root certificate in PEM format if `cert` is an intermediate certificate. Setting `root` to the same certificate as `cert` explicitly anchors mesh trust at that certificate; this is allowed even for a non-self-signed intermediate, but rotating it later changes the mesh root (a mesh-wide trust event).
+      secretRef:
+        type: object
+        description: |
+          Reference to an existing Secret that contains the CA certificate and key.
+
+          The Secret may be in one of the following formats (auto-detected):
+          - a cert-manager `kubernetes.io/tls` Secret with the `tls.crt`, `tls.key` and `ca.crt` keys — this allows issuing the CA with any preferred tooling (cert-manager self-signed issuer, Vault issuer, etc.);
+          - a native Istio `cacerts` Secret with the `ca-cert.pem`, `ca-key.pem`, `cert-chain.pem` and `root-cert.pem` keys.
+
+          The signing certificate must be a single CA certificate (`basicConstraints = CA:TRUE`) whose key matches it. For cert-manager, issue it with `isCA: true`.
+
+          If the referenced Secret is missing or malformed (not valid PEM, not a CA certificate, or a mismatched key pair) on the first resolution of this `secretRef`, the module will not render until the issue is fixed (it will not silently fall back to a self-signed CA or to any previously-used CA). If the same `secretRef` was already resolved successfully and later becomes unavailable or invalid, the module keeps using that last successfully-resolved CA so an already-working mesh is not regressed. Changing `secretRef` to point at a different Secret is treated as a first resolution: if the new target cannot be resolved, the module hard-blocks instead of keeping the old CA.
+        required: [name]
+        x-examples:
+        - name: my-istio-ca
+          namespace: my-pki
+        properties:
+          name:
+            type: string
+            description: Name of the Secret containing the CA certificate and key.
+            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+          namespace:
+            type: string
+            description: Namespace of the Secret. If not specified, the Secret is looked up in the module namespace.
+            default: d8-istio
+            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
   jwksResolverAdditionalRootCA:
     type: string
     description: |

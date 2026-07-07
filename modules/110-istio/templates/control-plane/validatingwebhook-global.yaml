@@ -17,7 +17,7 @@ webhooks:
   - admissionReviewVersions:
     - v1
     clientConfig:
-      caBundle: {{ .Values.istio.internal.ca.cert | b64enc }}
+      caBundle: {{ .Values.istio.internal.ca.root | b64enc }}
       service:
         name: istiod-{{ $revision }}
         namespace: d8-istio

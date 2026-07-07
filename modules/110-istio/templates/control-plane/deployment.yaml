@@ -58,7 +58,7 @@ spec:
         prometheus.io/port: "15014"
         prometheus.io/scrape: "true"
         sidecar.istio.io/inject: "false"
-        istio-mtls-ca-bundle-checksum: {{ $.Values.istio.internal.ca | toYaml | sha256sum }}
+        istio-mtls-ca-bundle-checksum: {{ include "istioCABundleChecksum" $ }}
     spec:
       serviceAccountName: istiod-{{ $revision }}
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}

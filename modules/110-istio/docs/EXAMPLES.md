@@ -954,3 +954,140 @@ metadata:
 ```
 
 {% alert level="warning" %}All four parameters must be defined together - if you set any of these annotations, you must specify all four (`sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory`, and `sidecar.istio.io/proxyMemoryLimit`).{% endalert %}
+
+## Providing a custom CA via a Secret reference
+
+Instead of pasting the CA certificate and key inline into the module configuration (via `ca.cert` and `ca.key`), you can reference an existing Secret with the [`ca.secretRef`](configuration.html#parameters-ca-secretref) parameter. This lets you issue the CA with any preferred tooling, for example, cert-manager (self-signed issuer, Vault issuer, etc.).
+
+The referenced Secret may be in one of the following formats (auto-detected):
+
+- a cert-manager `kubernetes.io/tls` Secret with the `tls.crt`, `tls.key` and `ca.crt` keys;
+- a native Istio `cacerts` Secret with the `ca-cert.pem`, `ca-key.pem`, `cert-chain.pem` and `root-cert.pem` keys.
+
+The signing certificate must be a CA certificate (`isCA: true` / `basicConstraints = CA:TRUE`) whose key matches it.
+
+### Example: self-signed CA issued by cert-manager
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca
+  namespace: my-pki
+spec:
+  secretName: istio-ca
+  commonName: istiod-ca
+  isCA: true
+  usages:
+    - digital signature
+    - key encipherment
+    - cert sign
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+```
+
+### Example: intermediate CA issued by a Vault issuer
+
+If you already run a HashiCorp Vault PKI, you can have cert-manager issue the Istio CA as an **intermediate** signed by your Vault root/intermediate. The resulting Secret has exactly the same layout and is auto-detected the same way — the only requirement is `isCA: true`.
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vault-issuer
+  namespace: my-pki
+spec:
+  vault:
+    # Path of the intermediate PKI role that is allowed to issue CA certificates.
+    path: pki_int/sign/istio-ca
+    server: https://vault.example.com:8200
+    # Vault must return the CA chain so that ca.crt contains the root.
+    caBundle: <base64-encoded Vault CA bundle>
+    auth:
+      kubernetes:
+        role: istio-ca-issuer
+        mountPath: /v1/auth/kubernetes
+        serviceAccountRef:
+          name: cert-manager
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca
+  namespace: my-pki
+spec:
+  secretName: istio-ca
+  commonName: istiod-ca
+  # Mandatory: the issued certificate must itself be a CA so istiod can sign workload certs.
+  isCA: true
+  duration: 87600h    # 10y, adjust to your rotation policy
+  usages:
+    - digital signature
+    - key encipherment
+    - cert sign
+    - crl sign
+  issuerRef:
+    kind: Issuer
+    name: vault-issuer
+```
+
+{% alert level="warning" %}
+The Vault PKI role must permit issuing CA certificates (`isCA`), and the issuer must return the CA chain so that `ca.crt` contains the Vault root. Otherwise the module cannot determine the root and the leaf validation will fail, hard-blocking the rollout.
+{% endalert %}
+
+Then reference the resulting Secret in the module configuration (identical for both examples above):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 3
+  enabled: true
+  settings:
+    ca:
+      secretRef:
+        name: istio-ca
+        namespace: my-pki
+```
+
+{% alert level="info" %}
+If `namespace` is omitted, the Secret is looked up in the `d8-istio` namespace.
+{% endalert %}
+
+{% alert level="warning" %}
+If the referenced Secret is missing or malformed on the **first** resolution of this `secretRef`, the module will not proceed until the issue is fixed. It will not silently fall back to a self-signed CA — or to any CA that was in use before this `secretRef` was configured — to avoid unexpectedly running on an unrelated CA.
+
+If the **same** `secretRef` was already resolved successfully and later becomes unavailable or invalid (for example, it is briefly deleted during rotation, or its chain expires), the module keeps using that last successfully-resolved CA instead of hard-blocking. It never switches to a different CA on its own — it only reuses the exact material istiod is already running with — so an already-working mesh is not regressed while the source is fixed. Repointing `secretRef` to a **different** Secret counts as a first resolution: if that new Secret cannot be resolved, the module hard-blocks rather than keeping the previous CA.
+{% endalert %}
+
+{% alert level="info" %}
+The referenced Secret is re-resolved on a 5-minute schedule, so changes to the source Secret can take up to 5 minutes to propagate to the mesh.
+
+When using an intermediate CA, keep the **root** stable across rotations: the module publishes `root-cert.pem` (the `ca.crt` trust anchor) as the webhook `caBundle` and as the workload trust root, while the signing (intermediate) certificate may change. Rotating the intermediate under a stable root is seamless; changing the root is a mesh-wide trust change and requires the old and new roots to overlap in the trust bundle during the transition.
+{% endalert %}
+
+### Reverting to a self-signed CA
+
+Removing `ca.secretRef` (or inline `ca.cert`) from the module configuration does **not** switch the mesh back to an auto-generated self-signed CA on its own. The module intentionally keeps the last-published CA — stored in the `d8-istio/cacerts` Secret — so an already-working mesh is never rotated implicitly: rotating the mesh root breaks mTLS cluster-wide until every workload re-trusts the new root.
+
+To deliberately return to a self-signed CA:
+
+1. Remove the `ca.secretRef` (or `ca.cert`) configuration from the `istio` ModuleConfig.
+2. Delete the module-owned `d8-istio/cacerts` Secret:
+
+   ```shell
+   d8 k -n d8-istio delete secret cacerts
+   ```
+
+3. Restart the Deckhouse pod so the module drops the last-published CA it holds in memory:
+
+   ```shell
+   d8 k -n d8-system rollout restart deployment deckhouse
+   ```
+
+{% alert level="warning" %}
+This is a mesh-wide trust change and triggers a rollout: istiod republishes the new root as the webhook `caBundle` and workloads must re-trust it. Perform it during a maintenance window.
+{% endalert %}

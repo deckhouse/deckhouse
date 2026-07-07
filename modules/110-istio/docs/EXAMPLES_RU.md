@@ -954,3 +954,140 @@ metadata:
 ```
 
 {% alert level="warning" %}Все четыре параметра должны быть указаны вместе — `sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory` и `sidecar.istio.io/proxyMemoryLimit`. Частичная конфигурация не поддерживается.{% endalert %}
+
+## Предоставление собственного CA через ссылку на Secret
+
+Вместо того чтобы указывать сертификат и ключ CA непосредственно в конфигурации модуля (через `ca.cert` и `ca.key`), можно сослаться на существующий Secret с помощью параметра [`ca.secretRef`](configuration.html#parameters-ca-secretref). Это позволяет выпустить CA любым удобным способом, например с помощью cert-manager (self-signed issuer, Vault issuer и т. д.).
+
+Secret, на который указывает ссылка, может быть в одном из следующих форматов (определяется автоматически):
+
+- Secret cert-manager типа `kubernetes.io/tls` с ключами `tls.crt`, `tls.key` и `ca.crt`;
+- нативный Secret Istio `cacerts` с ключами `ca-cert.pem`, `ca-key.pem`, `cert-chain.pem` и `root-cert.pem`.
+
+Подписывающий сертификат должен быть CA-сертификатом (`isCA: true` / `basicConstraints = CA:TRUE`), ключ которого ему соответствует.
+
+### Пример: самоподписанный CA, выпущенный cert-manager
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca
+  namespace: my-pki
+spec:
+  secretName: istio-ca
+  commonName: istiod-ca
+  isCA: true
+  usages:
+    - digital signature
+    - key encipherment
+    - cert sign
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+```
+
+### Пример: промежуточный CA (выпущен через Vault Issuer cert-manager)
+
+Если у вас уже развёрнут HashiCorp Vault PKI, можно поручить cert-manager выпустить CA для Istio как **промежуточный**, подписанный вашим корневым/промежуточным CA из Vault. Полученный Secret имеет точно такую же структуру и определяется автоматически тем же способом — единственное требование `isCA: true`.
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vault-issuer
+  namespace: my-pki
+spec:
+  vault:
+    # Путь роли промежуточного PKI, которой разрешено выпускать CA-сертификаты.
+    path: pki_int/sign/istio-ca
+    server: https://vault.example.com:8200
+    # Vault должен возвращать цепочку CA, чтобы ca.crt содержал корень.
+    caBundle: <Vault CA bundle в base64>
+    auth:
+      kubernetes:
+        role: istio-ca-issuer
+        mountPath: /v1/auth/kubernetes
+        serviceAccountRef:
+          name: cert-manager
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca
+  namespace: my-pki
+spec:
+  secretName: istio-ca
+  commonName: istiod-ca
+  # Обязательно: выпускаемый сертификат сам должен быть CA, чтобы istiod мог подписывать сертификаты рабочих нагрузок.
+  isCA: true
+  duration: 87600h    # 10 лет, скорректируйте под свою политику ротации
+  usages:
+    - digital signature
+    - key encipherment
+    - cert sign
+    - crl sign
+  issuerRef:
+    kind: Issuer
+    name: vault-issuer
+```
+
+{% alert level="warning" %}
+Роль Vault PKI должна разрешать выпуск CA-сертификатов (`isCA`), а issuer должен возвращать цепочку CA, чтобы `ca.crt` содержал корень Vault. Иначе модуль не сможет определить корень, а проверка leaf-сертификата завершится ошибкой и заблокирует раскатку.
+{% endalert %}
+
+Затем сошлитесь на полученный Secret в конфигурации модуля (одинаково для обоих примеров выше):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 3
+  enabled: true
+  settings:
+    ca:
+      secretRef:
+        name: istio-ca
+        namespace: my-pki
+```
+
+{% alert level="info" %}
+Если `namespace` не указан, Secret ищется в неймспейсе `d8-istio`.
+{% endalert %}
+
+{% alert level="warning" %}
+Если Secret, на который указывает ссылка, отсутствует или имеет некорректный формат при **первом** разрешении данного `secretRef`, модуль не продолжит работу до устранения проблемы. Молчаливого отката к самоподписанному CA — или к любому CA, использовавшемуся до настройки этого `secretRef`, — не произойдёт, чтобы не оказаться неожиданно на постороннем CA.
+
+Если **тот же** `secretRef` уже был успешно разрешён, а **позже** стал недоступным или некорректным (например, кратковременно удалён во время ротации или у его цепочки истёк срок действия), модуль продолжит использовать этот последний успешно разрешённый CA вместо жёсткой блокировки. Модуль никогда не переключается на другой CA самостоятельно — он лишь повторно использует ровно тот материал, с которым уже работает istiod, — поэтому уже работающий меш не деградирует на время устранения проблемы с источником. Перенаправление `secretRef` на **другой** Secret считается первым разрешением: если новый Secret не удаётся разрешить, модуль блокируется, а не продолжает использовать предыдущий CA.
+{% endalert %}
+
+{% alert level="info" %}
+Secret, на который указывает ссылка, перечитывается по расписанию раз в 5 минут, поэтому изменения исходного Secret могут применяться с задержкой до 5 минут.
+
+При использовании промежуточного CA сохраняйте **корневой** сертификат неизменным при ротациях: модуль публикует `root-cert.pem` (доверенный якорь из `ca.crt`) в качестве `caBundle` для webhook'ов и в качестве корня доверия для рабочих нагрузок, тогда как подписывающий (промежуточный) сертификат может меняться. Ротация промежуточного сертификата при неизменном корне проходит бесшовно; смена корня — это изменение доверия в масштабе всего меша, при котором старый и новый корни должны сосуществовать в bundle доверия на время перехода.
+{% endalert %}
+
+### Возврат к самоподписанному CA
+
+Удаление `ca.secretRef` (или inline-поля `ca.cert`) из конфигурации модуля **не** переключает меш обратно на автоматически сгенерированный самоподписанный CA сам по себе. Модуль намеренно сохраняет последний опубликованный CA — хранящийся в Secret `d8-istio/cacerts` — чтобы уже работающий меш не был неявно ротирован: ротация корня меша разрывает mTLS во всём кластере, пока каждая рабочая нагрузка не начнёт доверять новому корню.
+
+Чтобы намеренно вернуться к самоподписанному CA:
+
+1. Удалите конфигурацию `ca.secretRef` (или `ca.cert`) из ModuleConfig `istio`.
+2. Удалите принадлежащий модулю Secret `d8-istio/cacerts`:
+
+   ```shell
+   d8 k -n d8-istio delete secret cacerts
+   ```
+
+3. Перезапустите под Deckhouse, чтобы модуль сбросил последний опубликованный CA, который он держит в памяти:
+
+   ```shell
+   d8 k -n d8-system rollout restart deployment deckhouse
+   ```
+
+{% alert level="warning" %}
+Это изменение доверия в масштабе всего меша, и оно приводит к перевыкатке: istiod перепубликует новый корень в качестве `caBundle` для webhook'ов, а рабочие нагрузки должны начать ему доверять. Выполняйте во время окна обслуживания.
+{% endalert %}

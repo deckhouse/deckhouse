@@ -431,7 +431,17 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(iopV21.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x21x6`))
 
 			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x21x6`))
-			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXljZXJ0`)) // b64("mycert")
+			// caBundle must be the root cert (b64("myroot")), not the signing cert: istiod advertises
+			// root-cert.pem as its webhook trust anchor, so the module must render the same to stay
+			// consistent for plugged intermediate CAs (where cert != root).
+			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXlyb290`)) // b64("myroot")
+
+			// Validating webhooks are never patched by istiod (their config names do not match
+			// VALIDATION_WEBHOOK_CONFIG_NAME), so the rendered caBundle is the sole source of truth
+			// and must also be the root cert, not the signing cert.
+			vwhRev := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-istio-validator-v1x21x6")
+			Expect(vwhRev.Exists()).To(BeTrue())
+			Expect(vwhRev.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXlyb290`)) // b64("myroot")
 			Expect(serviceGlobal.Field("spec.selector").String()).To(MatchJSON(`{"app":"istiod","istio.io/rev":"v1x21x6"}`))
 
 			Expect(secretCacerts.Field("data").String()).To(MatchJSON(`
@@ -442,6 +452,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 					"root-cert.pem":"bXlyb290"
 				}
 `))
+			// No istio.internal.ca.source set in these values, so the provenance annotation must be absent.
+			Expect(secretCacerts.Field(`metadata.annotations.istio\.deckhouse\.io/ca-source`).Exists()).To(BeFalse())
 
 			Expect(iopV21.Field("spec.meshConfig.caCertificates").Exists()).To(BeFalse())
 			Expect(iopV21.Field("spec.values.meshNetworks").Exists()).To(BeFalse())
@@ -464,6 +476,66 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Secret", "d8-istio", "d8-remote-clusters-public-metadata").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("CA provenance source is set (ca.secretRef)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSet("istio.internal.ca.source", "secretRef:my-pki/my-istio-ca")
+			f.HelmRender()
+		})
+
+		It("stamps the provenance annotation on the cacerts Secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
+			Expect(secretCacerts.Exists()).To(BeTrue())
+			// The annotation lets the generate_ca hook recognize this Secret as its own secretRef
+			// material after a restart wipes the volatile istio.internal.ca.* values.
+			Expect(secretCacerts.Field(`metadata.annotations.istio\.deckhouse\.io/ca-source`).String()).
+				To(Equal("secretRef:my-pki/my-istio-ca"))
+		})
+	})
+
+	Context("istiod CA-bundle checksum ignores the provenance source but tracks material", func() {
+		// The checksum drives istiod pod rollouts. It must hash only the mounted CA material
+		// (cert/key/chain/root), NOT istio.internal.ca.source — otherwise a provenance-only change
+		// (e.g. on upgrade, or repointing secretRef to a Secret with identical material) would roll
+		// istiod needlessly.
+		caChecksum := func(source string) string {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			if source != "" {
+				f.ValuesSet("istio.internal.ca.source", source)
+			}
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			return f.KubernetesResource("Istio", "d8-istio", "v1x25x2").
+				Field("spec.values.pilot.podAnnotations.istio-mtls-ca-bundle-checksum").String()
+		}
+
+		It("is stable when only istio.internal.ca.source changes", func() {
+			noSource := caChecksum("")
+			Expect(noSource).NotTo(BeEmpty())
+			Expect(caChecksum("selfSigned")).To(Equal(noSource))
+			Expect(caChecksum("secretRef:my-pki/my-istio-ca")).To(Equal(noSource))
+		})
+
+		It("changes when the mounted CA material changes", func() {
+			baseline := caChecksum("selfSigned")
+			f.ValuesSet("istio.internal.ca.cert", "a-different-cert")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			changed := f.KubernetesResource("Istio", "d8-istio", "v1x25x2").
+				Field("spec.values.pilot.podAnnotations.istio-mtls-ca-bundle-checksum").String()
+			Expect(changed).NotTo(Equal(baseline))
 		})
 	})
 
