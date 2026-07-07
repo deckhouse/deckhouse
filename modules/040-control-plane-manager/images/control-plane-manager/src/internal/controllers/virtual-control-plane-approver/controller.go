@@ -34,7 +34,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-	operationsapprover "control-plane-manager/internal/controllers/operations-approver"
+	controlplaneapprover "control-plane-manager/internal/controllers/control-plane-approver"
 )
 
 const (
@@ -75,7 +75,7 @@ func BuildController(mgr manager.Manager) error {
 		Watches(
 			&controlplanev1alpha1.ControlPlaneOperation{},
 			handler.EnqueueRequestsFromMapFunc(mapToNamespace),
-			builder.WithPredicates(operationsapprover.OperationPredicate()),
+			builder.WithPredicates(controlplaneapprover.OperationPredicate()),
 		).
 		Complete(r)
 }
