@@ -1064,6 +1064,268 @@ index 6c6c94ba718..12b16e8f598 100644
  		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
  		audit.AddAuditAnnotations(ctx,
  			decisionAnnotationKey, decisionForbid,
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go
+new file mode 100644
+index 00000000000..3ecb580e67e
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go
+@@ -0,0 +1,256 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package filters
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/runtime/serializer"
++	"k8s.io/apiserver/pkg/audit"
++	"k8s.io/apiserver/pkg/authentication/user"
++	"k8s.io/apiserver/pkg/authorization/authorizer"
++	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++)
++
++// This is "Layer 2" of the design's test plan: unit tests for the generic
++// scope-filtering bypass branch in withAuthorization, isolated from the
++// storage layer entirely (no *genericregistry.Store, no resolvers -- just
++// the HTTP-level gate that decides whether a denied request is handed to
++// the storage layer at all). This is the layer flagged as least covered
++// when the design was written: Layer 1/3 both start from "the filter
++// already decided to bypass" via scopefilter.WithRequest/WithBypass; this
++// file is what actually drives that decision through the real
++// withAuthorization code path.
++
++// scopeTestHandler records whether the wrapped handler ran (bypass fired)
++// and what scopefilter tags its context carried, without touching the
++// storage layer at all.
++type scopeTestHandler struct {
++	called     bool
++	gotRequest scopefilter.Request
++	gotPresent bool
++	gotBypass  bool
++}
++
++func (h *scopeTestHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
++	h.called = true
++	h.gotRequest, h.gotPresent = scopefilter.RequestFrom(req.Context())
++	h.gotBypass = scopefilter.IsBypass(req.Context())
++	w.WriteHeader(http.StatusOK)
++}
++
++func denyAllAuthorizer() fakeAuthorizer {
++	return fakeAuthorizer{authorizer.DecisionDeny, "denied for test", nil}
++}
++
++// newScopeTestRequest builds a request with a real, path-derived RequestInfo
++// (via the same RequestInfoFactory pattern audit_test.go's withTestContext
++// uses) plus an authenticated user -- everything GetAuthorizerAttributes and
++// isFilteredRequest need, and nothing else.
++func newScopeTestRequest(t *testing.T, method, path, scopeHeader string) *http.Request {
++	t.Helper()
++	req, err := http.NewRequest(method, path, nil)
++	if err != nil {
++		t.Fatalf("NewRequest: %v", err)
++	}
++	if scopeHeader != "" {
++		req.Header.Set(scopefilter.HeaderScope, scopeHeader)
++	}
++
++	info, err := newTestRequestInfoResolver().NewRequestInfo(req)
++	if err != nil {
++		t.Fatalf("NewRequestInfo(%s %s): %v", method, path, err)
++	}
++
++	ctx := audit.WithAuditContext(req.Context())
++	ctx = genericapirequest.WithRequestInfo(ctx, info)
++	ctx = genericapirequest.WithUser(ctx, &user.DefaultInfo{Name: "alice"})
++	return req.WithContext(ctx)
++}
++
++// TestWithAuthorization_GenericScopeBypass is the direct test of
++// isFilteredRequest's gating: a header alone must never be enough. Every
++// negative case here reproduces a specific way a header-gated bypass could
++// accidentally widen beyond its intended (resource, verb, subresource)
++// footprint if isFilteredRequest's checks were loosened.
++func TestWithAuthorization_GenericScopeBypass(t *testing.T) {
++	registered := schema.GroupResource{Resource: "widgets"}
++	scopefilter.Register(registered)
++	t.Cleanup(func() { scopefilter.Unregister(registered) })
++
++	scheme := runtime.NewScheme()
++	negotiatedSerializer := serializer.NewCodecFactory(scheme).WithoutConversion()
++
++	tests := []struct {
++		name       string
++		method     string
++		path       string
++		header     string
++		wantBypass bool
++	}{
++		{
++			name:       "list registered resource with header bypasses",
++			method:     http.MethodGet,
++			path:       "/api/v1/widgets",
++			header:     "system",
++			wantBypass: true,
++		},
++		{
++			name:       "get registered resource with header bypasses",
++			method:     http.MethodGet,
++			path:       "/api/v1/namespaces/ns-a/widgets/foo",
++			header:     "accessible",
++			wantBypass: true,
++		},
++		{
++			name:       "watch registered resource with header bypasses",
++			method:     http.MethodGet,
++			path:       "/api/v1/widgets?watch=true",
++			header:     "user",
++			wantBypass: true,
++		},
++		{
++			name:       "no header at all never bypasses regardless of resource",
++			method:     http.MethodGet,
++			path:       "/api/v1/widgets",
++			header:     "",
++			wantBypass: false,
++		},
++		{
++			name:       "unregistered resource with header never bypasses",
++			method:     http.MethodGet,
++			path:       "/api/v1/pods", // deliberately not scopefilter.Register'd in this test
++			header:     "system",
++			wantBypass: false,
++		},
++		{
++			name:       "create verb never bypasses even with header",
++			method:     http.MethodPost,
++			path:       "/api/v1/namespaces/ns-a/widgets",
++			header:     "system",
++			wantBypass: false,
++		},
++		{
++			name:       "update (PUT) verb never bypasses",
++			method:     http.MethodPut,
++			path:       "/api/v1/namespaces/ns-a/widgets/foo",
++			header:     "system",
++			wantBypass: false,
++		},
++		{
++			name:       "delete verb never bypasses",
++			method:     http.MethodDelete,
++			path:       "/api/v1/namespaces/ns-a/widgets/foo",
++			header:     "system",
++			wantBypass: false,
++		},
++		{
++			name:       "patch verb never bypasses",
++			method:     http.MethodPatch,
++			path:       "/api/v1/namespaces/ns-a/widgets/foo",
++			header:     "system",
++			wantBypass: false,
++		},
++		{
++			name:       "subresource never bypasses even with header on a registered resource",
++			method:     http.MethodGet,
++			path:       "/api/v1/namespaces/ns-a/widgets/foo/status",
++			header:     "system",
++			wantBypass: false,
++		},
++		{
++			name: "cluster-scoped resource with header never bypasses when not registered " +
++				"(real wiring never registers cluster-scoped resources -- see wireScopeFilter)",
++			method:     http.MethodGet,
++			path:       "/apis/rbac.authorization.k8s.io/v1/clusterroles",
++			header:     "system",
++			wantBypass: false,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			handler := &scopeTestHandler{}
++			wrapped := WithAuthorization(handler, denyAllAuthorizer(), negotiatedSerializer)
++			req := newScopeTestRequest(t, tt.method, tt.path, tt.header)
++			w := httptest.NewRecorder()
++			wrapped.ServeHTTP(w, req)
++
++			if tt.wantBypass {
++				if !handler.called {
++					t.Fatalf("expected bypass (handler invoked), got HTTP %d: %s", w.Code, w.Body.String())
++				}
++				if !handler.gotPresent {
++					t.Fatal("handler ran but scopefilter.RequestFrom found nothing on its context")
++				}
++				if !handler.gotBypass {
++					t.Fatal("handler ran but scopefilter.IsBypass is false -- a denied-then-bypassed request must carry it")
++				}
++				return
++			}
++
++			if handler.called {
++				t.Fatal("expected no bypass, but the wrapped handler was invoked anyway")
++			}
++			if w.Code != http.StatusForbidden {
++				t.Fatalf("expected 403 Forbidden, got %d: %s", w.Code, w.Body.String())
++			}
++		})
++	}
++}
++
++// TestWithAuthorization_GenericScopeBypass_AllowedCallerStillGetsTagged
++// covers the OTHER branch: a caller RBAC already allows (never denied, so
++// never bypassed) still gets scopefilter.WithRequest set when they send the
++// header, WITHOUT scopefilter.WithBypass -- letting a privileged caller use
++// --scope=system to narrow their own view without ever triggering the RBAC
++// floor computation. See withAuthorization's DecisionAllow branch and
++// scopefilter.WithBypass's doc for why these two tags are independent.
++func TestWithAuthorization_GenericScopeBypass_AllowedCallerStillGetsTagged(t *testing.T) {
++	registered := schema.GroupResource{Resource: "widgets"}
++	scopefilter.Register(registered)
++	t.Cleanup(func() { scopefilter.Unregister(registered) })
++
++	scheme := runtime.NewScheme()
++	negotiatedSerializer := serializer.NewCodecFactory(scheme).WithoutConversion()
++
++	handler := &scopeTestHandler{}
++	allowAll := fakeAuthorizer{authorizer.DecisionAllow, "allowed for test", nil}
++	wrapped := WithAuthorization(handler, allowAll, negotiatedSerializer)
++
++	req := newScopeTestRequest(t, http.MethodGet, "/api/v1/widgets", "system")
++	w := httptest.NewRecorder()
++	wrapped.ServeHTTP(w, req)
++
++	if !handler.called {
++		t.Fatalf("expected the handler to run (RBAC allowed), got HTTP %d", w.Code)
++	}
++	if !handler.gotPresent {
++		t.Fatal("allowed caller with --scope header must still get scopefilter.WithRequest tagged")
++	}
++	if handler.gotBypass {
++		t.Fatal("allowed (non-denied) caller must NOT carry scopefilter.IsBypass -- RBAC floor must never be computed for them")
++	}
++	if handler.gotRequest.Kind != scopefilter.KindSystem {
++		t.Fatalf("scope request kind = %q, want %q", handler.gotRequest.Kind, scopefilter.KindSystem)
++	}
++}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
 index 722a312270a..90e1627147b 100644
 --- a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
@@ -1254,6 +1516,134 @@ index 00000000000..9f423e42d64
 +		names[ns.Name] = struct{}{}
 +	}
 +	return names, nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go
+new file mode 100644
+index 00000000000..3ec97db72b9
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go
+@@ -0,0 +1,122 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter_test
++
++import (
++	"context"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	corev1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++	restclient "k8s.io/client-go/rest"
++)
++
++// TestLoopbackClassificationResolver_LabelSelectorPerKind is the direct,
++// wire-level test of the exact labelSelector query string each scope Kind
++// sends: integration_test.go proves the END BEHAVIOR is correct against a
++// fake server that itself re-parses the selector with labels.Parse, which
++// would forgive some malformed-but-equivalent strings. This test instead
++// asserts on the literal query parameter the real HTTP client sends, so a
++// change to e.g. "!"+ProjectLabel accidentally becoming " !"+ProjectLabel
++// (a leading space, still often tolerated by labels.Parse) would be caught
++// here even if it happened to still work end to end.
++func TestLoopbackClassificationResolver_LabelSelectorPerKind(t *testing.T) {
++	tests := []struct {
++		name              string
++		kind              scopefilter.Kind
++		project           string
++		wantLabelSelector string
++	}{
++		{
++			name:              "system is the negated-existence selector",
++			kind:              scopefilter.KindSystem,
++			wantLabelSelector: "!" + scopefilter.ProjectLabel,
++		},
++		{
++			name:              "user is the bare-existence selector",
++			kind:              scopefilter.KindUser,
++			wantLabelSelector: scopefilter.ProjectLabel,
++		},
++		{
++			name:              "project is an equality selector on the given name",
++			kind:              scopefilter.KindProject,
++			project:           "team-a",
++			wantLabelSelector: scopefilter.ProjectLabel + "=team-a",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			var gotSelector string
++			var gotPath string
++			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				gotPath = r.URL.Path
++				gotSelector = r.URL.Query().Get("labelSelector")
++				w.Header().Set("Content-Type", "application/json")
++				_ = json.NewEncoder(w).Encode(corev1.NamespaceList{
++					TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "NamespaceList"},
++				})
++			}))
++			defer srv.Close()
++
++			resolver, err := scopefilter.NewLoopbackClassificationResolver(&restclient.Config{Host: srv.URL})
++			if err != nil {
++				t.Fatalf("NewLoopbackClassificationResolver: %v", err)
++			}
++
++			if _, err := resolver.Resolve(context.Background(), tt.kind, tt.project); err != nil {
++				t.Fatalf("Resolve: %v", err)
++			}
++
++			if gotPath != "/api/v1/namespaces" {
++				t.Fatalf("request path = %q, want /api/v1/namespaces", gotPath)
++			}
++			if gotSelector != tt.wantLabelSelector {
++				t.Fatalf("labelSelector = %q, want %q", gotSelector, tt.wantLabelSelector)
++			}
++		})
++	}
++}
++
++// TestLoopbackClassificationResolver_ProjectWithoutNameIsRejectedLocally
++// verifies KindProject with an empty project name fails BEFORE making any
++// HTTP call at all -- a request for "every namespace with any value of the
++// project label" is never the right fallback for a missing project name.
++func TestLoopbackClassificationResolver_ProjectWithoutNameIsRejectedLocally(t *testing.T) {
++	called := false
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		called = true
++		w.WriteHeader(http.StatusOK)
++	}))
++	defer srv.Close()
++
++	resolver, err := scopefilter.NewLoopbackClassificationResolver(&restclient.Config{Host: srv.URL})
++	if err != nil {
++		t.Fatalf("NewLoopbackClassificationResolver: %v", err)
++	}
++
++	if _, err := resolver.Resolve(context.Background(), scopefilter.KindProject, ""); err == nil {
++		t.Fatal("expected an error for KindProject with an empty project name")
++	}
++	if called {
++		t.Fatal("must fail before making any HTTP request when the project name is empty")
++	}
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator.go
 new file mode 100644
@@ -3381,6 +3771,193 @@ index 00000000000..5e2d682be7f
 +		}
 +	}
 +	return gained, lost
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/selector_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/selector_test.go
+new file mode 100644
+index 00000000000..1452dd3e484
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/selector_test.go
+@@ -0,0 +1,181 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter_test
++
++import (
++	"sync"
++	"testing"
++	"time"
++
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++)
++
++func fieldsOf(pairs ...string) fakeFields {
++	m := make(map[string]string, len(pairs)/2)
++	for i := 0; i+1 < len(pairs); i += 2 {
++		m[pairs[i]] = pairs[i+1]
++	}
++	return fakeFields(m)
++}
++
++// fakeFields implements fields.Fields directly over a plain map, so these
++// tests don't need a real runtime.Object just to exercise Matches.
++type fakeFields map[string]string
++
++func (f fakeFields) Has(field string) bool   { _, ok := f[field]; return ok }
++func (f fakeFields) Get(field string) string { return f[field] }
++
++func TestNameSetSelector_MatchesByConfiguredField(t *testing.T) {
++	nameSel := scopefilter.NewNameSetSelector(scopefilter.NameField, scopefilter.NamesToSet([]string{"ns-a"}))
++	if !nameSel.Matches(fieldsOf(scopefilter.NameField, "ns-a")) {
++		t.Fatal("NameField selector should match metadata.name=ns-a")
++	}
++	if nameSel.Matches(fieldsOf(scopefilter.NamespaceField, "ns-a")) {
++		t.Fatal("NameField selector must not match on metadata.namespace, even with the same value")
++	}
++
++	nsSel := scopefilter.NewNameSetSelector(scopefilter.NamespaceField, scopefilter.NamesToSet([]string{"ns-a"}))
++	if !nsSel.Matches(fieldsOf(scopefilter.NamespaceField, "ns-a")) {
++		t.Fatal("NamespaceField selector should match metadata.namespace=ns-a")
++	}
++	if nsSel.Matches(fieldsOf(scopefilter.NameField, "ns-a")) {
++		t.Fatal("NamespaceField selector must not match on metadata.name, even with the same value")
++	}
++}
++
++func TestNameSetSelector_NilSetDeniesEverything(t *testing.T) {
++	sel := scopefilter.NewNameSetSelector(scopefilter.NamespaceField, nil)
++	if sel.Matches(fieldsOf(scopefilter.NamespaceField, "ns-a")) {
++		t.Fatal("a selector constructed with a nil set must deny everything")
++	}
++
++	sel.Update(scopefilter.NamesToSet([]string{"ns-a"}))
++	if !sel.Matches(fieldsOf(scopefilter.NamespaceField, "ns-a")) {
++		t.Fatal("after Update with a real set, a previously-nil selector must start matching")
++	}
++
++	sel.Update(nil)
++	if sel.Matches(fieldsOf(scopefilter.NamespaceField, "ns-a")) {
++		t.Fatal("Update(nil) must switch back to deny-everything")
++	}
++}
++
++func TestNameSetSelector_ContractForAndSelectorComposition(t *testing.T) {
++	// fields.AndSelectors treats an Empty() selector as "match everything";
++	// NameSetSelector must never report Empty() == true, or composing it
++	// into an AND chain would silently drop the restriction it exists to
++	// enforce.
++	sel := scopefilter.NewNameSetSelector(scopefilter.NamespaceField, scopefilter.NamesToSet([]string{"ns-a"}))
++	if sel.Empty() {
++		t.Fatal("NameSetSelector.Empty() must always be false")
++	}
++
++	// RequiresExactMatch reporting a match here would let storage-layer
++	// single-key optimizations (MatchesSingle) treat this set-membership
++	// selector as an equality constraint on one value, silently narrowing
++	// results to a single (wrong) key once the set has more than one member.
++	if _, ok := sel.RequiresExactMatch("anything"); ok {
++		t.Fatal("NameSetSelector.RequiresExactMatch must always report (_, false)")
++	}
++}
++
++// TestNameSetSelector_ConcurrentUpdateDuringMatches is a regression guard
++// for the concurrency contract the whole watch-polling design depends on:
++// runACLPoller calls Update() from its own goroutine on every tick while the
++// storage layer's cacher concurrently calls Matches() from arbitrary
++// goroutines for every incoming watch event. Run with `go test -race` to
++// have any real teeth -- a non-atomic implementation would be flagged by
++// the race detector even though the assertions below would still pass.
++func TestNameSetSelector_ConcurrentUpdateDuringMatches(t *testing.T) {
++	sel := scopefilter.NewNameSetSelector(scopefilter.NamespaceField, scopefilter.NamesToSet([]string{"ns-a"}))
++
++	stop := make(chan struct{})
++	var wg sync.WaitGroup
++
++	wg.Add(1)
++	go func() {
++		defer wg.Done()
++		toggle := false
++		for {
++			select {
++			case <-stop:
++				return
++			default:
++				if toggle {
++					sel.Update(scopefilter.NamesToSet([]string{"ns-a", "ns-b"}))
++				} else {
++					sel.Update(scopefilter.NamesToSet([]string{"ns-a"}))
++				}
++				toggle = !toggle
++			}
++		}
++	}()
++
++	const readers = 8
++	wg.Add(readers)
++	for i := 0; i < readers; i++ {
++		go func() {
++			defer wg.Done()
++			for {
++				select {
++				case <-stop:
++					return
++				default:
++					// ns-a must always match regardless of which of the
++					// two Update'd sets is currently active -- both
++					// contain it. A racy implementation could observe a
++					// torn/partial map here; the race detector is the
++					// real judge, this assertion is a sanity backstop.
++					if !sel.Matches(fieldsOf(scopefilter.NamespaceField, "ns-a")) {
++						t.Error("ns-a must always match: it is present in both sets Update alternates between")
++						return
++					}
++				}
++			}
++		}()
++	}
++
++	time.Sleep(50 * time.Millisecond)
++	close(stop)
++	wg.Wait()
++}
++
++func TestDiffNameSets(t *testing.T) {
++	prev := scopefilter.NamesToSet([]string{"ns-a", "ns-b"})
++	next := scopefilter.NamesToSet([]string{"ns-b", "ns-c"})
++
++	gained, lost := scopefilter.DiffNameSets(next, prev)
++	if len(gained) != 1 || gained[0] != "ns-c" {
++		t.Fatalf("gained = %v, want [ns-c]", gained)
++	}
++	if len(lost) != 1 || lost[0] != "ns-a" {
++		t.Fatalf("lost = %v, want [ns-a]", lost)
++	}
++}
++
++func TestIntersectSets(t *testing.T) {
++	a := scopefilter.NamesToSet([]string{"ns-a", "ns-b"})
++	b := scopefilter.NamesToSet([]string{"ns-b", "ns-c"})
++
++	got := scopefilter.IntersectSets(a, b)
++	if len(got) != 1 {
++		t.Fatalf("IntersectSets(%v, %v) = %v, want exactly {ns-b}", a, b, got)
++	}
++	if _, ok := got["ns-b"]; !ok {
++		t.Fatalf("IntersectSets(%v, %v) = %v, want exactly {ns-b}", a, b, got)
++	}
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/store.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/store.go
 new file mode 100644
