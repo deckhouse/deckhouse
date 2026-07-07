@@ -53,3 +53,15 @@
 Итого инструментов из отчёта: **45**.
 Из них с явной заменой/статусом из `tools-docker-replacements.md`: **15**.
 Требуется создание нового образа (по отсутствию сопоставления): **30**.
+
+## Дополнительно выявленные инструменты из совпавших `.sh` в `tools`
+
+Источник анализа: `tools/check-release-images.sh`, `tools/docs/spelling/validate_dictionary_sync.sh`.
+
+| Инструмент | Функция(и) / место обнаружения | Наличие в busybox |
+|---|---|---|
+| `diff` | основной поток скрипта (`validate_dictionary_sync.sh`) | Да |
+| `dirname` | основной поток скрипта (`validate_dictionary_sync.sh`) | Да |
+| `mktemp` | основной поток скрипта (`validate_dictionary_sync.sh`) | Да |
+| `pwd` | основной поток скрипта (`validate_dictionary_sync.sh`) | Да |
+| `validate_wordlist.sh` | основной поток скрипта (`validate_dictionary_sync.sh`) | Нет |
