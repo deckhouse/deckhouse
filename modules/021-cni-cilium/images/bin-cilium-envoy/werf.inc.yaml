@@ -129,7 +129,13 @@ shell:
   # selects the LLVM version from this env var (otherwise it falls back to the newest installed, e.g. 19.1).
   # bazel runs compile actions in a sandbox that does not inherit the shell env, so it must be passed explicitly.
 {{- if $buildWithPreparedCacheAndDeps }}
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
+  # NB: no --nofetch here. Envoy 1.36 pulls the Dynamic Modules Rust SDK via crate_universe (rules_rust),
+  # and cilium/proxy's Makefile hardcodes `CARGO_BAZEL_REPIN=true`, which forces the crates_repository rule
+  # to re-run (a "fetch"). --nofetch would abort that with "@@dynamic_modules_rust_sdk_crate_index not found
+  # and fetching repositories is disabled". The prepared deps already vendor the full cargo home
+  # (index + .crate cache + sources), so we let the repin run but pin cargo offline via --repo_env, keeping
+  # the build hermetic: all other external repos come from the pre-extracted external/ + --disk_cache.
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --repo_env=CARGO_NET_OFFLINE=true --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- else }}
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- end }}
