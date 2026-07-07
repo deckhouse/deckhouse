@@ -78,23 +78,23 @@
 
 Источник анализа: `.github/scripts/registry-crane-cleanup.sh`, `.github/scripts/registry-deckhouse-cleanup.sh`, `.github/scripts/send-report.sh`, `.github/scripts/validation_bashible.sh`, `.github/scripts/validation_run.sh`.
 
-| Инструмент | Файл скрипта |
-|---|---|
-| `base64` | `.github/scripts/registry-deckhouse-cleanup.sh` |
-| `cat` | `.github/scripts/registry-deckhouse-cleanup.sh`, `.github/scripts/validation_bashible.sh`, `.github/scripts/validation_run.sh` |
-| `cp` | `.github/scripts/validation_run.sh` |
-| `crane` | `.github/scripts/registry-crane-cleanup.sh` |
-| `curl` | `.github/scripts/registry-crane-cleanup.sh`, `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` |
-| `date` | `.github/scripts/registry-crane-cleanup.sh` |
-| `dhctl` | `.github/scripts/validation_bashible.sh` |
-| `docker` | `.github/scripts/validation_bashible.sh` |
-| `grep` | `.github/scripts/registry-crane-cleanup.sh`, `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` |
-| `jq` | `.github/scripts/registry-crane-cleanup.sh` |
-| `mkdir` | `.github/scripts/registry-deckhouse-cleanup.sh` |
-| `mktemp` | `.github/scripts/validation_run.sh` |
-| `printf` | `.github/scripts/validation_bashible.sh` |
-| `pwd` | `.github/scripts/validation_bashible.sh` |
-| `rm` | `.github/scripts/validation_run.sh` |
-| `sed` | `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` |
-| `tar` | `.github/scripts/registry-crane-cleanup.sh` |
-| `werf` | `.github/scripts/registry-deckhouse-cleanup.sh` |
+| Инструмент | Файл скрипта | Наличие в busybox |
+|---|---|---|
+| `base64` | `.github/scripts/registry-deckhouse-cleanup.sh` | Да |
+| `cat` | `.github/scripts/registry-deckhouse-cleanup.sh`, `.github/scripts/validation_bashible.sh`, `.github/scripts/validation_run.sh` | Да |
+| `cp` | `.github/scripts/validation_run.sh` | Да |
+| `crane` | `.github/scripts/registry-crane-cleanup.sh` | Нет |
+| `curl` | `.github/scripts/registry-crane-cleanup.sh`, `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` | Нет |
+| `date` | `.github/scripts/registry-crane-cleanup.sh` | Да |
+| `dhctl` | `.github/scripts/validation_bashible.sh` | Нет |
+| `docker` | `.github/scripts/validation_bashible.sh` | Нет |
+| `grep` | `.github/scripts/registry-crane-cleanup.sh`, `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` | Да |
+| `jq` | `.github/scripts/registry-crane-cleanup.sh` | Нет |
+| `mkdir` | `.github/scripts/registry-deckhouse-cleanup.sh` | Да |
+| `mktemp` | `.github/scripts/validation_run.sh` | Да |
+| `printf` | `.github/scripts/validation_bashible.sh` | Да |
+| `pwd` | `.github/scripts/validation_bashible.sh` | Да |
+| `rm` | `.github/scripts/validation_run.sh` | Да |
+| `sed` | `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` | Да |
+| `tar` | `.github/scripts/registry-crane-cleanup.sh` | Да |
+| `werf` | `.github/scripts/registry-deckhouse-cleanup.sh` | Нет |
