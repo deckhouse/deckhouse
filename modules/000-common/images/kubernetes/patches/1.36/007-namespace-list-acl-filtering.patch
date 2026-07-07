@@ -1,464 +1,3 @@
-diff --git a/pkg/registry/core/namespace/storage/storage.go b/pkg/registry/core/namespace/storage/storage.go
-index e67cedeb15e..1315e000829 100644
---- a/pkg/registry/core/namespace/storage/storage.go
-+++ b/pkg/registry/core/namespace/storage/storage.go
-@@ -18,20 +18,27 @@ package storage
- 
- import (
- 	"context"
-+	"errors"
- 	"fmt"
-+	"time"
- 
- 	apierrors "k8s.io/apimachinery/pkg/api/errors"
- 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
- 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-+	"k8s.io/apimachinery/pkg/fields"
-+	"k8s.io/apimachinery/pkg/labels"
- 	"k8s.io/apimachinery/pkg/runtime"
- 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
- 	"k8s.io/apimachinery/pkg/watch"
-+	"k8s.io/apiserver/pkg/endpoints/filters"
- 	"k8s.io/apiserver/pkg/registry/generic"
- 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
- 	"k8s.io/apiserver/pkg/registry/rest"
- 	"k8s.io/apiserver/pkg/storage"
- 	storageerr "k8s.io/apiserver/pkg/storage/errors"
- 	"k8s.io/apiserver/pkg/util/dryrun"
-+	restclient "k8s.io/client-go/rest"
-+	"k8s.io/klog/v2"
- 	api "k8s.io/kubernetes/pkg/apis/core"
- 	"k8s.io/kubernetes/pkg/printers"
- 	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
-@@ -40,10 +47,45 @@ import (
- 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
- )
- 
--// rest implements a RESTStorage for namespaces
-+// errCannotListNamespaces / errCannotGetNamespace / errCannotWatchNamespaces
-+// are the opaque error messages we surface to clients when ACL filtering is
-+// active but cannot decide one way or the other (typically: missing user
-+// info in context, or the permission service is unreachable). We never leak
-+// the underlying cause to the client — that goes to klog instead.
-+var (
-+	errCannotListNamespaces  = errors.New("cannot list namespaces")
-+	errCannotGetNamespace    = errors.New("cannot get namespace")
-+	errCannotWatchNamespaces = errors.New("cannot watch namespaces")
-+)
-+
-+// defaultACLRefreshInterval is the polling cadence the watch path uses to
-+// re-fetch a user's accessible-namespace set when no explicit interval was
-+// configured. One second balances responsiveness for permission changes
-+// against load on the upstream permission service; tune via Option if you
-+// need otherwise.
-+const defaultACLRefreshInterval = time.Second
-+
-+// REST implements a RESTStorage for namespaces.
-+//
-+// When accessibleFetcher is non-nil and the request context carries
-+// filters.IsNamespaceFilteringMode (set by the authorization filter for users
-+// who lack RBAC for list/get on namespaces but should still see the subset
-+// they have *some* access to), List/Get/Watch transparently switch to the
-+// ACL-filtered code path. Otherwise the calls fall straight through to the
-+// generic registry store, preserving vanilla Kubernetes semantics.
- type REST struct {
- 	store  *genericregistry.Store
- 	status *genericregistry.Store
-+
-+	// accessibleFetcher resolves a user's accessible-namespace set against
-+	// the upstream permission service. nil disables Deckhouse filtering
-+	// entirely (vanilla behavior).
-+	accessibleFetcher AccessibleNamespaceFetcher
-+
-+	// aclRefreshInterval controls how often the Watch path re-polls the
-+	// fetcher to detect permission changes mid-watch. Coerced to
-+	// defaultACLRefreshInterval at construction if non-positive.
-+	aclRefreshInterval time.Duration
- }
- 
- // StatusREST implements the REST endpoint for changing the status of a namespace.
-@@ -56,8 +98,73 @@ type FinalizeREST struct {
- 	store *genericregistry.Store
- }
- 
--// NewREST returns a RESTStorage object that will work against namespaces.
--func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *FinalizeREST, error) {
-+// restConfig collects the Deckhouse-specific settings supplied to NewREST
-+// via functional options. The zero value disables filtering — i.e. plain
-+// upstream behavior — which is what NewREST(optsGetter) gives you.
-+type restConfig struct {
-+	// fetcher is the AccessibleNamespaceFetcher to use directly, when the
-+	// caller already has one (typically tests).
-+	fetcher AccessibleNamespaceFetcher
-+
-+	// loopbackConfig, when set, asks NewREST to build a
-+	// LoopbackAccessibleNamespaceFetcher itself. If both fetcher and
-+	// loopbackConfig are set, fetcher wins.
-+	loopbackConfig *restclient.Config
-+
-+	// refreshInterval overrides defaultACLRefreshInterval for the
-+	// watch-path ACL poller.
-+	refreshInterval time.Duration
-+}
-+
-+// Option configures the namespace REST storage. Options are applied in
-+// order; later options override earlier ones for the same field.
-+type Option func(*restConfig)
-+
-+// WithAccessibleNamespaceFetcher enables Deckhouse ACL filtering with the
-+// caller-supplied fetcher. Pass nil to leave filtering disabled.
-+func WithAccessibleNamespaceFetcher(f AccessibleNamespaceFetcher) Option {
-+	return func(c *restConfig) { c.fetcher = f }
-+}
-+
-+// WithLoopbackFetcher enables Deckhouse ACL filtering by constructing a
-+// LoopbackAccessibleNamespaceFetcher from the supplied loopback REST
-+// config. Nil config or fetcher-build failure degrades to vanilla
-+// behavior with a klog warning — kube-apiserver still boots.
-+func WithLoopbackFetcher(cfg *restclient.Config) Option {
-+	return func(c *restConfig) { c.loopbackConfig = cfg }
-+}
-+
-+// WithACLRefreshInterval overrides the watch-path ACL polling cadence.
-+// Non-positive values fall back to defaultACLRefreshInterval.
-+func WithACLRefreshInterval(d time.Duration) Option {
-+	return func(c *restConfig) { c.refreshInterval = d }
-+}
-+
-+// NewREST returns a RESTStorage object for namespaces.
-+//
-+// Called with no options, NewREST(optsGetter) reproduces vanilla upstream
-+// behavior — this is what the upstream storage_test.go relies on.
-+//
-+// Pass WithAccessibleNamespaceFetcher / WithLoopbackFetcher to enable
-+// Deckhouse ACL filtering. If a fetcher cannot be built (e.g. malformed
-+// loopback config) filtering is silently disabled with a klog warning so
-+// the apiserver remains bootstrappable.
-+func NewREST(optsGetter generic.RESTOptionsGetter, opts ...Option) (*REST, *StatusREST, *FinalizeREST, error) {
-+	var cfg restConfig
-+	for _, opt := range opts {
-+		opt(&cfg)
-+	}
-+
-+	fetcher := cfg.fetcher
-+	if fetcher == nil && cfg.loopbackConfig != nil {
-+		f, err := NewLoopbackAccessibleNamespaceFetcher(cfg.loopbackConfig)
-+		if err != nil {
-+			klog.Warningf("namespace ACL: failed to build loopback accessible-namespace fetcher: %v; filtering disabled", err)
-+		} else {
-+			fetcher = f
-+		}
-+	}
-+
- 	store := &genericregistry.Store{
- 		NewFunc:                   func() runtime.Object { return &api.Namespace{} },
- 		NewListFunc:               func() runtime.Object { return &api.NamespaceList{} },
-@@ -75,8 +182,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
- 
- 		TableConvertor: printerstorage.TableConvertor{TableGenerator: printers.NewTableGenerator().With(printersinternal.AddHandlers)},
- 	}
--	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: namespace.GetAttrs}
--	if err := store.CompleteWithOptions(options); err != nil {
-+	storeOptions := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: namespace.GetAttrs}
-+	if err := store.CompleteWithOptions(storeOptions); err != nil {
- 		return nil, nil, nil, err
- 	}
- 
-@@ -88,7 +195,18 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
- 	finalizeStore.UpdateStrategy = namespace.FinalizeStrategy
- 	finalizeStore.ResetFieldsStrategy = namespace.FinalizeStrategy
- 
--	return &REST{store: store, status: &statusStore}, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
-+	refresh := cfg.refreshInterval
-+	if refresh <= 0 {
-+		refresh = defaultACLRefreshInterval
-+	}
-+
-+	r := &REST{
-+		store:              store,
-+		status:             &statusStore,
-+		accessibleFetcher:  fetcher,
-+		aclRefreshInterval: refresh,
-+	}
-+	return r, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
- }
- 
- func (r *REST) NamespaceScoped() bool {
-@@ -114,8 +232,69 @@ func (r *REST) NewList() runtime.Object {
- 	return r.store.NewList()
- }
- 
-+// shouldFilter returns true when the request should run through the ACL
-+// filtering path. Two preconditions must hold:
-+//
-+//  1. A fetcher is configured at construction time (Deckhouse mode).
-+//  2. The request context was tagged by the authorization filter as
-+//     "namespace filtering mode" — i.e. the user was denied by the regular
-+//     authorizer chain but the filter chose to bypass the 403 specifically
-+//     to let the storage layer return a filtered subset.
-+//
-+// Without (2), users with full RBAC see vanilla behavior with no extra
-+// fetcher round-trips on the hot path.
-+func (r *REST) shouldFilter(ctx context.Context) bool {
-+	return r.accessibleFetcher != nil && filters.IsNamespaceFilteringMode(ctx)
-+}
-+
-+// List returns a list of namespaces. When ACL filtering is active, the user-
-+// supplied selectors are AND-combined with a metadata.name-set membership
-+// selector and the request is served via Store.ListPredicate, so all the
-+// usual storage-layer machinery (pagination, single-key optimization via
-+// MatchesSingle, etc.) keeps working without any post-processing.
- func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
--	return r.store.List(ctx, options)
-+	if !r.shouldFilter(ctx) {
-+		return r.store.List(ctx, options)
-+	}
-+
-+	u, err := userFromContext(ctx)
-+	if err != nil {
-+		klog.V(4).InfoS("namespace ACL: missing user info on List", "err", err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotListNamespaces)
-+	}
-+
-+	names, err := r.accessibleFetcher.FetchAccessibleNamespaces(ctx, u)
-+	if err != nil {
-+		klog.Warningf("namespace ACL: failed to fetch accessible namespaces for user %q: %v; returning forbidden", u.GetName(), err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotListNamespaces)
-+	}
-+
-+	predicate := r.aclPredicate(options, newAccessibleNamesSelector(namesToSet(names)))
-+	out, err := r.store.ListPredicate(ctx, predicate, options)
-+	if err != nil {
-+		return nil, storageerr.InterpretListError(err, api.Resource("namespaces"))
-+	}
-+	return out, nil
-+}
-+
-+// aclPredicate builds the SelectionPredicate used by List and Watch in
-+// filtering mode. It composes the user-supplied label/field selectors from
-+// options with our metadata.name set selector via fields.AndSelectors and
-+// hands the result to the registered PredicateFunc, which sets up GetAttrs
-+// the way the upstream namespace strategy expects.
-+func (r *REST) aclPredicate(options *metainternalversion.ListOptions, accessibleSel *accessibleNamesSelector) storage.SelectionPredicate {
-+	label := labels.Everything()
-+	field := fields.Everything()
-+	if options != nil {
-+		if options.LabelSelector != nil {
-+			label = options.LabelSelector
-+		}
-+		if options.FieldSelector != nil {
-+			field = options.FieldSelector
-+		}
-+	}
-+	combined := fields.AndSelectors(field, accessibleSel)
-+	return r.store.PredicateFunc(label, combined)
- }
- 
- func (r *REST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
-@@ -126,12 +305,88 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
- 	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
- }
- 
-+// Get retrieves a single namespace, applying the ACL fast path when filtering
-+// is active: a single point-query against the permission service answers
-+// whether the user can see this namespace, with NotFound returned in place
-+// of Forbidden to avoid leaking existence to unprivileged callers.
- func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-+	if !r.shouldFilter(ctx) {
-+		return r.store.Get(ctx, name, options)
-+	}
-+
-+	u, err := userFromContext(ctx)
-+	if err != nil {
-+		klog.V(4).InfoS("namespace ACL: missing user info on Get", "namespace", name, "err", err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), name, errCannotGetNamespace)
-+	}
-+
-+	accessible, err := r.accessibleFetcher.IsNamespaceAccessible(ctx, u, name)
-+	if err != nil {
-+		klog.Warningf("namespace ACL: failed to check accessibility for user %q on namespace %q: %v; returning forbidden", u.GetName(), name, err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), name, errCannotGetNamespace)
-+	}
-+	if !accessible {
-+		return nil, apierrors.NewNotFound(api.Resource("namespaces"), name)
-+	}
-+
- 	return r.store.Get(ctx, name, options)
- }
- 
-+// Watch streams namespace events. When ACL filtering is active, it:
-+//
-+//  1. Fetches the user's initial accessible-namespace set.
-+//  2. Builds a live accessibleNamesSelector seeded with that set, ANDs it
-+//     with the caller's field selector, and starts the underlying storage
-+//     watch with that predicate. The cacher will then drop events for any
-+//     namespace the user cannot see, with no extra plumbing.
-+//  3. Returns a wrapper that polls the fetcher every aclRefreshInterval and
-+//     synthesizes ADDED/DELETED events when the user gains or loses access
-+//     to a namespace mid-watch — the canonical OpenShift userProjectWatcher
-+//     pattern.
-+//
-+// Without filtering this is a straight pass-through to Store.Watch.
- func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
--	return r.store.Watch(ctx, options)
-+	if !r.shouldFilter(ctx) {
-+		return r.store.Watch(ctx, options)
-+	}
-+
-+	u, err := userFromContext(ctx)
-+	if err != nil {
-+		klog.V(4).InfoS("namespace ACL: missing user info on Watch", "err", err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotWatchNamespaces)
-+	}
-+
-+	names, err := r.accessibleFetcher.FetchAccessibleNamespaces(ctx, u)
-+	if err != nil {
-+		klog.Warningf("namespace ACL: failed to fetch accessible namespaces for user %q on Watch: %v; returning forbidden", u.GetName(), err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotWatchNamespaces)
-+	}
-+	initial := namesToSet(names)
-+	selector := newAccessibleNamesSelector(initial)
-+
-+	predicate := r.aclPredicate(options, selector)
-+	resourceVersion := ""
-+	var sendInitialEvents *bool
-+	if options != nil {
-+		resourceVersion = options.ResourceVersion
-+		predicate.AllowWatchBookmarks = options.AllowWatchBookmarks
-+		sendInitialEvents = options.SendInitialEvents
-+	}
-+
-+	inner, err := r.store.WatchPredicate(ctx, predicate, resourceVersion, sendInitialEvents)
-+	if err != nil {
-+		return nil, err
-+	}
-+
-+	return newFilteredWatch(ctx, filteredWatchConfig{
-+		inner:           inner,
-+		selector:        selector,
-+		getter:          r.store,
-+		fetcher:         r.accessibleFetcher,
-+		user:            u,
-+		initial:         initial,
-+		refreshInterval: r.aclRefreshInterval,
-+	}), nil
- }
- 
- // Delete enforces life-cycle rules for namespace termination
-diff --git a/pkg/registry/core/rest/storage_core_generic.go b/pkg/registry/core/rest/storage_core_generic.go
-index 9d82ca85633..0a9f149c3eb 100644
---- a/pkg/registry/core/rest/storage_core_generic.go
-+++ b/pkg/registry/core/rest/storage_core_generic.go
-@@ -106,7 +106,21 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
- 		return genericapiserver.APIGroupInfo{}, err
- 	}
- 
--	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(restOptionsGetter)
-+	// Deckhouse: always wire the filtering-capable namespace storage. The
-+	// fetcher is constructed from the loopback client so impersonation
-+	// against permission-browser-apiserver works out of the box. Actual
-+	// per-request filtering only kicks in when filters.IsNamespaceFilteringMode(ctx)
-+	// is true — set by WithAuthorization when a user lacks RBAC for
-+	// list/get on namespaces but should still see their accessible subset.
-+	//
-+	// We omit WithACLRefreshInterval to accept the package default (1s),
-+	// which controls how quickly synthetic ADDED/DELETED events surface on
-+	// long-lived watches when permissions change. Add WithACLRefreshInterval
-+	// to override at runtime if needed.
-+	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(
-+		restOptionsGetter,
-+		namespacestore.WithLoopbackFetcher(c.LoopbackClientConfig),
-+	)
- 	if err != nil {
- 		return genericapiserver.APIGroupInfo{}, err
- 	}
-diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index 6c6c94ba718..86bd915e96c 100644
---- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-+++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-@@ -45,8 +45,58 @@ const (
- 	decisionAllow  = "allow"
- 	decisionForbid = "forbid"
- 	reasonError    = "internal error"
-+
-+	// Deckhouse: audit annotation values used when the authorization filter
-+	// hands a denied namespace list/get/watch over to the storage layer for
-+	// ACL-based filtering instead of 403'ing.
-+	decisionAllowFiltered = "allow-filtered"
-+	reasonNamespaceFilter = "namespace filtering mode"
- )
- 
-+// Deckhouse: namespaceFilteringModeKey is the context-value key that the
-+// authorization filter uses to flag a request as "denied by RBAC but routed
-+// to the namespace-filtering code path in storage". It is intentionally an
-+// unexported zero-size struct so external packages cannot synthesize it
-+// without going through WithNamespaceFilteringMode (which is only meant for
-+// tests).
-+type namespaceFilteringModeKey struct{}
-+
-+// IsNamespaceFilteringMode reports whether the request context was tagged for
-+// ACL-based namespace filtering (see the WithAuthorization branch below).
-+// The storage layer reads this to decide whether to invoke the accessible-
-+// namespace fetcher.
-+func IsNamespaceFilteringMode(ctx context.Context) bool {
-+	val, ok := ctx.Value(namespaceFilteringModeKey{}).(bool)
-+	return ok && val
-+}
-+
-+// WithNamespaceFilteringMode returns a derivative context with the namespace
-+// filtering flag set. Production code reaches this state via the
-+// authorization filter; tests use this helper to construct a context that
-+// pretends an authorizer denial happened.
-+func WithNamespaceFilteringMode(ctx context.Context) context.Context {
-+	return context.WithValue(ctx, namespaceFilteringModeKey{}, true)
-+}
-+
-+// isNamespaceListGetOrWatchRequest reports whether the request targets the
-+// core /v1/namespaces list/get/watch endpoint. These three verbs are the
-+// only ones we bypass 403 for: create/update/delete still reject denied
-+// users with the standard error so we don't accidentally let unauthorized
-+// callers mutate cluster state.
-+func isNamespaceListGetOrWatchRequest(requestInfo *request.RequestInfo) bool {
-+	if requestInfo == nil || !requestInfo.IsResourceRequest {
-+		return false
-+	}
-+	if requestInfo.APIGroup != "" || requestInfo.Resource != "namespaces" || requestInfo.Subresource != "" {
-+		return false
-+	}
-+	switch requestInfo.Verb {
-+	case "list", "get", "watch":
-+		return true
-+	}
-+	return false
-+}
-+
- type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
- 
- // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
-@@ -90,6 +140,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
- 			return
- 		}
- 
-+		// Deckhouse: bypass 403 for namespace list/get/watch and let the
-+		// storage layer return an ACL-filtered response instead. This is
-+		// strictly a relaxation for *read* verbs; mutating verbs still
-+		// hit the standard Forbidden path below. The storage layer keys
-+		// off IsNamespaceFilteringMode() so other consumers of this
-+		// filter chain are unaffected.
-+		requestInfo, _ := request.RequestInfoFrom(ctx)
-+		if isNamespaceListGetOrWatchRequest(requestInfo) {
-+			klog.V(4).InfoS("namespace ACL: bypassing authorization denial for namespace read; storage will filter",
-+				"URI", req.RequestURI, "verb", requestInfo.Verb, "reason", reason)
-+			audit.AddAuditAnnotations(ctx,
-+				decisionAnnotationKey, decisionAllowFiltered,
-+				reasonAnnotationKey, reasonNamespaceFilter)
-+			handler.ServeHTTP(w, req.WithContext(WithNamespaceFilteringMode(ctx)))
-+			return
-+		}
-+
- 		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
- 		audit.AddAuditAnnotations(ctx,
- 			decisionAnnotationKey, decisionForbid,
 diff --git a/pkg/registry/core/namespace/storage/accessible_fetcher.go b/pkg/registry/core/namespace/storage/accessible_fetcher.go
 new file mode 100644
 index 00000000000..aca532cb899
@@ -1824,3 +1363,464 @@ index 00000000000..9621931772d
 +		t.Fatalf("ACL poller still ticking after Stop: before=%d after=%d", beforeCalls, afterCalls)
 +	}
 +}
+diff --git a/pkg/registry/core/namespace/storage/storage.go b/pkg/registry/core/namespace/storage/storage.go
+index e67cedeb15e..1315e000829 100644
+--- a/pkg/registry/core/namespace/storage/storage.go
++++ b/pkg/registry/core/namespace/storage/storage.go
+@@ -18,20 +18,27 @@ package storage
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"fmt"
++	"time"
+ 
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/fields"
++	"k8s.io/apimachinery/pkg/labels"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+ 	"k8s.io/apimachinery/pkg/watch"
++	"k8s.io/apiserver/pkg/endpoints/filters"
+ 	"k8s.io/apiserver/pkg/registry/generic"
+ 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
+ 	"k8s.io/apiserver/pkg/registry/rest"
+ 	"k8s.io/apiserver/pkg/storage"
+ 	storageerr "k8s.io/apiserver/pkg/storage/errors"
+ 	"k8s.io/apiserver/pkg/util/dryrun"
++	restclient "k8s.io/client-go/rest"
++	"k8s.io/klog/v2"
+ 	api "k8s.io/kubernetes/pkg/apis/core"
+ 	"k8s.io/kubernetes/pkg/printers"
+ 	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
+@@ -40,10 +47,45 @@ import (
+ 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
+ )
+ 
+-// rest implements a RESTStorage for namespaces
++// errCannotListNamespaces / errCannotGetNamespace / errCannotWatchNamespaces
++// are the opaque error messages we surface to clients when ACL filtering is
++// active but cannot decide one way or the other (typically: missing user
++// info in context, or the permission service is unreachable). We never leak
++// the underlying cause to the client — that goes to klog instead.
++var (
++	errCannotListNamespaces  = errors.New("cannot list namespaces")
++	errCannotGetNamespace    = errors.New("cannot get namespace")
++	errCannotWatchNamespaces = errors.New("cannot watch namespaces")
++)
++
++// defaultACLRefreshInterval is the polling cadence the watch path uses to
++// re-fetch a user's accessible-namespace set when no explicit interval was
++// configured. One second balances responsiveness for permission changes
++// against load on the upstream permission service; tune via Option if you
++// need otherwise.
++const defaultACLRefreshInterval = time.Second
++
++// REST implements a RESTStorage for namespaces.
++//
++// When accessibleFetcher is non-nil and the request context carries
++// filters.IsNamespaceFilteringMode (set by the authorization filter for users
++// who lack RBAC for list/get on namespaces but should still see the subset
++// they have *some* access to), List/Get/Watch transparently switch to the
++// ACL-filtered code path. Otherwise the calls fall straight through to the
++// generic registry store, preserving vanilla Kubernetes semantics.
+ type REST struct {
+ 	store  *genericregistry.Store
+ 	status *genericregistry.Store
++
++	// accessibleFetcher resolves a user's accessible-namespace set against
++	// the upstream permission service. nil disables Deckhouse filtering
++	// entirely (vanilla behavior).
++	accessibleFetcher AccessibleNamespaceFetcher
++
++	// aclRefreshInterval controls how often the Watch path re-polls the
++	// fetcher to detect permission changes mid-watch. Coerced to
++	// defaultACLRefreshInterval at construction if non-positive.
++	aclRefreshInterval time.Duration
+ }
+ 
+ // StatusREST implements the REST endpoint for changing the status of a namespace.
+@@ -56,8 +98,73 @@ type FinalizeREST struct {
+ 	store *genericregistry.Store
+ }
+ 
+-// NewREST returns a RESTStorage object that will work against namespaces.
+-func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *FinalizeREST, error) {
++// restConfig collects the Deckhouse-specific settings supplied to NewREST
++// via functional options. The zero value disables filtering — i.e. plain
++// upstream behavior — which is what NewREST(optsGetter) gives you.
++type restConfig struct {
++	// fetcher is the AccessibleNamespaceFetcher to use directly, when the
++	// caller already has one (typically tests).
++	fetcher AccessibleNamespaceFetcher
++
++	// loopbackConfig, when set, asks NewREST to build a
++	// LoopbackAccessibleNamespaceFetcher itself. If both fetcher and
++	// loopbackConfig are set, fetcher wins.
++	loopbackConfig *restclient.Config
++
++	// refreshInterval overrides defaultACLRefreshInterval for the
++	// watch-path ACL poller.
++	refreshInterval time.Duration
++}
++
++// Option configures the namespace REST storage. Options are applied in
++// order; later options override earlier ones for the same field.
++type Option func(*restConfig)
++
++// WithAccessibleNamespaceFetcher enables Deckhouse ACL filtering with the
++// caller-supplied fetcher. Pass nil to leave filtering disabled.
++func WithAccessibleNamespaceFetcher(f AccessibleNamespaceFetcher) Option {
++	return func(c *restConfig) { c.fetcher = f }
++}
++
++// WithLoopbackFetcher enables Deckhouse ACL filtering by constructing a
++// LoopbackAccessibleNamespaceFetcher from the supplied loopback REST
++// config. Nil config or fetcher-build failure degrades to vanilla
++// behavior with a klog warning — kube-apiserver still boots.
++func WithLoopbackFetcher(cfg *restclient.Config) Option {
++	return func(c *restConfig) { c.loopbackConfig = cfg }
++}
++
++// WithACLRefreshInterval overrides the watch-path ACL polling cadence.
++// Non-positive values fall back to defaultACLRefreshInterval.
++func WithACLRefreshInterval(d time.Duration) Option {
++	return func(c *restConfig) { c.refreshInterval = d }
++}
++
++// NewREST returns a RESTStorage object for namespaces.
++//
++// Called with no options, NewREST(optsGetter) reproduces vanilla upstream
++// behavior — this is what the upstream storage_test.go relies on.
++//
++// Pass WithAccessibleNamespaceFetcher / WithLoopbackFetcher to enable
++// Deckhouse ACL filtering. If a fetcher cannot be built (e.g. malformed
++// loopback config) filtering is silently disabled with a klog warning so
++// the apiserver remains bootstrappable.
++func NewREST(optsGetter generic.RESTOptionsGetter, opts ...Option) (*REST, *StatusREST, *FinalizeREST, error) {
++	var cfg restConfig
++	for _, opt := range opts {
++		opt(&cfg)
++	}
++
++	fetcher := cfg.fetcher
++	if fetcher == nil && cfg.loopbackConfig != nil {
++		f, err := NewLoopbackAccessibleNamespaceFetcher(cfg.loopbackConfig)
++		if err != nil {
++			klog.Warningf("namespace ACL: failed to build loopback accessible-namespace fetcher: %v; filtering disabled", err)
++		} else {
++			fetcher = f
++		}
++	}
++
+ 	store := &genericregistry.Store{
+ 		NewFunc:                   func() runtime.Object { return &api.Namespace{} },
+ 		NewListFunc:               func() runtime.Object { return &api.NamespaceList{} },
+@@ -75,8 +182,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
+ 
+ 		TableConvertor: printerstorage.TableConvertor{TableGenerator: printers.NewTableGenerator().With(printersinternal.AddHandlers)},
+ 	}
+-	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: namespace.GetAttrs}
+-	if err := store.CompleteWithOptions(options); err != nil {
++	storeOptions := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: namespace.GetAttrs}
++	if err := store.CompleteWithOptions(storeOptions); err != nil {
+ 		return nil, nil, nil, err
+ 	}
+ 
+@@ -88,7 +195,18 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
+ 	finalizeStore.UpdateStrategy = namespace.FinalizeStrategy
+ 	finalizeStore.ResetFieldsStrategy = namespace.FinalizeStrategy
+ 
+-	return &REST{store: store, status: &statusStore}, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
++	refresh := cfg.refreshInterval
++	if refresh <= 0 {
++		refresh = defaultACLRefreshInterval
++	}
++
++	r := &REST{
++		store:              store,
++		status:             &statusStore,
++		accessibleFetcher:  fetcher,
++		aclRefreshInterval: refresh,
++	}
++	return r, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
+ }
+ 
+ func (r *REST) NamespaceScoped() bool {
+@@ -114,8 +232,69 @@ func (r *REST) NewList() runtime.Object {
+ 	return r.store.NewList()
+ }
+ 
++// shouldFilter returns true when the request should run through the ACL
++// filtering path. Two preconditions must hold:
++//
++//  1. A fetcher is configured at construction time (Deckhouse mode).
++//  2. The request context was tagged by the authorization filter as
++//     "namespace filtering mode" — i.e. the user was denied by the regular
++//     authorizer chain but the filter chose to bypass the 403 specifically
++//     to let the storage layer return a filtered subset.
++//
++// Without (2), users with full RBAC see vanilla behavior with no extra
++// fetcher round-trips on the hot path.
++func (r *REST) shouldFilter(ctx context.Context) bool {
++	return r.accessibleFetcher != nil && filters.IsNamespaceFilteringMode(ctx)
++}
++
++// List returns a list of namespaces. When ACL filtering is active, the user-
++// supplied selectors are AND-combined with a metadata.name-set membership
++// selector and the request is served via Store.ListPredicate, so all the
++// usual storage-layer machinery (pagination, single-key optimization via
++// MatchesSingle, etc.) keeps working without any post-processing.
+ func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
+-	return r.store.List(ctx, options)
++	if !r.shouldFilter(ctx) {
++		return r.store.List(ctx, options)
++	}
++
++	u, err := userFromContext(ctx)
++	if err != nil {
++		klog.V(4).InfoS("namespace ACL: missing user info on List", "err", err)
++		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotListNamespaces)
++	}
++
++	names, err := r.accessibleFetcher.FetchAccessibleNamespaces(ctx, u)
++	if err != nil {
++		klog.Warningf("namespace ACL: failed to fetch accessible namespaces for user %q: %v; returning forbidden", u.GetName(), err)
++		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotListNamespaces)
++	}
++
++	predicate := r.aclPredicate(options, newAccessibleNamesSelector(namesToSet(names)))
++	out, err := r.store.ListPredicate(ctx, predicate, options)
++	if err != nil {
++		return nil, storageerr.InterpretListError(err, api.Resource("namespaces"))
++	}
++	return out, nil
++}
++
++// aclPredicate builds the SelectionPredicate used by List and Watch in
++// filtering mode. It composes the user-supplied label/field selectors from
++// options with our metadata.name set selector via fields.AndSelectors and
++// hands the result to the registered PredicateFunc, which sets up GetAttrs
++// the way the upstream namespace strategy expects.
++func (r *REST) aclPredicate(options *metainternalversion.ListOptions, accessibleSel *accessibleNamesSelector) storage.SelectionPredicate {
++	label := labels.Everything()
++	field := fields.Everything()
++	if options != nil {
++		if options.LabelSelector != nil {
++			label = options.LabelSelector
++		}
++		if options.FieldSelector != nil {
++			field = options.FieldSelector
++		}
++	}
++	combined := fields.AndSelectors(field, accessibleSel)
++	return r.store.PredicateFunc(label, combined)
+ }
+ 
+ func (r *REST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
+@@ -126,12 +305,88 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
+ 	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
+ }
+ 
++// Get retrieves a single namespace, applying the ACL fast path when filtering
++// is active: a single point-query against the permission service answers
++// whether the user can see this namespace, with NotFound returned in place
++// of Forbidden to avoid leaking existence to unprivileged callers.
+ func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
++	if !r.shouldFilter(ctx) {
++		return r.store.Get(ctx, name, options)
++	}
++
++	u, err := userFromContext(ctx)
++	if err != nil {
++		klog.V(4).InfoS("namespace ACL: missing user info on Get", "namespace", name, "err", err)
++		return nil, apierrors.NewForbidden(api.Resource("namespaces"), name, errCannotGetNamespace)
++	}
++
++	accessible, err := r.accessibleFetcher.IsNamespaceAccessible(ctx, u, name)
++	if err != nil {
++		klog.Warningf("namespace ACL: failed to check accessibility for user %q on namespace %q: %v; returning forbidden", u.GetName(), name, err)
++		return nil, apierrors.NewForbidden(api.Resource("namespaces"), name, errCannotGetNamespace)
++	}
++	if !accessible {
++		return nil, apierrors.NewNotFound(api.Resource("namespaces"), name)
++	}
++
+ 	return r.store.Get(ctx, name, options)
+ }
+ 
++// Watch streams namespace events. When ACL filtering is active, it:
++//
++//  1. Fetches the user's initial accessible-namespace set.
++//  2. Builds a live accessibleNamesSelector seeded with that set, ANDs it
++//     with the caller's field selector, and starts the underlying storage
++//     watch with that predicate. The cacher will then drop events for any
++//     namespace the user cannot see, with no extra plumbing.
++//  3. Returns a wrapper that polls the fetcher every aclRefreshInterval and
++//     synthesizes ADDED/DELETED events when the user gains or loses access
++//     to a namespace mid-watch — the canonical OpenShift userProjectWatcher
++//     pattern.
++//
++// Without filtering this is a straight pass-through to Store.Watch.
+ func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+-	return r.store.Watch(ctx, options)
++	if !r.shouldFilter(ctx) {
++		return r.store.Watch(ctx, options)
++	}
++
++	u, err := userFromContext(ctx)
++	if err != nil {
++		klog.V(4).InfoS("namespace ACL: missing user info on Watch", "err", err)
++		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotWatchNamespaces)
++	}
++
++	names, err := r.accessibleFetcher.FetchAccessibleNamespaces(ctx, u)
++	if err != nil {
++		klog.Warningf("namespace ACL: failed to fetch accessible namespaces for user %q on Watch: %v; returning forbidden", u.GetName(), err)
++		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotWatchNamespaces)
++	}
++	initial := namesToSet(names)
++	selector := newAccessibleNamesSelector(initial)
++
++	predicate := r.aclPredicate(options, selector)
++	resourceVersion := ""
++	var sendInitialEvents *bool
++	if options != nil {
++		resourceVersion = options.ResourceVersion
++		predicate.AllowWatchBookmarks = options.AllowWatchBookmarks
++		sendInitialEvents = options.SendInitialEvents
++	}
++
++	inner, err := r.store.WatchPredicate(ctx, predicate, resourceVersion, sendInitialEvents)
++	if err != nil {
++		return nil, err
++	}
++
++	return newFilteredWatch(ctx, filteredWatchConfig{
++		inner:           inner,
++		selector:        selector,
++		getter:          r.store,
++		fetcher:         r.accessibleFetcher,
++		user:            u,
++		initial:         initial,
++		refreshInterval: r.aclRefreshInterval,
++	}), nil
+ }
+ 
+ // Delete enforces life-cycle rules for namespace termination
+diff --git a/pkg/registry/core/rest/storage_core_generic.go b/pkg/registry/core/rest/storage_core_generic.go
+index 9d82ca85633..0a9f149c3eb 100644
+--- a/pkg/registry/core/rest/storage_core_generic.go
++++ b/pkg/registry/core/rest/storage_core_generic.go
+@@ -106,7 +106,21 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
+ 		return genericapiserver.APIGroupInfo{}, err
+ 	}
+ 
+-	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(restOptionsGetter)
++	// Deckhouse: always wire the filtering-capable namespace storage. The
++	// fetcher is constructed from the loopback client so impersonation
++	// against permission-browser-apiserver works out of the box. Actual
++	// per-request filtering only kicks in when filters.IsNamespaceFilteringMode(ctx)
++	// is true — set by WithAuthorization when a user lacks RBAC for
++	// list/get on namespaces but should still see their accessible subset.
++	//
++	// We omit WithACLRefreshInterval to accept the package default (1s),
++	// which controls how quickly synthetic ADDED/DELETED events surface on
++	// long-lived watches when permissions change. Add WithACLRefreshInterval
++	// to override at runtime if needed.
++	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(
++		restOptionsGetter,
++		namespacestore.WithLoopbackFetcher(c.LoopbackClientConfig),
++	)
+ 	if err != nil {
+ 		return genericapiserver.APIGroupInfo{}, err
+ 	}
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
+index 439696d07ab..dbfabbab028 100644
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
+@@ -45,8 +45,58 @@ const (
+ 	decisionAllow  = "allow"
+ 	decisionForbid = "forbid"
+ 	reasonError    = "internal error"
++
++	// Deckhouse: audit annotation values used when the authorization filter
++	// hands a denied namespace list/get/watch over to the storage layer for
++	// ACL-based filtering instead of 403'ing.
++	decisionAllowFiltered = "allow-filtered"
++	reasonNamespaceFilter = "namespace filtering mode"
+ )
+ 
++// Deckhouse: namespaceFilteringModeKey is the context-value key that the
++// authorization filter uses to flag a request as "denied by RBAC but routed
++// to the namespace-filtering code path in storage". It is intentionally an
++// unexported zero-size struct so external packages cannot synthesize it
++// without going through WithNamespaceFilteringMode (which is only meant for
++// tests).
++type namespaceFilteringModeKey struct{}
++
++// IsNamespaceFilteringMode reports whether the request context was tagged for
++// ACL-based namespace filtering (see the WithAuthorization branch below).
++// The storage layer reads this to decide whether to invoke the accessible-
++// namespace fetcher.
++func IsNamespaceFilteringMode(ctx context.Context) bool {
++	val, ok := ctx.Value(namespaceFilteringModeKey{}).(bool)
++	return ok && val
++}
++
++// WithNamespaceFilteringMode returns a derivative context with the namespace
++// filtering flag set. Production code reaches this state via the
++// authorization filter; tests use this helper to construct a context that
++// pretends an authorizer denial happened.
++func WithNamespaceFilteringMode(ctx context.Context) context.Context {
++	return context.WithValue(ctx, namespaceFilteringModeKey{}, true)
++}
++
++// isNamespaceListGetOrWatchRequest reports whether the request targets the
++// core /v1/namespaces list/get/watch endpoint. These three verbs are the
++// only ones we bypass 403 for: create/update/delete still reject denied
++// users with the standard error so we don't accidentally let unauthorized
++// callers mutate cluster state.
++func isNamespaceListGetOrWatchRequest(requestInfo *request.RequestInfo) bool {
++	if requestInfo == nil || !requestInfo.IsResourceRequest {
++		return false
++	}
++	if requestInfo.APIGroup != "" || requestInfo.Resource != "namespaces" || requestInfo.Subresource != "" {
++		return false
++	}
++	switch requestInfo.Verb {
++	case "list", "get", "watch":
++		return true
++	}
++	return false
++}
++
+ type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
+ 
+ // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
+@@ -90,6 +140,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+ 			return
+ 		}
+ 
++		// Deckhouse: bypass 403 for namespace list/get/watch and let the
++		// storage layer return an ACL-filtered response instead. This is
++		// strictly a relaxation for *read* verbs; mutating verbs still
++		// hit the standard Forbidden path below. The storage layer keys
++		// off IsNamespaceFilteringMode() so other consumers of this
++		// filter chain are unaffected.
++		requestInfo, _ := request.RequestInfoFrom(ctx)
++		if isNamespaceListGetOrWatchRequest(requestInfo) {
++			klog.V(4).InfoS("namespace ACL: bypassing authorization denial for namespace read; storage will filter",
++				"URI", req.RequestURI, "verb", requestInfo.Verb, "reason", reason)
++			audit.AddAuditAnnotations(ctx,
++				decisionAnnotationKey, decisionAllowFiltered,
++				reasonAnnotationKey, reasonNamespaceFilter)
++			handler.ServeHTTP(w, req.WithContext(WithNamespaceFilteringMode(ctx)))
++			return
++		}
++
+ 		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
+ 		audit.AddAuditAnnotations(ctx,
+ 			decisionAnnotationKey, decisionForbid,
