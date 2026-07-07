@@ -55,7 +55,6 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 
 Архитектура модуля [`deckhouse`](/modules/deckhouse/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля deckhouse](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse.ru.svg)
 
 ## Компоненты модуля
