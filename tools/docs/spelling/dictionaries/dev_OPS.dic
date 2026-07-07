@@ -237,7 +237,6 @@ Dockerfile
 Dockerfiles
 Dockerfile’s
 DoesNotExist
-Dryrun
 DynamiX
 Dynamix
 EBS
@@ -1138,10 +1137,6 @@ dropdown
 dryrun
 Dryrun
 ds
-DSA
-DSL
-DSR
-DSS
 dst
 dvp
 dynDNS
