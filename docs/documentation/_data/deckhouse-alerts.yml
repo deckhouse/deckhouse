@@ -1,4 +1,21 @@
 alerts:
+    - name: ApplicationIsInMaintenanceMode
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the application back to normal mode, edit the corresponding Application resource with the following command:
+
+        ```bash
+        d8 k patch application {{ $labels.name }} -n {{ $labels.namespace }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        ```
+      summary: |
+        Application {{ $labels.name }} in namespace {{ $labels.namespace }} is running in maintenance mode.
+      severity: "6"
+      markupFormat: markdown
     - name: CapsInstanceUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/caps-nodes.tpl
       moduleUrl: 040-node-manager
@@ -4325,23 +4342,6 @@ alerts:
         ```
       summary: |
         Module {{ $labels.module }} is running in maintenance mode.
-      severity: "6"
-      markupFormat: markdown
-    - name: ApplicationIsInMaintenanceMode
-      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 002-deckhouse
-      module: deckhouse
-      edition: ce
-      description: |
-        Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
-
-        To switch the application back to normal mode, edit the corresponding Application resource with the following command:
-
-        ```bash
-        d8 k patch application {{ $labels.name }} -n {{ $labels.namespace }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
-        ```
-      summary: |
-        Application {{ $labels.name }} in namespace {{ $labels.namespace }} is running in maintenance mode.
       severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
