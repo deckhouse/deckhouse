@@ -412,7 +412,7 @@ entries:
                     - title:
                         en: Hybrid cluster with DVP
                         ru: Гибридный кластер с DVP
-                      url: /admin/integrations/hybrid/dvp-hybrid.html  
+                      url: /admin/integrations/hybrid/dvp-hybrid.html
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
@@ -1295,6 +1295,18 @@ entries:
                 ru: Хуки
               url: /architecture/marketplace/hooks.html
         - title:
+            en: Delivery subsystem
+            ru: Подсистема Delivery
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/delivery/
+            - title:
+                en: Operator-argo module
+                ru: Модуль operator-argo
+              url: /architecture/delivery/operator-argo.html
+        - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
           folders:
@@ -1421,7 +1433,7 @@ entries:
                 - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
-                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html                
+                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1621,7 +1633,7 @@ entries:
             - title:
                 en: Observability module
                 ru: Модуль observability
-              url: /architecture/observability/observability.html                
+              url: /architecture/observability/observability.html
             - title:
                 en: Logging modules
                 ru: Модули логирования
@@ -1637,7 +1649,7 @@ entries:
             - title:
                 en: Module core
                 ru: Ядро модуля
-              url: /architecture/virtualization/core.html              
+              url: /architecture/virtualization/core.html
             - title:
                 en: Deckhouse Virtualization Container Registry (DVCR)
                 ru: Deckhouse Virtualization Container Registry (DVCR)
@@ -1649,7 +1661,7 @@ entries:
             - title:
                 en: Auxiliary components
                 ru: Вспомогательные компоненты
-              url: /architecture/virtualization/auxiliary.html             
+              url: /architecture/virtualization/auxiliary.html
     - title:
         en: Reference
         ru: Справка
