@@ -54,6 +54,7 @@ const (
 	VirtualBootstrapTokenGroup             = "system:bootstrappers:d8:vcp"
 	DefaultTenantClusterDomain             = "cluster.virtual"
 	DefaultTenantServiceSubnetCIDR         = "10.96.0.0/12"
+	VirtualExposeDomainSuffix              = "cluster.local"
 
 	RegistryPackagesProxyPort          int32 = 4219
 	RegistryPackagesProxyBootstrapPort int32 = 4282

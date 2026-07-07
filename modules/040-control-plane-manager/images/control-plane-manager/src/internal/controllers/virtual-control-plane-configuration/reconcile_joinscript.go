@@ -37,16 +37,21 @@ const registryPackagesProxyTokenNamespace = "d8-cloud-instance-manager"
 func (r *reconciler) reconcileJoinScript(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
-	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
 	configSecret *corev1.Secret,
 	joinToken string,
 ) (reconcile.Result, error) {
-	host, port, err := r.externalAPIEndpoint(ctx, vcp, apiserverService)
-	if err != nil {
-		return reconcile.Result{}, err
+	host, port := externalAPIEndpoint(vcp)
+	if joinToken == "" {
+		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
-	if host == "" || port == 0 || joinToken == "" {
+
+	vip, err := r.albVIP(ctx, vcp)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
+	}
+	if vip == "" {
+		// ALB LoadBalancer address not assigned yet, waiting — the join.sh /etc/hosts entry needs it.
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
 	endpoint := fmt.Sprintf("https://%s:%d", host, port)
@@ -67,7 +72,7 @@ func (r *reconciler) reconcileJoinScript(
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	rppToken, rppAddrs, rppBootstrapAddrs, err := r.registryPackagesProxyData(ctx)
+	rppToken, err := r.registryPackagesProxyToken(ctx)
 	if err != nil {
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
@@ -78,11 +83,9 @@ func (r *reconciler) reconcileJoinScript(
 	}
 
 	replacer := strings.NewReplacer(
-		"${VCP_RPP_ADDRESSES}", rppAddrs,
-		"${VCP_RPP_BOOTSTRAP_ADDRESSES}", rppBootstrapAddrs,
 		"${VCP_RPP_TOKEN}", rppToken,
-		"${VCP_CLUSTER_UUID}", string(configSecret.Data["cluster-uuid"]),
 		"${VCP_MINGET_B64}", string(configSecret.Data["minget"]),
+		"${VCP_CLUSTER_UUID}", string(configSecret.Data["cluster-uuid"]),
 		"${VCP_RPP_GET_DIGEST}", table.RegistryPackages.Fixed.RppGet,
 		"${VCP_CONTAINERD_DIGEST}", table.RegistryPackages.Fixed.Containerd,
 		"${VCP_CRICTL_DIGEST}", rp.Crictl,
@@ -91,6 +94,10 @@ func (r *reconciler) reconcileJoinScript(
 		"${VCP_BOOTSTRAP_KUBECONFIG}", string(bootstrapKubeconfig),
 		"${VCP_CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
 		"${VCP_CLUSTER_DNS}", "10.96.0.10",
+		"${VCP_ALB_VIP}", vip,
+		"${VCP_API_HOST}", host,
+		"${VCP_KONN_HOST}", konnExposeHost(vcp),
+		"${VCP_PKG_HOST}", packagesExposeHost(vcp),
 	)
 	rendered := replacer.Replace(string(tpl))
 
@@ -117,31 +124,11 @@ func (r *reconciler) reconcileJoinScript(
 	return reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
-// registryPackagesProxyData returns the RPP token and space-separated master:port address lists from the parent cluster.
-func (r *reconciler) registryPackagesProxyData(ctx context.Context) (token, addrs, bootstrapAddrs string, err error) {
+// registryPackagesProxyToken returns the RPP bearer token from the parent cluster
+func (r *reconciler) registryPackagesProxyToken(ctx context.Context) (string, error) {
 	sec, err := r.getSecret(ctx, registryPackagesProxyTokenNamespace, "registry-packages-proxy-token")
 	if err != nil {
-		return "", "", "", fmt.Errorf("get rpp token: %w", err)
+		return "", fmt.Errorf("get rpp token: %w", err)
 	}
-	token = string(sec.Data["token"])
-
-	nodeList := &corev1.NodeList{}
-	if err := r.client.List(ctx, nodeList); err != nil {
-		return "", "", "", fmt.Errorf("list nodes: %w", err)
-	}
-	var a, b []string
-	for i := range nodeList.Items {
-		n := &nodeList.Items[i]
-		if _, isCP := n.Labels[constants.ControlPlaneNodeLabelKey]; !isCP {
-			continue
-		}
-		for _, addr := range n.Status.Addresses {
-			if addr.Type == corev1.NodeInternalIP {
-				a = append(a, fmt.Sprintf("%s:%d", addr.Address, constants.RegistryPackagesProxyPort))
-				b = append(b, fmt.Sprintf("%s:%d", addr.Address, constants.RegistryPackagesProxyBootstrapPort))
-			}
-		}
-	}
-
-	return token, strings.Join(a, ","), strings.Join(b, " "), nil
+	return string(sec.Data["token"]), nil
 }

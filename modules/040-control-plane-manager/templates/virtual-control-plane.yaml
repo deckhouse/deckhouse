@@ -29,7 +29,9 @@
     "containerd" (get $rp "containerd224")
     "tomlMerge"  (get $rp "tomlMerge01")
     "rppGet"     (get $rp "rppGet") }}
-{{- $imagesTable := dict "versioned" $versioned "fixed" (dict "kine" (printf "%s@%s" $reg (get $dig "kine"))) "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed) }}
+{{- /* TODO: mirror kas-network-proxy/proxy-server like kine. */ -}}
+{{- $fixed := dict "kine" (printf "%s@%s" $reg (get $dig "kine")) "konnectivityServer" "registry.k8s.io/kas-network-proxy/proxy-server:v0.30.3" "konnectivityAgent" "registry.k8s.io/kas-network-proxy/proxy-agent:v0.30.3" "cilium" "quay.io/cilium/cilium:v1.19.3" "ciliumOperator" "quay.io/cilium/operator-generic:v1.19.3" }}
+{{- $imagesTable := dict "versioned" $versioned "fixed" $fixed "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed) }}
 ---
 apiVersion: v1
 kind: Secret
@@ -119,6 +121,12 @@ rules:
   verbs: ["get", "update", "patch"]
 - apiGroups: ["managed-services.deckhouse.io"]
   resources: ["postgreses", "postgres"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["network.deckhouse.io"]
+  resources: ["albinstances"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["gateways", "listenersets", "tlsroutes", "httproutes", "referencegrants"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

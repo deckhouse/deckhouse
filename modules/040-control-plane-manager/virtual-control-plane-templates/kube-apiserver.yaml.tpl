@@ -22,6 +22,10 @@ spec:
         control-plane.deckhouse.io/cpn: ${CPN_NAME}
     spec:
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 64535
+        runAsGroup: 64535
+        fsGroup: 64535
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -51,6 +55,7 @@ spec:
         - --allow-privileged=true
         - --secure-port=6443
         - --advertise-address=$(POD_IP)
+        - --egress-selector-config-file=/etc/kubernetes/konnectivity/egress-selector-configuration.yaml
         env:
         - name: POD_IP
           valueFrom:
@@ -60,6 +65,8 @@ spec:
         - {containerPort: 6443, name: https}
         volumeMounts:
         - {name: pki, mountPath: /pki, readOnly: true}
+        - {name: konnectivity-uds, mountPath: /etc/kubernetes/konnectivity-server}
+        - {name: konnectivity-egress, mountPath: /etc/kubernetes/konnectivity, readOnly: true}
         # startup/liveness exclude the etcd check for datastore (kine/Postgres)
         # This makes the pod NotReady (via /readyz) instead of triggering a pointless restart loop.
         startupProbe:
@@ -111,7 +118,49 @@ spec:
         resources:
           requests: {cpu: 100m, memory: 128Mi}
           limits: {cpu: 500m, memory: 512Mi}
+      - name: konnectivity-server
+        image: ${IMAGE_KONNECTIVITY_SERVER}
+        command:
+        - /proxy-server
+        - --logtostderr=true
+        - --mode=grpc
+        - --server-port=0
+        - --agent-port=8132
+        - --health-port=8134
+        - --admin-port=8133
+        - --uds-name=/etc/kubernetes/konnectivity-server/konnectivity-server.socket
+        - --cluster-cert=/pki/apiserver.crt
+        - --cluster-key=/pki/apiserver.key
+        - --agent-namespace=kube-system
+        - --agent-service-account=konnectivity-agent
+        - --authentication-audience=system:konnectivity-server
+        - --kubeconfig=/etc/konnectivity/kubeconfig/super-admin.conf
+        ports:
+        - {containerPort: 8132, name: agent}
+        - {containerPort: 8134, name: health}
+        livenessProbe:
+          httpGet: {path: /healthz, port: 8134}
+          initialDelaySeconds: 15
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - {name: konnectivity-uds, mountPath: /etc/kubernetes/konnectivity-server}
+        - {name: pki, mountPath: /pki, readOnly: true}
+        - {name: konnectivity-kubeconfig, mountPath: /etc/konnectivity/kubeconfig, readOnly: true}
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
       volumes:
       - name: pki
         secret:
           secretName: d8-pki-virtual
+      - name: konnectivity-uds
+        emptyDir: {}
+      - name: konnectivity-egress
+        configMap:
+          name: konnectivity-egress
+      - name: konnectivity-kubeconfig
+        secret:
+          secretName: d8-admin-kubeconfig-virtual

@@ -23,7 +23,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"time"
 
@@ -105,16 +104,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if res, err := r.reconcileALB(ctx, vcp, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	if res, err := r.reconcileControlPlaneNodes(ctx, vcp, pkiSecret, configSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	joinToken, res, err := r.reconcileNodeJoinSecret(ctx, vcp)
+	joinToken, res, err := r.reconcileTenantAddons(ctx, vcp, configSecret)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	if res, err := r.reconcileJoinScript(ctx, vcp, apiserverService, pkiSecret, configSecret, joinToken); err != nil || !res.IsZero() {
+	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -206,15 +209,8 @@ func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *control
 func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
+	// Always ClusterIP: external exposure is handled by the per-VCP ALB (TLSRoute backend), not the Service.
 	serviceType := corev1.ServiceTypeClusterIP
-	if vcp.Spec.Expose != nil {
-		switch vcp.Spec.Expose.Type {
-		case "NodePort":
-			serviceType = corev1.ServiceTypeNodePort
-		case "LoadBalancer":
-			serviceType = corev1.ServiceTypeLoadBalancer
-		}
-	}
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -283,71 +279,14 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 	current.Spec.Ports = target.Spec.Ports
 }
 
-// apiEndpointHosts returns all addresses joining nodes may use to reach the virtual apiserver, sorted for determinism, together with the port to connect to.
-func (r *reconciler) apiEndpointHosts(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) ([]string, int32, error) {
-	if vcp.Spec.Expose == nil {
-		return nil, 0, nil
-	}
-
-	switch vcp.Spec.Expose.Type {
-	case "NodePort":
-		var nodePort int32
-		for _, p := range apiserverService.Spec.Ports {
-			if p.Port == 6443 {
-				nodePort = p.NodePort
-			}
-		}
-		if nodePort == 0 {
-			return nil, 0, nil
-		}
-		nodeList := &corev1.NodeList{}
-		if err := r.client.List(ctx, nodeList); err != nil {
-			return nil, 0, fmt.Errorf("list host nodes: %w", err)
-		}
-		seen := map[string]struct{}{}
-		var hosts []string
-		for i := range nodeList.Items {
-			for _, a := range nodeList.Items[i].Status.Addresses {
-				if a.Type != corev1.NodeInternalIP || a.Address == "" {
-					continue
-				}
-				if _, ok := seen[a.Address]; ok {
-					continue
-				}
-				seen[a.Address] = struct{}{}
-				hosts = append(hosts, a.Address)
-			}
-		}
-		sort.Strings(hosts)
-		return hosts, nodePort, nil
-	case "LoadBalancer":
-		for _, ing := range apiserverService.Status.LoadBalancer.Ingress {
-			if ing.IP != "" {
-				return []string{ing.IP}, 6443, nil
-			}
-			if ing.Hostname != "" {
-				return []string{ing.Hostname}, 6443, nil
-			}
-		}
-		return nil, 0, nil
-	default:
-		return nil, 0, nil
-	}
+// externalAPIEndpoint returns the hostname and port joining nodes use to reach the virtual apiserver through the per-VCP ALB.
+func externalAPIEndpoint(vcp *controlplanev1alpha1.VirtualControlPlane) (string, int32) {
+	return apiExposeHost(vcp), 443
 }
 
-// externalAPIEndpoint returns the host and port for joining nodes to the virtual control plane.
-func (r *reconciler) externalAPIEndpoint(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (string, int32, error) {
-	hosts, port, err := r.apiEndpointHosts(ctx, vcp, apiserverService)
-	if err != nil || len(hosts) == 0 {
-		return "", port, err
-	}
-	return hosts[0], port, nil
-}
-
-// apiServerCertExtraSANs returns every address that joining nodes may use to reach the virtual apiserver
-func (r *reconciler) apiServerCertExtraSANs(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) ([]string, error) {
-	hosts, _, err := r.apiEndpointHosts(ctx, vcp, apiserverService)
-	return hosts, err
+// apiServerCertExtraSANs returns the stable ALB hostnames that must be in the apiserver serving cert.
+func apiServerCertExtraSANs(vcp *controlplanev1alpha1.VirtualControlPlane) []string {
+	return []string{apiExposeHost(vcp), konnExposeHost(vcp)}
 }
 
 func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (*corev1.Secret, reconcile.Result, error) {
@@ -355,10 +294,7 @@ func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
 
-		extraSANs, err := r.apiServerCertExtraSANs(ctx, vcp, apiserverService)
-		if err != nil {
-			return nil, reconcile.Result{}, err
-		}
+		extraSANs := apiServerCertExtraSANs(vcp)
 
 		data, err := buildTargetPKISecretData(vcp, apiserverService, extraSANs)
 		if err != nil {
