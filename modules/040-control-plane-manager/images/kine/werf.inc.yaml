@@ -27,7 +27,6 @@ mount:
 {{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
   - pm install musl-devel
   install:
   - cd /src
