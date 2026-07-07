@@ -34,7 +34,7 @@ kind: Deployment
 metadata:
   name: deckhouse
   namespace: d8-system
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   replicas: 1
   selector:
