@@ -65,3 +65,11 @@
 | `mktemp` | основной поток скрипта (`validate_dictionary_sync.sh`) | Да |
 | `pwd` | основной поток скрипта (`validate_dictionary_sync.sh`) | Да |
 | `validate_wordlist.sh` | основной поток скрипта (`validate_dictionary_sync.sh`) | Нет |
+
+## Дополнительно выявленные инструменты из `validate_wordlist.sh`
+
+Источник анализа: `tools/docs/spelling/validate_wordlist.sh`.
+
+| Инструмент | Функция(и) / место обнаружения | Наличие в busybox |
+|---|---|---|
+| `uniq` | основной поток скрипта (`validate_wordlist.sh`), проверка дубликатов | Да |
