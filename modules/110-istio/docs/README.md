@@ -207,6 +207,24 @@ It is also important to get the Ingress controller and the application's Ingress
   - `nginx.ingress.kubernetes.io/service-upstream: "true"` — the Ingress controller will use the service's ClusterIP as upstream instead of the Pod addresses. In this case, traffic balancing between the Pods is now handled by the sidecar-proxy. Use this option only if your service has a ClusterIP.
   - `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc"` — the Ingress controller's sidecar-proxy makes routing decisions based on the Host header. If this annotation is omitted, the controller will leave a header with the site address (e.g. `Host: example.com`).
 
+### Mark-based traffic interception for shared-UID workloads
+
+Some workloads (e.g. `ingress-nginx` under Deckhouse) run in the same UID/GID as the Istio sidecar. The default owner-based iptables rules cannot tell the app's traffic apart from Envoy's in that case, so outbound traffic bypasses the sidecar and the mesh has no effect on it.
+
+For such pods, enable mark-based interception by adding the annotation:
+
+```yaml
+metadata:
+  annotations:
+    traffic.sidecar.istio.io/outboundSocketMark: "1338"
+```
+
+Envoy tags its own outbound sockets with a fwmark (`0x53a` = 1338), and the init container exempts marked packets from redirect. Regular pods without the annotation keep the default UID-based rules and are not affected.
+
+{% alert level="warning" %}
+Setting `SO_MARK` requires `CAP_NET_RAW` on Linux **>= 5.17** (or `CAP_NET_ADMIN` on older kernels). On older kernels, the marked sidecar will fail to bind its upstream sockets with `EPERM`.
+{% endalert %}
+
 ## Federation and multicluster
 
 {% alert level="warning" %}
