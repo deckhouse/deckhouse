@@ -73,3 +73,28 @@
 | Инструмент | Функция(и) / место обнаружения | Наличие в busybox |
 |---|---|---|
 | `uniq` | основной поток скрипта (`validate_wordlist.sh`), проверка дубликатов | Да |
+
+## Утилиты из `.github/scripts` (целевые `.sh` файлы)
+
+Источник анализа: `.github/scripts/registry-crane-cleanup.sh`, `.github/scripts/registry-deckhouse-cleanup.sh`, `.github/scripts/send-report.sh`, `.github/scripts/validation_bashible.sh`, `.github/scripts/validation_run.sh`.
+
+| Инструмент | Файл скрипта |
+|---|---|
+| `base64` | `.github/scripts/registry-deckhouse-cleanup.sh` |
+| `cat` | `.github/scripts/registry-deckhouse-cleanup.sh`, `.github/scripts/validation_bashible.sh`, `.github/scripts/validation_run.sh` |
+| `cp` | `.github/scripts/validation_run.sh` |
+| `crane` | `.github/scripts/registry-crane-cleanup.sh` |
+| `curl` | `.github/scripts/registry-crane-cleanup.sh`, `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` |
+| `date` | `.github/scripts/registry-crane-cleanup.sh` |
+| `dhctl` | `.github/scripts/validation_bashible.sh` |
+| `docker` | `.github/scripts/validation_bashible.sh` |
+| `grep` | `.github/scripts/registry-crane-cleanup.sh`, `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` |
+| `jq` | `.github/scripts/registry-crane-cleanup.sh` |
+| `mkdir` | `.github/scripts/registry-deckhouse-cleanup.sh` |
+| `mktemp` | `.github/scripts/validation_run.sh` |
+| `printf` | `.github/scripts/validation_bashible.sh` |
+| `pwd` | `.github/scripts/validation_bashible.sh` |
+| `rm` | `.github/scripts/validation_run.sh` |
+| `sed` | `.github/scripts/send-report.sh`, `.github/scripts/validation_run.sh` |
+| `tar` | `.github/scripts/registry-crane-cleanup.sh` |
+| `werf` | `.github/scripts/registry-deckhouse-cleanup.sh` |
