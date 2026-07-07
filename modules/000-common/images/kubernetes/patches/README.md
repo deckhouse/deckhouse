@@ -46,11 +46,38 @@ Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regard
 
 ### namespace-list-acl-filtering.patch
 
-Allows users without cluster-wide `list/get namespaces` to receive an ACL-filtered response for `GET /api/v1/namespaces` and `GET /api/v1/namespaces/{name}`.
-The kube-apiserver authorization filter bypasses the initial 403 for these requests and delegates filtering to the Namespace storage.
-The storage queries the aggregated extension API `authorization.deckhouse.io/v1alpha1` resource `accessiblenamespaces` served by the `permission-browser-apiserver` APIService (`v1alpha1.authorization.deckhouse.io`) and returns only accessible namespaces.
+Two related mechanisms, both opt-in and both leaving default `list/get/watch`
+behavior for any client that doesn't ask otherwise completely unchanged:
 
-If `permission-browser-apiserver` is not present/unavailable (APIService is not `Available=True` or request fails), the behavior falls back to vanilla Kubernetes (403 for users without permissions). `watch namespaces` is not changed.
+**Namespaces (unconditional).** Users without cluster-wide `list/get/watch
+namespaces` receive an ACL-filtered response for `GET /api/v1/namespaces`,
+`GET /api/v1/namespaces/{name}` and `WATCH /api/v1/namespaces` instead of a
+flat 403. The kube-apiserver authorization filter bypasses the initial 403
+for these three verbs and delegates filtering to the Namespace storage, which
+queries the aggregated extension API `authorization.deckhouse.io/v1alpha1`
+resource `accessiblenamespaces` served by `permission-browser-apiserver`
+(APIService `v1alpha1.authorization.deckhouse.io`) and returns only
+accessible namespaces. `watch` synthesizes `ADDED`/`DELETED` events when the
+user's accessible-namespace set changes mid-watch (polling
+`accessiblenamespaces`, ~1s cadence) -- the canonical OpenShift
+`userProjectWatcher` pattern.
+
+**Generic `-A --scope=<kind>` (opt-in, any namespaced resource).** The same
+mechanism generalized to arbitrary namespaced resources, built-in (currently
+allow-listed: `pods`) and CustomResourceDefinitions, gated by two request
+headers (`X-Deckhouse-Scope`, `X-Deckhouse-Project`) rather than being
+unconditional: absent header, absent bypass, byte-for-byte vanilla behavior.
+`scope=accessible` reproduces the namespaces mechanism's RBAC-floor
+semantics for any resource; `scope=system|user|project:<name>` additionally
+classify by the `projects.deckhouse.io/project` namespace label
+(multitenancy-manager's Project CRD), resolved via a direct loopback
+`Namespace LIST` rather than a new permission-browser endpoint. See
+`k8s.io/apiserver/pkg/registry/generic/scopefilter` (staging) for the shared
+implementation both mechanisms build on.
+
+If `permission-browser-apiserver` is not present/unavailable (APIService is
+not `Available=True` or a request fails), both mechanisms fall back to
+vanilla Kubernetes (403 for users without permissions).
 
 ### kubelet-inappropriate-manifest-name.patch
 

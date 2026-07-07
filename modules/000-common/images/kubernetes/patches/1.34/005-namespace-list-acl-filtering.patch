@@ -1,1305 +1,9 @@
-diff --git a/pkg/registry/core/namespace/storage/storage.go b/pkg/registry/core/namespace/storage/storage.go
-index e67cedeb15e..1315e000829 100644
---- a/pkg/registry/core/namespace/storage/storage.go
-+++ b/pkg/registry/core/namespace/storage/storage.go
-@@ -18,20 +18,27 @@ package storage
- 
- import (
- 	"context"
-+	"errors"
- 	"fmt"
-+	"time"
- 
- 	apierrors "k8s.io/apimachinery/pkg/api/errors"
- 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
- 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-+	"k8s.io/apimachinery/pkg/fields"
-+	"k8s.io/apimachinery/pkg/labels"
- 	"k8s.io/apimachinery/pkg/runtime"
- 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
- 	"k8s.io/apimachinery/pkg/watch"
-+	"k8s.io/apiserver/pkg/endpoints/filters"
- 	"k8s.io/apiserver/pkg/registry/generic"
- 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
- 	"k8s.io/apiserver/pkg/registry/rest"
- 	"k8s.io/apiserver/pkg/storage"
- 	storageerr "k8s.io/apiserver/pkg/storage/errors"
- 	"k8s.io/apiserver/pkg/util/dryrun"
-+	restclient "k8s.io/client-go/rest"
-+	"k8s.io/klog/v2"
- 	api "k8s.io/kubernetes/pkg/apis/core"
- 	"k8s.io/kubernetes/pkg/printers"
- 	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
-@@ -40,10 +47,45 @@ import (
- 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
- )
- 
--// rest implements a RESTStorage for namespaces
-+// errCannotListNamespaces / errCannotGetNamespace / errCannotWatchNamespaces
-+// are the opaque error messages we surface to clients when ACL filtering is
-+// active but cannot decide one way or the other (typically: missing user
-+// info in context, or the permission service is unreachable). We never leak
-+// the underlying cause to the client — that goes to klog instead.
-+var (
-+	errCannotListNamespaces  = errors.New("cannot list namespaces")
-+	errCannotGetNamespace    = errors.New("cannot get namespace")
-+	errCannotWatchNamespaces = errors.New("cannot watch namespaces")
-+)
-+
-+// defaultACLRefreshInterval is the polling cadence the watch path uses to
-+// re-fetch a user's accessible-namespace set when no explicit interval was
-+// configured. One second balances responsiveness for permission changes
-+// against load on the upstream permission service; tune via Option if you
-+// need otherwise.
-+const defaultACLRefreshInterval = time.Second
-+
-+// REST implements a RESTStorage for namespaces.
-+//
-+// When accessibleFetcher is non-nil and the request context carries
-+// filters.IsNamespaceFilteringMode (set by the authorization filter for users
-+// who lack RBAC for list/get on namespaces but should still see the subset
-+// they have *some* access to), List/Get/Watch transparently switch to the
-+// ACL-filtered code path. Otherwise the calls fall straight through to the
-+// generic registry store, preserving vanilla Kubernetes semantics.
- type REST struct {
- 	store  *genericregistry.Store
- 	status *genericregistry.Store
-+
-+	// accessibleFetcher resolves a user's accessible-namespace set against
-+	// the upstream permission service. nil disables Deckhouse filtering
-+	// entirely (vanilla behavior).
-+	accessibleFetcher AccessibleNamespaceFetcher
-+
-+	// aclRefreshInterval controls how often the Watch path re-polls the
-+	// fetcher to detect permission changes mid-watch. Coerced to
-+	// defaultACLRefreshInterval at construction if non-positive.
-+	aclRefreshInterval time.Duration
- }
- 
- // StatusREST implements the REST endpoint for changing the status of a namespace.
-@@ -56,8 +98,73 @@ type FinalizeREST struct {
- 	store *genericregistry.Store
- }
- 
--// NewREST returns a RESTStorage object that will work against namespaces.
--func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *FinalizeREST, error) {
-+// restConfig collects the Deckhouse-specific settings supplied to NewREST
-+// via functional options. The zero value disables filtering — i.e. plain
-+// upstream behavior — which is what NewREST(optsGetter) gives you.
-+type restConfig struct {
-+	// fetcher is the AccessibleNamespaceFetcher to use directly, when the
-+	// caller already has one (typically tests).
-+	fetcher AccessibleNamespaceFetcher
-+
-+	// loopbackConfig, when set, asks NewREST to build a
-+	// LoopbackAccessibleNamespaceFetcher itself. If both fetcher and
-+	// loopbackConfig are set, fetcher wins.
-+	loopbackConfig *restclient.Config
-+
-+	// refreshInterval overrides defaultACLRefreshInterval for the
-+	// watch-path ACL poller.
-+	refreshInterval time.Duration
-+}
-+
-+// Option configures the namespace REST storage. Options are applied in
-+// order; later options override earlier ones for the same field.
-+type Option func(*restConfig)
-+
-+// WithAccessibleNamespaceFetcher enables Deckhouse ACL filtering with the
-+// caller-supplied fetcher. Pass nil to leave filtering disabled.
-+func WithAccessibleNamespaceFetcher(f AccessibleNamespaceFetcher) Option {
-+	return func(c *restConfig) { c.fetcher = f }
-+}
-+
-+// WithLoopbackFetcher enables Deckhouse ACL filtering by constructing a
-+// LoopbackAccessibleNamespaceFetcher from the supplied loopback REST
-+// config. Nil config or fetcher-build failure degrades to vanilla
-+// behavior with a klog warning — kube-apiserver still boots.
-+func WithLoopbackFetcher(cfg *restclient.Config) Option {
-+	return func(c *restConfig) { c.loopbackConfig = cfg }
-+}
-+
-+// WithACLRefreshInterval overrides the watch-path ACL polling cadence.
-+// Non-positive values fall back to defaultACLRefreshInterval.
-+func WithACLRefreshInterval(d time.Duration) Option {
-+	return func(c *restConfig) { c.refreshInterval = d }
-+}
-+
-+// NewREST returns a RESTStorage object for namespaces.
-+//
-+// Called with no options, NewREST(optsGetter) reproduces vanilla upstream
-+// behavior — this is what the upstream storage_test.go relies on.
-+//
-+// Pass WithAccessibleNamespaceFetcher / WithLoopbackFetcher to enable
-+// Deckhouse ACL filtering. If a fetcher cannot be built (e.g. malformed
-+// loopback config) filtering is silently disabled with a klog warning so
-+// the apiserver remains bootstrappable.
-+func NewREST(optsGetter generic.RESTOptionsGetter, opts ...Option) (*REST, *StatusREST, *FinalizeREST, error) {
-+	var cfg restConfig
-+	for _, opt := range opts {
-+		opt(&cfg)
-+	}
-+
-+	fetcher := cfg.fetcher
-+	if fetcher == nil && cfg.loopbackConfig != nil {
-+		f, err := NewLoopbackAccessibleNamespaceFetcher(cfg.loopbackConfig)
-+		if err != nil {
-+			klog.Warningf("namespace ACL: failed to build loopback accessible-namespace fetcher: %v; filtering disabled", err)
-+		} else {
-+			fetcher = f
-+		}
-+	}
-+
- 	store := &genericregistry.Store{
- 		NewFunc:                   func() runtime.Object { return &api.Namespace{} },
- 		NewListFunc:               func() runtime.Object { return &api.NamespaceList{} },
-@@ -75,8 +182,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
- 
- 		TableConvertor: printerstorage.TableConvertor{TableGenerator: printers.NewTableGenerator().With(printersinternal.AddHandlers)},
- 	}
--	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: namespace.GetAttrs}
--	if err := store.CompleteWithOptions(options); err != nil {
-+	storeOptions := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: namespace.GetAttrs}
-+	if err := store.CompleteWithOptions(storeOptions); err != nil {
- 		return nil, nil, nil, err
- 	}
- 
-@@ -88,7 +195,18 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
- 	finalizeStore.UpdateStrategy = namespace.FinalizeStrategy
- 	finalizeStore.ResetFieldsStrategy = namespace.FinalizeStrategy
- 
--	return &REST{store: store, status: &statusStore}, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
-+	refresh := cfg.refreshInterval
-+	if refresh <= 0 {
-+		refresh = defaultACLRefreshInterval
-+	}
-+
-+	r := &REST{
-+		store:              store,
-+		status:             &statusStore,
-+		accessibleFetcher:  fetcher,
-+		aclRefreshInterval: refresh,
-+	}
-+	return r, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
- }
- 
- func (r *REST) NamespaceScoped() bool {
-@@ -114,8 +232,69 @@ func (r *REST) NewList() runtime.Object {
- 	return r.store.NewList()
- }
- 
-+// shouldFilter returns true when the request should run through the ACL
-+// filtering path. Two preconditions must hold:
-+//
-+//  1. A fetcher is configured at construction time (Deckhouse mode).
-+//  2. The request context was tagged by the authorization filter as
-+//     "namespace filtering mode" — i.e. the user was denied by the regular
-+//     authorizer chain but the filter chose to bypass the 403 specifically
-+//     to let the storage layer return a filtered subset.
-+//
-+// Without (2), users with full RBAC see vanilla behavior with no extra
-+// fetcher round-trips on the hot path.
-+func (r *REST) shouldFilter(ctx context.Context) bool {
-+	return r.accessibleFetcher != nil && filters.IsNamespaceFilteringMode(ctx)
-+}
-+
-+// List returns a list of namespaces. When ACL filtering is active, the user-
-+// supplied selectors are AND-combined with a metadata.name-set membership
-+// selector and the request is served via Store.ListPredicate, so all the
-+// usual storage-layer machinery (pagination, single-key optimization via
-+// MatchesSingle, etc.) keeps working without any post-processing.
- func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
--	return r.store.List(ctx, options)
-+	if !r.shouldFilter(ctx) {
-+		return r.store.List(ctx, options)
-+	}
-+
-+	u, err := userFromContext(ctx)
-+	if err != nil {
-+		klog.V(4).InfoS("namespace ACL: missing user info on List", "err", err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotListNamespaces)
-+	}
-+
-+	names, err := r.accessibleFetcher.FetchAccessibleNamespaces(ctx, u)
-+	if err != nil {
-+		klog.Warningf("namespace ACL: failed to fetch accessible namespaces for user %q: %v; returning forbidden", u.GetName(), err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotListNamespaces)
-+	}
-+
-+	predicate := r.aclPredicate(options, newAccessibleNamesSelector(namesToSet(names)))
-+	out, err := r.store.ListPredicate(ctx, predicate, options)
-+	if err != nil {
-+		return nil, storageerr.InterpretListError(err, api.Resource("namespaces"))
-+	}
-+	return out, nil
-+}
-+
-+// aclPredicate builds the SelectionPredicate used by List and Watch in
-+// filtering mode. It composes the user-supplied label/field selectors from
-+// options with our metadata.name set selector via fields.AndSelectors and
-+// hands the result to the registered PredicateFunc, which sets up GetAttrs
-+// the way the upstream namespace strategy expects.
-+func (r *REST) aclPredicate(options *metainternalversion.ListOptions, accessibleSel *accessibleNamesSelector) storage.SelectionPredicate {
-+	label := labels.Everything()
-+	field := fields.Everything()
-+	if options != nil {
-+		if options.LabelSelector != nil {
-+			label = options.LabelSelector
-+		}
-+		if options.FieldSelector != nil {
-+			field = options.FieldSelector
-+		}
-+	}
-+	combined := fields.AndSelectors(field, accessibleSel)
-+	return r.store.PredicateFunc(label, combined)
- }
- 
- func (r *REST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
-@@ -126,12 +305,88 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
- 	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
- }
- 
-+// Get retrieves a single namespace, applying the ACL fast path when filtering
-+// is active: a single point-query against the permission service answers
-+// whether the user can see this namespace, with NotFound returned in place
-+// of Forbidden to avoid leaking existence to unprivileged callers.
- func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-+	if !r.shouldFilter(ctx) {
-+		return r.store.Get(ctx, name, options)
-+	}
-+
-+	u, err := userFromContext(ctx)
-+	if err != nil {
-+		klog.V(4).InfoS("namespace ACL: missing user info on Get", "namespace", name, "err", err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), name, errCannotGetNamespace)
-+	}
-+
-+	accessible, err := r.accessibleFetcher.IsNamespaceAccessible(ctx, u, name)
-+	if err != nil {
-+		klog.Warningf("namespace ACL: failed to check accessibility for user %q on namespace %q: %v; returning forbidden", u.GetName(), name, err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), name, errCannotGetNamespace)
-+	}
-+	if !accessible {
-+		return nil, apierrors.NewNotFound(api.Resource("namespaces"), name)
-+	}
-+
- 	return r.store.Get(ctx, name, options)
- }
- 
-+// Watch streams namespace events. When ACL filtering is active, it:
-+//
-+//  1. Fetches the user's initial accessible-namespace set.
-+//  2. Builds a live accessibleNamesSelector seeded with that set, ANDs it
-+//     with the caller's field selector, and starts the underlying storage
-+//     watch with that predicate. The cacher will then drop events for any
-+//     namespace the user cannot see, with no extra plumbing.
-+//  3. Returns a wrapper that polls the fetcher every aclRefreshInterval and
-+//     synthesizes ADDED/DELETED events when the user gains or loses access
-+//     to a namespace mid-watch — the canonical OpenShift userProjectWatcher
-+//     pattern.
-+//
-+// Without filtering this is a straight pass-through to Store.Watch.
- func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
--	return r.store.Watch(ctx, options)
-+	if !r.shouldFilter(ctx) {
-+		return r.store.Watch(ctx, options)
-+	}
-+
-+	u, err := userFromContext(ctx)
-+	if err != nil {
-+		klog.V(4).InfoS("namespace ACL: missing user info on Watch", "err", err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotWatchNamespaces)
-+	}
-+
-+	names, err := r.accessibleFetcher.FetchAccessibleNamespaces(ctx, u)
-+	if err != nil {
-+		klog.Warningf("namespace ACL: failed to fetch accessible namespaces for user %q on Watch: %v; returning forbidden", u.GetName(), err)
-+		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", errCannotWatchNamespaces)
-+	}
-+	initial := namesToSet(names)
-+	selector := newAccessibleNamesSelector(initial)
-+
-+	predicate := r.aclPredicate(options, selector)
-+	resourceVersion := ""
-+	var sendInitialEvents *bool
-+	if options != nil {
-+		resourceVersion = options.ResourceVersion
-+		predicate.AllowWatchBookmarks = options.AllowWatchBookmarks
-+		sendInitialEvents = options.SendInitialEvents
-+	}
-+
-+	inner, err := r.store.WatchPredicate(ctx, predicate, resourceVersion, sendInitialEvents)
-+	if err != nil {
-+		return nil, err
-+	}
-+
-+	return newFilteredWatch(ctx, filteredWatchConfig{
-+		inner:           inner,
-+		selector:        selector,
-+		getter:          r.store,
-+		fetcher:         r.accessibleFetcher,
-+		user:            u,
-+		initial:         initial,
-+		refreshInterval: r.aclRefreshInterval,
-+	}), nil
- }
- 
- // Delete enforces life-cycle rules for namespace termination
-diff --git a/pkg/registry/core/rest/storage_core_generic.go b/pkg/registry/core/rest/storage_core_generic.go
-index 9d82ca85633..0a9f149c3eb 100644
---- a/pkg/registry/core/rest/storage_core_generic.go
-+++ b/pkg/registry/core/rest/storage_core_generic.go
-@@ -106,7 +106,21 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
- 		return genericapiserver.APIGroupInfo{}, err
- 	}
- 
--	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(restOptionsGetter)
-+	// Deckhouse: always wire the filtering-capable namespace storage. The
-+	// fetcher is constructed from the loopback client so impersonation
-+	// against permission-browser-apiserver works out of the box. Actual
-+	// per-request filtering only kicks in when filters.IsNamespaceFilteringMode(ctx)
-+	// is true — set by WithAuthorization when a user lacks RBAC for
-+	// list/get on namespaces but should still see their accessible subset.
-+	//
-+	// We omit WithACLRefreshInterval to accept the package default (1s),
-+	// which controls how quickly synthetic ADDED/DELETED events surface on
-+	// long-lived watches when permissions change. Add WithACLRefreshInterval
-+	// to override at runtime if needed.
-+	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(
-+		restOptionsGetter,
-+		namespacestore.WithLoopbackFetcher(c.LoopbackClientConfig),
-+	)
- 	if err != nil {
- 		return genericapiserver.APIGroupInfo{}, err
- 	}
-diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index 6c6c94ba718..86bd915e96c 100644
---- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-+++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-@@ -45,8 +45,58 @@ const (
- 	decisionAllow  = "allow"
- 	decisionForbid = "forbid"
- 	reasonError    = "internal error"
-+
-+	// Deckhouse: audit annotation values used when the authorization filter
-+	// hands a denied namespace list/get/watch over to the storage layer for
-+	// ACL-based filtering instead of 403'ing.
-+	decisionAllowFiltered = "allow-filtered"
-+	reasonNamespaceFilter = "namespace filtering mode"
- )
- 
-+// Deckhouse: namespaceFilteringModeKey is the context-value key that the
-+// authorization filter uses to flag a request as "denied by RBAC but routed
-+// to the namespace-filtering code path in storage". It is intentionally an
-+// unexported zero-size struct so external packages cannot synthesize it
-+// without going through WithNamespaceFilteringMode (which is only meant for
-+// tests).
-+type namespaceFilteringModeKey struct{}
-+
-+// IsNamespaceFilteringMode reports whether the request context was tagged for
-+// ACL-based namespace filtering (see the WithAuthorization branch below).
-+// The storage layer reads this to decide whether to invoke the accessible-
-+// namespace fetcher.
-+func IsNamespaceFilteringMode(ctx context.Context) bool {
-+	val, ok := ctx.Value(namespaceFilteringModeKey{}).(bool)
-+	return ok && val
-+}
-+
-+// WithNamespaceFilteringMode returns a derivative context with the namespace
-+// filtering flag set. Production code reaches this state via the
-+// authorization filter; tests use this helper to construct a context that
-+// pretends an authorizer denial happened.
-+func WithNamespaceFilteringMode(ctx context.Context) context.Context {
-+	return context.WithValue(ctx, namespaceFilteringModeKey{}, true)
-+}
-+
-+// isNamespaceListGetOrWatchRequest reports whether the request targets the
-+// core /v1/namespaces list/get/watch endpoint. These three verbs are the
-+// only ones we bypass 403 for: create/update/delete still reject denied
-+// users with the standard error so we don't accidentally let unauthorized
-+// callers mutate cluster state.
-+func isNamespaceListGetOrWatchRequest(requestInfo *request.RequestInfo) bool {
-+	if requestInfo == nil || !requestInfo.IsResourceRequest {
-+		return false
-+	}
-+	if requestInfo.APIGroup != "" || requestInfo.Resource != "namespaces" || requestInfo.Subresource != "" {
-+		return false
-+	}
-+	switch requestInfo.Verb {
-+	case "list", "get", "watch":
-+		return true
-+	}
-+	return false
-+}
-+
- type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
- 
- // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
-@@ -90,6 +140,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
- 			return
- 		}
- 
-+		// Deckhouse: bypass 403 for namespace list/get/watch and let the
-+		// storage layer return an ACL-filtered response instead. This is
-+		// strictly a relaxation for *read* verbs; mutating verbs still
-+		// hit the standard Forbidden path below. The storage layer keys
-+		// off IsNamespaceFilteringMode() so other consumers of this
-+		// filter chain are unaffected.
-+		requestInfo, _ := request.RequestInfoFrom(ctx)
-+		if isNamespaceListGetOrWatchRequest(requestInfo) {
-+			klog.V(4).InfoS("namespace ACL: bypassing authorization denial for namespace read; storage will filter",
-+				"URI", req.RequestURI, "verb", requestInfo.Verb, "reason", reason)
-+			audit.AddAuditAnnotations(ctx,
-+				decisionAnnotationKey, decisionAllowFiltered,
-+				reasonAnnotationKey, reasonNamespaceFilter)
-+			handler.ServeHTTP(w, req.WithContext(WithNamespaceFilteringMode(ctx)))
-+			return
-+		}
-+
- 		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
- 		audit.AddAuditAnnotations(ctx,
- 			decisionAnnotationKey, decisionForbid,
-diff --git a/pkg/registry/core/namespace/storage/accessible_fetcher.go b/pkg/registry/core/namespace/storage/accessible_fetcher.go
-new file mode 100644
-index 00000000000..aca532cb899
---- /dev/null
-+++ b/pkg/registry/core/namespace/storage/accessible_fetcher.go
-@@ -0,0 +1,234 @@
-+/*
-+Copyright 2025 The Kubernetes Authors.
-+
-+Licensed under the Apache License, Version 2.0 (the "License");
-+you may not use this file except in compliance with the License.
-+You may obtain a copy of the License at
-+
-+    http://www.apache.org/licenses/LICENSE-2.0
-+
-+Unless required by applicable law or agreed to in writing, software
-+distributed under the License is distributed on an "AS IS" BASIS,
-+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+See the License for the specific language governing permissions and
-+limitations under the License.
-+*/
-+
-+package storage
-+
-+import (
-+	"context"
-+	"encoding/json"
-+	"errors"
-+	"fmt"
-+	"io"
-+	"net/http"
-+	"net/url"
-+	"strings"
-+	"time"
-+
-+	"k8s.io/apiserver/pkg/authentication/user"
-+	restclient "k8s.io/client-go/rest"
-+	"k8s.io/client-go/transport"
-+	"k8s.io/klog/v2"
-+)
-+
-+const (
-+	// accessibleNamespacesAPIPath is the URL path under which Deckhouse's
-+	// permission-browser-apiserver registers its AccessibleNamespaces API.
-+	// Calls are routed via kube-apiserver's loopback connection so they hit
-+	// the aggregated APIServer with full TLS/cert plumbing intact.
-+	accessibleNamespacesAPIPath = "/apis/authorization.deckhouse.io/v1alpha1/accessiblenamespaces"
-+
-+	// defaultHTTPTimeout caps every fetcher call. It must be short enough
-+	// that a hung permission service does not stall a List/Watch request,
-+	// and long enough that a busy service still completes during normal
-+	// load. Ten seconds matches client-go's default RESTClient timeout.
-+	defaultHTTPTimeout = 10 * time.Second
-+
-+	// errorBodyByteLimit bounds how much of an error response body we
-+	// read into memory and surface in error messages. Permission-browser
-+	// is trusted, but a misconfigured proxy could splice in arbitrarily
-+	// large payloads; 8 KiB is plenty for any sane Status object.
-+	errorBodyByteLimit = 8 * 1024
-+)
-+
-+// accessibleNamespaceItem matches the on-the-wire shape of one entry in the
-+// permission-browser-apiserver list response. We deliberately decode only
-+// the fields we use; new fields added upstream will not break this code.
-+type accessibleNamespaceItem struct {
-+	Metadata struct {
-+		Name string `json:"name"`
-+	} `json:"metadata"`
-+}
-+
-+// accessibleNamespaceList matches the on-the-wire shape of the LIST response.
-+type accessibleNamespaceList struct {
-+	Items []accessibleNamespaceItem `json:"items"`
-+}
-+
-+// AccessibleNamespaceFetcher returns the set of namespaces a given user is
-+// allowed to see. The watch code path takes advantage of repeated calls
-+// returning different results (as the user's bindings change) to synthesize
-+// ADDED/DELETED events while a watch is open.
-+type AccessibleNamespaceFetcher interface {
-+	// FetchAccessibleNamespaces lists all namespace names the user can
-+	// see. Used by List and Watch.
-+	FetchAccessibleNamespaces(ctx context.Context, u user.Info) ([]string, error)
-+
-+	// IsNamespaceAccessible answers whether a single named namespace is
-+	// accessible to the user. Used by Get as a fast path that avoids
-+	// pulling the full accessible set when the client only asks for one.
-+	IsNamespaceAccessible(ctx context.Context, u user.Info, namespace string) (bool, error)
-+}
-+
-+// LoopbackAccessibleNamespaceFetcher resolves a user's accessible namespaces
-+// by calling permission-browser-apiserver through kube-apiserver's loopback
-+// HTTPS endpoint. Authentication is provided by the loopback client's TLS
-+// credentials; user identity is conveyed via standard impersonation headers
-+// (Impersonate-User/-Group/-Extra-*), which the aggregated APIServer
-+// validates against its RBAC for the impersonate verb on the loopback
-+// service account — the same path SubjectAccessReviews take.
-+type LoopbackAccessibleNamespaceFetcher struct {
-+	// baseURL is the scheme+host portion of the loopback config (no path).
-+	baseURL string
-+
-+	// roundTripper is the authenticated transport built once from the
-+	// loopback config. Per-request impersonation is layered on top via
-+	// transport.NewImpersonatingRoundTripper, which simply prepends the
-+	// impersonation headers and delegates to this base RT — so all users
-+	// share the same TLS connection pool.
-+	roundTripper http.RoundTripper
-+
-+	// timeout caps every individual HTTP call.
-+	timeout time.Duration
-+}
-+
-+// Compile-time guard.
-+var _ AccessibleNamespaceFetcher = (*LoopbackAccessibleNamespaceFetcher)(nil)
-+
-+// NewLoopbackAccessibleNamespaceFetcher builds a fetcher from a loopback
-+// REST config. The config is copied internally; callers may safely mutate
-+// it after this returns.
-+func NewLoopbackAccessibleNamespaceFetcher(loopbackConfig *restclient.Config) (*LoopbackAccessibleNamespaceFetcher, error) {
-+	if loopbackConfig == nil {
-+		return nil, errors.New("loopback config is required")
-+	}
-+
-+	cfg := restclient.CopyConfig(loopbackConfig)
-+	transportConfig, err := cfg.TransportConfig()
-+	if err != nil {
-+		return nil, fmt.Errorf("get transport config: %w", err)
-+	}
-+
-+	rt, err := transport.New(transportConfig)
-+	if err != nil {
-+		return nil, fmt.Errorf("build loopback transport: %w", err)
-+	}
-+
-+	return &LoopbackAccessibleNamespaceFetcher{
-+		baseURL:      strings.TrimRight(cfg.Host, "/"),
-+		roundTripper: rt,
-+		timeout:      defaultHTTPTimeout,
-+	}, nil
-+}
-+
-+// readErrorBody reads up to errorBodyByteLimit bytes of an HTTP response
-+// body for inclusion in error messages. The read error is intentionally
-+// swallowed — we are already on the error path and the partial body is
-+// more useful than nothing.
-+func readErrorBody(body io.Reader) string {
-+	b, _ := io.ReadAll(io.LimitReader(body, errorBodyByteLimit))
-+	return string(b)
-+}
-+
-+// httpClientFor returns an http.Client whose transport prepends impersonation
-+// headers identifying the supplied user, then delegates to the shared base
-+// roundTripper. The returned client is cheap to construct: no new pools, no
-+// new TLS sessions. We deliberately do NOT cache per-user clients because
-+// the fetcher is shared across all users on the apiserver, and caching
-+// would either grow unbounded or require an LRU; per-call construction is
-+// simpler and the allocations are noise.
-+func (f *LoopbackAccessibleNamespaceFetcher) httpClientFor(u user.Info) *http.Client {
-+	// NOTE: extra keys may contain characters that are illegal in HTTP
-+	// header field names (e.g. '/'). transport.NewImpersonatingRoundTripper
-+	// applies the same key-escaping that kube-apiserver uses on the receive
-+	// side, so we get cross-component agreement for free.
-+	impRT := transport.NewImpersonatingRoundTripper(transport.ImpersonationConfig{
-+		UserName: u.GetName(),
-+		Groups:   u.GetGroups(),
-+		Extra:    u.GetExtra(),
-+	}, f.roundTripper)
-+
-+	return &http.Client{
-+		Transport: impRT,
-+		Timeout:   f.timeout,
-+	}
-+}
-+
-+// FetchAccessibleNamespaces lists all namespace names visible to the user.
-+func (f *LoopbackAccessibleNamespaceFetcher) FetchAccessibleNamespaces(ctx context.Context, u user.Info) ([]string, error) {
-+	endpoint := f.baseURL + accessibleNamespacesAPIPath
-+
-+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-+	if err != nil {
-+		return nil, fmt.Errorf("build LIST accessiblenamespaces request: %w", err)
-+	}
-+	req.Header.Set("Accept", "application/json")
-+
-+	klog.V(4).InfoS("namespace ACL: fetching accessible namespaces", "user", u.GetName(), "url", endpoint)
-+
-+	resp, err := f.httpClientFor(u).Do(req)
-+	if err != nil {
-+		return nil, fmt.Errorf("LIST accessiblenamespaces for user %q: %w", u.GetName(), err)
-+	}
-+	defer resp.Body.Close()
-+
-+	if resp.StatusCode != http.StatusOK {
-+		return nil, fmt.Errorf("LIST accessiblenamespaces for user %q: unexpected status %d: %s", u.GetName(), resp.StatusCode, readErrorBody(resp.Body))
-+	}
-+
-+	var list accessibleNamespaceList
-+	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
-+		return nil, fmt.Errorf("decode LIST accessiblenamespaces response for user %q: %w", u.GetName(), err)
-+	}
-+
-+	names := make([]string, len(list.Items))
-+	for i, item := range list.Items {
-+		names[i] = item.Metadata.Name
-+	}
-+	return names, nil
-+}
-+
-+// IsNamespaceAccessible answers whether a single namespace is visible to
-+// the user. It maps directly to a GET on the per-name endpoint, with 404
-+// meaning "not accessible" — semantically identical to how the apiserver
-+// itself translates a denied namespace lookup.
-+func (f *LoopbackAccessibleNamespaceFetcher) IsNamespaceAccessible(ctx context.Context, u user.Info, namespace string) (bool, error) {
-+	// url.PathEscape guards against pathological names. Namespace name
-+	// validation in upstream is strict (DNS-1123 label), so this is mostly
-+	// belt-and-suspenders, but it costs nothing and prevents a crafted
-+	// name from injecting a path segment.
-+	endpoint := fmt.Sprintf("%s%s/%s", f.baseURL, accessibleNamespacesAPIPath, url.PathEscape(namespace))
-+
-+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-+	if err != nil {
-+		return false, fmt.Errorf("build GET accessiblenamespace request: %w", err)
-+	}
-+	req.Header.Set("Accept", "application/json")
-+
-+	resp, err := f.httpClientFor(u).Do(req)
-+	if err != nil {
-+		return false, fmt.Errorf("GET accessiblenamespace %q for user %q: %w", namespace, u.GetName(), err)
-+	}
-+	defer resp.Body.Close()
-+
-+	switch resp.StatusCode {
-+	case http.StatusOK:
-+		return true, nil
-+	case http.StatusNotFound:
-+		return false, nil
-+	default:
-+		return false, fmt.Errorf("GET accessiblenamespace %q for user %q: unexpected status %d: %s", namespace, u.GetName(), resp.StatusCode, readErrorBody(resp.Body))
-+	}
-+}
-diff --git a/pkg/registry/core/namespace/storage/accessible_filtered_watch.go b/pkg/registry/core/namespace/storage/accessible_filtered_watch.go
-new file mode 100644
-index 00000000000..bfc5bf4f71a
---- /dev/null
-+++ b/pkg/registry/core/namespace/storage/accessible_filtered_watch.go
-@@ -0,0 +1,464 @@
-+/*
-+Copyright 2025 The Kubernetes Authors.
-+
-+Licensed under the Apache License, Version 2.0 (the "License");
-+you may not use this file except in compliance with the License.
-+You may obtain a copy of the License at
-+
-+    http://www.apache.org/licenses/LICENSE-2.0
-+
-+Unless required by applicable law or agreed to in writing, software
-+distributed under the License is distributed on an "AS IS" BASIS,
-+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+See the License for the specific language governing permissions and
-+limitations under the License.
-+*/
-+
-+package storage
-+
-+import (
-+	"context"
-+	"errors"
-+	"net/http"
-+	"sync"
-+	"time"
-+
-+	apierrors "k8s.io/apimachinery/pkg/api/errors"
-+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-+	"k8s.io/apimachinery/pkg/runtime"
-+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-+	"k8s.io/apimachinery/pkg/watch"
-+	"k8s.io/apiserver/pkg/authentication/user"
-+	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-+	"k8s.io/klog/v2"
-+	api "k8s.io/kubernetes/pkg/apis/core"
-+)
-+
-+// filteredWatchBufferSize controls the per-watch buffered channel that merges
-+// events coming from the underlying storage watch with events synthesized by
-+// the ACL poller. Sized to absorb a full namespace re-list during a
-+// steady-state ACL rotation; on overflow the watch errors out and the client
-+// is expected to reconnect with a fresh LIST. Mirrors openshift's
-+// pkg/project/auth/watch.go (1000).
-+const filteredWatchBufferSize = 1000
-+
-+// errChannelOverflow is the error message emitted via a watch.Error event when
-+// the merge buffer overflows.
-+var errChannelOverflow = errors.New("namespace ACL filtered watch: outgoing channel overflow; reconnect")
-+
-+// errNoUserInContext is returned when a request reaches the storage layer
-+// without an authenticated user — should be impossible in practice but we
-+// fail closed if it happens.
-+var errNoUserInContext = errors.New("no user info in context")
-+
-+// namespaceGetter is the minimal subset of the storage REST surface used by
-+// the filtered watch when synthesizing ADDED events for namespaces that just
-+// became accessible. The signature matches genericregistry.Store.Get exactly,
-+// kept as a tiny interface so tests can plug in a fake without spinning up
-+// etcd.
-+type namespaceGetter interface {
-+	Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error)
-+}
-+
-+// filteredWatchConfig groups the dependencies of a filteredWatch into a
-+// single value so the constructor stays at two parameters (ctx + config).
-+// All fields are required unless documented otherwise.
-+type filteredWatchConfig struct {
-+	// inner is the storage-layer watch already filtered through the
-+	// live predicate. filteredWatch takes ownership and will Stop() it.
-+	inner watch.Interface
-+
-+	// selector is the live fields.Selector whose accessible-name set is
-+	// updated on every poll tick. Shared with the SelectionPredicate
-+	// passed to inner; updates are seen by both immediately.
-+	selector *accessibleNamesSelector
-+
-+	// getter performs a server-side GET to materialize Namespace objects
-+	// for synthesized ADDED events.
-+	getter namespaceGetter
-+
-+	// fetcher answers "which namespaces is this user allowed to see"
-+	// on every poll tick.
-+	fetcher AccessibleNamespaceFetcher
-+
-+	// user identifies the watching client for impersonated fetcher calls.
-+	user user.Info
-+
-+	// initial is the accessible name set at watch open. Seeds knownNames
-+	// so the first poll tick does not synthesize ADDED events for
-+	// namespaces the inner watch is about to replay.
-+	initial map[string]struct{}
-+
-+	// refreshInterval governs how often the ACL poller wakes up. A value
-+	// <=0 disables polling (storage events still flow).
-+	refreshInterval time.Duration
-+}
-+
-+// filteredWatch wraps a storage-layer watch.Interface for namespaces and
-+// merges in synthetic events derived from changes to a user's accessible-
-+// namespace set (the ACL).
-+//
-+// Architecture mirrors OpenShift's userProjectWatcher:
-+//
-+//   - The underlying storage watch is started with a SelectionPredicate that
-+//     contains a live accessibleNamesSelector. The selector's atomic state is
-+//     updated on every ACL poll tick, so storage-layer events for namespaces
-+//     the user no longer has access to are silently dropped at the predicate
-+//     layer (no extra round-trips, no work in the cacher).
-+//
-+//   - In parallel, this wrapper polls the AccessibleNamespaceFetcher every
-+//     refreshInterval (default 1s, configurable). On each tick it computes
-+//     the diff against knownNames and synthesizes ADDED/DELETED events.
-+//     ADDED events fetch the actual Namespace via the supplied getter (a
-+//     server-side Get against the storage layer); DELETED events emit a stub
-+//     object carrying only metadata.name.
-+//
-+//   - All events — both pass-through from storage and synthetic from the
-+//     poller — are funneled through a single buffered channel and emitted to
-+//     the client in arrival order, so the client sees a consistent stream.
-+//
-+//   - On unrecoverable failure (channel overflow, inner watch closure) the
-+//     watch emits a watch.Error, stops itself, and CLOSES the outgoing
-+//     channel — clients ranging over ResultChan() unblock cleanly and let
-+//     their reflector reconnect.
-+type filteredWatch struct {
-+	inner    watch.Interface
-+	selector *accessibleNamesSelector
-+	getter   namespaceGetter
-+	fetcher  AccessibleNamespaceFetcher
-+
-+	// user is captured at watch-open and is immutable for the life of
-+	// the watch. We do not store the request context: cancellation flows
-+	// through the cancel func below.
-+	user user.Info
-+
-+	refreshInterval time.Duration
-+
-+	// outgoing carries every event delivered to the client. Buffered so a
-+	// slow storage layer and a slow poller cannot back each other up; on
-+	// overflow we emit a watch.Error and tear the watch down. Closed by
-+	// the lifecycle goroutine once both senders have exited, so a client
-+	// doing `for ev := range w.ResultChan()` always terminates.
-+	outgoing chan watch.Event
-+
-+	// knownNames is the set of namespace names this watch has surfaced to
-+	// the client and not yet retracted. It is the source of truth for
-+	// ADDED-vs-MODIFIED decisions and DELETED synthesis. Guarded by mu.
-+	mu         sync.Mutex
-+	knownNames map[string]struct{}
-+
-+	stopOnce sync.Once
-+	stopCh   chan struct{}
-+	cancel   context.CancelFunc
-+
-+	// senders is signalled once by each background goroutine when it
-+	// exits; the lifecycle goroutine waits on it before closing outgoing,
-+	// guaranteeing no "send on closed channel" panic.
-+	senders sync.WaitGroup
-+}
-+
-+// newFilteredWatch wires together a storage watch with an ACL poller. The
-+// returned watch owns cfg.inner and will Stop() it when the watch ends.
-+func newFilteredWatch(parentCtx context.Context, cfg filteredWatchConfig) *filteredWatch {
-+	ctx, cancel := context.WithCancel(parentCtx)
-+
-+	known := make(map[string]struct{}, len(cfg.initial))
-+	for n := range cfg.initial {
-+		known[n] = struct{}{}
-+	}
-+
-+	w := &filteredWatch{
-+		inner:           cfg.inner,
-+		selector:        cfg.selector,
-+		getter:          cfg.getter,
-+		fetcher:         cfg.fetcher,
-+		user:            cfg.user,
-+		refreshInterval: cfg.refreshInterval,
-+		outgoing:        make(chan watch.Event, filteredWatchBufferSize),
-+		knownNames:      known,
-+		stopCh:          make(chan struct{}),
-+		cancel:          cancel,
-+	}
-+
-+	w.senders.Add(2)
-+	go w.runStoragePump(ctx)
-+	go w.runACLPoller(ctx)
-+	go w.closeWhenDone()
-+
-+	return w
-+}
-+
-+// ResultChan implements watch.Interface.
-+func (w *filteredWatch) ResultChan() <-chan watch.Event {
-+	return w.outgoing
-+}
-+
-+// Stop implements watch.Interface. Idempotent.
-+func (w *filteredWatch) Stop() {
-+	w.stopOnce.Do(func() {
-+		// Cancel first so background goroutines unblock from their
-+		// selects before we tear down the inner watch.
-+		w.cancel()
-+		w.inner.Stop()
-+		close(w.stopCh)
-+	})
-+}
-+
-+// closeWhenDone waits for both sender goroutines (storage pump and ACL
-+// poller) to finish, then closes the outgoing channel exactly once. This
-+// is the canonical "single closer" pattern from the Go memory model and
-+// guarantees no send-on-closed-channel panic.
-+func (w *filteredWatch) closeWhenDone() {
-+	w.senders.Wait()
-+	close(w.outgoing)
-+}
-+
-+// runStoragePump forwards events from the underlying storage watch into the
-+// outgoing channel, maintaining knownNames so that subsequent ACL diffs make
-+// correct ADDED/DELETED decisions.
-+func (w *filteredWatch) runStoragePump(ctx context.Context) {
-+	defer utilruntime.HandleCrash()
-+	defer w.senders.Done()
-+	defer w.Stop()
-+
-+	in := w.inner.ResultChan()
-+	for {
-+		select {
-+		case <-ctx.Done():
-+			return
-+		case ev, ok := <-in:
-+			if !ok {
-+				// Inner watch closed (etcd disconnect, server
-+				// shutdown). Propagate by stopping ourselves;
-+				// client will reconnect with a fresh LIST.
-+				return
-+			}
-+			ev = w.observeStorageEvent(ev)
-+			if !w.emit(ev) {
-+				return
-+			}
-+		}
-+	}
-+}
-+
-+// observeStorageEvent updates knownNames for an event the predicate just let
-+// through and returns a (possibly mutated) event for emission. The event type
-+// is demoted from ADDED to MODIFIED if the name was already in knownNames —
-+// this happens, very rarely, when the ACL poller synthesized an ADDED for a
-+// namespace at almost the same instant a real etcd CREATE event for it
-+// crossed the predicate. Mirroring OpenShift's userProjectWatcher, we never
-+// emit two ADDEDs for the same name without an intervening DELETED.
-+func (w *filteredWatch) observeStorageEvent(ev watch.Event) watch.Event {
-+	name, ok := nameOfNamespaceEvent(ev)
-+	if !ok {
-+		return ev
-+	}
-+
-+	w.mu.Lock()
-+	defer w.mu.Unlock()
-+	switch ev.Type {
-+	case watch.Added:
-+		if _, already := w.knownNames[name]; already {
-+			ev.Type = watch.Modified
-+		}
-+		w.knownNames[name] = struct{}{}
-+	case watch.Modified:
-+		w.knownNames[name] = struct{}{}
-+	case watch.Deleted:
-+		delete(w.knownNames, name)
-+	}
-+	return ev
-+}
-+
-+// runACLPoller periodically refetches the user's accessible namespaces and
-+// synthesizes ADDED/DELETED events for the diff. The constructor seeds
-+// knownNames with the initial ACL, so the first poll iteration sees no diff
-+// in the steady state and only acts on subsequent changes.
-+func (w *filteredWatch) runACLPoller(ctx context.Context) {
-+	defer utilruntime.HandleCrash()
-+	defer w.senders.Done()
-+	defer w.Stop()
-+
-+	if w.refreshInterval <= 0 {
-+		// Misconfigured: a 0/negative interval would spin. Park the
-+		// goroutine until shutdown; the storage pump still works, ACL
-+		// changes won't be reflected until the client reconnects.
-+		<-ctx.Done()
-+		return
-+	}
-+
-+	ticker := time.NewTicker(w.refreshInterval)
-+	defer ticker.Stop()
-+
-+	for {
-+		select {
-+		case <-ctx.Done():
-+			return
-+		case <-ticker.C:
-+			if !w.tickACL(ctx) {
-+				return
-+			}
-+		}
-+	}
-+}
-+
-+// tickACL performs one ACL poll iteration: fetch the latest accessible set,
-+// update the live selector, and synthesize events for the diff. Returns
-+// false if the watch must be torn down (e.g. on emit overflow).
-+func (w *filteredWatch) tickACL(ctx context.Context) bool {
-+	names, err := w.fetcher.FetchAccessibleNamespaces(ctx, w.user)
-+	if err != nil {
-+		// Watch is shutting down: ctx cancellation propagates into the
-+		// fetcher's HTTP client and yields a context-canceled error.
-+		// This is normal teardown, not a real failure — keep silent.
-+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-+			return true
-+		}
-+		// Anything else is operationally interesting: surface it at
-+		// Warning so operators don't need -v=4 to notice. We keep the
-+		// previous ACL state — strictly safer than flipping to
-+		// deny-everything which would synthesize spurious DELETEDs
-+		// across the whole accessible set.
-+		klog.Warningf("namespace ACL: failed to refresh accessible set for user %q (keeping previous state): %v", w.user.GetName(), err)
-+		return true
-+	}
-+
-+	newACL := namesToSet(names)
-+	w.selector.update(newACL)
-+
-+	w.mu.Lock()
-+	gained, lost := diffNameSets(newACL, w.knownNames)
-+	w.mu.Unlock()
-+
-+	for _, n := range lost {
-+		ev := watch.Event{
-+			Type: watch.Deleted,
-+			// We don't have the original object in hand (recovering
-+			// it from etcd is racy). Emit a stub with just the name;
-+			// matches OpenShift's userProjectWatcher behavior and is
-+			// enough for client-go reflectors to evict their cache.
-+			Object: &api.Namespace{ObjectMeta: metav1.ObjectMeta{Name: n}},
-+		}
-+		w.mu.Lock()
-+		delete(w.knownNames, n)
-+		w.mu.Unlock()
-+		klog.V(4).InfoS("namespace ACL: synthesizing DELETED for lost access", "user", w.user.GetName(), "namespace", n)
-+		if !w.emit(ev) {
-+			return false
-+		}
-+	}
-+
-+	for _, n := range gained {
-+		obj, err := w.getter.Get(ctx, n, &metav1.GetOptions{})
-+		if err != nil {
-+			if apierrors.IsNotFound(err) {
-+				// Namespace exists in the user's ACL view but not
-+				// in storage (likely a race with deletion). Skip —
-+				// the client never saw it as ADDED and never will.
-+				continue
-+			}
-+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-+				// Shutting down; quietly drop.
-+				return true
-+			}
-+			klog.Warningf("namespace ACL: failed to fetch namespace %q for synthesized ADDED (user %q): %v", n, w.user.GetName(), err)
-+			continue
-+		}
-+
-+		// Re-check under lock just before emitting: between gathering
-+		// `gained` above and arriving here we released the lock, and
-+		// the storage pump may have raced through and announced an
-+		// ADDED for this same name (real etcd CREATE event passing
-+		// the now-updated predicate). If so, the pump already updated
-+		// knownNames; skip to avoid a duplicate ADDED. Best-effort; a
-+		// tighter window would require holding the lock across the
-+		// Get, which can be slow.
-+		w.mu.Lock()
-+		if _, already := w.knownNames[n]; already {
-+			w.mu.Unlock()
-+			continue
-+		}
-+		w.knownNames[n] = struct{}{}
-+		w.mu.Unlock()
-+
-+		klog.V(4).InfoS("namespace ACL: synthesizing ADDED for gained access", "user", w.user.GetName(), "namespace", n)
-+		if !w.emit(watch.Event{Type: watch.Added, Object: obj}) {
-+			return false
-+		}
-+	}
-+
-+	return true
-+}
-+
-+// diffNameSets returns names present in newACL but not in known (gained) and
-+// names present in known but not in newACL (lost). Caller must hold the
-+// lock guarding `known` for the duration of the call.
-+func diffNameSets(newACL, known map[string]struct{}) (gained, lost []string) {
-+	for n := range newACL {
-+		if _, ok := known[n]; !ok {
-+			gained = append(gained, n)
-+		}
-+	}
-+	for n := range known {
-+		if _, ok := newACL[n]; !ok {
-+			lost = append(lost, n)
-+		}
-+	}
-+	return gained, lost
-+}
-+
-+// emit pushes an event to the outgoing channel. Returns false if the watch
-+// is being torn down or the outgoing buffer overflowed, so callers stop.
-+//
-+// On overflow we attempt a single non-blocking delivery of a watch.Error so
-+// the client learns why their stream just ended; if even that fails (because
-+// the buffer is genuinely full and the client is unresponsive) the error is
-+// dropped — the client will notice anyway when ResultChan closes.
-+func (w *filteredWatch) emit(ev watch.Event) bool {
-+	select {
-+	case <-w.stopCh:
-+		return false
-+	case w.outgoing <- ev:
-+		return true
-+	default:
-+		errEvt := watch.Event{
-+			Type: watch.Error,
-+			Object: &metav1.Status{
-+				Status:  metav1.StatusFailure,
-+				Message: errChannelOverflow.Error(),
-+				Reason:  metav1.StatusReasonInternalError,
-+				Code:    http.StatusInternalServerError,
-+			},
-+		}
-+		select {
-+		case w.outgoing <- errEvt:
-+		default:
-+		}
-+		klog.Warningf("namespace ACL filtered watch: outgoing channel full for user %q; closing watch", w.user.GetName())
-+		return false
-+	}
-+}
-+
-+// nameOfNamespaceEvent extracts the namespace name from a watch event.
-+// Returns ("", false) for unexpected payloads (defensive — storage emits
-+// *api.Namespace, but a corrupt object should not panic the pump).
-+func nameOfNamespaceEvent(ev watch.Event) (string, bool) {
-+	if ev.Object == nil {
-+		return "", false
-+	}
-+	ns, ok := ev.Object.(*api.Namespace)
-+	if !ok {
-+		return "", false
-+	}
-+	return ns.Name, true
-+}
-+
-+// userFromContext extracts the authenticated user.Info from a request
-+// context. Fails closed if no user is present.
-+func userFromContext(ctx context.Context) (user.Info, error) {
-+	u, ok := genericapirequest.UserFrom(ctx)
-+	if !ok {
-+		return nil, errNoUserInContext
-+	}
-+	return u, nil
-+}
-diff --git a/pkg/registry/core/namespace/storage/accessible_selector.go b/pkg/registry/core/namespace/storage/accessible_selector.go
-new file mode 100644
-index 00000000000..907d06ee686
---- /dev/null
-+++ b/pkg/registry/core/namespace/storage/accessible_selector.go
-@@ -0,0 +1,119 @@
-+/*
-+Copyright 2025 The Kubernetes Authors.
-+
-+Licensed under the Apache License, Version 2.0 (the "License");
-+you may not use this file except in compliance with the License.
-+You may obtain a copy of the License at
-+
-+    http://www.apache.org/licenses/LICENSE-2.0
-+
-+Unless required by applicable law or agreed to in writing, software
-+distributed under the License is distributed on an "AS IS" BASIS,
-+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+See the License for the specific language governing permissions and
-+limitations under the License.
-+*/
-+
-+package storage
-+
-+import (
-+	"sync/atomic"
-+
-+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-+	"k8s.io/apimachinery/pkg/fields"
-+)
-+
-+// accessibleNamesSelector is a fields.Selector implementation that matches an
-+// object iff its metadata.name is contained in a dynamically-updated set of
-+// accessible namespace names.
-+//
-+// It is meant to be combined with the user-supplied field selector via
-+// fields.AndSelectors and passed inside a storage.SelectionPredicate to
-+// genericregistry.Store's ListPredicate/WatchPredicate. The Kubernetes
-+// storage layer always populates metadata.name in storeElement.Fields, so we
-+// reuse the existing predicate machinery for both filtering and watch
-+// streaming without any custom plumbing.
-+//
-+// The set is held behind an atomic.Pointer so that a background goroutine
-+// can update which names are accessible without any locking on the hot
-+// Matches() path. The selector is shared (not copied) between the storage
-+// predicate and the ACL poller; both see the same atomic value.
-+//
-+// Notes on the fields.Selector method contract:
-+//
-+//   - Empty() returns false unconditionally; otherwise an AndSelector
-+//     containing this selector would silently degrade to "match everything".
-+//   - RequiresExactMatch() returns ("", false): the selector represents a
-+//     set-membership test, not equality on a single value. Reporting an
-+//     equality match would defeat MatchesSingle/MatchesSingleNamespace
-+//     optimizations in the storage layer for user-supplied terms ANDed
-+//     alongside this selector.
-+//   - String() returns "" so we don't leak a (potentially large, per-user)
-+//     ACL set into error messages or audit logs.
-+//   - DeepCopySelector() returns self — the shared atomic state is the
-+//     point. apimachinery never strictly relies on copy semantics.
-+type accessibleNamesSelector struct {
-+	// names points to the current (immutable) set of accessible names.
-+	// A nil pointer means "deny everything" — used as a safe default
-+	// before the first fetch and after a permanent error.
-+	names atomic.Pointer[map[string]struct{}]
-+}
-+
-+// newAccessibleNamesSelector creates a selector that matches the given
-+// initial set of names. Pass nil to start in deny-everything mode.
-+func newAccessibleNamesSelector(initial map[string]struct{}) *accessibleNamesSelector {
-+	s := &accessibleNamesSelector{}
-+	if initial != nil {
-+		s.names.Store(&initial)
-+	}
-+	return s
-+}
-+
-+// update atomically replaces the accessible-name set. The passed map MUST
-+// NOT be mutated by the caller afterwards — it is shared with concurrent
-+// Matches() calls. Pass nil to switch into deny-everything mode.
-+func (s *accessibleNamesSelector) update(set map[string]struct{}) {
-+	if set == nil {
-+		s.names.Store(nil)
-+		return
-+	}
-+	s.names.Store(&set)
-+}
-+
-+// Matches implements fields.Selector. Returns true iff the object's
-+// metadata.name is contained in the current accessible set.
-+func (s *accessibleNamesSelector) Matches(f fields.Fields) bool {
-+	set := s.names.Load()
-+	if set == nil {
-+		return false
-+	}
-+	_, ok := (*set)[f.Get(metav1.ObjectNameField)]
-+	return ok
-+}
-+
-+func (s *accessibleNamesSelector) Empty() bool { return false }
-+
-+func (s *accessibleNamesSelector) RequiresExactMatch(string) (string, bool) {
-+	return "", false
-+}
-+
-+func (s *accessibleNamesSelector) Transform(fields.TransformFunc) (fields.Selector, error) {
-+	return s, nil
-+}
-+
-+func (s *accessibleNamesSelector) Requirements() fields.Requirements { return nil }
-+
-+func (s *accessibleNamesSelector) String() string { return "" }
-+
-+func (s *accessibleNamesSelector) DeepCopySelector() fields.Selector { return s }
-+
-+// namesToSet converts a slice of names into a set with a pre-sized backing
-+// map. The returned map is owned by the caller and may be handed off to
-+// update() without further copying.
-+func namesToSet(names []string) map[string]struct{} {
-+	set := make(map[string]struct{}, len(names))
-+	for _, n := range names {
-+		set[n] = struct{}{}
-+	}
-+	return set
-+}
 diff --git a/pkg/registry/core/namespace/storage/filtering_test.go b/pkg/registry/core/namespace/storage/filtering_test.go
 new file mode 100644
-index 00000000000..9621931772d
+index 00000000000..0355f4fe5ba
 --- /dev/null
 +++ b/pkg/registry/core/namespace/storage/filtering_test.go
-@@ -0,0 +1,524 @@
+@@ -0,0 +1,525 @@
 +/*
 +Copyright 2025 The Kubernetes Authors.
 +
@@ -1334,6 +38,7 @@ index 00000000000..9621931772d
 +	"k8s.io/apiserver/pkg/endpoints/filters"
 +	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 +	"k8s.io/apiserver/pkg/registry/generic"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
 +	"k8s.io/apiserver/pkg/registry/rest"
 +	etcd3testing "k8s.io/apiserver/pkg/storage/etcd3/testing"
 +
@@ -1390,11 +95,11 @@ index 00000000000..9621931772d
 +
 +// Compile-time guard: the fake must always implement the production
 +// interface. Any breaking change there fails the test build first.
-+var _ AccessibleNamespaceFetcher = (*fakeFetcher)(nil)
++var _ scopefilter.AccessibleNamespaceFetcher = (*fakeFetcher)(nil)
 +
 +// ----- helpers --------------------------------------------------------------
 +
-+func newStorageWithFiltering(t *testing.T, fetcher AccessibleNamespaceFetcher, refresh time.Duration) (*REST, *etcd3testing.EtcdTestServer) {
++func newStorageWithFiltering(t *testing.T, fetcher scopefilter.AccessibleNamespaceFetcher, refresh time.Duration) (*REST, *etcd3testing.EtcdTestServer) {
 +	t.Helper()
 +	etcdStorage, server := registrytest.NewEtcdStorage(t, "")
 +	restOptions := generic.RESTOptions{
@@ -1822,5 +527,2971 @@ index 00000000000..9621931772d
 +	afterCalls := fetcher.snapshotListCalls()
 +	if afterCalls != beforeCalls {
 +		t.Fatalf("ACL poller still ticking after Stop: before=%d after=%d", beforeCalls, afterCalls)
++	}
++}
+diff --git a/pkg/registry/core/namespace/storage/storage.go b/pkg/registry/core/namespace/storage/storage.go
+index e67cedeb15e..ff89cf9de64 100644
+--- a/pkg/registry/core/namespace/storage/storage.go
++++ b/pkg/registry/core/namespace/storage/storage.go
+@@ -19,19 +19,25 @@ package storage
+ import (
+ 	"context"
+ 	"fmt"
++	"time"
+ 
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
+ 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+ 	"k8s.io/apimachinery/pkg/watch"
++	"k8s.io/apiserver/pkg/endpoints/filters"
+ 	"k8s.io/apiserver/pkg/registry/generic"
+ 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
+ 	"k8s.io/apiserver/pkg/registry/rest"
+ 	"k8s.io/apiserver/pkg/storage"
+ 	storageerr "k8s.io/apiserver/pkg/storage/errors"
+ 	"k8s.io/apiserver/pkg/util/dryrun"
++	restclient "k8s.io/client-go/rest"
++	"k8s.io/klog/v2"
+ 	api "k8s.io/kubernetes/pkg/apis/core"
+ 	"k8s.io/kubernetes/pkg/printers"
+ 	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
+@@ -40,7 +46,25 @@ import (
+ 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
+ )
+ 
+-// rest implements a RESTStorage for namespaces
++// namespacesGVR identifies the namespaces resource for scopefilter.Decorator
++// error construction. There is no separate resource+verb to narrow an RBAC
++// floor against here (see scopefilter.Decorator's IdentityByName doc), so
++// Version is cosmetic.
++var namespacesGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
++
++// REST implements a RESTStorage for namespaces.
++//
++// List/Get/Watch below are plain, unconditional delegations to store; all
++// the filtering logic lives one level down, on store.ScopeFilter (see
++// genericregistry.Store's field doc). When a fetcher was supplied to
++// NewREST, store.ScopeFilter is wired in IdentityByName mode with an
++// unconditional trigger (filters.IsNamespaceFilteringMode, set by the
++// authorization filter for users who lack RBAC for list/get on namespaces
++// but should still see the subset they have *some* access to). This is the
++// original, narrower ACL-filtering mechanism that scopefilter's generic
++// --scope=<kind> path (used by every other namespaced resource) was
++// generalized from -- namespaces keeps its own unconditional trigger as a
++// deliberate, documented exception.
+ type REST struct {
+ 	store  *genericregistry.Store
+ 	status *genericregistry.Store
+@@ -56,8 +80,73 @@ type FinalizeREST struct {
+ 	store *genericregistry.Store
+ }
+ 
+-// NewREST returns a RESTStorage object that will work against namespaces.
+-func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *FinalizeREST, error) {
++// restConfig collects the Deckhouse-specific settings supplied to NewREST
++// via functional options. The zero value disables filtering — i.e. plain
++// upstream behavior — which is what NewREST(optsGetter) gives you.
++type restConfig struct {
++	// fetcher is the scopefilter.AccessibleNamespaceFetcher to use
++	// directly, when the caller already has one (typically tests).
++	fetcher scopefilter.AccessibleNamespaceFetcher
++
++	// loopbackConfig, when set, asks NewREST to build a
++	// scopefilter.LoopbackAccessibleNamespaceFetcher itself. If both
++	// fetcher and loopbackConfig are set, fetcher wins.
++	loopbackConfig *restclient.Config
++
++	// refreshInterval overrides scopefilter.DefaultRefreshInterval for
++	// the watch-path ACL poller.
++	refreshInterval time.Duration
++}
++
++// Option configures the namespace REST storage. Options are applied in
++// order; later options override earlier ones for the same field.
++type Option func(*restConfig)
++
++// WithAccessibleNamespaceFetcher enables Deckhouse ACL filtering with the
++// caller-supplied fetcher. Pass nil to leave filtering disabled.
++func WithAccessibleNamespaceFetcher(f scopefilter.AccessibleNamespaceFetcher) Option {
++	return func(c *restConfig) { c.fetcher = f }
++}
++
++// WithLoopbackFetcher enables Deckhouse ACL filtering by constructing a
++// scopefilter.LoopbackAccessibleNamespaceFetcher from the supplied loopback
++// REST config. Nil config or fetcher-build failure degrades to vanilla
++// behavior with a klog warning — kube-apiserver still boots.
++func WithLoopbackFetcher(cfg *restclient.Config) Option {
++	return func(c *restConfig) { c.loopbackConfig = cfg }
++}
++
++// WithACLRefreshInterval overrides the watch-path ACL polling cadence.
++// Non-positive values fall back to scopefilter.DefaultRefreshInterval.
++func WithACLRefreshInterval(d time.Duration) Option {
++	return func(c *restConfig) { c.refreshInterval = d }
++}
++
++// NewREST returns a RESTStorage object for namespaces.
++//
++// Called with no options, NewREST(optsGetter) reproduces vanilla upstream
++// behavior — this is what the upstream storage_test.go relies on.
++//
++// Pass WithAccessibleNamespaceFetcher / WithLoopbackFetcher to enable
++// Deckhouse ACL filtering. If a fetcher cannot be built (e.g. malformed
++// loopback config) filtering is silently disabled with a klog warning so
++// the apiserver remains bootstrappable.
++func NewREST(optsGetter generic.RESTOptionsGetter, opts ...Option) (*REST, *StatusREST, *FinalizeREST, error) {
++	var cfg restConfig
++	for _, opt := range opts {
++		opt(&cfg)
++	}
++
++	fetcher := cfg.fetcher
++	if fetcher == nil && cfg.loopbackConfig != nil {
++		f, err := scopefilter.NewLoopbackAccessibleNamespaceFetcher(cfg.loopbackConfig)
++		if err != nil {
++			klog.Warningf("namespace ACL: failed to build loopback accessible-namespace fetcher: %v; filtering disabled", err)
++		} else {
++			fetcher = f
++		}
++	}
++
+ 	store := &genericregistry.Store{
+ 		NewFunc:                   func() runtime.Object { return &api.Namespace{} },
+ 		NewListFunc:               func() runtime.Object { return &api.NamespaceList{} },
+@@ -75,8 +164,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
+ 
+ 		TableConvertor: printerstorage.TableConvertor{TableGenerator: printers.NewTableGenerator().With(printersinternal.AddHandlers)},
+ 	}
+-	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: namespace.GetAttrs}
+-	if err := store.CompleteWithOptions(options); err != nil {
++	storeOptions := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: namespace.GetAttrs}
++	if err := store.CompleteWithOptions(storeOptions); err != nil {
+ 		return nil, nil, nil, err
+ 	}
+ 
+@@ -88,7 +177,33 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
+ 	finalizeStore.UpdateStrategy = namespace.FinalizeStrategy
+ 	finalizeStore.ResetFieldsStrategy = namespace.FinalizeStrategy
+ 
+-	return &REST{store: store, status: &statusStore}, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
++	// Wired directly on store (rather than kept alongside it on REST) so
++	// that store.List/Get/Watch's own ScopeFilter check -- shared by every
++	// resource built on *genericregistry.Store -- picks it up with no
++	// per-type List/Get/Watch overrides needed here. Set after
++	// statusStore/finalizeStore were already copied above, so neither
++	// subresource inherits it -- consistent with the authorization filter
++	// never tagging a subresource request for filtering in the first
++	// place (filters.IsNamespaceFilteringMode only ever fires for the
++	// top-level namespaces resource), just structurally guaranteed rather
++	// than incidentally true.
++	if fetcher != nil {
++		store.ScopeFilter = &scopefilter.Decorator{
++			Store:           store,
++			BuildPredicate:  store.PredicateFunc,
++			Resource:        namespacesGVR,
++			Mode:            scopefilter.IdentityByName,
++			Trigger:         filters.IsNamespaceFilteringMode,
++			Accessible:      fetcher,
++			RefreshInterval: cfg.refreshInterval,
++		}
++	}
++
++	r := &REST{
++		store:  store,
++		status: &statusStore,
++	}
++	return r, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
+ }
+ 
+ func (r *REST) NamespaceScoped() bool {
+@@ -114,6 +229,8 @@ func (r *REST) NewList() runtime.Object {
+ 	return r.store.NewList()
+ }
+ 
++// List returns a list of namespaces. Filtering, when active, is entirely
++// store.ScopeFilter's concern -- see genericregistry.Store.List's own doc.
+ func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
+ 	return r.store.List(ctx, options)
+ }
+@@ -126,10 +243,14 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
+ 	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
+ }
+ 
++// Get retrieves a single namespace. Filtering, when active, is entirely
++// store.ScopeFilter's concern -- see genericregistry.Store.Get's own doc.
+ func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+ 	return r.store.Get(ctx, name, options)
+ }
+ 
++// Watch streams namespace events. Filtering, when active, is entirely
++// store.ScopeFilter's concern -- see genericregistry.Store.Watch's own doc.
+ func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+ 	return r.store.Watch(ctx, options)
+ }
+diff --git a/pkg/registry/core/rest/scopefilter_wiring.go b/pkg/registry/core/rest/scopefilter_wiring.go
+new file mode 100644
+index 00000000000..7f77514b57b
+--- /dev/null
++++ b/pkg/registry/core/rest/scopefilter_wiring.go
+@@ -0,0 +1,106 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package rest
++
++import (
++	"context"
++
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++	restclient "k8s.io/client-go/rest"
++	"k8s.io/klog/v2"
++)
++
++// scopeFilterResolvers bundles the resolvers every generic `--scope=<kind>`
++// wiring needs. Built once from a loopback REST config and shared across
++// every built-in resource wired via wireScopeFilter -- there is no reason
++// for pods, and whatever resource joins the MVP allow-list next, to each pay
++// for their own set of loopback HTTP transports.
++type scopeFilterResolvers struct {
++	accessible scopefilter.AccessibleNamespaceFetcher
++	classify   scopefilter.ClassificationResolver
++	floor      scopefilter.RBACFloorResolver
++}
++
++// newScopeFilterResolvers builds the shared resolver bundle. Returns
++// (nil, nil) -- deliberately not an error -- when loopbackConfig is nil,
++// since some minimal/test configurations legitimately have none. Callers
++// must treat a nil bundle as "generic scope filtering unavailable this run"
++// and skip wiring; kube-apiserver still boots with vanilla behavior for
++// every resource that would otherwise have been wired.
++func newScopeFilterResolvers(loopbackConfig *restclient.Config) (*scopeFilterResolvers, error) {
++	if loopbackConfig == nil {
++		return nil, nil
++	}
++
++	accessible, err := scopefilter.NewLoopbackAccessibleNamespaceFetcher(loopbackConfig)
++	if err != nil {
++		return nil, err
++	}
++	classify, err := scopefilter.NewLoopbackClassificationResolver(loopbackConfig)
++	if err != nil {
++		return nil, err
++	}
++	floor, err := scopefilter.NewLoopbackRBACFloorResolver(loopbackConfig, accessible)
++	if err != nil {
++		return nil, err
++	}
++
++	return &scopeFilterResolvers{accessible: accessible, classify: classify, floor: floor}, nil
++}
++
++// wireScopeFilter installs a scopefilter.Decorator on store (Mode
++// IdentityByNamespace, header-gated Trigger) and registers gvr so the
++// authorization filter's header-gated bypass (see
++// staging/.../endpoints/filters/authorization.go) is willing to route
++// denied requests for it into the filtering path.
++//
++// A nil resolvers bundle (no loopback config available this run) is a
++// silent no-op: store keeps vanilla behavior, and gvr is never registered,
++// so no --scope header can ever bypass 403 for it. Covering another
++// built-in resource is exactly this one call at its own construction site --
++// no change to that resource's own storage.go, since the filtering hook
++// lives on *genericregistry.Store itself (see its ScopeFilter field doc).
++func wireScopeFilter(store *genericregistry.Store, resolvers *scopeFilterResolvers, gvr schema.GroupVersionResource) {
++	if resolvers == nil {
++		return
++	}
++
++	store.ScopeFilter = &scopefilter.Decorator{
++		Store:          store,
++		BuildPredicate: store.PredicateFunc,
++		Resource:       gvr,
++		Mode:           scopefilter.IdentityByNamespace,
++		Trigger:        scopeFilterTriggered,
++		Classify:       resolvers.classify,
++		RBACFloor:      resolvers.floor,
++		Accessible:     resolvers.accessible,
++	}
++	scopefilter.Register(gvr.GroupResource())
++	klog.V(2).InfoS("scopefilter: wired generic --scope filtering", "resource", gvr)
++}
++
++// scopeFilterTriggered reports whether ctx carries a scope request at all.
++// Set by the authorization filter on both the denied-then-bypassed path
++// (which also carries scopefilter.IsBypass) and the already-allowed path
++// (which does not) -- see scopefilter.WithBypass's doc for why those two
++// tags are independent.
++func scopeFilterTriggered(ctx context.Context) bool {
++	_, present := scopefilter.RequestFrom(ctx)
++	return present
++}
+diff --git a/pkg/registry/core/rest/storage_core.go b/pkg/registry/core/rest/storage_core.go
+index da2384aae05..068d9d1bc52 100644
+--- a/pkg/registry/core/rest/storage_core.go
++++ b/pkg/registry/core/rest/storage_core.go
+@@ -198,6 +198,19 @@ func (p *legacyProvider) NewRESTStorage(apiResourceConfigSource serverstorage.AP
+ 		return genericapiserver.APIGroupInfo{}, err
+ 	}
+ 
++	// Deckhouse: wire pods as the MVP resource for generic `-A
++	// --scope=<kind>` cross-namespace filtering (see
++	// k8s.io/apiserver/pkg/registry/generic/scopefilter). A nil resolver
++	// bundle (no loopback config, e.g. some minimal test setups) is a
++	// silent no-op -- pods keep vanilla behavior and stay unregistered, so
++	// no --scope header can bypass 403 for them.
++	scopeFilterResolvers, err := newScopeFilterResolvers(p.LoopbackClientConfig)
++	if err != nil {
++		klog.Warningf("scopefilter: failed to build resolvers: %v; generic --scope filtering disabled this run", err)
++	} else {
++		wireScopeFilter(podStorage.Pod.Store, scopeFilterResolvers, corev1.SchemeGroupVersion.WithResource("pods"))
++	}
++
+ 	serviceRESTStorage, serviceStatusStorage, serviceRESTProxy, err := servicestore.NewREST(
+ 		restOptionsGetter,
+ 		p.primaryServiceClusterIPAllocator.IPFamily(),
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
+index 6c6c94ba718..12b16e8f598 100644
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
+@@ -24,6 +24,7 @@ import (
+ 
+ 	"k8s.io/apimachinery/pkg/fields"
+ 	"k8s.io/apimachinery/pkg/labels"
++	"k8s.io/apimachinery/pkg/runtime/schema"
+ 	genericfeatures "k8s.io/apiserver/pkg/features"
+ 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+ 
+@@ -34,6 +35,7 @@ import (
+ 	"k8s.io/apiserver/pkg/authorization/authorizer"
+ 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
+ 	"k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
+ )
+ 
+ const (
+@@ -45,8 +47,88 @@ const (
+ 	decisionAllow  = "allow"
+ 	decisionForbid = "forbid"
+ 	reasonError    = "internal error"
++
++	// Deckhouse: audit annotation values used when the authorization filter
++	// hands a denied namespace list/get/watch over to the storage layer for
++	// ACL-based filtering instead of 403'ing.
++	decisionAllowFiltered = "allow-filtered"
++	reasonNamespaceFilter = "namespace filtering mode"
++
++	// Deckhouse: audit annotation values used when the authorization filter
++	// hands a denied list/get/watch of an arbitrary --scope-registered
++	// resource over to the storage layer for scope-based filtering instead
++	// of 403'ing. Distinct from the namespace-specific pair above because
++	// the trigger condition differs (a header, not an unconditional rule)
++	// and operators auditing "allow-filtered" decisions want to tell the two
++	// apart.
++	decisionAllowScoped = "allow-scoped"
++	reasonScopeFilter   = "scope filtering mode"
+ )
+ 
++// Deckhouse: namespaceFilteringModeKey is the context-value key that the
++// authorization filter uses to flag a request as "denied by RBAC but routed
++// to the namespace-filtering code path in storage". It is intentionally an
++// unexported zero-size struct so external packages cannot synthesize it
++// without going through WithNamespaceFilteringMode (which is only meant for
++// tests).
++type namespaceFilteringModeKey struct{}
++
++// IsNamespaceFilteringMode reports whether the request context was tagged for
++// ACL-based namespace filtering (see the WithAuthorization branch below).
++// The storage layer reads this to decide whether to invoke the accessible-
++// namespace fetcher.
++func IsNamespaceFilteringMode(ctx context.Context) bool {
++	val, ok := ctx.Value(namespaceFilteringModeKey{}).(bool)
++	return ok && val
++}
++
++// WithNamespaceFilteringMode returns a derivative context with the namespace
++// filtering flag set. Production code reaches this state via the
++// authorization filter; tests use this helper to construct a context that
++// pretends an authorizer denial happened.
++func WithNamespaceFilteringMode(ctx context.Context) context.Context {
++	return context.WithValue(ctx, namespaceFilteringModeKey{}, true)
++}
++
++// isNamespaceListGetOrWatchRequest reports whether the request targets the
++// core /v1/namespaces list/get/watch endpoint. These three verbs are the
++// only ones we bypass 403 for: create/update/delete still reject denied
++// users with the standard error so we don't accidentally let unauthorized
++// callers mutate cluster state.
++func isNamespaceListGetOrWatchRequest(requestInfo *request.RequestInfo) bool {
++	if requestInfo == nil || !requestInfo.IsResourceRequest {
++		return false
++	}
++	if requestInfo.APIGroup != "" || requestInfo.Resource != "namespaces" || requestInfo.Subresource != "" {
++		return false
++	}
++	switch requestInfo.Verb {
++	case "list", "get", "watch":
++		return true
++	}
++	return false
++}
++
++// isFilteredRequest reports whether the request is a read (list/get/watch)
++// of a top-level (no subresource) namespaced-resource endpoint that COULD be
++// bypassed for scope-based filtering. It deliberately says nothing about
++// whether the caller actually asked for a scope (that's a header check the
++// caller makes separately) or whether a filtering decorator is actually
++// wired for this resource (that's scopefilter.IsRegistered, also checked
++// separately by the caller) -- both must ALSO hold before bypassing, so
++// that a header alone is never enough to skip authz for a resource nobody
++// wired filtering for.
++func isFilteredRequest(requestInfo *request.RequestInfo) bool {
++	if requestInfo == nil || !requestInfo.IsResourceRequest || requestInfo.Subresource != "" {
++		return false
++	}
++	switch requestInfo.Verb {
++	case "list", "get", "watch":
++		return true
++	}
++	return false
++}
++
+ type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
+ 
+ // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
+@@ -81,6 +163,24 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+ 			audit.AddAuditAnnotations(ctx,
+ 				decisionAnnotationKey, decisionAllow,
+ 				reasonAnnotationKey, reason)
++
++			// Deckhouse: tag the scope request even on the allowed
++			// path, WITHOUT WithBypass. This is what lets a fully
++			// privileged caller use e.g. --scope=system to narrow
++			// their own view without ever triggering the (comparatively
++			// expensive) RBAC floor computation -- RBAC already said
++			// yes, so scopefilter.Decorator applies only the
++			// classification selector and skips RBACFloorResolver
++			// entirely. See scopefilter.WithBypass's doc for why these
++			// two tags are intentionally independent.
++			if requestInfo, ok := request.RequestInfoFrom(ctx); ok && isFilteredRequest(requestInfo) {
++				if scopeReq, present, perr := scopefilter.ParseHeaders(req.Header); present && perr == nil {
++					if gr := (schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}); scopefilter.IsRegistered(gr) {
++						req = req.WithContext(scopefilter.WithRequest(ctx, scopeReq))
++					}
++				}
++			}
++
+ 			handler.ServeHTTP(w, req)
+ 			return
+ 		}
+@@ -90,6 +190,61 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+ 			return
+ 		}
+ 
++		// Deckhouse: bypass 403 for namespace list/get/watch and let the
++		// storage layer return an ACL-filtered response instead. This is
++		// strictly a relaxation for *read* verbs; mutating verbs still
++		// hit the standard Forbidden path below. The storage layer keys
++		// off IsNamespaceFilteringMode() so other consumers of this
++		// filter chain are unaffected.
++		requestInfo, _ := request.RequestInfoFrom(ctx)
++		if isNamespaceListGetOrWatchRequest(requestInfo) {
++			klog.V(4).InfoS("namespace ACL: bypassing authorization denial for namespace read; storage will filter",
++				"URI", req.RequestURI, "verb", requestInfo.Verb, "reason", reason)
++			audit.AddAuditAnnotations(ctx,
++				decisionAnnotationKey, decisionAllowFiltered,
++				reasonAnnotationKey, reasonNamespaceFilter)
++			handler.ServeHTTP(w, req.WithContext(WithNamespaceFilteringMode(ctx)))
++			return
++		}
++
++		// Deckhouse: generic scope-filtering bypass. Three independent
++		// gates must ALL hold, or we fall through to the standard
++		// Forbidden response below:
++		//
++		//  1. isFilteredRequest: read verb, no subresource, resource
++		//     request at all (this alone says nothing about WHICH
++		//     resource -- deliberately, so this stays a single shared
++		//     gate for every namespaced resource rather than a
++		//     per-resource hardcode like the namespaces case above).
++		//  2. The client actually sent a scope header -- absence means
++		//     "not asking for this", and behavior for such a caller
++		//     must stay byte-for-byte identical to a kube-apiserver
++		//     with no Deckhouse patches at all.
++		//  3. scopefilter.IsRegistered(gr): a storage-layer decorator
++		//     is ACTUALLY wired for this exact (group, resource). This
++		//     is the gate that makes (1)+(2) safe -- without it, a
++		//     header alone would bypass 403 into a completely
++		//     unfiltered Store.List for any resource nobody wired
++		//     filtering for, handing back everything to a denied
++		//     caller.
++		if isFilteredRequest(requestInfo) {
++			if scopeReq, present, perr := scopefilter.ParseHeaders(req.Header); present {
++				if perr != nil {
++					klog.V(4).InfoS("scopefilter: invalid scope header, falling through to Forbidden",
++						"URI", req.RequestURI, "err", perr)
++				} else if gr := (schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}); scopefilter.IsRegistered(gr) {
++					klog.V(4).InfoS("scopefilter: bypassing authorization denial for scoped read; storage will filter",
++						"URI", req.RequestURI, "verb", requestInfo.Verb, "resource", gr, "scope", scopeReq.Kind, "reason", reason)
++					audit.AddAuditAnnotations(ctx,
++						decisionAnnotationKey, decisionAllowScoped,
++						reasonAnnotationKey, reasonScopeFilter)
++					scopedCtx := scopefilter.WithBypass(scopefilter.WithRequest(ctx, scopeReq))
++					handler.ServeHTTP(w, req.WithContext(scopedCtx))
++					return
++				}
++			}
++		}
++
+ 		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
+ 		audit.AddAuditAnnotations(ctx,
+ 			decisionAnnotationKey, decisionForbid,
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
+index 722a312270a..90e1627147b 100644
+--- a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
+@@ -44,6 +44,7 @@ import (
+ 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
+ 	"k8s.io/apiserver/pkg/features"
+ 	"k8s.io/apiserver/pkg/registry/generic"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
+ 	"k8s.io/apiserver/pkg/registry/rest"
+ 	"k8s.io/apiserver/pkg/storage"
+ 	storeerr "k8s.io/apiserver/pkg/storage/errors"
+@@ -148,6 +149,22 @@ type Store struct {
+ 	// object matches the given field and label selectors.
+ 	PredicateFunc func(label labels.Selector, field fields.Selector) storage.SelectionPredicate
+ 
++	// Deckhouse: ScopeFilter, when non-nil, adds Deckhouse's generic
++	// `-A --scope=<kind>` cross-namespace filtering to List/Get/Watch
++	// below. Its own ScopeFilter.Trigger decides whether a given request
++	// actually gets routed through it -- a resource with ScopeFilter wired
++	// but Trigger returning false for a given ctx (e.g. no --scope header
++	// sent) sees byte-for-byte vanilla behavior at zero extra cost.
++	//
++	// This lives on Store itself, rather than requiring every resource's
++	// own REST wrapper type to add matching fields and List/Get/Watch
++	// overrides, specifically so covering another built-in resource (or a
++	// CustomResourceDefinition -- apiextensions-apiserver's
++	// customresource.REST also wraps *Store) costs a construction-time
++	// assignment plus a scopefilter.Register call, not a per-resource file
++	// edit repeated on every version bump.
++	ScopeFilter *scopefilter.Decorator
++
+ 	// EnableGarbageCollection affects the handling of Update and Delete
+ 	// requests. Enabling garbage collection allows finalizers to do work to
+ 	// finalize this object before the store deletes it.
+@@ -364,8 +381,14 @@ func (e *Store) GetCorruptObjDeleter() rest.GracefulDeleter {
+ }
+ 
+ // List returns a list of items matching labels and field according to the
+-// store's PredicateFunc.
++// store's PredicateFunc. Deckhouse: routed through ScopeFilter instead when
++// it is wired and ScopeFilter.Trigger(ctx) says this particular request
++// should be -- see the field doc.
+ func (e *Store) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
++	if e.ScopeFilter != nil && e.ScopeFilter.Trigger != nil && e.ScopeFilter.Trigger(ctx) {
++		return e.ScopeFilter.List(ctx, options)
++	}
++
+ 	label := labels.Everything()
+ 	if options != nil && options.LabelSelector != nil {
+ 		label = options.LabelSelector
+@@ -845,6 +868,17 @@ func newDeleteOptionsFromUpdateOptions(in *metav1.UpdateOptions) *metav1.DeleteO
+ 
+ // Get retrieves the item from storage.
+ func (e *Store) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
++	if e.ScopeFilter != nil && e.ScopeFilter.Trigger != nil && e.ScopeFilter.Trigger(ctx) {
++		return e.ScopeFilter.Get(ctx, name, options, e.getIgnoringScopeFilter)
++	}
++	return e.getIgnoringScopeFilter(ctx, name, options)
++}
++
++// getIgnoringScopeFilter is the original, unhooked Get body. Deckhouse:
++// split out from Get so ScopeFilter -- once it has decided a request is
++// allowed -- has a way to perform the actual read without going back through
++// Get's own ScopeFilter check, which would recurse forever.
++func (e *Store) getIgnoringScopeFilter(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+ 	obj := e.NewFunc()
+ 	key, err := e.KeyFunc(ctx, name)
+ 	if err != nil {
+@@ -1415,6 +1449,10 @@ func (e *Store) finalizeDelete(ctx context.Context, obj runtime.Object, runHooks
+ // a matcher that matches by key. SelectionPredicate does this for you
+ // automatically.
+ func (e *Store) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
++	if e.ScopeFilter != nil && e.ScopeFilter.Trigger != nil && e.ScopeFilter.Trigger(ctx) {
++		return e.ScopeFilter.Watch(ctx, options)
++	}
++
+ 	label := labels.Everything()
+ 	if options != nil && options.LabelSelector != nil {
+ 		label = options.LabelSelector
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go
+new file mode 100644
+index 00000000000..9f423e42d64
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go
+@@ -0,0 +1,105 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"fmt"
++
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/client-go/kubernetes"
++	restclient "k8s.io/client-go/rest"
++)
++
++// ProjectLabel is the label Deckhouse's multitenancy-manager stamps on every
++// namespace belonging to a Project (deckhouse.io/v1alpha2 Project CRD).
++// Namespaces without this label are "system" namespaces for
++// scope-classification purposes; namespaces carrying it belong to the
++// project named by its value.
++const ProjectLabel = "projects.deckhouse.io/project"
++
++// ClassificationResolver resolves the "system" / "user" / "project:<name>"
++// scope kinds to a set of namespace names. It answers a question that is
++// identity-independent (which namespaces exist and how are they labeled),
++// not "can this particular user see them" -- that narrowing is applied
++// separately by RBACFloorResolver, and only when the caller was actually
++// denied by RBAC.
++type ClassificationResolver interface {
++	// Resolve returns the set of namespace names matching kind (and, for
++	// KindProject, the given project name). Callers should never invoke
++	// this for KindAccessible: that scope's classification is a no-op, and
++	// the caller is expected to skip building a classification selector
++	// entirely rather than route it through here.
++	Resolve(ctx context.Context, kind Kind, project string) (map[string]struct{}, error)
++}
++
++// LoopbackClassificationResolver resolves system/user/project classification
++// by listing Namespace objects directly through kube-apiserver's loopback
++// client with a label selector on ProjectLabel. This deliberately bypasses
++// permission-browser-apiserver: multitenancy-manager (the controller that
++// owns ProjectLabel) has no dependency on userAuthz.enableMultiTenancy, so
++// resolving system/project membership this way works regardless of whether
++// EE multi-tenancy authorization is turned on, and needs no impersonation --
++// the answer does not depend on which user is asking.
++type LoopbackClassificationResolver struct {
++	client kubernetes.Interface
++}
++
++var _ ClassificationResolver = (*LoopbackClassificationResolver)(nil)
++
++// NewLoopbackClassificationResolver builds a resolver from a loopback REST
++// config. The config is copied internally by kubernetes.NewForConfig;
++// callers may safely mutate it after this returns.
++func NewLoopbackClassificationResolver(loopbackConfig *restclient.Config) (*LoopbackClassificationResolver, error) {
++	cfg := restclient.CopyConfig(loopbackConfig)
++	client, err := kubernetes.NewForConfig(cfg)
++	if err != nil {
++		return nil, fmt.Errorf("build loopback clientset: %w", err)
++	}
++	return &LoopbackClassificationResolver{client: client}, nil
++}
++
++// Resolve implements ClassificationResolver.
++func (r *LoopbackClassificationResolver) Resolve(ctx context.Context, kind Kind, project string) (map[string]struct{}, error) {
++	var labelSelector string
++	switch kind {
++	case KindSystem:
++		// "!key" -- namespace does not carry ProjectLabel at all.
++		labelSelector = "!" + ProjectLabel
++	case KindUser:
++		// bare "key" -- namespace carries ProjectLabel with any value.
++		labelSelector = ProjectLabel
++	case KindProject:
++		if project == "" {
++			return nil, fmt.Errorf("scopefilter: project classification requires a project name")
++		}
++		labelSelector = ProjectLabel + "=" + project
++	default:
++		return nil, fmt.Errorf("scopefilter: %q is not a namespace-classification scope kind", kind)
++	}
++
++	list, err := r.client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
++	if err != nil {
++		return nil, fmt.Errorf("list namespaces for classification %q: %w", kind, err)
++	}
++
++	names := make(map[string]struct{}, len(list.Items))
++	for _, ns := range list.Items {
++		names[ns.Name] = struct{}{}
++	}
++	return names, nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator.go
+new file mode 100644
+index 00000000000..f78d62829a1
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator.go
+@@ -0,0 +1,360 @@
++/*
++Copyright 2025 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"errors"
++	"time"
++
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/fields"
++	"k8s.io/apimachinery/pkg/labels"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/watch"
++	"k8s.io/apiserver/pkg/authentication/user"
++	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/storage"
++	storageerr "k8s.io/apiserver/pkg/storage/errors"
++	"k8s.io/klog/v2"
++)
++
++// DefaultRefreshInterval is the polling cadence the watch path uses when a
++// Decorator's RefreshInterval is unset. One second balances responsiveness
++// to permission changes against load on the upstream permission service.
++const DefaultRefreshInterval = time.Second
++
++var (
++	errCannotList  = errors.New("cannot list resource")
++	errCannotGet   = errors.New("cannot get resource")
++	errCannotWatch = errors.New("cannot watch resource")
++	errNoUser      = errors.New("no user info in context")
++	errNoNamespace = errors.New("no namespace in context")
++)
++
++// Decorator wraps a *genericregistry.Store and adds scope filtering to its
++// List/Get/Watch methods, transparently falling back to the plain store
++// whenever filtering is not active for a given request -- a fully
++// privileged, non-triggering caller pays no extra fetcher/resolver round
++// trips at all.
++//
++// Two usage patterns:
++//
++//   - Unconditional (namespaces' own storage): Trigger always returns true,
++//     Mode is IdentityByName, Classify/RBACFloor are nil, and Accessible
++//     alone supplies the allowed set on every call. This reproduces the
++//     original, narrower namespace-only patch: there is no separate
++//     resource+verb to narrow the floor against, because Namespace listing
++//     Namespace already IS that resource+verb.
++//
++//   - Generic (any other namespaced resource, built-in or CRD): Trigger
++//     checks scopefilter.RequestFrom(ctx), Mode is IdentityByNamespace, and
++//     the RBAC floor is intersected in whenever scopefilter.IsBypass(ctx) is
++//     also true.
++type Decorator struct {
++	// Store performs the actual List/Get/Watch calls once filtering has
++	// decided what to allow. See StoreAccessor's doc for why this is a
++	// local interface rather than *genericregistry.Store directly.
++	Store StoreAccessor
++
++	// BuildPredicate is the resource's registered predicate-construction
++	// function -- on the real Store this is the `PredicateFunc` struct
++	// field, passed by value (`store.PredicateFunc`) since a struct field
++	// cannot be required by StoreAccessor. Ensures the resulting
++	// SelectionPredicate's GetAttrs matches what the resource's own
++	// storage strategy expects.
++	BuildPredicate func(label labels.Selector, field fields.Selector) storage.SelectionPredicate
++
++	// Resource identifies the resource being served, used both for
++	// building apierrors and as the (group, version, resource) narrowed
++	// against by RBACFloorResolver.
++	Resource schema.GroupVersionResource
++
++	Mode IdentityMode
++
++	// Trigger reports whether ctx should be routed through the filtering
++	// path at all.
++	Trigger func(ctx context.Context) bool
++
++	// Classify resolves the classification-selector set for the scope
++	// request tagged on ctx. Nil if this Decorator never needs
++	// classification (the unconditional-namespaces usage pattern).
++	Classify ClassificationResolver
++
++	// RBACFloor computes the RBAC safety floor. Consulted only when
++	// scopefilter.IsBypass(ctx) is true. Nil for the unconditional
++	// namespaces usage pattern (see type doc).
++	RBACFloor RBACFloorResolver
++
++	// Accessible answers the "accessible" scope kind, and is the sole
++	// source of truth for the unconditional-namespaces usage pattern.
++	// Required whenever Classify or RBACFloor is set, since both build on
++	// it (directly, or via RBACFloor's own dependency on it).
++	Accessible AccessibleNamespaceFetcher
++
++	// RefreshInterval overrides DefaultRefreshInterval for the watch-path
++	// poller.
++	RefreshInterval time.Duration
++}
++
++func (d *Decorator) identityField() string {
++	if d.Mode == IdentityByName {
++		return NameField
++	}
++	return NamespaceField
++}
++
++func userFromContext(ctx context.Context) (user.Info, error) {
++	u, ok := genericapirequest.UserFrom(ctx)
++	if !ok {
++		return nil, errNoUser
++	}
++	return u, nil
++}
++
++// resolve computes the classification set (if any) and the RBAC floor (if
++// bypass is active) for the given verb. hasClassified/hasFloor distinguish
++// "not applicable" from "applicable, empty set" -- an empty-but-present set
++// still means deny-everything, whereas "not applicable" means don't
++// restrict on this axis at all.
++func (d *Decorator) resolve(ctx context.Context, u user.Info, verb string) (classified map[string]struct{}, hasClassified bool, floor map[string]struct{}, hasFloor bool, err error) {
++	if d.Mode == IdentityByName {
++		// Unconditional namespaces usage: the accessible set IS the
++		// floor. There is no separate classification concept and no
++		// separate resource+verb to narrow against -- namespaces IS
++		// the resource being asked about.
++		names, ferr := d.Accessible.FetchAccessibleNamespaces(ctx, u)
++		if ferr != nil {
++			return nil, false, nil, false, ferr
++		}
++		return nil, false, NamesToSet(names), true, nil
++	}
++
++	req, _ := RequestFrom(ctx)
++	if req.Kind != KindAccessible {
++		set, cerr := d.Classify.Resolve(ctx, req.Kind, req.Project)
++		if cerr != nil {
++			return nil, false, nil, false, cerr
++		}
++		classified, hasClassified = set, true
++	}
++	if IsBypass(ctx) {
++		set, ferr := d.RBACFloor.Resolve(ctx, u, d.Resource, verb)
++		if ferr != nil {
++			return nil, false, nil, false, ferr
++		}
++		floor, hasFloor = set, true
++	}
++	return classified, hasClassified, floor, hasFloor, nil
++}
++
++// combinedSet intersects whichever of classified/floor apply, per the
++// invariant finalSet = classification(scope) ∩ (rbacFloor, if bypass fired).
++// ok is false when neither axis applies -- i.e. no restriction at all, which
++// callers must handle by skipping filtering entirely rather than passing a
++// set through (NameSetSelector's nil-set sentinel means deny-everything, the
++// opposite of "no restriction").
++func combinedSet(classified map[string]struct{}, hasClassified bool, floor map[string]struct{}, hasFloor bool) (set map[string]struct{}, ok bool) {
++	switch {
++	case hasClassified && hasFloor:
++		return IntersectSets(classified, floor), true
++	case hasClassified:
++		return classified, true
++	case hasFloor:
++		return floor, true
++	default:
++		return nil, false
++	}
++}
++
++func callerSelectors(options *metainternalversion.ListOptions) (labels.Selector, fields.Selector) {
++	label := labels.Everything()
++	field := fields.Everything()
++	if options != nil {
++		if options.LabelSelector != nil {
++			label = options.LabelSelector
++		}
++		if options.FieldSelector != nil {
++			field = options.FieldSelector
++		}
++	}
++	return label, field
++}
++
++// List implements the filtering List path. Callers must only invoke this
++// when filtering is actually triggered for ctx (see Store.List's guard on
++// Trigger); List itself does not re-check.
++func (d *Decorator) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
++	u, err := userFromContext(ctx)
++	if err != nil {
++		klog.V(4).InfoS("scopefilter: missing user info on List", "resource", d.Resource, "err", err)
++		return nil, apierrors.NewForbidden(d.Resource.GroupResource(), "", errCannotList)
++	}
++
++	classified, hasClassified, floor, hasFloor, err := d.resolve(ctx, u, "list")
++	if err != nil {
++		klog.Warningf("scopefilter: failed to resolve allowed set for user %q on List (%s): %v", u.GetName(), d.Resource, err)
++		return nil, apierrors.NewForbidden(d.Resource.GroupResource(), "", errCannotList)
++	}
++
++	set, restrict := combinedSet(classified, hasClassified, floor, hasFloor)
++	label, field := callerSelectors(options)
++	if restrict {
++		field = fields.AndSelectors(field, NewNameSetSelector(d.identityField(), set))
++	}
++
++	out, err := d.Store.ListPredicate(ctx, d.BuildPredicate(label, field), options)
++	if err != nil {
++		return nil, storageerr.InterpretListError(err, d.Resource.GroupResource())
++	}
++	return out, nil
++}
++
++// Get implements the filtering Get path. Callers must only invoke this when
++// filtering is actually triggered for ctx. rawGet performs the actual,
++// unfiltered storage read once Get has decided the identity is allowed --
++// passed in by the caller (Store.Get) rather than reached via d.Store.Get,
++// because d.Store.Get on the real Store IS the hooked entrypoint that
++// dispatches back here; calling it again would recurse forever.
++//
++// A denied namespace/identity surfaces as NotFound rather than Forbidden,
++// matching how the apiserver itself already translates a denied namespace
++// lookup, and deliberately making an inaccessible-project lookup
++// indistinguishable from a nonexistent-project one (non-disclosure of
++// existence).
++func (d *Decorator) Get(ctx context.Context, name string, options *metav1.GetOptions, rawGet func(context.Context, string, *metav1.GetOptions) (runtime.Object, error)) (runtime.Object, error) {
++	u, err := userFromContext(ctx)
++	if err != nil {
++		klog.V(4).InfoS("scopefilter: missing user info on Get", "resource", d.Resource, "name", name, "err", err)
++		return nil, apierrors.NewForbidden(d.Resource.GroupResource(), name, errCannotGet)
++	}
++
++	identity := name
++	if d.Mode == IdentityByNamespace {
++		ns, ok := genericapirequest.NamespaceFrom(ctx)
++		if !ok || ns == "" {
++			klog.V(4).InfoS("scopefilter: missing namespace in context on Get", "resource", d.Resource, "name", name)
++			return nil, apierrors.NewForbidden(d.Resource.GroupResource(), name, errNoNamespace)
++		}
++		identity = ns
++	}
++
++	classified, hasClassified, floor, hasFloor, err := d.resolve(ctx, u, "get")
++	if err != nil {
++		klog.Warningf("scopefilter: failed to resolve allowed set for user %q on Get (%s): %v", u.GetName(), d.Resource, err)
++		return nil, apierrors.NewForbidden(d.Resource.GroupResource(), name, errCannotGet)
++	}
++
++	if hasClassified {
++		if _, ok := classified[identity]; !ok {
++			return nil, apierrors.NewNotFound(d.Resource.GroupResource(), name)
++		}
++	}
++	if hasFloor {
++		if _, ok := floor[identity]; !ok {
++			return nil, apierrors.NewNotFound(d.Resource.GroupResource(), name)
++		}
++	}
++
++	return rawGet(ctx, name, options)
++}
++
++// Watch implements the filtering Watch path. Callers must only invoke this
++// when filtering is actually triggered for ctx. When neither classification
++// nor an RBAC floor applies (a fully privileged caller explicitly passing
++// --scope=accessible, which for them is a no-op since they can see
++// everything anyway), the inner watch is returned directly -- there is
++// nothing to poll and wrapping it would add pure overhead.
++func (d *Decorator) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
++	u, err := userFromContext(ctx)
++	if err != nil {
++		klog.V(4).InfoS("scopefilter: missing user info on Watch", "resource", d.Resource, "err", err)
++		return nil, apierrors.NewForbidden(d.Resource.GroupResource(), "", errCannotWatch)
++	}
++
++	classified, hasClassified, floor, hasFloor, err := d.resolve(ctx, u, "watch")
++	if err != nil {
++		klog.Warningf("scopefilter: failed to resolve allowed set for user %q on Watch (%s): %v", u.GetName(), d.Resource, err)
++		return nil, apierrors.NewForbidden(d.Resource.GroupResource(), "", errCannotWatch)
++	}
++
++	initial, restrict := combinedSet(classified, hasClassified, floor, hasFloor)
++	label, field := callerSelectors(options)
++
++	var selector *NameSetSelector
++	finalField := field
++	if restrict {
++		selector = NewNameSetSelector(d.identityField(), initial)
++		finalField = fields.AndSelectors(field, selector)
++	}
++
++	predicate := d.BuildPredicate(label, finalField)
++	resourceVersion := ""
++	var sendInitialEvents *bool
++	if options != nil {
++		resourceVersion = options.ResourceVersion
++		predicate.AllowWatchBookmarks = options.AllowWatchBookmarks
++		sendInitialEvents = options.SendInitialEvents
++	}
++
++	inner, err := d.Store.WatchPredicate(ctx, predicate, resourceVersion, sendInitialEvents)
++	if err != nil {
++		return nil, err
++	}
++
++	if !restrict {
++		return inner, nil
++	}
++
++	refresh := d.RefreshInterval
++	if refresh <= 0 {
++		refresh = DefaultRefreshInterval
++	}
++
++	return NewFilteredWatch(ctx, WatchConfig{
++		Inner:          inner,
++		Selector:       selector,
++		Mode:           d.Mode,
++		Store:          d.Store,
++		BuildPredicate: d.BuildPredicate,
++		CallerLabel:    label,
++		CallerField:    field,
++		Poll: func(pctx context.Context) (map[string]struct{}, error) {
++			c, hasC, f, hasF, perr := d.resolve(pctx, u, "watch")
++			if perr != nil {
++				return nil, perr
++			}
++			next, ok := combinedSet(c, hasC, f, hasF)
++			if !ok {
++				// Cannot happen in practice: restrict was true
++				// at watch-open and neither axis can newly
++				// become "not applicable" mid-watch (the scope
++				// request and bypass status are fixed for the
++				// life of the connection). Fail closed rather
++				// than silently widening to unrestricted.
++				return map[string]struct{}{}, nil
++			}
++			return next, nil
++		},
++		Initial:         initial,
++		RefreshInterval: refresh,
++		UserName:        u.GetName(),
++	}), nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator_test.go
+new file mode 100644
+index 00000000000..246c5339c72
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator_test.go
+@@ -0,0 +1,404 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Package scopefilter_test exercises the IdentityByNamespace (generic
++// resource) path end to end against fake, in-memory implementations of
++// StoreAccessor and the three resolver interfaces -- deliberately not the
++// real *genericregistry.Store, so this stays a pure k8s.io/apiserver test
++// with no dependency on the main k8s.io/kubernetes module. The
++// IdentityByName (namespaces) path already has thorough coverage in
++// k8s.io/kubernetes/pkg/registry/core/namespace/storage's filtering_test.go.
++package scopefilter_test
++
++import (
++	"context"
++	"fmt"
++	"slices"
++	"sync"
++	"testing"
++	"time"
++
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/fields"
++	"k8s.io/apimachinery/pkg/labels"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/watch"
++	"k8s.io/apiserver/pkg/authentication/user"
++	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/registry/generic"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++	"k8s.io/apiserver/pkg/storage"
++)
++
++// ----- fake namespaced resource type (stands in for e.g. a Pod) -----------
++
++type fakeItem struct {
++	metav1.TypeMeta
++	metav1.ObjectMeta
++}
++
++func (i *fakeItem) DeepCopyObject() runtime.Object {
++	return &fakeItem{TypeMeta: i.TypeMeta, ObjectMeta: *i.ObjectMeta.DeepCopy()}
++}
++
++type fakeItemList struct {
++	metav1.TypeMeta
++	metav1.ListMeta
++	Items []fakeItem
++}
++
++func (l *fakeItemList) DeepCopyObject() runtime.Object {
++	out := &fakeItemList{TypeMeta: l.TypeMeta, ListMeta: l.ListMeta, Items: make([]fakeItem, len(l.Items))}
++	for i := range l.Items {
++		out.Items[i] = *l.Items[i].DeepCopyObject().(*fakeItem)
++	}
++	return out
++}
++
++// ----- fake StoreAccessor ---------------------------------------------------
++
++// fakeStore is a minimal, in-memory stand-in for *genericregistry.Store,
++// just enough to exercise Decorator/FilteredWatch's own logic (selector
++// composition, gained/lost synthesis) without pulling in etcd or the main
++// module's registrytest helpers.
++type fakeStore struct {
++	mu    sync.Mutex
++	items map[string]map[string]*fakeItem // namespace -> name -> item
++}
++
++func newFakeStore() *fakeStore {
++	return &fakeStore{items: make(map[string]map[string]*fakeItem)}
++}
++
++func (s *fakeStore) put(namespace, name string) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	if s.items[namespace] == nil {
++		s.items[namespace] = make(map[string]*fakeItem)
++	}
++	s.items[namespace][name] = &fakeItem{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
++}
++
++func (s *fakeStore) New() runtime.Object { return &fakeItem{} }
++
++// buildPredicate mirrors what a real Store.PredicateFunc field does: wire
++// GetAttrs so the selector machinery can see metadata.namespace/name/labels,
++// exactly like generic.DefaultNamespaceScopedAttr would for a real resource.
++func (s *fakeStore) buildPredicate(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
++	return storage.SelectionPredicate{
++		Label: label,
++		Field: field,
++		GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, error) {
++			item, ok := obj.(*fakeItem)
++			if !ok {
++				return nil, nil, fmt.Errorf("unexpected type %T", obj)
++			}
++			return labels.Set(item.Labels), generic.ObjectMetaFieldsSet(&item.ObjectMeta, true), nil
++		},
++	}
++}
++
++func (s *fakeStore) Get(ctx context.Context, name string, _ *metav1.GetOptions) (runtime.Object, error) {
++	ns, _ := genericapirequest.NamespaceFrom(ctx)
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	item, ok := s.items[ns][name]
++	if !ok {
++		return nil, apierrors.NewNotFound(schema.GroupResource{Resource: "fakeitems"}, name)
++	}
++	return item.DeepCopyObject(), nil
++}
++
++func (s *fakeStore) ListPredicate(_ context.Context, p storage.SelectionPredicate, _ *metainternalversion.ListOptions) (runtime.Object, error) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	out := &fakeItemList{}
++	for _, byName := range s.items {
++		for _, item := range byName {
++			ok, err := p.Matches(item)
++			if err != nil {
++				return nil, err
++			}
++			if ok {
++				out.Items = append(out.Items, *item.DeepCopyObject().(*fakeItem))
++			}
++		}
++	}
++	return out, nil
++}
++
++func (s *fakeStore) WatchPredicate(context.Context, storage.SelectionPredicate, string, *bool) (watch.Interface, error) {
++	return newFakeWatch(), nil
++}
++
++var _ scopefilter.StoreAccessor = (*fakeStore)(nil)
++
++// ----- fake watch.Interface -------------------------------------------------
++
++type fakeWatch struct {
++	ch       chan watch.Event
++	stopOnce sync.Once
++}
++
++func newFakeWatch() *fakeWatch {
++	return &fakeWatch{ch: make(chan watch.Event, 16)}
++}
++
++func (w *fakeWatch) ResultChan() <-chan watch.Event { return w.ch }
++func (w *fakeWatch) Stop()                          { w.stopOnce.Do(func() { close(w.ch) }) }
++
++// ----- fake resolvers --------------------------------------------------------
++
++type fakeAccessible struct{ names []string }
++
++func (f *fakeAccessible) FetchAccessibleNamespaces(context.Context, user.Info) ([]string, error) {
++	return f.names, nil
++}
++
++func (f *fakeAccessible) IsNamespaceAccessible(_ context.Context, _ user.Info, ns string) (bool, error) {
++	return slices.Contains(f.names, ns), nil
++}
++
++// fakeClassify answers classification per scope Kind with a fixed,
++// pre-programmed set -- Project is ignored since the invariant test below
++// only exercises KindSystem.
++type fakeClassify struct{ byKind map[scopefilter.Kind]map[string]struct{} }
++
++func (f *fakeClassify) Resolve(_ context.Context, kind scopefilter.Kind, _ string) (map[string]struct{}, error) {
++	return f.byKind[kind], nil
++}
++
++// fakeFloor answers the RBAC floor keyed by "<resource>/<verb>" -- the whole
++// point of TestDecorator_List_RBACFloorNarrowsByResourceAndVerb is to prove
++// Decorator only ever consults the entry for the ACTUAL resource+verb of the
++// request, never a broader "has access to something in this namespace" set.
++type fakeFloor struct{ allowed map[string]map[string]struct{} }
++
++func floorKey(gvr schema.GroupVersionResource, verb string) string {
++	return gvr.Resource + "/" + verb
++}
++
++func (f *fakeFloor) Resolve(_ context.Context, _ user.Info, gvr schema.GroupVersionResource, verb string) (map[string]struct{}, error) {
++	return f.allowed[floorKey(gvr, verb)], nil
++}
++
++// ----- the invariant test ---------------------------------------------------
++
++// TestDecorator_List_RBACFloorNarrowsByResourceAndVerb is the direct
++// regression test for the design's load-bearing security invariant: the
++// RBAC safety floor added on a denied-then-bypassed request MUST be
++// AccessibleNamespaces() ∩ BulkSubjectAccessReview(group, resource, verb) of
++// the ACTUAL request being served, never a looser "has RBAC for anything in
++// this namespace" check. A caller with rights to list secrets (but not
++// pods) in ns-a, requesting pods with --scope=system, must see nothing from
++// ns-a -- even though ns-a is both AccessibleNamespaces-visible to them and
++// classified "system".
++func TestDecorator_List_RBACFloorNarrowsByResourceAndVerb(t *testing.T) {
++	podsGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
++
++	classify := &fakeClassify{byKind: map[scopefilter.Kind]map[string]struct{}{
++		scopefilter.KindSystem: {"ns-a": {}},
++	}}
++
++	tests := []struct {
++		name         string
++		floorAllowed map[string]map[string]struct{}
++		wantNames    []string
++	}{
++		{
++			name: "attack: floor scoped to a different resource+verb must not leak ns-a's pods",
++			floorAllowed: map[string]map[string]struct{}{
++				// user can list secrets in ns-a -- NOT pods.
++				"secrets/list": {"ns-a": {}},
++			},
++			wantNames: nil,
++		},
++		{
++			name: "control: floor scoped to pods/list in ns-a surfaces its pods",
++			floorAllowed: map[string]map[string]struct{}{
++				"pods/list": {"ns-a": {}},
++			},
++			wantNames: []string{"pod-1"},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			store := newFakeStore()
++			store.put("ns-a", "pod-1")
++			store.put("ns-b", "pod-2") // not system-classified; must never appear either way
++
++			d := &scopefilter.Decorator{
++				Store:          store,
++				BuildPredicate: store.buildPredicate,
++				Resource:       podsGVR,
++				Mode:           scopefilter.IdentityByNamespace,
++				Classify:       classify,
++				RBACFloor:      &fakeFloor{allowed: tt.floorAllowed},
++				Accessible:     &fakeAccessible{names: []string{"ns-a"}},
++			}
++
++			ctx := genericapirequest.WithUser(genericapirequest.NewContext(), &user.DefaultInfo{Name: "alice"})
++			ctx = scopefilter.WithRequest(ctx, scopefilter.Request{Kind: scopefilter.KindSystem})
++			ctx = scopefilter.WithBypass(ctx)
++
++			out, err := d.List(ctx, nil)
++			if err != nil {
++				t.Fatalf("List: %v", err)
++			}
++			list, ok := out.(*fakeItemList)
++			if !ok {
++				t.Fatalf("List returned %T, want *fakeItemList", out)
++			}
++
++			var got []string
++			for _, item := range list.Items {
++				got = append(got, item.Name)
++			}
++			slices.Sort(got)
++			want := slices.Clone(tt.wantNames)
++			slices.Sort(want)
++			if !slices.Equal(got, want) {
++				t.Fatalf("List names: got %v, want %v", got, want)
++			}
++		})
++	}
++}
++
++// TestDecorator_Watch_NoRestriction_DegradesToPlainWatchPredicate covers the
++// "fully privileged caller passing --scope=accessible" degenerate case: no
++// classification (accessible is a no-op) and no floor (never denied, so
++// never bypassed) must mean the FilteredWatch wrapper is skipped entirely.
++func TestDecorator_Watch_NoRestriction_DegradesToPlainWatchPredicate(t *testing.T) {
++	store := newFakeStore()
++	d := &scopefilter.Decorator{
++		Store:          store,
++		BuildPredicate: store.buildPredicate,
++		Resource:       schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"},
++		Mode:           scopefilter.IdentityByNamespace,
++		Accessible:     &fakeAccessible{},
++	}
++
++	ctx := genericapirequest.WithUser(genericapirequest.NewContext(), &user.DefaultInfo{Name: "alice"})
++	ctx = scopefilter.WithRequest(ctx, scopefilter.Request{Kind: scopefilter.KindAccessible})
++	// Deliberately NOT WithBypass: RBAC allowed this caller outright.
++
++	w, err := d.Watch(ctx, nil)
++	if err != nil {
++		t.Fatalf("Watch: %v", err)
++	}
++	defer w.Stop()
++
++	if _, ok := w.(*fakeWatch); !ok {
++		t.Fatalf("Watch returned %T, want the raw *fakeWatch (no FilteredWatch wrapping expected)", w)
++	}
++}
++
++// ----- generic (IdentityByNamespace) watch synthesis ------------------------
++
++// TestFilteredWatch_IdentityByNamespace_SynthesizesAcrossNamespaceGainAndLoss
++// is the direct regression test for the riskiest previously-untested code
++// path: unlike namespaces (IdentityByName, one object per identity), a
++// single namespace gain/loss here must synthesize ADDED/DELETED for EVERY
++// item in that namespace, and FilteredWatch must remember exactly what it
++// synthesized so it can retract the right set later.
++func TestFilteredWatch_IdentityByNamespace_SynthesizesAcrossNamespaceGainAndLoss(t *testing.T) {
++	store := newFakeStore()
++	store.put("ns-a", "pod-1")
++	store.put("ns-b", "pod-2")
++	store.put("ns-b", "pod-3")
++
++	selector := scopefilter.NewNameSetSelector(scopefilter.NamespaceField, map[string]struct{}{"ns-a": {}})
++
++	var mu sync.Mutex
++	current := map[string]struct{}{"ns-a": {}}
++	poll := func(context.Context) (map[string]struct{}, error) {
++		mu.Lock()
++		defer mu.Unlock()
++		out := make(map[string]struct{}, len(current))
++		for k := range current {
++			out[k] = struct{}{}
++		}
++		return out, nil
++	}
++
++	w := scopefilter.NewFilteredWatch(context.Background(), scopefilter.WatchConfig{
++		Inner:           newFakeWatch(),
++		Selector:        selector,
++		Mode:            scopefilter.IdentityByNamespace,
++		Store:           store,
++		BuildPredicate:  store.buildPredicate,
++		CallerLabel:     labels.Everything(),
++		CallerField:     fields.Everything(),
++		Poll:            poll,
++		Initial:         map[string]struct{}{"ns-a": {}},
++		RefreshInterval: 20 * time.Millisecond,
++		UserName:        "alice",
++	})
++	defer w.Stop()
++
++	mu.Lock()
++	current = map[string]struct{}{"ns-a": {}, "ns-b": {}}
++	mu.Unlock()
++
++	added := collectEvents(t, w.ResultChan(), watch.Added, "ns-b", 3*time.Second, "pod-2", "pod-3")
++	if !added {
++		t.Fatal("did not observe synthesized ADDED for both ns-b pods within 3s of gaining ns-b")
++	}
++
++	mu.Lock()
++	current = map[string]struct{}{"ns-a": {}}
++	mu.Unlock()
++
++	deleted := collectEvents(t, w.ResultChan(), watch.Deleted, "ns-b", 3*time.Second, "pod-2", "pod-3")
++	if !deleted {
++		t.Fatal("did not observe synthesized DELETED for both ns-b pods within 3s of losing ns-b")
++	}
++}
++
++// collectEvents drains ch until every name in want has been seen with the
++// given (evType, namespace), or timeout elapses. Events not matching
++// evType/namespace (e.g. from an unrelated namespace) are ignored rather
++// than treated as failures.
++func collectEvents(t *testing.T, ch <-chan watch.Event, evType watch.EventType, namespace string, timeout time.Duration, want ...string) bool {
++	t.Helper()
++	remaining := make(map[string]bool, len(want))
++	for _, n := range want {
++		remaining[n] = true
++	}
++
++	deadline := time.NewTimer(timeout)
++	defer deadline.Stop()
++	for len(remaining) > 0 {
++		select {
++		case ev := <-ch:
++			if ev.Type != evType {
++				continue
++			}
++			item, ok := ev.Object.(*fakeItem)
++			if !ok || item.Namespace != namespace {
++				continue
++			}
++			delete(remaining, item.Name)
++		case <-deadline.C:
++			return false
++		}
++	}
++	return true
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go
+new file mode 100644
+index 00000000000..c7a64e37d72
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go
+@@ -0,0 +1,40 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Package scopefilter implements Deckhouse's cross-namespace scope-filtering
++// mechanism: `kubectl get <resource> -A --scope=<accessible|user|system|project:<name>>`
++// returns the subset of a namespaced resource the caller can see instead of a
++// flat 403, without changing default `-A` semantics for anyone who does not
++// ask for it.
++//
++// The mechanism generalizes an existing, narrower patch that gave this
++// behavior only to `namespaces` (see pkg/registry/core/namespace/storage,
++// which now builds on this package with identity field "metadata.name" and
++// an unconditional trigger instead of a header). Generic namespaced resources
++// (built-in, via storage_<group>.go, and CustomResourceDefinitions, via
++// apiextensions-apiserver's customresource_handler.go) use identity field
++// "metadata.namespace" and a header-gated trigger.
++//
++// Security invariant (do not weaken without re-reading the design note this
++// patch ships against): the RBAC safety floor added whenever the
++// authorization filter bypassed a 403 for this request MUST always be
++// AccessibleNamespaces() ∩ BulkSubjectAccessReview(group, resource, verb) --
++// narrowed by the *actual* (resource, verb) of the request being served,
++// never a plain "has access to something, somewhere" check. A looser floor
++// lets a caller with e.g. `get secrets` rights in namespace N see unrelated
++// resources in N via --scope=system/user/project, despite having no RBAC for
++// them at all.
++package scopefilter
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/fetcher.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/fetcher.go
+new file mode 100644
+index 00000000000..cf070f1812d
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/fetcher.go
+@@ -0,0 +1,245 @@
++/*
++Copyright 2025 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"net/http"
++	"net/url"
++	"strings"
++	"time"
++
++	"k8s.io/apiserver/pkg/authentication/user"
++	restclient "k8s.io/client-go/rest"
++	"k8s.io/client-go/transport"
++	"k8s.io/klog/v2"
++)
++
++const (
++	// accessibleNamespacesAPIPath is the URL path under which Deckhouse's
++	// permission-browser-apiserver registers its AccessibleNamespaces API.
++	// Calls are routed via kube-apiserver's loopback connection so they hit
++	// the aggregated APIServer with full TLS/cert plumbing intact.
++	accessibleNamespacesAPIPath = "/apis/authorization.deckhouse.io/v1alpha1/accessiblenamespaces"
++
++	// defaultHTTPTimeout caps every fetcher call. It must be short enough
++	// that a hung permission service does not stall a List/Watch request,
++	// and long enough that a busy service still completes during normal
++	// load. Ten seconds matches client-go's default RESTClient timeout.
++	defaultHTTPTimeout = 10 * time.Second
++
++	// errorBodyByteLimit bounds how much of an error response body we
++	// read into memory and surface in error messages. Permission-browser
++	// is trusted, but a misconfigured proxy could splice in arbitrarily
++	// large payloads; 8 KiB is plenty for any sane Status object.
++	errorBodyByteLimit = 8 * 1024
++)
++
++// accessibleNamespaceItem matches the on-the-wire shape of one entry in the
++// permission-browser-apiserver list response. We deliberately decode only
++// the fields we use; new fields added upstream will not break this code.
++type accessibleNamespaceItem struct {
++	Metadata struct {
++		Name string `json:"name"`
++	} `json:"metadata"`
++}
++
++// accessibleNamespaceList matches the on-the-wire shape of the LIST response.
++type accessibleNamespaceList struct {
++	Items []accessibleNamespaceItem `json:"items"`
++}
++
++// AccessibleNamespaceFetcher returns the set of namespaces a given user is
++// allowed to see at all (the "accessible" scope's raw material, and one half
++// of the RBAC safety floor -- see RBACFloorResolver). Repeated calls
++// returning different results as the user's bindings change lets the watch
++// code path synthesize ADDED/DELETED events while a watch is open.
++type AccessibleNamespaceFetcher interface {
++	// FetchAccessibleNamespaces lists all namespace names the user can see.
++	FetchAccessibleNamespaces(ctx context.Context, u user.Info) ([]string, error)
++
++	// IsNamespaceAccessible answers whether a single named namespace is
++	// accessible to the user. Used as a fast path that avoids pulling the
++	// full accessible set when only one namespace's accessibility matters.
++	IsNamespaceAccessible(ctx context.Context, u user.Info, namespace string) (bool, error)
++}
++
++// LoopbackAccessibleNamespaceFetcher resolves a user's accessible namespaces
++// by calling permission-browser-apiserver through kube-apiserver's loopback
++// HTTPS endpoint. Authentication is provided by the loopback client's TLS
++// credentials; user identity is conveyed via standard impersonation headers
++// (Impersonate-User/-Group/-Extra-*), which the aggregated APIServer
++// validates against its RBAC for the impersonate verb on the loopback
++// service account -- the same path SubjectAccessReviews take.
++type LoopbackAccessibleNamespaceFetcher struct {
++	// baseURL is the scheme+host portion of the loopback config (no path).
++	baseURL string
++
++	// roundTripper is the authenticated transport built once from the
++	// loopback config. Per-request impersonation is layered on top via
++	// transport.NewImpersonatingRoundTripper, which simply prepends the
++	// impersonation headers and delegates to this base RT -- so all users
++	// share the same TLS connection pool.
++	roundTripper http.RoundTripper
++
++	// timeout caps every individual HTTP call.
++	timeout time.Duration
++}
++
++// Compile-time guard.
++var _ AccessibleNamespaceFetcher = (*LoopbackAccessibleNamespaceFetcher)(nil)
++
++// NewLoopbackAccessibleNamespaceFetcher builds a fetcher from a loopback
++// REST config. The config is copied internally; callers may safely mutate
++// it after this returns.
++func NewLoopbackAccessibleNamespaceFetcher(loopbackConfig *restclient.Config) (*LoopbackAccessibleNamespaceFetcher, error) {
++	rt, baseURL, err := newLoopbackRoundTripper(loopbackConfig)
++	if err != nil {
++		return nil, err
++	}
++	return &LoopbackAccessibleNamespaceFetcher{
++		baseURL:      baseURL,
++		roundTripper: rt,
++		timeout:      defaultHTTPTimeout,
++	}, nil
++}
++
++// newLoopbackRoundTripper builds an authenticated (but not yet impersonated)
++// transport plus the bare scheme+host from a loopback REST config. Shared by
++// every Loopback* resolver in this package so they all get identical
++// connection-pooling and TLS behavior.
++func newLoopbackRoundTripper(loopbackConfig *restclient.Config) (http.RoundTripper, string, error) {
++	if loopbackConfig == nil {
++		return nil, "", errors.New("loopback config is required")
++	}
++
++	cfg := restclient.CopyConfig(loopbackConfig)
++	transportConfig, err := cfg.TransportConfig()
++	if err != nil {
++		return nil, "", fmt.Errorf("get transport config: %w", err)
++	}
++
++	rt, err := transport.New(transportConfig)
++	if err != nil {
++		return nil, "", fmt.Errorf("build loopback transport: %w", err)
++	}
++
++	return rt, strings.TrimRight(cfg.Host, "/"), nil
++}
++
++// impersonatedHTTPClient returns an http.Client whose transport prepends
++// impersonation headers identifying u, then delegates to rt. Cheap to
++// construct: no new pools, no new TLS sessions. Per-user clients are
++// deliberately not cached -- the fetcher is shared across all users on the
++// apiserver, and caching would either grow unbounded or require an LRU;
++// per-call construction is simpler and the allocations are noise.
++func impersonatedHTTPClient(rt http.RoundTripper, u user.Info, timeout time.Duration) *http.Client {
++	// NOTE: extra keys may contain characters that are illegal in HTTP
++	// header field names (e.g. '/'). transport.NewImpersonatingRoundTripper
++	// applies the same key-escaping that kube-apiserver uses on the receive
++	// side, so we get cross-component agreement for free.
++	impRT := transport.NewImpersonatingRoundTripper(transport.ImpersonationConfig{
++		UserName: u.GetName(),
++		Groups:   u.GetGroups(),
++		Extra:    u.GetExtra(),
++	}, rt)
++
++	return &http.Client{
++		Transport: impRT,
++		Timeout:   timeout,
++	}
++}
++
++// readErrorBody reads up to errorBodyByteLimit bytes of an HTTP response
++// body for inclusion in error messages. The read error is intentionally
++// swallowed -- we are already on the error path and the partial body is
++// more useful than nothing.
++func readErrorBody(body io.Reader) string {
++	b, _ := io.ReadAll(io.LimitReader(body, errorBodyByteLimit))
++	return string(b)
++}
++
++// FetchAccessibleNamespaces lists all namespace names visible to the user.
++func (f *LoopbackAccessibleNamespaceFetcher) FetchAccessibleNamespaces(ctx context.Context, u user.Info) ([]string, error) {
++	endpoint := f.baseURL + accessibleNamespacesAPIPath
++
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
++	if err != nil {
++		return nil, fmt.Errorf("build LIST accessiblenamespaces request: %w", err)
++	}
++	req.Header.Set("Accept", "application/json")
++
++	klog.V(4).InfoS("scopefilter: fetching accessible namespaces", "user", u.GetName(), "url", endpoint)
++
++	resp, err := impersonatedHTTPClient(f.roundTripper, u, f.timeout).Do(req)
++	if err != nil {
++		return nil, fmt.Errorf("LIST accessiblenamespaces for user %q: %w", u.GetName(), err)
++	}
++	defer resp.Body.Close()
++
++	if resp.StatusCode != http.StatusOK {
++		return nil, fmt.Errorf("LIST accessiblenamespaces for user %q: unexpected status %d: %s", u.GetName(), resp.StatusCode, readErrorBody(resp.Body))
++	}
++
++	var list accessibleNamespaceList
++	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
++		return nil, fmt.Errorf("decode LIST accessiblenamespaces response for user %q: %w", u.GetName(), err)
++	}
++
++	names := make([]string, len(list.Items))
++	for i, item := range list.Items {
++		names[i] = item.Metadata.Name
++	}
++	return names, nil
++}
++
++// IsNamespaceAccessible answers whether a single namespace is visible to
++// the user. It maps directly to a GET on the per-name endpoint, with 404
++// meaning "not accessible" -- semantically identical to how the apiserver
++// itself translates a denied namespace lookup.
++func (f *LoopbackAccessibleNamespaceFetcher) IsNamespaceAccessible(ctx context.Context, u user.Info, namespace string) (bool, error) {
++	// url.PathEscape guards against pathological names. Namespace name
++	// validation in upstream is strict (DNS-1123 label), so this is mostly
++	// belt-and-suspenders, but it costs nothing and prevents a crafted
++	// name from injecting a path segment.
++	endpoint := fmt.Sprintf("%s%s/%s", f.baseURL, accessibleNamespacesAPIPath, url.PathEscape(namespace))
++
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
++	if err != nil {
++		return false, fmt.Errorf("build GET accessiblenamespace request: %w", err)
++	}
++	req.Header.Set("Accept", "application/json")
++
++	resp, err := impersonatedHTTPClient(f.roundTripper, u, f.timeout).Do(req)
++	if err != nil {
++		return false, fmt.Errorf("GET accessiblenamespace %q for user %q: %w", namespace, u.GetName(), err)
++	}
++	defer resp.Body.Close()
++
++	switch resp.StatusCode {
++	case http.StatusOK:
++		return true, nil
++	case http.StatusNotFound:
++		return false, nil
++	default:
++		return false, fmt.Errorf("GET accessiblenamespace %q for user %q: unexpected status %d: %s", namespace, u.GetName(), resp.StatusCode, readErrorBody(resp.Body))
++	}
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/rbacfloor.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/rbacfloor.go
+new file mode 100644
+index 00000000000..093caf0545a
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/rbacfloor.go
+@@ -0,0 +1,178 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"fmt"
++	"net/http"
++	"time"
++
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apiserver/pkg/authentication/user"
++	restclient "k8s.io/client-go/rest"
++)
++
++// bulkSubjectAccessReviewAPIPath is the URL path under which Deckhouse's
++// permission-browser-apiserver registers its BulkSubjectAccessReview API
++// (create-only, ephemeral -- results are computed and returned, never
++// stored).
++const bulkSubjectAccessReviewAPIPath = "/apis/authorization.deckhouse.io/v1alpha1/bulksubjectaccessreviews"
++
++// RBACFloorResolver computes the RBAC safety floor for a denied-then-bypassed
++// request: the set of namespaces the user is both (a) allowed to see at all
++// (AccessibleNamespaceFetcher) and (b) specifically allowed to perform verb
++// on gvr within (BulkSubjectAccessReview). Both halves are required: (a)
++// alone would let a caller with rights to some unrelated resource in
++// namespace N see gvr's objects in N too -- exactly the privilege-escalation
++// bug this design was corrected to close (see the package doc).
++type RBACFloorResolver interface {
++	Resolve(ctx context.Context, u user.Info, gvr schema.GroupVersionResource, verb string) (map[string]struct{}, error)
++}
++
++// The following types mirror the on-the-wire JSON shape of
++// permission-browser-apiserver's BulkSubjectAccessReview
++// (authorization.deckhouse.io/v1alpha1). Only the fields this resolver uses
++// are decoded/encoded, matching the pattern in fetcher.go: new upstream
++// fields don't break this code. Deckhouse's own generated Go types are not
++// importable here -- they live in a separate module (deckhouse/deckhouse),
++// while this file ships inside the vendored Kubernetes source tree.
++type bulkSARRequestBody struct {
++	Spec bulkSARRequestSpec `json:"spec"`
++}
++
++type bulkSARRequestSpec struct {
++	Requests []bulkSARResourceRequest `json:"requests"`
++}
++
++type bulkSARResourceRequest struct {
++	ResourceAttributes bulkSARResourceAttributes `json:"resourceAttributes"`
++}
++
++type bulkSARResourceAttributes struct {
++	Namespace string `json:"namespace,omitempty"`
++	Verb      string `json:"verb,omitempty"`
++	Group     string `json:"group,omitempty"`
++	Version   string `json:"version,omitempty"`
++	Resource  string `json:"resource,omitempty"`
++}
++
++type bulkSARResponseBody struct {
++	Status bulkSARResponseStatus `json:"status"`
++}
++
++type bulkSARResponseStatus struct {
++	// Results is positional: Results[i] answers Spec.Requests[i].
++	Results []bulkSARResult `json:"results"`
++}
++
++type bulkSARResult struct {
++	Allowed bool `json:"allowed"`
++}
++
++// LoopbackRBACFloorResolver implements RBACFloorResolver via kube-apiserver's
++// loopback connection: an AccessibleNamespaceFetcher supplies the candidate
++// set, then a single BulkSubjectAccessReview call narrows it to namespaces
++// where (group, version, resource, verb) is actually allowed.
++type LoopbackRBACFloorResolver struct {
++	accessible   AccessibleNamespaceFetcher
++	baseURL      string
++	roundTripper http.RoundTripper
++	timeout      time.Duration
++}
++
++var _ RBACFloorResolver = (*LoopbackRBACFloorResolver)(nil)
++
++// NewLoopbackRBACFloorResolver builds a resolver from a loopback REST config
++// and an already-constructed AccessibleNamespaceFetcher (typically the same
++// instance used elsewhere, e.g. for the "accessible" scope kind -- no need
++// to build two).
++func NewLoopbackRBACFloorResolver(loopbackConfig *restclient.Config, accessible AccessibleNamespaceFetcher) (*LoopbackRBACFloorResolver, error) {
++	rt, baseURL, err := newLoopbackRoundTripper(loopbackConfig)
++	if err != nil {
++		return nil, err
++	}
++	return &LoopbackRBACFloorResolver{
++		accessible:   accessible,
++		baseURL:      baseURL,
++		roundTripper: rt,
++		timeout:      defaultHTTPTimeout,
++	}, nil
++}
++
++// Resolve implements RBACFloorResolver.
++func (r *LoopbackRBACFloorResolver) Resolve(ctx context.Context, u user.Info, gvr schema.GroupVersionResource, verb string) (map[string]struct{}, error) {
++	candidates, err := r.accessible.FetchAccessibleNamespaces(ctx, u)
++	if err != nil {
++		return nil, fmt.Errorf("rbac floor: fetch accessible namespaces for user %q: %w", u.GetName(), err)
++	}
++	if len(candidates) == 0 {
++		return map[string]struct{}{}, nil
++	}
++
++	reqBody := bulkSARRequestBody{Spec: bulkSARRequestSpec{Requests: make([]bulkSARResourceRequest, len(candidates))}}
++	for i, ns := range candidates {
++		reqBody.Spec.Requests[i] = bulkSARResourceRequest{ResourceAttributes: bulkSARResourceAttributes{
++			Namespace: ns,
++			Verb:      verb,
++			Group:     gvr.Group,
++			Version:   gvr.Version,
++			Resource:  gvr.Resource,
++		}}
++	}
++
++	payload, err := json.Marshal(reqBody)
++	if err != nil {
++		return nil, fmt.Errorf("rbac floor: marshal BulkSubjectAccessReview request: %w", err)
++	}
++
++	endpoint := r.baseURL + bulkSubjectAccessReviewAPIPath
++	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
++	if err != nil {
++		return nil, fmt.Errorf("rbac floor: build BulkSubjectAccessReview request: %w", err)
++	}
++	httpReq.Header.Set("Content-Type", "application/json")
++	httpReq.Header.Set("Accept", "application/json")
++
++	resp, err := impersonatedHTTPClient(r.roundTripper, u, r.timeout).Do(httpReq)
++	if err != nil {
++		return nil, fmt.Errorf("rbac floor: BulkSubjectAccessReview for user %q: %w", u.GetName(), err)
++	}
++	defer resp.Body.Close()
++
++	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
++		return nil, fmt.Errorf("rbac floor: BulkSubjectAccessReview for user %q: unexpected status %d: %s", u.GetName(), resp.StatusCode, readErrorBody(resp.Body))
++	}
++
++	var out bulkSARResponseBody
++	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
++		return nil, fmt.Errorf("rbac floor: decode BulkSubjectAccessReview response for user %q: %w", u.GetName(), err)
++	}
++	if len(out.Status.Results) != len(candidates) {
++		return nil, fmt.Errorf("rbac floor: BulkSubjectAccessReview for user %q: got %d results for %d requests", u.GetName(), len(out.Status.Results), len(candidates))
++	}
++
++	floor := make(map[string]struct{})
++	for i, result := range out.Status.Results {
++		if result.Allowed {
++			floor[candidates[i]] = struct{}{}
++		}
++	}
++	return floor, nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/registry.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/registry.go
+new file mode 100644
+index 00000000000..7d618da2e1c
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/registry.go
+@@ -0,0 +1,61 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"sync"
++
++	"k8s.io/apimachinery/pkg/runtime/schema"
++)
++
++var (
++	registryMu   sync.RWMutex
++	registryData = map[schema.GroupResource]struct{}{}
++)
++
++// Register marks gr as having scope-filtering storage wired in. Called once,
++// at construction time, by every storage_<group>.go site that wraps its
++// *genericregistry.Store with a Decorator, and by the CRD handler for every
++// namespaced CustomResourceDefinition it serves.
++//
++// The authorization filter consults IsRegistered before bypassing a 403 for
++// a scope-header request: a header alone must never be sufficient, because
++// bypassing authz for a resource with no filtering decorator actually wired
++// would hand a fully unfiltered list back to a caller RBAC just denied.
++func Register(gr schema.GroupResource) {
++	registryMu.Lock()
++	defer registryMu.Unlock()
++	registryData[gr] = struct{}{}
++}
++
++// Unregister removes gr from the allow-list. Used when a
++// CustomResourceDefinition is deleted, so that a future CRD reusing the same
++// group/resource name does not inherit stale registration state left over
++// from the deleted one.
++func Unregister(gr schema.GroupResource) {
++	registryMu.Lock()
++	defer registryMu.Unlock()
++	delete(registryData, gr)
++}
++
++// IsRegistered reports whether gr has scope-filtering storage wired in.
++func IsRegistered(gr schema.GroupResource) bool {
++	registryMu.RLock()
++	defer registryMu.RUnlock()
++	_, ok := registryData[gr]
++	return ok
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
+new file mode 100644
+index 00000000000..f0734026926
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
+@@ -0,0 +1,123 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"fmt"
++	"net/http"
++	"strings"
++)
++
++// Wire headers carrying the client-requested scope. The CLI exposes a single
++// --scope=<kind>[:<project>] flag, but splits it into two headers before
++// sending: this keeps the wire contract a flat enum plus an optional
++// companion parameter, rather than a tagged-value string the server has to
++// parse out of one header.
++const (
++	HeaderScope   = "X-Deckhouse-Scope"
++	HeaderProject = "X-Deckhouse-Project"
++)
++
++// Kind enumerates the supported --scope values.
++type Kind string
++
++const (
++	KindAccessible Kind = "accessible"
++	KindUser       Kind = "user"
++	KindSystem     Kind = "system"
++	KindProject    Kind = "project"
++)
++
++// Request is the parsed, validated scope request carried on a single API
++// call, decoded from the wire headers.
++type Request struct {
++	Kind    Kind
++	Project string // set only when Kind == KindProject
++}
++
++// ParseHeaders extracts a Request from the two scope headers.
++//
++// present is false when no scope header was sent at all -- the caller is not
++// asking for scope filtering, and callers of this function must treat that
++// identically to plain upstream behavior (no bypass, no filtering). This is
++// distinct from Request{Kind: KindAccessible}, which IS an explicit request,
++// just the broadest one available.
++func ParseHeaders(h http.Header) (req Request, present bool, err error) {
++	raw := h.Get(HeaderScope)
++	if raw == "" {
++		return Request{}, false, nil
++	}
++
++	kind := Kind(strings.ToLower(raw))
++	project := h.Get(HeaderProject)
++
++	switch kind {
++	case KindAccessible, KindUser, KindSystem:
++		if project != "" {
++			return Request{}, true, fmt.Errorf("scopefilter: %s header is only valid together with %s=%s", HeaderProject, HeaderScope, KindProject)
++		}
++		return Request{Kind: kind}, true, nil
++	case KindProject:
++		if project == "" {
++			return Request{}, true, fmt.Errorf("scopefilter: %s=%s requires the %s header", HeaderScope, KindProject, HeaderProject)
++		}
++		return Request{Kind: kind, Project: project}, true, nil
++	default:
++		return Request{}, true, fmt.Errorf("scopefilter: invalid %s value %q", HeaderScope, raw)
++	}
++}
++
++type requestContextKey struct{}
++
++// WithRequest returns a derivative context carrying the parsed scope
++// request. Production code reaches this via the authorization filter, which
++// parses the incoming headers once per request; tests use this helper
++// directly.
++func WithRequest(ctx context.Context, req Request) context.Context {
++	return context.WithValue(ctx, requestContextKey{}, req)
++}
++
++// RequestFrom reports the scope request tagged on ctx, if any. Its absence
++// means the caller did not send a scope header at all.
++func RequestFrom(ctx context.Context) (Request, bool) {
++	req, ok := ctx.Value(requestContextKey{}).(Request)
++	return req, ok
++}
++
++type bypassContextKey struct{}
++
++// WithBypass marks ctx as "RBAC denied this request, but the authorization
++// filter chose to hand it to the storage layer for ACL-based filtering
++// instead of returning 403". The storage layer reads this to decide whether
++// the RBAC safety floor (AccessibleNamespaces ∩ BulkSubjectAccessReview) must
++// be computed and intersected into the final result.
++//
++// This is intentionally independent from WithRequest: a fully privileged
++// caller can pass --scope=system purely to narrow their own view without
++// ever being denied by RBAC. In that case RequestFrom is set but IsBypass is
++// not, and the (expensive) RBAC floor is never computed -- only a denied,
++// bypassed caller pays that cost.
++func WithBypass(ctx context.Context) context.Context {
++	return context.WithValue(ctx, bypassContextKey{}, true)
++}
++
++// IsBypass reports whether ctx was tagged by WithBypass.
++func IsBypass(ctx context.Context) bool {
++	v, ok := ctx.Value(bypassContextKey{}).(bool)
++	return ok && v
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/selector.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/selector.go
+new file mode 100644
+index 00000000000..5e2d682be7f
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/selector.go
+@@ -0,0 +1,171 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"sync/atomic"
++
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/fields"
++)
++
++// NamespaceField is the field NameSetSelector matches against when the
++// listed resource's own namespace determines visibility (the generic case:
++// pods, CRDs, anything namespaced other than Namespace itself).
++const NamespaceField = "metadata.namespace"
++
++// NameField is the field NameSetSelector matches against when the listed
++// resource IS the identity being classified (the one existing case:
++// namespaces listing namespaces, where "which namespace is this" and "what
++// is this item called" are the same question). Equal to metav1.ObjectNameField.
++const NameField = metav1.ObjectNameField
++
++// NameSetSelector is a fields.Selector that matches an object iff the value
++// of a configured field (NameField or NamespaceField) is contained in a
++// dynamically-updated set of allowed values.
++//
++// It is meant to be combined with other selectors -- the caller's own
++// label/field selector, a classification selector, an RBAC-floor selector --
++// via fields.AndSelectors, and handed to a storage.SelectionPredicate for
++// genericregistry.Store's ListPredicate/WatchPredicate. Because
++// generic.ObjectMetaFieldsSet (used by every namespaced resource's default
++// AttrFunc) always populates both "metadata.name" and "metadata.namespace",
++// this works against any namespaced resource without per-resource wiring.
++//
++// The set is held behind an atomic.Pointer so a background poller can update
++// which values are allowed without any locking on the hot Matches() path.
++// The selector is shared (not copied) between the storage predicate and
++// whatever populates it, so both observe the same atomic value.
++//
++// Notes on the fields.Selector method contract:
++//
++//   - Empty() returns false unconditionally; otherwise an AndSelector
++//     containing this selector would silently degrade to "match everything".
++//   - RequiresExactMatch() returns ("", false): this selector is a
++//     set-membership test, not equality on a single value. Reporting an
++//     equality match would defeat MatchesSingle-style storage optimizations
++//     for user-supplied terms ANDed alongside it.
++//   - String() returns "" so a (potentially large, per-user) ACL/RBAC set
++//     never leaks into error messages or audit logs.
++//   - DeepCopySelector() returns self -- the shared atomic state is the
++//     point; apimachinery does not strictly rely on copy semantics here.
++type NameSetSelector struct {
++	field string
++	names atomic.Pointer[map[string]struct{}]
++}
++
++// NewNameSetSelector creates a selector matching field against the given
++// initial set of values. Pass nil to start in deny-everything mode.
++func NewNameSetSelector(field string, initial map[string]struct{}) *NameSetSelector {
++	s := &NameSetSelector{field: field}
++	if initial != nil {
++		s.names.Store(&initial)
++	}
++	return s
++}
++
++// Update atomically replaces the allowed-value set. The passed map MUST NOT
++// be mutated by the caller afterwards -- it is shared with concurrent
++// Matches() calls. Pass nil to switch into deny-everything mode.
++func (s *NameSetSelector) Update(set map[string]struct{}) {
++	if set == nil {
++		s.names.Store(nil)
++		return
++	}
++	s.names.Store(&set)
++}
++
++// Snapshot returns the currently active set (read-only; callers must not
++// mutate the returned map). Returns nil in deny-everything mode.
++func (s *NameSetSelector) Snapshot() map[string]struct{} {
++	set := s.names.Load()
++	if set == nil {
++		return nil
++	}
++	return *set
++}
++
++// Matches implements fields.Selector.
++func (s *NameSetSelector) Matches(f fields.Fields) bool {
++	set := s.names.Load()
++	if set == nil {
++		return false
++	}
++	_, ok := (*set)[f.Get(s.field)]
++	return ok
++}
++
++func (s *NameSetSelector) Empty() bool { return false }
++
++func (s *NameSetSelector) RequiresExactMatch(string) (string, bool) {
++	return "", false
++}
++
++func (s *NameSetSelector) Transform(fields.TransformFunc) (fields.Selector, error) {
++	return s, nil
++}
++
++func (s *NameSetSelector) Requirements() fields.Requirements { return nil }
++
++func (s *NameSetSelector) String() string { return "" }
++
++func (s *NameSetSelector) DeepCopySelector() fields.Selector { return s }
++
++// NamesToSet converts a slice of names into a set with a pre-sized backing
++// map. The returned map is owned by the caller and may be handed off to
++// Update() without further copying.
++func NamesToSet(names []string) map[string]struct{} {
++	set := make(map[string]struct{}, len(names))
++	for _, n := range names {
++		set[n] = struct{}{}
++	}
++	return set
++}
++
++// IntersectSets returns the set intersection of a and b. Both must be
++// non-nil (callers needing "no restriction" semantics must special-case
++// that themselves -- there is no sentinel value here for it, unlike
++// NameSetSelector.Update(nil), which deliberately means deny-everything).
++func IntersectSets(a, b map[string]struct{}) map[string]struct{} {
++	out := make(map[string]struct{})
++	small, big := a, b
++	if len(b) < len(a) {
++		small, big = b, a
++	}
++	for n := range small {
++		if _, ok := big[n]; ok {
++			out[n] = struct{}{}
++		}
++	}
++	return out
++}
++
++// DiffNameSets returns names present in next but not in prev (gained) and
++// names present in prev but not in next (lost).
++func DiffNameSets(next, prev map[string]struct{}) (gained, lost []string) {
++	for n := range next {
++		if _, ok := prev[n]; !ok {
++			gained = append(gained, n)
++		}
++	}
++	for n := range prev {
++		if _, ok := next[n]; !ok {
++			lost = append(lost, n)
++		}
++	}
++	return gained, lost
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/store.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/store.go
+new file mode 100644
+index 00000000000..07a3c9d337b
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/store.go
+@@ -0,0 +1,47 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++
++	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/watch"
++	"k8s.io/apiserver/pkg/storage"
++)
++
++// StoreAccessor is the subset of *genericregistry.Store (package
++// k8s.io/apiserver/pkg/registry/generic/registry) this package needs. It is
++// declared as a local interface -- rather than importing that package
++// directly -- specifically so that package can import THIS one (to add the
++// ScopeFilter hook to Store.List/Get/Watch) without creating an import
++// cycle. *genericregistry.Store satisfies this interface with its existing,
++// unmodified methods; no adapter is needed at call sites.
++//
++// PredicateFunc is deliberately excluded: on the real Store it is a struct
++// FIELD of function type, not a method, so it cannot appear in a Go
++// interface. Callers pass its value separately (see Decorator.BuildPredicate
++// and WatchConfig's predicate-building needs) -- construction sites already
++// have it in hand as `store.PredicateFunc`.
++type StoreAccessor interface {
++	Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error)
++	ListPredicate(ctx context.Context, p storage.SelectionPredicate, options *metainternalversion.ListOptions) (runtime.Object, error)
++	WatchPredicate(ctx context.Context, p storage.SelectionPredicate, resourceVersion string, sendInitialEvents *bool) (watch.Interface, error)
++	New() runtime.Object
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/watch.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/watch.go
+new file mode 100644
+index 00000000000..6ce7ef1c1a1
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/watch.go
+@@ -0,0 +1,551 @@
++/*
++Copyright 2025 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"errors"
++	"net/http"
++	"sync"
++	"time"
++
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	"k8s.io/apimachinery/pkg/api/meta"
++	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/fields"
++	"k8s.io/apimachinery/pkg/labels"
++	"k8s.io/apimachinery/pkg/runtime"
++	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
++	"k8s.io/apimachinery/pkg/watch"
++	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/storage"
++	"k8s.io/klog/v2"
++)
++
++// filteredWatchBufferSize controls the per-watch buffered channel that merges
++// events coming from the underlying storage watch with events synthesized by
++// the ACL poller. Sized to absorb a full re-list during a steady-state ACL
++// rotation; on overflow the watch errors out and the client is expected to
++// reconnect with a fresh LIST. Mirrors OpenShift's pkg/project/auth/watch.go
++// (1000).
++const filteredWatchBufferSize = 1000
++
++var errChannelOverflow = errors.New("scopefilter: filtered watch outgoing channel overflow; reconnect")
++
++// IdentityMode selects how FilteredWatch maps a watched object to the
++// (namespace-set key, item key) pair its ACL-diffing logic operates on.
++type IdentityMode int
++
++const (
++	// IdentityByName is for the one case where the listed resource IS the
++	// identity being classified: Namespace listing Namespace. nsKey and
++	// itemKey are both the object's own name.
++	IdentityByName IdentityMode = iota
++
++	// IdentityByNamespace is the generic case: nsKey is the object's
++	// metadata.namespace, itemKey is its metadata.name. A single ACL
++	// change (one namespace gained/lost) can therefore gain or lose many
++	// items at once.
++	IdentityByNamespace
++)
++
++func identityOf(mode IdentityMode, obj runtime.Object) (nsKey, itemKey string, ok bool) {
++	accessor, err := meta.Accessor(obj)
++	if err != nil {
++		return "", "", false
++	}
++	if mode == IdentityByName {
++		n := accessor.GetName()
++		return n, n, true
++	}
++	return accessor.GetNamespace(), accessor.GetName(), true
++}
++
++// WatchConfig groups the dependencies of a FilteredWatch. All fields are
++// required unless documented otherwise.
++type WatchConfig struct {
++	// Inner is the storage-layer watch, already filtered through the live
++	// Selector via a SelectionPredicate. FilteredWatch takes ownership and
++	// calls Stop() on it.
++	Inner watch.Interface
++
++	// Selector is the live NameSetSelector whose allowed-value set is
++	// updated on every poll tick. Shared with the SelectionPredicate
++	// passed to Inner; updates are seen by both immediately.
++	Selector *NameSetSelector
++
++	// Mode selects the identity-extraction strategy (see IdentityMode).
++	Mode IdentityMode
++
++	// Store performs the Get (IdentityByName) or ListPredicate
++	// (IdentityByNamespace) calls used to materialize objects for
++	// synthesized ADDED events, and New() for building DELETED stubs.
++	Store StoreAccessor
++
++	// BuildPredicate mirrors Decorator.BuildPredicate -- the resource's
++	// registered predicate-construction function, needed to build a
++	// correctly-attributed SelectionPredicate when IdentityByNamespace mode
++	// lists a newly-gained namespace's contents.
++	BuildPredicate func(label labels.Selector, field fields.Selector) storage.SelectionPredicate
++
++	// CallerLabel / CallerField are the requesting client's own selectors
++	// (from the original List/Watch call), reused via BuildPredicate when
++	// IdentityByNamespace mode lists a newly-gained namespace's contents.
++	// Unused in IdentityByName mode. Nil means "no selector", matching
++	// fields.Everything()/labels.Everything() semantics.
++	CallerLabel labels.Selector
++	CallerField fields.Selector
++
++	// Poll returns the current combined allowed namespace/name set (e.g.
++	// classification ∩ RBAC floor, or plain AccessibleNamespaces --
++	// FilteredWatch does not care which). Called once per refresh tick.
++	Poll func(ctx context.Context) (map[string]struct{}, error)
++
++	// Initial is the allowed set at watch-open, used to seed the ACL
++	// diff baseline so the first poll tick does not treat namespaces the
++	// inner watch is about to (or already did) replay as newly "gained".
++	Initial map[string]struct{}
++
++	// RefreshInterval governs how often the poller wakes up. A value <=0
++	// disables polling entirely (storage events still flow).
++	RefreshInterval time.Duration
++
++	// UserName identifies the watching client, for logging only.
++	UserName string
++}
++
++// FilteredWatch wraps a storage-layer watch.Interface and merges in
++// synthetic events derived from changes to a dynamically-computed allowed
++// namespace/name set (an "ACL" in the broad sense: could be
++// AccessibleNamespaces, a classification ∩ RBAC-floor intersection, or
++// anything else Poll computes).
++//
++// Architecture mirrors OpenShift's userProjectWatcher:
++//
++//   - The underlying storage watch is started with a SelectionPredicate
++//     containing a live NameSetSelector. The selector's atomic state is
++//     updated on every poll tick, so storage-layer events for
++//     now-inaccessible namespaces/names are silently dropped at the
++//     predicate layer -- no extra round-trips, no work in the cacher.
++//
++//   - In parallel, this wrapper polls Poll every RefreshInterval (typically
++//     1s). On each tick it diffs the result against the last-known allowed
++//     set and synthesizes events for the change:
++//
++//   - IdentityByName (namespaces): a single Get materializes the one
++//     gained object; a stub carrying only its name is emitted for a lost
++//     one.
++//
++//   - IdentityByNamespace (generic resources): a namespace-scoped List
++//     (via Store.ListPredicate, reusing the caller's own label/field
++//     selectors) materializes every item newly visible in a gained
++//     namespace; stubs are emitted for every item previously surfaced
++//     from a lost namespace, using bookkeeping kept for exactly this
++//     purpose (see knownItems below) -- there is no cheaper way to know
++//     what to retract than remembering what was shown.
++//
++//   - All events -- pass-through from storage and synthetic from the
++//     poller -- are funneled through a single buffered channel and emitted
++//     to the client in arrival order.
++//
++//   - On unrecoverable failure (channel overflow, inner watch closure) the
++//     watch emits a watch.Error, stops itself, and closes the outgoing
++//     channel -- clients ranging over ResultChan() unblock cleanly and let
++//     their reflector reconnect.
++type FilteredWatch struct {
++	inner          watch.Interface
++	selector       *NameSetSelector
++	mode           IdentityMode
++	store          StoreAccessor
++	buildPredicate func(label labels.Selector, field fields.Selector) storage.SelectionPredicate
++
++	callerLabel labels.Selector
++	callerField fields.Selector
++
++	poll            func(ctx context.Context) (map[string]struct{}, error)
++	refreshInterval time.Duration
++	userName        string
++
++	outgoing chan watch.Event
++
++	// mu guards knownACL and knownItems.
++	mu sync.Mutex
++	// knownACL is the allowed namespace/name set as of the last poll tick
++	// (or Initial, before the first tick). Drives gained/lost diffing.
++	knownACL map[string]struct{}
++	// knownItems maps nsKey -> the set of itemKeys surfaced to the client
++	// under that key and not yet retracted. In IdentityByName mode this
++	// always collapses to knownItems[n] == {n: {}}. Source of truth for
++	// ADDED-vs-MODIFIED demotion and for exactly which stubs to emit as
++	// DELETED when a namespace is lost.
++	knownItems map[string]map[string]struct{}
++
++	stopOnce sync.Once
++	stopCh   chan struct{}
++	cancel   context.CancelFunc
++	senders  sync.WaitGroup
++}
++
++// NewFilteredWatch wires together a storage watch with an ACL poller. The
++// returned watch owns cfg.Inner and will Stop() it when the watch ends.
++func NewFilteredWatch(parentCtx context.Context, cfg WatchConfig) *FilteredWatch {
++	ctx, cancel := context.WithCancel(parentCtx)
++
++	known := make(map[string]struct{}, len(cfg.Initial))
++	for n := range cfg.Initial {
++		known[n] = struct{}{}
++	}
++
++	w := &FilteredWatch{
++		inner:           cfg.Inner,
++		selector:        cfg.Selector,
++		mode:            cfg.Mode,
++		store:           cfg.Store,
++		buildPredicate:  cfg.BuildPredicate,
++		callerLabel:     cfg.CallerLabel,
++		callerField:     cfg.CallerField,
++		poll:            cfg.Poll,
++		refreshInterval: cfg.RefreshInterval,
++		userName:        cfg.UserName,
++		outgoing:        make(chan watch.Event, filteredWatchBufferSize),
++		knownACL:        known,
++		knownItems:      make(map[string]map[string]struct{}),
++		stopCh:          make(chan struct{}),
++		cancel:          cancel,
++	}
++
++	w.senders.Add(2)
++	go w.runStoragePump(ctx)
++	go w.runACLPoller(ctx)
++	go w.closeWhenDone()
++
++	return w
++}
++
++// ResultChan implements watch.Interface.
++func (w *FilteredWatch) ResultChan() <-chan watch.Event {
++	return w.outgoing
++}
++
++// Stop implements watch.Interface. Idempotent.
++func (w *FilteredWatch) Stop() {
++	w.stopOnce.Do(func() {
++		// Cancel first so background goroutines unblock from their
++		// selects before we tear down the inner watch.
++		w.cancel()
++		w.inner.Stop()
++		close(w.stopCh)
++	})
++}
++
++// closeWhenDone waits for both sender goroutines (storage pump and ACL
++// poller) to finish, then closes the outgoing channel exactly once -- the
++// canonical "single closer" pattern, guaranteeing no send-on-closed-channel
++// panic.
++func (w *FilteredWatch) closeWhenDone() {
++	w.senders.Wait()
++	close(w.outgoing)
++}
++
++// runStoragePump forwards events from the underlying storage watch into the
++// outgoing channel, maintaining knownItems so subsequent ACL diffs make
++// correct ADDED/DELETED decisions.
++func (w *FilteredWatch) runStoragePump(ctx context.Context) {
++	defer utilruntime.HandleCrash()
++	defer w.senders.Done()
++	defer w.Stop()
++
++	in := w.inner.ResultChan()
++	for {
++		select {
++		case <-ctx.Done():
++			return
++		case ev, ok := <-in:
++			if !ok {
++				// Inner watch closed (etcd disconnect, server
++				// shutdown). Propagate by stopping ourselves;
++				// client will reconnect with a fresh LIST.
++				return
++			}
++			ev = w.observeStorageEvent(ev)
++			if !w.emit(ev) {
++				return
++			}
++		}
++	}
++}
++
++// observeStorageEvent updates knownItems for an event the predicate just let
++// through and returns a (possibly mutated) event for emission. The event
++// type is demoted from ADDED to MODIFIED if the item was already known --
++// this happens, very rarely, when the ACL poller synthesized an ADDED for
++// the same item at almost the same instant a real etcd CREATE event for it
++// crossed the predicate. We never emit two ADDEDs for the same item without
++// an intervening DELETED.
++func (w *FilteredWatch) observeStorageEvent(ev watch.Event) watch.Event {
++	if ev.Object == nil {
++		return ev
++	}
++	nsKey, itemKey, ok := identityOf(w.mode, ev.Object)
++	if !ok {
++		return ev
++	}
++
++	w.mu.Lock()
++	defer w.mu.Unlock()
++	switch ev.Type {
++	case watch.Added:
++		items := w.knownItems[nsKey]
++		if items == nil {
++			items = make(map[string]struct{})
++			w.knownItems[nsKey] = items
++		}
++		if _, already := items[itemKey]; already {
++			ev.Type = watch.Modified
++		}
++		items[itemKey] = struct{}{}
++	case watch.Modified:
++		items := w.knownItems[nsKey]
++		if items == nil {
++			items = make(map[string]struct{})
++			w.knownItems[nsKey] = items
++		}
++		items[itemKey] = struct{}{}
++	case watch.Deleted:
++		if items, present := w.knownItems[nsKey]; present {
++			delete(items, itemKey)
++			if len(items) == 0 {
++				delete(w.knownItems, nsKey)
++			}
++		}
++	}
++	return ev
++}
++
++// runACLPoller periodically re-evaluates Poll and synthesizes ADDED/DELETED
++// events for the diff against knownACL. The constructor seeds knownACL from
++// Initial, so the first poll iteration sees no diff in the steady state and
++// only acts on subsequent changes.
++func (w *FilteredWatch) runACLPoller(ctx context.Context) {
++	defer utilruntime.HandleCrash()
++	defer w.senders.Done()
++	defer w.Stop()
++
++	if w.refreshInterval <= 0 {
++		// Misconfigured: a 0/negative interval would spin. Park the
++		// goroutine until shutdown; the storage pump still works, ACL
++		// changes won't be reflected until the client reconnects.
++		<-ctx.Done()
++		return
++	}
++
++	ticker := time.NewTicker(w.refreshInterval)
++	defer ticker.Stop()
++
++	for {
++		select {
++		case <-ctx.Done():
++			return
++		case <-ticker.C:
++			if !w.tickACL(ctx) {
++				return
++			}
++		}
++	}
++}
++
++// tickACL performs one ACL poll iteration. Returns false if the watch must
++// be torn down (e.g. on emit overflow).
++func (w *FilteredWatch) tickACL(ctx context.Context) bool {
++	next, err := w.poll(ctx)
++	if err != nil {
++		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
++			// Normal teardown: ctx cancellation propagated into the
++			// resolver's HTTP client.
++			return true
++		}
++		// Anything else is operationally interesting: surface it at
++		// Warning so operators don't need -v=4 to notice. Keep the
++		// previous ACL state -- strictly safer than flipping to
++		// deny-everything, which would synthesize spurious DELETEDs
++		// across the whole allowed set.
++		klog.Warningf("scopefilter: failed to refresh allowed set for user %q (keeping previous state): %v", w.userName, err)
++		return true
++	}
++
++	w.selector.Update(next)
++
++	w.mu.Lock()
++	gained, lost := DiffNameSets(next, w.knownACL)
++	w.knownACL = next
++	w.mu.Unlock()
++
++	for _, ns := range lost {
++		if !w.retract(ns) {
++			return false
++		}
++	}
++	for _, ns := range gained {
++		if !w.materialize(ctx, ns) {
++			return false
++		}
++	}
++	return true
++}
++
++// retract emits DELETED stubs for every item currently known under nsKey and
++// clears its bookkeeping. Returns false if the watch must be torn down.
++func (w *FilteredWatch) retract(nsKey string) bool {
++	w.mu.Lock()
++	items := w.knownItems[nsKey]
++	delete(w.knownItems, nsKey)
++	w.mu.Unlock()
++
++	for itemKey := range items {
++		stub := w.newStub(nsKey, itemKey)
++		klog.V(4).InfoS("scopefilter: synthesizing DELETED for lost access", "user", w.userName, "namespace", nsKey, "name", itemKey)
++		if !w.emit(watch.Event{Type: watch.Deleted, Object: stub}) {
++			return false
++		}
++	}
++	return true
++}
++
++// newStub builds a minimal object carrying only identity fields, for a
++// synthesized DELETED event where the real object may no longer be
++// retrievable (or, in IdentityByNamespace mode, was never re-fetched).
++func (w *FilteredWatch) newStub(nsKey, itemKey string) runtime.Object {
++	obj := w.store.New()
++	accessor, err := meta.Accessor(obj)
++	if err != nil {
++		// Unreachable for any real registered type; New() always
++		// returns something meta.Accessor can handle. Fall back to
++		// the bare object rather than panicking.
++		return obj
++	}
++	accessor.SetName(itemKey)
++	if w.mode == IdentityByNamespace {
++		accessor.SetNamespace(nsKey)
++	}
++	return obj
++}
++
++// materialize fetches and emits ADDED events for every item newly visible
++// under nsKey. Returns false if the watch must be torn down.
++func (w *FilteredWatch) materialize(ctx context.Context, nsKey string) bool {
++	objs, err := w.fetchGained(ctx, nsKey)
++	if err != nil {
++		if apierrors.IsNotFound(err) {
++			// IdentityByName: the namespace vanished between the ACL
++			// tick and the Get (race with deletion). The client
++			// never saw it as ADDED and never will -- not an error.
++			return true
++		}
++		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
++			return true
++		}
++		klog.Warningf("scopefilter: failed to fetch gained namespace %q for user %q: %v", nsKey, w.userName, err)
++		return true
++	}
++
++	for _, obj := range objs {
++		_, itemKey, ok := identityOf(w.mode, obj)
++		if !ok {
++			continue
++		}
++
++		// Re-check under lock just before emitting: the storage pump
++		// may have raced ahead and already announced this same item
++		// as ADDED (a real etcd CREATE event passing the now-updated
++		// predicate) between us gathering `objs` and arriving here.
++		// Best-effort; a tighter window would require holding the
++		// lock across the fetch, which can be slow.
++		w.mu.Lock()
++		items := w.knownItems[nsKey]
++		if items == nil {
++			items = make(map[string]struct{})
++			w.knownItems[nsKey] = items
++		}
++		if _, already := items[itemKey]; already {
++			w.mu.Unlock()
++			continue
++		}
++		items[itemKey] = struct{}{}
++		w.mu.Unlock()
++
++		klog.V(4).InfoS("scopefilter: synthesizing ADDED for gained access", "user", w.userName, "namespace", nsKey, "name", itemKey)
++		if !w.emit(watch.Event{Type: watch.Added, Object: obj}) {
++			return false
++		}
++	}
++	return true
++}
++
++// fetchGained retrieves the object(s) newly visible under nsKey: a single
++// Get in IdentityByName mode (nsKey IS the object's name), or a
++// namespace-scoped List reusing the caller's own selectors in
++// IdentityByNamespace mode.
++func (w *FilteredWatch) fetchGained(ctx context.Context, nsKey string) ([]runtime.Object, error) {
++	if w.mode == IdentityByName {
++		obj, err := w.store.Get(ctx, nsKey, &metav1.GetOptions{})
++		if err != nil {
++			return nil, err
++		}
++		return []runtime.Object{obj}, nil
++	}
++
++	nsCtx := genericapirequest.WithNamespace(ctx, nsKey)
++	predicate := w.buildPredicate(w.callerLabel, w.callerField)
++	list, err := w.store.ListPredicate(nsCtx, predicate, &metainternalversion.ListOptions{})
++	if err != nil {
++		return nil, err
++	}
++	return meta.ExtractList(list)
++}
++
++// emit pushes an event to the outgoing channel. Returns false if the watch
++// is being torn down or the outgoing buffer overflowed, so callers stop.
++//
++// On overflow we attempt a single non-blocking delivery of a watch.Error so
++// the client learns why their stream just ended; if even that fails (buffer
++// genuinely full, client unresponsive) the error is dropped -- the client
++// will notice anyway when ResultChan closes.
++func (w *FilteredWatch) emit(ev watch.Event) bool {
++	select {
++	case <-w.stopCh:
++		return false
++	case w.outgoing <- ev:
++		return true
++	default:
++		errEvt := watch.Event{
++			Type: watch.Error,
++			Object: &metav1.Status{
++				Status:  metav1.StatusFailure,
++				Message: errChannelOverflow.Error(),
++				Reason:  metav1.StatusReasonInternalError,
++				Code:    http.StatusInternalServerError,
++			},
++		}
++		select {
++		case w.outgoing <- errEvt:
++		default:
++		}
++		klog.Warningf("scopefilter: filtered watch outgoing channel full for user %q; closing watch", w.userName)
++		return false
 +	}
 +}
