@@ -42,7 +42,11 @@ type versionedImages struct {
 }
 
 type fixedImages struct {
-	Kine string `json:"kine"`
+	Kine               string `json:"kine"`
+	KonnectivityServer string `json:"konnectivityServer"`
+	KonnectivityAgent  string `json:"konnectivityAgent"`
+	Cilium             string `json:"cilium"`
+	CiliumOperator     string `json:"ciliumOperator"`
 }
 
 type registryPackagesTable struct {
@@ -124,9 +128,16 @@ func buildManifestReplacer(vcp *controlplanev1alpha1.VirtualControlPlane, versio
 		"${IMAGE_KUBE_CONTROLLER_MANAGER}", versioned.ControllerManager,
 		"${IMAGE_KUBE_SCHEDULER}", versioned.Scheduler,
 		"${IMAGE_KINE}", fixed.Kine,
+		"${IMAGE_KONNECTIVITY_SERVER}", fixed.KonnectivityServer,
+		"${IMAGE_KONNECTIVITY_AGENT}", fixed.KonnectivityAgent,
+		"${IMAGE_CILIUM}", fixed.Cilium,
+		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", namespace,
 		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
 		"${SERVICE_SUBNET_CIDR}", constants.DefaultTenantServiceSubnetCIDR,
+		"${VCP_API_HOST}", apiExposeHost(vcp),
+		"${VCP_KONN_HOST}", konnExposeHost(vcp),
+		"${VCP_PKG_HOST}", packagesExposeHost(vcp),
 	)
 }

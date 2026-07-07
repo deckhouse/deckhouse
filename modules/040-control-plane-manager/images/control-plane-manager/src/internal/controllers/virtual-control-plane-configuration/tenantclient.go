@@ -25,10 +25,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *reconciler) tenantClientset(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (kubernetes.Interface, error) {
+func (r *reconciler) tenantRESTConfig(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*rest.Config, error) {
 	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 	sec, err := r.getSecret(ctx, ns, constants.VirtualAdminKubeconfigSecretName)
 	if err != nil {
@@ -44,10 +46,27 @@ func (r *reconciler) tenantClientset(ctx context.Context, vcp *controlplanev1alp
 	if err != nil {
 		return nil, fmt.Errorf("build rest config: %w", err)
 	}
+	return cfg, nil
+}
+
+// tenantClients builds both a typed client-go for the tenant cluster from a single super-admin REST config.
+// - typed clientset (for bootstrap-token management)
+// - controller-runtime client (for applying arbitrary/unstructured addon manifests)
+func (r *reconciler) tenantClients(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (kubernetes.Interface, client.Client, error) {
+	cfg, err := r.tenantRESTConfig(ctx, vcp)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	cs, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("build tenant clientset: %w", err)
+		return nil, nil, fmt.Errorf("build tenant clientset: %w", err)
 	}
-	return cs, nil
+
+	c, err := client.New(cfg, client.Options{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("build tenant client: %w", err)
+	}
+
+	return cs, c, nil
 }
