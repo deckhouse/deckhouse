@@ -974,7 +974,8 @@
     {
       "id": 30,
       "type": "timeseries",
-      "title": "Imbalance (max-min)",
+      "title": "Imbalance: hottest vs coldest node",
+      "description": "max(node usage) - min(node usage), per resource. Highlights the gap between the single busiest and single idlest node; sensitive to one outlier.",
       "gridPos": {
         "h": 8,
         "w": 6,
@@ -1018,7 +1019,8 @@
     {
       "id": 31,
       "type": "timeseries",
-      "title": "Imbalance (stddev)",
+      "title": "Imbalance: spread across nodes",
+      "description": "stddev of node usage across all nodes, per resource. Shows whether the imbalance is systemic or just one outlier; robust to a single hot node.",
       "gridPos": {
         "h": 8,
         "w": 6,
@@ -1524,7 +1526,7 @@
       "title": "Avg happiness per workload",
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 85
       },
@@ -1544,41 +1546,6 @@
           "unit": "short",
           "min": 0,
           "max": 100
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 52,
-      "type": "timeseries",
-      "title": "Cluster imbalance",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 85
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "descheduler:cluster_imbalance_score",
-          "legendFormat": "{{resource}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0
         },
         "overrides": []
       },
