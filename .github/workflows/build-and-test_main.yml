@@ -429,6 +429,9 @@ jobs:
           else
             # fallback to non-signed version
             export WERF_SIGN_MANIFEST="0"
+            export VAULT_KEY=$WERF_SIGN_KEY
+            export VAULT_ROLE=$WERF_VAULT_AUTH_ROLE
+            unset WERF_SIGN_KEY
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
 
