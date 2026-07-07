@@ -32,6 +32,8 @@ Control plane management functions:
   * Prioritizing nodes based on their state (network load, storage subsystem health, etc.).
   * Dividing nodes into zones, etc.
 
+* **Periodic etcd defragmentation**. In clusters with three or more etcd members, this feature is enabled by default. For more details, see the [`control-plane-manager` module documentation](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag).
+
 For detailed configuration options and usage examples, refer to the [`control-plane-manager` module documentation](/modules/control-plane-manager/).
 
 ### Module architecture
