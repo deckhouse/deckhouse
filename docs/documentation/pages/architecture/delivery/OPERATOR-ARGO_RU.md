@@ -35,22 +35,18 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
 - Основной оператор модуля:
 
-  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
   ![Архитектура оператора модуля operator-argo](../../images/architecture/delivery/c4-l2-operator-argo-operator.ru.svg)
 
 - Вариант развёртывания экземпляра Argo CD с базой данных Redis в неотказоустойчивой конфигурации:
 
-  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
   ![Архитектура модуля operator-argo с Redis non-HA](../../images/architecture/delivery/c4-l2-operator-argo.ru.svg)
 
 - Вариант развёртывания экземпляра Argo CD с отказоустойчивой конфигурацией Redis (на диаграмме отражены только отличия от основного варианта развёртывания):
 
-  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
   ![Архитектура модуля operator-argo с Redis HA](../../images/architecture/delivery/c4-l2-operator-argo-ha.ru.svg)
 
 - Вариант развёртывания экземпляра Argo CD в [управляющем кластере](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) в мультикластерной конфигурации (на диаграмме отражены только отличия от основного варианта развёртывания):
 
-  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
   ![Архитектура модуля operator-argo с Principal](../../images/architecture/delivery/c4-l2-operator-argo-principal.ru.svg)
 
 ## Компоненты модуля
