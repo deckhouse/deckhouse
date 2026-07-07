@@ -1,0 +1,61 @@
+ci:
+  fixes:
+    - summary: fix unlimited upmeter iterations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21149
+cloud-provider-vcd:
+  fixes:
+    - summary: >-
+        add werf deploy-dependency annotations to capcd webhook configurations to fix DMT lint and prevent
+        race on install/upgrade
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21117
+deckhouse:
+  fixes:
+    - summary: Fix serialize docs builder builds.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21136
+deckhouse-controller:
+  features:
+    - summary: harden migrated modules check
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21077
+dhctl:
+  fixes:
+    - summary: >-
+        Preflight checks are no longer re-run on every dhctl-server restart when the cluster config is
+        unchanged.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21114
+docs:
+  fixes:
+    - summary: Fix broken-link. Module admission
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21030
+    - summary: Change security events docs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20993
+ingress-nginx:
+  fixes:
+    - summary: The config hashing is fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21141
+      impact: All ingress-nginx controllers pod will be restarted.
+istio:
+  features:
+    - summary: Custom annotations for Ingress Controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21118
+    - summary: Custom extension providers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21126
+    - summary: JWKS extra root CA implementation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21124
+kube-dns:
+  fixes:
+    - summary: Added deploy dependencies for webhook configuration
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21060
+node-manager:
+  fixes:
+    - summary: Creating or re-applying an already-existing StaticInstance no longer fails address validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21114
+user-authz:
+  fixes:
+    - summary: >-
+        user-authz-webhook now uses the node-local kube-apiserver endpoint for its discovery cache and
+        liveness check, instead of resolving the "kubernetes.default" DNS name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21081
+      impact: >-
+        Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe
+        to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy:
+        Deny) could deny all API requests, including cluster-admins, until DNS recovered.
