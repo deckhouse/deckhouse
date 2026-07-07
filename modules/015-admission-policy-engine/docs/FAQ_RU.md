@@ -544,6 +544,17 @@ spec:
 - сервисные аккаунты из неймспейсов `d8-*` (`system:serviceaccount:d8-*`);
 - сервисные аккаунты из неймспейсов `kube-*` (`system:serviceaccount:kube-*`).
 
+### Встроенная политика для финалайзеров Deckhouse
+
+Для защиты ресурсов, управляемых контроллерами Deckhouse, в модуле `admission-policy-engine` предусмотрена встроенная ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io`, которая запрещает удалять финалайзеры, содержащие подстроку `.deckhouse.io/`, на любых ресурсах кластера.
+
+Политика не распространяется на следующих пользователей, которым разрешено снимать такие финалайзеры:
+
+- системные контроллеры Kubernetes (`system:kube-controller-manager`, `system:kube-scheduler` и др.);
+- `system:sudouser`, `dhctl`, `observability`;
+- сервисные аккаунты из неймспейсов `d8-*` (`system:serviceaccount:d8-*`);
+- сервисные аккаунты из неймспейсов `kube-*` (`system:serviceaccount:kube-*`).
+
 ### Пример пользовательской политики
 
 Вы можете создать собственную политику Gatekeeper для запрета операций `kubectl exec` и `kubectl attach` в определённых неймспейсах. В примере ниже используются `input.review.operation` и `input.review.resource.resource` для проверки операций `CONNECT`:

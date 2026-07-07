@@ -157,3 +157,55 @@ metadata:
 spec:
   policyName: deny-gatekeeper-webhook-operation-label-controllers-cronjobs
   validationActions: [Deny]
+---
+{{- $policyName := "deny-deckhouse-finalizers.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations: ["UPDATE"]
+        resources: ["*"]
+  matchConditions:
+    - name: exclude-groups
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: exclude-users
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: has-protected-finalizers
+      expression: |
+        has(oldObject.metadata.finalizers) &&
+        oldObject.metadata.finalizers.exists(f, f.contains('.deckhouse.io/'))
+  variables:
+    - name: protectedOldFinalizers
+      expression: |
+        has(oldObject.metadata.finalizers)
+        ? oldObject.metadata.finalizers.filter(f, f.contains('.deckhouse.io/'))
+        : []
+  validations:
+    - expression: |
+        request.userInfo.username.startsWith("system:serviceaccount:d8-")
+        || request.userInfo.username.startsWith("system:serviceaccount:kube-")
+        || variables.protectedOldFinalizers.all(f,
+            has(object.metadata.finalizers) && f in object.metadata.finalizers)
+      reason: Forbidden
+      message: "Removing Deckhouse finalizers (containing '.deckhouse.io/') is forbidden"
+  auditAnnotations:
+    - key: source-user
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to remove Deckhouse finalizers'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector: {}

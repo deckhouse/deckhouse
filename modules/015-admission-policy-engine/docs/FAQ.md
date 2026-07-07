@@ -544,6 +544,17 @@ This policy doesn't apply to the following users who are allowed to run `kubectl
 - service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`);
 - service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`).
 
+### Built-in policy for Deckhouse finalizers
+
+To protect resources managed by Deckhouse controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `.deckhouse.io/` substring on any cluster resource.
+
+This policy doesn't apply to the following users who are allowed to remove such finalizers:
+
+- Kubernetes system controllers (`system:kube-controller-manager`, `system:kube-scheduler`, etc.);
+- `system:sudouser`, `dhctl`, `observability`;
+- service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`);
+- service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`).
+
 ### Custom policy example
 
 You can create your own Gatekeeper policy to deny `kubectl exec` and `kubectl attach` operations in specific namespaces. The example below uses `input.review.operation` and `input.review.resource.resource` to check for `CONNECT` operations:
