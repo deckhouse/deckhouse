@@ -840,6 +840,40 @@ spec:
 
 Управляемые модулем `Telemetry` для этого режима будут убраны при следующей синхронизации; снова включится прежний `telemetry.v2`.
 
+## Диагностика Istio с помощью `istioctl` из debug-контейнера
+
+В debug-контейнер Deckhouse входят бинарные файлы `istioctl` для поддерживаемых версий Istio. Используйте их, когда нужно проверить конфигурацию Istio, запустить анализаторы или получить конфигурацию Envoy из прикладных подов.
+
+Запустите временный debug-под со встроенным debug-образом и ServiceAccount `deckhouse`:
+
+```shell
+IMG="$(d8 k -n d8-system get cm debug-container -o jsonpath='{.data.image}')"
+
+d8 k -n d8-system run istioctl-debug \
+  --rm -it \
+  --restart=Never \
+  --image="$IMG" \
+  --overrides='{"spec":{"serviceAccountName":"deckhouse","automountServiceAccountToken":true}}' \
+  -- bash
+```
+
+Выберите минорную версию Istio, которая используется нужным control plane:
+
+```shell
+export ISTIOCTL_VERSION=1.21
+```
+
+Доступные значения: `1.21`, `1.25` и `1.27`. Также можно запустить конкретный бинарный файл напрямую: `istioctl-1.21`, `istioctl-1.25` или `istioctl-1.27`.
+
+Примеры:
+
+```shell
+istioctl -n d8-istio analyze -A
+istioctl pc all <pod-name>.<namespace>
+```
+
+Для команд `istioctl pc` у целевого пода должен быть добавлен сайдкар `istio-proxy`, а у ServiceAccount должны быть права на создание `pods/portforward` в целевом пространстве имён. Если у workload нет сайдкара, admin-порт Envoy `15000` будет недоступен.
+
 ## Ограничения режима перенаправления прикладного трафика `CNIPlugin`
 
 В отличие от режима `InitContainer`, настройка перенаправления осуществляется в момент создании пода, а не в момент срабатывания init-контейнера `istio-init`. Это значит, что прикладные init-контейнеры не смогут взаимодействовать с остальными сервисами так как весь трафик будет перенаправлен на обработку в sidecar-контейнер `istio-proxy`, который ещё не запущен. Обходные пути:

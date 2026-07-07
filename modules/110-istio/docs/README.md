@@ -383,7 +383,7 @@ In case of issues when working with a multi-cluster, it is necessary to check in
 
 1. The status of the `IstioMultiCluster` resources. To do this, run the command `d8 k describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
 1. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
-1. Using the `istioctl` utility ([how to install...](https://istio.io/v1.25/docs/setup/additional-setup/download-istio-release/)):
+1. Using the `istioctl` utility from the Deckhouse debug container (see [the example](examples.html#debugging-istio-with-istioctl-from-the-debug-container)):
 
 ```console
 istioctl remote-clusters -i d8-istio

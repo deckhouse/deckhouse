@@ -838,6 +838,40 @@ spec:
 
 The module-managed `Telemetry` objects for this mode disappear on the next sync; Istio restores the full `telemetry.v2` configuration.
 
+## Debugging Istio with `istioctl` from the debug container
+
+The Deckhouse debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
+
+Start a temporary debug Pod with the built-in debug image and the `deckhouse` ServiceAccount:
+
+```shell
+IMG="$(d8 k -n d8-system get cm debug-container -o jsonpath='{.data.image}')"
+
+d8 k -n d8-system run istioctl-debug \
+  --rm -it \
+  --restart=Never \
+  --image="$IMG" \
+  --overrides='{"spec":{"serviceAccountName":"deckhouse","automountServiceAccountToken":true}}' \
+  -- bash
+```
+
+Select the Istio minor version used by the target control plane:
+
+```shell
+export ISTIOCTL_VERSION=1.21
+```
+
+Available values are `1.21`, `1.25`, and `1.27`. You can also run a specific binary directly: `istioctl-1.21`, `istioctl-1.25`, or `istioctl-1.27`.
+
+Examples:
+
+```shell
+istioctl -n d8-istio analyze -A
+istioctl pc all <pod-name>.<namespace>
+```
+
+The `istioctl pc` commands require a target Pod with an injected `istio-proxy` sidecar and Kubernetes permissions to create `pods/portforward` in the target namespace. If the target workload has no sidecar, Envoy admin port `15000` will not be available.
+
 ## `CNIPlugin` application traffic redirection mode restrictions
 
 Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
