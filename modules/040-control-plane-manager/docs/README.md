@@ -17,6 +17,7 @@ The control-plane-manager:
   - state-based node prioritization (network load, storage subsystem status, etc.),
   - dividing nodes into zones, etc.
 - **Monitors the control plane**. The CPM module organizes secure metrics collection and provides a basic set of monitoring rules for the control plane components. For details, refer to [Control plane monitoring](#control-plane-monitoring).
+- **Periodic etcd defragmentation**. In clusters with three or more etcd members, this feature is enabled by default. For more details, see the description of the [`etcd.defrag`](configuration.html#parameters-etcd-defrag) parameter.
 
 ## Managing certificates
 

@@ -26,7 +26,7 @@
        {{- $alertLevel = "danger" }}
     {{- end }}
 
-    {{- $content := printf "%s: <i data-tippy-content='%s'>%s</i>" (T "module_lifecycle_stage") (T (printf "module_alert_%s_long" $statusKey )) $moduleStage }}
+    {{- $content := printf "%s: <span style='border-bottom: 1px dotted #000' data-tippy-content='%s'>%s</span>" (T "module_lifecycle_stage") (T (printf "module_alert_%s_long" $statusKey )) $moduleStage }}
     {{- if $hasRequirements }}
       {{- $content = printf "%s <br>%s" $content (printf (T "requirements_for_alert") $module) }}
     {{- end }}

@@ -168,6 +168,10 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 
 ## etcd defragmentation
 
+{% alert level="info" %}
+In clusters with three or more etcd members, periodic etcd defragmentation is enabled by default. It runs once a day at exactly 1:00 a.m. server time. For more details, see the [`control-plane-manager`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag) module documentation.
+{% endalert %}
+
 {% alert level="warning" %}
 Before defragmenting, [back up etcd](../../backup/backup-and-restore.html#creating-backups-with-deckhouse-cli).
 {% endalert %}

@@ -24,9 +24,21 @@ shell:
       done
     done
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
 from: {{ index $.Images "builder/distroless" }}
+shell:
+  install:
+  - pm install baselayout -d /out
+  - pm install curl bash jq yq sed grep gawk procps iproute2 findutils coreutils openssl vim less ethtool pwru gnu-glibc-locale util-linux -d /out
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "base/distroless-fin" }}
 import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /out
+  to: /
+  before: install
 - image: control-plane-manager/etcd
   add: /usr/bin
   to: /usr/bin
@@ -43,16 +55,10 @@ import:
   - iptables-*
   - ip6tables-*
   before: install
-- from: {{ index $.Images "tools/util-linux" }}
-  add: /usr/bin/nsenter
-  to: /usr/bin/nsenter
-  before: install
 shell:
   install:
-    - pm install curl bash jq yq sed grep gawk procps iproute2 findutils coreutils openssl vim less ethtool pwru util-linux
-    - pm install gnu-glibc-locale -1
-    - /usr/bin/ln -fs /var/run /run
-    - /usr/bin/ln -fs /bin/bash /bin/sh
+  - ln -fs /var/run /run
+  - ln -fs /bin/bash /bin/sh
 imageSpec:
   config:
     env:
