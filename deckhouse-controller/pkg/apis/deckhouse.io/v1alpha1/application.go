@@ -58,6 +58,8 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
+// +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)."
+// +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)."
 
 // Application represents a namespace-scoped application instance.
 type Application struct {
