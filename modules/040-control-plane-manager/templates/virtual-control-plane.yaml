@@ -30,7 +30,6 @@ stringData:
   service-subnet-cidr: {{ .Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
   default-kubernetes-version: {{ .Values.controlPlaneManager.internal.effectiveKubernetesVersion | quote }}
   components: |
-    - etcd
     - kube-apiserver
     - kube-controller-manager
     - kube-scheduler

@@ -603,7 +603,6 @@ func buildTargetControlPlaneNodeSpec(
 	configChecksums := make(map[string]string)
 	pkiChecksums := make(map[string]string)
 	for _, component := range []string{
-		"etcd",
 		"kube-apiserver",
 		"kube-controller-manager",
 		"kube-scheduler",
@@ -622,12 +621,6 @@ func buildTargetControlPlaneNodeSpec(
 	return controlplanev1alpha1.ControlPlaneNodeSpec{
 		CAChecksum: caChecksum,
 		Components: controlplanev1alpha1.ComponentsSpec{
-			Etcd: controlplanev1alpha1.ComponentSpec{
-				Checksums: controlplanev1alpha1.Checksums{
-					Config: configChecksums["etcd"],
-					PKI:    pkiChecksums["etcd"],
-				},
-			},
 			KubeAPIServer: controlplanev1alpha1.ComponentSpec{
 				Checksums: controlplanev1alpha1.Checksums{
 					Config: configChecksums["kube-apiserver"],
