@@ -620,7 +620,7 @@ jobs:
       - name: Copy attestations
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         env:
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
@@ -1030,7 +1030,7 @@ jobs:
       - name: Copy attestations
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         env:
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
@@ -1441,7 +1441,7 @@ jobs:
       - name: Copy attestations
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         env:
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
@@ -1852,7 +1852,7 @@ jobs:
       - name: Copy attestations
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         env:
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
@@ -2263,7 +2263,7 @@ jobs:
       - name: Copy attestations
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         env:
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
@@ -2674,7 +2674,7 @@ jobs:
       - name: Copy attestations
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         env:
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
