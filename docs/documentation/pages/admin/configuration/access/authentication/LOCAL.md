@@ -49,7 +49,7 @@ If the `htpasswd` command is not available, install the appropriate package:
 
 ## Local user operations
 
-Password reset, 2FA reset, and lock/unlock operations are performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
+Password reset, 2FA reset, and user lock/unlock operations are performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
 
 ### Administrative operations
 
@@ -111,10 +111,10 @@ Self-service password reset is available only for local accounts (the built-in `
 
 When a user resets their password:
 
-- the new password must comply with the [password policy](#configuring-password-policy);
-- the user's active sessions are terminated and re-authentication is required.
+- The new password must comply with the [password policy](#configuring-password-policy).
+- The user's active sessions are terminated and re-authentication is required.
 
-For user-facing password change and reset scenarios, see [Configuring authentication for applications](../../../user/access/authentication.html#changing-and-resetting-a-local-users-password).
+For user-facing password change and reset scenarios, see [Configuring authentication for applications](../../../../user/access/authentication.html#changing-and-resetting-a-local-users-password).
 
 ## Adding a user to a group
 

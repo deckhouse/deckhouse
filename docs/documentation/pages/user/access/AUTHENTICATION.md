@@ -32,15 +32,15 @@ Example of DKP authentication interface with username and password input:
 
 ## Changing and resetting a local user's password
 
-If [local authentication](../../admin/configuration/access/authentication/local.html) is configured in the cluster, a user can change or reset their password independently.
+If [local authentication](../../admin/configuration/access/authentication/local.html) is configured in the cluster, a user can change or reset their password on their own.
 
 ### Password change required by policy or administrator
 
 During login, DKP may redirect a local user to the password change form if:
 
-- the password does not meet the [complexity policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy);
-- the password has expired according to the [rotation policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy);
-- an administrator initiated a forced password change.
+- The password complexity does not meet the [configured policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy).
+- The password has expired according to the [configured policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy).
+- An administrator initiated a forced password change.
 
 The form requires the current password, a new password, and confirmation. The new password must comply with the cluster password policy.
 
