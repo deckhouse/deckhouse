@@ -3,7 +3,7 @@ Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package controller
+package containerdintegritycontroller
 
 import (
 	"bytes"
@@ -59,7 +59,7 @@ type ContainerdIntegrityPolicyControllerTestSuite struct {
 	ctx context.Context
 
 	client      client.Client
-	reconciler  *Reconciler
+	reconciler  *reconciler
 	policyNames []string
 
 	testDataFileName string
@@ -143,9 +143,9 @@ func (suite *ContainerdIntegrityPolicyControllerTestSuite) setupController(yamlD
 		WithStatusSubresource(&deckhousev1alpha1.ContainerdIntegrityPolicy{}).
 		Build()
 
-	suite.reconciler = &Reconciler{
-		Client: k8sClient,
-		Scheme: scheme,
+	suite.reconciler = &reconciler{
+		client: k8sClient,
+		scheme: scheme,
 	}
 	suite.client = k8sClient
 	suite.ctx = ctx

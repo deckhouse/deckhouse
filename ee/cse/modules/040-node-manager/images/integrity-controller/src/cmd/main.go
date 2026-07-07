@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
-	"integrity-controller/internal/controller"
+	containerdintegritycontroller "integrity-controller/internal/controllers/containerd_integrity_controller"
 )
 
 var (
@@ -81,10 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	if err = containerdintegritycontroller.BuildController(mgr); err != nil {
 		setupLog.Error("unable to create controller", log.Err(err), "controller", "ContainerdIntegrityPolicy")
 		os.Exit(1)
 	}
