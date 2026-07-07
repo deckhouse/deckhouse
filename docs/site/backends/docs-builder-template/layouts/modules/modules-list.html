@@ -125,8 +125,6 @@
   {{- warnf "No embedded modules found!" }}
 {{- end }}
 
-{{- warnf "modulesList - %s" ($modulesList | jsonify (dict "indent" "  ")) }}
-
       <div class="block__tile">
       {{- range (sort $modulesList "module" "asc") }}
         {{- $moduleStage := "" }}
@@ -195,7 +193,7 @@
 
         <a class="button-tile" data-editions="{{ $moduleEditionsString }}" href="{{ .url }}">
 
-        {{- warnf "%s; stage - %s." $moduleName $moduleStage }}
+        {{- warnf "%s; stage - %s; metadata len - %d" $moduleName $moduleStage (.metadata | len) }}
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
           {{- if eq $moduleStage "General Availability" }}
