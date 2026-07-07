@@ -62,7 +62,11 @@ spec:
         # startup/liveness exclude the etcd check for datastore (kine/Postgres)
         # This makes the pod NotReady (via /readyz) instead of triggering a pointless restart loop.
         startupProbe:
+<<<<<<< HEAD
           httpGet: {path: "/livez?exclude=etcd", port: 6443, scheme: HTTPS}
+=======
+          httpGet: {path: /livez?exclude=etcd, port: 6443, scheme: HTTPS}
+>>>>>>> 1566be5d85 (add probes for apiserver)
           periodSeconds: 10
           timeoutSeconds: 15
           failureThreshold: 24
