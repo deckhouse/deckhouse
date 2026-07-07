@@ -216,6 +216,165 @@ func TestBuildChecksumElement_OnlyInstanceClassAndRolloutMatter(t *testing.T) {
 	}
 }
 
+// MCM machine-class.checksum templates for the remaining providers (AWS covered
+// by TestRenderChecksum_AWSParity). CE providers sit under modules/ (8 levels up);
+// openstack/vsphere sit under ee/ (9 levels up).
+const (
+	yandexMCMChecksumPath    = "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum"
+	gcpMCMChecksumPath       = "../../../../../../../../030-cloud-provider-gcp/cloud-instance-manager/machine-class.checksum"
+	azureMCMChecksumPath     = "../../../../../../../../030-cloud-provider-azure/cloud-instance-manager/machine-class.checksum"
+	vsphereMCMChecksumPath   = "../../../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager/machine-class.checksum"
+	openstackMCMChecksumPath = "../../../../../../../../../ee/modules/030-cloud-provider-openstack/cloud-instance-manager/machine-class.checksum"
+)
+
+// TestRenderChecksum_MCMProviderParity proves RenderChecksum reproduces every
+// remaining MCM machine-class.checksum byte for byte against an independently
+// computed digest. This is the guard that makes the helm→controller MCM cutover
+// safe: the checksum/machine-class annotation is the only thing that rolls nodes,
+// so it must render identically whether produced by the hook or the controller.
+// Each case deliberately exercises the template's whitelist/default/quirk logic.
+func TestRenderChecksum_MCMProviderParity(t *testing.T) {
+	cases := []struct {
+		name        string
+		path        string
+		blob        map[string]interface{}
+		wantOptions map[string]interface{}
+	}{
+		{
+			name: "yandex: default diskSizeGB=50 excluded, coreFraction kept",
+			path: yandexMCMChecksumPath,
+			blob: map[string]interface{}{
+				"instanceClass": map[string]interface{}{
+					"platformID":   "standard-v3",
+					"cores":        float64(4),
+					"coreFraction": float64(100),
+					"memory":       float64(8589934592),
+					"diskType":     "network-ssd",
+					"diskSizeGB":   float64(50),
+					"imageID":      "img-abc",
+				},
+				"manualRolloutID": "r1",
+			},
+			wantOptions: map[string]interface{}{
+				"platformID":      "standard-v3",
+				"cores":           float64(4),
+				"coreFraction":    float64(100),
+				"memory":          float64(8589934592),
+				"diskType":        "network-ssd",
+				"imageID":         "img-abc",
+				"manualRolloutID": "r1",
+			},
+		},
+		{
+			name: "gcp: default diskSizeGb=50 excluded, diskType kept",
+			path: gcpMCMChecksumPath,
+			blob: map[string]interface{}{
+				"instanceClass": map[string]interface{}{
+					"machineType": "n1-standard-4",
+					"image":       "img-1",
+					"diskSizeGb":  float64(50),
+					"diskType":    "pd-ssd",
+					"preemptible": true,
+				},
+				"manualRolloutID": "r2",
+			},
+			wantOptions: map[string]interface{}{
+				"machineType":     "n1-standard-4",
+				"image":           "img-1",
+				"diskType":        "pd-ssd",
+				"preemptible":     true,
+				"manualRolloutID": "r2",
+			},
+		},
+		{
+			// The azure template has a real quirk: when diskSizeGb!=50 it stores
+			// the value of .diskSize (not .diskSizeGb) under the diskSizeGb key.
+			// Parity means the controller must reproduce that quirk exactly.
+			name: "azure: diskSizeGb key sourced from .diskSize, acceleratedNetworking=false kept",
+			path: azureMCMChecksumPath,
+			blob: map[string]interface{}{
+				"instanceClass": map[string]interface{}{
+					"machineSize":           "Standard_D4",
+					"urn":                   "urn-1",
+					"diskSizeGb":            float64(100),
+					"diskSize":              float64(99),
+					"diskType":              "Premium_LRS",
+					"acceleratedNetworking": false,
+				},
+				"manualRolloutID": "r3",
+			},
+			wantOptions: map[string]interface{}{
+				"machineSize":           "Standard_D4",
+				"urn":                   "urn-1",
+				"diskSizeGb":            float64(99),
+				"diskType":              "Premium_LRS",
+				"acceleratedNetworking": false,
+				"manualRolloutID":       "r3",
+			},
+		},
+		{
+			// vsphere: memory = add memory (mod memory 4); rootDiskSize is always
+			// present, set to nil when it equals the default (20) or is absent.
+			name: "vsphere: memory arithmetic, default rootDiskSize=20 becomes nil",
+			path: vsphereMCMChecksumPath,
+			blob: map[string]interface{}{
+				"instanceClass": map[string]interface{}{
+					"numCPUs":      float64(4),
+					"memory":       float64(8192),
+					"rootDiskSize": float64(20),
+					"template":     "tmpl-1",
+					"datastore":    "ds-1",
+					"mainNetwork":  "net-1",
+				},
+				"manualRolloutID": "r4",
+			},
+			wantOptions: map[string]interface{}{
+				"numCPUs":         float64(4),
+				"memory":          float64(8192),
+				"rootDiskSize":    nil,
+				"template":        "tmpl-1",
+				"datastore":       "ds-1",
+				"mainNetwork":     "net-1",
+				"manualRolloutID": "r4",
+			},
+		},
+		{
+			name: "openstack: truthy-gated optionals set",
+			path: openstackMCMChecksumPath,
+			blob: map[string]interface{}{
+				"instanceClass": map[string]interface{}{
+					"flavorName":   "m1.large",
+					"imageName":    "img-os",
+					"mainNetwork":  "net-os",
+					"rootDiskSize": float64(30),
+				},
+				"manualRolloutID": "r5",
+			},
+			wantOptions: map[string]interface{}{
+				"flavorName":      "m1.large",
+				"imageName":       "img-os",
+				"mainNetwork":     "net-os",
+				"rootDiskSize":    float64(30),
+				"manualRolloutID": "r5",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpl, err := os.ReadFile(tc.path)
+			require.NoError(t, err, "provider MCM checksum template must exist")
+
+			got, err := RenderChecksum(tmpl, tc.blob)
+			require.NoError(t, err)
+
+			want := expectedChecksum(t, tc.wantOptions)
+			assert.Len(t, got, 64, "sha256sum output is 64 hex chars")
+			assert.Equal(t, want, got)
+		})
+	}
+}
+
 // manualRolloutID feeds the checksum (that is the whole point of M19): changing it
 // must roll the checksum, so nodes re-bootstrap on a manual rollout bump.
 func TestRenderChecksum_ManualRolloutIDChangesChecksum(t *testing.T) {
