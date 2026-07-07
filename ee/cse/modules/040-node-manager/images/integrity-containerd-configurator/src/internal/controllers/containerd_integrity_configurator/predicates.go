@@ -21,11 +21,8 @@ func policyPredicate() predicate.Predicate {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldPolicy, okOld := e.ObjectOld.(*deckhousev1alpha1.ContainerdIntegrityPolicy)
-			newPolicy, okNew := e.ObjectNew.(*deckhousev1alpha1.ContainerdIntegrityPolicy)
-			if !okOld || !okNew {
-				return false
-			}
+			oldPolicy := e.ObjectOld.(*deckhousev1alpha1.ContainerdIntegrityPolicy)
+			newPolicy := e.ObjectNew.(*deckhousev1alpha1.ContainerdIntegrityPolicy)
 
 			if oldPolicy.Spec.CA != newPolicy.Spec.CA {
 				return true
