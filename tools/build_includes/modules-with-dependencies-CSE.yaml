@@ -159,24 +159,8 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/300-prometheus/hooks
-  to: /deckhouse/modules/300-prometheus/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler/hooks
   to: /deckhouse/modules/302-vertical-pod-autoscaler/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/340-monitoring-custom/hooks
-  to: /deckhouse/modules/340-monitoring-custom/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
@@ -207,24 +191,8 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/462-loki/hooks
-  to: /deckhouse/modules/462-loki/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/500-cilium-hubble/hooks
   to: /deckhouse/modules/500-cilium-hubble/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/500-upmeter/hooks
-  to: /deckhouse/modules/500-upmeter/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
@@ -307,21 +275,6 @@
         - '**/*'
 - add: /ee/modules/150-user-authn/hooks/custom_logo_test.go
   to: /deckhouse/modules/150-user-authn/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/common_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/common_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
   stageDependencies:
     install:
         - '**/*'

@@ -1178,38 +1178,6 @@ modules:
     namespace: d8-log-shipper
     subsystems:
     - observability
-  loki:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:loki:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - loki
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:loki:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - loki
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-monitoring
-    subsystems:
-    - infrastructure
   metallb:
     capabilities:
       manage:
@@ -2429,7 +2397,6 @@ subsystems:
     - istio
     - vertical-pod-autoscaler
     - descheduler
-    - loki
     - chrony
     namespaces:
     - d8-chrony

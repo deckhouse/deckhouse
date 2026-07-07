@@ -1,0 +1,56 @@
+diff --git a/main.go b/main.go
+index 272c192f5..a6d1a9e41 100644
+--- a/main.go
++++ b/main.go
+@@ -501,8 +501,6 @@ func setupReconcilers(ctx context.Context, mgr ctrl.Manager, watchNamespaces map
+ 	// Note: The kubebuilder RBAC markers above has to be kept in sync
+ 	// with the CRDs that should be migrated by this provider.
+ 	crdMigratorConfig := map[client.Object]crdmigrator.ByObjectConfig{
+-		&addonsv1.ClusterResourceSetBinding{}: {UseCache: true},
+-		&addonsv1.ClusterResourceSet{}:        {UseCache: true, UseStatusForStorageVersionMigration: true},
+ 		&clusterv1.Cluster{}:                  {UseCache: true, UseStatusForStorageVersionMigration: true},
+ 		&clusterv1.MachineDeployment{}:        {UseCache: true, UseStatusForStorageVersionMigration: true},
+ 		&clusterv1.MachineDrainRule{}:         {UseCache: true},
+@@ -745,22 +743,6 @@ func setupReconcilers(ctx context.Context, mgr ctrl.Manager, watchNamespaces map
+ 		}
+ 	}
+ 
+-	if err := (&controllers.ClusterResourceSetReconciler{
+-		Client:           mgr.GetClient(),
+-		ClusterCache:     clusterCache,
+-		WatchFilterValue: watchFilterValue,
+-	}).SetupWithManager(ctx, mgr, concurrency(clusterResourceSetConcurrency), partialSecretCache); err != nil {
+-		setupLog.Error(err, "Unable to create controller", "controller", "ClusterResourceSet")
+-		os.Exit(1)
+-	}
+-	if err := (&controllers.ClusterResourceSetBindingReconciler{
+-		Client:           mgr.GetClient(),
+-		WatchFilterValue: watchFilterValue,
+-	}).SetupWithManager(ctx, mgr, concurrency(clusterResourceSetConcurrency)); err != nil {
+-		setupLog.Error(err, "Unable to create controller", "controller", "ClusterResourceSetBinding")
+-		os.Exit(1)
+-	}
+-
+ 	if err := (&controllers.MachineHealthCheckReconciler{
+ 		Client:           mgr.GetClient(),
+ 		ClusterCache:     clusterCache,
+@@ -823,19 +805,6 @@ func setupWebhooks(ctx context.Context, mgr ctrl.Manager, clusterCacheReader web
+ 		os.Exit(1)
+ 	}
+ 
+-	// NOTE: ClusterResourceSet is behind ClusterResourceSet feature gate flag; the webhook
+-	// is going to prevent creating or updating new objects in case the feature flag is disabled
+-	if err := (&webhooks.ClusterResourceSet{}).SetupWebhookWithManager(mgr); err != nil {
+-		setupLog.Error(err, "Unable to create webhook", "webhook", "ClusterResourceSet")
+-		os.Exit(1)
+-	}
+-	// NOTE: ClusterResourceSetBinding is behind ClusterResourceSet feature gate flag; the webhook
+-	// is going to prevent creating or updating new objects in case the feature flag is disabled
+-	if err := (&webhooks.ClusterResourceSetBinding{}).SetupWebhookWithManager(mgr); err != nil {
+-		setupLog.Error(err, "Unable to create webhook", "webhook", "ClusterResourceSetBinding")
+-		os.Exit(1)
+-	}
+-
+ 	if err := (&webhooks.MachineHealthCheck{}).SetupWebhookWithManager(mgr); err != nil {
+ 		setupLog.Error(err, "Unable to create webhook", "webhook", "MachineHealthCheck")
+ 		os.Exit(1)

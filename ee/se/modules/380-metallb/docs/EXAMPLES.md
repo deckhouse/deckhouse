@@ -253,7 +253,7 @@ spec:
     app: dns
 ```
 
-### Creating a service and assigning IPAddressPools to it when using mettalb in BGP LoadBalancer mode
+### Creating a service and assigning IPAddressPools to it when using metallb in BGP LoadBalancer mode
 
 Creating a Service and assigning it IPAddressPools is possible in BGP LoadBalancer mode using the annotation `network.deckhouse.io/load-balancer-pool`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
 

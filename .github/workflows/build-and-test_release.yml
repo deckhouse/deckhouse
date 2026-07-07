@@ -448,13 +448,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -512,6 +519,49 @@ jobs:
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
+
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          if $sign_supported; then
+            # Prepare for image and binary signing
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+              echo "Received Actions token";
+            else
+              echo "Actions token empty";
+            fi
+            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+            if [ -n "${VAULT_TOKEN}" ]; then
+              echo "Received Vault token";
+            else
+              echo "Vault token empty";
+            fi
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -793,13 +843,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -857,6 +914,49 @@ jobs:
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
+
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          if $sign_supported; then
+            # Prepare for image and binary signing
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+              echo "Received Actions token";
+            else
+              echo "Actions token empty";
+            fi
+            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+            if [ -n "${VAULT_TOKEN}" ]; then
+              echo "Received Vault token";
+            else
+              echo "Vault token empty";
+            fi
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -1139,13 +1239,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1203,6 +1310,49 @@ jobs:
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
+
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          if $sign_supported; then
+            # Prepare for image and binary signing
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+              echo "Received Actions token";
+            else
+              echo "Actions token empty";
+            fi
+            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+            if [ -n "${VAULT_TOKEN}" ]; then
+              echo "Received Vault token";
+            else
+              echo "Vault token empty";
+            fi
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -1485,13 +1635,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1549,6 +1706,49 @@ jobs:
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
+
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          if $sign_supported; then
+            # Prepare for image and binary signing
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+              echo "Received Actions token";
+            else
+              echo "Actions token empty";
+            fi
+            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+            if [ -n "${VAULT_TOKEN}" ]; then
+              echo "Received Vault token";
+            else
+              echo "Vault token empty";
+            fi
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -1831,13 +2031,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1895,6 +2102,49 @@ jobs:
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
+
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          if $sign_supported; then
+            # Prepare for image and binary signing
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+              echo "Received Actions token";
+            else
+              echo "Actions token empty";
+            fi
+            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+            if [ -n "${VAULT_TOKEN}" ]; then
+              echo "Received Vault token";
+            else
+              echo "Vault token empty";
+            fi
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -2177,13 +2427,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2241,6 +2498,49 @@ jobs:
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
+
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          if $sign_supported; then
+            # Prepare for image and binary signing
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+              echo "Received Actions token";
+            else
+              echo "Actions token empty";
+            fi
+            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+            if [ -n "${VAULT_TOKEN}" ]; then
+              echo "Received Vault token";
+            else
+              echo "Vault token empty";
+            fi
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \

@@ -97,6 +97,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManager":       "imageHash-cloudProviderHuaweicloud-terraformManager",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
+		"capoControllerManager":     "imageHash-cloudProviderOpenstack-capoControllerManager",
 		"cinderCsiPlugin131":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin131",
 		"cinderCsiPlugin132":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin132",
 		"cinderCsiPlugin133":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin133",
@@ -218,14 +219,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiVsphereSyncer135":       "imageHash-common-csiVsphereSyncer135",
 		"csiVsphereSyncer136":       "imageHash-common-csiVsphereSyncer136",
 		"debugContainer":            "imageHash-common-debugContainer",
-		"distroless":                "imageHash-common-distroless",
 		"init":                      "imageHash-common-init",
-		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
-		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
 		"redisStatic":               "imageHash-common-redisStatic",
-		"shellOperator":             "imageHash-common-shellOperator",
 		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
 	},
 	"controlPlaneManager": map[string]interface{}{
@@ -305,9 +302,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"helper":               "imageHash-localPathProvisioner-helper",
 		"localPathProvisioner": "imageHash-localPathProvisioner-localPathProvisioner",
 	},
-	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
-	},
 	"metallb": map[string]interface{}{
 		"l2lbController":    "imageHash-metallb-l2lbController",
 		"l2lbSpeaker":       "imageHash-metallb-l2lbSpeaker",
@@ -370,22 +364,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"openvpn":             "imageHash-openvpn-openvpn",
 		"ovpnAdmin":           "imageHash-openvpn-ovpnAdmin",
 		"pmacct":              "imageHash-openvpn-pmacct",
-	},
-	"operatorPrometheus": map[string]interface{}{
-		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
-		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
-	},
-	"prometheus": map[string]interface{}{
-		"alertmanager":                "imageHash-prometheus-alertmanager",
-		"alertsReceiver":              "imageHash-prometheus-alertsReceiver",
-		"grafanaDashboardProvisioner": "imageHash-prometheus-grafanaDashboardProvisioner",
-		"grafanaV10":                  "imageHash-prometheus-grafanaV10",
-		"memcached":                   "imageHash-prometheus-memcached",
-		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
-		"mimir":                       "imageHash-prometheus-mimir",
-		"prometheus":                  "imageHash-prometheus-prometheus",
-		"promxy":                      "imageHash-prometheus-promxy",
-		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"registry": map[string]interface{}{
 		"dockerAuth":          "imageHash-registry-dockerAuth",
@@ -471,12 +449,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManagerVsphere":     "imageHash-terraformManager-terraformManagerVsphere",
 		"terraformManagerYandex":      "imageHash-terraformManager-terraformManagerYandex",
 		"terraformManagerZvirt":       "imageHash-terraformManager-terraformManagerZvirt",
-	},
-	"upmeter": map[string]interface{}{
-		"smokeMini": "imageHash-upmeter-smokeMini",
-		"status":    "imageHash-upmeter-status",
-		"upmeter":   "imageHash-upmeter-upmeter",
-		"webui":     "imageHash-upmeter-webui",
 	},
 	"userAuthn": map[string]interface{}{
 		"basicAuthProxy":      "imageHash-userAuthn-basicAuthProxy",

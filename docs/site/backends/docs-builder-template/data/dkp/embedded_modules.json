@@ -1884,45 +1884,6 @@
       }
     },
     {
-      "title": "The loki module",
-      "description": "Log storage in the Deckhouse Kubernetes Platform cluster based on Grafana Loki.",
-      "module": "loki",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "logging",
-        "observability",
-        "ssdlc"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "loki/",
-      "ru": {
-        "title": "Модуль loki",
-        "description": "Хранилище логов в кластере Deckhouse Kubernetes Platform на базе Grafana Loki."
-      },
-      "metadata": {
-        "name": "loki",
-        "stage": "Preview",
-        "subsystems": [
-          "infrastructure"
-        ],
-        "namespace": "d8-monitoring",
-        "descriptions": {
-          "en": "Deploys operational log storage based on Grafana Loki in the cluster. Provides centralized log collection and access via Grafana for short-term log retention.",
-          "ru": "Разворачивает хранилище логов на базе Grafana Loki в кластере. Обеспечивает централизованный сбор логов и доступ к ним через Grafana для краткосрочного хранения."
-        },
-        "oss": [
-          {
-            "name": "Loki",
-            "link": "https://github.com/grafana/loki",
-            "description": "Loki: like Prometheus, but for logs.",
-            "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
-            "license": "GNU Affero General Public License v3.0"
-          }
-        ]
-      }
-    },
-    {
       "title": "The metallb module",
       "description": "Load balancing for services in bare metal clusters.",
       "module": "metallb",
@@ -1965,44 +1926,35 @@
       }
     },
     {
-      "title": "Automatic configuration of the monitoring system to collect metrics from user applications",
-      "description": "Monitoring user applications in Deckhouse Kubernetes Platform.",
-      "type": [
-        "instruction"
-      ],
-      "search": "prometheus",
-      "module": "monitoring-custom",
+      "title": "The monitoring-deckhouse module",
+      "description": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+      "module": "monitoring-deckhouse",
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability",
-        "ssdlc"
+        "observability"
       ],
       "editionMinimumAvailable": "ce",
-      "url": "monitoring-custom/",
+      "url": "monitoring-deckhouse/",
       "ru": {
-        "title": "Автоматическая настройка системы мониторинга для сбора метрик с пользовательских приложений",
-        "description": "Мониторинг приложений пользователей в Deckhouse Kubernetes Platform.",
-        "type": [
-          "instruction"
-        ],
-        "search": "prometheus"
+        "title": "Модуль monitoring-deckhouse",
+        "description": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
       },
       "metadata": {
-        "name": "monitoring-custom",
+        "name": "monitoring-deckhouse",
         "stage": "General Availability",
         "subsystems": [
           "observability"
         ],
         "namespace": "d8-monitoring",
+        "descriptions": {
+          "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+          "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+        },
         "requirements": {
           "modules": {
             "prometheus": ">= 0.0.0"
           }
-        },
-        "descriptions": {
-          "en": "Simplifies monitoring setup for custom applications by requiring only a specific label on Service or Pod. Enables collection of application metrics without manual Prometheus configuration.",
-          "ru": "Упрощает настройку мониторинга пользовательских приложений, требуя только указания определённого лейбла на Service или Pod. Позволяет собирать метрики приложений без ручной настройки Prometheus."
         },
         "oss": []
       }
@@ -2683,52 +2635,6 @@
             "license": "Mozilla Public License 2.0"
           }
         ]
-      }
-    },
-    {
-      "title": "Cluster SLA Monitoring",
-      "description": "Collecting availability statistics for Deckhouse Kubernetes Platform cluster components.",
-      "webIfaces": [
-        {
-          "name": "status"
-        },
-        {
-          "name": "upmeter"
-        }
-      ],
-      "module": "upmeter",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability",
-        "ssdlc"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "upmeter/",
-      "ru": {
-        "title": "Мониторинг SLA кластера",
-        "description": "Сбор статистики по доступности компонентов кластера Deckhouse Kubernetes Platform.",
-        "webIfaces": [
-          {
-            "name": "status"
-          },
-          {
-            "name": "upmeter"
-          }
-        ]
-      },
-      "metadata": {
-        "name": "upmeter",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-upmeter",
-        "descriptions": {
-          "en": "Monitors platform availability and cluster component status in real time. Provides dashboards and metrics for SLA monitoring and component health tracking.",
-          "ru": "Мониторит доступность платформы и состояние компонентов кластера в реальном времени. Предоставляет дашборды и метрики для мониторинга SLA и отслеживания работоспособности компонентов."
-        },
-        "oss": []
       }
     },
     {

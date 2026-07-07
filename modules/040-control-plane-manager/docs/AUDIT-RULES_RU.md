@@ -285,6 +285,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-huaweicloud:caphc-controller-manager
   - system:serviceaccount:d8-cloud-provider-huaweicloud:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-huaweicloud:cloud-data-discoverer
+  - system:serviceaccount:d8-cloud-provider-openstack:capo-controller-manager
   - system:serviceaccount:d8-cloud-provider-openstack:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-openstack:cloud-data-discoverer
   - system:serviceaccount:d8-cloud-provider-vcd:capcd-controller-manager
@@ -325,19 +326,11 @@ users:
   - system:serviceaccount:d8-metallb:l2lb-controller
   - system:serviceaccount:d8-metallb:l2lb-speaker
   - system:serviceaccount:d8-metallb:speaker
-  - system:serviceaccount:d8-monitoring:aggregating-proxy
-  - system:serviceaccount:d8-monitoring:alertmanager-internal
-  - system:serviceaccount:d8-monitoring:alerts-receiver
-  - system:serviceaccount:d8-monitoring:grafana
   - system:serviceaccount:d8-monitoring:kube-state-metrics
-  - system:serviceaccount:d8-monitoring:loki
   - system:serviceaccount:d8-monitoring:node-exporter
   - system:serviceaccount:d8-monitoring:oom-kills-exporter
-  - system:serviceaccount:d8-monitoring:prometheus
-  - system:serviceaccount:d8-monitoring:trickster
   - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
   - system:serviceaccount:d8-openvpn:openvpn
-  - system:serviceaccount:d8-operator-prometheus:operator-prometheus
   - system:serviceaccount:d8-service-with-healthchecks:agent
   - system:serviceaccount:d8-service-with-healthchecks:controller
   - system:serviceaccount:d8-system:deckhouse
@@ -347,9 +340,6 @@ users:
   - system:serviceaccount:d8-system:terraform-auto-converger
   - system:serviceaccount:d8-system:terraform-state-exporter
   - system:serviceaccount:d8-system:webhook-handler
-  - system:serviceaccount:d8-upmeter:smoke-mini
-  - system:serviceaccount:d8-upmeter:upmeter
-  - system:serviceaccount:d8-upmeter:upmeter-agent
   - system:serviceaccount:d8-user-authn:basic-auth-proxy
   - system:serviceaccount:d8-user-authn:dex
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
@@ -432,10 +422,8 @@ namespaces:
   - d8-network-gateway
   - d8-okmeter
   - d8-openvpn
-  - d8-operator-prometheus
   - d8-service-with-healthchecks
   - d8-system
-  - d8-upmeter
   - d8-user-authn
   - d8-user-authz
   - kube-system
@@ -773,6 +761,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-huaweicloud:caphc-controller-manager
       - system:serviceaccount:d8-cloud-provider-huaweicloud:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-huaweicloud:cloud-data-discoverer
+      - system:serviceaccount:d8-cloud-provider-openstack:capo-controller-manager
       - system:serviceaccount:d8-cloud-provider-openstack:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-openstack:cloud-data-discoverer
       - system:serviceaccount:d8-cloud-provider-vcd:capcd-controller-manager
@@ -813,19 +802,11 @@ rules:
       - system:serviceaccount:d8-metallb:l2lb-controller
       - system:serviceaccount:d8-metallb:l2lb-speaker
       - system:serviceaccount:d8-metallb:speaker
-      - system:serviceaccount:d8-monitoring:aggregating-proxy
-      - system:serviceaccount:d8-monitoring:alertmanager-internal
-      - system:serviceaccount:d8-monitoring:alerts-receiver
-      - system:serviceaccount:d8-monitoring:grafana
       - system:serviceaccount:d8-monitoring:kube-state-metrics
-      - system:serviceaccount:d8-monitoring:loki
       - system:serviceaccount:d8-monitoring:node-exporter
       - system:serviceaccount:d8-monitoring:oom-kills-exporter
-      - system:serviceaccount:d8-monitoring:prometheus
-      - system:serviceaccount:d8-monitoring:trickster
       - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
       - system:serviceaccount:d8-openvpn:openvpn
-      - system:serviceaccount:d8-operator-prometheus:operator-prometheus
       - system:serviceaccount:d8-service-with-healthchecks:agent
       - system:serviceaccount:d8-service-with-healthchecks:controller
       - system:serviceaccount:d8-system:deckhouse
@@ -835,9 +816,6 @@ rules:
       - system:serviceaccount:d8-system:terraform-auto-converger
       - system:serviceaccount:d8-system:terraform-state-exporter
       - system:serviceaccount:d8-system:webhook-handler
-      - system:serviceaccount:d8-upmeter:smoke-mini
-      - system:serviceaccount:d8-upmeter:upmeter
-      - system:serviceaccount:d8-upmeter:upmeter-agent
       - system:serviceaccount:d8-user-authn:basic-auth-proxy
       - system:serviceaccount:d8-user-authn:dex
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
@@ -912,10 +890,8 @@ rules:
       - d8-network-gateway
       - d8-okmeter
       - d8-openvpn
-      - d8-operator-prometheus
       - d8-service-with-healthchecks
       - d8-system
-      - d8-upmeter
       - d8-user-authn
       - d8-user-authz
       - kube-system

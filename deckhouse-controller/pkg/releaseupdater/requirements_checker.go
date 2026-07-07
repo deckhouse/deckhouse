@@ -36,13 +36,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
 	deckhouseClusterConfigurationConfig = "d8-cluster-configuration"
-	systemNamespace                     = "kube-system"
 	k8sAutomaticVersion                 = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
 	MigratedModulesRequirementFieldName = "migratedModules"
@@ -230,7 +230,7 @@ type clusterConf struct {
 }
 
 func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Context) error {
-	key := client.ObjectKey{Namespace: systemNamespace, Name: deckhouseClusterConfigurationConfig}
+	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterConfigurationConfig}
 	secret := new(corev1.Secret)
 	if err := c.k8sclient.Get(ctx, key, secret); err != nil {
 		// the secret does not exist in managed cluster

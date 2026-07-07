@@ -1347,27 +1347,6 @@
         }
       ]
     },
-    "loki": {
-      "name": "loki",
-      "stage": "Preview",
-      "subsystems": [
-        "infrastructure"
-      ],
-      "namespace": "d8-monitoring",
-      "descriptions": {
-        "en": "Deploys operational log storage based on Grafana Loki in the cluster. Provides centralized log collection and access via Grafana for short-term log retention.",
-        "ru": "Разворачивает хранилище логов на базе Grafana Loki в кластере. Обеспечивает централизованный сбор логов и доступ к ним через Grafana для краткосрочного хранения."
-      },
-      "oss": [
-        {
-          "name": "Loki",
-          "link": "https://github.com/grafana/loki",
-          "description": "Loki: like Prometheus, but for logs.",
-          "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
-          "license": "GNU Affero General Public License v3.0"
-        }
-      ]
-    },
     "metallb": {
       "name": "metallb",
       "stage": "General Availability",
@@ -1409,21 +1388,21 @@
       },
       "oss": []
     },
-    "monitoring-custom": {
-      "name": "monitoring-custom",
+    "monitoring-deckhouse": {
+      "name": "monitoring-deckhouse",
       "stage": "General Availability",
       "subsystems": [
         "observability"
       ],
       "namespace": "d8-monitoring",
+      "descriptions": {
+        "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+        "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+      },
       "requirements": {
         "modules": {
           "prometheus": ">= 0.0.0"
         }
-      },
-      "descriptions": {
-        "en": "Simplifies monitoring setup for custom applications by requiring only a specific label on Service or Pod. Enables collection of application metrics without manual Prometheus configuration.",
-        "ru": "Упрощает настройку мониторинга пользовательских приложений, требуя только указания определённого лейбла на Service или Pod. Позволяет собирать метрики приложений без ручной настройки Prometheus."
       },
       "oss": []
     },
@@ -1810,19 +1789,6 @@
           "license": "Mozilla Public License 2.0"
         }
       ]
-    },
-    "upmeter": {
-      "name": "upmeter",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-upmeter",
-      "descriptions": {
-        "en": "Monitors platform availability and cluster component status in real time. Provides dashboards and metrics for SLA monitoring and component health tracking.",
-        "ru": "Мониторит доступность платформы и состояние компонентов кластера в реальном времени. Предоставляет дашборды и метрики для мониторинга SLA и отслеживания работоспособности компонентов."
-      },
-      "oss": []
     },
     "user-authn": {
       "name": "user-authn",
@@ -2338,16 +2304,6 @@
       "versions": [],
       "modules": [
         "local-path-provisioner"
-      ]
-    },
-    "Loki": {
-      "link": "https://github.com/grafana/loki",
-      "description": "Loki: like Prometheus, but for logs.",
-      "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
-      "license": "GNU Affero General Public License v3.0",
-      "versions": [],
-      "modules": [
-        "loki"
       ]
     },
     "Memcached": {

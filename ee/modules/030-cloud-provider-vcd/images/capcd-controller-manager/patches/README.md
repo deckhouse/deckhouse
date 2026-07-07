@@ -191,3 +191,25 @@ Changes:
 - Handle `primaryNetwork.IPAddress == ""` in DHCP mode as a transient condition.
 - Requeue with delay and informational log while waiting for DHCP lease.
 - Keep existing strict behavior for non-DHCP allocation modes.
+
+### 011-ignore-lb-delete-forbidden.patch
+
+Files:
+
+- controllers/vcdcluster_controller.go
+
+Changes:
+
+- During cluster deletion, treat LB delete errors as ignorable when VCD returns 403/404 or entity not found.
+- Prevents VCDCluster finalizer from blocking destroy on NO_RDE clusters where the service account lacks LB delete rights.
+
+### 012-delete-remaining-vapp-vms-on-cluster-delete.patch
+
+Files:
+
+- controllers/vcdcluster_controller.go
+
+Changes:
+
+- During cluster deletion, skip vApp removal when VMs remain in the vApp (e.g. terraform-managed master) instead of failing with "VMs detected in the vApp".
+- Release the VCDCluster finalizer and let dhctl terraform destroy clean up the remaining infrastructure without killing the control plane API mid-destroy.

@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"slices"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -154,7 +154,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			return fmt.Errorf("set the module version '%s': %w", module.Name, err)
 		}
 
-		currentNode := os.Getenv("DECKHOUSE_NODE_NAME")
+		currentNode := app.NodeName()
 		if len(currentNode) == 0 {
 			return errors.New("determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")
 		}

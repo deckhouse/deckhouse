@@ -28,8 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -57,8 +57,8 @@ type installer interface {
 func New(dc dependency.Container, logger *log.Logger) *Installer {
 	i := new(Installer)
 
-	i.downloaded = d8env.GetDownloadedModulesDir()
-	i.embedded = d8env.GetEmbeddedModulesDir()
+	i.downloaded = app.DownloadedModulesDir()
+	i.embedded = app.EmbeddedModulesDir
 	i.registry = registry.NewService(dc, logger)
 	i.installer = symlink.NewInstaller(i.registry, logger)
 
