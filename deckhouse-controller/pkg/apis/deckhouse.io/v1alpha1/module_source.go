@@ -109,6 +109,7 @@ type ModuleSourceSpecRegistry struct {
 	// Protocol to access the registry.
 	// +kubebuilder:default=HTTPS
 	// +kubebuilder:validation:Enum=HTTP;HTTPS
+	// +crd-enricher:deckhouse:documentation:examples=[HTTP, HTTPS]
 	Scheme string `json:"scheme,omitempty"`
 
 	// URL of the container registry.
@@ -133,6 +134,7 @@ type ModuleSourceStatus struct {
 	AvailableModules []AvailableModule `json:"modules,omitempty"`
 	// The current phase.
 	// +kubebuilder:validation:Enum=Active;Terminating
+	// +crd-enricher:deckhouse:documentation:examples=[Active, Terminating]
 	Phase   string `json:"phase,omitempty"`
 	Message string `json:"message,omitempty"`
 }
