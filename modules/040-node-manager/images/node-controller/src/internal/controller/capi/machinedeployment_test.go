@@ -187,3 +187,44 @@ func TestSerializeNodeGroupTaints(t *testing.T) {
 		}
 	})
 }
+
+func TestApplyMachineDeploymentSpecPatch(t *testing.T) {
+	spec := map[string]interface{}{
+		"clusterName": "openstack",
+		"template": map[string]interface{}{
+			"spec": map[string]interface{}{
+				"clusterName": "openstack",
+				"bootstrap": map[string]interface{}{
+					"dataSecretName": "worker-template",
+				},
+			},
+		},
+	}
+
+	rawPatch := `
+template:
+  spec:
+    failureDomain: ${zone}
+`
+
+	if err := applyMachineDeploymentSpecPatch(spec, rawPatch, map[string]string{"zone": "ru-3a"}); err != nil {
+		t.Fatalf("applyMachineDeploymentSpecPatch returned error: %v", err)
+	}
+
+	templateSpec := spec["template"].(map[string]interface{})["spec"].(map[string]interface{})
+	if got := templateSpec["failureDomain"]; got != "ru-3a" {
+		t.Fatalf("failureDomain=%v, want ru-3a", got)
+	}
+	if got := templateSpec["clusterName"]; got != "openstack" {
+		t.Fatalf("clusterName=%v, want openstack", got)
+	}
+}
+
+func TestApplyMachineDeploymentSpecPatchInvalidYAML(t *testing.T) {
+	spec := map[string]interface{}{}
+
+	err := applyMachineDeploymentSpecPatch(spec, "template: [", nil)
+	if err == nil {
+		t.Fatal("expected invalid patch error, got nil")
+	}
+}

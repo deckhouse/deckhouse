@@ -794,16 +794,20 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/security/
                 - title:
-                    en: Security events
-                    ru: События безопасности
+                    en: Audit and security events
+                    ru: Аудит и события безопасности
                   folders:
+                    - title:
+                        en: Security events
+                        ru: События безопасности
+                      url: /admin/configuration/security/events/security-events.html
                     - title:
                         en: Kubernetes API event audit
                         ru: Аудит событий API Kubernetes
                       url: /admin/configuration/security/events/kubernetes-api-audit.html
                     - title:
-                        en: Security event audit
-                        ru: Аудит событий безопасности
+                        en: Runtime audit
+                        ru: Рантайм-аудит
                       url: /admin/configuration/security/events/runtime-audit.html
                 - title:
                     en: Security policies
@@ -1315,6 +1319,18 @@ entries:
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
         - title:
+            en: Delivery subsystem
+            ru: Подсистема Delivery
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/delivery/
+            - title:
+                en: Operator-argo module
+                ru: Модуль operator-argo
+              url: /architecture/delivery/operator-argo.html
+        - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
           folders:
@@ -1475,9 +1491,13 @@ entries:
                 ru: Контроль целостности
               url: /architecture/security/integrity-control.html
             - title:
-                en: Security events audit
-                ru: Аудит событий безопасности
+                en: Runtime audit
+                ru: Рантайм-аудит
               url: /architecture/security/runtime-audit.html
+            - title:
+                en: Security events
+                ru: События безопасности
+              url: /architecture/security/security-events.html
             - title:
                 en: Admission-policy-engine module
                 ru: Модуль admission-policy-engine
@@ -1486,6 +1506,10 @@ entries:
                 en: Cert-manager module
                 ru: Модуль cert-manager
               url: /architecture/security/cert-manager.html
+            - title:
+                en: Runtime-audit-engine module
+                ru: Модуль runtime-audit-engine
+              url: /architecture/security/runtime-audit-engine.html
         - title:
             en: Network subsystem
             ru: Подсистема Network

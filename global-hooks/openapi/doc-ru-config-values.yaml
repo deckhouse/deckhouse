@@ -116,3 +116,57 @@ properties:
             * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
             * Этот параметр имеет смысл использовать только в исключительных ситуациях.
             * Этот параметр применяется в процессе включения модуля.
+  applications:
+    description: |
+      Общие параметры приложений экосистемы Deckhouse.
+    properties:
+      ingressClass:
+        description: |
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого приложениями экосистемы Deckhouse.
+
+          Если имя IngressClass задано как `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером, используемым по умолчанию для всех приложений. При использовании любого другого имени Ingress-контроллера, он не будет использоваться по умолчанию.
+      publicDomainTemplate:
+        description: |
+          Шаблон DNS-имён с тремя ключами `%s` в качестве динамических частей строки.
+          
+          При формировании DNS-имени:
+          
+          - первый ключ заменяется на имя компонента;
+          - второй — на имя экземпляра приложения;
+          - третий — на имя неймспейса приложения.
+
+          Приложения экосистемы Deckhouse используют этот шаблон при создании Ingress-ресурсов.
+
+          Например, для шаблона `%s.%s.%s.kube.company.my` компонент `web` экземпляра приложения `grafana`, работающего в неймспейсе `monitoring`, получит Ingress-ресурс на адрес `web.grafana.monitoring.kube.company.my`.
+
+          **Особенности использования:**
+
+          - Если параметр не указан, Ingress-ресурсы создаваться не будут.
+          - Домен, указанный в шаблоне, не может совпадать или быть поддоменом домена, заданного в параметре [`clusterDomain`](cr.html#clusterconfiguration-clusterdomain). Не рекомендуется изменять значение `clusterDomain` без необходимости.
+          - Перед использованием шаблона настройте службы DNS как в сетях, где будут располагаться узлы кластера, так и в сетях, из которых клиенты будут обращаться к служебным веб-интерфейсам.
+          - Если домен шаблона совпадает с доменом сети узлов, используйте только А-записи для назначения служебным веб-интерфейсам платформы адресов frontend-узлов. Например, если для узлов заведена зона `company.my`, шаблон должен иметь вид `%s.%s.%s.company.my`.
+      https:
+        description: |
+          Способ реализации протокола HTTPS, используемый приложениями экосистемы Deckhouse.
+        properties:
+          mode:
+            description: |
+              Режим работы HTTPS:
+              * `CertManager` — приложения экосистемы Deckhouse будут работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, указанного в параметре `certManager.clusterIssuerName`;
+              * `CustomCertificate` — приложения экосистемы Deckhouse будут работать по HTTPS, используя сертификат из неймспейса `d8-system`;
+              * `Disabled` — приложения экосистемы Deckhouse будут работать только по HTTP;
+              * `OnlyInURI` — приложения экосистемы Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          certManager:
+            properties:
+              clusterIssuerName:
+                description: |
+                  Имя `ClusterIssuer`, используемого приложениями экосистемы Deckhouse.
+
+                  В модуле [cert-manager](https://deckhouse.ru/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+          customCertificate:
+            properties:
+              secretName:
+                description: |
+                  Имя Secret'а в неймспейсе `d8-system`, который будет использоваться приложениями экосистемы Deckhouse.
+
+                  Указанный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).

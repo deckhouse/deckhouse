@@ -98,7 +98,6 @@
 500-openvpn/                                                     @AndreyPavlovFlant @apolovov
 500-cilium-hubble/                                               @AndreyPavlovFlant @apolovov
 500-dashboard/                                                   @shvgn
-500-upmeter/                                                     @vladimirGuryanov @lazovskiy @maksimmadzhuga
 500-okmeter/                                                     @vladimirGuryanov @lazovskiy @maksimmadzhuga
 600-secret-copier/                                               @nabokihms @AlwxSin
 600-namespace-configurator/                                      @nabokihms @AlwxSin

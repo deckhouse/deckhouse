@@ -27,6 +27,7 @@ rewrite ^/(.+)/modules/500-dashboard/usage.html$ /$1/modules/dashboard/examples.
 rewrite ^/(.+)/modules/500-okmeter/usage.html$ /$1/modules/okmeter/examples.html redirect;
 rewrite ^/(.+)/modules/500-openvpn/usage.html$ /$1/modules/openvpn/examples.html redirect;
 rewrite ^/(.+)/modules/500-upmeter/usage.html$ /$1/modules/upmeter/examples.html redirect;
+rewrite ^/(.+)/modules/upmeter/usage.html$ /$1/modules/upmeter/examples.html redirect;
 rewrite ^/(.+)/modules/600-namespace-configurator/usage.html$ /$1/modules/namespace-configurator/examples.html redirect;
 rewrite ^/(.+)/modules/810-deckhouse-web/(.*)$ /$1/modules/documentation/$2 redirect;
 {{- end }}

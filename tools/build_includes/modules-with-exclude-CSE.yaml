@@ -436,25 +436,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/500-upmeter
-  to: /deckhouse/modules/500-upmeter
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
   excludePaths:
@@ -1150,16 +1131,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
-  to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/cse/modules/015-admission-policy-engine/openapi/config-values.yaml
   to: /deckhouse/modules/015-admission-policy-engine/openapi/config-values.yaml
   stageDependencies:
@@ -1270,23 +1241,4 @@
   to: /deckhouse/modules/150-user-authn/openapi/values.yaml
   stageDependencies:
     install:
-        - '**/*'
-- add: /ee/cse/modules/500-upmeter/templates/webui
-  to: /deckhouse/modules/500-upmeter/templates/webui
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
         - '**/*'

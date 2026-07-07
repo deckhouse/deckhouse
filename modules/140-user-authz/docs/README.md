@@ -434,10 +434,8 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
-    - deckhouse.io/downtimes
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
-    - deckhouse.io/upmeterremotewrites
     - multitenancy.deckhouse.io/clusterresourcegrantpolicies
 write:
     - apiextensions.k8s.io/customresourcedefinitions
