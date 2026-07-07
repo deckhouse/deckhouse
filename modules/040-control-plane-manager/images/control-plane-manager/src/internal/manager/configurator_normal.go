@@ -185,3 +185,6 @@ func metricsAuthFilterProvider(cfg *rest.Config, hc *http.Client) (metricsserver
 		return mw.Handler(h), nil
 	}, nil
 }
+
+func (c *normalConfigurator) configureClient(cfg *rest.Config) {
+}

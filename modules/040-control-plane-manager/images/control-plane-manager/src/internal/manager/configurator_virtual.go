@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/rest"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -96,4 +97,9 @@ func (c *virtualConfigurator) configureRuntimeManager(runtimeManager runtimemana
 	}
 
 	return nil
+}
+
+func (c *virtualConfigurator) configureClient(cfg *rest.Config) {
+	cfg.QPS = 10
+	cfg.Burst = 20
 }
