@@ -43,6 +43,8 @@ type reconciler struct {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log.FromContext(ctx).Info("Reconcile started")
+
 	operation, err := r.getOperation(ctx, req.NamespacedName)
 	if apierrors.IsNotFound(err) {
 		return reconcile.Result{}, nil

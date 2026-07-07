@@ -30,26 +30,28 @@ const (
 
 // Normal control plane manager constants
 const (
-	ControlPlaneManagerName = "control-plane-manager"
-	CpcControllerName       = "control-plane-configuration-controller"
-	CpnControllerName       = "control-plane-node-controller"
-	CpoControllerName       = "control-plane-operation-controller"
+	ControlPlaneManagerName          = "control-plane-manager"
+	CpcControllerName                = "control-plane-configuration-controller"
+	CpnControllerName                = "control-plane-node-controller"
+	CpoControllerName                = "control-plane-operation-controller"
+	OperationsApproverControllerName = "operations_approver_controller"
 )
 
 // Virtual control plane manager constants
 const (
-	VirtualControlPlaneManagerName         = "virtual-control-plane-manager"
-	VirtualConfigurationController         = "virtual-control-plane-configuration-controller"
-	VirtualControlPlaneNodeController      = "virtual-control-plane-node-controller"
-	VirtualControlPlaneNamespacePrefix     = "vcp-"
-	VirtualControlPlaneConfigSecretName    = "d8-virtual-control-plane-config"
-	VirtualRenderedConfigSecretName        = "d8-vcp-config-virtual"
-	VirtualPKISecretName                   = "d8-pki-virtual"
-	VirtualKubeconfigSecretName            = "d8-kubeconfig-virtual"
-	VirtualAdminKubeconfigSecretName       = "d8-admin-kubeconfig-virtual"
-	VirtualControlPlaneNodeOrdinalLabelKey = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
-	DefaultTenantClusterDomain             = "cluster.virtual"
-	DefaultTenantServiceSubnetCIDR         = "10.96.0.0/12"
+	VirtualControlPlaneManagerName            = "virtual-control-plane-manager"
+	VirtualConfigurationController            = "virtual-control-plane-configuration-controller"
+	VirtualControlPlaneNodeController         = "virtual-control-plane-node-controller"
+	VirtualControlPlaneApproverControllerName = "virtual_control_plane_approver_controller"
+	VirtualControlPlaneNamespacePrefix        = "vcp-"
+	VirtualControlPlaneConfigSecretName       = "d8-virtual-control-plane-config"
+	VirtualRenderedConfigSecretName           = "d8-vcp-config-virtual"
+	VirtualPKISecretName                      = "d8-pki-virtual"
+	VirtualKubeconfigSecretName               = "d8-kubeconfig-virtual"
+	VirtualAdminKubeconfigSecretName          = "d8-admin-kubeconfig-virtual"
+	VirtualControlPlaneNodeOrdinalLabelKey    = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
+	DefaultTenantClusterDomain                = "cluster.virtual"
+	DefaultTenantServiceSubnetCIDR            = "10.96.0.0/12"
 )
 
 const (

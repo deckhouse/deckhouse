@@ -41,7 +41,6 @@ func NewOperation(node NodeRef, c controlplanev1alpha1.OperationComponent, steps
 	op.Spec.DesiredConfigChecksum = intended.Config
 	op.Spec.DesiredPKIChecksum = intended.PKI
 	op.Spec.DesiredCAChecksum = intended.CA
-	op.Spec.Approved = true // TODO(virtual): remove after implementing approval mechanism
 	op.GenerateName = generateName(op)
 	return op
 }
