@@ -15,6 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
@@ -53,6 +54,7 @@ func (r *reconciler) reconcileProtectedNamespaces(
 	}
 
 	if isProtectedNamespacesInSync(policy, matchedNamespaces) {
+		log.FromContext(ctx).Info("protected namespaces status is in sync")
 		return reconcile.Result{}, nil
 	}
 
@@ -62,6 +64,12 @@ func (r *reconciler) reconcileProtectedNamespaces(
 	if err := r.patchContainerdIntegrityPolicyStatus(ctx, base, policy); err != nil {
 		return reconcile.Result{}, fmt.Errorf("patch ContainerdIntegrityPolicy status: %w", err)
 	}
+
+	log.FromContext(ctx).Info(
+		"patched protected namespaces status",
+		"count", len(matchedNamespaces),
+		"namespaces", matchedNamespaces,
+	)
 
 	return reconcile.Result{}, nil
 }
