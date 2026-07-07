@@ -108,6 +108,16 @@ def is_ip_in_cidr(ip_str, cidr_str):
     return ip in net
 
 
+def first_system_ip(system_ips, version):
+    for ip, _ in system_ips:
+        try:
+            if ipaddress.ip_address(ip).version == version:
+                return ip
+        except ValueError:
+            continue
+    return None
+
+
 def discover_ip(internal_network_cidrs_str):
     system_ips = get_system_ips_and_prefixes()
     matched_v4 = None
@@ -125,7 +135,17 @@ def discover_ip(internal_network_cidrs_str):
             elif version == 6 and prefix == '128' and matched_v6 is None:
                 matched_v6 = ip
     else:
+        requested_v4 = False
+        requested_v6 = False
         for cidr in internal_network_cidrs_str.split():
+            try:
+                cidr_version = ipaddress.ip_network(cidr, strict=False).version
+            except ValueError:
+                continue
+            if cidr_version == 4:
+                requested_v4 = True
+            else:
+                requested_v6 = True
             for ip, _ in system_ips:
                 if not is_ip_in_cidr(ip, cidr):
                     continue
@@ -137,6 +157,15 @@ def discover_ip(internal_network_cidrs_str):
                     matched_v4 = ip
                 elif version == 6 and matched_v6 is None:
                     matched_v6 = ip
+
+        # A family may be requested via internalNetworkCIDRs but no node address
+        # matches the configured subnet, e.g. when a public IPv6 prefix is
+        # rotated by SLAAC/DHCPv6-PD. Fall back to any global-scope address of
+        # that family so the node IP follows the current prefix automatically.
+        if requested_v4 and matched_v4 is None:
+            matched_v4 = first_system_ip(system_ips, 4)
+        if requested_v6 and matched_v6 is None:
+            matched_v6 = first_system_ip(system_ips, 6)
 
     final_ips = [ip for ip in (matched_v4, matched_v6) if ip]
     return ",".join(final_ips)
