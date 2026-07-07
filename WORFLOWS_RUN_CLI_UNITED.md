@@ -5,32 +5,27 @@
 Критерии отбора:
 - Из основной таблицы: значение в колонке «Docker-образ / статус» **не** равно `часть busybox`.
 - Из дополнительных таблиц: значение в колонке «Наличие в busybox» равно `Нет`.
+- Утилиты, оканчивающиеся на `*.sh`, исключены (это скрипты, уже разложенные на атомарные инструменты).
+- `docker` исключён (не используется на ephemeral runners).
+- `gh` исключён (не используется в Fox).
 - Дубликаты между разделами удалены.
 
 ## Итоговый список (уникальные инструменты)
 
 1. `bash`
-2. `check-release-images.sh`
-3. `crane`
-4. `curl`
-5. `dhctl`
-6. `docker`
-7. `gh`
-8. `git`
-9. `jq`
-10. `make`
-11. `npm`
-12. `pip`
-13. `python`
-14. `python3`
-15. `regctl`
-16. `render-workflows.sh`
-17. `rsync`
-18. `ssh-keygen`
-19. `validate_dictionary_sync.sh`
-20. `validate_wordlist.sh`
-21. `validation_bashible.sh`
-22. `validation_run.sh`
-23. `werf`
+2. `crane`
+3. `curl`
+4. `dhctl`
+5. `git`
+6. `jq`
+7. `make`
+8. `npm`
+9. `pip`
+10. `python`
+11. `python3`
+12. `regctl`
+13. `rsync`
+14. `ssh-keygen`
+15. `werf`
 
-Всего: **23** инструмента.
+Всего: **15** инструментов.
