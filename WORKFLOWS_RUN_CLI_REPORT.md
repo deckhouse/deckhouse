@@ -1,0 +1,3544 @@
+# CLI utilities used in `.github/workflows` `run` blocks
+
+Scope: all workflow files in `.github/workflows` with `.yml`/`.yaml` extensions.
+
+Exclusions: shell builtins and shell syntax constructs.
+
+Total unique CLI utilities: **45**
+
+## `awk`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/antivirus-scan.yml`; job: `get-tags`; step: `Get latest tags for scheduled run`
+- file: `.github/workflows/antivirus-scan.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `list_changed_modules`; step: `List changed modules from latest released version`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/security-scan-images.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/security-scan-images.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+
+## `base64`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_main.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Build and push deckhouse images`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+
+## `bash`
+
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `list_changed_modules`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Send fail report`
+- file: `.github/workflows/build-and-test_release.yml`; job: `list_changed_modules`; step: `Send fail report`
+- file: `.github/workflows/create_release.yml`; job: `create-release`; step: `Send fail report`
+- file: `.github/workflows/cve-weekly.yml`; job: `test_cve_report_main`; step: `Send fail report`
+- file: `.github/workflows/deploy-alpha.yml`; job: `deploy_channels_cm_prod`; step: `Send fail report`
+- file: `.github/workflows/deploy-alpha.yml`; job: `deploy_channels_cm_stage`; step: `Send fail report`
+- file: `.github/workflows/deploy-alpha.yml`; job: `post_deploy_preparation`; step: `Send fail report`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Send failure report`
+- file: `.github/workflows/deploy-alpha.yml`; job: `update_latest_release`; step: `Send fail report`
+- file: `.github/workflows/deploy-beta.yml`; job: `deploy_channels_cm_prod`; step: `Send fail report`
+- file: `.github/workflows/deploy-beta.yml`; job: `deploy_channels_cm_stage`; step: `Send fail report`
+- file: `.github/workflows/deploy-beta.yml`; job: `post_deploy_preparation`; step: `Send fail report`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Send failure report`
+- file: `.github/workflows/deploy-beta.yml`; job: `update_latest_release`; step: `Send fail report`
+- file: `.github/workflows/deploy-early-access.yml`; job: `deploy_channels_cm_prod`; step: `Send fail report`
+- file: `.github/workflows/deploy-early-access.yml`; job: `deploy_channels_cm_stage`; step: `Send fail report`
+- file: `.github/workflows/deploy-early-access.yml`; job: `post_deploy_preparation`; step: `Send fail report`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Send failure report`
+- file: `.github/workflows/deploy-early-access.yml`; job: `update_latest_release`; step: `Send fail report`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `deploy_channels_cm_prod`; step: `Send fail report`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `deploy_channels_cm_stage`; step: `Send fail report`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `post_deploy_preparation`; step: `Send fail report`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Send failure report`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `update_latest_release`; step: `Send fail report`
+- file: `.github/workflows/deploy-stable.yml`; job: `deploy_channels_cm_prod`; step: `Send fail report`
+- file: `.github/workflows/deploy-stable.yml`; job: `deploy_channels_cm_stage`; step: `Send fail report`
+- file: `.github/workflows/deploy-stable.yml`; job: `post_deploy_preparation`; step: `Send fail report`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Send failure report`
+- file: `.github/workflows/deploy-stable.yml`; job: `update_latest_release`; step: `Send fail report`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-autoclean.yml`; job: `e2e-autoclean`; step: `Send fail report`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_31`; step: `Run e2e test: AWS/Containerd/1.31`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_32`; step: `Run e2e test: AWS/Containerd/1.32`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_33`; step: `Run e2e test: AWS/Containerd/1.33`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_34`; step: `Run e2e test: AWS/Containerd/1.34`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_35`; step: `Run e2e test: AWS/Containerd/1.35`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_36`; step: `Run e2e test: AWS/Containerd/1.36`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: AWS/Containerd/Automatic`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: AWS/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: AWS/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: AWS/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: AWS/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: AWS/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: AWS/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: AWS/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_31`; step: `Run e2e test: Azure/Containerd/1.31`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_32`; step: `Run e2e test: Azure/Containerd/1.32`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_33`; step: `Run e2e test: Azure/Containerd/1.33`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_34`; step: `Run e2e test: Azure/Containerd/1.34`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_35`; step: `Run e2e test: Azure/Containerd/1.35`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_36`; step: `Run e2e test: Azure/Containerd/1.36`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: Azure/Containerd/Automatic`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: Azure/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: Azure/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: Azure/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: Azure/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: Azure/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: Azure/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: Azure/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_31`; step: `Run e2e test: DVP/Containerd/1.31`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_32`; step: `Run e2e test: DVP/Containerd/1.32`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_33`; step: `Run e2e test: DVP/Containerd/1.33`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_34`; step: `Run e2e test: DVP/Containerd/1.34`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_35`; step: `Run e2e test: DVP/Containerd/1.35`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_36`; step: `Run e2e test: DVP/Containerd/1.36`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: DVP/Containerd/Automatic`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: DVP/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: DVP/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: DVP/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: DVP/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: DVP/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: DVP/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: DVP/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_31`; step: `Run e2e test: GCP/Containerd/1.31`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_32`; step: `Run e2e test: GCP/Containerd/1.32`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_33`; step: `Run e2e test: GCP/Containerd/1.33`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_34`; step: `Run e2e test: GCP/Containerd/1.34`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_35`; step: `Run e2e test: GCP/Containerd/1.35`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_36`; step: `Run e2e test: GCP/Containerd/1.36`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: GCP/Containerd/Automatic`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: GCP/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: GCP/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: GCP/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: GCP/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: GCP/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: GCP/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: GCP/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_31`; step: `Run e2e test: OpenStack/Containerd/1.31`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_32`; step: `Run e2e test: OpenStack/Containerd/1.32`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_33`; step: `Run e2e test: OpenStack/Containerd/1.33`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_34`; step: `Run e2e test: OpenStack/Containerd/1.34`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_35`; step: `Run e2e test: OpenStack/Containerd/1.35`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_36`; step: `Run e2e test: OpenStack/Containerd/1.36`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: OpenStack/Containerd/Automatic`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: OpenStack/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: OpenStack/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: OpenStack/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: OpenStack/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: OpenStack/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: OpenStack/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: OpenStack/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_31`; step: `Run e2e test: Static/Containerd/1.31`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_32`; step: `Run e2e test: Static/Containerd/1.32`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_33`; step: `Run e2e test: Static/Containerd/1.33`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_34`; step: `Run e2e test: Static/Containerd/1.34`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_35`; step: `Run e2e test: Static/Containerd/1.35`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_36`; step: `Run e2e test: Static/Containerd/1.36`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: Static/Containerd/Automatic`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: Static/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: Static/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: Static/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: Static/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: Static/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: Static/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: Static/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_31`; step: `Run e2e test: VCD/Containerd/1.31`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_32`; step: `Run e2e test: VCD/Containerd/1.32`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_33`; step: `Run e2e test: VCD/Containerd/1.33`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_34`; step: `Run e2e test: VCD/Containerd/1.34`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_35`; step: `Run e2e test: VCD/Containerd/1.35`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_36`; step: `Run e2e test: VCD/Containerd/1.36`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: VCD/Containerd/Automatic`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: VCD/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: VCD/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: VCD/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: VCD/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: VCD/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: VCD/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: VCD/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_31`; step: `Run e2e test: vSphere/Containerd/1.31`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_32`; step: `Run e2e test: vSphere/Containerd/1.32`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_33`; step: `Run e2e test: vSphere/Containerd/1.33`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_34`; step: `Run e2e test: vSphere/Containerd/1.34`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_35`; step: `Run e2e test: vSphere/Containerd/1.35`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_36`; step: `Run e2e test: vSphere/Containerd/1.36`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: vSphere/Containerd/Automatic`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: vSphere/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: vSphere/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: vSphere/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: vSphere/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: vSphere/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: vSphere/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: vSphere/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Run e2e test: Yandex.Cloud/Containerd/1.31`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Run e2e test: Yandex.Cloud/Containerd/1.32`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Run e2e test: Yandex.Cloud/Containerd/1.33`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Run e2e test: Yandex.Cloud/Containerd/1.34`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Run e2e test: Yandex.Cloud/Containerd/1.35`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Run e2e test: Yandex.Cloud/Containerd/1.36`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: Yandex.Cloud/Containerd/Automatic`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: Yandex.Cloud/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: Yandex.Cloud/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: Yandex.Cloud/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: Yandex.Cloud/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: Yandex.Cloud/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: Yandex.Cloud/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: Yandex.Cloud/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_31`; step: `Run e2e test: zVirt/Containerd/1.31`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_32`; step: `Run e2e test: zVirt/Containerd/1.32`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_33`; step: `Run e2e test: zVirt/Containerd/1.33`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_34`; step: `Run e2e test: zVirt/Containerd/1.34`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_35`; step: `Run e2e test: zVirt/Containerd/1.35`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_36`; step: `Run e2e test: zVirt/Containerd/1.36`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: zVirt/Containerd/Automatic`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: zVirt/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: zVirt/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: zVirt/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: zVirt/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: zVirt/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: zVirt/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: zVirt/ContainerdV2/Automatic`
+- file: `.github/workflows/gitleaks.yml`; job: `gitleaks_full_scan`; step: `Send fail report`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Send failure report`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Send success report`
+- file: `.github/workflows/on-push-release-tag.yml`; job: `start_release_build_workflow`; step: `Send fail report`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Send fail report`
+- file: `.github/workflows/reproducibility-timing-report.yml`; job: `timing_report`; step: `Send report to Loop`
+- file: `.github/workflows/security-scan-images.yml`; job: `security_scan_images`; step: `Send fail report`
+- file: `.github/workflows/security-scan-src.yml`; job: `gitleaks_scan`; step: `Send fail report`
+- file: `.github/workflows/stage_registry_clean.yml`; job: `clean`; step: `RM Crane image`
+- file: `.github/workflows/stage_registry_clean.yml`; job: `clean`; step: `RM Deckhouse image`
+- file: `.github/workflows/stale.yml`; job: `stale`; step: `Send fail report`
+- file: `.github/workflows/svace.yml`; job: `analyze_deckhouse`; step: `Send fail report`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Send fail report`
+
+## `cat`
+
+- file: `.github/workflows/compare-cve-between-release.yml`; job: `compare-cve`; step: `Add report to workflow summary`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+
+## `check-release-images.sh`
+
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Check DKP images manifests in public registry (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Check DKP images manifests in public registry (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Check DKP images manifests in public registry (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Check DKP images manifests in public registry (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Check DKP images manifests in public registry (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Check DKP images manifests in public registry (SE-plus)`
+
+## `chmod`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_pdf_build`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/docs-pdf-daily.yml`; job: `doc_pdf_build`; step: `Install werf-dk CLI`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Run e2e test: EKS/Containerd/1.31`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Run e2e test: EKS/Containerd/1.32`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Run e2e test: EKS/Containerd/1.33`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Run e2e test: EKS/Containerd/1.34`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Run e2e test: EKS/Containerd/1.35`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Run e2e test: EKS/Containerd/1.36`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: EKS/Containerd/Automatic`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: EKS/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: EKS/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: EKS/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: EKS/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: EKS/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: EKS/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: EKS/ContainerdV2/Automatic`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Install werf-dk CLI`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Install werf-dk CLI`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Install werf-dk CLI`
+- file: `.github/workflows/stage_registry_clean.yml`; job: `clean`; step: `Install werf-dk CLI`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+
+## `chown`
+
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+
+## `crane`
+
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+
+## `curl`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `notify-failure`; step: `Send notification`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_pdf_build`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/docs-pdf-daily.yml`; job: `doc_pdf_build`; step: `Install werf-dk CLI`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Install werf-dk CLI`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Install werf-dk CLI`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Install werf-dk CLI`
+- file: `.github/workflows/security-scan-images.yml`; job: `notify-failure`; step: `Send notification`
+- file: `.github/workflows/stage_registry_clean.yml`; job: `clean`; step: `Install werf-dk CLI`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+
+## `cut`
+
+- file: `.github/workflows/build-and-test_release.yml`; job: `check_branch_name`; step: `Check branch name`
+
+## `docker`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/antivirus-scan.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `tests_node_controller`; step: `Run node-controller tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Check links with html-proofer`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Prepare site structure`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_pdf_build`; step: `Upload PDF files to S3`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/docs-pdf-daily.yml`; job: `doc_pdf_build`; step: `Upload PDF files to S3`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Run e2e test: EKS/Containerd/1.31`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Run e2e test: EKS/Containerd/1.32`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Run e2e test: EKS/Containerd/1.33`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Run e2e test: EKS/Containerd/1.34`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Run e2e test: EKS/Containerd/1.35`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Run e2e test: EKS/Containerd/1.36`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: EKS/Containerd/Automatic`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: EKS/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: EKS/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: EKS/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: EKS/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: EKS/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: EKS/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: EKS/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/security-scan-images.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/security-scan-images.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+
+## `egrep`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Build and push deckhouse images`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+
+## `gh`
+
+- file: `.github/workflows/security-scan-images.yml`; job: `set_security_antivirus_requirement_status`; step: `Auth with GitHub CLI`
+- file: `.github/workflows/security-scan-images.yml`; job: `set_security_antivirus_requirement_status`; step: `Set PR Label`
+- file: `.github/workflows/security-scan-images.yml`; job: `set_security_rootless_requirement_status`; step: `Auth with GitHub CLI`
+- file: `.github/workflows/security-scan-images.yml`; job: `set_security_rootless_requirement_status`; step: `Set PR Label`
+- file: `.github/workflows/security-scan-images.yml`; job: `set_security_scan_requirement_status`; step: `Auth with GitHub CLI`
+- file: `.github/workflows/security-scan-images.yml`; job: `set_security_scan_requirement_status`; step: `Set PR Label`
+- file: `.github/workflows/security-scan-src.yml`; job: `set_security_gitleaks_requirement_status`; step: `Auth with GitHub CLI`
+- file: `.github/workflows/security-scan-src.yml`; job: `set_security_gitleaks_requirement_status`; step: `Set PR Label`
+
+## `git`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `go_generate`; step: `Check generated code`
+- file: `.github/workflows/build-and-test_main.yml`; job: `go_generate`; step: `Check generated code`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `go_generate`; step: `Check generated code`
+- file: `.github/workflows/build-and-test_release.yml`; job: `check_branch_name`; step: `Check branch name`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Print git context`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Print git context`
+- file: `.github/workflows/validation.yml`; job: `workflow_render`; step: `Check rendered files`
+
+## `grep`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `get-tags`; step: `Get latest tags for scheduled run`
+- file: `.github/workflows/build-and-test_release.yml`; job: `check_branch_name`; step: `Check branch name`
+
+## `head`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/antivirus-scan.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `doc_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `go_generate`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `main_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `deploy_latest_web_doc_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `deploy_latest_web_site_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `doc_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `go_generate`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `main_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `deploy_release_doc_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `deploy_release_doc_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_pdf_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `go_generate`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-alpha.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-alpha.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-alpha.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-beta.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-beta.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-beta.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-early-access.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-early-access.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-early-access.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-stable.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-stable.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-stable.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-web-stage.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test10.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test2.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test3.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test4.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test5.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test6.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test7.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test8.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test9.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/docs-pdf-daily.yml`; job: `doc_pdf_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/security-scan-images.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/security-scan-images.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/stage_registry_clean.yml`; job: `clean`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+
+## `jq`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Build and push deckhouse images`
+- file: `.github/workflows/security-scan-images.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/security-scan-images.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/security-scan-images.yml`; job: `security_scan_images`; step: `Running default user validation on ${{env.TAG}}`
+- file: `.github/workflows/security-scan-images.yml`; job: `test_cve_report_main`; step: `Announce CVE delta-scan filter`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+
+## `ln`
+
+- file: `.github/workflows/build-and-test_main.yml`; job: `security_scan_images`; step: `Link binary cache`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `security_scan_images`; step: `Link binary cache`
+- file: `.github/workflows/cve-weekly.yml`; job: `test_cve_report_main`; step: `Link binary cache`
+- file: `.github/workflows/security-scan-images.yml`; job: `security_scan_images`; step: `Link binary cache`
+- file: `.github/workflows/security-scan-images.yml`; job: `test_cve_report_main`; step: `Link binary cache`
+
+## `ls`
+
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Run e2e test: EKS/Containerd/1.31`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Run e2e test: EKS/Containerd/1.32`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Run e2e test: EKS/Containerd/1.33`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Run e2e test: EKS/Containerd/1.34`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Run e2e test: EKS/Containerd/1.35`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Run e2e test: EKS/Containerd/1.36`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Run e2e test: EKS/Containerd/Automatic`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Run e2e test: EKS/ContainerdV2/1.31`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Run e2e test: EKS/ContainerdV2/1.32`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Run e2e test: EKS/ContainerdV2/1.33`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Run e2e test: EKS/ContainerdV2/1.34`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Run e2e test: EKS/ContainerdV2/1.35`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Run e2e test: EKS/ContainerdV2/1.36`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup bootstrapped cluster`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Run e2e test: EKS/ContainerdV2/Automatic`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+
+## `make`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `tests_dmt_lint`; step: `DMT lint`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `tests_python_webhooks`; step: `Run python webhook tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `security_scan_images`; step: `Running default user validation on ${{env.TAG}}`
+- file: `.github/workflows/build-and-test_main.yml`; job: `tests_dmt_lint`; step: `DMT lint`
+- file: `.github/workflows/build-and-test_main.yml`; job: `tests_python_webhooks`; step: `Run python webhook tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_pdf_build`; step: `Generate PDF documentation`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `security_scan_images`; step: `Running default user validation on ${{env.TAG}}`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `tests_dmt_lint`; step: `DMT lint`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `tests_python_webhooks`; step: `Run python webhook tests`
+- file: `.github/workflows/docs-pdf-daily.yml`; job: `doc_pdf_build`; step: `Generate PDF documentation`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Update k8s patch version`
+- file: `.github/workflows/security-scan-images.yml`; job: `security_scan_images`; step: `Running default user validation on ${{env.TAG}}`
+- file: `.github/workflows/validation.yml`; job: `doc_spell_check`; step: `Spell check`
+- file: `.github/workflows/validation.yml`; job: `markdown_linter`; step: `Run linter`
+
+## `mkdir`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `tests_node_controller`; step: `Run node-controller tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_main.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Prepare site structure`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_pdf_build`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Isolate docker config`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Isolate docker config`
+- file: `.github/workflows/deploy-alpha.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/deploy-beta.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/deploy-early-access.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/deploy-stable.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/docs-pdf-daily.yml`; job: `doc_pdf_build`; step: `Install werf-dk CLI`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Install werf-dk CLI`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Isolate docker config`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Isolate docker config`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Isolate docker config`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Isolate docker config`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Isolate docker config`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Isolate docker config`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Install werf-dk CLI`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Isolate docker config`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Install werf-dk CLI`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Isolate docker config`
+- file: `.github/workflows/stage_registry_clean.yml`; job: `clean`; step: `Install werf-dk CLI`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Isolate docker config`
+
+## `mv`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Prepare site structure`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Build and push deckhouse images`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+
+## `npm`
+
+- file: `.github/workflows/run-ci-tests-on-changes.yml`; job: `test`; step: `Install dependencies`
+- file: `.github/workflows/run-ci-tests-on-changes.yml`; job: `test`; step: `Run Jest tests`
+- file: `.github/workflows/validation.yml`; job: `pull_request_changes_validation`; step: `step #3`
+
+## `pip`
+
+- file: `.github/workflows/compare-cve-between-release.yml`; job: `compare-cve`; step: `Create and activate venv`
+- file: `.github/workflows/compare-external-modules.yml`; job: `compare-external-modules`; step: `Install dependencies`
+- file: `.github/workflows/create_release.yml`; job: `create-release`; step: `Install dependencies`
+- file: `.github/workflows/deploy-alpha.yml`; job: `post_deploy_preparation`; step: `Install dependencies`
+- file: `.github/workflows/deploy-beta.yml`; job: `post_deploy_preparation`; step: `Install dependencies`
+- file: `.github/workflows/deploy-early-access.yml`; job: `post_deploy_preparation`; step: `Install dependencies`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `post_deploy_preparation`; step: `Install dependencies`
+- file: `.github/workflows/deploy-stable.yml`; job: `post_deploy_preparation`; step: `Install dependencies`
+- file: `.github/workflows/e2e-autoclean.yml`; job: `e2e-autoclean`; step: `Install deps`
+- file: `.github/workflows/e2e-autoclean.yml`; job: `e2e-pr-clean`; step: `Install deps`
+
+## `python`
+
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `compare_internal_modules`; step: `Compare modules`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `list_changed_modules`; step: `List changed modules from latest released version`
+- file: `.github/workflows/build-and-test_release.yml`; job: `compare_internal_modules`; step: `Compare modules`
+- file: `.github/workflows/build-and-test_release.yml`; job: `list_changed_modules`; step: `List changed modules from latest released version`
+- file: `.github/workflows/compare-cve-between-release.yml`; job: `compare-cve`; step: `Run CVE comparison`
+- file: `.github/workflows/compare-external-modules.yml`; job: `compare-external-modules`; step: `Compare modules`
+- file: `.github/workflows/create_release.yml`; job: `create-release`; step: `Run Python release script`
+- file: `.github/workflows/deploy-alpha.yml`; job: `post_deploy_preparation`; step: `Post deploy preparation`
+- file: `.github/workflows/deploy-beta.yml`; job: `post_deploy_preparation`; step: `Post deploy preparation`
+- file: `.github/workflows/deploy-early-access.yml`; job: `post_deploy_preparation`; step: `Post deploy preparation`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `post_deploy_preparation`; step: `Post deploy preparation`
+- file: `.github/workflows/deploy-stable.yml`; job: `post_deploy_preparation`; step: `Post deploy preparation`
+- file: `.github/workflows/e2e-autoclean.yml`; job: `e2e-autoclean`; step: `Run clean`
+- file: `.github/workflows/e2e-autoclean.yml`; job: `e2e-pr-clean`; step: `Run clean`
+
+## `python3`
+
+- file: `.github/workflows/compare-cve-between-release.yml`; job: `compare-cve`; step: `Create and activate venv`
+- file: `.github/workflows/reproducibility-check.yml`; job: `compare_reports`; step: `Compare digests`
+- file: `.github/workflows/reproducibility-timing-report.yml`; job: `timing_report`; step: `Collect scheduled rebuild timings`
+- file: `.github/workflows/security-scan-images.yml`; job: `changed_images`; step: `Compute changed images`
+
+## `regctl`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Copy attestations (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Promote images from stage to prod (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Copy attestations (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Promote images from stage to prod (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Copy attestations (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Promote images from stage to prod (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Copy attestations (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Promote images from stage to prod (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Copy attestations (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Promote images from stage to prod (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Copy attestations (SE-plus)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Promote images from stage to prod (SE-plus)`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Build and push deckhouse images`
+- file: `.github/workflows/security-scan-images.yml`; job: `changed_images`; step: `Extract images_digests.json from dev:${{ steps.tag.outputs.TAG }}`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+
+## `render-workflows.sh`
+
+- file: `.github/workflows/validation.yml`; job: `workflow_render`; step: `Render GitHub workflow`
+
+## `rm`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `drweb-scan`; step: `Cleanup scan results on runner`
+- file: `.github/workflows/antivirus-scan.yml`; job: `kaspersky-scan`; step: `Cleanup scan results on runner`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_main.yml`; job: `security_scan_images`; step: `Unlink binary cache`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Clean TMPDIR`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `security_scan_images`; step: `Unlink binary cache`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Cleanup workdir`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Cleanup workdir`
+- file: `.github/workflows/compare-cve-between-release.yml`; job: `compare-cve`; step: `Cleanup venv`
+- file: `.github/workflows/cve-weekly.yml`; job: `test_cve_report_main`; step: `Remove workdir`
+- file: `.github/workflows/cve-weekly.yml`; job: `test_cve_report_main`; step: `Unlink binary cache`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Cleanup temp directory`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_Automatic`; step: `Cleanup temp directory`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Update k8s patch version`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Copy attestations (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Promote images from stage to prod (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Copy attestations (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Promote images from stage to prod (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Copy attestations (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Promote images from stage to prod (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Copy attestations (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Promote images from stage to prod (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Copy attestations (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Promote images from stage to prod (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Copy attestations (SE-plus)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Promote images from stage to prod (SE-plus)`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Cleanup workdir`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Cleanup workdir`
+- file: `.github/workflows/security-scan-images.yml`; job: `drweb-scan`; step: `Cleanup scan results on runner`
+- file: `.github/workflows/security-scan-images.yml`; job: `kaspersky-scan`; step: `Cleanup scan results on runner`
+- file: `.github/workflows/security-scan-images.yml`; job: `security_scan_images`; step: `Unlink binary cache`
+- file: `.github/workflows/security-scan-images.yml`; job: `test_cve_report_main`; step: `Remove workdir`
+- file: `.github/workflows/security-scan-images.yml`; job: `test_cve_report_main`; step: `Unlink binary cache`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Cleanup workdir`
+
+## `rsync`
+
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Prepare site structure`
+
+## `sed`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/antivirus-scan.yml`; job: `get-tags`; step: `Get latest tags for scheduled run`
+- file: `.github/workflows/antivirus-scan.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `doc_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `go_generate`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `main_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `deploy_latest_web_doc_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `deploy_latest_web_site_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `doc_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `go_generate`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `main_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `deploy_release_doc_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `deploy_release_doc_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_pdf_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_web_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `go_generate`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-alpha.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-alpha.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-beta.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-beta.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-early-access.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-early-access.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-stable.yml`; job: `deploy_channels_cm_prod`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-stable.yml`; job: `deploy_channels_cm_stage`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-stage.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test10.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test2.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test3.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test4.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test5.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test6.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test7.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test8.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/deploy-web-test9.yml`; job: `run_web_deploy`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/docs-pdf-daily.yml`; job: `doc_pdf_build`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Promote images from stage to prod (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Promote images from stage to prod (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Promote images from stage to prod (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Promote images from stage to prod (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Promote images from stage to prod (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Promote images from stage to prod (SE-plus)`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/security-scan-images.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/security-scan-images.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/stage_registry_clean.yml`; job: `clean`; step: `Read werf version from werf_envs.yml`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Read werf version from werf_envs.yml`
+
+## `sleep`
+
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Copy attestations (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Promote images from stage to prod (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Copy attestations (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Promote images from stage to prod (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Copy attestations (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Promote images from stage to prod (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Copy attestations (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Promote images from stage to prod (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Copy attestations (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Promote images from stage to prod (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Copy attestations (SE-plus)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Promote images from stage to prod (SE-plus)`
+- file: `.github/workflows/reproducibility-check.yml`; job: `send_alert_about_workflow_problem`; step: `Send loop alert`
+
+## `sort`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `get-tags`; step: `Get latest tags for scheduled run`
+
+## `ssh-keygen`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+
+## `tail`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `get-tags`; step: `Get latest tags for scheduled run`
+- file: `.github/workflows/deploy-alpha.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-beta.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-early-access.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `update_latest_release`; step: `Make latest stable release`
+- file: `.github/workflows/deploy-stable.yml`; job: `update_latest_release`; step: `Make latest stable release`
+
+## `tar`
+
+- file: `.github/workflows/cve-weekly.yml`; job: `test_cve_report_main`; step: `Archive report artifacts`
+- file: `.github/workflows/cve-weekly.yml`; job: `test_cve_report_main`; step: `Create fail artifact`
+- file: `.github/workflows/security-scan-images.yml`; job: `test_cve_report_main`; step: `Archive report artifacts`
+- file: `.github/workflows/security-scan-images.yml`; job: `test_cve_report_main`; step: `Create fail artifact`
+
+## `tee`
+
+- file: `.github/workflows/deploy-alpha.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/deploy-beta.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/deploy-early-access.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+- file: `.github/workflows/deploy-stable.yml`; job: `post_deploy_preparation`; step: `Prepare files to collect and deploy channels`
+
+## `touch`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Prepare site structure`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Add svace analyze server to ssh_known_hosts`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Add svace analyze server to ssh_known_hosts`
+
+## `tr`
+
+- file: `.github/workflows/antivirus-scan.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/antivirus-scan.yml`; job: `get-tags`; step: `Get latest tags for scheduled run`
+- file: `.github/workflows/antivirus-scan.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `tests_node_controller`; step: `Run node-controller tests`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Prepare site structure`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `dhctl_tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `doc_pdf_build`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `go_generate`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `golint`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `openapi_test_cases`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `tests`; step: `Run tests`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `validators`; step: `Run tests`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+- file: `.github/workflows/build-and-test_release.yml`; job: `check_branch_name`; step: `Check branch name`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-alpha.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-beta.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-early-access.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-rock-solid.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for BE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for CE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for EE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for FE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for SE`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Publish release images for SE-plus`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (BE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (CE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (EE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (FE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (SE)`
+- file: `.github/workflows/deploy-stable.yml`; job: `run_deploy`; step: `Set cooldown for release (SE-plus)`
+- file: `.github/workflows/docs-pdf-daily.yml`; job: `doc_pdf_build`; step: `Install werf-dk CLI`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-aws.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-azure.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-dvp.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-eks.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-gcp.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-openstack.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-static.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vcd.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-vsphere.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-yandex-cloud.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerd_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-abort-zvirt.yml`; job: `run_containerdv2_automatic`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-aws.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-azure.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-dvp.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-eks.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-gcp.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-openstack.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-static.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-vcd.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-vsphere.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-yandex-cloud.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerd_Automatic`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_31`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_32`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_33`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_34`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_35`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_1_36`; step: `Setup`
+- file: `.github/workflows/e2e-zvirt.yml`; job: `run_containerdv2_Automatic`; step: `Setup`
+- file: `.github/workflows/k8s-autoupdate.yml`; job: `update_k8s`; step: `Install werf-dk CLI`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Check DKP images manifests in public registry (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Copy attestations (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_BE`; step: `Promote images from stage to prod (BE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Check DKP images manifests in public registry (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Copy attestations (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_CE`; step: `Promote images from stage to prod (CE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Check DKP images manifests in public registry (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Copy attestations (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_EE`; step: `Promote images from stage to prod (EE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Check DKP images manifests in public registry (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Copy attestations (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_FE`; step: `Promote images from stage to prod (FE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Check DKP images manifests in public registry (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Copy attestations (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE`; step: `Promote images from stage to prod (SE)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Check DKP images manifests in public registry (SE-plus)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Copy attestations (SE-plus)`
+- file: `.github/workflows/promote_image.yml`; job: `promote_SE_plus`; step: `Promote images from stage to prod (SE-plus)`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Install werf-dk CLI`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Install werf-dk CLI`
+- file: `.github/workflows/security-scan-images.yml`; job: `drweb-scan`; step: `Run drweb scan`
+- file: `.github/workflows/security-scan-images.yml`; job: `kaspersky-scan`; step: `Run kaspersky scan`
+- file: `.github/workflows/stage_registry_clean.yml`; job: `clean`; step: `Install werf-dk CLI`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-alpha.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-beta.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-early-access.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-rock-solid.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for BE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for CE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for EE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for FE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE`
+- file: `.github/workflows/suspend-stable.yml`; job: `run_suspend`; step: `Publish suspend images for SE-plus`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Install werf-dk CLI`
+
+## `validate_dictionary_sync.sh`
+
+- file: `.github/workflows/validation.yml`; job: `doc_spell_check`; step: `Validate spelling wordlist <-> dev_OPS.dic sync`
+
+## `validation_bashible.sh`
+
+- file: `.github/workflows/bashible_validation.yml`; job: `bashible_validation`; step: `Bashible validation on ${{ matrix.provider }} provider`
+
+## `validation_run.sh`
+
+- file: `.github/workflows/validation.yml`; job: `copyright_validation`; step: `Run check`
+- file: `.github/workflows/validation.yml`; job: `discover`; step: `Download diff for pull request`
+- file: `.github/workflows/validation.yml`; job: `doc_validation`; step: `Run check`
+- file: `.github/workflows/validation.yml`; job: `doc_validation_reference`; step: `Run check`
+- file: `.github/workflows/validation.yml`; job: `grafana_dashboard_validation`; step: `Run check`
+- file: `.github/workflows/validation.yml`; job: `no_cyrillic_validation`; step: `Run check`
+- file: `.github/workflows/validation.yml`; job: `release_requirements_validation`; step: `Run check`
+
+## `wc`
+
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `list_changed_modules`; step: `List changed modules from latest released version`
+- file: `.github/workflows/build-and-test_release.yml`; job: `list_changed_modules`; step: `List changed modules from latest released version`
+
+## `werf`
+
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_dev.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_main.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_main.yml`; job: `web_links_test`; step: `Prepare site structure`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_CSE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_pre-release.yml`; job: `build_tests`; step: `Build tests image`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_BE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_CE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_EE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_SE-plus`; step: `Build and push deckhouse images`
+- file: `.github/workflows/build-and-test_release.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_dev`; step: `Build and push deckhouse images`
+- file: `.github/workflows/reproducibility-check.yml`; job: `build_fe_main`; step: `Build and push deckhouse images`
+- file: `.github/workflows/svace.yml`; job: `build_fe`; step: `Build and push deckhouse images`
+
+## `which`
+
+- file: `.github/workflows/compare-cve-between-release.yml`; job: `compare-cve`; step: `Create and activate venv`
+
