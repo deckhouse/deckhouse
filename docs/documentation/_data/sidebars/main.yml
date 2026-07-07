@@ -1319,6 +1319,18 @@ entries:
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
         - title:
+            en: Delivery subsystem
+            ru: Подсистема Delivery
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/delivery/
+            - title:
+                en: Operator-argo module
+                ru: Модуль operator-argo
+              url: /architecture/delivery/operator-argo.html
+        - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
           folders:
