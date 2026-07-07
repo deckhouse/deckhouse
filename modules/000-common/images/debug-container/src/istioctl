@@ -54,7 +54,7 @@ normalize_version() {
 }
 
 configure_kubeconfig() {
-  if [[ -n "${KUBECONFIG:-}" ]]; then
+  if [[ -n "${KUBECONFIG:-}" && -r "${KUBECONFIG}" ]]; then
     return 0
   fi
 
