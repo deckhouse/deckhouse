@@ -478,6 +478,8 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+
+
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0

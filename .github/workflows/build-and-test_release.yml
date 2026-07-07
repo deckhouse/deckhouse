@@ -612,6 +612,21 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
+
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
@@ -1006,6 +1021,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1403,6 +1433,21 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
+
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
@@ -1798,6 +1843,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -2195,6 +2255,21 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
+
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
@@ -2590,6 +2665,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
