@@ -230,6 +230,7 @@ type DeckhouseReleaseSpec struct {
 type DeckhouseReleaseStatus struct {
 	// Current status of the release.
 	// +kubebuilder:validation:Enum=Pending;Deployed;Outdated;Suspended;Superseded;Skipped
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Deployed, Outdated, Suspended, Superseded, Skipped]
 	Phase string `json:"phase,omitempty"`
 	// The status of the release's readiness for deployment. It makes sense only for Manual updates (`update.mode: Manual`).
 	// +optional
