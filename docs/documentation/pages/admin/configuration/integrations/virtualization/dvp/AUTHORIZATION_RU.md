@@ -10,6 +10,22 @@ lang: ru
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
 {% endalert %}
 
+{% alert level="warning" %}
+Если модуль `update-hostname` пакета `cloud-init` не отключён, рекомендуется изменить частоту его запуска с `always` на `once-per-instance`.
+
+Для этого измените конфигурацию модуля `update-hostname` в файле `/etc/cloud/cloud.cfg`:
+
+```yaml
+cloud_init_modules:
+  ...
+  - [update-hostname, once-per-instance]
+  ...
+```
+
+Также модуль `update-hostname` можно полностью отключить, удалив его из списка модулей `cloud_init_modules` в файле `/etc/cloud/cloud.cfg`.
+
+{% endalert %}
+
 ## Создание пользователя
 
 Создайте нового пользователя в кластере DVP с помощью следующей команды:
