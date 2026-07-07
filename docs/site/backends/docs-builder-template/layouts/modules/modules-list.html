@@ -205,6 +205,8 @@
             <img src="/images/{{ $stageIcon }}.svg" alt="{{- $moduleStage }}">
           </span>
           {{- end }}
+        {{- else }}
+          <span class='button-tile__stage'></span>
         {{- end }}
         <h2 class="button-tile__title">{{ .module }}</h2>
 
