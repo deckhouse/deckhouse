@@ -141,6 +141,7 @@ type PackageRepositoryOperationStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
+	// +crd-enricher:raw:items.properties.reason.x-doc-examples=[Discover, Processing, Succeeded, Failed]
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 

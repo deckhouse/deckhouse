@@ -131,6 +131,11 @@ spec:
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
+                      x-doc-examples:
+                      - Discover
+                      - Processing
+                      - Succeeded
+                      - Failed
                     status:
                       description: status of the condition, one of True, False, Unknown.
                       enum:

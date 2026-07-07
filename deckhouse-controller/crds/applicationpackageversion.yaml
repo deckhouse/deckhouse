@@ -369,9 +369,14 @@ spec:
                         type: object
                     type: object
                   stage:
-                    description: The development stage of the package (e.g., alpha,
-                      beta, stable).
+                    description: The development stage of the package (e.g., Experimental,
+                      Preview, General Availability, Deprecated).
                     type: string
+                    x-doc-examples:
+                    - Experimental
+                    - Preview
+                    - General Availability
+                    - Deprecated
                   versionCompatibilityRules:
                     description: Version compatibility rules for upgrades and downgrades.
                     properties:

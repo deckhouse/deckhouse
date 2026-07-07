@@ -199,6 +199,13 @@ spec:
                       State is the high-level lifecycle state observed for the application.
                       Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
                     type: string
+                    x-doc-examples:
+                    - Pending
+                    - Failed
+                    - Updating
+                    - Ready
+                    - Degraded
+                    - Suspended
                   tip:
                     description: |-
                       Tip is a human-readable instruction on how to resolve the current
