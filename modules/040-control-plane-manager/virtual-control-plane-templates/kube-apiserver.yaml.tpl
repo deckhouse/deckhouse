@@ -63,10 +63,14 @@ spec:
         # This makes the pod NotReady (via /readyz) instead of triggering a pointless restart loop.
         startupProbe:
 <<<<<<< HEAD
+<<<<<<< HEAD
           httpGet: {path: "/livez?exclude=etcd", port: 6443, scheme: HTTPS}
 =======
           httpGet: {path: /livez?exclude=etcd, port: 6443, scheme: HTTPS}
 >>>>>>> 1566be5d85 (add probes for apiserver)
+=======
+          httpGet: {path: "/livez?exclude=etcd", port: 6443, scheme: HTTPS}
+>>>>>>> b6853bcad5 (fix manifest)
           periodSeconds: 10
           timeoutSeconds: 15
           failureThreshold: 24
