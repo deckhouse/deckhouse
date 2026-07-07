@@ -26,15 +26,16 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 )
 
 const (
@@ -71,12 +72,25 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
 	}
 
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider(), nil)
+	return getKubernetesVersion(ccYaml)
+}
+
+func getKubernetesVersion(data []byte) (string, error) {
+	if err := validation.ValidateData([]string{}, data); err != nil {
+		return "", err
+	}
+	res := make(map[any]any)
+	err := yaml.Unmarshal(data, &res)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
+	version, ok := res["kubernetesVersion"]
+	if ok {
+		return version.(string), nil
+	}
+
+	return "", nil
 }
 
 func discoveryIsK8sVersionAutomatic(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -102,12 +116,7 @@ func discoveryIsK8sVersionAutomatic(ctx context.Context, input *go_hook.HookInpu
 				return fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
 			}
 
-			metaConfig, err := config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider(), nil)
-			if err != nil {
-				return err
-			}
-
-			kubernetesVersionStr, err = rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
+			kubernetesVersionStr, err = getKubernetesVersion(ccYaml)
 			if err != nil {
 				return err
 			}

@@ -163,6 +163,8 @@ github.com/deckhouse/lib-connection v0.12.0 h1:bUOQOPtqDcT0rINgMzVHxh4AASkaZVv/d
 github.com/deckhouse/lib-connection v0.12.0/go.mod h1:6fNsoXGoxiuSZRMhB1m2NWs1Q70tlmJNdm0MHmjBips=
 github.com/deckhouse/lib-dhctl v0.20.0 h1:ahubdw6pdgg/9GGKCgU68d+6VSv04ZEhzt6+xQIDO48=
 github.com/deckhouse/lib-dhctl v0.20.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
+github.com/deckhouse/lib-dhctl v0.20.1-0.20260706142917-0338597c8fea h1:NwkjrO5OlrYkIl5tQqvRD0s3//QHoKqZ1pmyKgPLYq8=
+github.com/deckhouse/lib-dhctl v0.20.1-0.20260706142917-0338597c8fea/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
 github.com/deckhouse/lib-gossh v0.3.0/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.11.1 h1:dMhL08TbKNhtBdI+1eVVk7iR2OnRp4mSoeyEMg6uVtQ=

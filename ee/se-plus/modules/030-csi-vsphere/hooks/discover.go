@@ -24,9 +24,9 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 	objectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
@@ -129,13 +129,12 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 	}
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{
+	if err := validation.ValidateData([]string{
 		"/deckhouse/candi/cloud-providers/vsphere/openapi",
 		"/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi",
 	},
-		nil,
-	)
-	if err != nil {
+		discoveryDataJSON,
+	); err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 

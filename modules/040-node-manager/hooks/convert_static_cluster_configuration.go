@@ -23,11 +23,11 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 )
 
 func applyStaticClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -72,7 +72,7 @@ func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hoo
 		return fmt.Errorf("failed to unmarshal first 'static_cluster_configuration' snapshot: %w", err)
 	}
 
-	internalNetwork, err := internalNetworkFromStaticConfiguration(ctx, staticConfiguration)
+	internalNetwork, err := internalNetworkFromStaticConfiguration(staticConfiguration)
 	if err != nil {
 		return err
 	}
@@ -81,25 +81,20 @@ func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hoo
 	return nil
 }
 
-func internalNetworkFromStaticConfiguration(ctx context.Context, data []byte) (interface{}, error) {
-	var err error
-	var metaConfig *config.MetaConfig
-
-	metaConfig, err = config.ParseConfigFromData(
-		ctx,
-		string(data),
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParamsWithoutLogger(),
-		),
-		nil,
-	)
+func internalNetworkFromStaticConfiguration(data []byte) (any, error) {
+	if err := validation.ValidateData([]string{}, data); err != nil {
+		return "", err
+	}
+	res := make(map[any]any)
+	err := yaml.Unmarshal(data, &res)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	intNet := metaConfig.StaticClusterConfig["internalNetworkCIDRs"]
-	if intNet == nil {
-		return []interface{}{}, nil
+	intNet, ok := res["internalNetworkCIDRs"]
+	if ok {
+		return intNet, nil
 	}
-	return intNet, nil
+
+	return "", nil
 }
