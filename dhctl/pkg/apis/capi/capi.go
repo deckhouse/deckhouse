@@ -38,12 +38,8 @@ const (
 	deploymentsName = "machinedeployments"
 )
 
-// preferredVersions lists the served CAPI API versions in priority order.
-// v1beta2 is preferred to avoid deprecation warnings on upgraded clusters;
-// v1beta1 is kept as a fallback for clusters that do not serve v1beta2 yet.
 var preferredVersions = []string{versionV1beta2, versionV1beta1}
 
-// GVRs holds CAPI resources bound to a concrete served API version.
 type GVRs struct {
 	Version              string
 	GV                   schema.GroupVersion
@@ -62,7 +58,6 @@ func gvrsForVersion(version string) GVRs {
 	}
 }
 
-// V1beta1 and V1beta2 are the static resource sets for each supported version.
 var (
 	V1beta1 = gvrsForVersion(versionV1beta1)
 	V1beta2 = gvrsForVersion(versionV1beta2)
@@ -135,8 +130,6 @@ var (
 	}
 )
 
-// ListsGVRs returns the list-kind to GVR mapping for the preferred (v1beta2)
-// version. It is used to register CAPI resources with fake clients in tests.
 func ListsGVRs() apis.ListKindToGVR {
 	return apis.CopyListKindToGVR(apis.ListKindToGVR{
 		"ClusterList":           V1beta2.ClusterGVR,
@@ -145,8 +138,6 @@ func ListsGVRs() apis.ListKindToGVR {
 	})
 }
 
-// APIResourcesList returns the preferred (v1beta2) API resources list, used to
-// populate fake discovery in tests.
 func APIResourcesList() *metav1.APIResourceList {
 	return &metav1.APIResourceList{
 		GroupVersion: V1beta2.GV.String(),
