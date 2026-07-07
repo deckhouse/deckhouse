@@ -165,7 +165,7 @@ type ModulePackageVersionStatusMetadata struct {
 	// +optional
 	Category string `json:"category,omitempty"`
 
-	// The development stage of the package (e.g., alpha, beta, stable).
+	// The development stage of the package (e.g., Experimental, Preview, General Availability, Deprecated).
 	// +optional
 	Stage string `json:"stage,omitempty"`
 
