@@ -30,7 +30,7 @@ export PACKAGES_PROXY_TOKEN="${VCP_RPP_TOKEN}"
 echo -n "${VCP_MINGET_B64}" | base64 -d > "${BIN_DIR}/minget"
 [[ -s "${BIN_DIR}/minget" ]] || { echo "embedded minget is empty (missing candi/bashible/bootstrap/minget)" >&2; exit 1; }
 chmod +x "${BIN_DIR}/minget"
-"${BIN_DIR}/minget" "${VCP_ALB_VIP}:8080/${VCP_CLUSTER_UUID}/rpp-get?digest=${VCP_RPP_GET_DIGEST}" > "${BIN_DIR}/rpp-get"
+"${BIN_DIR}/minget" "${VCP_ALB_VIP}:80/${VCP_CLUSTER_UUID}/rpp-get?digest=${VCP_RPP_GET_DIGEST}" > "${BIN_DIR}/rpp-get"
 echo "${VCP_RPP_GET_DIGEST#sha256:}  ${BIN_DIR}/rpp-get" | sha256sum -c - \
   || { echo "rpp-get digest mismatch" >&2; exit 1; }
 chmod +x "${BIN_DIR}/rpp-get"

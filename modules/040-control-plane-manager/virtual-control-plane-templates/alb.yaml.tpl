@@ -10,10 +10,6 @@ spec:
   gatewayName: ${VCP_NAME}
   inlet:
     type: LoadBalancer
-    additionalPorts:
-    # Plaintext bootstrap for rpp-get: minget is a tiny no-TLS client, it needs an HTTP port.
-    - port: 8080
-      protocol: TCP
 ---
 # EgressSelectorConfiguration for the apiserver: route "cluster" traffic (logs/exec/metrics) to the
 # konnectivity-server sidecar over the shared UDS.
@@ -87,10 +83,6 @@ spec:
     hostname: ${VCP_PKG_HOST}
     tls:
       mode: Passthrough
-  - name: pkg-bootstrap
-    # Plaintext HTTP for the one tokenless hop minget makes to fetch the rpp-get binary.
-    port: 8080
-    protocol: HTTP
 ---
 # Backend Service for RPP's tokenless bootstrap port (raw rpp-get binary)
 apiVersion: v1
@@ -111,7 +103,7 @@ spec:
     targetPort: 4282
     protocol: TCP
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: ${VCP_NAME}-api
@@ -133,7 +125,7 @@ spec:
     - name: kube-apiserver
       port: 6443
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: ${VCP_NAME}-konn
@@ -156,7 +148,7 @@ spec:
       port: 8132
 ---
 # SNI passthrough to RPP:443 (kube-rbac-proxy, token-gated). The token is the gate.
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: ${VCP_NAME}-packages
@@ -180,6 +172,7 @@ spec:
       port: 443
 ---
 # Plaintext bootstrap route: minget fetches the raw rpp-get binary here (tokenless), integrity via digest.
+# Attaches directly to the Gateway built-in default HTTP:80 listener (d8-http-default)
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -191,10 +184,10 @@ metadata:
 spec:
   parentRefs:
   - name: ${VCP_NAME}
-    kind: ListenerSet
+    kind: Gateway
     group: gateway.networking.k8s.io
-    sectionName: pkg-bootstrap
-    port: 8080
+    sectionName: d8-http-default
+    port: 80
   rules:
   - matches:
     - path:

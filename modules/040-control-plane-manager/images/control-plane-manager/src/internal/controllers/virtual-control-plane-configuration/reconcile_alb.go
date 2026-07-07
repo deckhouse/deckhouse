@@ -25,6 +25,7 @@ import (
 	"control-plane-manager/internal/constants"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,6 +73,22 @@ func (r *reconciler) reconcileALB(ctx context.Context, vcp *controlplanev1alpha1
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("get %s %s: %w", target.GetKind(), target.GetName(), err)
 		}
+
+		if equality.Semantic.DeepEqual(current.Object["spec"], target.Object["spec"]) &&
+			equality.Semantic.DeepEqual(current.Object["data"], target.Object["data"]) {
+			continue
+		}
+
+		base := current.DeepCopy()
+		if spec, ok := target.Object["spec"]; ok {
+			current.Object["spec"] = spec
+		}
+		if data, ok := target.Object["data"]; ok {
+			current.Object["data"] = data
+		}
+		if err := r.client.Patch(ctx, current, client.MergeFrom(base)); err != nil {
+			return reconcile.Result{}, fmt.Errorf("patch %s %s: %w", target.GetKind(), target.GetName(), err)
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -110,6 +127,9 @@ func albManifests(configSecret *corev1.Secret, vcp *controlplanev1alpha1.Virtual
 
 // albVIP resolves the external ALB address for this VCP: ALBInstance.status.gateway
 // Returns "" (not an error) until the LoadBalancer address is assigned.
+//
+// The externally-reachable address is read straight off the "d8-alb-<gw>-loadbalancer"
+// Service the ALB module provisions alongside the Gateway for that inlet type.
 func (r *reconciler) albVIP(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (string, error) {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
@@ -128,28 +148,20 @@ func (r *reconciler) albVIP(ctx context.Context, vcp *controlplanev1alpha1.Virtu
 		gatewayName = vcp.Name // spec.gatewayName
 	}
 
-	gateway := &unstructured.Unstructured{}
-	gateway.SetAPIVersion("gateway.networking.k8s.io/v1")
-	gateway.SetKind("Gateway")
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: gatewayName}, gateway); err != nil {
-		if apierrors.IsNotFound(err) {
-			return "", nil
-		}
-		return "", fmt.Errorf("get Gateway %s: %w", gatewayName, err)
+	lbService, err := r.getService(ctx, namespace, fmt.Sprintf("d8-alb-%s-loadbalancer", gatewayName))
+	if apierrors.IsNotFound(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("get ALB LoadBalancer Service: %w", err)
 	}
 
-	addresses, _, _ := unstructured.NestedSlice(gateway.Object, "status", "addresses")
-	for _, a := range addresses {
-		addr, ok := a.(map[string]interface{})
-		if !ok {
-			continue
+	for _, ingress := range lbService.Status.LoadBalancer.Ingress {
+		if ingress.IP != "" {
+			return ingress.IP, nil
 		}
-		value, _ := addr["value"].(string)
-		if value == "" {
-			continue
-		}
-		if t, _ := addr["type"].(string); t == "" || t == "IPAddress" {
-			return value, nil
+		if ingress.Hostname != "" {
+			return ingress.Hostname, nil
 		}
 	}
 
