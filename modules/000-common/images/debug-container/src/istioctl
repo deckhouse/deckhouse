@@ -30,6 +30,20 @@ service_account_dir() {
   return 1
 }
 
+kubeconfig_file() {
+  local file
+  for file in \
+    "/var/run/secrets/remote/config" \
+    "/proc/1/root/var/run/secrets/remote/config"; do
+    if [[ -r "${file}" ]]; then
+      echo "${file}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 normalize_version() {
   case "${1:-}" in
     1.21|1.21.*|v1.21|v1.21.*|v1x21*) echo "1.21" ;;
@@ -40,7 +54,13 @@ normalize_version() {
 }
 
 configure_kubeconfig() {
-  if [[ -n "${KUBECONFIG:-}" || -z "${KUBERNETES_SERVICE_HOST:-}" ]]; then
+  if [[ -n "${KUBECONFIG:-}" ]]; then
+    return 0
+  fi
+
+  local existing_kubeconfig
+  if existing_kubeconfig="$(kubeconfig_file)"; then
+    export KUBECONFIG="${existing_kubeconfig}"
     return 0
   fi
 
@@ -49,6 +69,7 @@ configure_kubeconfig() {
     return 0
   fi
 
+  local api_host="${KUBERNETES_SERVICE_HOST:-kubernetes.default.svc}"
   local api_port="${KUBERNETES_SERVICE_PORT_HTTPS:-${KUBERNETES_SERVICE_PORT:-443}}"
   local namespace="default"
   if [[ -r "${sa_dir}/namespace" ]]; then
@@ -63,7 +84,7 @@ clusters:
 - name: in-cluster
   cluster:
     certificate-authority: ${sa_dir}/ca.crt
-    server: https://${KUBERNETES_SERVICE_HOST}:${api_port}
+    server: https://${api_host}:${api_port}
 users:
 - name: service-account
   user:
