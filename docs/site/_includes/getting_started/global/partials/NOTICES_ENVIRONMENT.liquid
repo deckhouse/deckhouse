@@ -35,6 +35,9 @@ The {{ page.title_main }} installation is not available in the Community Edition
 - Включён [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com).
 {%- endif %}
 - На ВМ установлен пакет `cloud-init`. После старта ВМ запущены службы `cloud-config.service`, `cloud-final.service`, `cloud-init.service`.
+{%- if page.platform_code == "dvp-provider" %}
+Для модуля `update-hostname` рекомендуется изменить частоту запуска на `once-per-instance`. Рекомендации по настройке приведены в [документации модуля `cloud-provider-dvp`](/modules/cloud-provider-dvp/environment.html).
+{%- endif %}
 - В шаблоне виртуальной машины присутствует только один диск.
 {%- if page.platform_code == "vcd" %}
 - В VMware Cloud Director отключена vApp/Guest OS Customization для шаблона и ВМ кластера.
@@ -77,6 +80,9 @@ Before installation, ensure the following:
 - [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com) enabled.
 {%- endif %}
 - The `cloud-init` package is installed on the VMs. After the VM starts, services `cloud-config.service`, `cloud-final.service`, `cloud-init.service` must be running.
+{%- if page.platform_code == "dvp-provider" %}
+It is recommended to change the run frequency of the `update-hostname` module to `once-per-instance`. For configuration recommendations, see the [`cloud-provider-dvp` module documentation](/modules/cloud-provider-dvp/environment.html).
+{%- endif %}
 - The virtual machine template contains only one disk.
 {%- if page.platform_code == "vcd" %}
 - In VMware Cloud Director, vApp/Guest OS Customization is disabled for the cluster template and VMs.
