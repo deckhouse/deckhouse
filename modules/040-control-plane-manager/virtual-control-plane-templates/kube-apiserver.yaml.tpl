@@ -59,14 +59,23 @@ spec:
         - {containerPort: 6443, name: https}
         volumeMounts:
         - {name: pki, mountPath: /pki, readOnly: true}
+        # startup/liveness exclude the etcd check for datastore (kine/Postgres)
+        # This makes the pod NotReady (via /readyz) instead of triggering a pointless restart loop.
+        startupProbe:
+          httpGet: {path: /livez?exclude=etcd, port: 6443, scheme: HTTPS}
+          periodSeconds: 10
+          timeoutSeconds: 15
+          failureThreshold: 24
         readinessProbe:
           httpGet: {path: /readyz, port: 6443, scheme: HTTPS}
-          initialDelaySeconds: 10
           periodSeconds: 5
+          timeoutSeconds: 15
+          failureThreshold: 3
         livenessProbe:
-          httpGet: {path: /livez, port: 6443, scheme: HTTPS}
-          initialDelaySeconds: 30
+          httpGet: {path: /livez?exclude=etcd, port: 6443, scheme: HTTPS}
           periodSeconds: 10
+          timeoutSeconds: 15
+          failureThreshold: 8
         resources:
           requests: {cpu: 250m, memory: 512Mi}
       - name: kine
