@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index ea4b44413..9cd0d6a87 100644
+index 793cec8b5..f06826f2c 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -82,12 +82,12 @@ require (
@@ -18,9 +18,9 @@ index ea4b44413..9cd0d6a87 100644
 +	go.opentelemetry.io/otel/trace v1.41.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
- 	golang.org/x/crypto v0.48.0 // indirect
+ 	golang.org/x/crypto v0.49.0 // indirect
 diff --git a/go.sum b/go.sum
-index 4470dc6e5..1ce7bf6e9 100644
+index 1cd72b540..4a5d9dabf 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -152,20 +152,20 @@ go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ
