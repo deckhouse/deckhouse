@@ -346,9 +346,22 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, st
 	return nil
 }
 
-// isReleaseUnderMaintenance reports whether the release is already marked as under
-// maintenance. A missing release or missing label means "not marked".
+// isReleaseUnderMaintenance reports whether the release is deployed and already
+// marked as under maintenance. A missing, failed, or pending release — or a missing
+// label — means "not (successfully) marked", so the caller must (re)apply to stamp
+// it. The deployed check matters because nelm writes the maintenance storage label
+// at pending time: without it a failed enter-maintenance install would be frozen
+// and falsely reported as applied until maintenance is turned off.
 func (s *Service) isReleaseUnderMaintenance(ctx context.Context, namespace, name string) (bool, error) {
+	_, releaseStatus, err := s.client.LastStatus(ctx, namespace, name)
+	if err != nil {
+		return false, fmt.Errorf("get release status: %w", err)
+	}
+
+	if strings.ToLower(releaseStatus) != "deployed" {
+		return false, nil
+	}
+
 	value, err := s.client.GetReleaseLabel(ctx, namespace, name, nelm.ReleaseLabelMaintenance)
 	if err != nil {
 		if errors.Is(err, nelm.ErrReleaseNotFound) || errors.Is(err, nelm.ErrLabelNotFound) {
