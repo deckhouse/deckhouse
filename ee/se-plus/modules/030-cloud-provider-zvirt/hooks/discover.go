@@ -23,9 +23,9 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
@@ -124,7 +124,12 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	if err := validation.ValidateData([]string{"/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi", "/deckhouse/candi/cloud-providers/zvirt/openapi"}, discoveryDataJSON); err != nil {
+	// if err := validation.ValidateData([]string{"/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi", "/deckhouse/candi/cloud-providers/zvirt/openapi"}, discoveryDataJSON); err != nil {
+	// 	return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
+	// }
+
+	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi", "/deckhouse/candi/cloud-providers/zvirt/openapi"}, nil)
+	if err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 

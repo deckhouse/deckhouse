@@ -32,10 +32,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
-	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 )
 
 const (
@@ -76,23 +77,18 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 }
 
 func getKubernetesVersion(data []byte) (string, error) {
-	if err := validation.ValidateData([]string{}, data); err != nil {
+	if err := validation.ValidateData([]string{}, &data); err != nil {
 		if !errors.Is(err, validation.ErrSchemaNotFound) {
 			return "", err
 		}
 	}
-	res := make(map[any]any)
-	err := yaml.Unmarshal(data, &res)
-	if err != nil {
-		return "", err
+	var cfg struct {
+		KubernetesVersion string `yaml:"kubernetesVersion"`
 	}
-
-	version, ok := res["kubernetesVersion"]
-	if ok {
-		return version.(string), nil
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return "", fmt.Errorf("unmarshal YAML: %w", err)
 	}
-
-	return "", nil
+	return cfg.KubernetesVersion, nil
 }
 
 func discoveryIsK8sVersionAutomatic(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -141,14 +137,4 @@ func discoveryIsK8sVersionAutomatic(ctx context.Context, input *go_hook.HookInpu
 	requirements.SaveValue(isK8sVersionAutomaticKey, kubernetesVersionStr == "Automatic")
 
 	return nil
-}
-
-func rawMessageToString(message json.RawMessage) (string, error) {
-	var result string
-	b, err := message.MarshalJSON()
-	if err != nil {
-		return result, err
-	}
-	err = json.Unmarshal(b, &result)
-	return result, err
 }

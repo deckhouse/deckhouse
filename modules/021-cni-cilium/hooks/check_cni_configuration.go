@@ -253,7 +253,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 				secretMatchesMC = false
 			}
 		default:
-			input.Logger.Warn("An unknown cilium mode was specified in the d8-cni-configuration secret, so the default cni mode will be used instead.", slog.String("specified mode", cniSecret.Cilium.Mode))
+			input.Logger.Warn("An unknown cilium mode was specified in the d8-cni-configuration secret, so the default cni mode will be used instead.", slog.String("specified_mode", cniSecret.Cilium.Mode))
 		}
 
 		switch cniSecret.Cilium.MasqueradeMode {
@@ -270,7 +270,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 				secretMatchesMC = false
 			}
 		default:
-			input.Logger.Warn("An unknown cilium masqueradeMode was specified in the d8-cni-configuration secret, so the default cni masqueradeMode will be used instead.", slog.String("specified masqueradeMode", cniSecret.Cilium.Mode))
+			input.Logger.Warn("An unknown cilium masqueradeMode was specified in the d8-cni-configuration secret, so the default cni masqueradeMode will be used instead.", slog.String("specified_masquerade_mode", cniSecret.Cilium.Mode))
 		}
 
 		desiredCNIModuleConfig.Spec.Settings = v1alpha1.MakeMappedFields(settings)

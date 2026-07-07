@@ -131,7 +131,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	if err := validation.ValidateData([]string{"/deckhouse/ee/modules/030-cloud-provider-huaweicloud/candi/openapi", "/deckhouse/candi/cloud-providers/huaweicloud/openapi"}, discoveryDataJSON); err != nil {
+	if err := validation.ValidateData([]string{"/deckhouse/ee/modules/030-cloud-provider-huaweicloud/candi/openapi", "/deckhouse/candi/cloud-providers/huaweicloud/openapi"}, &discoveryDataJSON); err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 

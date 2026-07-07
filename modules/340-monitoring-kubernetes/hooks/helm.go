@@ -43,11 +43,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 )
 
 // this hook checks helm releases (v2 and v3) and find deprecated apis
@@ -170,23 +171,18 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 }
 
 func getKubernetesVersion(data []byte) (string, error) {
-	if err := validation.ValidateData([]string{}, data); err != nil {
+	if err := validation.ValidateData([]string{}, &data); err != nil {
 		if !errors.Is(err, validation.ErrSchemaNotFound) {
 			return "", err
 		}
 	}
-	res := make(map[any]any)
-	err := yaml.Unmarshal(data, &res)
-	if err != nil {
-		return "", err
+	var cfg struct {
+		KubernetesVersion string `yaml:"kubernetesVersion"`
 	}
-
-	version, ok := res["kubernetesVersion"]
-	if ok {
-		return version.(string), nil
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return "", fmt.Errorf("unmarshal YAML: %w", err)
 	}
-
-	return "", nil
+	return cfg.KubernetesVersion, nil
 }
 
 func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
