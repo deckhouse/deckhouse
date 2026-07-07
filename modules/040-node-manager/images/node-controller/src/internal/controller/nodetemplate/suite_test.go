@@ -22,7 +22,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -68,7 +67,12 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping the envtest environment with the NodeGroup CRD")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(scheme, testenv.CRDPaths("node_group.yaml"))
+	testEnv, cfg, k8sClient, err = testenv.Start(
+		scheme,
+		testenv.CRDPaths(
+			testenv.WithNodeGroupCRDFile(),
+		)...,
+	)
 	Expect(err).NotTo(HaveOccurred())
 
 	// The node-template controller registered itself via its package init(); since only this

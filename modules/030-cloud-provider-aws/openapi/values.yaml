@@ -50,6 +50,10 @@ properties:
               additionalProperties: false
         x-examples:
         - [{"name": "gp3", "type": "gp3", "iops": "6000", "throughput": "300"}]
+      cniSecretData:
+        type: string
+        x-examples:
+        - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV3b2dJQ0p0YjJSbElqb2dJbFpZVEVGT0lpd0tJQ0FpYldGemNYVmxjbUZrWlUxdlpHVWlPaUFpUWxCR0lncDkK"
       instances:
         type: object
         properties:

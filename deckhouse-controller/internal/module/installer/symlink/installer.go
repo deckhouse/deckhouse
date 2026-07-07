@@ -30,7 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -56,7 +56,7 @@ type Installer struct {
 //	/deckhouse/downloaded/<module>/     - Actual module files
 //	/deckhouse/downloaded/modules/<version> -> symlink to actual module
 func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
-	downloaded := d8env.GetDownloadedModulesDir()
+	downloaded := app.DownloadedModulesDir()
 
 	return &Installer{
 		downloaded: downloaded,
