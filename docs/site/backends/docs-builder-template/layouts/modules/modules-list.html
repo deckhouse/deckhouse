@@ -193,7 +193,7 @@
 
         <a class="button-tile" data-editions="{{ $moduleEditionsString }}" href="{{ .url }}">
 
-        {{- warnf "%s; stage - %s; metadata len - %d" $moduleName $moduleStage (.metadata | len) }}
+        {{- warnf "%s; stage - %s; metadata len - %v" $moduleName $moduleStage (len (default dict .metadata)) }}
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
           {{- if eq $moduleStage "General Availability" }}
