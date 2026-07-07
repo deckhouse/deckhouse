@@ -20,7 +20,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`cloud-provider-openstack`](/modules/cloud-provider-openstack/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Cloud-provider-openstack architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-openstack.png)
 
 ## Module components

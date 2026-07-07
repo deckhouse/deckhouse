@@ -19,7 +19,6 @@ description: Архитектура модуля node-manager для CloudStatic
 
 Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля node-manager для CloudStatic-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-static-nodes.ru.png)
 
 ## Компоненты модуля

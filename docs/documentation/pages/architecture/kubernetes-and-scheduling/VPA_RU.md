@@ -72,7 +72,6 @@ VPA может работать в двух режимах:
 
 Архитектура модуля [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP показаны на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля vertical-pod-autoscaler](../../images/architecture/kubernetes-and-scheduling/c4-l2-vertical-pod-autoscaler.ru.png)
 
 ## Компоненты модуля

@@ -18,7 +18,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the `csi-huawei` CSI driver and its interactions with other components of DKP are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![CSI driver architecture (csi-huawei)](../../../images/architecture/storage/c4-l2-csi-driver-huawei.png)
 
 ## Driver components

@@ -21,7 +21,6 @@ description: Архитектура модуля csi-nfs в Deckhouse Kubernetes
 
 Архитектура модуля [`csi-nfs`](/modules/csi-nfs/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля csi-nfs](../../../images/architecture/storage/c4-l2-csi-nfs.ru.png)
 
 ## Компоненты модуля

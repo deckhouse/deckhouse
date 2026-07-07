@@ -20,7 +20,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`cloud-provider-dynamix`](/modules/cloud-provider-dynamix/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Cloud-provider-dynamix architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dynamix.png)
 
 ## Module components

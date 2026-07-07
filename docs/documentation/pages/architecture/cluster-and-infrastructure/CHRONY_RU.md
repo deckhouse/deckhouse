@@ -21,7 +21,6 @@ description: Архитектура модуля chrony в Deckhouse Kubernetes 
 
 Архитектура модуля [`chrony`](/modules/chrony/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля chrony](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.ru.png)
 
 ## Компоненты модуля

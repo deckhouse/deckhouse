@@ -30,7 +30,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`admission-policy-engine`](/modules/admission-policy-engine/) module and its interaction with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Admission-policy-engine architecture](../../images/architecture/security/c4-l2-admission-policy-engine.png)
 
 ## Module components

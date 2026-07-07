@@ -30,7 +30,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`kube-dns`](/modules/kube-dns/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![kube-dns module architecture](../../images/architecture/network/c4-l2-kube-dns.png)
 
 ### Module components
@@ -92,7 +91,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`node-local-dns`](/modules/node-local-dns/) module when using Cilium as the CNI plugin and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![node-local-dns module architecture](../../images/architecture/network/c4-l2-node-local-dns.png)
 
 #### Module components
@@ -149,7 +147,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`node-local-dns`](/modules/node-local-dns/) module when using the [`cni-flannel`](/modules/cni-flannel/) or [`cni-simple-bridge`](/modules/cni-simple-bridge/) CNI plugin and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![node-local-dns module architecture](../../images/architecture/network/c4-l2-node-local-dns-without-cilium.png)
 
 #### Module components

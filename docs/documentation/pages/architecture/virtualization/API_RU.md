@@ -52,7 +52,6 @@ description: Архитектура компонента Virtualization API мо
 
 Архитектура компонента Virtualization API модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура компонента Virtualization API модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-api.ru.png)
 
 ## Компоненты Virtualization API

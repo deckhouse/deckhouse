@@ -26,7 +26,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`log-shipper`](/modules/log-shipper/) module and its interactions with other components of DKP are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Log-shipper module architecture](../../images/architecture/observability/c4-l2-log-shipper.png)
 
 ### Module components
@@ -87,7 +86,6 @@ For more details about module configuration and usage examples, refer to the [co
 
 The Level 2 C4 architecture of the [`loki`](/modules/loki/) module and its interactions with other components of DKP are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Loki module architecture](../../images/architecture/observability/c4-l2-loki.png)
 
 ### Module components

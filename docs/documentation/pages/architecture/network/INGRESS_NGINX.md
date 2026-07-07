@@ -24,7 +24,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`ingress-nginx`](/modules/ingress-nginx/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Ingress-nginx module architecture](../../images/architecture/network/c4-l2-ingress-nginx.png)
 
 ## Module components
@@ -112,7 +111,6 @@ The following diagram does not show the architecture of the main Ingress control
 
 The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet type and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Architecture of ingress-nginx module with HostWithFailover inlet type](../../images/architecture/network/c4-l2-ingress-nginx-failover.png)
 
 ### Components of failover Ingress controller

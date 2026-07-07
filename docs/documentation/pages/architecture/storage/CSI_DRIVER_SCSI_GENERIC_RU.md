@@ -19,7 +19,6 @@ CSI-драйвер `csi-scsi-generic` — это реализация станд
 
 Архитектура CSI-драйвера (`csi-scsi-generic`) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура CSI-драйвера (csi-scsi-generic)](../../../images/architecture/storage/c4-l2-csi-driver-scsi-generic.ru.png)
 
 ## Компоненты драйвера

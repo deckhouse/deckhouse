@@ -21,7 +21,6 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
 Архитектура модуля [`cloud-provider-aws`](/modules/cloud-provider-aws/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля cloud-provider-aws](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-aws.ru.png)
 
 ## Компоненты модуля

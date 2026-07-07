@@ -22,7 +22,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`csi-vsphere`](/modules/csi-vsphere/) CSI driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Architecture of the csi-vsphere CSI driver](../../../images/architecture/storage/c4-l2-csi-driver-vsphere.png)
 
 ## Driver components

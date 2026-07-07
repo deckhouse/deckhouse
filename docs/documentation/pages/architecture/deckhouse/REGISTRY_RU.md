@@ -33,17 +33,14 @@ description: Архитектура модуля registry в Deckhouse Kubernete
 
 Модуль [`registry`](/modules/registry/) в режиме `Direct`:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля registry в режиме Direct](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.ru.png)
 
 Модуль [`registry`](/modules/registry/) в режиме `Proxy`:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля registry в режиме Proxy](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.ru.png)
 
 Модуль [`registry`](/modules/registry/) в режиме `Local`:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля registry в режиме Local](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.ru.png)
 
 ## Компоненты модуля

@@ -21,7 +21,6 @@ description: Архитектура модуля csi-yadro-tatlin-unified в Dec
 
 Архитектура модуля [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля csi-yadro-tatlin-unified](../../../images/architecture/storage/c4-l2-csi-yadro-tatlin-unified.ru.png)
 
 ## Компоненты модуля

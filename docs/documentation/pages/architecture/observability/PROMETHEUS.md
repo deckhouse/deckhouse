@@ -20,7 +20,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`prometheus`](/modules/prometheus/) module and its interactions with other components of DKP are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Prometheus module architecture](../../images/architecture/observability/c4-l2-prometheus.svg)
 
 ## Module components

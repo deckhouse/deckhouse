@@ -46,7 +46,6 @@ description: Архитектура и функции модуля control-plane
 
 Архитектура модуля [`control-plane-manager`](/modules/control-plane-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля control-plane-manager](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.ru.png)
 
 ### Компоненты модуля

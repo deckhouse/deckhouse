@@ -21,7 +21,6 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
 
 Архитектура модуля [`cloud-provider-azure`](/modules/cloud-provider-azure/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля cloud-provider-azure](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-azure.ru.png)
 
 ## Компоненты модуля

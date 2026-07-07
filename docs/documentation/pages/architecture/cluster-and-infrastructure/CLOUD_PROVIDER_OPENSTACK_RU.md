@@ -21,7 +21,6 @@ description: Архитектура модуля cloud-provider-openstack в Dec
 
 Архитектура модуля [`cloud-provider-openstack`](/modules/cloud-provider-openstack/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля cloud-provider-openstack](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-openstack.ru.png)
 
 ## Компоненты модуля

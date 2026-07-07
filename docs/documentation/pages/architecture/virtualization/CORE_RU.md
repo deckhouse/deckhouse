@@ -47,7 +47,6 @@ description: Архитектура ядра модуля virtualization в Deck
 
 Архитектура ядра модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура ядра модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-core.ru.png)
 
 ## Компоненты ядра модуля

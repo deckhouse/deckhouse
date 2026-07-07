@@ -19,7 +19,6 @@ CSI-драйвер `csi-rbd` — это реализация стандарта 
 
 Архитектура CSI-драйвера `csi-rbd` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура CSI-драйвера (csi-rbd)](../../../images/architecture/storage/c4-l2-csi-ceph-rbd-driver.ru.png)
 
 ## Компоненты драйвера

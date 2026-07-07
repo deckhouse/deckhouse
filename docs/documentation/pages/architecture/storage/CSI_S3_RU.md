@@ -21,7 +21,6 @@ description: Архитектура модуля csi-s3 в Deckhouse Kubernetes 
 
 Архитектура модуля [`csi-s3`](/modules/csi-s3/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля csi-s3](../../../images/architecture/storage/c4-l2-csi-s3.ru.png)
 
 ## Компоненты модуля

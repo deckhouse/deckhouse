@@ -20,7 +20,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`console`](/modules/console/) module and its interaction with other DKP components are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Console module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-console.png)
 
 {% alert level="info" %}
@@ -84,7 +83,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`documentation`](/modules/documentation/) module and its interaction with other DKP components are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Documentation module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.png)
 
 {% alert level="info" %}
@@ -141,7 +139,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`deckhouse-tools`](/modules/deckhouse-tools/) module and its interaction with other DKP components are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![Deckhouse-tools module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.png)
 
 {% alert level="info" %}

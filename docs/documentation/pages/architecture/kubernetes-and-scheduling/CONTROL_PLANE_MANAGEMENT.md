@@ -45,7 +45,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`control-plane-manager`](/modules/control-plane-manager/) module and its interactions with other platform components are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![control-plane-manager module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.png)
 
 ## Module components

@@ -20,7 +20,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`csi-huawei`](/modules/csi-huawei/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code --->
 ![csi-huawei module architecture](../../../images/architecture/storage/c4-l2-csi-huawei.png)
 
 ## Module components

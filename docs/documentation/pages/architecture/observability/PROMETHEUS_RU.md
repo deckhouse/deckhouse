@@ -21,7 +21,6 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
 Архитектура модуля [`prometheus`](/modules/prometheus/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля prometheus](../../images/architecture/observability/c4-l2-prometheus.ru.svg)
 
 ## Компоненты модуля

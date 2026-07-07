@@ -19,7 +19,6 @@ description: Архитектура компонента DVCR модуля virtu
 
 Архитектура компонента DVCR модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура компонента DVCR модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-dvcr.ru.png)
 
 ## Компоненты DVCR

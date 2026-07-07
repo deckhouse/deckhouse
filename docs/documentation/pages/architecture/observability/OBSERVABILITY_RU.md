@@ -30,7 +30,6 @@ description: Архитектура модуля observability в Deckhouse Kube
 
 Архитектура модуля [`observability`](/modules/observability/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля observability](../../images/architecture/observability/c4-l2-observability.ru.svg)
 
 ## Компоненты модуля

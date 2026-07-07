@@ -21,7 +21,6 @@ description: Архитектура модуля cloud-provider-huaweicloud в D
 
 Архитектура модуля [`cloud-provider-huaweicloud`](/modules/cloud-provider-huaweicloud/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code --->
 ![Архитектура модуля cloud-provider-huaweicloud](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-huaweicloud.ru.png)
 
 ## Компоненты модуля
