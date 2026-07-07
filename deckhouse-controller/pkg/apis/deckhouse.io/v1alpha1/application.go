@@ -121,7 +121,7 @@ type ApplicationStatus struct {
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
 	// URLs of application endpoints, collected from Ingress resources of the
-	// application chart annotated with packages.deckhouse.io/is-application-endpoint.
+	// application chart annotated with `packages.deckhouse.io/is-application-endpoint`.
 	// +optional
 	URLs []ApplicationStatusURL `json:"urls,omitempty"`
 
@@ -173,7 +173,8 @@ type ApplicationStatusURL struct {
 	URL string `json:"url"`
 
 	// Description of the endpoint, taken from the value of the
-	// packages.deckhouse.io/is-application-endpoint annotation.
+	// `packages.deckhouse.io/is-application-endpoint` annotation.
+	//
 	// Empty when the annotation value is "true".
 	// +optional
 	Description string `json:"description,omitempty"`
