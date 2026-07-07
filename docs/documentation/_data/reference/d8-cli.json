@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.31.0",
+  "version": "v0.32.0",
   "aliases": null,
   "flags": {
     "help": {
@@ -118,6 +118,179 @@
               "description": "Set start timestamp range to dump logs from Loki. (Default get max start timestamp from Loki, ex. \"2025-01-12 15:04:05\".)",
               "shorthand": "",
               "global": false
+            }
+          },
+          "subcommands": null
+        }
+      ]
+    },
+    {
+      "name": "cli",
+      "description": "Manage the deckhouse-cli (d8) binary",
+      "aliases": null,
+      "flags": {
+        "context": {
+          "description": "The name of the kubeconfig context to use",
+          "shorthand": "",
+          "global": false
+        },
+        "kubeconfig": {
+          "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+          "shorthand": "k",
+          "global": false
+        },
+        "rpp-ca-file": {
+          "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+          "shorthand": "",
+          "global": false
+        },
+        "rpp-endpoint": {
+          "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+          "shorthand": "",
+          "global": false
+        },
+        "rpp-insecure-skip-tls-verify": {
+          "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+          "shorthand": "",
+          "global": false
+        }
+      },
+      "subcommands": [
+        {
+          "name": "check",
+          "description": "Report whether a newer deckhouse-cli version is available",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-insecure-skip-tls-verify": {
+              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "update",
+          "description": "Update deckhouse-cli to the latest version",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-insecure-skip-tls-verify": {
+              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+              "shorthand": "",
+              "global": true
+            },
+            "version": {
+              "description": "Exact version to install; downgrades are allowed (default: the latest).",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "use \u003cversion\u003e",
+          "description": "Switch to a specific deckhouse-cli version (no download when it is installed locally)",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-insecure-skip-tls-verify": {
+              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "versions",
+          "description": "List deckhouse-cli versions available in the cluster registry",
+          "aliases": [
+            "list"
+          ],
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-insecure-skip-tls-verify": {
+              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+              "shorthand": "",
+              "global": true
             }
           },
           "subcommands": null
