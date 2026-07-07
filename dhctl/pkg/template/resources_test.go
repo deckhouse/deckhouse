@@ -15,7 +15,6 @@
 package template
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,7 +44,7 @@ func TestResourcesOrder(t *testing.T) {
 	}
 	expectedLen := len(unknownAdditionalOrder) + len(bootstrapKindsOrder)
 
-	resources, err := ParseResources(context.Background(), "testdata/resources/order.yaml", nil)
+	resources, err := ParseResources(t.Context(), "testdata/resources/order.yaml", nil)
 	require.NoError(t, err)
 
 	require.Len(t, resources, expectedLen)
@@ -73,7 +72,7 @@ func TestResourcesOrderWithSameKind(t *testing.T) {
 		require.Equal(t, resources[indx].GVK, schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})
 	}
 
-	resources, err := ParseResources(context.Background(), "testdata/resources/same_kind_order.yaml", nil)
+	resources, err := ParseResources(t.Context(), "testdata/resources/same_kind_order.yaml", nil)
 	require.NoError(t, err)
 
 	require.Len(t, resources, 5)
@@ -93,7 +92,7 @@ func TestResourcesOrderWithSameKind(t *testing.T) {
 func TestResourcesWithTemplateData(t *testing.T) {
 	const expectedValueFromCloudData = "id1"
 	t.Run("parses template resources and put data in manifests", func(t *testing.T) {
-		resources, err := ParseResources(context.Background(), "testdata/resources/with_tmp.yaml", map[string]any{
+		resources, err := ParseResources(t.Context(), "testdata/resources/with_tmp.yaml", map[string]any{
 			"cloudDiscovery": map[string]any{
 				"networkId": map[string]any{
 					"ru-central1-a": expectedValueFromCloudData,
@@ -124,7 +123,7 @@ func TestResourcesWithTemplateData(t *testing.T) {
 
 func TestResourcesNotExistsTemplateDataReturnError(t *testing.T) {
 	t.Run("returns error if value not found in data", func(t *testing.T) {
-		resources, err := ParseResources(context.Background(), "testdata/resources/with_tmp.yaml", map[string]any{
+		resources, err := ParseResources(t.Context(), "testdata/resources/with_tmp.yaml", map[string]any{
 			"cloudDiscovery": map[string]any{
 				"anotherKey": "anotherValue",
 			},
@@ -137,7 +136,7 @@ func TestResourcesNotExistsTemplateDataReturnError(t *testing.T) {
 
 func TestResourcesWithEmptyDocs(t *testing.T) {
 	t.Run("returns only not empty resources", func(t *testing.T) {
-		resources, err := ParseResources(context.Background(), "testdata/resources/empties_docs.yaml", make(map[string]any))
+		resources, err := ParseResources(t.Context(), "testdata/resources/empties_docs.yaml", make(map[string]any))
 
 		require.NoError(t, err)
 		require.Len(t, resources, 2)

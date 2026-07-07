@@ -141,7 +141,7 @@ func assertResources(t *testing.T, kubeCl *client.KubernetesClient, resources []
 }
 
 func assertResourcesDeleted(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
-	ctx := context.TODO()
+	ctx := t.Context()
 	for _, r := range resources {
 		err := r.getFunc(t, ctx, kubeCl)
 		if r.shouldExists {
@@ -155,7 +155,7 @@ func assertResourcesDeleted(t *testing.T, kubeCl *client.KubernetesClient, resou
 }
 
 func assertResourceExists(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
-	ctx := context.TODO()
+	ctx := t.Context()
 	for _, r := range resources {
 		err := r.getFunc(t, ctx, kubeCl)
 		require.NoError(t, err, r.Name(), "resource should not delete", r.Name())
@@ -180,7 +180,7 @@ func testAddDeckhouseStorageClass(t *testing.T, ctx context.Context, kubeCl *cli
 }
 
 func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) []testCreatedResource {
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	createdResources := make([]testCreatedResource, 0)
 
@@ -642,7 +642,7 @@ spec:
       nodeDrainTimeout: 10m0s
       nodeVolumeDetachTimeout: 10m0s
 `)
-	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(context.TODO(), md, metav1.CreateOptions{})
+	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(t.Context(), md, metav1.CreateOptions{})
 	require.NoError(t, err)
 	createdResources = append(createdResources, testCreatedResource{
 		name: md.GetName(),
@@ -726,7 +726,7 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -741,7 +741,7 @@ func testCreateSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -756,7 +756,7 @@ func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(context.TODO(), cm, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), cm, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 

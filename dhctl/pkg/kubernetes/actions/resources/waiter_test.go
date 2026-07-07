@@ -50,11 +50,11 @@ spec:
 `
 
 	t.Run("without nodegroup", func(t *testing.T) {
-		resources, err := template.ParseResourcesContent(context.Background(), resourcesContentWithoutNg, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), resourcesContentWithoutNg, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 2)
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, nil)
+		checkers, err := GetCheckers(t.Context(), nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 2) // ready resources for all
 
@@ -71,11 +71,11 @@ metadata:
 spec:
   nodeType: Static
 `
-		resources, err := template.ParseResourcesContent(context.Background(), content, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), content, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, nil)
+		checkers, err := GetCheckers(t.Context(), nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 3, "only readiness checks")
 
@@ -104,11 +104,11 @@ spec:
         value: system
   nodeType: CloudEphemeral
 `
-		resources, err := template.ParseResourcesContent(context.Background(), content, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), content, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, nil)
+		checkers, err := GetCheckers(t.Context(), nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 3, "only readiness checks")
 
@@ -145,11 +145,11 @@ spec:
 	t.Run("with cloud ephemeral nodegroup, but min and max per zone is zero", func(t *testing.T) {
 		content := resourcesContentWithoutNg + ngTemplate("system", 0, 0)
 
-		resources, err := template.ParseResourcesContent(context.Background(), content, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), content, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, nil)
+		checkers, err := GetCheckers(t.Context(), nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 3, "only readiness checks")
 
@@ -161,11 +161,11 @@ spec:
 	t.Run("with cloud ephemeral nodegroup, but min = 0 and max not zero", func(t *testing.T) {
 		content := resourcesContentWithoutNg + ngTemplate("system", 0, 2)
 
-		resources, err := template.ParseResourcesContent(context.Background(), content, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), content, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, nil)
+		checkers, err := GetCheckers(t.Context(), nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 4, "readiness checks with cluster bootstrapped")
 
@@ -178,11 +178,11 @@ spec:
 	t.Run("with cloud ephemeral nodegroup, but min not zero and max not zero", func(t *testing.T) {
 		content := resourcesContentWithoutNg + ngTemplate("system", 1, 2)
 
-		resources, err := template.ParseResourcesContent(context.Background(), content, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), content, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, nil)
+		checkers, err := GetCheckers(t.Context(), nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 4, "readiness checks with cluster bootstrapped")
 
@@ -197,11 +197,11 @@ spec:
 			ngTemplate("system", 0, 2) +
 			ngTemplate("node", 1, 2)
 
-		resources, err := template.ParseResourcesContent(context.Background(), content, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), content, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 4)
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, nil)
+		checkers, err := GetCheckers(t.Context(), nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 5, "readiness checks with only one cluster bootstrapped")
 
@@ -215,7 +215,7 @@ spec:
 	t.Run("with one terra node without replicas", func(t *testing.T) {
 		content := resourcesContentWithoutNg
 
-		resources, err := template.ParseResourcesContent(context.Background(), content, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), content, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 2)
 
@@ -225,7 +225,7 @@ spec:
 			},
 		}
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, cnf)
+		checkers, err := GetCheckers(t.Context(), nil, resources, cnf)
 		require.NoError(t, err)
 		require.Len(t, checkers, 2) // ready resources for all
 
@@ -240,7 +240,7 @@ spec:
 			},
 		}
 
-		checkers, err := GetCheckers(context.Background(), nil, nil, cnf)
+		checkers, err := GetCheckers(t.Context(), nil, nil, cnf)
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get one check")
 
@@ -255,7 +255,7 @@ spec:
 			},
 		}
 
-		checkers, err := GetCheckers(context.Background(), nil, nil, cnf)
+		checkers, err := GetCheckers(t.Context(), nil, nil, cnf)
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get one check")
 
@@ -265,7 +265,7 @@ spec:
 	t.Run("with one terra node with replicas an ephemeral node group", func(t *testing.T) {
 		content := resourcesContentWithoutNg + ngTemplate("system", 0, 2)
 
-		resources, err := template.ParseResourcesContent(context.Background(), content, nil)
+		resources, err := template.ParseResourcesContent(t.Context(), content, nil)
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
@@ -275,7 +275,7 @@ spec:
 			},
 		}
 
-		checkers, err := GetCheckers(context.Background(), nil, resources, cnf)
+		checkers, err := GetCheckers(t.Context(), nil, resources, cnf)
 		require.NoError(t, err)
 
 		require.Len(t, checkers, 4, "should get one check")
@@ -320,7 +320,7 @@ func (n *testChecker) Single() bool {
 }
 
 func TestWaiterStep(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("without checks", func(t *testing.T) {
 		w := NewWaiter(make([]Checker, 0))

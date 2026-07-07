@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -129,7 +128,7 @@ func Test_getNodesToDeleteInfo(t *testing.T) {
 				state[node] = nil
 			}
 
-			nodeToDeleteInfo, err := getNodesToDeleteInfo(context.Background(), test.replicas, state)
+			nodeToDeleteInfo, err := getNodesToDeleteInfo(t.Context(), test.replicas, state)
 
 			if test.error {
 				require.Error(t, err)

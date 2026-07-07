@@ -15,7 +15,6 @@
 package destroy
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,13 +30,13 @@ import (
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
-	params := settings.ProviderParams{Logger: dhlog.FromContext(context.Background()), IsDebug: false, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: options.DefaultTmpDir()}
+	params := settings.ProviderParams{Logger: dhlog.FromContext(t.Context()), IsDebug: false, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: options.DefaultTmpDir()}
 	baseProviderSettings := settings.NewBaseProviders(params)
 
 	sshProvider := testCreateDefaultTestSSHProvider(session.Host{Host: "host"}, false)
 	providerInitializer := provider.NewSimpleSSHProviderInitializer(sshProvider)
 	cfg := &kube.Config{}
-	runnerInterface, err := provider.GetRunnerInterface(context.Background(), cfg, baseProviderSettings, providerInitializer)
+	runnerInterface, err := provider.GetRunnerInterface(t.Context(), cfg, baseProviderSettings, providerInitializer)
 	require.NoError(t, err)
 	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
 	require.NoError(t, err)

@@ -15,7 +15,6 @@
 package state
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -49,7 +48,7 @@ func writeBlobsToRandomTempFiles(t *testing.T, blobs [][]byte) []string {
 // to produce different hashes (the old ConfigHash sorted by path). That flipped
 // the preflight cache salt every run and re-ran preflights on restart.
 func TestConfigHashDeterministicAcrossRandomTempNames(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	blobs := [][]byte{
 		[]byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\n"),
@@ -69,7 +68,7 @@ func TestConfigHashDeterministicAcrossRandomTempNames(t *testing.T) {
 // TestConfigHashIndependentOfPathOrder ensures the slice order of paths does not
 // affect the hash (same files, shuffled argument order).
 func TestConfigHashIndependentOfPathOrder(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	paths := writeBlobsToRandomTempFiles(t, [][]byte{
 		[]byte("blob-A"),
@@ -89,7 +88,7 @@ func TestConfigHashIndependentOfPathOrder(t *testing.T) {
 // any config actually changes (e.g. a changed master IP / CIDR), so preflights
 // correctly re-run.
 func TestConfigHashChangesOnContentChange(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	base := [][]byte{
 		[]byte("master:\n  ip: 10.0.0.1\n"),
@@ -109,7 +108,7 @@ func TestConfigHashChangesOnContentChange(t *testing.T) {
 // TestConfigHashStableForSameFile is a sanity check that a single fixed file
 // hashes to the same value across calls.
 func TestConfigHashStableForSameFile(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")

@@ -15,7 +15,6 @@
 package validation
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -35,7 +34,7 @@ kubernetesVersion: Automatic
 clusterDomain: cluster.local
 `
 	s := New(config.NewSchemaStore(nil))
-	resp, err := s.ConfigExtender(context.Background(), &pb.ConfigExtenderRequest{
+	resp, err := s.ConfigExtender(t.Context(), &pb.ConfigExtenderRequest{
 		Config: cfg,
 		Kind:   pb.ConfigExtensionKind_CONFIG_EXTENSION_KIND_CNI,
 	})
@@ -45,7 +44,7 @@ clusterDomain: cluster.local
 
 func TestConfigExtender_UnspecifiedKind_EmptyConfig(t *testing.T) {
 	s := New(config.NewSchemaStore(nil))
-	resp, err := s.ConfigExtender(context.Background(), &pb.ConfigExtenderRequest{
+	resp, err := s.ConfigExtender(t.Context(), &pb.ConfigExtenderRequest{
 		Config: "",
 		Kind:   pb.ConfigExtensionKind_CONFIG_EXTENSION_KIND_UNSPECIFIED,
 	})
@@ -57,7 +56,7 @@ func TestConfigExtender_UnspecifiedKind_EmptyConfig(t *testing.T) {
 // error, matching the convention used by other validation methods.
 func TestConfigExtender_InvalidConfig_ErrorInResponse(t *testing.T) {
 	s := New(config.NewSchemaStore(nil))
-	resp, err := s.ConfigExtender(context.Background(), &pb.ConfigExtenderRequest{
+	resp, err := s.ConfigExtender(t.Context(), &pb.ConfigExtenderRequest{
 		Config: "not a yaml: : :",
 		Kind:   pb.ConfigExtensionKind_CONFIG_EXTENSION_KIND_CNI,
 	})

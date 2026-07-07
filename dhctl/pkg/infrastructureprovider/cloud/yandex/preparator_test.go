@@ -15,7 +15,6 @@
 package yandex
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -118,7 +117,7 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 		preparator := NewMetaConfigPreparator(true)
 		require.False(t, preparator.validateWithNATLayout)
 
-		err := preparator.Validate(context.TODO(), cfg)
+		err := preparator.Validate(t.Context(), cfg)
 		require.NoError(t, err)
 	}
 
@@ -204,7 +203,7 @@ func assertValidation(t *testing.T, validatePrefix bool, cfg *config.MetaConfig,
 
 	require.True(t, preparator.validateWithNATLayout)
 
-	err := preparator.Validate(context.TODO(), cfg)
+	err := preparator.Validate(t.Context(), cfg)
 	if hasError {
 		require.Error(t, err)
 		return

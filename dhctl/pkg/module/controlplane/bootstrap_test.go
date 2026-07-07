@@ -15,7 +15,6 @@
 package controlplane
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -220,7 +219,7 @@ func TestPrepare(t *testing.T) {
 				CreateSigDir: retry.NewEmptyParams(),
 			})
 
-			err := preparator.PrepareModule(context.TODO())
+			err := preparator.PrepareModule(t.Context())
 			assertError(t, err)
 
 			tst.assertUploads(t, tst.uploads)
@@ -290,7 +289,7 @@ func (b *bootstrapTest) node(t *testing.T) libcon.Interface {
 		}).WithErr(b.commandErr)
 	})
 
-	err := cl.Start(context.Background())
+	err := cl.Start(t.Context())
 	require.NoError(t, err, "client should started")
 
 	return cl

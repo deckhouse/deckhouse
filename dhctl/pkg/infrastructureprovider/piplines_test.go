@@ -15,7 +15,6 @@
 package infrastructureprovider
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -42,7 +41,7 @@ func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 
 	getter := CloudProviderGetter(params)
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	type testCase struct {
 		name      string
@@ -245,7 +244,7 @@ func TestPipelineGetMasterIPs(t *testing.T) {
 
 	getter := CloudProviderGetter(params)
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	type testCase struct {
 		name      string
