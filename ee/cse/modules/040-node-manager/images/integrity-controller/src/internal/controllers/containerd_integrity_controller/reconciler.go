@@ -54,7 +54,7 @@ func (r *reconciler) reconcileProtectedNamespaces(
 	}
 
 	if isProtectedNamespacesInSync(policy, matchedNamespaces) {
-		log.FromContext(ctx).Info("protected namespaces status is in sync")
+		log.FromContext(ctx).Info("Protected namespaces status is in sync")
 		return reconcile.Result{}, nil
 	}
 
@@ -66,8 +66,7 @@ func (r *reconciler) reconcileProtectedNamespaces(
 	}
 
 	log.FromContext(ctx).Info(
-		"patched protected namespaces status",
-		"count", len(matchedNamespaces),
+		"Patched protected namespaces status",
 		"namespaces", matchedNamespaces,
 	)
 
