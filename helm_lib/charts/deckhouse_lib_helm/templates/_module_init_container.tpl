@@ -74,6 +74,8 @@
     runAsNonRoot: false
     runAsUser: 0
     runAsGroup: 0
+    seccompProfile:
+      type: RuntimeDefault
   image: {{ include "helm_lib_module_image" (list $context  "iptablesWrapperInit") }}
   command:
   - /bin/bash

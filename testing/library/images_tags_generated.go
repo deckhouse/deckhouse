@@ -97,6 +97,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManager":       "imageHash-cloudProviderHuaweicloud-terraformManager",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
+		"capoControllerManager":     "imageHash-cloudProviderOpenstack-capoControllerManager",
 		"cinderCsiPlugin131":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin131",
 		"cinderCsiPlugin132":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin132",
 		"cinderCsiPlugin133":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin133",
@@ -448,12 +449,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManagerVsphere":     "imageHash-terraformManager-terraformManagerVsphere",
 		"terraformManagerYandex":      "imageHash-terraformManager-terraformManagerYandex",
 		"terraformManagerZvirt":       "imageHash-terraformManager-terraformManagerZvirt",
-	},
-	"upmeter": map[string]interface{}{
-		"smokeMini": "imageHash-upmeter-smokeMini",
-		"status":    "imageHash-upmeter-status",
-		"upmeter":   "imageHash-upmeter-upmeter",
-		"webui":     "imageHash-upmeter-webui",
 	},
 	"userAuthn": map[string]interface{}{
 		"basicAuthProxy":      "imageHash-userAuthn-basicAuthProxy",

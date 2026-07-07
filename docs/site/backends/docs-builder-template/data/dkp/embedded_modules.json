@@ -2638,52 +2638,6 @@
       }
     },
     {
-      "title": "Cluster SLA Monitoring",
-      "description": "Collecting availability statistics for Deckhouse Kubernetes Platform cluster components.",
-      "webIfaces": [
-        {
-          "name": "status"
-        },
-        {
-          "name": "upmeter"
-        }
-      ],
-      "module": "upmeter",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability",
-        "ssdlc"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "upmeter/",
-      "ru": {
-        "title": "Мониторинг SLA кластера",
-        "description": "Сбор статистики по доступности компонентов кластера Deckhouse Kubernetes Platform.",
-        "webIfaces": [
-          {
-            "name": "status"
-          },
-          {
-            "name": "upmeter"
-          }
-        ]
-      },
-      "metadata": {
-        "name": "upmeter",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-upmeter",
-        "descriptions": {
-          "en": "Monitors platform availability and cluster component status in real time. Provides dashboards and metrics for SLA monitoring and component health tracking.",
-          "ru": "Мониторит доступность платформы и состояние компонентов кластера в реальном времени. Предоставляет дашборды и метрики для мониторинга SLA и отслеживания работоспособности компонентов."
-        },
-        "oss": []
-      }
-    },
-    {
       "title": "The user-authn module",
       "search": "kube config generator",
       "description": "A unified authentication system for Deckhouse Kubernetes Platform, integrated with Kubernetes and Deckhouse Kubernetes Platform web interfaces.",

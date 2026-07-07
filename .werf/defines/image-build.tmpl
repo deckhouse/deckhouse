@@ -34,6 +34,12 @@ cat >> .svace-dir/svace.ignore <<EOF
 {{ trim $content }}
 EOF
 {{- end }}
+# Install ssh via pm if missing (distroless builder/golang has no ssh).
+if ! command -v ssh >/dev/null 2>&1; then
+  if command -v pm >/dev/null 2>&1; then
+    pm install ssh-static
+  fi
+fi
 attempt=0
 retries=5
 success=0

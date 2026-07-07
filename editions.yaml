@@ -64,7 +64,9 @@ editions:
 - name: CSE
   versionMapFile: "ee/cse/candi/version_map.yml"
   modulesDir: "ee/cse/modules"
-  AvailableModules:
+  excludeEditions:
+  - FE
+  availableModules:
   - admission-policy-engine
   - cert-manager
   - chrony

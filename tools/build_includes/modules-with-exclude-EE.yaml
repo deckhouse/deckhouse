@@ -626,25 +626,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/500-upmeter
-  to: /deckhouse/modules/500-upmeter
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
   excludePaths:

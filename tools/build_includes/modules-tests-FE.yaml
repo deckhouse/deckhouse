@@ -362,17 +362,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/500-upmeter
-  to: /deckhouse/modules/500-upmeter
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
   excludePaths:

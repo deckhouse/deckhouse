@@ -295,14 +295,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/500-upmeter/hooks
-  to: /deckhouse/modules/500-upmeter/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/600-namespace-configurator/hooks
   to: /deckhouse/modules/600-namespace-configurator/hooks
   excludePaths:

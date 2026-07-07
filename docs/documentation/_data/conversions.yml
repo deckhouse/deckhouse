@@ -109,14 +109,6 @@ openvpn:
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
         - del(.storageClass)
-upmeter:
-    - version: 2
-      conversions:
-        - del(.auth.status.password) | if .auth.status == {} then del(.auth.status) end | if .auth == {} then del(.auth) end
-        - del(.auth.webui.password) | if .auth.webui == {} then del(.auth.webui) end | if .auth == {} then del(.auth) end
-    - version: 3
-      conversions:
-        - del(.smokeMini.ingressClass) | if .smokeMini == {} then del(.smokeMini) end
 user-authn:
     - version: 2
       description:
