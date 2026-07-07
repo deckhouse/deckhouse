@@ -67,7 +67,6 @@ spec:
         - /integrity-containerd-configurator
         args:
         - --health-probe-bind-address=0.0.0.0:8081
-        - --config-dir=/host/etc/containerd/integrity
         livenessProbe:
           httpGet:
             path: /healthz
@@ -88,7 +87,7 @@ spec:
 {{- end }}
         volumeMounts:
         - name: containerd-integrity
-          mountPath: /host/etc/containerd/integrity
+          mountPath: /etc/containerd/integrity
       volumes:
       - name: containerd-integrity
         hostPath:

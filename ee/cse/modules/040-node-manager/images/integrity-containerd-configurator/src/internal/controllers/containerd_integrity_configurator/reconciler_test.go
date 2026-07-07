@@ -3,12 +3,10 @@ Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package configapplier
+package containerdintegrityconfigurator
 
 import (
 	"encoding/base64"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/BurntSushi/toml"
@@ -17,7 +15,7 @@ import (
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 )
 
-func TestAggregatePolicies(t *testing.T) {
+func TestBuildDesiredConfig(t *testing.T) {
 	t.Parallel()
 
 	ca := "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----"
@@ -26,12 +24,12 @@ func TestAggregatePolicies(t *testing.T) {
 	tests := []struct {
 		name     string
 		policies []deckhousev1alpha1.ContainerdIntegrityPolicy
-		want     *DesiredConfig
+		want     *desiredConfig
 	}{
 		{
 			name:     "no policies",
 			policies: nil,
-			want: &DesiredConfig{
+			want: &desiredConfig{
 				Namespaces: []string{},
 				CACerts:    []string{},
 			},
@@ -48,7 +46,7 @@ func TestAggregatePolicies(t *testing.T) {
 					},
 				},
 			},
-			want: &DesiredConfig{
+			want: &desiredConfig{
 				Namespaces: []string{"baz", "qwerty"},
 				CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
 			},
@@ -69,7 +67,7 @@ func TestAggregatePolicies(t *testing.T) {
 					},
 				},
 			},
-			want: &DesiredConfig{
+			want: &desiredConfig{
 				Namespaces: []string{"kube-.+", "my-ns", "production"},
 				CACerts: []string{
 					base64.StdEncoding.EncodeToString([]byte(ca)),
@@ -87,7 +85,7 @@ func TestAggregatePolicies(t *testing.T) {
 					Spec: deckhousev1alpha1.ContainerdIntegrityPolicySpec{CA: ca},
 				},
 			},
-			want: &DesiredConfig{
+			want: &desiredConfig{
 				Namespaces: []string{},
 				CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
 			},
@@ -102,7 +100,7 @@ func TestAggregatePolicies(t *testing.T) {
 					},
 				},
 			},
-			want: &DesiredConfig{
+			want: &desiredConfig{
 				Namespaces: []string{"skipped-ns"},
 				CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(""))},
 			},
@@ -123,7 +121,7 @@ func TestAggregatePolicies(t *testing.T) {
 					},
 				},
 			},
-			want: &DesiredConfig{
+			want: &desiredConfig{
 				Namespaces: []string{"my-ns", "skipped-ns"},
 				CACerts: []string{
 					base64.StdEncoding.EncodeToString([]byte("")),
@@ -137,7 +135,7 @@ func TestAggregatePolicies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := AggregatePolicies(tt.policies)
+			got := makeDesiredConfig(tt.policies)
 			require.Equal(t, tt.want, got)
 		})
 	}
@@ -146,12 +144,12 @@ func TestAggregatePolicies(t *testing.T) {
 func TestRenderIntegrityToml(t *testing.T) {
 	t.Parallel()
 
-	cfg := &DesiredConfig{
+	cfg := &desiredConfig{
 		Namespaces: []string{"my-ns", "production", "kube-.+"},
 		CACerts:    []string{"base64_ca_first", "base64_ca_second"},
 	}
 
-	got, err := RenderIntegrityToml(cfg)
+	got, err := renderIntegrityToml(cfg)
 	require.NoError(t, err)
 
 	var parsed integrityTOML
@@ -160,51 +158,9 @@ func TestRenderIntegrityToml(t *testing.T) {
 	require.Equal(t, cfg.CACerts, parsed.CACerts)
 }
 
-func TestFSApplierApplyAndRemove(t *testing.T) {
+func TestIsIntegrityConfigFileInSync(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
-	applier := NewFSApplier(dir)
-
-	ca := "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----"
-	config := &DesiredConfig{
-		Namespaces: []string{"my-ns", "production"},
-		CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
-	}
-
-	_, err := applier.Apply(config)
-	require.NoError(t, err)
-
-	IntegrityTomlPath := filepath.Join(dir, IntegrityConfigFile)
-	IntegrityTomlData, err := os.ReadFile(IntegrityTomlPath)
-	require.NoError(t, err)
-
-	expected, err := RenderIntegrityToml(config)
-	require.NoError(t, err)
-	require.Equal(t, expected, IntegrityTomlData)
-
-	_, err = applier.Apply(config)
-	require.NoError(t, err)
-	unchanged, err := os.ReadFile(IntegrityTomlPath)
-	require.NoError(t, err)
-	require.Equal(t, expected, unchanged)
-
-	require.NoError(t, os.WriteFile(IntegrityTomlPath, []byte("stale"), 0o644))
-	_, err = applier.Apply(config)
-	require.NoError(t, err)
-	restored, err := os.ReadFile(IntegrityTomlPath)
-	require.NoError(t, err)
-	require.Equal(t, expected, restored)
-
-	_, err = applier.Apply(nil)
-	require.NoError(t, err)
-	_, err = os.Stat(filepath.Join(dir, IntegrityConfigFile))
-	require.True(t, os.IsNotExist(err))
-
-	_, err = applier.Apply(config)
-	require.NoError(t, err)
-	_, err = applier.Apply(&DesiredConfig{})
-	require.NoError(t, err)
-	_, err = os.Stat(filepath.Join(dir, IntegrityConfigFile))
-	require.True(t, os.IsNotExist(err))
+	require.True(t, isIntegrityConfigFileInSync([]byte("same"), []byte("same")))
+	require.False(t, isIntegrityConfigFileInSync([]byte("old"), []byte("new")))
 }

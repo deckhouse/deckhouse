@@ -17,13 +17,13 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"integrity-containerd-configurator/internal/configapplier"
-	"integrity-containerd-configurator/internal/controller"
+	containerdintegrityconfigurator "integrity-containerd-configurator/internal/controllers/containerd_integrity_configurator"
 )
 
 var (
@@ -38,11 +38,9 @@ func init() {
 
 func main() {
 	var probeAddr string
-	var configDir string
 	var debugging bool
 
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.StringVar(&configDir, "config-dir", configapplier.IntegrityNSConfigDir, "Directory for containerd integrity config files.")
 	flag.BoolVar(&debugging, "debug", false, "If set, enables debug logging.")
 
 	flag.Parse()
@@ -51,7 +49,9 @@ func main() {
 		log.SetDefaultLevel(log.LevelDebug)
 	}
 
-	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))
+	logger := logr.FromSlogHandler(log.Default().Handler())
+	ctrl.SetLogger(logger)
+	klog.SetLogger(logger)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -63,11 +63,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.Reconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		FSApplier: configapplier.NewFSApplier(configDir),
-	}).SetupWithManager(mgr); err != nil {
+	if err = containerdintegrityconfigurator.BuildController(mgr); err != nil {
 		setupLog.Error("unable to create controller", log.Err(err), "controller", "ContainerdIntegrityConfigurator")
 		os.Exit(1)
 	}
@@ -81,7 +77,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager", "config_dir", configDir)
+	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error("problem running manager", log.Err(err))
 		os.Exit(1)
