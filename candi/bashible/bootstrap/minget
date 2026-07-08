@@ -1,3 +1,0 @@
-#!/bin/sh
-echo "minget build artifact is missing; run the dev-prebuild/prepare-minget step" >&2
-exit 1
