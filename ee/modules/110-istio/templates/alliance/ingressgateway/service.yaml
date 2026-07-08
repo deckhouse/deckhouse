@@ -26,5 +26,8 @@ spec:
   type: NodePort
   {{- else }}
   type: LoadBalancer
+  {{- with .Values.istio.alliance.ingressGateway.loadBalancerClass }}
+  loadBalancerClass: {{ . | quote }}
+  {{- end }}
   {{- end }}
 {{- end }}
