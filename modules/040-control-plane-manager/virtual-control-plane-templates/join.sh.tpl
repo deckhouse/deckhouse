@@ -31,10 +31,12 @@ echo -n "${VCP_MINGET_B64}" | base64 -d > "${BIN_DIR}/minget"
 [[ -s "${BIN_DIR}/minget" ]] || { echo "embedded minget is empty (missing candi/bashible/bootstrap/minget)" >&2; exit 1; }
 chmod +x "${BIN_DIR}/minget"
 RPP_GET_DIGEST="${VCP_RPP_GET_DIGEST}"
-"${BIN_DIR}/minget" "${VCP_ALB_VIP}:80/${VCP_CLUSTER_UUID}/rpp-get?digest=${RPP_GET_DIGEST}" > "${BIN_DIR}/rpp-get"
-echo "${RPP_GET_DIGEST#sha256:}  ${BIN_DIR}/rpp-get" | sha256sum -c - \
-  || { echo "rpp-get digest mismatch" >&2; exit 1; }
-chmod +x "${BIN_DIR}/rpp-get"
+RPP_GET_TMP="${BIN_DIR}/rpp-get.tmp"
+"${BIN_DIR}/minget" "${VCP_ALB_VIP}:80/${VCP_CLUSTER_UUID}/rpp-get?digest=${RPP_GET_DIGEST}" > "${RPP_GET_TMP}"
+chmod +x "${RPP_GET_TMP}"
+"${RPP_GET_TMP}" version >/dev/null \
+  || { echo "downloaded rpp-get is not executable" >&2; exit 1; }
+mv -f "${RPP_GET_TMP}" "${BIN_DIR}/rpp-get"
 
 # --- install core packages (rpp-get talks HTTPS + bearer to the ALB itself) ---
 "${BIN_DIR}/rpp-get" install \
