@@ -39,7 +39,7 @@ import (
 var tenantAddonManifestKeys = []string{
 	"tenant-rbac.yaml.tpl",        // bootstrap CRBs + kube-apiserver-kubelet-client -> system:kubelet-api-admin
 	"konnectivity-agent.yaml.tpl", // SA + DaemonSet dialing konn.<vcp>:443
-	"cilium.yaml.tpl",             // CNI: agent DaemonSet + operator
+	"cilium-vcp.yaml.tpl",         // CNI: agent DaemonSet + operator RBAC; operator Deployment runs in the parent cluster
 }
 
 // reconcileTenantAddons ensures all tenant-side resources exist:
