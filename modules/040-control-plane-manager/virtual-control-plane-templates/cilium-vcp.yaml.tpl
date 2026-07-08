@@ -836,6 +836,7 @@ metadata:
     app.kubernetes.io/part-of: cilium
     app.kubernetes.io/name: cilium-agent
 spec:
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       k8s-app: cilium
@@ -942,7 +943,7 @@ spec:
                     set -o errexit
                     set -o pipefail
                     set -o nounset
-                    
+
                     # When running in AWS ENI mode, it's likely that 'aws-node' has
                     # had a chance to install SNAT iptables rules. These can result
                     # in dropped traffic, so we should attempt to remove them.
@@ -958,7 +959,7 @@ spec:
                         iptables-save | grep -E -v 'AWS-SNAT-CHAIN|AWS-CONNMARK-CHAIN' | iptables-restore
                     fi
                     echo 'Done!'
-                    
+
           preStop:
             exec:
               command:
@@ -1024,7 +1025,7 @@ spec:
           mountPath: /run/xtables.lock
         - name: tmp
           mountPath: /tmp
-        
+
       initContainers:
       - name: config
         image: "${IMAGE_CILIUM}"
@@ -1230,7 +1231,7 @@ spec:
       automountServiceAccountToken: true
       terminationGracePeriodSeconds: 1
       hostNetwork: true
-      
+
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

@@ -397,6 +397,25 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 	return readPKIBundleSecretData(pkiDir)
 }
 
+func writePKIBundleSecretData(pkiDir string, data map[string][]byte) error {
+	for flatKey, relPath := range certs.VirtualCertsFileLayout() {
+		content, ok := data[flatKey]
+		if !ok {
+			continue
+		}
+
+		dst := filepath.Join(pkiDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
+			return fmt.Errorf("create PKI dir for %s: %w", relPath, err)
+		}
+		if err := os.WriteFile(dst, content, 0o600); err != nil {
+			return fmt.Errorf("write PKI file %s: %w", relPath, err)
+		}
+	}
+
+	return nil
+}
+
 func readPKIBundleSecretData(pkiDir string) (map[string][]byte, error) {
 	layout := certs.VirtualCertsFileLayout()
 

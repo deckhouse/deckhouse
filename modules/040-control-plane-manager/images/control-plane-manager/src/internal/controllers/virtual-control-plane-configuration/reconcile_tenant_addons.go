@@ -119,7 +119,40 @@ func applyTenantManifests(ctx context.Context, tc client.Client, configSecret *c
 		if err != nil {
 			return fmt.Errorf("get %s %s: %w", target.GetKind(), target.GetName(), err)
 		}
+
+		base := current.DeepCopy()
+		applyTenantManifestTarget(current, target)
+		if err := tc.Patch(ctx, current, client.MergeFrom(base)); err != nil {
+			return fmt.Errorf("patch %s %s: %w", target.GetKind(), target.GetName(), err)
+		}
 	}
 
 	return nil
+}
+
+func applyTenantManifestTarget(current, target *unstructured.Unstructured) {
+	current.SetLabels(mergeMetadata(current.GetLabels(), target.GetLabels()))
+	current.SetAnnotations(mergeMetadata(current.GetAnnotations(), target.GetAnnotations()))
+
+	for _, field := range []string{"data", "spec", "rules", "roleRef", "subjects"} {
+		value, ok := target.Object[field]
+		if !ok {
+			continue
+		}
+		current.Object[field] = value
+	}
+}
+
+func mergeMetadata(current, target map[string]string) map[string]string {
+	if len(target) == 0 {
+		return current
+	}
+	out := make(map[string]string, len(current)+len(target))
+	for key, value := range current {
+		out[key] = value
+	}
+	for key, value := range target {
+		out[key] = value
+	}
+	return out
 }

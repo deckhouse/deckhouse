@@ -19,6 +19,7 @@ package virtualcontrolplaneconfiguration
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -157,11 +158,13 @@ func (r *reconciler) albVIP(ctx context.Context, vcp *controlplanev1alpha1.Virtu
 	}
 
 	for _, ingress := range lbService.Status.LoadBalancer.Ingress {
-		if ingress.IP != "" {
+		if ingress.IP != "" && net.ParseIP(ingress.IP) != nil {
 			return ingress.IP, nil
 		}
 		if ingress.Hostname != "" {
-			return ingress.Hostname, nil
+			// MVP is intentionally IP-only: the same value is used for apiserver
+			// --advertise-address and as an IP SAN, both of which require a concrete IP.
+			return "", nil
 		}
 	}
 
