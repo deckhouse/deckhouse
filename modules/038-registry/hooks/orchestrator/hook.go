@@ -173,6 +173,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		}
 
 		if err != nil {
+			noState = true
 			input.Logger.Warn(
 				"Cannot restore state from secret, will initialize new",
 				"error", err,
@@ -183,7 +184,6 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	if values.State.Mode == "" {
-		noState = true
 		values.State.Mode = registry_const.ModeUnmanaged
 
 		input.Logger.Warn(
