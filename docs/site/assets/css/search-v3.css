@@ -443,6 +443,7 @@
 @media (max-width: 1200px) {
   .searchV3 .input {
     padding-left: 10px;
+    padding-right: 30px;
     background-size: 20px;
   }
 }

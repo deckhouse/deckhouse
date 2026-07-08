@@ -374,16 +374,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked:not([data-select-all="true"])');
     const query = filterSearch ? filterSearch.value.trim() : '';
 
+    const hasCheckedCheckboxes = checkedCheckboxes.length > 0;
+
     if (applyButton) {
-      applyButton.disabled = checkedCheckboxes.length === 0;
+      applyButton.disabled = !hasCheckedCheckboxes;
     }
 
-    if(resetButton) {
-      if (checkedCheckboxes.length > 0) {
-        resetButton.classList.add('active');
-      } else {
-        resetButton.classList.remove('active');
-      }
+    if (resetButton) {
+      resetButton.disabled = !hasCheckedCheckboxes;
     }
 
     if (selectedFiltersList) {

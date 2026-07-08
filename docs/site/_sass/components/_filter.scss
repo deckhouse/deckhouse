@@ -80,48 +80,22 @@
             display: none;
             box-sizing: border-box;
             left: 0;
-            top: 0;
+            top: 51px;
             max-height: 100%;
-            width: 384px;
-            min-width: 384px;
-            padding: 130px 32px 0;
+            width: 100%;
+            min-width: 100%;
+            padding: 20px 20px 50px;
             overflow: auto;
             background: #fff;
             overflow: auto;
             position: fixed;
             transform: translateX(-100%);
-            z-index: 80;
+            z-index: 100;
             transition: .2s;
 
             &.show {
                 display: block;
                 transform: translateX(0);
-            }
-        }
-
-        @include breakpoints.max-w(s) {
-            width: 320px;
-            min-width: 320px;
-        }
-
-        @include breakpoints.max-w(xs) {
-            position: fixed;
-            top: 51px;
-            min-width: 100%;
-            padding: 20px 20px 50px;
-            z-index: 100;
-        }
-
-        &-module {
-            @include breakpoints.max-w(l) {
-
-                .filter__block--filters {
-                    margin-bottom: 65px;
-                }
-            }
-
-            @include breakpoints.max-w(xs) {
-                max-height: calc(100% - 51px);
             }
         }
 
@@ -131,8 +105,7 @@
             bottom: 20px;
             margin-top: 50px;
             background-color: #fff;
-            box-shadow: 0 0 30px 30px #fff;
-            cursor: pointer;
+            box-shadow: 0 0 30px 25px #fff;
 
             .filter__container--apply {
                 position: sticky;
@@ -143,6 +116,7 @@
                 align-items: center;
                 border-radius: 1px;
                 background: #0064FF;
+                cursor: pointer;
 
                 &:has(button:disabled) {
                     cursor: not-allowed;
@@ -167,34 +141,36 @@
             @include breakpoints.max-w(l) {
                 display: block;
             }
-
-            @include breakpoints.max-w(xs) {
-                bottom: 10px;
-                margin-top: 40px;
-            }
         }
     }
 
     &__container {
-
-        @include breakpoints.max-w(xl) {
-            &--stages {
-                .filter__container--title {
+        &--stages {
+            .filter__container--title {
+                @include breakpoints.max-w(xl) {
                     padding-right: 30px;
+                }
 
-                    &.closing-title {
-                        &::before {
-                            top: -12px;
+                &.closing-title {
+                    &::before {
+                        @include breakpoints.max-w(xl) {
+                           top: -12px; 
                         }
                     }
+                }
 
-                    &.filter-selected {
-                        &::after {
+                &.filter-selected {
+                    &::after {
+                        @include breakpoints.max-w(xl) {
                             top: 30px;
                         }
+
+                        @include breakpoints.max-w(l) {
+                            top: 5px;
+                        }
                     }
-                    
                 }
+                
             }
         }
 
@@ -216,12 +192,13 @@
 
             &.closing-title {
                 position: relative;
+                user-select: none;
 
                 @include breakpoints.min-w(l) {
                     &::before {
                         content: '';
                         position: absolute;
-                        top: 0;
+                        top: 2px;
                         left: 0;
                         width: 100%;
                         height: 100%;
@@ -245,7 +222,7 @@
                     justify-content: center;
                     align-items: center;
                     position: absolute;
-                    top: 4px;
+                    top: 5px;
                     width: 25px;
                     height: 20px;
                     margin-left: 6px;
@@ -323,6 +300,14 @@
                 font-weight: 400;
                 line-height: normal;
 
+                @include breakpoints.max-w(xl) {
+                    background-size: 20px;
+                }
+
+                @include breakpoints.max-w(m) {
+                    background-size: 18px;
+                }
+
                 &::placeholder {
                     color: #B2B8D9;
                 }
@@ -395,7 +380,13 @@
             cursor: pointer;
 
             &.hidden {
-                display: none;
+                @include breakpoints.min-w(l) {
+                    display: none;
+                }
+
+                @include breakpoints.max-w(l) {
+                    display: flex;
+                }
             }
 
             &--all {
@@ -484,15 +475,13 @@
 
         .reset-check {
             width: 100%;
-            height: 40px;
+            height: 100%;
             margin-bottom: 50px;
+            padding: 6px 20px;
             font-weight: 500;
             font-size: 16px;
             line-height: 24px;
-            color: #C4CAD4;
-            border: 1px solid #C4CAD4;
             background-color: #fff;
-            background-image: url(/images/icons/reset_icon.svg);
             background-position: calc(100% - 50px) center;
             background-repeat: no-repeat;
             cursor: pointer;
@@ -504,6 +493,10 @@
 
             @include breakpoints.max-w(l) {
                 margin-bottom: 0;
+                padding: 12px 20px;
+                font-size: 14px;
+                line-height: 21px;
+                text-transform: uppercase;
             }
 
             &__en {
@@ -511,19 +504,17 @@
                 background-position: calc(100% - 75px) center;
             }
 
-            &:hover {
-                border-color: #222a5e;
-                background-color: #f5f5fb;
+            &:disabled {
+                color: #C4CAD4;
+                border: 1px solid #C4CAD4;
+                background-image: url(/images/icons/reset_icon.svg);
+                cursor: not-allowed;
+                pointer-events: none;
             }
 
-            &:active {
-                opacity: 0.7;
-                transform: scale(0.95);
-            }
-
-            &.active {
+            &:not(:disabled) {
                 background-image: url(/images/icons/reset_icon-active.svg);
-                border-color:#0064FF;
+                border: 1px solid #0064FF;
                 color: #0064FF;
 
                 &:hover {

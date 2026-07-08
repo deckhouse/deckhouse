@@ -1,13 +1,11 @@
 document.addEventListener('DOMContentLoaded', function () {
     const body = document.querySelector('body');
-    const content = document.querySelector('.content');
     const hamburgerCollapse = document.querySelector('.hamburger--collapse');
     const headerSidebar = document.querySelector('.header__sidebar');
     const navTrigger = document.querySelector('div .nav__trigger');
     const headerNavList = document.querySelector('ul#bottom-header-nav.nav.header__nav');
     const moduleSidebarNavList = document.querySelector('.header__sidebar .header__sidebar--nav');
     const isModuleHeader = !!document.querySelector('.header-container--module');
-    const burgerOverlay = document.createElement('div');
     const modulesName = document.createElement('p');
     modulesName.className = 'module-name';
 
@@ -212,16 +210,11 @@ document.addEventListener('DOMContentLoaded', function () {
         closeNavModal();
         hamburgerCollapse.classList.add('show');
         headerSidebar.classList.add('show');
-        burgerOverlay.classList.add('sidebar-overlay');
-        content.appendChild(burgerOverlay);
-        body.classList.add('sidebar-opened');
     }
 
     function closeBurgerSidebar() {
         closeNavModal();
         if (headerSidebar) headerSidebar.classList.remove('show');
-        if (burgerOverlay.parentNode) burgerOverlay.parentNode.removeChild(burgerOverlay);
-        if (body) body.classList.remove('sidebar-opened');
         if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
     }
 
@@ -244,7 +237,6 @@ document.addEventListener('DOMContentLoaded', function () {
             hamburgerCollapse.addEventListener('click', function () {
                 if (window.innerWidth < 1024 && closeFilter()) {
                     hamburgerCollapse.classList.remove('show');
-                    if (body) body.classList.remove('sidebar-opened');
                     return;
                 }
                 if (!headerSidebar) return;
