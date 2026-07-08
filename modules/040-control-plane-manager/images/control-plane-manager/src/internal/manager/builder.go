@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -35,6 +36,12 @@ const (
 	healthProbeBindAddress   = ":8095"
 	metricsserverBindAddress = ":4296"
 )
+
+type configurator interface {
+	configureOptions(*controllerruntime.Options)
+	configureRuntimeManager(manager.Manager) error
+	configureClient(*rest.Config)
+}
 
 type builder struct {
 	configurator
@@ -91,7 +98,10 @@ func (b builder) buildOptions(ctx context.Context) controllerruntime.Options {
 }
 
 func (b builder) buildRuntimeManager(opts controllerruntime.Options) (manager.Manager, error) {
-	runtimeManager, err := controllerruntime.NewManager(controllerruntime.GetConfigOrDie(), opts)
+	restConfig := controllerruntime.GetConfigOrDie()
+	b.configurator.configureClient(restConfig)
+
+	runtimeManager, err := controllerruntime.NewManager(restConfig, opts)
 	if err != nil {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}

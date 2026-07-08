@@ -34,8 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/cpn/cpnplanner"
@@ -82,7 +80,6 @@ func (suite *ControllerTestSuite) setupController(objs []client.Object) {
 		scheme,
 		cpnplanner.NormalOperationBuilder{},
 		nil,
-		log.NewNop(),
 	)
 }
 

@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
@@ -45,7 +45,6 @@ type Reconciler struct {
 	operationBuilder cpnplanner.OperationBuilder
 	// for normal cpn only, TODO vcp support
 	metrics *Metrics
-	log     *log.Logger
 }
 
 // New builds the shared ControlPlaneNode reconciler.
@@ -55,7 +54,6 @@ func New(
 	scheme *runtime.Scheme,
 	operationBuilder cpnplanner.OperationBuilder,
 	metrics *Metrics,
-	logger *log.Logger,
 ) *Reconciler {
 	return &Reconciler{
 		client:           cl,
@@ -63,13 +61,14 @@ func New(
 		scheme:           scheme,
 		operationBuilder: operationBuilder,
 		metrics:          metrics,
-		log:              logger,
 	}
 }
 
 var _ reconcile.Reconciler = (*Reconciler)(nil)
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log.FromContext(ctx).Info("Reconcile started")
+
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
 	if err := r.client.Get(ctx, req.NamespacedName, cpn); err != nil {
 		if apierrors.IsNotFound(err) {
