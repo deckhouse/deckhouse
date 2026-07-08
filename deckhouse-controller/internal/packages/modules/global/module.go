@@ -57,8 +57,8 @@ type Module struct {
 	name string // Package name
 	path string // path to the package dir on fs
 
-	hooks   *hooks.GlobalStorage  // Hook storage with indices
-	values  *values.Storage       // Values storage with layering
+	hooks     *hooks.GlobalStorage  // Hook storage with indices
+	values    *values.Storage       // Values storage with layering
 	converter *conversion.Converter // Schema version converter for settings
 
 	// running tracks whether OnStartup hooks have completed successfully.
