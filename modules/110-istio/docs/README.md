@@ -379,8 +379,8 @@ The module installs and runs the ambient infrastructure (`ztunnel` and the waypo
 
 To enroll workloads, use the standard Istio labels:
 
-- Add the `istio.io/dataplane-mode=ambient` label to a namespace (or Pod) to capture its traffic with `ztunnel` (L4).
-- Create a [`WaypointInstance`](cr.html#waypointinstance) in the namespace, then point workloads or services at it with the `istio.io/use-waypoint` label to enable L7 features.
+1. Add the `istio.io/dataplane-mode=ambient` label to a namespace (or pod) to capture its traffic with `ztunnel` (L4).
+2. Create a [WaypointInstance](cr.html#waypointinstance) resource in the namespace, then point workloads or services at it with the `istio.io/use-waypoint` label to enable L7 features.
 
 See the ["Examples"](examples.html#ambient-mesh) section for step-by-step configuration.
 

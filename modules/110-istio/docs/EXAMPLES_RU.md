@@ -718,12 +718,16 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 Перед отключением режима ambient удалите все ресурсы WaypointInstance. При отключенном режиме ambient контроллер waypoint не запускается и не может согласовывать или удалять ресурсы waypoint. Это приводит к появлению orphan-ресурсов, о чём DKP сигнализирует алертом [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled).
 {% endalert %}
 
-```shell
-d8 k get waypointinstance -A
-d8 k -n myns delete waypointinstance main
-```
+Чтобы отключить режим ambient, выполните следующие шаги:
 
-Затем верните значение `false` для параметра `ambient.enabled` в ModuleConfig `istio`.
+1. Проверьте наличие ресурсов WaypointInstance и при необходимости удалите их с помощью следующих команд:
+
+   ```shell
+   d8 k get waypointinstance -A
+   d8 k -n myns delete waypointinstance main
+   ```
+
+2. Отключите режим, установив значение `false` для параметра [`ambient.enabled`](configuration.html#parameters-ambient-enabled) в настройках модуля.
 
 ## Управление поведением data plane
 

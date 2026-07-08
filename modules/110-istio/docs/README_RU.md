@@ -381,8 +381,8 @@ cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21
 
 Чтобы подключить рабочие нагрузки, используйте стандартные лейблы Istio:
 
-- Добавьте лейбл `istio.io/dataplane-mode=ambient` на неймспейс (или под), чтобы захватывать его трафик с помощью `ztunnel` (L4).
-- Создайте [`WaypointInstance`](cr.html#waypointinstance) в неймспейсе, а затем направьте рабочие нагрузки или сервисы на него с помощью лейбла `istio.io/use-waypoint`, чтобы включить возможности L7.
+1. Добавьте лейбл `istio.io/dataplane-mode=ambient` на неймспейс (или под), чтобы захватывать его трафик с помощью `ztunnel` (L4).
+2. Создайте ресурс [WaypointInstance](cr.html#waypointinstance) в неймспейсе, а затем направьте рабочие нагрузки или сервисы на него, назначив им лейбл `istio.io/use-waypoint`, чтобы включить возможности L7.
 
 Пошаговая настройка описана [в разделе «Примеры»](examples.html#ambient-mesh).
 
