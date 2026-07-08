@@ -19,21 +19,6 @@ index e9adac6ca57..ebeee5c42b3 100644
  	"k8s.io/klog/v2"
  	"k8s.io/kubernetes/pkg/features"
  	kubeletevents "k8s.io/kubernetes/pkg/kubelet/events"
-@@ -246,10 +248,10 @@ func (m *managerImpl) start() (chan struct{}, error) {
- 					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
- 				}
- 
--			    // Clean up memory manager state before shutdown
--			    if isShuttingDown {
--				    m.cleanupMemoryManagerState()
--			    }
-+				// Clean up memory manager state before shutdown
-+				if isShuttingDown {
-+					m.cleanupMemoryManagerState()
-+				}
- 
- 				m.nodeShuttingDownMutex.Lock()
- 				m.nodeShuttingDownNow = isShuttingDown
 @@ -287,7 +289,7 @@ func (m *managerImpl) ShutdownStatus() error {
  	defer m.nodeShuttingDownMutex.Unlock()
  
