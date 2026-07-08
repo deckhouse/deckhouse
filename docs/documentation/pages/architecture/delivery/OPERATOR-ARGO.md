@@ -34,22 +34,18 @@ The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) mo
 
 - Main module operator:
 
-  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
   ![Operator-argo module operator architecture](../../images/architecture/delivery/c4-l2-operator-argo-operator.svg)
 
 - Argo CD instance deployment scenario with Redis in a non-HA configuration:
 
-  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
   ![Operator-argo module architecture with Redis non-HA](../../images/architecture/delivery/c4-l2-operator-argo.svg)
 
 - Argo CD instance deployment scenario with Redis in an HA configuration (the diagram shows only differences from the primary deployment scenario):
 
-  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
   ![Operator-argo module architecture with Redis HA](../../images/architecture/delivery/c4-l2-operator-argo-ha.svg)
 
 - Argo CD instance deployment scenario in a [principal cluster](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) for a multicluster setup (the diagram shows only differences from the primary deployment scenario):
 
-  <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
   ![Operator-argo module architecture with Principal](../../images/architecture/delivery/c4-l2-operator-argo-principal.svg)
 
 ## Module components
