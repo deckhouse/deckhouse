@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
@@ -43,6 +44,7 @@ type Package interface {
 	GetName() string
 	GetVersion() *semver.Version
 	GetConstraints() Constraints
+	GetEnabledScriptDescriptor() *script.Descriptor
 }
 
 // Constraints defines the scheduling requirements for a Package:
@@ -212,6 +214,8 @@ func (s *Scheduler) addNode(pkg Package) {
 		if s.dynamicGetter != nil {
 			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
 		}
+
+		n.rules = append(n.rules, script.NewRule(pkg, s.logger))
 	}
 
 	s.nodes[pkg.GetName()] = n

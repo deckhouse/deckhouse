@@ -22,7 +22,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // globalName is the literal sentinel used by Scheduler internally; it lives
@@ -56,6 +58,10 @@ func (p *testPackage) GetConstraints() schedule.Constraints {
 	return p.constraints
 }
 
+func (p *testPackage) GetEnabledScriptDescriptor() *script.Descriptor {
+	return nil
+}
+
 // mustVersion parses s into a *semver.Version or panics; tests use known-good values.
 func mustVersion(s string) *semver.Version {
 	v, err := semver.NewVersion(s)
@@ -85,6 +91,7 @@ func TestSchedulerSuite(t *testing.T) {
 func (s *SchedulerSuite) SetupTest() {
 	s.versions = make(map[string]*semver.Version)
 	s.sched = schedule.NewScheduler(
+		log.NewNop(),
 		schedule.WithDependencyGetter(func(name string) *semver.Version {
 			return s.versions[name]
 		}),
@@ -1040,6 +1047,7 @@ func (s *SchedulerSuite) useDynamicScheduler() map[string]*bool {
 
 	s.sched.Stop()
 	s.sched = schedule.NewScheduler(
+		log.NewNop(),
 		schedule.WithDependencyGetter(func(name string) *semver.Version {
 			return s.versions[name]
 		}),
@@ -1103,6 +1111,7 @@ func (s *SchedulerSuite) TestDynamicRuleDisableOverridesBundle() {
 
 	s.sched.Stop()
 	s.sched = schedule.NewScheduler(
+		log.NewNop(),
 		schedule.WithDependencyGetter(func(name string) *semver.Version {
 			return s.versions[name]
 		}),
