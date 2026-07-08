@@ -99,72 +99,6 @@
         "iconColor": "blue",
         "expr": "sum(increase(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[1m])) > 0",
         "titleFormat": "descheduler cycle"
-      },
-      {
-        "name": "Eviction success",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "$ds_prometheus"
-        },
-        "enable": true,
-        "iconColor": "green",
-        "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", result=\"success\"}[1m])) > 0",
-        "titleFormat": "eviction success"
-      },
-      {
-        "name": "Eviction error",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "$ds_prometheus"
-        },
-        "enable": true,
-        "iconColor": "red",
-        "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", result=\"error\"}[1m])) > 0",
-        "titleFormat": "eviction error"
-      },
-      {
-        "name": "Eviction blocked",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "$ds_prometheus"
-        },
-        "enable": true,
-        "iconColor": "orange",
-        "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", result=\"blocked\"}[1m])) > 0",
-        "titleFormat": "eviction blocked"
-      },
-      {
-        "name": "OOM burst",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "$ds_prometheus"
-        },
-        "enable": false,
-        "iconColor": "purple",
-        "expr": "sum(increase(klog_pod_oomkill[5m])) > 3",
-        "titleFormat": "OOM burst"
-      },
-      {
-        "name": "Unhappy spike",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "$ds_prometheus"
-        },
-        "enable": false,
-        "iconColor": "yellow",
-        "expr": "delta(count(descheduler:workload_happiness_bucket{bucket=\"unhappy\"})[10m:]) > 5",
-        "titleFormat": "unhappy spike"
-      },
-      {
-        "name": "Imbalance jump",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "$ds_prometheus"
-        },
-        "enable": false,
-        "iconColor": "yellow",
-        "expr": "abs(delta(descheduler:cluster_imbalance_score{resource=\"cpu\"}[10m:])) > 0.2",
-        "titleFormat": "imbalance jump"
       }
     ]
   },
@@ -1523,6 +1457,7 @@
       "id": 51,
       "type": "timeseries",
       "title": "Events",
+      "interval": "1m",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -1536,12 +1471,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "round(sum by (result)(increase(descheduler_pod_evictions_total{job=\"descheduler\"}[$__rate_interval])))",
+          "expr": "round(sum by (result)(increase(descheduler_pod_evictions_total{job=\"descheduler\"}[$__interval])))",
           "legendFormat": "evictions {{result}}"
         },
         {
           "refId": "B",
-          "expr": "round(sum(increase(klog_pod_oomkill[$__rate_interval])))",
+          "expr": "round(sum(increase(klog_pod_oomkill[$__interval])))",
           "legendFormat": "oom kills"
         },
         {
