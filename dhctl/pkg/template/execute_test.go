@@ -15,7 +15,6 @@
 package template
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -32,7 +31,7 @@ nodeIP: "127.0.0.1"
 		t.Errorf("Loading templates error: %v", err)
 	}
 
-	rendered, err := RenderTemplatesDir(context.Background(), "testdata/execute", data, nil)
+	rendered, err := RenderTemplatesDir(t.Context(), "testdata/execute", data, nil)
 	if err != nil {
 		t.Errorf("Rendering templates error: %v", err)
 	}

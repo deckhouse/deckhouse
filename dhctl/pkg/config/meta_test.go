@@ -16,7 +16,6 @@ package config
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -63,7 +62,7 @@ func TestGetDNSAddress(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, testCase.result, getDNSAddress(context.Background(), testCase.cidr))
+			require.Equal(t, testCase.result, getDNSAddress(t.Context(), testCase.cidr))
 		})
 	}
 }
@@ -221,7 +220,7 @@ func generateOldDockerCfg(host string, username, password *string) string {
 func generateMetaConfig(t *testing.T, template string, data map[string]any, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
-	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), &options.New().Global)
+	cfg, err := ParseConfigFromData(t.Context(), configData, DummyPreparatorProvider(), &options.New().Global)
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -377,7 +376,7 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 		},
 	}
 
-	data, err := cfg.ConfigForBashibleBundleTemplate(context.Background(), "10.0.0.2")
+	data, err := cfg.ConfigForBashibleBundleTemplate(t.Context(), "10.0.0.2")
 	require.NoError(t, err)
 
 	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]any)
@@ -401,7 +400,7 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	require.NoError(t, os.WriteFile(mingetPath, expectedMingetBytes, 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	data, err := cfg.ConfigForBashibleBundleTemplate(context.Background(), "10.0.0.2")
+	data, err := cfg.ConfigForBashibleBundleTemplate(t.Context(), "10.0.0.2")
 	require.NoError(t, err)
 
 	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]any)

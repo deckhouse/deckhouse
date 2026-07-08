@@ -15,7 +15,6 @@
 package template
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -76,13 +75,13 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 }
 
 func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.New().Global)
+	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.New().Global)
 	require.NoError(t, err)
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	data, err := metaConfig.ConfigForBashibleBundleTemplate(context.Background(), "10.0.0.2")
+	data, err := metaConfig.ConfigForBashibleBundleTemplate(t.Context(), "10.0.0.2")
 	require.NoError(t, err)
 
 	tplContent, err := os.ReadFile("/deckhouse/candi/bashible/bashible.sh.tpl")

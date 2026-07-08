@@ -33,7 +33,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/local"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -45,9 +45,8 @@ type LoopsParams struct {
 }
 
 type DependenciesChecker struct {
-	loggerProvider log.LoggerProvider
-	nodeInterface  libcon.Interface
-	loopsParams    LoopsParams
+	nodeInterface libcon.Interface
+	loopsParams   LoopsParams
 }
 
 var (
@@ -65,10 +64,9 @@ var (
 	checkDepsDefaultOpts = retry.AttemptsWithWaitOpts(10, 5*time.Second)
 )
 
-func NewDependenciesChecker(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *DependenciesChecker {
+func NewDependenciesChecker(nodeInterface libcon.Interface) *DependenciesChecker {
 	return &DependenciesChecker{
-		nodeInterface:  nodeInterface,
-		loggerProvider: loggerProvider,
+		nodeInterface: nodeInterface,
 	}
 }
 
@@ -100,18 +98,18 @@ func (c *DependenciesChecker) Check(ctx context.Context) error {
 }
 
 func (c *DependenciesChecker) checkShell(ctx context.Context) error {
-	logger := c.loggerProvider()
-	return logger.Process(log.ProcessBootstrap, "Check user's shell is bash", func() error {
+	logger := dhlog.FromContext(ctx)
+	return dhlog.RunProcess(ctx, logger, "Check user's shell is bash", func(ctx context.Context) error {
 		if _, ok := c.nodeInterface.(*local.NodeInterface); ok {
 			shell := os.ExpandEnv("$SHELL")
-			logger.DebugF("Local interface. Expanded SHELL: '%s'", shell)
+			logger.DebugContext(ctx, fmt.Sprintf("Local interface. Expanded SHELL: '%s'", shell))
 			return c.isBash(shell)
 		}
 
 		loopParams := retry.SafeCloneOrNewParams(c.loopsParams.Shell, checkDepsDefaultOpts...).
 			Clone(
 				retry.WithName("Check shell is bash"),
-				retry.WithLogger(c.loggerProvider()),
+				retry.WithLogger(dhlog.FromContext(ctx)),
 			)
 
 		err := retry.NewSilentLoopWithParams(loopParams).
@@ -134,7 +132,7 @@ func (c *DependenciesChecker) checkShell(ctx context.Context) error {
 			return err
 		}
 
-		c.loggerProvider().InfoF("OK!")
+		logger.InfoContext(ctx, "OK!")
 		return nil
 	})
 }
@@ -148,11 +146,11 @@ func (c *DependenciesChecker) isBash(out string) error {
 }
 
 func (c *DependenciesChecker) checkDependencies(ctx context.Context) error {
-	return c.loggerProvider().Process(log.ProcessBootstrap, "Check all DHCTL dependencies", func() error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Check all DHCTL dependencies", func(context.Context) error {
 		loopParams := retry.SafeCloneOrNewParams(c.loopsParams.Dependencies, checkDepsDefaultOpts...).
 			Clone(
 				retry.WithName("Check all DHCTL dependencies"),
-				retry.WithLogger(c.loggerProvider()),
+				retry.WithLogger(dhlog.FromContext(ctx)),
 			)
 
 		return retry.NewSilentLoopWithParams(loopParams).
@@ -163,12 +161,12 @@ func (c *DependenciesChecker) checkDependencies(ctx context.Context) error {
 					return err
 				}
 
-				return c.processBinariesCheckResult(output)
+				return c.processBinariesCheckResult(ctx, output)
 			})
 	})
 }
 
-func (c *DependenciesChecker) processBinariesCheckResult(output []byte) error {
+func (c *DependenciesChecker) processBinariesCheckResult(ctx context.Context, output []byte) error {
 	var missing []string
 	scanner := bufio.NewScanner(bytes.NewReader(output))
 	for scanner.Scan() {
@@ -183,13 +181,13 @@ func (c *DependenciesChecker) processBinariesCheckResult(output []byte) error {
 			continue
 		}
 
-		logger := c.loggerProvider()
+		logger := dhlog.FromContext(ctx)
 
-		logger.InfoF("Checking '%s' dependency", dep)
+		logger.InfoContext(ctx, fmt.Sprintf("Checking '%s' dependency", dep))
 		if statusCode == 1 {
-			logger.Success(fmt.Sprintf("Dependency '%s' is available", dep))
+			dhlog.Success(ctx, logger, fmt.Sprintf("Dependency '%s' is available", dep))
 		} else {
-			c.loggerProvider().WarnF(fmt.Sprintf("Dependency '%s' is missing!", dep))
+			logger.WarnContext(ctx, fmt.Sprintf("Dependency '%s' is missing!", dep))
 			missing = append(missing, dep)
 		}
 	}
@@ -211,9 +209,9 @@ func (c *DependenciesChecker) runBinariesCheckScript(ctx context.Context) ([]byt
 		return nil, fmt.Errorf("failed to build dependency check script: %w", err)
 	}
 
-	logger := c.loggerProvider()
+	logger := dhlog.FromContext(ctx)
 
-	logger.DebugF("Generated dependency check bash script:\n%s\n", bashScript)
+	logger.DebugContext(ctx, fmt.Sprintf("Generated dependency check bash script:\n%s\n", bashScript))
 	// Encode the script to avoid "\n" characters and safely pass it via SSH
 	encoded := base64.StdEncoding.EncodeToString([]byte(bashScript))
 	remoteCmd := fmt.Sprintf("echo %q | base64 -d | bash", encoded)
@@ -223,10 +221,10 @@ func (c *DependenciesChecker) runBinariesCheckScript(ctx context.Context) ([]byt
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
-			logger.DebugF("SSH exit code: %v", ee.ExitCode())
+			logger.DebugContext(ctx, fmt.Sprintf("SSH exit code: %v", ee.ExitCode()))
 		}
 		e := fmt.Errorf("remote dependency check failed: %w - %s", err, string(output))
-		logger.DebugF("Dependency check error: %v", e)
+		logger.DebugContext(ctx, fmt.Sprintf("Dependency check error: %v", e))
 		return nil, e
 	}
 
@@ -239,7 +237,7 @@ func (c *DependenciesChecker) depsErrorBreakPredicate(err error) bool {
 	}
 
 	if errors.Is(err, ErrMissingDeps) {
-		c.loggerProvider().DebugF("Has a missing-dependencies error. Breaking the loop")
+		dhlog.FromContext(context.Background()).DebugContext(context.Background(), "Has a missing-dependencies error. Breaking the loop")
 		return true
 	}
 
@@ -252,7 +250,7 @@ func (c *DependenciesChecker) shellErrorBreakPredicate(err error) bool {
 	}
 
 	if errors.Is(err, ErrShellIsNotBash) {
-		c.loggerProvider().DebugF("Has a non-bash shell error. Breaking the loop")
+		dhlog.FromContext(context.Background()).DebugContext(context.Background(), "Has a non-bash shell error. Breaking the loop")
 		return true
 	}
 
@@ -265,7 +263,7 @@ func (c *DependenciesChecker) sshErrorBreakPredicate(err error) bool {
 		return true
 	}
 	if ee, ok := errors.AsType[*exec.ExitError](err); ok && ee.ExitCode() == 255 {
-		c.loggerProvider().WarnF("SSH connection failed (exit 255), retrying in 1 second...")
+		dhlog.FromContext(context.Background()).WarnContext(context.Background(), "SSH connection failed (exit 255), retrying in 1 second...")
 		return false
 	}
 

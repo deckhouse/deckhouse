@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -160,7 +159,7 @@ func TestCheckRegistryCredentials(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := RegistryCredentials(tt.fields.metaConfig, tt.fields.installConfig)
-			tt.wantErr(t, check.Run(context.Background()), fmt.Sprintf("CheckRegistryCredentials()"))
+			tt.wantErr(t, check.Run(t.Context()), fmt.Sprintf("CheckRegistryCredentials()"))
 		})
 	}
 }

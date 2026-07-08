@@ -15,7 +15,6 @@
 package readiness
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -2027,7 +2026,7 @@ func assertChecker(t *testing.T, tst testChecker) {
 	require.False(t, govalue.IsNil(checker), tst.testName)
 	require.IsType(t, tst.checkerType, checker, tst.testName)
 
-	ready, err := checker.IsReady(context.TODO(), obj, resourceName)
+	ready, err := checker.IsReady(t.Context(), obj, resourceName)
 	if tst.hasError {
 		require.Error(t, err, tst.testName)
 	} else {
