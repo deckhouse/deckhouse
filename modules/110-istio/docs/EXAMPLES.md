@@ -57,7 +57,7 @@ Assign a name with the `grpc` prefix or value to the port in the corresponding s
 
 ## Locality Failover
 
-> Read [the main documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if you need.
+{% alert level="info" %}Read the [Istio Locality Failover documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if needed.{% endalert %}
 
 Istio allows you to configure a priority-based locality (geographic location) failover between endpoints. Istio uses node labels with the appropriate hierarchy to define the zone:
 
@@ -541,7 +541,7 @@ spec:
 ### Allow from any cluster (via mTLS)
 
 {% alert level="warning" %}
-The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
+The denying rules (if they exist) have priority over any other rules. For details, refer to the [Decision-making algorithm](#decision-making-algorithm).
 {% endalert %}
 
 Example:
@@ -838,7 +838,7 @@ spec:
 
 The module-managed `Telemetry` objects for this mode disappear on the next sync; Istio restores the full `telemetry.v2` configuration.
 
-## Debugging Istio with `istioctl` from the debug container
+## Debugging Istio with istioctl from the debug container
 
 The DKP debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
 
@@ -872,7 +872,7 @@ istioctl pc all <pod-name>.<namespace>
 
 The `istioctl pc` commands require a target Pod with an injected `istio-proxy` sidecar and Kubernetes permissions to create `pods/portforward` in the target namespace. If the target workload has no sidecar, Envoy admin port `15000` will not be available.
 
-## `CNIPlugin` application traffic redirection mode restrictions
+## CNIPlugin application traffic redirection mode restrictions
 
 Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
 

@@ -385,7 +385,7 @@ Istio работает в режиме [multi-network](https://istio.io/latest/d
 В случае проблем при работе с мультикластером необходимо проверить в каждом кластере:
 1. Состояние ресурсов `IstioMultiCluster`. Для этого выполните команду `d8 k describe istiomulticluster cluster-name`. Важно, чтобы в статусе ресурса был указан `Root CA` и в поле `Public Last Fetch Timestamp` была свежий лейбл времени.
 1. В поле `Ingress Gateways` ресурса `IstioMultiCluster` должен быть указан корректный адрес (IP или FQDN) IngressGateway второго кластера.
-1. С помощью утилиты `istioctl` из debug-контейнера DKP (см. [пример](examples.html#диагностика-istio-с-помощью-istioctl-из-debug-контейнера)):
+1. С помощью утилиты `istioctl` из debug-контейнера DKP ([диагностика Istio с помощью istioctl](examples.html#диагностика-istio-с-помощью-istioctl-из-debug-контейнера)):
 
 ```console
 istioctl remote-clusters -i d8-istio
