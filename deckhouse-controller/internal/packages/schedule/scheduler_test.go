@@ -15,9 +15,12 @@
 package schedule_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
@@ -35,9 +38,10 @@ const globalName = "global"
 // testPackage is a minimal Package implementation used to drive Scheduler
 // behavior from tests; production code uses apps.Application / modules.Module.
 type testPackage struct {
-	name        string
-	version     *semver.Version
-	constraints schedule.Constraints
+	name          string
+	version       *semver.Version
+	constraints   schedule.Constraints
+	enabledScript *script.Descriptor
 }
 
 // GetName returns the package identifier.
@@ -58,8 +62,10 @@ func (p *testPackage) GetConstraints() schedule.Constraints {
 	return p.constraints
 }
 
+// GetEnabledScriptDescriptor returns the package's enabled-script descriptor,
+// or nil when the case does not exercise the script rule.
 func (p *testPackage) GetEnabledScriptDescriptor() *script.Descriptor {
-	return nil
+	return p.enabledScript
 }
 
 // mustVersion parses s into a *semver.Version or panics; tests use known-good values.
@@ -1141,4 +1147,124 @@ func (s *SchedulerSuite) TestDynamicRuleDisableOverridesBundle() {
 	}))
 	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "bundle-off",
 		"a disable intent must override the bundle enable")
+}
+
+// writeEnabledScript writes an executable enabled script with the given /bin/sh
+// body into a per-test temp dir and returns a descriptor pointing at it. The
+// body runs with the MODULE_ENABLED_RESULT / MODULE_ENABLED_REASON environment
+// variables the runner sets.
+func (s *SchedulerSuite) writeEnabledScript(body string) *script.Descriptor {
+	path := filepath.Join(s.T().TempDir(), "enabled")
+	s.Require().NoError(os.WriteFile(path, []byte("#!/bin/sh\n"+body+"\n"), 0o755))
+
+	return &script.Descriptor{
+		Path:     path,
+		Settings: addonutils.Values{},
+		Values:   addonutils.Values{},
+	}
+}
+
+// TestScriptRuleEnablesOverFloor verifies a true enabled-script result is a soft
+// Enable vote that turns on a module whose Disable floor would otherwise keep it
+// off. Order 0 keeps the module in global's tier so the reschedule-on-enable
+// revert does not gate it behind global re-completing (see TestDynamicRuleEnablesOverFloor).
+func (s *SchedulerSuite) TestScriptRuleEnablesOverFloor() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: s.writeEnabledScript("echo true > $MODULE_ENABLED_RESULT"),
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a true enabled-script result must override the module's Disable floor")
+}
+
+// TestScriptRuleFalseForbids verifies a false enabled-script result vetoes the
+// module even when another intent rule would enable it: the dynamic enable is
+// overridden by the script's Forbid (which wins from any position).
+func (s *SchedulerSuite) TestScriptRuleFalseForbids() {
+	enabledState := s.useDynamicScheduler()
+	s.activateGlobal()
+
+	enabledState["mod"] = boolPtr(true) // dynamic intent alone would enable it
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: s.writeEnabledScript("echo false > $MODULE_ENABLED_RESULT"),
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a false enabled-script result must veto the module despite the dynamic enable")
+}
+
+// TestScriptRuleErrorForbids verifies that a script which fails to run vetoes the
+// module (fail-closed), so a broken enabled script never leaves a module running.
+func (s *SchedulerSuite) TestScriptRuleErrorForbids() {
+	enabledState := s.useDynamicScheduler()
+	s.activateGlobal()
+
+	enabledState["mod"] = boolPtr(true)
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: s.writeEnabledScript("exit 1"),
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a failing enabled script must veto the module (fail-closed)")
+}
+
+// TestScriptRuleDisableSurfacesReason verifies that when a module flips off
+// because its enabled script now reports false, the EventDisable carries the
+// script's reason and the DisabledByScript condition reason. The same descriptor
+// path is rewritten between passes to change the verdict.
+func (s *SchedulerSuite) TestScriptRuleDisableSurfacesReason() {
+	s.activateGlobal()
+
+	descriptor := s.writeEnabledScript("echo true > $MODULE_ENABLED_RESULT")
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: descriptor,
+	}))
+	s.Require().Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod")
+
+	// Rewrite the same script to report false with a reason, then reschedule so
+	// the module flips off and emits a disable event.
+	s.Require().NoError(os.WriteFile(descriptor.Path,
+		[]byte("#!/bin/sh\necho false > $MODULE_ENABLED_RESULT\necho 'not today' > $MODULE_ENABLED_REASON\n"),
+		0o755))
+	s.sched.Schedule()
+
+	var disable *schedule.Event
+	for _, e := range s.collectEvents() {
+		if e.Kind == schedule.EventDisable && e.Name == "mod" {
+			event := e
+			disable = &event
+
+			break
+		}
+	}
+
+	s.Require().NotNil(disable, "flipping the script to false must emit an EventDisable")
+	s.Equal("DisabledByScript", disable.Reason)
+	s.Contains(disable.Message, "not today")
 }
