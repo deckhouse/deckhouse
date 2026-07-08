@@ -54,7 +54,7 @@ spec:
         - --authorization-mode=Node,RBAC
         - --allow-privileged=true
         - --secure-port=6443
-        - --advertise-address=$(POD_IP)
+        - --advertise-address=${VCP_API_VIP}
         - --egress-selector-config-file=/etc/kubernetes/konnectivity/egress-selector-configuration.yaml
         env:
         - name: POD_IP
