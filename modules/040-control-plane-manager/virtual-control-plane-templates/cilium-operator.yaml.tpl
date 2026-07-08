@@ -369,7 +369,7 @@ spec:
         - name: nested-kubeconfig
           mountPath: /etc/cilium/kubeconfig
           readOnly: true
-        
+
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -402,7 +402,7 @@ spec:
           operator: Exists
         - key: node.cilium.io/agent-not-ready
           operator: Exists
-      
+
       volumes:
         # To read the configuration from the config map
       - name: cilium-config-path

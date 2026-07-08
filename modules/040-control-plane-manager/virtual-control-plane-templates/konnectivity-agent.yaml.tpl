@@ -16,9 +16,14 @@ metadata:
     heritage: deckhouse
     k8s-app: konnectivity-agent
 spec:
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       k8s-app: konnectivity-agent
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
   template:
     metadata:
       labels:
