@@ -369,12 +369,20 @@ func LoadGlobalConf(ctx context.Context, logger *log.Logger) (*global.Config, er
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
+	conversions, err := loadConversions(globalPath)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load conversions: %w", err)
+	}
+
 	return &global.Config{
 		Path: globalPath,
 
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
+
+		Conversions: conversions,
 
 		Hooks: hooks,
 	}, nil

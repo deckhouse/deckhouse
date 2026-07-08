@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -56,8 +57,9 @@ type Module struct {
 	name string // Package name
 	path string // path to the package dir on fs
 
-	hooks  *hooks.GlobalStorage // Hook storage with indices
-	values *values.Storage      // Values storage with layering
+	hooks   *hooks.GlobalStorage  // Hook storage with indices
+	values  *values.Storage       // Values storage with layering
+	converter *conversion.Converter // Schema version converter for settings
 
 	// running tracks whether OnStartup hooks have completed successfully.
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
@@ -93,6 +95,8 @@ type Config struct {
 
 	Hooks []hooks.GlobalHook // Discovered hooks
 
+	Conversions *conversion.Converter // Schema version converter
+
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
@@ -111,6 +115,7 @@ func NewModuleByConfig(cfg *Config, logger *log.Logger) (*Module, error) {
 	m.configEnabled = make(map[string]bool)
 
 	m.path = cfg.Path
+	m.converter = cfg.Conversions
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
@@ -222,8 +227,17 @@ func (m *Module) GetValues() addonutils.Values {
 	)
 }
 
-// ValidateSettings validates settings against openAPI
-func (m *Module) ValidateSettings(_ context.Context, _ int, settings addonutils.Values) (settingscheck.Result, error) {
+// ValidateSettings converts settings to the latest schema version (if a converter
+// is available and settingsVersion > 0), then validates against OpenAPI schema.
+func (m *Module) ValidateSettings(_ context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
+	// Convert to latest schema version before validation
+	if m.converter != nil && settingsVersion > 0 {
+		var err error
+		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		if err != nil {
+			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
+		}
+	}
 	if err := m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
@@ -241,8 +255,17 @@ func (m *Module) ValidateSettings(_ context.Context, _ int, settings addonutils.
 	}, nil
 }
 
-// ApplySettings apply settings values
-func (m *Module) ApplySettings(_ int, settings addonutils.Values) error {
+// ApplySettings converts settings to the latest schema version (if a converter
+// is available), then applies them to the values storage.
+func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) error {
+	// Convert to latest schema version before applying
+	if m.converter != nil && settingsVersion > 0 {
+		var err error
+		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		if err != nil {
+			return fmt.Errorf("convert settings: %w", err)
+		}
+	}
 	return m.values.ApplySettings(settings)
 }
 
