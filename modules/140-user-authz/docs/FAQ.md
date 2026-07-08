@@ -64,6 +64,112 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
 {% endalert %}
 
+## Can the current and the experimental role-based models be used at the same time?
+
+Yes. Both models ultimately boil down to the standard Kubernetes RBAC mechanism, and RBAC is a permissive model: permissions from all sources are **summed up**. If an action is allowed by at least one source — a `ClusterAuthorizationRule`, an `AuthorizationRule`, a `RoleBinding` to an experimental-model role, or a `ProjectRoleBinding` — it will be allowed. Nothing needs to be "switched over": you can keep the existing `ClusterAuthorizationRule` objects and gradually add experimental-model role bindings.
+
+The only exception is the multitenancy mode ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)). If a user has a `ClusterAuthorizationRule` with a namespace restriction (`limitNamespaces` or `namespaceSelector`), that restriction acts as a **hard boundary**: requests to namespaces outside the list are denied even if the user has a `RoleBinding` there. See [the module description](./#rolebinding-car) for details. If a user needs combined access, use an `AuthorizationRule` instead of a `ClusterAuthorizationRule`, or do not set a namespace restriction in the CAR.
+
+## How do I get an equivalent of the ClusterAdmin and SuperAdmin roles in the experimental model?
+
+There is no single-object counterpart of the current model's `ClusterAdmin` and `SuperAdmin` roles in the experimental model — it deliberately separates platform administration (system roles) from application access (namespace and project roles). The equivalent is assembled from **two bindings**: a `ClusterRoleBinding` to a system role and a [ClusterProjectRoleBinding](../multitenancy-manager/cr.html#clusterprojectrolebinding) to a project role (the latter applies in all projects, including those created later).
+
+Approximate level mapping:
+
+| Current model role | Experimental model equivalent |
+|--------------------|-------------------------------|
+| `User` | `d8:namespace:viewer` (via `RoleBinding` or `ProjectRoleBinding`) |
+| `PrivilegedUser` | `d8:namespace:user` |
+| `Editor` | `d8:namespace:manager` |
+| `Admin` | `d8:namespace:admin` |
+| `ClusterEditor` | `d8:system:manager` (roughly; the scope is the platform and system namespaces) |
+| `ClusterAdmin` | `d8:system:manager` + a `ClusterProjectRoleBinding` to `d8:project:admin` |
+| `SuperAdmin` | `d8:system:superadmin` + a `ClusterProjectRoleBinding` to `d8:project:superadmin` |
+
+An example for `ClusterAdmin` (the `k8s-admins` group):
+
+```yaml
+# Platform: DKP module configuration, cluster-wide resources, system namespaces.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-admins-platform
+subjects:
+  - kind: Group
+    name: k8s-admins
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:system:manager
+  apiGroup: rbac.authorization.k8s.io
+---
+# Applications: administrator in all namespaces of all projects (including future ones).
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
+metadata:
+  name: k8s-admins-projects
+spec:
+  subjects:
+    - kind: Group
+      name: k8s-admins
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:admin
+```
+
+For `SuperAdmin`, replace the roles with `d8:system:superadmin` and `d8:project:superadmin`.
+
+Specifics:
+
+- With [automatic project creation](../multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) enabled, every user namespace is a project, so the "system role + `ClusterProjectRoleBinding`" pair covers both the platform and all user namespaces. Only the `default` namespace is not covered — it is neither a project nor a system namespace.
+- You cannot create a custom "all permissions" role (`apiGroups: ["*"], resources: ["*"], verbs: ["*"]`): such a role would also grant project management permissions and is rejected by the [built-in protections](./#built-in-protections-of-the-role-model). If you need truly unrestricted access to the whole API (outside the platform role model), use a `ClusterRoleBinding` to the built-in Kubernetes `cluster-admin` role — only someone who already has such permissions can assign it.
+
+## How do I grant a user access to the resources of one module only?
+
+A typical request: a user in a namespace should only work with the resources of one module (for example, only with virtual machines) without seeing the other resources (`Pod`, `Deployment`, etc.).
+
+Every DKP module ships separate capabilities for its resources, so such access is granted without writing RBAC rules. Assemble a [custom role](#creating-a-custom-namespace-or-project-role) that aggregates only the capabilities of the desired module (a selector by the `module` label):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace:virtualization-only
+  labels:
+    rbac.deckhouse.io/kind: custom-role
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/delegatable: "true"   # Allows using the role in a RoleBinding inside projects.
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/kind: capability
+        rbac.deckhouse.io/scope: namespace
+        module: virtualization
+rules: []
+```
+
+Grant the role via a `RoleBinding` in the desired namespace or via a [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) across the whole project. The user will get access only to the module's resources — the standard Kubernetes resources will not be visible to them.
+
+Outside of projects the same can be done even simpler — by binding the module capability directly, without creating a role:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: virtualization-view
+  namespace: my-namespace
+subjects:
+  - kind: User
+    name: user@example.com
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:namespace-capability:virtualization:view
+  apiGroup: rbac.authorization.k8s.io
+```
+
+Note: inside **project** namespaces a plain `RoleBinding` may only reference roles [available to the project](../multitenancy-manager/usage.html#which-roles-are-available-in-a-rolebinding-inside-a-project) — capabilities are not among them by default, so for projects use the custom-role variant (the `rbac.deckhouse.io/delegatable: "true"` label in the example above is exactly what makes it available) or a `ProjectRoleBinding`.
+
 ## How do I extend a role or create a new one?
 
 [The experimental role model](./#experimental-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,

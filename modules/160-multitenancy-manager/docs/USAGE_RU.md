@@ -220,6 +220,20 @@ spec:
 
 Привязка `d8-administrators`, создаваемая контроллером из поля [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators), управляется только контроллером — редактировать её вручную нельзя. Чтобы изменить состав администраторов, измените поле `.spec.administrators` проекта.
 
+### Какие роли доступны в RoleBinding внутри проекта
+
+Кроме проектных привязок, внутри пространства имён проекта можно использовать и обычный `RoleBinding` — тогда роль действует только в этом одном пространстве имён. Но в проектах набор ролей, доступных для обычного `RoleBinding`, ограничен: разрешены только кластерные роли с лейблом `rbac.deckhouse.io/delegatable: "true"`. Из встроенных это роли `d8:namespace:*` и `d8:project:*`, а также роли уровней доступа текущей ролевой модели (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
+
+`RoleBinding` на любую другую кластерную роль (например, `cluster-admin`, системные роли или capabilities) в проекте будет отклонён с сообщением `references "<роль>" which is not available to project`. Это защита от обхода изоляции проекта через привязку к слишком широкой роли.
+
+Чтобы использовать в проектах [собственную роль](../user-authz/faq.html#создание-собственной-namespace--или-проектной-роли), добавьте на неё лейбл `rbac.deckhouse.io/delegatable: "true"`:
+
+```shell
+d8 k label clusterrole d8:custom:namespace:developer rbac.deckhouse.io/delegatable=true
+```
+
+Ограничение действует только в пространствах имён «настоящих» проектов. На [автоматически обёрнутые](#автоматическое-создание-проекта-для-пространства-имён) пространства имён (с лейблом `multitenancy.deckhouse.io/project-managed-by-namespace`) оно не распространяется.
+
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha3

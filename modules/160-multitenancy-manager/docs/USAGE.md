@@ -220,6 +220,20 @@ The following checks apply when bindings are created:
 
 The `d8-administrators` binding created by the controller from the [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) field is managed by the controller only — it cannot be edited manually. To change the set of administrators, change the `.spec.administrators` field of the project.
 
+### Which roles are available in a RoleBinding inside a project
+
+Besides the project bindings, a plain `RoleBinding` can also be used inside a project namespace — the role then applies in that single namespace only. However, in projects the set of roles available to a plain `RoleBinding` is restricted: only cluster roles carrying the `rbac.deckhouse.io/delegatable: "true"` label are allowed. Among the built-in ones these are the `d8:namespace:*` and `d8:project:*` roles, as well as the access-level roles of the current role model (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
+
+A `RoleBinding` to any other cluster role (for example, `cluster-admin`, system roles, or capabilities) is rejected in a project with the message `references "<role>" which is not available to project`. This protects the project isolation from being bypassed by binding to an overly broad role.
+
+To use a [custom role](../user-authz/faq.html#creating-a-custom-namespace-or-project-role) in projects, add the `rbac.deckhouse.io/delegatable: "true"` label to it:
+
+```shell
+d8 k label clusterrole d8:custom:namespace:developer rbac.deckhouse.io/delegatable=true
+```
+
+The restriction applies only in the namespaces of "real" projects. It does not apply to [automatically wrapped](#creating-a-project-automatically-for-a-namespace) namespaces (labelled `multitenancy.deckhouse.io/project-managed-by-namespace`).
+
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha3
