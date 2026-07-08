@@ -10,6 +10,10 @@ spec:
   gatewayName: ${VCP_NAME}
   inlet:
     type: LoadBalancer
+    # TCP (not TLS passthrough) is required because in-cluster clients reach the apiserver via the ClusterIP by IP, sending no SNI.
+    additionalPorts:
+    - port: 6443
+      protocol: TCP
 ---
 # EgressSelectorConfiguration for the apiserver: route "cluster" traffic (logs/exec/metrics) to the
 # konnectivity-server sidecar over the shared UDS.
@@ -65,15 +69,6 @@ spec:
     name: ${VCP_NAME}
     namespace: ${NAMESPACE}
   listeners:
-  # L4 passthrough for the apiserver on a dedicated port (no SNI/hostname): serves both 
-  # external kubelet traffic (api.<vcp> -> VIP:6443)
-  # in-cluster default/kubernetes endpoint
-  # (apiserver --advertise-address=VIP -> 10.96.0.1:443 DNAT -> VIP:6443).
-  - name: api
-    port: 6443
-    protocol: TLS
-    tls:
-      mode: Passthrough
   - name: konn
     port: 443
     protocol: TLS
@@ -106,8 +101,10 @@ spec:
     targetPort: 4282
     protocol: TCP
 ---
+# Pure L4 route for the apiserver: matches by port only (no SNI), so it serves both external
+# kubelet traffic (api.<vcp>:6443) and in-cluster clients that dial the ClusterIP by IP.
 apiVersion: gateway.networking.k8s.io/v1
-kind: TLSRoute
+kind: TCPRoute
 metadata:
   name: ${VCP_NAME}-api
   namespace: ${NAMESPACE}
@@ -117,9 +114,8 @@ metadata:
 spec:
   parentRefs:
   - name: ${VCP_NAME}
-    kind: ListenerSet
-    group: gateway.networking.k8s.io
-    sectionName: api
+    namespace: ${NAMESPACE}
+    sectionName: tcp-port-6443
     port: 6443
   rules:
   - backendRefs:
