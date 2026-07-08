@@ -203,7 +203,7 @@ func moduleConfigValidationHandler(
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
-						warnings = append(warnings, confirmationDisableWarning(reason))
+						return rejectResult(reason)
 					}
 				}
 			}
