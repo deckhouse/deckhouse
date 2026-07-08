@@ -579,43 +579,6 @@
       }
     },
     {
-      "id": 11,
-      "type": "stat",
-      "title": "Descheduler version",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 5
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "descheduler_build_info{job=\"descheduler\"}",
-          "instant": true,
-          "legendFormat": "{{version}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "name"
-      }
-    },
-    {
       "id": 12,
       "type": "bargauge",
       "title": "Top-10 unhappy workloads",
@@ -1573,12 +1536,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (result)(increase(descheduler_pod_evictions_total{job=\"descheduler\"}[5m]))",
+          "expr": "round(sum by (result)(increase(descheduler_pod_evictions_total{job=\"descheduler\"}[$__rate_interval])))",
           "legendFormat": "evictions {{result}}"
         },
         {
           "refId": "B",
-          "expr": "sum(increase(klog_pod_oomkill[5m]))",
+          "expr": "round(sum(increase(klog_pod_oomkill[$__rate_interval])))",
           "legendFormat": "oom kills"
         },
         {
