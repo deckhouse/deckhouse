@@ -46,6 +46,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
@@ -79,6 +80,10 @@ type Application struct {
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
+
+	// maintenance is the package maintenance mode, set by the Configure task and
+	// read by the Run/nelm layer. Empty (Managed) means reconcile normally.
+	maintenance nelm.MaintenanceState
 
 	// grantResolver resolves per-project cluster resource grants for settings
 	// fields tagged with x-deckhouse-grantable-resource. Never nil (defaults to NoopResolver).
@@ -487,6 +492,18 @@ func stringAtPath(values addonutils.Values, path []string) (string, bool) {
 // config-schema defaults. Same payload exposed to templates as .Application.Settings.
 func (a *Application) GetSettings() addonutils.Values {
 	return a.values.GetSettings()
+}
+
+// SetMaintenance records the application maintenance mode. Called by the Configure
+// task on the package's serialized queue.
+func (a *Application) SetMaintenance(state nelm.MaintenanceState) {
+	a.maintenance = state
+}
+
+// GetMaintenance returns the application maintenance mode. Empty (Managed) means
+// the application reconciles normally.
+func (a *Application) GetMaintenance() nelm.MaintenanceState {
+	return a.maintenance
 }
 
 // GetConstraints returns scheduler checks, their determine if an app should be enabled/disabled

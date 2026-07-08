@@ -79,6 +79,9 @@ type Package interface {
 	GetPath() string
 	GetRuntimeValues() string
 	GetValues() addonutils.Values
+	// GetMaintenance reports the package's maintenance mode; the package itself
+	// decides whether its resources must be reconciled.
+	GetMaintenance() MaintenanceState
 }
 
 // Service manages Helm release lifecycle via nelm client.
@@ -232,9 +235,12 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 // policy stops guarding them against manual edits.
 //
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
-func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, state MaintenanceState) error {
+func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) error {
 	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
+
+	// The package owns its maintenance mode and decides whether it reconciles.
+	state := pkg.GetMaintenance()
 
 	span.SetAttributes(attribute.String("name", pkg.GetName()))
 	span.SetAttributes(attribute.String("namespace", namespace))

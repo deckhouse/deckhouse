@@ -46,6 +46,7 @@ import (
 	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
@@ -251,6 +252,10 @@ func (m *Module) ApplySettings(settings addonutils.Values) error {
 func (m *Module) GetSettings() addonutils.Values {
 	return m.values.GetSettings()
 }
+
+// SetMaintenance is a no-op: the synthetic global package is always managed and has
+// no maintenance mode. It exists only to satisfy the Configure task's interface.
+func (m *Module) SetMaintenance(_ nelm.MaintenanceState) {}
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
 func (m *Module) InitializeHooks() {

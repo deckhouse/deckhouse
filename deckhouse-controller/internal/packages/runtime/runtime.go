@@ -649,7 +649,7 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 	}
 
 	settings := r.packages.GetPendingSettings(r.global.GetName())
-	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, r.status, r.logger))
+	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, nelm.Managed, r.status, r.logger))
 
 	// Enable initializes and syncs the global hooks; its OnStartup step is a no-op
 	// because global has no OnStartup hooks. globalrun then runs BeforeAll, ensures
@@ -699,15 +699,17 @@ func (r *Runtime) schedulePackage(name string) {
 		// ApplicationIsInMaintenanceMode alert reflects the current mode.
 		r.setMaintenanceMetric(name, maintenance)
 
-		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
+		// Configure applies the maintenance mode onto the package; Run reads it back
+		// via the package's GetMaintenance.
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, maintenance, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), maintenance, r.nelmService, r.status, r.logger), onDone)
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, maintenance, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, maintenance, r.nelmService, r.status, r.logger), onDone)
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, r.nelmService, r.status, r.logger), onDone)
 	}
 }
 
