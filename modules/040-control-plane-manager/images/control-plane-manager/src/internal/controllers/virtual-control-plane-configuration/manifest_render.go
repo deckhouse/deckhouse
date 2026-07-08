@@ -65,7 +65,7 @@ type registryPackagesFixed struct {
 	RppGet     string `json:"rppGet"`
 }
 
-func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane) (map[string][]byte, error) {
+func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane, apiAdvertiseAddress string) (map[string][]byte, error) {
 	table, err := parseImagesTable(globalData)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.Vir
 		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
 	}
 
-	replacer := buildManifestReplacer(vcp, versioned, table.Fixed)
+	replacer := buildManifestReplacer(vcp, versioned, table.Fixed, apiAdvertiseAddress)
 
 	rendered := make(map[string][]byte)
 	for key, value := range globalData {
@@ -120,10 +120,11 @@ func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *cor
 	}
 }
 
-func buildManifestReplacer(vcp *controlplanev1alpha1.VirtualControlPlane, versioned versionedImages, fixed fixedImages) *strings.Replacer {
+func buildManifestReplacer(vcp *controlplanev1alpha1.VirtualControlPlane, versioned versionedImages, fixed fixedImages, apiAdvertiseAddress string) *strings.Replacer {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
 	return strings.NewReplacer(
+		"${VCP_API_VIP}", apiAdvertiseAddress,
 		"${IMAGE_KUBE_APISERVER}", versioned.Apiserver,
 		"${IMAGE_KUBE_CONTROLLER_MANAGER}", versioned.ControllerManager,
 		"${IMAGE_KUBE_SCHEDULER}", versioned.Scheduler,

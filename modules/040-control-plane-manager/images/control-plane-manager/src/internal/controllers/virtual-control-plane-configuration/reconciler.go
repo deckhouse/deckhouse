@@ -285,7 +285,7 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 
 // externalAPIEndpoint returns the hostname and port joining nodes use to reach the virtual apiserver through the per-VCP ALB.
 func externalAPIEndpoint(vcp *controlplanev1alpha1.VirtualControlPlane) (string, int32) {
-	return apiExposeHost(vcp), 443
+	return apiExposeHost(vcp), 6443
 }
 
 // apiServerCertExtraSANs returns the stable ALB hostnames that must be in the apiserver serving cert.
@@ -533,7 +533,20 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 		return nil, reconcile.Result{}, fmt.Errorf("get config Secret: %w", err)
 	}
 
-	data, err := renderManifests(global.Data, vcp)
+	// The apiserver advertises the ALB VIP so the tenant's default/kubernetes endpoint
+	// resolves to an address reachable from worker nodes. Until the LoadBalancer address
+	// is assigned (first bootstrap, before the ALB exists) fall back to the pod IP so the
+	// apiserver still starts; the eastbound endpoint only matters once nodes join.
+	vip, err := r.albVIP(ctx, vcp)
+	if err != nil {
+		return nil, reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
+	}
+	apiAdvertiseAddress := vip
+	if apiAdvertiseAddress == "" {
+		apiAdvertiseAddress = "$(POD_IP)"
+	}
+
+	data, err := renderManifests(global.Data, vcp, apiAdvertiseAddress)
 	if err != nil {
 		return nil, reconcile.Result{}, fmt.Errorf("render manifests: %w", err)
 	}

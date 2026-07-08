@@ -65,10 +65,13 @@ spec:
     name: ${VCP_NAME}
     namespace: ${NAMESPACE}
   listeners:
+  # L4 passthrough for the apiserver on a dedicated port (no SNI/hostname): serves both 
+  # external kubelet traffic (api.<vcp> -> VIP:6443)
+  # in-cluster default/kubernetes endpoint
+  # (apiserver --advertise-address=VIP -> 10.96.0.1:443 DNAT -> VIP:6443).
   - name: api
-    port: 443
+    port: 6443
     protocol: TLS
-    hostname: ${VCP_API_HOST}
     tls:
       mode: Passthrough
   - name: konn
@@ -117,9 +120,7 @@ spec:
     kind: ListenerSet
     group: gateway.networking.k8s.io
     sectionName: api
-    port: 443
-  hostnames:
-  - ${VCP_API_HOST}
+    port: 6443
   rules:
   - backendRefs:
     - name: kube-apiserver
