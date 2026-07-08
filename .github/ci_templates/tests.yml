@@ -10,7 +10,7 @@ exec_options: '-u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse'
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
 args: 'make ci'
-docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec'
+docker_options: '-u $(id -u):$(id -g) -w /deckhouse/dhctl -v ${{github.workspace}}:/deckhouse -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec -e HOME=/tmp'
 # </template: dhctl_run_args>
 {!{- end -}!}
 
@@ -23,21 +23,21 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode
 {!{ define "golint_diff_run_args" }!}
 # <template: golint_diff_run_args>
 args: 'sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint'
+docker_options: '-u $(id -u):$(id -g) -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint'
 # </template: golint_diff_run_args>
 {!{- end -}!}
 
 {!{ define "openapi_test_cases_run_args" }!}
 # <template: openapi_test_cases_run_args>
 args: 'ginkgo -vet=off ./testing/openapi_cases/'
-docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-u $(id -u):$(id -g) -v ${{github.workspace}}:/deckhouse -w /deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -v ~/go-pkg-cache:/go/pkg'
 # </template: openapi_test_cases_run_args>
 {!{- end -}!}
 
 {!{ define "validators_run_args" }!}
 # <template: validators_run_args>
 args: 'go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
-docker_options: '-w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-u $(id -u):$(id -g) -w /deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -v ~/go-pkg-cache:/go/pkg'
 # </template: validators_run_args>
 {!{- end -}!}
 
@@ -79,7 +79,7 @@ steps:
       echo "⚓️ 🏎 [$(date -u)] Run tests..."
 {!{- if has $run "setup_cmd" }!}
       CONTAINER_ID=$(docker run -d {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} sleep infinity)
-      docker exec ${CONTAINER_ID} {!{ $run.setup_cmd }!}
+      docker exec -u 0:0 ${CONTAINER_ID} {!{ $run.setup_cmd }!}
       docker exec {!{ $run.exec_options }!} ${CONTAINER_ID} {!{ $run.args }!}
       docker rm -f ${CONTAINER_ID}
 {!{- else }!}
@@ -118,7 +118,7 @@ steps:
       echo "⚓️ 🏎 [$(date -u)] Run tests..."
 {!{- if has $run "setup_cmd" }!}
       CONTAINER_ID=$(docker run -d {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} sleep infinity)
-      docker exec ${CONTAINER_ID} {!{ $run.setup_cmd }!}
+      docker exec -u 0:0 ${CONTAINER_ID} {!{ $run.setup_cmd }!}
       docker exec {!{ $run.exec_options }!} ${CONTAINER_ID} {!{ $run.args }!}
       docker rm -f ${CONTAINER_ID}
 {!{- else }!}
