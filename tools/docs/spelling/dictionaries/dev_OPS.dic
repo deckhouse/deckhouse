@@ -1,4 +1,4 @@
-2721
+2746
 1GB
 2GB
 5XX
@@ -35,6 +35,7 @@ AllowedAddressPairs
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
+allowedUserGroups
 allowVolumeExpansion
 amd
 AMD
@@ -274,6 +275,7 @@ Colocating
 Colour
 comparations
 compatibilityFlag
+complexityLevel
 conf
 config
 configMap
@@ -483,8 +485,10 @@ ElasticIP
 elasticsearch
 Elasticsearch
 ELB
+emailAddress
 EmailConfig
 emptyDir
+enableBasicAuth
 enablement
 enableMultiTenancy
 endofftopic
@@ -647,7 +651,9 @@ hsts
 HSTS
 html
 HTML
+htpasswd
 http
+httpd
 httpPort
 httpProxy
 https
@@ -664,6 +670,7 @@ hypervisor
 hypervisors
 Hypervisors
 IaC
+iam
 IAM
 ICMP
 idempotence
@@ -704,6 +711,7 @@ initContainer
 InitContainer
 initContainers
 InitContainers
+initiatorType
 Inline
 inode
 inodes
@@ -750,6 +758,7 @@ iSCSI
 isn
 ISP
 isSudoer
+issuerName
 istio
 istio-api-proxy
 istiod
@@ -780,6 +789,7 @@ keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+kerberos
 Kerberos
 KESL
 Keycloak
@@ -791,6 +801,7 @@ Kiali
 KiB
 KLLRCODA
 Klog
+krb
 kruise
 Kruise
 kube
@@ -853,6 +864,7 @@ localpath
 LocalPathProvisioner
 localpref
 Lockbox
+lockDuration
 loghouse
 logLevel
 Logstash
@@ -893,6 +905,7 @@ masterNodeGroup
 matchExpressions
 matchLabels
 Mattermost
+maxAttempts
 maxConcurrent
 maxConcurrentDownloads
 maxPerZone
@@ -926,6 +939,7 @@ minikube
 minimalNotificationTime
 MinIO
 MinIO’s
+minLength
 minPerZone
 minReplicas
 misconfigured
@@ -1120,6 +1134,7 @@ paravirtualization
 passphrase
 Passthrough
 passwordHash
+passwordHistoryLimit
 passwordless
 pathPrefix
 PCI
@@ -1190,6 +1205,7 @@ prometheus
 PrometheusRemoteWrite
 PrometheusRule
 PrometheusRules
+promptType
 PromQL
 promtail
 Promtail
@@ -1244,6 +1260,7 @@ Redis
 Redoc
 redos
 RefreshToken
+refreshTokens
 regex
 Regex
 regexes
@@ -1262,6 +1279,7 @@ RemovePodsViolatingInterPodAntiAffinity
 RemovePodsViolatingNodeAffinity
 RemovePodsViolatingNodeTaints
 RemovePodsViolatingTopologySpreadConstraint
+repeatedChars
 ReplicaSet
 ReplicaSets
 ReplicatedStorageClass
@@ -1273,6 +1291,7 @@ reprovisioning
 repurposed
 RequestAuthentication
 RequirementCheck
+ResetPassword
 resizer
 resourceAttributes
 ResourceList
@@ -1291,6 +1310,7 @@ roleRef
 RollingUpdate
 rollout
 rollouts
+rootCAData
 RootConf
 rootDir
 rootDiskSize
@@ -1379,6 +1399,7 @@ SonarQube
 Sonatype
 sourceRanges
 SPE
+specialCharacters
 spellchecker
 Spellchecking
 SPIFFE
@@ -1520,6 +1541,7 @@ trdl
 trivy
 Trivy
 TrustDomain
+ttl
 tuf
 tunnelMode
 txt
@@ -1554,6 +1576,7 @@ username
 UserOperation
 UTC
 UTF
+utils
 UUID
 UUIDs
 uwsgi
@@ -2563,6 +2586,8 @@ ZvirtInstanceClass
 сокеты
 соотвествущая
 соответствующий
+сопоставление
+сопоставления
 Сохраняеем
 спецзаголовки
 спринты

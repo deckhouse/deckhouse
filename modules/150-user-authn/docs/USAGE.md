@@ -29,6 +29,18 @@ spec:
 
 ## Configuring a provider
 
+### Checking provider connectivity
+
+The web UI  provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the hook to write the result to its status.
+
+The check verifies that:
+
+- the referenced [DexProvider](cr.html#dexprovider) exists and is enabled;
+- the Dex discovery endpoint inside the cluster is reachable;
+- the external provider endpoint is reachable.
+
+For OIDC providers, the check also reads the discovery document and JWKS. For LDAP providers, it verifies TCP/TLS/StartTLS reachability and, when Kerberos is enabled, that the keytab Secret exists. The check does not perform a full login flow and does not validate a test user password.
+
 ### GitHub
 
 The example shows the provider's settings for integration with GitHub.
@@ -81,7 +93,7 @@ Create a new application in the GitLab project.
 
 To do this, you need to:
 * **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)` and set scopes `read_user`, `openid`;
-* **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)`; also, don't forget to set scopes `read_user`, `openid`;
+* **cloud GitLab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)`; also, don't forget to set scopes `read_user`, `openid`;
 * (for GitLab version starting with 16) enable the `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` checkbox when creating an application.
 
 Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
@@ -432,14 +444,14 @@ spec:
 
 To configure the SAML Identity Provider:
 
-1. Register Dex as a Service Provider (SP) in your IdP with the following settings:
+1. Register Dex as a Service Provider (SP) with your identity provider using the following settings:
    - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
    - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
-   - **NameID format**: `persistent` or `emailAddress`
+   - **Name identifier format**: `persistent` or `emailAddress`
 
-1. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
+1. Configure attribute mapping in the identity provider to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
 
-1. Export the IdP signing certificate and specify it in the `rootCAData` field of the DexProvider resource.
+1. Export the identity provider signing certificate and specify it in the `rootCAData` field of the DexProvider resource.
 
 {% alert level="info" %}
 SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the `user-authn` module configuration.
@@ -531,6 +543,68 @@ spec:
 ```
 
 {% endraw %}
+
+### Local user operations
+
+Password reset, 2FA reset, and lock/unlock operations are performed via the [UserOperation](cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
+
+#### Administrative operations
+
+Use the `d8 iam user` commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
+
+The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
+
+Interactive password reset example:
+
+```shell
+d8 iam user reset-password admin
+```
+
+Example of reading the new password from stdin:
+
+```shell
+echo "N3wPa$$wo#d" | d8 iam user reset-password admin --password-stdin
+```
+
+Example of generating a new password automatically:
+
+```shell
+d8 iam user reset-password admin --generate-password
+```
+
+If the password is already hashed, pass the bcrypt hash without Base64 encoding:
+
+```shell
+d8 iam user reset-password admin --password-hash '$2y$10$abcdef...'
+```
+
+2FA reset example:
+
+```shell
+d8 iam user reset2fa admin
+```
+
+Example of locking a user for 30 minutes:
+
+```shell
+d8 iam user lock admin 30m
+```
+
+User unlock example:
+
+```shell
+d8 iam user unlock admin
+```
+
+By default, commands wait for the operation to complete. To only create a UserOperation and print its name, use the `--wait=false` flag.
+
+#### Self-service password reset
+
+A local user can reset their own password in the DKP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+
+Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
+
+When a user resets their password, the new password must comply with the password policy, and the user's active sessions are terminated — re-authentication is required.
 
 ### Adding a user to a group
 
