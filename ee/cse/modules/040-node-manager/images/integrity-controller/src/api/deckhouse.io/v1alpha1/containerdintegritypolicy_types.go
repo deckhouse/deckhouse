@@ -23,6 +23,7 @@ type ContainerdIntegrityPolicySpec struct {
 type ProtectedNamespacesSelector struct {
 	// MatchLabels is a map of `key: value` pairs.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinProperties=1
 	MatchLabels map[string]string `json:"matchLabels"`
 }
 

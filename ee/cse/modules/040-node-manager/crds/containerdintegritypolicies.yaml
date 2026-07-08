@@ -90,6 +90,7 @@ spec:
                     additionalProperties:
                       type: string
                     description: 'MatchLabels is a map of `key: value` pairs.'
+                    minProperties: 1
                     x-doc-examples: [{ "foo": "bar" }]
                     type: object
                 required:
