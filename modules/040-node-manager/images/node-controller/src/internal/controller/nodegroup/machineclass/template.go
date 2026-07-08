@@ -52,6 +52,12 @@ const (
 // module. It is resolved with the same base-dir search as the checksum templates.
 const MCMMachineClassSubPath = "cloud-instance-manager/machine-class.yaml"
 
+// CAPIMachineTemplateSubPath is the provider MachineTemplate manifest template
+// (the get_crds capi_node_group_machine_template define) within a
+// 030-cloud-provider-<type> module. It is resolved with the same base-dir search
+// as the checksum templates and rendered by the same engine as the MCM class.
+const CAPIMachineTemplateSubPath = "capi/machine-template.yaml"
+
 // ResolveChecksumTemplatePath returns the path to the checksum template (subPath,
 // e.g. MCMChecksumSubPath or CAPIChecksumSubPath) for cloudType, mirroring the
 // assign hook: it returns the first path that exists under baseDirs, otherwise the

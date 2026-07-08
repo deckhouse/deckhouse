@@ -13,6 +13,10 @@ import:
   add: /crds
   to: /crds
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-templates-artifact
+  add: /deckhouse
+  to: /deckhouse
+  before: setup
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -81,3 +85,56 @@ git:
   stageDependencies:
     install:
     - "*.yaml"
+---
+# Provider MachineClass / MachineTemplate templates baked into the image at the
+# /deckhouse/... paths that machineclass.DefaultTemplateBaseDirs resolves against
+# (mirrors the helm symlinks capi/<type> and cloud-providers/<type>). This lets
+# the controller render provider objects without mounting the module tree at runtime.
+# EE providers live under ee/ and are only present in EE build trees, so they are
+# guarded by .isEE (in CE builds those NodeGroups cannot exist).
+image: {{ .ModuleName }}/{{ .ImageName }}-templates-artifact
+fromImage: common/src-artifact
+final: false
+git:
+{{- $tplIncludePaths := list "cloud-instance-manager/machine-class.yaml" "cloud-instance-manager/machine-class.checksum" "capi/instance-class.checksum" "capi/machine-template.yaml" }}
+{{- range $provider := list "aws" "azure" "gcp" "yandex" "dvp" }}
+- add: /{{ $.ModulePath }}modules/030-cloud-provider-{{ $provider }}
+  to: /deckhouse/modules/030-cloud-provider-{{ $provider }}
+  includePaths:
+  {{- range $p := $tplIncludePaths }}
+  - {{ $p }}
+  {{- end }}
+  stageDependencies:
+    install:
+    {{- range $p := $tplIncludePaths }}
+    - {{ $p }}
+    {{- end }}
+{{- end }}
+{{- if .isEE }}
+{{- range $provider := list "openstack" "dynamix" "vcd" "huaweicloud" }}
+- add: /ee/modules/030-cloud-provider-{{ $provider }}
+  to: /deckhouse/ee/modules/030-cloud-provider-{{ $provider }}
+  includePaths:
+  {{- range $p := $tplIncludePaths }}
+  - {{ $p }}
+  {{- end }}
+  stageDependencies:
+    install:
+    {{- range $p := $tplIncludePaths }}
+    - {{ $p }}
+    {{- end }}
+{{- end }}
+{{- range $provider := list "vsphere" "zvirt" }}
+- add: /ee/se-plus/modules/030-cloud-provider-{{ $provider }}
+  to: /deckhouse/ee/se-plus/modules/030-cloud-provider-{{ $provider }}
+  includePaths:
+  {{- range $p := $tplIncludePaths }}
+  - {{ $p }}
+  {{- end }}
+  stageDependencies:
+    install:
+    {{- range $p := $tplIncludePaths }}
+    - {{ $p }}
+    {{- end }}
+{{- end }}
+{{- end }}

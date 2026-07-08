@@ -19,6 +19,7 @@ package machineclass
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"text/template"
 )
 
@@ -47,15 +48,18 @@ func renderInclude(name string, data interface{}) (string, error) {
 	}
 }
 
-// renderModuleLabels reproduces deckhouse_lib_helm _module_labels.tpl for the
-// (list .) call form — one element, no additional labels — which is the only form
-// the provider machine-class.yaml templates use. The result carries no
-// surrounding newline; the template's `| nindent 2` supplies indentation. This
-// must stay byte-identical to the define or the MachineClass label block diverges.
+// renderModuleLabels reproduces deckhouse_lib_helm _module_labels.tpl for both
+// call forms used by the provider templates: (list .) — mandatory labels only
+// (MCM machine-class.yaml) — and (list . (dict ...)) — mandatory labels plus a
+// sorted block of additional labels (CAPI machine-template.yaml and the static
+// StaticMachineTemplate, which add node-group: <name>). The result carries no
+// surrounding newline; the template's `| nindent N` supplies indentation. The
+// additional labels are emitted in sorted key order to match Helm's range over a
+// map. This must stay byte-identical to the define or the label block diverges.
 func renderModuleLabels(data interface{}) (string, error) {
 	args, ok := data.([]interface{})
-	if !ok || len(args) != 1 {
-		return "", fmt.Errorf("helm_lib_module_labels: machine-class renderer supports only the (list .) one-element form")
+	if !ok || (len(args) != 1 && len(args) != 2) {
+		return "", fmt.Errorf("helm_lib_module_labels: supports only (list .) and (list . (dict ...)) forms")
 	}
 	ctx, ok := args[0].(map[string]interface{})
 	if !ok {
@@ -63,7 +67,23 @@ func renderModuleLabels(data interface{}) (string, error) {
 	}
 	chart, _ := ctx["Chart"].(map[string]interface{})
 	name, _ := chart["Name"].(string)
-	return "labels:\n  heritage: deckhouse\n  module: " + name, nil
+	out := "labels:\n  heritage: deckhouse\n  module: " + name
+
+	if len(args) == 2 {
+		extra, ok := args[1].(map[string]interface{})
+		if !ok {
+			return "", fmt.Errorf("helm_lib_module_labels: additional labels is not a map[string]interface{}")
+		}
+		keys := make([]string, 0, len(extra))
+		for k := range extra {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			out += fmt.Sprintf("\n  %s: %q", k, fmt.Sprintf("%v", extra[k]))
+		}
+	}
+	return out, nil
 }
 
 // RenderMachineClass renders a provider's machine-class.yaml (node_group_machine_class)

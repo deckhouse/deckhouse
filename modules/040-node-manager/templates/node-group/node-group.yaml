@@ -12,19 +12,16 @@
         {{- end }}
       {{- end }}
       {{- if eq $engine "CAPI" }}
+        {{- /* MachineTemplate and MachineDeployment are rendered by node-controller (capi.reconcileCloudMDsRendered). Only the bootstrap Secret stays in helm (its content needs candi/tpl and does not depend on instanceClass). */ -}}
         {{- range $zone_name := $ng.cloudInstances.zones }}
-          {{ $instance_class_checksum := include "capi_node_group_instance_class_checksum" (list $ $ng) }}
-          {{ $instance_class_hash := printf "%v%v%v" $.Values.global.discovery.clusterUUID $zone_name $instance_class_checksum | sha256sum | trunc 8 }}
-          {{ $template_name := printf "%s-%s" $ng.name $instance_class_hash }}
-          {{ $bootstrap_secret_name := $template_name}}
+          {{ $zone_hash := printf "%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+          {{ $bootstrap_secret_name := printf "%s-%s" $ng.name $zone_hash }}
           {{- include "capi_node_group_machine_bootstrap_secret" (list $ $ng $zone_name $bootstrap_secret_name) }}
-          {{- include "capi_node_group_machine_template" (list $ $ng $zone_name $template_name $instance_class_checksum) }}
         {{- end }}
       {{- else if eq $engine "MCM" }}
+        {{- /* MachineClass CR and MachineDeployment are rendered by node-controller (capi.reconcileCloudMCMs). Only the MachineClass Secret stays in helm. */ -}}
         {{- range $zone_name := $ng.cloudInstances.zones }}
-          {{- include "node_group_machine_class" (list $ $ng $zone_name) }}
           {{- include "node_group_machine_class_secret" (list $ $ng $zone_name) }}
-          {{- include "node_group_machine_deployment" (list $ $ng $zone_name) }}
         {{- end }}
       {{- else if eq $engine "None" }}
       {{- else }}
@@ -32,9 +29,7 @@
       {{- end }}
     {{- end }}
   {{- else }}
+    {{- /* StaticMachineTemplate and MachineDeployment are rendered by node-controller (capi.reconcileStaticMDRendered). Only the manual-bootstrap Secret stays in helm. */ -}}
     {{- include "node_group_static_or_hybrid_secret" (list $ $ng) }}
-    {{- if hasKey $ng "staticInstances" }}
-      {{- include "node_group_static_or_hybrid_machine_template" (list $ $ng) }}
-    {{- end }}
   {{- end }}
 {{- end }}

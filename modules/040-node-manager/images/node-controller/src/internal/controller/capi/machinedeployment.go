@@ -113,12 +113,11 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	case deckhousev1.NodeTypeCloudEphemeral:
 		switch ng.Status.Engine {
 		case engineCAPI:
-			if err := r.reconcileCloudMDs(ctx, ng); err != nil {
+			if err := r.reconcileCloudMDsRendered(ctx, ng); err != nil {
 				return ctrl.Result{}, err
 			}
 		case engineMCM:
-			minReplicas, maxReplicas := getMinMax(ng)
-			if err := r.reconcileMCMReplicas(ctx, logger, ng.Name, minReplicas, maxReplicas); err != nil {
+			if err := r.reconcileCloudMCMs(ctx, ng); err != nil {
 				return ctrl.Result{}, err
 			}
 		default:
@@ -126,7 +125,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	case deckhousev1.NodeTypeStatic, deckhousev1.NodeTypeCloudStatic:
 		if ng.Spec.StaticInstances != nil {
-			if err := r.reconcileStaticMD(ctx, ng); err != nil {
+			if err := r.reconcileStaticMDRendered(ctx, ng); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -200,172 +199,10 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 	return nil
 }
 
-func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
-	logger := log.FromContext(ctx)
-
-	if ng.Spec.CloudInstances == nil {
-		logger.V(1).Info("skipping: no cloudInstances")
-		return nil
-	}
-
-	cloudConfig, err := r.readCloudProviderConfig(ctx)
-	if err != nil {
-		return err
-	}
-	if cloudConfig.capiClusterName == "" {
-		logger.V(1).Info("skipping: capiClusterName is empty")
-		return nil
-	}
-
-	zones := ng.Spec.CloudInstances.Zones
-	if len(zones) == 0 {
-		zones = cloudConfig.zones
-	}
-	if len(zones) == 0 {
-		logger.V(1).Info("skipping: no zones in NodeGroup or cloud provider secret")
-		return nil
-	}
-
-	instanceClassChecksum, err := r.readInstanceClassChecksum(ctx, cloudConfig, ng.Name)
-	if err != nil {
-		return err
-	}
-	if instanceClassChecksum == "" {
-		logger.V(1).Info("skipping: infrastructure template not found yet, waiting for helm")
-		return nil
-	}
-
-	clusterUUID, err := r.readClusterUUID(ctx)
-	if err != nil {
-		return err
-	}
-
-	instancePrefix, err := r.readInstancePrefix(ctx)
-	if err != nil {
-		return err
-	}
-
-	minReplicas := ng.Spec.CloudInstances.MinPerZone
-	maxReplicas := ng.Spec.CloudInstances.MaxPerZone
-	maxSurge := intOrDefault(ng.Spec.CloudInstances.MaxSurgePerZone, 1)
-	maxUnavailable := intOrDefault(ng.Spec.CloudInstances.MaxUnavailablePerZone, 0)
-
-	drainTimeout := 600
-	if ng.Spec.NodeDrainTimeoutSecond != nil {
-		drainTimeout = *ng.Spec.NodeDrainTimeoutSecond
-	}
-
-	infraAPIGroup := cloudConfig.capiMachineTemplateAPIVersion
-	if idx := strings.LastIndex(infraAPIGroup, "/"); idx >= 0 {
-		infraAPIGroup = infraAPIGroup[:idx]
-	}
-
-	for _, zone := range zones {
-		mdHash := sha256Hash(clusterUUID + zone)
-		mdSuffix := fmt.Sprintf("%s-%s", ng.Name, mdHash)
-		mdName := mdSuffix
-		if instancePrefix != "" {
-			mdName = fmt.Sprintf("%s-%s", instancePrefix, mdSuffix)
-		}
-
-		templateHash := sha256Hash(clusterUUID + zone + instanceClassChecksum)
-		templateName := fmt.Sprintf("%s-%s", ng.Name, templateHash)
-		bootstrapSecretName := templateName
-
-		annotations := map[string]interface{}{
-			"cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size": fmt.Sprintf("%d", minReplicas),
-			"cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size": fmt.Sprintf("%d", maxReplicas),
-		}
-
-		serializedLabels := serializeNodeGroupLabels(ng)
-		if serializedLabels != "" {
-			annotations["capacity.cluster-autoscaler.kubernetes.io/labels"] = serializedLabels
-		}
-		serializedTaints := serializeNodeGroupTaints(ng)
-		if serializedTaints != "" {
-			annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = serializedTaints
-		}
-
-		commonLabels := map[string]interface{}{
-			"heritage":   "deckhouse",
-			"module":     "node-manager",
-			"node-group": ng.Name,
-		}
-
-		var desired int32
-		existing := &unstructured.Unstructured{}
-		existing.SetGroupVersionKind(schema.GroupVersionKind{
-			Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeployment",
-		})
-		err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				return fmt.Errorf("get MachineDeployment %s: %w", mdName, err)
-			}
-			desired = minReplicas
-		} else {
-			replicas, _, _ := unstructured.NestedInt64(existing.Object, "spec", "replicas")
-			desired = calculateReplicas(int32(replicas), minReplicas, maxReplicas)
-		}
-
-		md := &unstructured.Unstructured{Object: map[string]interface{}{
-			"apiVersion": "cluster.x-k8s.io/v1beta2",
-			"kind":       "MachineDeployment",
-			"metadata": map[string]interface{}{
-				"name":        mdName,
-				"namespace":   common.MachineNamespace,
-				"labels":      commonLabels,
-				"annotations": annotations,
-			},
-			"spec": map[string]interface{}{
-				"clusterName": cloudConfig.capiClusterName,
-				"replicas":    int64(desired),
-				"template": map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"labels": commonLabels,
-					},
-					"spec": map[string]interface{}{
-						"clusterName": cloudConfig.capiClusterName,
-						"bootstrap": map[string]interface{}{
-							"dataSecretName": bootstrapSecretName,
-						},
-						"infrastructureRef": map[string]interface{}{
-							"apiGroup": infraAPIGroup,
-							"kind":     cloudConfig.capiMachineTemplateKind,
-							"name":     templateName,
-						},
-						"deletion": map[string]interface{}{
-							"nodeDrainTimeoutSeconds":        int64(drainTimeout),
-							"nodeDeletionTimeoutSeconds":     int64(600),
-							"nodeVolumeDetachTimeoutSeconds": int64(600),
-						},
-					},
-				},
-				"rollout": map[string]interface{}{
-					"strategy": map[string]interface{}{
-						"type": "RollingUpdate",
-						"rollingUpdate": map[string]interface{}{
-							"maxSurge":       int64(maxSurge),
-							"maxUnavailable": int64(maxUnavailable),
-						},
-					},
-				},
-			},
-		}}
-
-		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
-			return fmt.Errorf("apply MachineDeployment %s: %w", mdName, err)
-		}
-		logger.V(1).Info("applied cloud MachineDeployment", "name", mdName, "zone", zone)
-	}
-
-	return nil
-}
-
-func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng *deckhousev1.NodeGroup) error {
-	logger := log.FromContext(ctx)
-
-	mdName := ng.Name
+// buildStaticMD renders the cluster.x-k8s.io/v1beta2 MachineDeployment for a
+// Static/CloudStatic NodeGroup. Extracted so the live reconcileStaticMD and the
+// rendered-cutover reconcileStaticMDRendered build byte-identical objects.
+func buildStaticMD(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
 	var replicas int32
 	if ng.Spec.StaticInstances.Count != nil {
 		replicas = *ng.Spec.StaticInstances.Count
@@ -378,11 +215,11 @@ func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng 
 		"app":        "caps-controller",
 	}
 
-	md := &unstructured.Unstructured{Object: map[string]interface{}{
+	return &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "MachineDeployment",
 		"metadata": map[string]interface{}{
-			"name":      mdName,
+			"name":      ng.Name,
 			"namespace": common.MachineNamespace,
 			"labels":    commonLabels,
 		},
@@ -425,54 +262,6 @@ func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng 
 			},
 		},
 	}}
-
-	if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
-		return fmt.Errorf("apply static MachineDeployment %s: %w", mdName, err)
-	}
-	logger.V(1).Info("applied static MachineDeployment", "name", mdName)
-	return nil
-}
-
-func (r *MachineDeploymentReconciler) reconcileMCMReplicas(ctx context.Context, logger interface{ Info(string, ...any) }, ngName string, minReplicas, maxReplicas int32) error {
-	list := &unstructured.UnstructuredList{}
-	list.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeploymentList",
-	})
-
-	if err := r.Client.List(ctx, list,
-		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
-	); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return nil
-		}
-		return fmt.Errorf("list MCM MachineDeployments: %w", err)
-	}
-
-	for i := range list.Items {
-		md := &list.Items[i]
-		replicas, _, _ := unstructured.NestedInt64(md.Object, "spec", "replicas")
-		current := int32(replicas)
-
-		desired := calculateReplicas(current, minReplicas, maxReplicas)
-		if desired == current {
-			continue
-		}
-
-		patch := &unstructured.Unstructured{}
-		patch.SetGroupVersionKind(md.GroupVersionKind())
-		patch.SetName(md.GetName())
-		patch.SetNamespace(md.GetNamespace())
-		if err := unstructured.SetNestedField(patch.Object, int64(desired), "spec", "replicas"); err != nil {
-			return fmt.Errorf("set replicas field: %w", err)
-		}
-
-		if err := r.Client.Patch(ctx, patch, client.Apply, client.FieldOwner("capi-set-replicas"), client.ForceOwnership); err != nil {
-			return fmt.Errorf("patch MCM MachineDeployment %s replicas: %w", md.GetName(), err)
-		}
-		logger.Info("patched MCM replicas", "name", md.GetName(), "from", current, "to", desired)
-	}
-	return nil
 }
 
 type cloudProviderConfig struct {
@@ -549,35 +338,6 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
 	return cfg.Cloud.Prefix, nil
-}
-
-func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, cloudConfig *cloudProviderConfig, ngName string) (string, error) {
-	gv, err := schema.ParseGroupVersion(cloudConfig.capiMachineTemplateAPIVersion)
-	if err != nil {
-		return "", fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
-	}
-
-	templateList := &unstructured.UnstructuredList{}
-	templateList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   gv.Group,
-		Version: gv.Version,
-		Kind:    cloudConfig.capiMachineTemplateKind + "List",
-	})
-
-	if err := r.APIReader.List(ctx, templateList,
-		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
-	); err != nil {
-		return "", fmt.Errorf("list infrastructure templates for %s: %w", ngName, err)
-	}
-
-	for i := range templateList.Items {
-		annotations := templateList.Items[i].GetAnnotations()
-		if v, ok := annotations["checksum/instance-class"]; ok && v != "" {
-			return v, nil
-		}
-	}
-	return "", nil
 }
 
 func getMinMax(ng *deckhousev1.NodeGroup) (int32, int32) {
