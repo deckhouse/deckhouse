@@ -47,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -281,6 +282,11 @@ func (a *Application) GetVersion() *semver.Version {
 // GetPath returns path to the package dir
 func (a *Application) GetPath() string {
 	return a.path
+}
+
+// GetEnabledScriptDescriptor is a stub that returns nil
+func (a *Application) GetEnabledScriptDescriptor() *script.Descriptor {
+	return nil
 }
 
 // GetHooksQueues returns package queues from all hooks
