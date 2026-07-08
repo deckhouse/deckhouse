@@ -32,9 +32,9 @@ import (
 )
 
 const (
-	initSecretName              = "registry-init"
-	initSecretNamespace         = "d8-system"
-	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
+	secretName        = "registry-init"
+	secretNamespace   = "d8-system"
+	appliedAnnotation = "registry.deckhouse.io/is-applied"
 )
 
 func KubernetsConfig(snapName string) go_hook.KubernetesConfig {
@@ -43,11 +43,11 @@ func KubernetsConfig(snapName string) go_hook.KubernetesConfig {
 		ApiVersion: "v1",
 		Kind:       "Secret",
 		NameSelector: &types.NameSelector{
-			MatchNames: []string{initSecretName},
+			MatchNames: []string{secretName},
 		},
 		NamespaceSelector: &types.NamespaceSelector{
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{initSecretNamespace},
+				MatchNames: []string{secretNamespace},
 			},
 		},
 		FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -58,7 +58,7 @@ func KubernetsConfig(snapName string) go_hook.KubernetesConfig {
 				return nil, fmt.Errorf("failed to convert init secret to struct: %v", err)
 			}
 
-			_, applied := secret.Annotations[initSecretAppliedAnnotation]
+			_, applied := secret.Annotations[appliedAnnotation]
 			ret := initSecretSnap{
 				Applied: applied,
 				Config:  secret.Data["config"],
@@ -107,12 +107,12 @@ func SetApplied(input *go_hook.HookInput, inputs Inputs) {
 		patch := map[string]any{
 			"metadata": map[string]any{
 				"annotations": map[string]any{
-					initSecretAppliedAnnotation: "",
+					appliedAnnotation: "",
 				},
 			},
 		}
 
 		input.PatchCollector.PatchWithMerge(
-			patch, "v1", "Secret", initSecretNamespace, initSecretName)
+			patch, "v1", "Secret", secretNamespace, secretName)
 	}
 }
