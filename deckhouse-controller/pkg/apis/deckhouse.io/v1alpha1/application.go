@@ -117,6 +117,7 @@ type ApplicationSpec struct {
 	//   - The `ApplicationIsInMaintenanceMode` alert is triggered.
 	// +kubebuilder:validation:Enum=NoResourceReconciliation
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=NoResourceReconciliation
 	Maintenance string `json:"maintenance,omitempty"`
 }
 
