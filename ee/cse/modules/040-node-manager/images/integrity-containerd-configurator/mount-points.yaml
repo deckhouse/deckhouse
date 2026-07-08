@@ -1,2 +1,2 @@
 dirs:
-- /host/etc/containerd/integrity
+- /etc/containerd/integrity
