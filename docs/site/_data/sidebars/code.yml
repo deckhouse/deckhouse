@@ -35,6 +35,10 @@ entries:
           en: Security сredentials
           ru: Ключи доступа
         url: /code/documentation/admin/security-credentials.html
+      - title:
+          en: OpenSearch API
+          ru: OpenSearch API
+        url: /code/documentation/admin/configuration/opensearch-api.html
   - title:
       en: User guide
       ru: Руководство пользователя
@@ -111,6 +115,10 @@ entries:
           en: Search
           ru: Поиск
         url: /code/documentation/user/search.html
+      - title:
+          en: Search API
+          ru: Search API
+        url: /code/documentation/user/search-api.html
       - title:
           en: Push rules
           ru: Правила отправки изменений
