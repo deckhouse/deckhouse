@@ -405,21 +405,28 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 ) (reconcile.Result, error) {
 	target := buildTargetKubeconfigSecret(vcp, name)
 
-	_, err := r.getSecret(ctx, target.Namespace, target.Name)
-	if apierrors.IsNotFound(err) {
-		data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
-		}
-		target.Data = data
+	data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
+	}
+	target.Data = data
 
+	current, err := r.getSecret(ctx, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
 		return reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
 	}
 
-	return reconcile.Result{}, nil
+	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+		return reconcile.Result{}, nil
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+
+	return reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
 func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) error {
