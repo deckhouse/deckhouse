@@ -12,6 +12,7 @@ import (
 // ContainerdIntegrityPolicySpec defines the desired state of ContainerdIntegrityPolicy.
 type ContainerdIntegrityPolicySpec struct {
 	// PEM-encoded CA certificate used to verify image signatures.
+	// +kubebuilder:validation:Pattern=`(?s)^-----BEGIN.*$`
 	CA string `json:"ca"`
 
 	// Label selector that defines which namespaces are protected by this policy.
@@ -20,9 +21,9 @@ type ContainerdIntegrityPolicySpec struct {
 
 // ProtectedNamespacesSelector selects namespaces by labels.
 type ProtectedNamespacesSelector struct {
-	// MatchLabels is a map of {key,value} pairs.
-	// +optional
-	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+	// MatchLabels is a map of `key: value` pairs.
+	// +kubebuilder:validation:Required
+	MatchLabels map[string]string `json:"matchLabels"`
 }
 
 // ContainerdIntegrityPolicyStatus defines the observed state of ContainerdIntegrityPolicy.

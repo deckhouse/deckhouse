@@ -80,20 +80,20 @@ spec:
             properties:
               ca:
                 description: PEM-encoded CA certificate used to verify image signatures.
+                pattern: (?s)^-----BEGIN.*$
                 type: string
               protectedNamespaces:
-                required:
-                  - matchLabels
                 description: Label selector that defines which namespaces are protected
                   by this policy.
                 properties:
                   matchLabels:
                     additionalProperties:
                       type: string
-                    description: | 
-                      MatchLabels is a map of `key: value` pairs.
+                    description: 'MatchLabels is a map of `key: value` pairs.'
                     x-doc-examples: [{ "foo": "bar" }]
                     type: object
+                required:
+                - matchLabels
                 type: object
             required:
             - ca
