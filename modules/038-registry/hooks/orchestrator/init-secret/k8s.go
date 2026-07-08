@@ -34,17 +34,12 @@ import (
 const (
 	initSecretName              = "registry-init"
 	initSecretNamespace         = "d8-system"
-	initSecretSnapName          = "init-secret"
 	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
 )
 
-func snapName(prefix, name string) string {
-	return fmt.Sprintf("%s-->%s", prefix, name)
-}
-
-func KubernetsConfig(name string) go_hook.KubernetesConfig {
+func KubernetsConfig(snapName string) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
-		Name:       snapName(name, initSecretSnapName),
+		Name:       snapName,
 		ApiVersion: "v1",
 		Kind:       "Secret",
 		NameSelector: &types.NameSelector{
@@ -73,9 +68,7 @@ func KubernetsConfig(name string) go_hook.KubernetesConfig {
 	}
 }
 
-func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
-	snapName := snapName(name, initSecretSnapName)
-
+func InputsFromSnapshot(input *go_hook.HookInput, snapName string) (Inputs, error) {
 	initSecret, err := helpers.SnapshotToSingle[initSecretSnap](input, snapName)
 	if err != nil {
 		if errors.Is(err, helpers.ErrNoSnapshot) {
