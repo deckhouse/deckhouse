@@ -79,7 +79,7 @@ func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
 	initSecret, err := helpers.SnapshotToSingle[initSecretSnap](input, snapName)
 	if err != nil {
 		if errors.Is(err, helpers.ErrNoSnapshot) {
-			// No initialization secret found in snapshot - nothing to process
+			// No initialization secret found - nothing to process
 			return Inputs{}, nil
 		}
 		// Unexpected error while reading snapshot
