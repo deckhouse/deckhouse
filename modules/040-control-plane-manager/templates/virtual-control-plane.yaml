@@ -1,9 +1,24 @@
 {{- if .Values.controlPlaneManager.internal.hasVirtualControlPlane }}
+{{- $vm := .Files.Get "candi/version_map.yml" | fromYaml }}
+{{- $dig := .Values.global.modulesImages.digests.controlPlaneManager }}
+{{- $reg := printf "%s%s" .Values.global.modulesImages.registry.address .Values.global.modulesImages.registry.path }}
+{{- $versioned := dict }}
+{{- range $ver, $_ := $vm.k8s }}
+  {{- $sfx := $ver | toString | replace "." "" }}
+  {{- $aKey := printf "kubeApiserver%s" $sfx }}
+  {{- if hasKey $dig $aKey }}
+    {{- $_ := set $versioned ($ver | toString) (dict
+        "apiserver"         (printf "%s@%s" $reg (get $dig $aKey))
+        "controllerManager" (printf "%s@%s" $reg (get $dig (printf "kubeControllerManager%s" $sfx)))
+        "scheduler"         (printf "%s@%s" $reg (get $dig (printf "kubeScheduler%s" $sfx)))) }}
+  {{- end }}
+{{- end }}
+{{- $imagesTable := dict "versioned" $versioned "fixed" (dict "kine" (printf "%s@%s" $reg (get $dig "kine"))) }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-vcp-config
+  name: d8-virtual-control-plane-config
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
 type: Opaque
@@ -15,10 +30,14 @@ stringData:
   service-subnet-cidr: {{ .Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
   default-kubernetes-version: {{ .Values.controlPlaneManager.internal.effectiveKubernetesVersion | quote }}
   components: |
-    - etcd
     - kube-apiserver
     - kube-controller-manager
     - kube-scheduler
+data:
+  {{- range $path, $_ := .Files.Glob "virtual-control-plane-templates/*.yaml.tpl" }}
+  {{ base $path }}: {{ $.Files.Get $path | b64enc }}
+  {{- end }}
+  images: {{ $imagesTable | toYaml | b64enc }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -45,12 +64,12 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create", "patch"]
-- apiGroups: [""]
+- apiGroups: ["apps"]
   resources: ["statefulsets"]
-  verbs: ["get", "list", "create", "update", "patch"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 - apiGroups: [""]
   resources: ["pods"]
-  verbs: ["get", "list"]
+  verbs: ["get", "list", "watch"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
   verbs: ["get", "list", "watch", "create", "update", "patch"]
@@ -72,6 +91,9 @@ rules:
 - apiGroups: ["control-plane.deckhouse.io"]
   resources: ["controlplaneoperations/status"]
   verbs: ["get", "update", "patch"]
+- apiGroups: ["managed-services.deckhouse.io"]
+  resources: ["postgreses", "postgres"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
