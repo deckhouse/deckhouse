@@ -87,9 +87,6 @@ func InstallDeckhouse(
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
-		// Warning! This function must be called at the end of the Deckhouse installation phase.
-		// At the end of this function, the registry-init secret is deleted,
-		// which is used during DeckhouseInstall for certain registry operation modes.
 		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
 		if err != nil {
 			return fmt.Errorf("registry initialization: %v", err)

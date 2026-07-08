@@ -27,7 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
-func createInitSecret(ctx context.Context, kubeClient client.KubeClient, applied bool) error {
+func createInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
 	pki, err := GeneratePKI()
 	if err != nil {
 		return err
@@ -46,12 +46,6 @@ func createInitSecret(ctx context.Context, kubeClient client.KubeClient, applied
 		Data: map[string][]byte{
 			"config": pkiYaml,
 		},
-	}
-
-	if applied {
-		secret.Annotations = map[string]string{
-			initSecretAppliedAnnotation: "",
-		}
 	}
 
 	return createOrUpdateSecret(ctx, kubeClient, secret)
@@ -101,87 +95,49 @@ func createOrUpdateSecret(ctx context.Context, kubeClient client.KubeClient, sec
 }
 
 func TestCheckRegistryInitialization(t *testing.T) {
-	t.Run("legacy - should delete init secret", func(t *testing.T) {
+	t.Run("legacy - returns ready regardless of state secret", func(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
 		config := ConfigBuilder(
 			WithLegacyMode(),
 		)
 
-		// Setup: create non-applied init secret
-		err := createInitSecret(ctx, kubeClient, false)
+		// Legacy mode skips readiness checks entirely.
+		err := checkRegistryInitialization(ctx, kubeClient, config)
 		require.NoError(t, err)
-
-		isExist, isApplied, err := getInitSecretStatus(ctx, kubeClient)
-		require.NoError(t, err)
-
-		require.True(t, isExist, "Init secret should exist initially")
-		require.False(t, isApplied, "Init secret should not be applied initially")
-
-		// First run: delete the secret
-		err = checkRegistryInitialization(ctx, kubeClient, config)
-		require.NoError(t, err)
-
-		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
-		require.NoError(t, err)
-
-		require.False(t, isExist, "Init secret should be deleted after first run")
-
-		// Second run: verify deletion is idempotent
-		err = checkRegistryInitialization(ctx, kubeClient, config)
-		require.NoError(t, err)
-
-		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
-		require.NoError(t, err)
-
-		require.False(t, isExist, "Init secret should remain deleted")
 	})
 
-	t.Run("not legacy - should delete init secret after ready", func(t *testing.T) {
+	t.Run("not legacy - not ready when state secret is missing", func(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
 		config := ConfigBuilder()
 
-		// Setup initial state with applied init secret
-		err := createInitSecret(ctx, kubeClient, true)
-		require.NoError(t, err)
+		// No state secret means conditions are unknown, so the registry is not ready.
+		err := checkRegistryInitialization(ctx, kubeClient, config)
+		require.EqualError(t, err, ErrIsNotReady.Error())
+	})
 
-		isExist, isApplied, err := getInitSecretStatus(ctx, kubeClient)
-		require.NoError(t, err)
+	t.Run("not legacy - readiness flow", func(t *testing.T) {
+		ctx := t.Context()
+		kubeClient := client.NewFakeKubernetesClient()
+		config := ConfigBuilder()
 
-		require.True(t, isExist, "Init secret should exist initially")
-		require.True(t, isApplied, "Init secret should be applied initially")
-
-		// First run: preserve secret when module status is unknown
-		err = checkRegistryInitialization(ctx, kubeClient, config)
+		// First run: not ready when module status is unknown
+		err := checkRegistryInitialization(ctx, kubeClient, config)
 		require.EqualError(t, err, ErrIsNotReady.Error())
 
-		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
-		require.NoError(t, err)
-
-		require.True(t, isExist, "Init secret should be preserved when module status is unknown")
-
-		// Second run: preserve secret with unready status
+		// Second run: not ready with unready status
 		err = createStatusSecret(ctx, kubeClient, false)
 		require.NoError(t, err)
 
 		err = checkRegistryInitialization(ctx, kubeClient, config)
 		require.EqualError(t, err, ErrIsNotReady.Error())
 
-		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
-		require.NoError(t, err)
-
-		require.True(t, isExist, "Init secret should remain preserved with unready status")
-
-		// Third run: delete secret when status becomes ready
+		// Third run: ready when status becomes ready
 		err = createStatusSecret(ctx, kubeClient, true)
 		require.NoError(t, err)
 
 		err = checkRegistryInitialization(ctx, kubeClient, config)
 		require.NoError(t, err)
-
-		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
-		require.NoError(t, err)
-		require.False(t, isExist, "Init secret should be deleted when module becomes ready")
 	})
 }

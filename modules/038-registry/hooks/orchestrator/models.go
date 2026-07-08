@@ -24,11 +24,11 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
+	init_secret "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/init-secret"
 	nodeservices "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
@@ -106,9 +106,9 @@ func (p ParamsState) toParams() (Params, error) {
 type Inputs struct {
 	Params          Params
 	RegistrySecret  deckhouse_registry.Config
-	InitSecret      init_secret.Config
 	IngressClientCA *x509.Certificate // optional
 
+	InitSecret       init_secret.Inputs
 	PKI              pki.Inputs
 	Secrets          secrets.Inputs
 	Users            users.Inputs
@@ -123,12 +123,6 @@ type Inputs struct {
 type Values struct {
 	Hash  string `json:"hash,omitempty"`
 	State State  `json:"state,omitempty"`
-}
-
-type InitSecretSnap struct {
-	IsExist bool
-	Applied bool
-	Config  []byte
 }
 
 func (p Params) Validate() error {

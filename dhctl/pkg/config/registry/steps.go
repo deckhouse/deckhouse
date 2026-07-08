@@ -31,16 +31,14 @@ import (
 )
 
 const (
-	secretsNamespace            = "d8-system"
-	stateSecretName             = "registry-state"
-	initSecretName              = "registry-init"
-	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
+	secretsNamespace = "d8-system"
+	stateSecretName  = "registry-state"
+	initSecretName   = "registry-init"
 
 	conditionTypeReady = "Ready"
 )
 
 // WaitForRegistryInitialization waits for the registry to become fully initialized and ready.
-// After successful initialization, the initSecret will be removed.
 // Parameters:
 //   - ctx: context for cancellation and timeouts
 //   - kubeClient: Kubernetes client for API operations
@@ -56,8 +54,7 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 		})
 }
 
-// checkRegistryInitialization performs checks for registry initialization status.
-// After successful initialization, the initSecret will be removed.
+// checkRegistryInitialization checks whether the registry is ready, unless legacy mode is enabled.
 // Parameters:
 //   - ctx: context for cancellation and timeouts
 //   - kubeClient: Kubernetes client for API operations
@@ -66,78 +63,42 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 // Returns:
 //   - err: error from the operation
 func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
-	if !config.LegacyMode {
-		if err := checkInit(ctx, kubeClient); err != nil {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry init: %v", err))
-			return ErrIsNotReady
-		}
-
-		msg, err := checkReady(ctx, kubeClient)
-		if err != nil {
-			if msg != "" {
-				err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
-				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
-				return err
-			}
-
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
-			return ErrIsNotReady
-		}
+	if config.LegacyMode {
+		return nil
 	}
 
-	if err := removeInitSecret(ctx, kubeClient); err != nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while removing registry init secret: %v", err))
+	logger := dhlog.FromContext(ctx)
+
+	conditions, err := getConditions(ctx, kubeClient)
+	if err != nil {
+		logger.DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
+		return ErrIsNotReady
+	}
+
+	if !isConditionsReady(conditions) {
+		if msg := formatNotReadyMessage(conditions); msg != "" {
+			err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
+			logger.DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
+			return err
+		}
+
 		return ErrIsNotReady
 	}
 
 	return nil
 }
 
-// checkInit verifies if the registry initialization process has started.
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//
-// Returns:
-//   - err: error from the operation
-func checkInit(ctx context.Context, kubeClient client.KubeClient) error {
-	exists, applied, err := getInitSecretStatus(ctx, kubeClient)
-	if err != nil {
-		return err
-	}
-
-	if exists && !applied {
-		return ErrNotInitialized
-	}
-	return nil
-}
-
-// checkReady verifies if the registry is ready.
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//
-// Returns:
-//   - string: readiness status messages
-//   - err: error from the operation
-func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, error) {
-	conditions, err := getStateSecret(ctx, kubeClient)
-	if err != nil {
-		return "", err
-	}
-
+// formatNotReadyMessage builds a human-readable message listing all non-True
+// conditions (excluding the Ready condition itself).
+func formatNotReadyMessage(conditions []metav1.Condition) string {
 	if len(conditions) == 0 {
-		return "", ErrIsNotReady
+		return ""
 	}
 
-	var (
-		msg   strings.Builder
-		ready bool
-	)
+	var msg strings.Builder
 
 	for _, condition := range conditions {
 		if condition.Type == conditionTypeReady {
-			ready = condition.Status == metav1.ConditionTrue
 			continue
 		}
 
@@ -155,14 +116,26 @@ func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, erro
 		)
 	}
 
-	if ready {
-		return "", nil
-	}
-
-	return msg.String(), ErrIsNotReady
+	return msg.String()
 }
 
-// getStateSecret retrieves and parses the registry state conditions.
+// isConditionsReady checks whether the registry is ready based on its conditions.
+// It returns true only if the Ready condition is present and set to True.
+func isConditionsReady(conditions []metav1.Condition) bool {
+	if len(conditions) == 0 {
+		return false
+	}
+
+	for _, condition := range conditions {
+		if condition.Type == conditionTypeReady {
+			return condition.Status == metav1.ConditionTrue
+		}
+	}
+
+	return false
+}
+
+// getConditions retrieves and parses the registry state conditions.
 // Parameters:
 //   - ctx: context for cancellation and timeouts
 //   - kubeClient: Kubernetes client for API operations
@@ -170,16 +143,25 @@ func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, erro
 // Returns:
 //   - []metav1.Condition: registry state conditions
 //   - err: error from the operation
-func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
+func getConditions(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
+	var conditions []metav1.Condition
+
 	secret, err := kubeClient.
 		CoreV1().
 		Secrets(secretsNamespace).
 		Get(ctx, stateSecretName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
-	}
 
-	var conditions []metav1.Condition
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return conditions, nil
+		}
+		return nil, fmt.Errorf(
+			"get secret '%s/%s': %w",
+			secretsNamespace,
+			stateSecretName,
+			err,
+		)
+	}
 
 	conditionRaw, exists := secret.Data["conditions"]
 	if !exists {
@@ -187,53 +169,13 @@ func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1
 	}
 
 	if err := yaml.Unmarshal(conditionRaw, &conditions); err != nil {
-		return nil, fmt.Errorf("unmarshal secret data: %w", err)
+		return nil, fmt.Errorf(
+			"unmarshal secret '%s/%s' conditions: %w",
+			secretsNamespace,
+			stateSecretName,
+			err,
+		)
 	}
 
 	return conditions, nil
-}
-
-// getInitSecretStatus checks the status of the init secret.
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//
-// Returns:
-//   - secretExists: boolean indicating secret presence
-//   - secretApplied: boolean indicating secret application status
-//   - err: error from the operation
-func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (bool, bool, error) {
-	secret, err := kubeClient.
-		CoreV1().
-		Secrets(secretsNamespace).
-		Get(ctx, initSecretName, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, false, nil
-		}
-		return false, false, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
-	}
-
-	_, applied := secret.Annotations[initSecretAppliedAnnotation]
-	return true, applied, nil
-}
-
-// removeInitSecret removes the initialization secret.
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//
-// Returns:
-//   - err: error from the operation
-func removeInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
-	err := kubeClient.
-		CoreV1().
-		Secrets(secretsNamespace).
-		Delete(ctx, initSecretName, metav1.DeleteOptions{})
-
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("remove secret '%s/%s': %w", secretsNamespace, initSecretName, err)
-	}
-
-	return nil
 }

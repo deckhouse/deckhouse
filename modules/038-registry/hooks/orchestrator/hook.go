@@ -30,12 +30,12 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
+	init_secret "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/init-secret"
 	nodeservices "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
@@ -58,8 +58,6 @@ const (
 	registryServiceSnapName  = "registry-service"
 	bashibleSnapName         = "bashible"
 	registrySwitcherSnapName = "registry-switcher"
-
-	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
 )
 
 func getKubernetesConfigs() []go_hook.KubernetesConfig {
@@ -115,35 +113,6 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 			},
 		},
 		{
-			Name:       initSnapName,
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"registry-init"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
-				},
-			},
-			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-				var secret v1core.Secret
-
-				err := sdk.FromUnstructured(obj, &secret)
-				if err != nil {
-					return nil, fmt.Errorf("failed to convert init secret to struct: %v", err)
-				}
-
-				_, applied := secret.Annotations[initSecretAppliedAnnotation]
-				ret := InitSecretSnap{
-					IsExist: true,
-					Applied: applied,
-					Config:  secret.Data["config"],
-				}
-				return ret, nil
-			},
-		},
-		{
 			Name:              registrySecretSnapName,
 			ApiVersion:        "v1",
 			Kind:              "Secret",
@@ -166,6 +135,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 		registryservice.KubernetsConfig(registryServiceSnapName),
 		inclusterproxy.KubernetesConfig(inClusterProxySnapName),
 		registryswitcher.KubernetesConfig(registrySwitcherSnapName),
+		init_secret.KubernetsConfig(initSnapName),
 	}
 
 	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
@@ -190,27 +160,6 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		inputs Inputs
 		err    error
 	)
-
-	initSecret, err := helpers.SnapshotToSingle[InitSecretSnap](input, initSnapName)
-	if err == nil {
-		var config init_secret.Config
-
-		if err = yaml.Unmarshal(initSecret.Config, &config); err != nil {
-			err = fmt.Errorf("cannot unmarhsal init secret YAML: %w", err)
-		} else if err = config.Validate(); err != nil {
-			err = fmt.Errorf("init secret validation error: %w", err)
-		} else {
-			inputs.InitSecret = config
-		}
-	}
-
-	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
-		input.Logger.Warn(
-			"Cannot get init config, the state will be processed without it",
-			"error", err,
-		)
-		initSecret = InitSecretSnap{}
-	}
 
 	if values.State.Mode == "" {
 		input.Logger.Info("State not initialized, trying restore from secret")
@@ -250,6 +199,11 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 	if inputs.Params, err = configFromSecret(configSecret); err != nil {
 		return fmt.Errorf("failed to process config from secret %q: %w", configSecret.Name, err)
+	}
+
+	inputs.InitSecret, err = init_secret.InputsFromSnapshot(input, initSnapName)
+	if err != nil {
+		return fmt.Errorf("get InitSecret snapshot error: %w", err)
 	}
 
 	inputs.RegistrySecret, err = helpers.SnapshotToSingle[deckhouse_registry.Config](input, registrySecretSnapName)
@@ -311,7 +265,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	values.State.CheckerParams = checker.GetParams(ctx, input)
 
 	// Process the state with init secret
-	if initSecret.IsExist && !initSecret.Applied {
+	if !inputs.InitSecret.Applied {
 		input.Logger.Info("initializing state from init configuration")
 
 		err = values.State.initialize(input.Logger, inputs)
@@ -320,22 +274,22 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	// Registry parameters are frozen during two critical phases:
+	// Registry parameters are frozen until the cluster has finished bootstrapping.
 	//
-	// 1. Initialization: User input changes are locked to ensure the registry
-	//    configuration can complete without being overwritten. This also prevents
-	//    the Commander agent from inadvertently overriding registry settings
-	//    if Commander itself was misconfigured.
+	// Freezing the parameters here:
+	//   - lets the registry configuration complete without user input changes
+	//     overwriting it (also prevents a misconfigured Commander agent from
+	//     overriding registry settings);
+	//   - avoids port collisions during bootstrap: the registry runs in Direct
+	//     mode on the host network so that Deckhouse (which also uses the host
+	//     network at this stage) can access it directly. If the registry mode
+	//     were changed during bootstrap, the new registry Pod would conflict on
+	//     the same host port already occupied by the existing Direct-mode
+	//     registry, preventing it from starting.
 	//
-	// 2. Cluster Bootstrap: To avoid port collisions. During bootstrap, the registry runs in
-	//    Direct mode on the host network so that Deckhouse (which also uses the host network
-	//    at this stage) can access it directly. If the registry mode were changed during
-	//    bootstrap, the new registry Pod would conflict on the same host port that is already
-	//    occupied by the existing Direct-mode registry, preventing it from starting.
-	//
-	// During these phases, parameters are frozen to prevent external modification.
+	// During this phase, parameters are frozen to prevent external modification.
 	// Any external changes are ignored, and the last saved parameters are used.
-	if initSecret.IsExist || !helpers.ClusterIsBootstrapped(input) {
+	if !helpers.ClusterIsBootstrapped(input) {
 		// Ensure we have frozen params
 		if values.State.InitParams == nil {
 			state := inputs.Params.toState()
@@ -382,18 +336,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	// Patch init secret
-	if initSecret.IsExist && !initSecret.Applied {
-		input.Logger.Debug("Marking init secret as applied by setting annotation")
-		patch := map[string]any{
-			"metadata": map[string]any{
-				"annotations": map[string]any{
-					initSecretAppliedAnnotation: "",
-				},
-			},
-		}
-		input.PatchCollector.PatchWithMerge(
-			patch, "v1", "Secret", "d8-system", "registry-init")
-	}
+	init_secret.SetApplied(input, inputs.InitSecret)
 	return nil
 }
 
