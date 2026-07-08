@@ -744,7 +744,6 @@ crd-enricher: $(CRD_ENRICHER) ## Download crd-enricher locally if necessary.
 $(CRD_ENRICHER): $(LOCALBIN)
 	$(call go-install-tool,$(CRD_ENRICHER),github.com/deckhouse/deckhouse/pkg/crd-enricher/cmd/crd-enricher,$(CRD_ENRICHER_VERSION))
 
-
 ## Download client-gen locally if necessary.
 .PHONY: client-gen
 client-gen: $(CLIENT_GEN)
