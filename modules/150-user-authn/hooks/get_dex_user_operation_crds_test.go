@@ -40,6 +40,9 @@ var _ = Describe("User Authn hooks :: handle UserOperation creation ::", func() 
 ---
 apiVersion: dex.coreos.com/v1
 email: admin@yourcompany.com
+groups:
+- Everyone
+- admins
 hash: JDJhJDEwJDlFRXFCMFNlenkyZk1ZT2JIZU1tUHVHSHo2bElZV1FCRTAxY3pYZFVmOUs5NlFJVlpVQlF1
 hashUpdatedAt: "2025-09-24T04:33:04.493729966Z"
 incorrectPasswordLoginAttempts: 0
@@ -59,6 +62,9 @@ username: admin
 ---
 apiVersion: dex.coreos.com/v1
 email: admin@yourcompany.com
+groups:
+- Everyone
+- admins
 hash: JDJhJDEwJDlFRXFCMFNlenkyZk1ZT2JIZU1tUHVHSHo2bElZV1FCRTAxY3pYZFVmOUs5NlFJVlpVQlF1
 hashUpdatedAt: "2025-09-24T04:33:04.493729966Z"
 incorrectPasswordLoginAttempts: 0
@@ -272,6 +278,11 @@ status:
 			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
 			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("~", time.Now().Add(1*time.Hour), 5*time.Second))
 			Expect(pw.Field("metadata.annotations").Map()).To(HaveKey("deckhouse.io/locked-by-administrator"))
+			// Locking must not drop Dex-managed fields the hook does not model
+			// (notably groups, which back the user's allowedGroups).
+			Expect(pw.Field("groups").Array()).To(HaveLen(2))
+			Expect(pw.Field("previousHashes").Array()).To(HaveLen(2))
+			Expect(pw.Field("hashUpdatedAt").String()).To(Equal("2025-09-24T04:33:04.493729966Z"))
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
@@ -289,6 +300,10 @@ status:
 			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
 			Expect(pw.Field("lockedUntil").Time().IsZero()).To(BeTrue())
 			Expect(pw.Field("metadata.annotations").Map()).NotTo(HaveKey("deckhouse.io/locked-by-administrator"))
+			// Unlocking must not drop Dex-managed fields the hook does not model.
+			Expect(pw.Field("groups").Array()).To(HaveLen(2))
+			Expect(pw.Field("previousHashes").Array()).To(HaveLen(2))
+			Expect(pw.Field("hashUpdatedAt").String()).To(Equal("2025-09-24T04:33:04.493729966Z"))
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
@@ -307,6 +322,13 @@ status:
 			// base64 encoded bcrypt hash from userOperationResetPassword.newPasswordHash
 			Expect(pw.Field("hash").String()).To(Equal("JDJ5JDEwJDlmZG12NGV3ZHZ6VkNUUTAxQm5BWi5DeTI3ZmRuZk5rbC5kTElnZTJZUzJnU0Y0Y3pxWFV5"))
 			Expect(pw.Field("requireResetHashOnNextSuccLogin").Bool()).To(BeTrue())
+			// Resetting the password must not drop the user's groups: Dex matches
+			// allowedGroups against Password.groups, so wiping them here left the
+			// user unable to log in until the groups were re-synced (the bug this
+			// patch fixes).
+			Expect(pw.Field("groups").Array()).To(HaveLen(2))
+			Expect(pw.Field("previousHashes").Array()).To(HaveLen(2))
+			Expect(pw.Field("hashUpdatedAt").String()).To(Equal("2025-09-24T04:33:04.493729966Z"))
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
