@@ -1,3 +1,273 @@
+diff --git a/pkg/controlplane/apiserver/apis.go b/pkg/controlplane/apiserver/apis.go
+index aadd43af7f5..385cbbe9a69 100644
+--- a/pkg/controlplane/apiserver/apis.go
++++ b/pkg/controlplane/apiserver/apis.go
+@@ -20,6 +20,7 @@ import (
+ 	"fmt"
+ 
+ 	"k8s.io/apiserver/pkg/registry/generic"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
+ 	genericapiserver "k8s.io/apiserver/pkg/server"
+ 	serverstorage "k8s.io/apiserver/pkg/server/storage"
+ 	"k8s.io/client-go/discovery"
+@@ -100,6 +101,15 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
+ 		return err
+ 	}
+ 
++	// Deckhouse: build the shared scope-filter resolver bundle once (nil when
++	// there is no loopback config, e.g. minimal/test setups). Every covered
++	// built-in resource is wired against it below, in wireScopeFilterForGroup.
++	scopeResolvers, err := scopefilter.NewLoopbackResolvers(s.GenericAPIServer.LoopbackClientConfig)
++	if err != nil {
++		klog.Warningf("scopefilter: failed to build resolvers: %v; generic --scope filtering disabled this run", err)
++		scopeResolvers = nil
++	}
++
+ 	for _, restStorageBuilder := range restStorageProviders {
+ 		groupName := restStorageBuilder.GroupName()
+ 		apiGroupInfo, err := restStorageBuilder.NewRESTStorage(s.APIResourceConfigSource, s.RESTOptionsGetter)
+@@ -125,6 +135,11 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
+ 			continue
+ 		}
+ 
++		// Deckhouse: attach generic --scope filtering to this group's
++		// built-in namespaced resources. After RemoveUnavailableKinds so we
++		// only wire (and Register) resources actually being served.
++		wireScopeFilterForGroup(&apiGroupInfo, scopeResolvers)
++
+ 		klog.V(1).Infof("Enabling API group %q.", groupName)
+ 
+ 		if postHookProvider, ok := restStorageBuilder.(genericapiserver.PostStartHookProvider); ok {
+@@ -149,5 +164,12 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
+ 	if err := s.GenericAPIServer.InstallAPIGroups(nonLegacy...); err != nil {
+ 		return fmt.Errorf("error in registering group versions: %w", err)
+ 	}
++
++	// Deckhouse: log the resulting coverage so an operator can verify which
++	// built-in resources became `--scope`-filterable (and spot omissions).
++	if scopeResolvers != nil {
++		klog.V(2).InfoS("scopefilter: generic --scope coverage wired",
++			"resources", scopefilter.RegisteredResources())
++	}
+ 	return nil
+ }
+diff --git a/pkg/controlplane/apiserver/scopefilter_wiring.go b/pkg/controlplane/apiserver/scopefilter_wiring.go
+new file mode 100644
+index 00000000000..900a2d57147
+--- /dev/null
++++ b/pkg/controlplane/apiserver/scopefilter_wiring.go
+@@ -0,0 +1,89 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"strings"
++
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++	"k8s.io/apiserver/pkg/registry/rest"
++	genericapiserver "k8s.io/apiserver/pkg/server"
++	"k8s.io/klog/v2"
++)
++
++// scopeStoreProvider is satisfied by any REST storage that EMBEDS
++// *genericregistry.Store (which promotes DeckhouseScopeStore). Storage that
++// merely wraps the store in an unexported field -- notably namespaces, which
++// runs its own bespoke IdentityByName ACL filter -- does not satisfy it and
++// is left untouched.
++type scopeStoreProvider interface {
++	DeckhouseScopeStore() *genericregistry.Store
++}
++
++// wireScopeFilterForGroup is Deckhouse's central choke point for attaching
++// generic `-A --scope=<kind>` cross-namespace filtering to built-in
++// resources. It walks one API group's storage map and wires every
++// namespaced, non-subresource, *genericregistry.Store-backed resource.
++//
++// Why here and not per-resource: this runs for every built-in group during
++// InstallAPIs, so covering a resource costs zero edits to that resource's
++// own storage.go. Why this excludes CRDs without any opt-out: CRD instance
++// storage is served by the apiextensions-apiserver delegate and never flows
++// through this install path. Why it excludes namespaces: the namespaces REST
++// wraps (not embeds) its Store, so it does not satisfy scopeStoreProvider,
++// and it is cluster-scoped anyway.
++//
++// A nil resolver bundle (no loopback config this run) is a silent no-op:
++// nothing is registered, so no --scope header can bypass 403 for anything.
++func wireScopeFilterForGroup(info *genericapiserver.APIGroupInfo, r *scopefilter.Resolvers) {
++	if r == nil {
++		return
++	}
++
++	group := ""
++	if len(info.PrioritizedVersions) > 0 {
++		// Every version in one APIGroupInfo shares a group; the group must
++		// equal requestInfo.APIGroup exactly, or the authz filter's
++		// IsRegistered check would miss and the resource would silently not
++		// be bypassable.
++		group = info.PrioritizedVersions[0].Group
++	}
++
++	for version, resources := range info.VersionedResourcesStorageMap {
++		for name, storageObj := range resources {
++			if strings.Contains(name, "/") {
++				continue // subresource (pods/status, deployments/scale, …)
++			}
++			scoper, ok := storageObj.(rest.Scoper)
++			if !ok || !scoper.NamespaceScoped() {
++				continue // cluster-scoped (nodes, namespaces, clusterroles, …)
++			}
++			provider, ok := storageObj.(scopeStoreProvider)
++			if !ok {
++				continue // does not embed *genericregistry.Store
++			}
++
++			store := provider.DeckhouseScopeStore()
++			gvr := schema.GroupVersionResource{Group: group, Version: version, Resource: name}
++			store.ScopeFilter = r.NewDecorator(store, store.PredicateFunc, gvr)
++			scopefilter.Register(gvr.GroupResource())
++			klog.V(4).InfoS("scopefilter: wired built-in resource", "resource", gvr)
++		}
++	}
++}
+diff --git a/pkg/controlplane/apiserver/scopefilter_wiring_test.go b/pkg/controlplane/apiserver/scopefilter_wiring_test.go
+new file mode 100644
+index 00000000000..42a8cdeed49
+--- /dev/null
++++ b/pkg/controlplane/apiserver/scopefilter_wiring_test.go
+@@ -0,0 +1,116 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"testing"
++
++	"k8s.io/apimachinery/pkg/fields"
++	"k8s.io/apimachinery/pkg/labels"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apiserver/pkg/registry/generic/registry"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++	"k8s.io/apiserver/pkg/registry/rest"
++	genericapiserver "k8s.io/apiserver/pkg/server"
++	"k8s.io/apiserver/pkg/storage"
++)
++
++func minimalStore() *registry.Store {
++	return &registry.Store{
++		PredicateFunc: func(l labels.Selector, f fields.Selector) storage.SelectionPredicate {
++			return storage.SelectionPredicate{Label: l, Field: f}
++		},
++	}
++}
++
++// nsEmbed embeds *registry.Store (promoting DeckhouseScopeStore) and is
++// namespaced -- the shape of a standard built-in resource, must be wired.
++type nsEmbed struct{ *registry.Store }
++
++func (nsEmbed) NamespaceScoped() bool { return true }
++
++// clusterEmbed embeds the store but is cluster-scoped -- must be skipped.
++type clusterEmbed struct{ *registry.Store }
++
++func (clusterEmbed) NamespaceScoped() bool { return false }
++
++// nsWrap is namespaced but WRAPS the store in an unexported field (does not
++// promote DeckhouseScopeStore) -- the namespaces-storage shape, must be
++// skipped.
++type nsWrap struct{ s *registry.Store }
++
++func (nsWrap) NamespaceScoped() bool { return true }
++func (nsWrap) New() runtime.Object   { return nil }
++func (nsWrap) Destroy()              {}
++
++var (
++	_ rest.Scoper = nsEmbed{}
++	_ rest.Scoper = clusterEmbed{}
++	_ rest.Scoper = nsWrap{}
++)
++
++// TestWireScopeFilterForGroup_SelectsOnlyNamespacedEmbeddedResources verifies
++// the coverage rule end to end: a namespaced resource embedding *Store gets
++// registered with the correct group; a cluster-scoped one, a subresource
++// (name contains '/'), and a namespaced-but-wrapping one are all skipped.
++func TestWireScopeFilterForGroup_SelectsOnlyNamespacedEmbeddedResources(t *testing.T) {
++	info := &genericapiserver.APIGroupInfo{
++		PrioritizedVersions: []schema.GroupVersion{{Group: "apps", Version: "v1"}},
++		VersionedResourcesStorageMap: map[string]map[string]rest.Storage{
++			"v1": {
++				"deployments":       nsEmbed{minimalStore()},      // wire
++				"deployments/scale": nsEmbed{minimalStore()},      // skip: subresource
++				"clusterwidgets":    clusterEmbed{minimalStore()}, // skip: cluster-scoped
++				"wrappedns":         nsWrap{minimalStore()},       // skip: wraps, no promote
++			},
++		},
++	}
++
++	// A non-nil bundle so wiring proceeds; resolvers are never invoked here.
++	wireScopeFilterForGroup(info, &scopefilter.Resolvers{})
++
++	mustBe := func(gr schema.GroupResource, want bool) {
++		t.Helper()
++		if got := scopefilter.IsRegistered(gr); got != want {
++			t.Fatalf("IsRegistered(%v) = %v, want %v", gr, got, want)
++		}
++	}
++	mustBe(schema.GroupResource{Group: "apps", Resource: "deployments"}, true)
++	mustBe(schema.GroupResource{Group: "apps", Resource: "deployments/scale"}, false)
++	mustBe(schema.GroupResource{Group: "apps", Resource: "clusterwidgets"}, false)
++	mustBe(schema.GroupResource{Group: "apps", Resource: "wrappedns"}, false)
++
++	// Group derivation must match requestInfo.APIGroup exactly: the wrong
++	// group (e.g. empty) must NOT be registered for an apps resource.
++	mustBe(schema.GroupResource{Group: "", Resource: "deployments"}, false)
++}
++
++// TestWireScopeFilterForGroup_NilResolversIsNoop: with no resolver bundle,
++// nothing is registered (fail-safe: no header can bypass anything).
++func TestWireScopeFilterForGroup_NilResolversIsNoop(t *testing.T) {
++	info := &genericapiserver.APIGroupInfo{
++		PrioritizedVersions: []schema.GroupVersion{{Group: "batch", Version: "v1"}},
++		VersionedResourcesStorageMap: map[string]map[string]rest.Storage{
++			"v1": {"cronjobs": nsEmbed{minimalStore()}},
++		},
++	}
++	wireScopeFilterForGroup(info, nil)
++	if scopefilter.IsRegistered(schema.GroupResource{Group: "batch", Resource: "cronjobs"}) {
++		t.Fatal("nil resolvers must register nothing")
++	}
++}
 diff --git a/pkg/registry/core/namespace/storage/filtering_test.go b/pkg/registry/core/namespace/storage/filtering_test.go
 new file mode 100644
 index 00000000000..0355f4fe5ba
@@ -732,138 +1002,19 @@ index e67cedeb15e..ff89cf9de64 100644
  func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
  	return r.store.Watch(ctx, options)
  }
-diff --git a/pkg/registry/core/rest/scopefilter_wiring.go b/pkg/registry/core/rest/scopefilter_wiring.go
-new file mode 100644
-index 00000000000..7f77514b57b
---- /dev/null
-+++ b/pkg/registry/core/rest/scopefilter_wiring.go
-@@ -0,0 +1,106 @@
-+/*
-+Copyright 2026 The Kubernetes Authors.
-+
-+Licensed under the Apache License, Version 2.0 (the "License");
-+you may not use this file except in compliance with the License.
-+You may obtain a copy of the License at
-+
-+    http://www.apache.org/licenses/LICENSE-2.0
-+
-+Unless required by applicable law or agreed to in writing, software
-+distributed under the License is distributed on an "AS IS" BASIS,
-+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+See the License for the specific language governing permissions and
-+limitations under the License.
-+*/
-+
-+package rest
-+
-+import (
-+	"context"
-+
-+	"k8s.io/apimachinery/pkg/runtime/schema"
-+	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
-+	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
-+	restclient "k8s.io/client-go/rest"
-+	"k8s.io/klog/v2"
-+)
-+
-+// scopeFilterResolvers bundles the resolvers every generic `--scope=<kind>`
-+// wiring needs. Built once from a loopback REST config and shared across
-+// every built-in resource wired via wireScopeFilter -- there is no reason
-+// for pods, and whatever resource joins the MVP allow-list next, to each pay
-+// for their own set of loopback HTTP transports.
-+type scopeFilterResolvers struct {
-+	accessible scopefilter.AccessibleNamespaceFetcher
-+	classify   scopefilter.ClassificationResolver
-+	floor      scopefilter.RBACFloorResolver
-+}
-+
-+// newScopeFilterResolvers builds the shared resolver bundle. Returns
-+// (nil, nil) -- deliberately not an error -- when loopbackConfig is nil,
-+// since some minimal/test configurations legitimately have none. Callers
-+// must treat a nil bundle as "generic scope filtering unavailable this run"
-+// and skip wiring; kube-apiserver still boots with vanilla behavior for
-+// every resource that would otherwise have been wired.
-+func newScopeFilterResolvers(loopbackConfig *restclient.Config) (*scopeFilterResolvers, error) {
-+	if loopbackConfig == nil {
-+		return nil, nil
-+	}
-+
-+	accessible, err := scopefilter.NewLoopbackAccessibleNamespaceFetcher(loopbackConfig)
-+	if err != nil {
-+		return nil, err
-+	}
-+	classify, err := scopefilter.NewLoopbackClassificationResolver(loopbackConfig)
-+	if err != nil {
-+		return nil, err
-+	}
-+	floor, err := scopefilter.NewLoopbackRBACFloorResolver(loopbackConfig, accessible)
-+	if err != nil {
-+		return nil, err
-+	}
-+
-+	return &scopeFilterResolvers{accessible: accessible, classify: classify, floor: floor}, nil
-+}
-+
-+// wireScopeFilter installs a scopefilter.Decorator on store (Mode
-+// IdentityByNamespace, header-gated Trigger) and registers gvr so the
-+// authorization filter's header-gated bypass (see
-+// staging/.../endpoints/filters/authorization.go) is willing to route
-+// denied requests for it into the filtering path.
-+//
-+// A nil resolvers bundle (no loopback config available this run) is a
-+// silent no-op: store keeps vanilla behavior, and gvr is never registered,
-+// so no --scope header can ever bypass 403 for it. Covering another
-+// built-in resource is exactly this one call at its own construction site --
-+// no change to that resource's own storage.go, since the filtering hook
-+// lives on *genericregistry.Store itself (see its ScopeFilter field doc).
-+func wireScopeFilter(store *genericregistry.Store, resolvers *scopeFilterResolvers, gvr schema.GroupVersionResource) {
-+	if resolvers == nil {
-+		return
-+	}
-+
-+	store.ScopeFilter = &scopefilter.Decorator{
-+		Store:          store,
-+		BuildPredicate: store.PredicateFunc,
-+		Resource:       gvr,
-+		Mode:           scopefilter.IdentityByNamespace,
-+		Trigger:        scopeFilterTriggered,
-+		Classify:       resolvers.classify,
-+		RBACFloor:      resolvers.floor,
-+		Accessible:     resolvers.accessible,
-+	}
-+	scopefilter.Register(gvr.GroupResource())
-+	klog.V(2).InfoS("scopefilter: wired generic --scope filtering", "resource", gvr)
-+}
-+
-+// scopeFilterTriggered reports whether ctx carries a scope request at all.
-+// Set by the authorization filter on both the denied-then-bypassed path
-+// (which also carries scopefilter.IsBypass) and the already-allowed path
-+// (which does not) -- see scopefilter.WithBypass's doc for why those two
-+// tags are independent.
-+func scopeFilterTriggered(ctx context.Context) bool {
-+	_, present := scopefilter.RequestFrom(ctx)
-+	return present
-+}
 diff --git a/pkg/registry/core/rest/storage_core.go b/pkg/registry/core/rest/storage_core.go
-index da2384aae05..068d9d1bc52 100644
+index da2384aae05..b3a5a523f4f 100644
 --- a/pkg/registry/core/rest/storage_core.go
 +++ b/pkg/registry/core/rest/storage_core.go
-@@ -198,6 +198,19 @@ func (p *legacyProvider) NewRESTStorage(apiResourceConfigSource serverstorage.AP
+@@ -198,6 +198,12 @@ func (p *legacyProvider) NewRESTStorage(apiResourceConfigSource serverstorage.AP
  		return genericapiserver.APIGroupInfo{}, err
  	}
  
-+	// Deckhouse: wire pods as the MVP resource for generic `-A
-+	// --scope=<kind>` cross-namespace filtering (see
-+	// k8s.io/apiserver/pkg/registry/generic/scopefilter). A nil resolver
-+	// bundle (no loopback config, e.g. some minimal test setups) is a
-+	// silent no-op -- pods keep vanilla behavior and stay unregistered, so
-+	// no --scope header can bypass 403 for them.
-+	scopeFilterResolvers, err := newScopeFilterResolvers(p.LoopbackClientConfig)
-+	if err != nil {
-+		klog.Warningf("scopefilter: failed to build resolvers: %v; generic --scope filtering disabled this run", err)
-+	} else {
-+		wireScopeFilter(podStorage.Pod.Store, scopeFilterResolvers, corev1.SchemeGroupVersion.WithResource("pods"))
-+	}
++	// Deckhouse: generic `-A --scope=<kind>` cross-namespace filtering is no
++	// longer wired per-resource here. Every built-in namespaced resource
++	// (pods included) is wired centrally in pkg/controlplane/apiserver's
++	// InstallAPIs, which walks each API group's storage map -- see
++	// scopefilter.Resolvers / Store.DeckhouseScopeStore.
 +
  	serviceRESTStorage, serviceStatusStorage, serviceRESTProxy, err := servicestore.NewREST(
  		restOptionsGetter,
@@ -1327,7 +1478,7 @@ index 00000000000..3ecb580e67e
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
-index 722a312270a..90e1627147b 100644
+index 722a312270a..996add5ae90 100644
 --- a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
 @@ -44,6 +44,7 @@ import (
@@ -1361,7 +1512,25 @@ index 722a312270a..90e1627147b 100644
  	// EnableGarbageCollection affects the handling of Update and Delete
  	// requests. Enabling garbage collection allows finalizers to do work to
  	// finalize this object before the store deletes it.
-@@ -364,8 +381,14 @@ func (e *Store) GetCorruptObjDeleter() rest.GracefulDeleter {
+@@ -358,14 +375,32 @@ func (e *Store) GetDeleteStrategy() rest.RESTDeleteStrategy {
+ 	return e.DeleteStrategy
+ }
+ 
++// DeckhouseScopeStore returns the underlying *Store so the central
++// scope-filter wiring loop (pkg/controlplane/apiserver) can reach it through
++// an interface assertion. A REST type that EMBEDS *Store promotes this
++// method and is thus auto-covered; a type that merely wraps *Store in an
++// unexported field (e.g. namespace storage, which has its own bespoke
++// IdentityByName filter) does not promote it and is correctly skipped. The
++// name is Deckhouse-specific to avoid any collision with upstream method
++// sets.
++func (e *Store) DeckhouseScopeStore() *Store {
++	return e
++}
++
+ // GetCorruptObjDeleter returns the unsafe corrupt object deleter
+ func (e *Store) GetCorruptObjDeleter() rest.GracefulDeleter {
+ 	return e.corruptObjDeleter
  }
  
  // List returns a list of items matching labels and field according to the
@@ -1377,7 +1546,7 @@ index 722a312270a..90e1627147b 100644
  	label := labels.Everything()
  	if options != nil && options.LabelSelector != nil {
  		label = options.LabelSelector
-@@ -845,6 +868,17 @@ func newDeleteOptionsFromUpdateOptions(in *metav1.UpdateOptions) *metav1.DeleteO
+@@ -845,6 +880,17 @@ func newDeleteOptionsFromUpdateOptions(in *metav1.UpdateOptions) *metav1.DeleteO
  
  // Get retrieves the item from storage.
  func (e *Store) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
@@ -1395,7 +1564,7 @@ index 722a312270a..90e1627147b 100644
  	obj := e.NewFunc()
  	key, err := e.KeyFunc(ctx, name)
  	if err != nil {
-@@ -1415,6 +1449,10 @@ func (e *Store) finalizeDelete(ctx context.Context, obj runtime.Object, runHooks
+@@ -1415,6 +1461,10 @@ func (e *Store) finalizeDelete(ctx context.Context, obj runtime.Object, runHooks
  // a matcher that matches by key. SelectionPredicate does this for you
  // automatically.
  func (e *Store) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
@@ -1406,6 +1575,520 @@ index 722a312270a..90e1627147b 100644
  	label := labels.Everything()
  	if options != nil && options.LabelSelector != nil {
  		label = options.LabelSelector
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go
+new file mode 100644
+index 00000000000..b35742e835f
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go
+@@ -0,0 +1,263 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"sort"
++	"strconv"
++	"strings"
++	"sync"
++	"time"
++
++	"golang.org/x/sync/singleflight"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apiserver/pkg/authentication/user"
++)
++
++const (
++	// DefaultResolveCacheTTL is how long a resolver result is served from the
++	// cache before a fresh loopback call is made. Kept short deliberately: a
++	// change to a user's RBAC/namespace-labels is reflected within
++	// ~TTL + permission-browser informer lag, which is already the
++	// eventual-consistency envelope the watch poller (also ~1s) operates in.
++	// A LARGER TTL is a footgun -- a transient empty AccessibleNamespaces would
++	// stick as "no access" for the whole TTL -- so it is capped by
++	// maxResolveCacheTTL.
++	DefaultResolveCacheTTL = 1 * time.Second
++
++	// maxResolveCacheTTL bounds the configurable TTL. Above this the staleness
++	// window stops being "within existing propagation lag" and starts being a
++	// visible correctness/authz-latency problem.
++	maxResolveCacheTTL = 30 * time.Second
++
++	// resolveLoadTimeout backstops a single cache-miss load. It sits just above
++	// the fetchers' own HTTP client timeout so the load ctx never cancels a
++	// call the client would otherwise have completed.
++	resolveLoadTimeout = defaultHTTPTimeout + 5*time.Second
++
++	// janitorInterval is how often expired entries are swept to reclaim memory
++	// for identities that never recur. Correctness does not depend on it
++	// (reads evict lazily); it only bounds memory.
++	janitorInterval = 60 * time.Second
++)
++
++// resolveCache is a small TTL cache with singleflight de-duplication, shared by
++// the caching resolver wrappers below. Values are namespace-name sets that are
++// immutable once stored (a refresh replaces the entry with a new map, never
++// mutates in place), so concurrent readers -- and long-lived watch selectors
++// holding a reference -- are safe without copying.
++//
++// The whole point is watch-poll amplification: N concurrent watches sharing a
++// user+resource+verb (or a user-independent classification) collapse to ~one
++// loopback resolve per TTL instead of one per watch per tick.
++type resolveCache struct {
++	ttl   time.Duration
++	group singleflight.Group
++
++	mu      sync.Mutex
++	entries map[string]resolveCacheEntry
++
++	now  func() time.Time // overridable in tests
++	stop chan struct{}
++}
++
++type resolveCacheEntry struct {
++	set    map[string]struct{}
++	expiry time.Time
++}
++
++func newResolveCache(ttl time.Duration) *resolveCache {
++	if ttl <= 0 {
++		ttl = DefaultResolveCacheTTL
++	}
++	if ttl > maxResolveCacheTTL {
++		ttl = maxResolveCacheTTL
++	}
++	return &resolveCache{
++		ttl:     ttl,
++		entries: make(map[string]resolveCacheEntry),
++		now:     time.Now,
++		stop:    make(chan struct{}),
++	}
++}
++
++// startJanitor launches the periodic sweep. Production calls this once on the
++// process-lifetime shared cache; tests skip it (lazy eviction keeps them
++// correct without a background goroutine).
++func (c *resolveCache) startJanitor() {
++	go func() {
++		t := time.NewTicker(janitorInterval)
++		defer t.Stop()
++		for {
++			select {
++			case <-c.stop:
++				return
++			case <-t.C:
++				c.sweep()
++			}
++		}
++	}()
++}
++
++func (c *resolveCache) close() { close(c.stop) }
++
++func (c *resolveCache) sweep() {
++	now := c.now()
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	for k, e := range c.entries {
++		if now.After(e.expiry) {
++			delete(c.entries, k)
++		}
++	}
++}
++
++func (c *resolveCache) get(key string) (map[string]struct{}, bool) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	e, ok := c.entries[key]
++	if !ok {
++		return nil, false
++	}
++	if c.now().After(e.expiry) {
++		delete(c.entries, key)
++		return nil, false
++	}
++	return e.set, true
++}
++
++func (c *resolveCache) set(key string, s map[string]struct{}) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	c.entries[key] = resolveCacheEntry{set: s, expiry: c.now().Add(c.ttl)}
++}
++
++// getOrLoad returns the cached set for key or runs load exactly once across all
++// concurrent callers for that key (singleflight). Errors are never cached.
++//
++// load runs on a fresh context.Background()-derived context with its own
++// timeout, NOT the caller's context: under singleflight one caller is the
++// flight leader, and if its request context cancelled mid-load (e.g. the watch
++// that happened to lead stops), every waiter on that key would otherwise get
++// context-canceled -- defeating dedup exactly when it matters most. Identity is
++// passed to the resolvers as an explicit argument, never read from the context,
++// so detaching the context changes nothing about the authorization decision.
++func (c *resolveCache) getOrLoad(key string, load func(ctx context.Context) (map[string]struct{}, error)) (map[string]struct{}, error) {
++	if s, ok := c.get(key); ok {
++		return s, nil
++	}
++	v, err, _ := c.group.Do(key, func() (interface{}, error) {
++		if s, ok := c.get(key); ok { // double-check after winning the flight
++			return s, nil
++		}
++		ctx, cancel := context.WithTimeout(context.Background(), resolveLoadTimeout)
++		defer cancel()
++		s, err := load(ctx)
++		if err != nil {
++			return nil, err
++		}
++		c.set(key, s)
++		return s, nil
++	})
++	if err != nil {
++		return nil, err
++	}
++	return v.(map[string]struct{}), nil
++}
++
++// ----- caching resolver wrappers --------------------------------------------
++
++// cachingClassificationResolver caches classification results keyed by
++// (kind, project) ONLY -- classification is a pure function of cluster
++// namespace labels, identical for every user, so one entry is shared across
++// all users.
++type cachingClassificationResolver struct {
++	inner ClassificationResolver
++	cache *resolveCache
++}
++
++var _ ClassificationResolver = (*cachingClassificationResolver)(nil)
++
++func (r *cachingClassificationResolver) Resolve(_ context.Context, kind Kind, project string) (map[string]struct{}, error) {
++	key := keyField("classify") + keyField(string(kind)) + keyField(project)
++	return r.cache.getOrLoad(key, func(ctx context.Context) (map[string]struct{}, error) {
++		return r.inner.Resolve(ctx, kind, project)
++	})
++}
++
++// cachingRBACFloorResolver caches the RBAC safety floor keyed by the FULL
++// caller identity plus the exact (gvr, verb). The identity key is
++// length-and-count-prefixed (see userCacheKey) so two distinct identities can
++// never collide onto one entry -- the one cache bug that would escalate
++// privilege rather than merely go stale.
++type cachingRBACFloorResolver struct {
++	inner RBACFloorResolver
++	cache *resolveCache
++}
++
++var _ RBACFloorResolver = (*cachingRBACFloorResolver)(nil)
++
++func (r *cachingRBACFloorResolver) Resolve(_ context.Context, u user.Info, gvr schema.GroupVersionResource, verb string) (map[string]struct{}, error) {
++	key := keyField("floor") + userCacheKey(u) + keyField(gvr.String()) + keyField(verb)
++	return r.cache.getOrLoad(key, func(ctx context.Context) (map[string]struct{}, error) {
++		return r.inner.Resolve(ctx, u, gvr, verb)
++	})
++}
++
++// keyField renders one field as `<len>:<value>;` so concatenated fields are
++// unambiguous regardless of their contents (no delimiter can be forged from
++// within a value).
++func keyField(s string) string {
++	return strconv.Itoa(len(s)) + ":" + s + ";"
++}
++
++// userCacheKey builds a collision-free key from every identity attribute that
++// can affect an authorization decision: name, uid, groups, and extra. Every
++// field is length-prefixed and every collection is count-prefixed, so no two
++// distinct user.Info values can map to the same string. Never shorten this to
++// name-only.
++func userCacheKey(u user.Info) string {
++	var b strings.Builder
++	b.WriteString(keyField(u.GetName()))
++	b.WriteString(keyField(u.GetUID()))
++
++	groups := append([]string(nil), u.GetGroups()...)
++	sort.Strings(groups)
++	b.WriteString(keyField(strconv.Itoa(len(groups))))
++	for _, g := range groups {
++		b.WriteString(keyField(g))
++	}
++
++	extra := u.GetExtra()
++	ekeys := make([]string, 0, len(extra))
++	for k := range extra {
++		ekeys = append(ekeys, k)
++	}
++	sort.Strings(ekeys)
++	b.WriteString(keyField(strconv.Itoa(len(ekeys))))
++	for _, k := range ekeys {
++		b.WriteString(keyField(k))
++		vals := append([]string(nil), extra[k]...)
++		sort.Strings(vals)
++		b.WriteString(keyField(strconv.Itoa(len(vals))))
++		for _, v := range vals {
++			b.WriteString(keyField(v))
++		}
++	}
++	return b.String()
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go
+new file mode 100644
+index 00000000000..f710b37e117
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go
+@@ -0,0 +1,239 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apiserver/pkg/authentication/user"
++)
++
++// countingFloorResolver records how many times the (uncached) inner resolver
++// actually ran, and returns a per-identity distinct set so a cross-user leak
++// is detectable.
++type countingFloorResolver struct {
++	mu    sync.Mutex
++	calls map[string]int
++	// setFor maps a user name to the namespace set that user should get.
++	setFor map[string]map[string]struct{}
++}
++
++func (r *countingFloorResolver) Resolve(_ context.Context, u user.Info, _ schema.GroupVersionResource, _ string) (map[string]struct{}, error) {
++	r.mu.Lock()
++	r.calls[u.GetName()]++
++	r.mu.Unlock()
++	return r.setFor[u.GetName()], nil
++}
++
++func (r *countingFloorResolver) callCount(name string) int {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++	return r.calls[name]
++}
++
++func gvrPods() schema.GroupVersionResource {
++	return schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
++}
++
++// TestCache_DedupesConcurrentSameKey: many concurrent Resolve calls for the
++// same identity+resource+verb collapse to a single inner call (singleflight +
++// TTL) -- the whole point, since that's the watch-poll amplification case.
++func TestCache_DedupesConcurrentSameKey(t *testing.T) {
++	inner := &countingFloorResolver{
++		calls:  map[string]int{},
++		setFor: map[string]map[string]struct{}{"alice": {"ns-a": {}}},
++	}
++	c := newResolveCache(time.Minute) // long TTL: all hits share one load
++	cached := &cachingRBACFloorResolver{inner: inner, cache: c}
++
++	alice := &user.DefaultInfo{Name: "alice", Groups: []string{"g1"}}
++	var wg sync.WaitGroup
++	for i := 0; i < 50; i++ {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			got, err := cached.Resolve(context.Background(), alice, gvrPods(), "list")
++			if err != nil {
++				t.Errorf("Resolve: %v", err)
++				return
++			}
++			if _, ok := got["ns-a"]; !ok || len(got) != 1 {
++				t.Errorf("alice got %v, want {ns-a}", got)
++			}
++		}()
++	}
++	wg.Wait()
++
++	if n := inner.callCount("alice"); n != 1 {
++		t.Fatalf("inner resolver ran %d times for 50 concurrent same-key calls, want 1", n)
++	}
++}
++
++// TestCache_DistinctIdentitiesNeverCollide is the adversarial test flagged in
++// review: the ONE cache bug that escalates privilege rather than merely going
++// stale. Two identities that differ only in groups (and separately only in
++// uid) must get SEPARATE entries and SEPARATE inner calls -- one user's floor
++// must never be served to another.
++func TestCache_DistinctIdentitiesNeverCollide(t *testing.T) {
++	// Names collide by design here, so the inner resolver keys on the FULL
++	// identity (userCacheKey) and returns a distinct set per identity; a
++	// cross-identity cache leak would surface as the wrong set.
++	perIdentity := &identityKeyedResolver{
++		calls:   map[string]int{},
++		results: map[string]map[string]struct{}{},
++	}
++	c := newResolveCache(time.Minute)
++	cached := &cachingRBACFloorResolver{inner: perIdentity, cache: c}
++
++	// Three identities: same name, but distinct groups / uid.
++	u1 := &user.DefaultInfo{Name: "same-name", UID: "uid-1", Groups: []string{"team-a"}}
++	u2 := &user.DefaultInfo{Name: "same-name", UID: "uid-1", Groups: []string{"team-b"}} // differs in groups
++	u3 := &user.DefaultInfo{Name: "same-name", UID: "uid-2", Groups: []string{"team-a"}} // differs in uid
++
++	perIdentity.results[userCacheKey(u1)] = map[string]struct{}{"ns-1": {}}
++	perIdentity.results[userCacheKey(u2)] = map[string]struct{}{"ns-2": {}}
++	perIdentity.results[userCacheKey(u3)] = map[string]struct{}{"ns-3": {}}
++
++	for _, tc := range []struct {
++		u    user.Info
++		want string
++	}{{u1, "ns-1"}, {u2, "ns-2"}, {u3, "ns-3"}} {
++		got, err := cached.Resolve(context.Background(), tc.u, gvrPods(), "list")
++		if err != nil {
++			t.Fatalf("Resolve: %v", err)
++		}
++		if _, ok := got[tc.want]; !ok || len(got) != 1 {
++			t.Fatalf("identity uid=%q groups=%v got %v, want {%s} -- CROSS-IDENTITY CACHE LEAK",
++				tc.u.GetUID(), tc.u.GetGroups(), got, tc.want)
++		}
++	}
++}
++
++type identityKeyedResolver struct {
++	mu      sync.Mutex
++	calls   map[string]int
++	results map[string]map[string]struct{}
++}
++
++func (r *identityKeyedResolver) Resolve(_ context.Context, u user.Info, _ schema.GroupVersionResource, _ string) (map[string]struct{}, error) {
++	k := userCacheKey(u)
++	r.mu.Lock()
++	r.calls[k]++
++	r.mu.Unlock()
++	return r.results[k], nil
++}
++
++// TestCache_ClassificationSharedAcrossUsers: classification is user-independent,
++// so the caching classification resolver keys on (kind, project) only and
++// serves one inner call to many distinct users.
++func TestCache_ClassificationSharedAcrossUsers(t *testing.T) {
++	var innerCalls int32
++	inner := classifyFunc(func(_ context.Context, kind Kind, _ string) (map[string]struct{}, error) {
++		atomic.AddInt32(&innerCalls, 1)
++		return map[string]struct{}{"sys-ns": {}}, nil
++	})
++	c := newResolveCache(time.Minute)
++	cached := &cachingClassificationResolver{inner: inner, cache: c}
++
++	// Two different users asking for the same classification kind -> one load.
++	for _, name := range []string{"alice", "bob"} {
++		_ = name
++		got, err := cached.Resolve(context.Background(), KindSystem, "")
++		if err != nil {
++			t.Fatalf("Resolve: %v", err)
++		}
++		if _, ok := got["sys-ns"]; !ok {
++			t.Fatalf("got %v, want {sys-ns}", got)
++		}
++	}
++	if n := atomic.LoadInt32(&innerCalls); n != 1 {
++		t.Fatalf("classification inner ran %d times, want 1 (must be shared across users)", n)
++	}
++}
++
++type classifyFunc func(context.Context, Kind, string) (map[string]struct{}, error)
++
++func (f classifyFunc) Resolve(ctx context.Context, kind Kind, project string) (map[string]struct{}, error) {
++	return f(ctx, kind, project)
++}
++
++// TestCache_TTLExpiry: after the TTL elapses a fresh inner call is made.
++func TestCache_TTLExpiry(t *testing.T) {
++	inner := &countingFloorResolver{
++		calls:  map[string]int{},
++		setFor: map[string]map[string]struct{}{"alice": {"ns-a": {}}},
++	}
++	c := newResolveCache(time.Minute)
++	// Drive time manually.
++	nowT := time.Now()
++	c.now = func() time.Time { return nowT }
++	cached := &cachingRBACFloorResolver{inner: inner, cache: c}
++	alice := &user.DefaultInfo{Name: "alice"}
++
++	if _, err := cached.Resolve(context.Background(), alice, gvrPods(), "list"); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := cached.Resolve(context.Background(), alice, gvrPods(), "list"); err != nil {
++		t.Fatal(err)
++	}
++	if n := inner.callCount("alice"); n != 1 {
++		t.Fatalf("within TTL: inner ran %d times, want 1", n)
++	}
++	nowT = nowT.Add(2 * time.Minute) // past TTL
++	if _, err := cached.Resolve(context.Background(), alice, gvrPods(), "list"); err != nil {
++		t.Fatal(err)
++	}
++	if n := inner.callCount("alice"); n != 2 {
++		t.Fatalf("after TTL: inner ran %d times, want 2", n)
++	}
++}
++
++// TestCache_ErrorsNotCached: a failing load is not cached; the next call
++// retries.
++func TestCache_ErrorsNotCached(t *testing.T) {
++	var calls int32
++	fail := true
++	inner := classifyFunc(func(_ context.Context, _ Kind, _ string) (map[string]struct{}, error) {
++		atomic.AddInt32(&calls, 1)
++		if fail {
++			return nil, context.DeadlineExceeded
++		}
++		return map[string]struct{}{"ns": {}}, nil
++	})
++	c := newResolveCache(time.Minute)
++	cached := &cachingClassificationResolver{inner: inner, cache: c}
++
++	if _, err := cached.Resolve(context.Background(), KindUser, ""); err == nil {
++		t.Fatal("expected error on first call")
++	}
++	fail = false
++	got, err := cached.Resolve(context.Background(), KindUser, "")
++	if err != nil {
++		t.Fatalf("second call: %v", err)
++	}
++	if _, ok := got["ns"]; !ok {
++		t.Fatalf("got %v, want {ns}", got)
++	}
++	if n := atomic.LoadInt32(&calls); n != 2 {
++		t.Fatalf("inner ran %d times, want 2 (error must not have been cached)", n)
++	}
++}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go
 new file mode 100644
 index 00000000000..9f423e42d64
@@ -3401,10 +4084,10 @@ index 00000000000..093caf0545a
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/registry.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/registry.go
 new file mode 100644
-index 00000000000..7d618da2e1c
+index 00000000000..65bbc78eec3
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/registry.go
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,103 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3425,28 +4108,49 @@ index 00000000000..7d618da2e1c
 +
 +import (
 +	"sync"
++	"sync/atomic"
 +
 +	"k8s.io/apimachinery/pkg/runtime/schema"
 +)
 +
++// The registry is written a bounded number of times (once per covered
++// built-in resource at server bootstrap; occasionally on CRD create/delete
++// when that path lands) but READ on every RBAC-denied list/get/watch to
++// decide whether to bypass. So reads are copy-on-write lock-free via an
++// atomic snapshot; only the rare writes take the mutex and publish a fresh
++// map. IsRegistered -- the hot path -- never blocks.
 +var (
-+	registryMu   sync.RWMutex
-+	registryData = map[schema.GroupResource]struct{}{}
++	registryWriteMu sync.Mutex
++	registrySnap    atomic.Pointer[map[schema.GroupResource]struct{}]
 +)
 +
-+// Register marks gr as having scope-filtering storage wired in. Called once,
-+// at construction time, by every storage_<group>.go site that wraps its
-+// *genericregistry.Store with a Decorator, and by the CRD handler for every
-+// namespaced CustomResourceDefinition it serves.
++func init() {
++	empty := map[schema.GroupResource]struct{}{}
++	registrySnap.Store(&empty)
++}
++
++// Register marks gr as having scope-filtering storage wired in. Called at
++// construction time by the central wiring loop for every covered built-in
++// namespaced resource (and, when that path lands, by the CRD handler per
++// namespaced CRD).
 +//
 +// The authorization filter consults IsRegistered before bypassing a 403 for
 +// a scope-header request: a header alone must never be sufficient, because
 +// bypassing authz for a resource with no filtering decorator actually wired
 +// would hand a fully unfiltered list back to a caller RBAC just denied.
 +func Register(gr schema.GroupResource) {
-+	registryMu.Lock()
-+	defer registryMu.Unlock()
-+	registryData[gr] = struct{}{}
++	registryWriteMu.Lock()
++	defer registryWriteMu.Unlock()
++	cur := *registrySnap.Load()
++	if _, ok := cur[gr]; ok {
++		return
++	}
++	next := make(map[schema.GroupResource]struct{}, len(cur)+1)
++	for k := range cur {
++		next[k] = struct{}{}
++	}
++	next[gr] = struct{}{}
++	registrySnap.Store(&next)
 +}
 +
 +// Unregister removes gr from the allow-list. Used when a
@@ -3454,17 +4158,38 @@ index 00000000000..7d618da2e1c
 +// group/resource name does not inherit stale registration state left over
 +// from the deleted one.
 +func Unregister(gr schema.GroupResource) {
-+	registryMu.Lock()
-+	defer registryMu.Unlock()
-+	delete(registryData, gr)
++	registryWriteMu.Lock()
++	defer registryWriteMu.Unlock()
++	cur := *registrySnap.Load()
++	if _, ok := cur[gr]; !ok {
++		return
++	}
++	next := make(map[schema.GroupResource]struct{}, len(cur))
++	for k := range cur {
++		if k != gr {
++			next[k] = struct{}{}
++		}
++	}
++	registrySnap.Store(&next)
 +}
 +
 +// IsRegistered reports whether gr has scope-filtering storage wired in.
++// Lock-free atomic snapshot read -- the denied-request hot path.
 +func IsRegistered(gr schema.GroupResource) bool {
-+	registryMu.RLock()
-+	defer registryMu.RUnlock()
-+	_, ok := registryData[gr]
++	_, ok := (*registrySnap.Load())[gr]
 +	return ok
++}
++
++// RegisteredResources returns a snapshot of all registered GroupResources.
++// Used by the wiring loop to log/verify coverage after bootstrap. The
++// returned slice is a copy; the caller may sort/mutate it freely.
++func RegisteredResources() []schema.GroupResource {
++	cur := *registrySnap.Load()
++	out := make([]schema.GroupResource, 0, len(cur))
++	for gr := range cur {
++		out = append(out, gr)
++	}
++	return out
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
 new file mode 100644
@@ -3594,6 +4319,141 @@ index 00000000000..f0734026926
 +func IsBypass(ctx context.Context) bool {
 +	v, ok := ctx.Value(bypassContextKey{}).(bool)
 +	return ok && v
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
+new file mode 100644
+index 00000000000..ed0208b87ac
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
+@@ -0,0 +1,129 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"os"
++	"time"
++
++	"k8s.io/apimachinery/pkg/fields"
++	"k8s.io/apimachinery/pkg/labels"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apiserver/pkg/storage"
++	restclient "k8s.io/client-go/rest"
++	"k8s.io/klog/v2"
++)
++
++// Env knobs (read once at construction). Defaults are the safe values; these
++// exist so an operator can tune load vs. responsiveness without a rebuild.
++const (
++	envPollInterval = "SCOPEFILTER_WATCH_POLL_INTERVAL"
++	envCacheTTL     = "SCOPEFILTER_RESOLVE_CACHE_TTL"
++)
++
++// Resolvers bundles the (cache-wrapped) resolvers plus tunables, built once
++// from a loopback REST config and shared across every generic-scope Decorator
++// in the process. The shared cache is what makes concurrent watches across all
++// covered resources collapse to ~one loopback resolve per key per TTL.
++type Resolvers struct {
++	Accessible      AccessibleNamespaceFetcher
++	Classify        ClassificationResolver // caching wrapper
++	Floor           RBACFloorResolver      // caching wrapper
++	RefreshInterval time.Duration
++
++	cache *resolveCache
++}
++
++// NewLoopbackResolvers builds the shared bundle. Returns (nil, nil) -- not an
++// error -- when loopbackConfig is nil (some minimal/test setups have none);
++// callers treat a nil bundle as "generic scope filtering unavailable this run"
++// and skip wiring, leaving every resource at vanilla behavior.
++func NewLoopbackResolvers(loopbackConfig *restclient.Config) (*Resolvers, error) {
++	if loopbackConfig == nil {
++		return nil, nil
++	}
++
++	accessible, err := NewLoopbackAccessibleNamespaceFetcher(loopbackConfig)
++	if err != nil {
++		return nil, err
++	}
++	classify, err := NewLoopbackClassificationResolver(loopbackConfig)
++	if err != nil {
++		return nil, err
++	}
++	floor, err := NewLoopbackRBACFloorResolver(loopbackConfig, accessible)
++	if err != nil {
++		return nil, err
++	}
++
++	ttl := envDuration(envCacheTTL, DefaultResolveCacheTTL)
++	interval := envDuration(envPollInterval, DefaultRefreshInterval)
++
++	cache := newResolveCache(ttl)
++	cache.startJanitor()
++
++	return &Resolvers{
++		Accessible:      accessible,
++		Classify:        &cachingClassificationResolver{inner: classify, cache: cache},
++		Floor:           &cachingRBACFloorResolver{inner: floor, cache: cache},
++		RefreshInterval: interval,
++		cache:           cache,
++	}, nil
++}
++
++// NewDecorator builds a generic (IdentityByNamespace, header-triggered)
++// Decorator over the given store. store is passed as a StoreAccessor and
++// buildPredicate as the store's PredicateFunc value, so this package never
++// imports the concrete *genericregistry.Store (which would be an import cycle
++// -- registry imports scopefilter for the ScopeFilter field). The caller
++// assigns the returned Decorator to store.ScopeFilter and calls Register.
++func (r *Resolvers) NewDecorator(store StoreAccessor, buildPredicate func(labels.Selector, fields.Selector) storage.SelectionPredicate, gvr schema.GroupVersionResource) *Decorator {
++	return &Decorator{
++		Store:           store,
++		BuildPredicate:  buildPredicate,
++		Resource:        gvr,
++		Mode:            IdentityByNamespace,
++		Trigger:         scopeRequestPresent,
++		Classify:        r.Classify,
++		RBACFloor:       r.Floor,
++		Accessible:      r.Accessible,
++		RefreshInterval: r.RefreshInterval,
++	}
++}
++
++// scopeRequestPresent is the trigger for every generic-scope resource: route
++// through filtering whenever the request carries a scope header at all. Set by
++// the authorization filter on both the denied-then-bypassed path (also carries
++// IsBypass) and the already-allowed path (does not) -- see WithBypass's doc.
++func scopeRequestPresent(ctx context.Context) bool {
++	_, present := RequestFrom(ctx)
++	return present
++}
++
++func envDuration(name string, def time.Duration) time.Duration {
++	raw := os.Getenv(name)
++	if raw == "" {
++		return def
++	}
++	d, err := time.ParseDuration(raw)
++	if err != nil || d <= 0 {
++		klog.Warningf("scopefilter: ignoring invalid %s=%q: %v; using default %s", name, raw, err, def)
++		return def
++	}
++	return d
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/selector.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/selector.go
 new file mode 100644

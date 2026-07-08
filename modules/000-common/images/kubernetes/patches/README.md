@@ -62,18 +62,33 @@ user's accessible-namespace set changes mid-watch (polling
 `accessiblenamespaces`, ~1s cadence) -- the canonical OpenShift
 `userProjectWatcher` pattern.
 
-**Generic `-A --scope=<kind>` (opt-in, any namespaced resource).** The same
-mechanism generalized to arbitrary namespaced resources, built-in (currently
-allow-listed: `pods`) and CustomResourceDefinitions, gated by two request
-headers (`X-Deckhouse-Scope`, `X-Deckhouse-Project`) rather than being
+**Generic `-A --scope=<kind>` (opt-in, every built-in namespaced resource).**
+The same mechanism generalized to arbitrary namespaced resources, gated by two
+request headers (`X-Deckhouse-Scope`, `X-Deckhouse-Project`) rather than being
 unconditional: absent header, absent bypass, byte-for-byte vanilla behavior.
 `scope=accessible` reproduces the namespaces mechanism's RBAC-floor
 semantics for any resource; `scope=system|user|project:<name>` additionally
 classify by the `projects.deckhouse.io/project` namespace label
 (multitenancy-manager's Project CRD), resolved via a direct loopback
-`Namespace LIST` rather than a new permission-browser endpoint. See
-`k8s.io/apiserver/pkg/registry/generic/scopefilter` (staging) for the shared
-implementation both mechanisms build on.
+`Namespace LIST` rather than a new permission-browser endpoint.
+
+Coverage is wired centrally in `pkg/controlplane/apiserver`'s `InstallAPIs`,
+which walks every built-in API group's storage map and attaches the filter to
+each namespaced, non-subresource resource backed by a `*genericregistry.Store`
+(via the promoted `DeckhouseScopeStore` method). No per-resource storage.go
+edits. CustomResourceDefinitions are excluded structurally (served by the
+apiextensions delegate, never through this install path); `namespaces` is
+excluded structurally (it wraps rather than embeds its Store and keeps its own
+unconditional filter above).
+
+The filter's `RBACFloor`/`Classify` loopback calls are served through a shared
+TTL cache (default 1s, `SCOPEFILTER_RESOLVE_CACHE_TTL` /
+`SCOPEFILTER_WATCH_POLL_INTERVAL` to tune) with singleflight de-duplication, so
+many concurrent `--scope` watches collapse to ~one `permission-browser` resolve
+per key per TTL instead of one per watch per poll tick.
+
+See `k8s.io/apiserver/pkg/registry/generic/scopefilter` (staging) for the
+shared implementation both mechanisms build on.
 
 If `permission-browser-apiserver` is not present/unavailable (APIService is
 not `Available=True` or a request fails), both mechanisms fall back to
