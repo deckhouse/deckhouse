@@ -10,9 +10,9 @@ title: "The user-authz module: FAQ"
 
 ## How do I limit user rights to specific namespaces?
 
-To limit a user's rights to specific namespaces in the experimental role-based model, use `RoleBinding` with the [namespace role](./#namespace-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
+To limit a user's rights to specific namespaces in the primary role-based model, use `RoleBinding` with the [namespace role](./#namespace-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
 
-In the current role-based model, use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) CR.
+In the legacy role-based model, use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) CR.
 
 ## What if there are two ClusterAuthorizationRules matching to a single user?
 
@@ -64,19 +64,19 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
 {% endalert %}
 
-## Can the current and the experimental role-based models be used at the same time?
+## Can the legacy and the primary role-based models be used at the same time?
 
-Yes. Both models ultimately boil down to the standard Kubernetes RBAC mechanism, and RBAC is a permissive model: permissions from all sources are **summed up**. If an action is allowed by at least one source — a `ClusterAuthorizationRule`, an `AuthorizationRule`, a `RoleBinding` to an experimental-model role, or a `ProjectRoleBinding` — it will be allowed. Nothing needs to be "switched over": you can keep the existing `ClusterAuthorizationRule` objects and gradually add experimental-model role bindings.
+Yes. Both models ultimately boil down to the standard Kubernetes RBAC mechanism, and RBAC is a permissive model: permissions from all sources are **summed up**. If an action is allowed by at least one source — a `ClusterAuthorizationRule`, an `AuthorizationRule`, a `RoleBinding` to an primary-model role, or a `ProjectRoleBinding` — it will be allowed. Nothing needs to be "switched over": you can keep the existing `ClusterAuthorizationRule` objects and gradually add primary-model role bindings.
 
 The only exception is the multitenancy mode ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)). If a user has a `ClusterAuthorizationRule` with a namespace restriction (`limitNamespaces` or `namespaceSelector`), that restriction acts as a **hard boundary**: requests to namespaces outside the list are denied even if the user has a `RoleBinding` there. See [the module description](./#rolebinding-car) for details. If a user needs combined access, use an `AuthorizationRule` instead of a `ClusterAuthorizationRule`, or do not set a namespace restriction in the CAR.
 
-## How do I get an equivalent of the ClusterAdmin and SuperAdmin roles in the experimental model?
+## How do I get an equivalent of the ClusterAdmin and SuperAdmin roles in the primary model?
 
-There is no single-object counterpart of the current model's `ClusterAdmin` and `SuperAdmin` roles in the experimental model — it deliberately separates platform administration (system roles) from application access (namespace and project roles). The equivalent is assembled from **two bindings**: a `ClusterRoleBinding` to a system role and a [ClusterProjectRoleBinding](../multitenancy-manager/cr.html#clusterprojectrolebinding) to a project role (the latter applies in all projects, including those created later).
+There is no single-object counterpart of the legacy model's `ClusterAdmin` and `SuperAdmin` roles in the primary model — it deliberately separates platform administration (system roles) from application access (namespace and project roles). The equivalent is assembled from **two bindings**: a `ClusterRoleBinding` to a system role and a [ClusterProjectRoleBinding](../multitenancy-manager/cr.html#clusterprojectrolebinding) to a project role (the latter applies in all projects, including those created later).
 
 Approximate level mapping:
 
-| Current model role | Experimental model equivalent |
+| Legacy model role | Primary model equivalent |
 |--------------------|-------------------------------|
 | `User` | `d8:namespace:viewer` (via `RoleBinding` or `ProjectRoleBinding`) |
 | `PrivilegedUser` | `d8:namespace:user` |
@@ -172,7 +172,7 @@ Note: inside **project** namespaces a plain `RoleBinding` may only reference rol
 
 ## How do I extend a role or create a new one?
 
-[The experimental role model](./#experimental-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,
+[The primary role model](./#primary-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,
 thus providing easy ways to enhance the model with custom roles.
 
 ### Creating a new role subsystem

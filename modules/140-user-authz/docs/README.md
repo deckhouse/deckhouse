@@ -6,18 +6,17 @@ description: "Authorization and role-based access control to the resources of th
 The module generates role-based access model objects based on the standard Kubernetes RBAC mechanism. The module creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
-Starting from Deckhouse Kubernetes Platform v1.64, the module features a experimental role-based access model. The current role-based access model will continue to operate but support for it will be discontinued in the future.
+The module provides two role-based models: the [primary](#primary-role-based-model) one (use this one) and the [legacy](#legacy-role-based-model) one, built around the `ClusterAuthorizationRule`/`AuthorizationRule` resources (its support will be discontinued in future releases).
 
-The experimental role-based access model is incompatible with the current one.
+The models are not resource-compatible — automatic conversion is impossible — but they [can be used at the same time](faq.html#can-the-legacy-and-the-primary-role-based-models-be-used-at-the-same-time): the permissions of both models are summed up.
 {% endalert %}
 
-The module implements a role-based access model based on the standard RBAC Kubernetes mechanism. It creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
-
 <div style="height: 0;" id="the-new-role-based-model"></div>
+<div style="height: 0;" id="experimental-role-based-model"></div>
 
-## Experimental role-based model
+## Primary role-based model
 
-Unlike the [current DKP role-based model](#current-role-based-model), the new role-based one does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating `RoleBinding` or `ClusterRoleBinding` resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding and ClusterProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) resources of the `multitenancy-manager` module.
+Unlike the [legacy DKP role-based model](#legacy-role-based-model), the primary role-based one does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating `RoleBinding` or `ClusterRoleBinding` resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding and ClusterProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) resources of the `multitenancy-manager` module.
 
 > Access does not have to be granted by hand-writing YAML manifests: the Deckhouse Console web interface provides an access grant wizard. It walks you through the steps (who gets access → where → at which level), picks the right binding kind itself (`RoleBinding`, `ClusterRoleBinding`, `ProjectRoleBinding`, or `ClusterProjectRoleBinding`), and lets you assemble a custom role from ready-made building blocks without writing YAML.
 
@@ -157,14 +156,7 @@ Role-based model subsystems composition table.
 
 No built-in role contains a list of permissions directly. Permissions are described in separate small cluster roles — **capabilities**. Each capability is responsible for one kind of action (for example, "view logs", "manage quotas", "connect to pods") and contains concrete RBAC rules. A role (`d8:namespace:admin`, `d8:system:viewer`, etc.) is an empty `ClusterRole` with an aggregation rule (`aggregationRule`): Kubernetes automatically collects into it the rules from all capabilities with matching labels.
 
-Membership of objects in the role model is defined by the `rbac.deckhouse.io/*` labels:
-
-| Label | Purpose |
-|-------|---------|
-| `rbac.deckhouse.io/kind` | Object type: `role`, `capability` (built-in), `custom-role`, `custom-capability` (user-defined) |
-| `rbac.deckhouse.io/scope` | Scope: `namespace`, `project`, `subsystem`, `system` |
-| `rbac.deckhouse.io/aggregate-to-<scope>-as: <level>` | Includes the capability into the role of the given scope and level. For example, the label `rbac.deckhouse.io/aggregate-to-namespace-as: admin` includes the capability into the `d8:namespace:admin` role (and, thanks to the level ladder, into `d8:namespace:superadmin`) |
-| `rbac.deckhouse.io/capability` | The unique name of the capability — it can be used to include the capability into a custom role selectively |
+Membership of objects in the role model is defined by the `rbac.deckhouse.io/*` labels — for example, the label `rbac.deckhouse.io/aggregate-to-namespace-as: admin` includes a capability into the `d8:namespace:admin` role (and, thanks to the level ladder, into all levels above). The complete list of labels and annotations is in [the reference below](#reference-of-role-labels-and-annotations).
 
 This design has two practical consequences:
 
@@ -172,6 +164,35 @@ This design has two practical consequences:
 - You can assemble your own roles from ready-made capabilities without writing RBAC rules by hand. See [the FAQ](faq.html#how-do-i-extend-a-role-or-create-a-new-one) for how to do that.
 
 The names of built-in roles and capabilities start with the `d8:` prefix. This namespace is reserved: you cannot create your own `ClusterRole` with a `d8:*` name — the only exception is the `d8:custom:*` prefix, which is dedicated to user-defined roles and capabilities. The labels `rbac.deckhouse.io/kind: role` and `rbac.deckhouse.io/kind: capability` are also reserved for built-in objects — use `custom-role` and `custom-capability` for your own.
+
+### Reference of role labels and annotations
+
+All labels the role model uses on `ClusterRole` objects:
+
+| Label | Found on | Purpose |
+|-------|----------|---------|
+| `rbac.deckhouse.io/kind` | All role model objects | Object type: `role` or `capability` — built-in (reserved), `custom-role` or `custom-capability` — user-defined. Objects without this label are not processed by the role model |
+| `rbac.deckhouse.io/scope` | Roles and capabilities | Scope: `namespace`, `project`, `subsystem`, `system` |
+| `rbac.deckhouse.io/subsystem` | Subsystem objects | The subsystem name (for example, `networking`) — only with `scope: subsystem` |
+| `rbac.deckhouse.io/aggregate-to-<scope>-as: <level>` | Capabilities and lower-level roles | The aggregation rule: includes the object into the role of the given scope and level. `<scope>` is `system`, `namespace`, `project`, or a subsystem name; `<level>` is `viewer`, `user`, `manager`, `admin`, `superadmin`. These are exactly the labels referenced by `aggregationRule` selectors |
+| `rbac.deckhouse.io/capability` | Capabilities | The globally unique name of the capability (for example, `namespace-capability.kubernetes.view_logs`) — used to include the capability into a [custom role](faq.html#creating-a-custom-namespace-or-project-role) selectively |
+| `rbac.deckhouse.io/use-role: <level>` | System and subsystem roles | Which namespace-role level the holder of this role automatically gets in the system namespaces of its subsystem. On the built-in roles: `viewer` → `viewer`, `manager` → `admin`, `superadmin` → `superadmin`. The access is granted by automatically created `RoleBinding` objects (labelled `rbac.deckhouse.io/automated: "true"`) |
+| `rbac.deckhouse.io/namespace: <namespace>` | Capabilities | An extra namespace where a `RoleBinding` is automatically created for the holders of a system/subsystem role ([an example in the FAQ](faq.html#extending-subsystem-roles-and-adding-a-new-namespace)) |
+| `rbac.deckhouse.io/delegatable: "true"` | The `d8:namespace:*`, `d8:project:*`, and user-defined roles | The role may be referenced by a `RoleBinding` [inside project namespaces](../multitenancy-manager/usage.html#which-roles-are-available-in-a-rolebinding-inside-a-project). Set it on your custom roles that should be available in projects |
+| `rbac.deckhouse.io/deprecated: "true"` | [Deprecated alias roles](#deprecated-role-names) | The role is deprecated and will be removed; migrate the bindings to the new role |
+| `module` | Built-in objects | The name of the DKP module the object belongs to. Convenient for aggregation selectors (for example, all capabilities of one module) |
+| `heritage: deckhouse` | Built-in objects | Marks a platform object. Must not be set on your own objects |
+
+Annotations on `ClusterRole` objects:
+
+| Annotation | Set by | Purpose |
+|------------|--------|---------|
+| `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` | Platform | The [display title and description](#display-names-of-roles) in Russian |
+| `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | Platform | The display title and description in English |
+| `custom.meta.deckhouse.io/title`, `custom.meta.deckhouse.io/description` | Administrator | Overrides the display title/description; the only allowed modification of built-in roles |
+| `rbac.deckhouse.io/bindable-only-via` | Platform | The list of binding kinds the role can be assigned with (on project roles — `ProjectRoleBinding,ClusterProjectRoleBinding`) |
+| `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` | Administrator | Forbids granting the role in projects: existing bindings keep working, new ones cannot be created ([details](../multitenancy-manager/usage.html#granting-access-within-a-project)) |
+| `rbac.deckhouse.io/deprecated-replaced-by` | Platform | On deprecated alias roles: the name of the role to migrate to |
 
 ### Admin level restrictions and superadmin rights
 
@@ -221,7 +242,7 @@ d8 k annotate clusterrole d8:namespace:admin \
 
 ### Deprecated role names
 
-The previous role names of the experimental model (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) are deprecated and will be removed in the next release. For backward compatibility they are temporarily kept as alias roles: existing bindings keep working and grant the same permissions as the new roles.
+The previous role names of the primary model (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) are deprecated and will be removed in the next release. For backward compatibility they are temporarily kept as alias roles: existing bindings keep working and grant the same permissions as the new roles.
 
 Name mapping:
 
@@ -241,8 +262,9 @@ d8 k get clusterrolebindings,rolebindings -A -o json \
 ```
 
 <div style="height: 0;" id="the-obsolete-role-based-model"></div>
+<div style="height: 0;" id="current-role-based-model"></div>
 
-## Current role-based model
+## Legacy role-based model
 
 Features:
 - Manages user and group access control using Kubernetes RBAC;
@@ -273,7 +295,7 @@ Each next role inherits permissions from the previous roles. A role block shows 
 
 The list below includes:
 
-- standard permissions from the current role-based model (k8s permissions);
+- standard permissions from the legacy role-based model (k8s permissions);
 - permissions created by Deckhouse’s built-in modules.
 
 It does not include permissions for [modules from source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source).

@@ -222,7 +222,7 @@ The `d8-administrators` binding created by the controller from the [`.spec.admin
 
 ### Which roles are available in a RoleBinding inside a project
 
-Besides the project bindings, a plain `RoleBinding` can also be used inside a project namespace — the role then applies in that single namespace only. However, in projects the set of roles available to a plain `RoleBinding` is restricted: only cluster roles carrying the `rbac.deckhouse.io/delegatable: "true"` label are allowed. Among the built-in ones these are the `d8:namespace:*` and `d8:project:*` roles, as well as the access-level roles of the current role model (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
+Besides the project bindings, a plain `RoleBinding` can also be used inside a project namespace — the role then applies in that single namespace only. However, in projects the set of roles available to a plain `RoleBinding` is restricted: only cluster roles carrying the `rbac.deckhouse.io/delegatable: "true"` label are allowed. Among the built-in ones these are the `d8:namespace:*` and `d8:project:*` roles, as well as the access-level roles of the legacy role model (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
 
 A `RoleBinding` to any other cluster role (for example, `cluster-admin`, system roles, or capabilities) is rejected in a project with the message `references "<role>" which is not available to project`. This protects the project isolation from being bypassed by binding to an overly broad role.
 
