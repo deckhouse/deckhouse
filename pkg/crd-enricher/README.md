@@ -51,9 +51,15 @@ exception of `x-kubernetes-sensitive-data`, which the apiserver acts on.
 
 | Field | Source marker | Purpose |
 | --- | --- | --- |
-| `x-doc-examples` | `deckhouse:documentation:examples` | Sample values shown in the docs for a field, and the assembled "example resource" block. A list; the marker may be repeated. |
-| `x-doc-default` | `deckhouse:documentation:default` | The **documented** default value, shown in the docs when the real default is computed at runtime and cannot be expressed as a `kubebuilder:default`. |
-| `x-doc-deprecated` | `deckhouse:documentation:deprecated` | Marks a field as deprecated in the docs (renders a deprecation badge). |
+| `x-doc-examples` | `deckhouse:documentation:examples` | Sample values shown in the docs for a field, and the assembled "example resource" block. A list; the marker may be repeated. Takes precedence over `example` and `x-examples`. |
+| `x-doc-example` | `raw:x-doc-example` | A single example value. May contain markdown. Takes precedence over `example` and `x-examples`. Use `x-doc-examples` when an array is needed. Only the English version value is used. |
+| `x-doc-default` | `deckhouse:documentation:default` | The **documented** default value, shown in the docs when the real default is computed at runtime and cannot be expressed as a `kubebuilder:default`. Must be the same type as the field; cannot contain markdown. Only the English version value is used. |
+| `x-doc-deprecated` | `deckhouse:documentation:deprecated` | Marks a field as deprecated in the docs (renders a deprecation badge). Boolean. |
+| `x-doc-required` | `raw:x-doc-required` | Overrides the required/optional badge shown in the docs. Boolean. |
+| `x-doc-search` | `raw:x-doc-search` | Comma-separated keywords added to the search index for this parameter. |
+| `x-doc-skip` | `raw:x-doc-skip` | If `true`, the field is omitted from the rendered documentation entirely. Boolean. |
+| `x-doc-map-key-name` | `raw:x-doc-map-key-name` | Display name for the map key when describing `additionalProperties`. |
+| `x-doc-pattern-name` | `raw:x-doc-pattern-name` | Display name for a pattern key inside a `patternProperties` object. |
 | `x-kubernetes-sensitive-data` | `deckhouse:sensitive-data` | **Behavioral**, not documentation. Tells the apiserver's `CRDSensitiveData` feature to encrypt the value in etcd, filter it by RBAC and mask it in audit logs. |
 | *(arbitrary standard field)* | `raw:<key>` | Injects a plain schema field controller-gen cannot produce for a given Go type (e.g. `pattern` on a `metav1.Duration`, or an overridden `description`). |
 
