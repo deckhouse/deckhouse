@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package manager
+package ephemeral
 
-import (
-	controllerruntime "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-)
+import "strings"
 
-type configurator interface {
-	configureOptions(*controllerruntime.Options)
-	configureRuntimeManager(manager.Manager) error
+const cpnNamePlaceholder = "${CPN_NAME}"
+
+func renderComponentManifest(raw []byte, cpnName string) []byte {
+	return []byte(strings.NewReplacer(cpnNamePlaceholder, cpnName).Replace(string(raw)))
 }

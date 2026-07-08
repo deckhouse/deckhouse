@@ -19,6 +19,7 @@ package ephemeral
 import (
 	"context"
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/operations"
 	"fmt"
 	"strings"
@@ -99,7 +100,7 @@ func (e *StepExecutor) observeKubeconfigExpirations(ctx context.Context, out map
 	secret := &corev1.Secret{}
 	key := client.ObjectKey{
 		Namespace: e.tenantIdentity.Namespace,
-		Name:      e.tenantIdentity.Namespace + "-kubeconfig",
+		Name:      constants.VirtualKubeconfigSecretName,
 	}
 	if err := e.client.Get(ctx, key, secret); err != nil {
 		return fmt.Errorf("get kubeconfig secret %s: %w", key.Name, err)

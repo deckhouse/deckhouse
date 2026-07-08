@@ -18,7 +18,6 @@ package controlplanenode
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"time"
 
@@ -34,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -65,7 +63,6 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 		mgr.GetScheme(),
 		cpnplanner.NormalOperationBuilder{},
 		metricHandlers,
-		log.Default().With(slog.String("controller", constants.CpnControllerName)),
 	)
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{

@@ -16,8 +16,27 @@ limitations under the License.
 
 package cpnplanner
 
+import (
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+)
+
 type VirtualOperationBuilder struct{}
 
 func (VirtualOperationBuilder) Targets(s componentState) []TargetOperation {
-	return targets(s)
+	// TODO(virtual/test): using datastore for etcd on vcpc
+	if s.component == controlplanev1alpha1.OperationComponentEtcd {
+		return nil
+	}
+	return targets(s, virtualPipeline)
+}
+
+// virtualPipeline emits only the steps implemented by the ephemeral executor (VCPO):
+// RenewPKICerts, SyncManifests, WaitPodReady, CertObserve.
+func virtualPipeline(s componentState, renewCerts, _ bool) []controlplanev1alpha1.StepName {
+	var steps []controlplanev1alpha1.StepName
+	if renewCerts && s.component.HasPKI() {
+		steps = append(steps, controlplanev1alpha1.StepRenewPKICerts)
+	}
+	steps = append(steps, syncStep(s.component))
+	return append(steps, controlplanev1alpha1.StepWaitPodReady, controlplanev1alpha1.StepCertObserve)
 }

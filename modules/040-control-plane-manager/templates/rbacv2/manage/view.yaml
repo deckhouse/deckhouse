@@ -34,8 +34,10 @@ rules:
   resources:
   - controlplanenodes
   - controlplaneoperations
+  - virtualcontrolplanes
   - controlplanenodes/status
   - controlplaneoperations/status
+  - virtualcontrolplanes/status
   verbs:
   - get
   - list

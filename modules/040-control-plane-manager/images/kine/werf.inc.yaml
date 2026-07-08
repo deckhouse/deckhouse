@@ -13,7 +13,7 @@ shell:
   - cd /src && rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -27,8 +27,7 @@ mount:
 {{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache gcc musl-dev
+  - pm install musl-devel
   install:
   - cd /src
   - |

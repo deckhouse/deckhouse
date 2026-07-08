@@ -25,3 +25,15 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - control-plane.deckhouse.io
+  resources:
+  - virtualcontrolplanes
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete

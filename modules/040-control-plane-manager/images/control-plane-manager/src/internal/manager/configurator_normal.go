@@ -19,10 +19,10 @@ package manager
 import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	controlplaneapprover "control-plane-manager/internal/controllers/control-plane-approver"
 	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
 	controlplanenode "control-plane-manager/internal/controllers/control-plane-node"
 	controlplaneoperation "control-plane-manager/internal/controllers/control-plane-operation"
-	operationsapprover "control-plane-manager/internal/controllers/operations-approver"
 	updateobserver "control-plane-manager/internal/controllers/update-observer/controller"
 	updateobserverv1 "control-plane-manager/internal/controllers/update-observer/pkg/v1"
 	"errors"
@@ -146,7 +146,7 @@ func (c *normalConfigurator) configureRuntimeManager(runtimeManager manager.Mana
 		return fmt.Errorf("register control-plane-operation controller: %w", err)
 	}
 
-	if err := operationsapprover.Register(runtimeManager); err != nil {
+	if err := controlplaneapprover.Register(runtimeManager); err != nil {
 		return fmt.Errorf("register operations-approver controller: %w", err)
 	}
 
@@ -184,4 +184,7 @@ func metricsAuthFilterProvider(cfg *rest.Config, hc *http.Client) (metricsserver
 		}
 		return mw.Handler(h), nil
 	}, nil
+}
+
+func (c *normalConfigurator) configureClient(cfg *rest.Config) {
 }

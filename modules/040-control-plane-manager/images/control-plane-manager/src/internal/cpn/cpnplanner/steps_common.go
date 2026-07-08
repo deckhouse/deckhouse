@@ -26,19 +26,21 @@ import (
 // Two independent decisions per component:
 //   - lifecycle: a mutating converge (spec drift) or a read-only observe — mutually exclusive;
 //   - renewal: an expiring leaf certificate or signature key — runs in parallel to the lifecycle.
-func targets(s componentState) []TargetOperation {
+type stepPipeline func(s componentState, renewCerts, renewSignature bool) []controlplanev1alpha1.StepName
+
+func targets(s componentState, pipeline stepPipeline) []TargetOperation {
 	var targets []TargetOperation
 	switch {
 	case s.needsConverge():
-		targets = append(targets, mutatingTarget(s, convergeSteps(s), operations.MatchesChecksums(s.intended)))
+		targets = append(targets, mutatingTarget(s, convergeSteps(s, pipeline), operations.MatchesChecksums(s.intended)))
 	case s.needsObserve():
 		targets = append(targets, observeTarget(s))
 	}
 	switch {
 	case s.needsCertRenew():
-		targets = append(targets, mutatingTarget(s, certRenewalSteps(s), operations.HasRenewalStep))
+		targets = append(targets, mutatingTarget(s, certRenewalSteps(s, pipeline), operations.HasRenewalStep))
 	case s.needsSignatureRenew():
-		targets = append(targets, mutatingTarget(s, signatureRenewalSteps(s), operations.HasSignatureStep))
+		targets = append(targets, mutatingTarget(s, signatureRenewalSteps(s, pipeline), operations.HasSignatureStep))
 	}
 	return targets
 }
@@ -63,35 +65,16 @@ func observeTarget(s componentState) TargetOperation {
 	}
 }
 
-func convergeSteps(s componentState) []controlplanev1alpha1.StepName {
+func convergeSteps(s componentState, pipeline stepPipeline) []controlplanev1alpha1.StepName {
 	return pipeline(s, s.certsChanged() || s.certsExpireSoon(), s.needsSignatureBootstrap())
 }
 
-func certRenewalSteps(s componentState) []controlplanev1alpha1.StepName {
+func certRenewalSteps(s componentState, pipeline stepPipeline) []controlplanev1alpha1.StepName {
 	return pipeline(s, true, false)
 }
 
-func signatureRenewalSteps(s componentState) []controlplanev1alpha1.StepName {
+func signatureRenewalSteps(s componentState, pipeline stepPipeline) []controlplanev1alpha1.StepName {
 	return pipeline(s, false, true)
-}
-
-// pipeline is the apply/restart sequence, driven by the component's capabilities.
-func pipeline(s componentState, renewCerts, renewSignature bool) []controlplanev1alpha1.StepName {
-	steps := []controlplanev1alpha1.StepName{controlplanev1alpha1.StepBackup}
-	if renewCerts {
-		steps = append(steps, controlplanev1alpha1.StepSyncCA)
-		if s.component.HasPKI() {
-			steps = append(steps, controlplanev1alpha1.StepRenewPKICerts)
-		}
-		if s.component.HasKubeconfigs() {
-			steps = append(steps, controlplanev1alpha1.StepRenewKubeconfigs)
-		}
-	}
-	if renewSignature {
-		steps = append(steps, controlplanev1alpha1.StepRenewSignature)
-	}
-	steps = append(steps, syncStep(s.component))
-	return append(steps, controlplanev1alpha1.StepWaitPodReady, controlplanev1alpha1.StepCertObserve)
 }
 
 // observeSteps is the read-only pipeline: record the component's certificate expiry.

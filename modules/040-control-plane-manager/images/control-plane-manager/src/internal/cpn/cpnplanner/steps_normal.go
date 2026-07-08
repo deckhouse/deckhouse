@@ -16,8 +16,30 @@ limitations under the License.
 
 package cpnplanner
 
+import (
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+)
+
 type NormalOperationBuilder struct{}
 
 func (NormalOperationBuilder) Targets(s componentState) []TargetOperation {
-	return targets(s)
+	return targets(s, normalPipeline)
+}
+
+func normalPipeline(s componentState, renewCerts, renewSignature bool) []controlplanev1alpha1.StepName {
+	steps := []controlplanev1alpha1.StepName{controlplanev1alpha1.StepBackup}
+	if renewCerts {
+		steps = append(steps, controlplanev1alpha1.StepSyncCA)
+		if s.component.HasPKI() {
+			steps = append(steps, controlplanev1alpha1.StepRenewPKICerts)
+		}
+		if s.component.HasKubeconfigs() {
+			steps = append(steps, controlplanev1alpha1.StepRenewKubeconfigs)
+		}
+	}
+	if renewSignature {
+		steps = append(steps, controlplanev1alpha1.StepRenewSignature)
+	}
+	steps = append(steps, syncStep(s.component))
+	return append(steps, controlplanev1alpha1.StepWaitPodReady, controlplanev1alpha1.StepCertObserve)
 }
