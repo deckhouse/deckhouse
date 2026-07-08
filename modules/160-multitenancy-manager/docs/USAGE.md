@@ -116,13 +116,50 @@ You can check the project composition in its status:
 d8 k get project my-project -o jsonpath='{.status.namespaces}'
 ```
 
-Specifics:
+The rules for working with `ProjectNamespace`:
 
-- An additional namespace automatically receives the project template settings (pod security profile, network policies, log collection, etc.) and all access granted to the project ([ProjectRoleBinding](cr.html#projectrolebinding), [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding), project administrators). The project quota applies in the main namespace.
 - The `spec.name` field is immutable: to rename a namespace, delete the resource and create a new one.
 - The resulting name `<project name>-<spec.name>` cannot be longer than 63 characters (the Kubernetes limit on namespace names).
 - A `ProjectNamespace` can only be created in the main namespace of a project — it cannot be "nested" into an additional namespace or a foreign project. If a namespace with that name already exists and belongs to another project, the request is rejected.
 - Deleting a `ProjectNamespace` resource deletes its namespace; deleting the project deletes all of its namespaces.
+
+### What applies to the additional namespaces
+
+The following automatically applies in **all** namespaces of the project (the main and the additional ones alike):
+
+- **Access**: the [ProjectRoleBinding](cr.html#projectrolebinding) and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) bindings, including the automatic access of the project administrators. When a new namespace is added, all existing bindings fan out into it without any user action.
+- **Namespaced template objects**: the network policy (`networkPolicy.mode: Isolated`) and the log collection setup (`logShipping`) are created in every namespace of the project. The network isolation allows traffic between the namespaces of one project.
+- **Cluster-scoped template policies** (`OperationPolicy`, the `SecurityPolicy` from `allowedUIDs`/`allowedGIDs`): they select namespaces by the `projects.deckhouse.io/project` label, that is, they cover the whole project.
+- **Inherited labels**: the pod security profile (`security.deckhouse.io/pod-policy`), extended monitoring (`extended-monitoring.deckhouse.io/enabled`), vulnerability scanning (`security-scanning.deckhouse.io/enabled`), and the template label (`projects.deckhouse.io/project-template`) are synced from the main namespace to the additional ones. The sync is complete: if a feature is turned off in the template, the label is removed from the additional namespaces as well. Thanks to the template label, the [cluster resource availability rules](#granting-cluster-scoped-resources-to-projects) also apply in all namespaces of the project.
+
+The following stays in the **main** namespace only:
+
+- the project quota (the `ResourceQuota` from [`.spec.quota`](cr.html#project-v1alpha3-spec-quota));
+- the extra labels and annotations from the template's `namespaceMetadata`;
+- the node placement annotations (from the template's `nodeSelector` and `tolerations` fields).
+
+### Labels of the project namespaces
+
+| Label | Main | Additional | Purpose |
+|-------|:----:|:----------:|---------|
+| `projects.deckhouse.io/project: <project name>` | ✓ | ✓ | Project ownership — the common label of all namespaces of the project |
+| `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Marks an additional namespace (the name of the `ProjectNamespace` resource) |
+| `projects.deckhouse.io/project-template: <template name>` | ✓ | ✓ | The project template; the cluster resource availability rules match by it |
+| `heritage: multitenancy-manager` | ✓ | ✓ | The namespace is managed by the project controller; it cannot be modified manually |
+| `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (inherited) | Policies and features from the project template |
+
+The common `projects.deckhouse.io/project` label makes it possible to select the project namespaces with a plain `get ns`:
+
+```shell
+# All namespaces of the project (main + additional):
+d8 k get ns -l projects.deckhouse.io/project=my-project
+
+# Additional only:
+d8 k get ns -l 'projects.deckhouse.io/project=my-project,projects.deckhouse.io/project-namespace'
+
+# Main only:
+d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/project-namespace'
+```
 
 ## Creating a project automatically for a namespace
 
