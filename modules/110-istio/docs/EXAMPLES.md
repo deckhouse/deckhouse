@@ -627,6 +627,106 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
+## Ambient mesh
+
+{% alert level="warning" %}Available in Enterprise Edition only.{% endalert %}
+
+{% alert level="warning" %}Ambient mesh support is experimental and not recommended for production use.{% endalert %}
+
+The ambient mesh components mentioned in this section are described on the [module overview page](./#ambient-mesh).
+
+### Enabling ambient mesh
+
+Ambient mode requires the [`CNIPlugin`](#cniplugin-application-traffic-redirection-mode-restrictions) traffic redirection mode and Istio 1.25 or newer.
+
+The following is a module configuration example with the ambient mode enabled:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  enabled: true
+  version: 2
+  settings:
+    dataPlane:
+      trafficRedirectionSetupMode: CNIPlugin
+    ambient:
+      enabled: true
+```
+
+Once enabled, the module runs the `ztunnel` DaemonSet and the waypoint controller. To enroll workloads into the ambient mesh, follow the steps below.
+
+### Enrolling workloads into the ambient (L4) mesh
+
+Add the `istio.io/dataplane-mode=ambient` label to a namespace to capture the traffic of its pods with `ztunnel`. This provides L4 features (mutual TLS, identity, L4 authorization) without a sidecar:
+
+```shell
+d8 k label namespace myns istio.io/dataplane-mode=ambient
+```
+
+### Adding a waypoint for L7 features
+
+To get L7 features (HTTP routing, L7 authorization, richer telemetry), create a [WaypointInstance](cr.html#waypointinstance) resource in the namespace:
+
+The following is a WaypointInstance resource example, which creates a waypoint for all workloads and services in a namespace:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: WaypointInstance
+metadata:
+  name: main
+  namespace: myns
+spec:
+  waypointFor: All
+  replicasManagement:
+    mode: Static
+    static:
+      replicas: 2
+  resourcesManagement:
+    mode: VPA
+    vpa:
+      mode: InPlaceOrRecreate
+      cpu:
+        min: 100m
+        max: 1000m
+      memory:
+        min: 128Mi
+        max: 2000Mi
+```
+
+The controller provisions the waypoint infrastructure (Deployment, Service, Gateway, VPA, and a PDB — when the effective replica count is `>= 2`). The controller **does not** attach workloads to the waypoint. You can do that with the `istio.io/use-waypoint` label.
+
+To attach all workloads and services in the namespace to the waypoint, run the following command:
+
+```shell
+d8 k label namespace myns istio.io/use-waypoint=main
+```
+
+To attach a single service or workload, run the following command:
+
+```shell
+d8 k -n myns label service myservice istio.io/use-waypoint=main
+```
+
+### Disabling ambient mesh
+
+{% alert level="warning" %}
+Before disabling ambient mode, delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by DKP in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
+{% endalert %}
+
+To disable the ambient mode, follow these steps:
+
+1. Check if any WaypointInstance resources remain and delete them as necessary using the following commands:
+
+   ```shell
+   d8 k get waypointinstance -A
+   d8 k -n myns delete waypointinstance main
+   ```
+
+2. Disable the ambient mode by setting [`ambient.enabled`](configuration.html#parameters-ambient-enabled) to `false` in the module configuration.
+
 ## Control the data-plane behavior
 
 ### Prevent istio-proxy from terminating before the main application's connections are closed
@@ -814,7 +914,7 @@ spec:
 
 #### Example — disable span export for ingress-only namespaces
 
-In Deckhouse Kubernetes Platform (DKP), when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
+In DKP, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1

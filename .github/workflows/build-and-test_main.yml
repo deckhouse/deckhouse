@@ -322,13 +322,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-dev"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "dev-int-pki/cert/56:61:03:74:72:94:e1:e7:7b:d9:ac:44:f1:4c:57:aa:2b:b2:8d:9d"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -382,9 +389,53 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
+          if $sign_supported; then
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -430,6 +481,8 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -655,7 +708,7 @@ jobs:
           # consumed inline just to read the tests image name — it is not kept
           # as an artifact (minimal value for a tests-only build).
           werf build tests \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --final-images-only=true \
             --build-report-path images_tags_werf.json
@@ -742,7 +795,6 @@ jobs:
       - name: Run go generate
         run: |
           (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
 
       - name: Check generated code
         run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)

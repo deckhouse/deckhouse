@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -29,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -52,8 +52,8 @@ type RegistryPackagesProxy struct {
 	bootstrapLocalPort  string
 	bootstrapRemotePort string
 
-	loggerProvider log.LoggerProvider
-	interactive    bool
+	logger      *slog.Logger
+	interactive bool
 
 	proxy        *proxy.Proxy
 	rppGetServer *proxy.RPPClientBinaryServer
@@ -84,14 +84,14 @@ func reverseTunnelCheckURL(kind tunnelCheckKind, host, port string) string {
 	return fmt.Sprintf("%s://%s/healthz", scheme, net.JoinHostPort(host, port))
 }
 
-func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.ClientConfigGetter, logger log.LoggerProvider, interactive bool) *RegistryPackagesProxy {
+func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.ClientConfigGetter, logger *slog.Logger, interactive bool) *RegistryPackagesProxy {
 	return &RegistryPackagesProxy{
 		clusterDomain:       clusterDomain,
 		configGetter:        configGetter,
 		remotePort:          registryPackagesProxyPort,
 		bootstrapRemotePort: rppGetBinaryPort,
 		signCheck:           false,
-		loggerProvider:      logger,
+		logger:              logger,
 		interactive:         interactive,
 	}
 }
@@ -254,9 +254,9 @@ func (p *RegistryPackagesProxy) startProxy() error {
 	var proxyLogger rpp_log.Logger
 
 	if p.interactive {
-		proxyLogger = newInteractiveLogger(p.loggerProvider())
+		proxyLogger = newInteractiveLogger(p.logger)
 	} else {
-		proxyLogger = newLogger(p.loggerProvider())
+		proxyLogger = newLogger(p.logger)
 	}
 
 	packagesProxy := proxy.NewProxy(srv, listener, p.configGetter, proxyLogger, registryCl)
@@ -348,7 +348,7 @@ func listenerPort(l net.Listener) (string, error) {
 }
 
 func (p *RegistryPackagesProxy) debug(f string, args ...any) {
-	p.loggerProvider().DebugF(f, args...)
+	p.logger.DebugContext(context.Background(), fmt.Sprintf(f, args...))
 }
 
 func upTunnelError(err error) error {

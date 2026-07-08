@@ -15,7 +15,6 @@
 package template
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -51,7 +50,7 @@ spec:
 		},
 	}
 
-	err := prepareNodeGroupConfigurationSteps(context.Background(), templateController, resourcesYAML, templateData)
+	err := prepareNodeGroupConfigurationSteps(t.Context(), templateController, resourcesYAML, templateData)
 	require.NoError(t, err)
 
 	stepsPath := filepath.Join(templateController.TmpDir, stepsDir)
@@ -65,7 +64,7 @@ func TestPrepareNodeGroupConfigurationSteps_NoNGC(t *testing.T) {
 	templateController := NewTemplateController("")
 	t.Cleanup(templateController.Close)
 
-	err := prepareNodeGroupConfigurationSteps(context.Background(), templateController, "", map[string]any{})
+	err := prepareNodeGroupConfigurationSteps(t.Context(), templateController, "", map[string]any{})
 	require.NoError(t, err)
 
 	stepsPath := filepath.Join(templateController.TmpDir, stepsDir)
@@ -91,7 +90,7 @@ spec:
     - "*"
 `
 
-	err := prepareNodeGroupConfigurationSteps(context.Background(), templateController, resourcesYAML, map[string]any{})
+	err := prepareNodeGroupConfigurationSteps(t.Context(), templateController, resourcesYAML, map[string]any{})
 	require.NoError(t, err)
 
 	stepsPath := filepath.Join(templateController.TmpDir, stepsDir)

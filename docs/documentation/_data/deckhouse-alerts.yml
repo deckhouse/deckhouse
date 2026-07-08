@@ -313,19 +313,6 @@ alerts:
         Orphaned EgressGatewayPolicy with an irrelevant EgressGateway name has been found.
       severity: "4"
       markupFormat: markdown
-    - name: CPUStealHigh
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        The CPU steal has been excessively high on node `{{ $labels.node }}` over the past 30 minutes.
-
-        Another component, such as a neighboring virtual machine, may be consuming the node's resources. This may be the result of "overselling" the hypervisor, meaning the hypervisor is hosting more virtual machines than it can handle.
-      summary: |
-        CPU steal on node {{ $labels.node }} is too high.
-      severity: "4"
-      markupFormat: default
     - name: D8AdmissionPolicyEngineNotBootstrapped
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/bootstrap.yaml
       moduleUrl: 015-admission-policy-engine
@@ -934,16 +921,67 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        Deckhouse cannot finish processing of the `{{ $labels.queue }}` queue, which currently has {{ $value }} pending task(s).
+        The module queue head has remained unchanged for more than 10 minutes.
 
-        To investigate the issue, check the logs by running the following command:
+        Affected queue:
+
+        - Module: `{{ $labels.module }}`
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
 
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
-        The {{ $labels.queue }} Deckhouse queue is stuck with {{ $value }} pending task(s).
-      severity: "7"
+        Module queue {{ $labels.module }} (type {{ $labels.task_type }}, hook {{ $labels.hook }}) is hung.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8DeckhouseQueueIsHungCritical
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        The critical module queue head has remained unchanged for more than 10 minutes.
+
+        Affected queue:
+
+        - Module: `{{ $labels.module }}`
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+      summary: |
+        Critical module queue {{ $labels.module }} (type {{ $labels.task_type }}, hook {{ $labels.hook }}) is hung.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8DeckhouseQueueIsHungGlobal
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        The global/parallel task head has remained unchanged for more than 10 minutes.
+
+        Affected task:
+
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+      summary: |
+        Global/Parallel task {{ $labels.task_type }} (hook {{ $labels.hook }}) is hung.
+      severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseSelfTargetAbsent
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
@@ -2614,28 +2652,6 @@ alerts:
         Obsolete antiopa_secret_copier=yes label detected.
       severity: "9"
       markupFormat: markdown
-    - name: D8SmokeMiniNotBoundPersistentVolumeClaims
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        The PersistentVolumeClaim `{{ $labels.persistentvolumeclaim }}` is in the `{{ $labels.phase }}` phase.
-
-        This indicates a problem with PersistentVolume provisioning.
-
-        To investigate the cause, check the PersistentVolumeClaim phase:
-
-        ```shell
-        d8 k -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}
-        ```
-
-        If your cluster doesn't have a disk provisioning system,
-        you can disable volume ordering for `smoke-mini` using the module settings.
-      summary: |
-        Smoke-mini has unbound or lost PersistentVolumeClaims.
-      severity: "9"
-      markupFormat: markdown
     - name: D8TerraformStateExporterClusterStateChanged
       sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
@@ -2888,330 +2904,6 @@ alerts:
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
       markupFormat: markdown
-    - name: D8UpmeterAgentPodIsNotReady
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: ""
-      summary: |
-        Upmeter agent is not Ready.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8UpmeterAgentReplicasUnavailable
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |-
-        Some `upmeter-agent` Pods are not in the Running state.
-
-        To investigate the details, do the following:
-
-        - Check the DaemonSet status:
-
-          ```shell
-          d8 k -n d8-upmeter get daemonset upmeter-agent -o json | jq .status
-          ```
-
-        - Check the Pod status:
-
-          ```shell
-          d8 k -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'
-          ```
-      summary: |
-        One or more upmeter-agent Pods are NOT Running.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8UpmeterDiskUsage
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        Disk usage for Upmeter has exceeded 80%.
-
-        The only way to resolve this is to recreate the PersistentVolumeClaim (PVC) in the following steps:
-
-        1. Save the PVC data if you need it.
-
-        1. Delete the PVC and restart the `upmeter` Pod:
-
-           ```shell
-           d8 k -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
-           ```
-
-        1. Check the status of the created PVC:
-
-           ```shell
-           d8 k -n d8-upmeter get pvc
-           ```
-      summary: |
-        Upmeter disk usage exceeds 80%.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8UpmeterProbeGarbageConfigmap
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        Probe-generated ConfigMaps were found but not cleaned up as expected.
-
-        `upmeter-agent` should automatically delete ConfigMaps produced by the `control-plane/basic` probe.
-        There should be no more ConfigMaps than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
-
-        This may indicate:
-
-        - A problem with the `kube-apiserver`.
-        - Stale ConfigMaps left by outdated `upmeter-agent` Pods after an Upmeter update.
-
-        Troubleshooting steps:
-
-        1. Check the `upmeter-agent` logs:
-
-           ```shell
-           d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'
-           ```
-
-        2. Ensure the control plane is operating normally.
-
-        3. Delete stale ConfigMaps manually:
-
-           ```shell
-           d8 k -n d8-upmeter delete cm -l heritage=upmeter
-           ```
-      summary: |
-        Garbage ConfigMaps from the basic probe are not being cleaned up.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8UpmeterProbeGarbageDeployment
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        The average number of probe-generated Deployments per `upmeter-agent` Pod is {{ $value }}.
-
-        `upmeter-agent` should automatically delete Deployments created by the `control-plane/controller-manager` probe.
-        There should not be more Deployments than master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
-
-        This may indicate:
-
-        - A problem with the `kube-apiserver`.
-        - Stale Deployments left by outdated `upmeter-agent` Pods after an Upmeter update.
-
-        Troubleshooting steps:
-
-        1. Check the `upmeter-agent` logs:
-
-           ```shell
-           d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
-           ```
-
-        2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
-
-        3. Delete stale Deployments manually:
-
-           ```shell
-           d8 k -n d8-upmeter delete deployment -l heritage=upmeter
-           ```
-      summary: |
-        Garbage Deployments from the controller-manager probe are not being cleaned up.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8UpmeterProbeGarbageNamespaces
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: "The average number of probe-created namespaces per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up namespaces created by the `control-plane/namespace` probe.  \nThere should not be more of these namespaces than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale namespaces left from older `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"namespace\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale namespaces manually:\n\n   ```shell\n   d8 k -n d8-upmeter delete ns -l heritage=upmeter\n   ```\n"
-      summary: |
-        Garbage namespaces from the namespace probe are not being cleaned up.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8UpmeterProbeGarbagePods
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: "The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up Pods created by the `control-plane/scheduler` probe.  \nThere should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale Pods left from old `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"scheduler\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale Pods manually:\n\n   ```shell\n   d8 k -n d8-upmeter delete pods -l upmeter-probe=scheduler\n   ```\n"
-      summary: |
-        Garbage Pods from the scheduler probe are not being cleaned up.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8UpmeterProbeGarbagePodsFromDeployments
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        A Pod from the `control-plane/controller-manager` probe was created more than 5 minutes ago.
-
-        `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe, and `kube-controller-manager` should remove the associated Pods within seconds.
-
-        This may indicate:
-
-        - A problem with the `kube-apiserver` or `kube-controller-manager`.
-        - Stale Pods left from outdated `upmeter-agent` Pods after an Upmeter update.
-
-        Troubleshooting steps:
-
-        1. Check the `upmeter-agent` logs:
-
-           ```shell
-           d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
-           ```
-
-        2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
-
-        3. Delete stale Pods manually:
-
-           ```shell
-           d8 k -n d8-upmeter delete pods -l upmeter-probe=controller-manager
-           ```
-      summary: |
-        Garbage Pods from the controller-manager probe are not being cleaned up.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8UpmeterProbeGarbageSecretsByCertManager
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        Probe-generated Secrets were found.
-
-        `upmeter-agent` should clean up certificates created by the `cert-manager` probe, and `cert-manager` in turn should clean up the associated Secrets.
-        There should not be more of these Secrets than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
-
-        This may indicate:
-
-        - A problem with `kube-apiserver`, `cert-manager`, or `upmeter`.
-        - Stale Secrets left from older `upmeter-agent` Pods after an Upmeter update.
-
-        Troubleshooting steps:
-
-        1. Check `upmeter-agent` logs:
-
-           ```shell
-           d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'
-           ```
-
-        2. Check that the control plane and `cert-manager` are operating normally.
-
-        3. Delete stale certificates and Secrets manually:
-
-           ```shell
-           d8 k -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
-           d8 k -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- d8 k -n d8-upmeter delete secret
-           ```
-      summary: |
-        Garbage Secrets from the cert-manager probe are not being cleaned up.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8UpmeterServerPodIsNotReady
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: ""
-      summary: |
-        Upmeter server is not Ready.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8UpmeterServerPodIsRestartingTooOften
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        The `upmeter` server has restarted {{ $value }} times in the last hour.
-
-        Frequent restarts may indicate an issue.
-        It is expected to run continuously and collect availability episodes without interruption.
-
-        To investigate the cause, check the logs:
-
-        ```shell
-        d8 k -n d8-upmeter logs -f upmeter-0 upmeter
-        ```
-      summary: |
-        Upmeter server is restarting too frequently.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8UpmeterServerReplicasUnavailable
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |-
-        Some `upmeter` Pods are not in the Running state.
-
-        To investigate the details, do the following:
-
-        - Check the StatefulSet status:
-
-          ```shell
-          d8 k -n d8-upmeter get statefulset upmeter -o json | jq .status
-          ```
-
-        - Check the Pod status:
-
-          ```shell
-          d8 k -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'
-          ```
-      summary: |
-        One or more Upmeter server Pods are NOT Running.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8UpmeterSmokeMiniMoreThanOnePVxPVC
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        The number of unnecessary `smoke-mini` PersistentVolumes (PVs) is {{ $value }}.
-
-        These PVs should be deleted automatically when released.
-
-        Possible causes:
-
-        - The `smoke-mini` StorageClass may be set to `Retain` by default.
-        - There may be issues with the CSI driver or cloud storage integration.
-
-        These PVs do not contain valuable data and should be deleted.
-
-        To list all the PVs, run the following command:
-
-        ```shell
-        d8 k get pv | grep disk-smoke-mini
-        ```
-      summary: |
-        Unnecessary smoke-mini PersistentVolumes detected in the cluster.
-      severity: "9"
-      markupFormat: markdown
-    - name: D8UpmeterTooManyHookProbeObjects
-      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 500-upmeter
-      module: upmeter
-      edition: ce
-      description: |
-        The average number of `UpmeterHookProbe` objects per `upmeter-agent` Pod is {{ $value }}, but it should always be exactly 1 per agent.
-
-        This likely happened because older `upmeter-agent` Pods left behind their `UpmeterHookProbe` objects during an Upmeter update or downscale.
-
-        Once the cause has been investigated, remove outdated objects and leave only the ones corresponding to currently running `upmeter-agent` Pods.
-
-        To view all `UpmeterHookProbe` objects, run the following command:
-
-        ```shell
-        d8 k get upmeterhookprobes.deckhouse.io
-        ```
-      summary: |
-        Too many UpmeterHookProbe objects in the cluster.
-      severity: "9"
-      markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
       moduleUrl: 140-user-authz
@@ -3265,16 +2957,6 @@ alerts:
         Connection quota utilization of the Yandex NAT instance exceeds 85% over the last 5 minutes.
       severity: "4"
       markupFormat: markdown
-    - name: DeadMansSwitch
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: This is a dead man's switch meant to ensure that the entire Alerting pipeline is functional.
-      summary: |
-        Alerting dead man's switch.
-      severity: "4"
-      markupFormat: default
     - name: DeckhouseEditionNotFound
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 002-deckhouse
@@ -3569,65 +3251,10 @@ alerts:
         Deckhouse update has failed.
       severity: "4"
       markupFormat: markdown
-    - name: DeploymentGenerationMismatch
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/propagated-kube-state-metrics.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The observed deployment generation doesn't match the expected one for Deployment `{{$labels.namespace}}/{{$labels.deployment}}`.
-      summary: |
-        Deployment is outdated.
-      severity: "4"
-      markupFormat: default
-    - name: FdExhaustionClose
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The instance `{{ $labels.job }}: {{ $labels.instance }}` is expected to exhaust its available file/socket descriptors within the next hour.
-      summary: |
-        File descriptors for {{ $labels.job }}: {{ $labels.instance }} are almost exhausted.
-      severity: "3"
-      markupFormat: default
-    - name: FdExhaustionClose
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The instance `{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }}` is expected to exhaust its available file/socket descriptors within the next hour.
-      summary: |
-        File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are almost exhausted.
-      severity: "3"
-      markupFormat: default
-    - name: FdExhaustionClose
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The instance `{{ $labels.job }}: {{ $labels.instance }}` is expected to exhaust its available file/socket descriptors within the next 4 hours.
-      summary: |
-        File descriptors for {{ $labels.job }}: {{ $labels.instance }} are exhausting soon.
-      severity: "4"
-      markupFormat: default
-    - name: FdExhaustionClose
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The instance `{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }}` is expected to exhaust its available file/socket descriptors within the next 4 hours.
-      summary: |
-        File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are exhausting soon.
-      severity: "4"
-      markupFormat: default
     - name: HelmReleasesHasResourcesWithDeprecatedVersions
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/helm/deprecated-versions.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/helm/deprecated-versions.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         To list all affected resources, run the following Prometheus query:
@@ -3644,9 +3271,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: HelmReleasesHasResourcesWithUnsupportedVersions
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/helm/deprecated-versions.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/helm/deprecated-versions.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         To list all affected resources, run the following Prometheus query:
@@ -3716,57 +3343,6 @@ alerts:
       description: There is no running kube-controller-manager. As a result, deployments and replication controllers are not progressing.
       summary: |
         Controller manager is down.
-      severity: "3"
-      markupFormat: default
-    - name: K8SKubeletDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: Prometheus failed to scrape {{ $value }}% of kubelets.
-      summary: |
-        Multiple kubelets couldn't be scraped.
-      severity: "3"
-      markupFormat: default
-    - name: K8SKubeletDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: Prometheus failed to scrape {{ $value }}% of kubelets.
-      summary: |
-        Several kubelets couldn't be scraped.
-      severity: "4"
-      markupFormat: default
-    - name: K8SKubeletTooManyPods
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: The kubelet on node {{ $labels.node }} is running {{ $value }} pods, which is close to the limit of {{ printf "kube_node_status_capacity{job=\"kube-state-metrics\",resource=\"pods\",unit=\"integer\",node=\"%s\"}" $labels.node | query | first | value }}.
-      summary: |
-        The kubelet on node {{ $labels.node }} is approaching the pod limit.
-      severity: "7"
-      markupFormat: default
-    - name: K8SManyNodesNotReady
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: '{{ $value }}% of Kubernetes nodes are not ready.'
-      summary: |
-        Too many nodes are not ready.
-      severity: "3"
-      markupFormat: default
-    - name: K8SNodeNotReady
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The kubelet on node {{ $labels.node }} has either failed to check in with the API server or has set itself to `NotReady` for more than 10 minutes.
-      summary: |
-        The status of node {{ $labels.node }} is NotReady.
       severity: "3"
       markupFormat: default
     - name: K8SSchedulerTargetDown
@@ -3883,226 +3459,6 @@ alerts:
         Prometheus is unable to scrape etcd metrics.
       severity: "5"
       markupFormat: markdown
-    - name: KubeletImageFSBytesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: ""
-      summary: |
-        No free space remaining on imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
-      severity: "5"
-      markupFormat: markdown
-    - name: KubeletImageFSBytesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Hard eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
-
-        Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Hard eviction of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "6"
-      markupFormat: markdown
-    - name: KubeletImageFSBytesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The imagefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
-
-        Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Approaching hard eviction threshold of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
-      severity: "7"
-      markupFormat: markdown
-    - name: KubeletImageFSBytesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Soft eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
-
-        Soft eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Soft eviction of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "9"
-      markupFormat: markdown
-    - name: KubeletImageFSInodesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: ""
-      summary: |
-        No free inodes remaining on imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
-      severity: "5"
-      markupFormat: markdown
-    - name: KubeletImageFSInodesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Hard eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
-
-        Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Hard eviction of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "6"
-      markupFormat: markdown
-    - name: KubeletImageFSInodesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The imagefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
-
-        Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Approaching hard eviction threshold of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
-      severity: "7"
-      markupFormat: markdown
-    - name: KubeletImageFSInodesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Soft eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
-
-        Soft eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Soft eviction of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "9"
-      markupFormat: markdown
-    - name: KubeletNodeFSBytesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: ""
-      summary: |
-        No free space remaining on nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
-      severity: "5"
-      markupFormat: markdown
-    - name: KubeletNodeFSBytesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Hard eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
-
-        Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Hard eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "6"
-      markupFormat: markdown
-    - name: KubeletNodeFSBytesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The nodefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
-
-        Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Approaching hard eviction threshold of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
-      severity: "7"
-      markupFormat: markdown
-    - name: KubeletNodeFSBytesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Soft eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
-
-        Soft eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Soft eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "9"
-      markupFormat: markdown
-    - name: KubeletNodeFSInodesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: ""
-      summary: |
-        No free inodes remaining on nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
-      severity: "5"
-      markupFormat: markdown
-    - name: KubeletNodeFSInodesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Hard eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
-
-        Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Hard eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "6"
-      markupFormat: markdown
-    - name: KubeletNodeFSInodesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The nodefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
-
-        Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Approaching hard eviction threshold of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
-      severity: "7"
-      markupFormat: markdown
-    - name: KubeletNodeFSInodesUsage
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Soft eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
-
-        Soft eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
-
-        Current usage: {{ .Value }}%
-      summary: |
-        Soft eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "9"
-      markupFormat: markdown
     - name: KubernetesCoreDNSHasCriticalErrors
       sourceFile: modules/042-kube-dns/monitoring/prometheus-rules/kubernetes/dns.yaml
       moduleUrl: 042-kube-dns
@@ -4120,57 +3476,6 @@ alerts:
         Critical errors found in CoreDNS.
       severity: "5"
       markupFormat: markdown
-    - name: KubernetesDnsTargetDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/kube-dns.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        Prometheus is unable to collect metrics from `kube-dns`, which makes its status unknown.
-
-        Steps to troubleshoot:
-
-        1. Check the deployment details:
-
-           ```bash
-           d8 k -n kube-system describe deployment -l k8s-app=kube-dns
-           ```
-
-        2. Check the pod details:
-
-           ```bash
-           d8 k -n kube-system describe pod -l k8s-app=kube-dns
-           ```
-      summary: |
-        Kube-dns or CoreDNS are not being monitored.
-      severity: "5"
-      markupFormat: markdown
-    - name: KubeStateMetricsDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kube-state-metrics.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        Deckhouse has detected that no metrics about cluster resources have been available for the past 5 minutes.
-        As a result, most alerts and monitoring panels aren't working.
-
-        Steps to troubleshoot:
-
-        1. Check the `kube-state-metrics` pods:
-
-           ```bash
-           d8 k -n d8-monitoring describe pod -l app=kube-state-metrics
-           ```
-
-        2. Check the deployment logs:
-
-           ```bash
-           d8 k -n d8-monitoring describe deploy kube-state-metrics
-           ```
-      summary: |
-        Kube-state-metrics isn't working in the cluster.
-      severity: "3"
-      markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
       sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb
@@ -4184,28 +3489,6 @@ alerts:
         Orphaned service with an irrelevant L2LoadBalancer name has been found.
       severity: "4"
       markupFormat: markdown
-    - name: LoadBalancerServiceWithoutExternalIP
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/propagated-loadbalancer.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        One or more services of the `LoadBalancer` type have not received an external address.
-
-        To list affected services, run the following command:
-
-        ```bash
-        d8 k get svc -Ao json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | select(.status.loadBalancer.ingress[0].ip == null) | "namespace: \(.metadata.namespace), name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
-        ```
-
-        Steps to troubleshoot:
-
-        - Check the `cloud-controller-manager` logs in the `d8-cloud-provider-*` namespace.
-        - If you are using a bare-metal cluster with the `metallb` module enabled, ensure the address pool has not been exhausted.
-      summary: |
-        A LoadBalancer has not been created.
-      severity: "4"
-      markupFormat: default
     - name: ModuleAtConflict
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 002-deckhouse
@@ -4498,57 +3781,6 @@ alerts:
         NAT instance {{ $labels.name }} is in a deprecated availability zone.
       severity: "9"
       markupFormat: markdown
-    - name: NodeConntrackTableFull
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        As a result, no new connections created or accepted on the node. Keeping the `conntrack` table at full capacity may lead to erratic software behavior.
-
-        To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
-      summary: |
-        The conntrack table on node {{ $labels.node }} is full.
-      severity: "3"
-      markupFormat: markdown
-    - name: NodeConntrackTableFull
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        The `conntrack` table on node `{{ $labels.node }}` is currently at {{ $value }}% of its maximum capacity.
-
-        This is acceptable as long as the `conntrack` table remains 70-80% full. However, if it reaches full capacity, new connections may fail, causing network disruptions and erratic software behavior.
-
-        To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
-      summary: |
-        The conntrack table on node {{ $labels.node }} is approaching the size limit.
-      severity: "4"
-      markupFormat: markdown
-    - name: NodeExporterDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: Prometheus has been unable to scrape a `node-exporter` for more than 10 minutes, or `node-exporters` have disappeared from service discovery.
-      summary: |
-        Prometheus couldn't scrape a node-exporter.
-      severity: "3"
-      markupFormat: default
-    - name: NodeFilesystemIsRO
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-ro-fs.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        The file system on the node has been switched to read-only mode.
-
-        To investigate the cause, check the node logs.
-      summary: |
-        Node file system is read-only.
-      severity: "4"
-      markupFormat: default
     - name: NodeGroupHasStaticInternalNetworkCIDRsField
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-deprecate.yaml
       moduleUrl: 040-node-manager
@@ -4835,73 +4067,6 @@ alerts:
         Node {{ $labels.node }} is stuck in draining.
       severity: "6"
       markupFormat: markdown
-    - name: NodeSUnreclaimBytesUsageHigh
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        The node `{{ $labels.node }}` has a potential kernel memory leak. One known issue could be causing this problem.
-
-        Steps to troubleshoot:
-
-        1. Check the `cgroupDriver` setting on node `{{ $labels.node }}`:
-
-           ```bash
-           cat /var/lib/kubelet/config.yaml | grep 'cgroupDriver: systemd'
-           ```
-
-        1. If `cgroupDriver` is set to `systemd`, a reboot is required to switch back to the `cgroupfs` driver.
-           In this case, drain and reboot the node.
-
-        For further details, refer to the [issue](https://github.com/deckhouse/deckhouse/issues/2152).
-      summary: |
-        Node {{ $labels.node }} has high kernel memory usage.
-      severity: "4"
-      markupFormat: markdown
-    - name: NodeSystemExporterDoesNotExistsForNode
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        To resolve the issue, follow these steps:
-
-        1. Find the `node-exporter` Pod running on the affected node:
-
-           ```bash
-           d8 k -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
-           ```
-
-        2. Describe the `node-exporter` Pod:
-
-           ```bash
-           d8 k -n d8-monitoring describe pod <POD_NAME>
-           ```
-
-        3. Verify that the kubelet is running on node `{{ $labels.node }}`.
-      summary: |
-        Some system exporters aren't functioning correctly on node {{ $labels.node }}.
-      severity: "4"
-      markupFormat: markdown
-    - name: NodeTCPMemoryExhaust
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        The TCP stack on node `{{ $labels.node }}` is experiencing high memory pressure.
-        This may be caused by applications with intensive TCP networking usage.
-
-        Steps to troubleshoot:
-
-        1. Identify applications consuming excessive TCP memory.
-        1. Adjust TCP memory configuration if needed.
-        1. Investigate network traffic sources.
-      summary: |
-        Node {{ $labels.node }} has high TCP stack memory usage.
-      severity: "6"
-      markupFormat: markdown
     - name: NodeTimeOutOfSync
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
       moduleUrl: 470-chrony
@@ -4919,33 +4084,6 @@ alerts:
       summary: |
         Clock on the node {{$labels.node}} is drifting.
       severity: "5"
-      markupFormat: markdown
-    - name: NodeUnschedulable
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        The node `{{ $labels.node }}` is in a cordon-protected state, meaning no new pods can be scheduled onto it.
-
-        Someone may have executed one of the following commands on this node:
-
-        - To cordon the node:
-
-          ```bash
-          d8 k cordon {{ $labels.node }}
-          ```
-
-        - To drain the node (if draining has been running for more than 20 minutes):
-
-          ```bash
-          d8 k drain {{ $labels.node }}
-          ```
-
-        The was likely caused by the scheduled maintenance of that node.
-      summary: |
-        Node {{ $labels.node }} is cordon-protected, preventing new pods from being scheduled.
-      severity: "8"
       markupFormat: markdown
     - name: NTPDaemonOnNodeDoesNotSynchronizeTime
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
@@ -5187,40 +4325,6 @@ alerts:
         At least one object violates the configured cluster operation policies.
       severity: "3"
       markupFormat: markdown
-    - name: PodOOMKilled
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/oom-kills.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The container was killed by the Linux OOM Killer.
-
-        * Namespace: {{ $labels.namespace }}
-        * Pod: {{ $labels.pod_name }}
-        * Container: {{ $labels.container_name }}
-
-        Check memory limits and actual memory usage.
-      summary: |
-        Pod was OOMKilled.
-      severity: "4"
-      markupFormat: markdown
-    - name: PodOOMKilled
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/propagated-oom-kills.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The container was killed by the Linux OOM Killer.
-
-        * Namespace: {{ $labels.namespace }}
-        * Pod: {{ $labels.pod_name }}
-        * Container: {{ $labels.container_name }}
-
-        Check memory limits and actual memory usage.
-      summary: |
-        Pod was OOMKilled.
-      severity: "4"
-      markupFormat: markdown
     - name: PodSecurityStandardsViolation
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
       moduleUrl: 015-admission-policy-engine
@@ -5248,39 +4352,6 @@ alerts:
       summary: |
         At least one pod violates the configured cluster pod security standards.
       severity: "3"
-      markupFormat: markdown
-    - name: PodStatusIsIncorrect
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/propagated-pod-status.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The Pod `{{ $labels.namespace }}/{{ $labels.pod }}` running on node `{{ $labels.node }}` is listed as `NotReady` while all the Pod's containers are `Ready`.
-
-        This could have been caused by the [known Kubernetes bug](https://github.com/kubernetes/kubernetes/issues/80968).
-
-        Steps to troubleshoot:
-
-        1. Identify all pods with this state:
-
-           ```bash
-           d8 k get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'
-           ```
-
-        2. Identify all affected nodes:
-
-           ```bash
-           d8 k get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c
-           ```
-
-        3. Restart kubelet on each node:
-
-           ```bash
-           systemctl restart kubelet
-           ```
-      summary: |
-        Incorrect state of Pod {{ $labels.namespace }}/{{ $labels.pod }} running on node {{ $labels.node }}.
-      severity: "6"
       markupFormat: markdown
     - name: SecurityPolicyViolation
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
@@ -5321,33 +4392,6 @@ alerts:
         No available replicas in Deployment standby-holder-{{$labels.node_group_name}}.
       severity: "5"
       markupFormat: markdown
-    - name: StorageClassCloudManual
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/storage-class.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        A StorageClass using a `cloud-provider` provisioner shouldn't be deployed manually.
-        Such StorageClasses are managed by the `cloud-provider` module.
-
-        Instead of the manual deployment, modify the `cloud-provider` module configuration as needed.
-      summary: |
-        Manually deployed StorageClass {{ $labels.name }} found in the cluster.
-      severity: "6"
-      markupFormat: markdown
-    - name: StorageClassDefaultDuplicate
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/storage-class.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        Deckhouse has detected that more than one StorageClass in the cluster is annotated as default.
-
-        This may have been caused by a manually deployed StorageClass that is overlapping with the default storage configuration provided by the `cloud-provider` module.
-      summary: |
-        Multiple default StorageClasses found in the cluster.
-      severity: "6"
-      markupFormat: markdown
     - name: UnmetCloudConditions
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
       moduleUrl: 040-node-manager
@@ -5364,24 +4408,6 @@ alerts:
       summary: |
         Deckhouse update is unavailable due to unmet cloud provider conditions.
       severity: "6"
-      markupFormat: markdown
-    - name: UnsupportedContainerRuntimeVersion
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/cri-version.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        Deckhouse has detected that the node {{$labels.node}} is running an unsupported version of CRI {{$labels.container_runtime_version}}.
-
-        Supported CRI versions for Kubernetes {{$labels.kubelet_version}}:
-
-        * Containerd 1.4.
-        * Containerd 1.5.
-        * Containerd 1.6.
-        * Containerd 1.7.
-      summary: |
-        Unsupported version of CRI {{$labels.container_runtime_version}} installed for Kubernetes version {{$labels.kubelet_version}}.
-      severity: undefined
       markupFormat: markdown
     - name: VerticalPodAutoscalerDeprecatedUpdateModeAuto
       sourceFile: modules/302-vertical-pod-autoscaler/monitoring/prometheus-rules/update-mode-deprecation.yaml
@@ -5428,7 +4454,6 @@ modules-having-alerts:
     - kube-dns
     - metallb
     - monitoring-applications
-    - monitoring-kubernetes
     - multitenancy-manager
     - node-local-dns
     - node-manager
@@ -5436,7 +4461,6 @@ modules-having-alerts:
     - openvpn
     - secret-copier
     - terraform-manager
-    - upmeter
     - user-authn
     - user-authz
     - vertical-pod-autoscaler

@@ -34,7 +34,7 @@ k8s:
     status: end-of-life
     patch: 13
     bashible: *bashible
-    clusterAutoscalerPatch: '3'
+    clusterAutoscalerPatch: "3"
     crictlPatch: 0
     csi:
       provisioner: v5.2.0
@@ -47,7 +47,7 @@ k8s:
     status: available
     patch: 12
     bashible: *bashible
-    clusterAutoscalerPatch: '1'
+    clusterAutoscalerPatch: "1"
     crictlPatch: 0
     csi:
       provisioner: v5.2.0
@@ -61,7 +61,7 @@ k8s:
     status: available
     patch: 8
     bashible: *bashible
-    clusterAutoscalerPatch: '1'
+    clusterAutoscalerPatch: "1"
     crictlPatch: 0
     csi:
       provisioner: v5.2.0
@@ -74,7 +74,7 @@ k8s:
     status: available
     patch: 5
     bashible: *bashible
-    clusterAutoscalerPatch: '1'
+    clusterAutoscalerPatch: "1"
     crictlPatch: 0
     csi:
       provisioner: v5.2.0
@@ -87,7 +87,7 @@ k8s:
     status: preview
     patch: 1
     bashible: *bashible
-    clusterAutoscalerPatch: '1'
+    clusterAutoscalerPatch: "1"
     crictlPatch: 0
     csi:
       provisioner: v5.2.0
@@ -97,4 +97,4 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
 d8:
-  d8CliVersion: v0.31.0
+  d8CliVersion: v0.32.0

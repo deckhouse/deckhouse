@@ -411,7 +411,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 
 	s.debug("SSH client started for replacing kube client")
 
-	if err := newSSHClient.RefreshPrivateKeys(); err != nil {
+	if err := newSSHClient.RefreshPrivateKeys(ctx); err != nil {
 		return fmt.Errorf("Failed to refresh ssh agent private keys: %w", err)
 	}
 

@@ -15,7 +15,6 @@
 package infrastructureprovider
 
 import (
-	"context"
 	"slices"
 	"testing"
 
@@ -27,7 +26,7 @@ import (
 
 func TestInstanceClassValidator(t *testing.T) {
 	metaConfig, err := config.ParseConfigFromData(
-		context.TODO(),
+		t.Context(),
 		`
 ---
 apiVersion: deckhouse.io/v1

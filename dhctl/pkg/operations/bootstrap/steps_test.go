@@ -15,7 +15,6 @@
 package bootstrap
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -71,7 +70,7 @@ func TestBootstrapGetNodesFromCache(t *testing.T) {
 }
 
 func TestInstallDeckhouse(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	defer func() {
@@ -111,7 +110,7 @@ func TestInstallDeckhouse(t *testing.T) {
 			},
 		}
 
-		_, err := fakeClient.CoreV1().Pods("d8-system").Create(context.TODO(), pod, metav1.CreateOptions{})
+		_, err := fakeClient.CoreV1().Pods("d8-system").Create(t.Context(), pod, metav1.CreateOptions{})
 		if err != nil {
 			panic(err)
 		}
@@ -126,7 +125,7 @@ func TestInstallDeckhouse(t *testing.T) {
 			Data: map[string]string{manifests.ClusterUUIDCmKey: uuid},
 		}
 
-		_, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+		_, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(t.Context(), cm, metav1.CreateOptions{})
 		if err != nil {
 			panic(err)
 		}
@@ -147,10 +146,10 @@ func TestInstallDeckhouse(t *testing.T) {
 
 	assertDeploymentAndUUIDCmCreated := func(t *testing.T, fakeClient *client.KubernetesClient) {
 		// todo assert all manifests
-		_, err := fakeClient.AppsV1().Deployments("d8-system").Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+		_, err := fakeClient.AppsV1().Deployments("d8-system").Get(t.Context(), "deckhouse", metav1.GetOptions{})
 		require.NoError(t, err)
 
-		uuidCm, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(context.TODO(), manifests.ClusterUUIDCm, metav1.GetOptions{})
+		uuidCm, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(t.Context(), manifests.ClusterUUIDCm, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		require.Equal(t, uuidCm.Data[manifests.ClusterUUIDCmKey], clusterUUID)
@@ -158,10 +157,10 @@ func TestInstallDeckhouse(t *testing.T) {
 
 	assertNotDeploymentCreatedAndUUIDCmIsSame := func(t *testing.T, fakeClient *client.KubernetesClient, uuid string) {
 		// todo assert all manifests
-		_, err := fakeClient.AppsV1().Deployments("d8-system").Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+		_, err := fakeClient.AppsV1().Deployments("d8-system").Get(t.Context(), "deckhouse", metav1.GetOptions{})
 		require.NotNil(t, err)
 
-		uuidCm, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(context.TODO(), manifests.ClusterUUIDCm, metav1.GetOptions{})
+		uuidCm, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(t.Context(), manifests.ClusterUUIDCm, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		require.Equal(t, uuidCm.Data[manifests.ClusterUUIDCmKey], uuid)

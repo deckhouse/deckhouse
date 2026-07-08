@@ -322,6 +322,7 @@ type UpdateConstraint struct {
 type ModuleReleaseStatus struct {
 	// Current status of the release.
 	// +kubebuilder:validation:Enum=Pending;Deployed;Superseded;Suspended;Skipped;Terminating
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Deployed, Superseded, Suspended, Skipped, Terminating]
 	Phase string `json:"phase,omitempty"`
 	// Status indicating that the release is ready for deployment. For the Manual update mode only (`update.mode: Manual`).
 	// +optional

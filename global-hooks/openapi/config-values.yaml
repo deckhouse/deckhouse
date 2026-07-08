@@ -60,9 +60,11 @@ properties:
         type: string
         default: nginx
         description: |
-          The class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
+          Class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used by the Deckhouse ecosystem modules.
 
-          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default IngressClass for all modules. If any other Ingress controller name is used, it will not be used by default.
+          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default Ingress controller for all modules.
+
+          If any other IngressClass name is used, a corresponding Ingress controller will not be used by default.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
@@ -106,7 +108,7 @@ properties:
             - [ "dedicated.example.com" ]
       https:
         description: |
-          The HTTPS implementation used by the Deckhouse modules.
+          HTTPS access implementation method used by the Deckhouse ecosystem modules.
         type: object
         additionalProperties: false
         default: {}
@@ -123,11 +125,12 @@ properties:
           mode:
             type: string
             description: |
-              The HTTPS usage mode:
-              * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
-              * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
-              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/modules/user-authn/));
-              * `OnlyInURI` — Deckhouse modules use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
+              HTTPS usage mode:
+
+              * `CertManager`: Modules use HTTPS and obtain certificates automatically using the ClusterIssuer defined in the [`certManager.clusterIssuerName`](#parameters-modules-https-certmanager-clusterissuername) parameter.
+              * `CustomCertificate`: Modules use HTTPS with the certificate from the `d8-system` namespace.
+              * `Disabled`: Modules use HTTP only (some modules, such as [`user-authn`](/modules/user-authn/), may not work).
+              * `OnlyInURI`: Modules use HTTP in the expectation that there is an external upstream HTTPS load balancer, which terminates HTTPS. This load balancer should be capable of redirecting requests from HTTP to HTTPS.
             default: CertManager
             enum:
             - Disabled
@@ -144,9 +147,19 @@ properties:
                 default: 'letsencrypt'
                 x-doc-default: 'letsencrypt'
                 description: |
-                  Name of a `ClusterIssuer` to use for Deckhouse modules.
+                  ClusterIssuer name used by modules to obtain TLS certificates.
 
-                  The [cert-manager](https://deckhouse.io/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+                  The [`cert-manager`](/modules/cert-manager/) module offers the following ClusterIssuer options:
+                  
+                  - `letsencrypt`
+                  - `letsencrypt-staging`
+                  - `selfsigned`
+                  - `clouddns`
+                  - `cloudflare`
+                  - `digitalocean`
+                  - `route53`
+                  
+                  You can use your own ClusterIssuer if necessary.
           customCertificate:
             type: object
             additionalProperties: false
@@ -154,9 +167,9 @@ properties:
               secretName:
                 type: string
                 description: |
-                  The name of the secret in the `d8-system` namespace to use with Deckhouse modules.
+                  Name of the Secret in the `d8-system` namespace containing a TLS certificate for modules.
 
-                  This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+                  This Secret must be in the [`kubernetes.io/tls`](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
                 default: "false"
       resourcesRequests:
         description: |
@@ -219,6 +232,17 @@ properties:
     default: {}
     type: object
     properties:
+      ingressClass:
+        type: string
+        default: nginx
+        description: |
+          Class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used by the Deckhouse ecosystem applications.
+
+          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default Ingress controller for all applications.
+
+          If any other IngressClass name is used, a corresponding Ingress controller will not be used by default.
+        x-examples: [ "nginx" ]
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
         type: string
         pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -244,3 +268,68 @@ properties:
           For example, if the nodes are registered under the `company.my` zone, the template must be `%s.%s.%s.company.my`.
         x-doc-examples: [ "%s.%s.%s.company.my", "%s.%s.%s.kube.company.my" ]
         x-examples: [ "%s.%s.%s.kube.company.my" ]
+      https:
+        description: |
+          HTTPS access implementation method used by the Deckhouse ecosystem applications.
+        type: object
+        additionalProperties: false
+        default: {}
+        x-examples:
+        - certManager:
+            clusterIssuerName: letsencrypt
+          mode: CertManager
+        - mode: Disabled
+        - mode: OnlyInURI
+        - mode: CustomCertificate
+          customCertificate:
+            secretName: plainstring
+        properties:
+          mode:
+            type: string
+            description: |
+              HTTPS usage mode:
+
+              * `CertManager`: Applications use HTTPS and obtain certificates automatically using the ClusterIssuer defined in the [`certManager.clusterIssuerName`](#parameters-applications-https-certmanager-clusterissuername) parameter.
+              * `CustomCertificate`: Applications use HTTPS with the certificate from the `d8-system` namespace.
+              * `Disabled`: Applications use HTTP only.
+              * `OnlyInURI`: Applications use HTTP in the expectation that there is an external upstream HTTPS load balancer, which terminates HTTPS. This load balancer should be capable of redirecting requests from HTTP to HTTPS.
+            default: CertManager
+            enum:
+            - Disabled
+            - CertManager
+            - CustomCertificate
+            - OnlyInURI
+          certManager:
+            type: object
+            additionalProperties: false
+            default: {}
+            properties:
+              clusterIssuerName:
+                type: string
+                default: 'letsencrypt'
+                x-doc-default: 'letsencrypt'
+                description: |
+                  ClusterIssuer name used by applications to obtain TLS certificates.
+
+                  The [`cert-manager`](/modules/cert-manager/) module offers the following ClusterIssuer options:
+                  
+                  - `letsencrypt`
+                  - `letsencrypt-staging`
+                  - `selfsigned`
+                  - `clouddns`
+                  - `cloudflare`
+                  - `digitalocean`
+                  - `route53`
+                  
+                  You can use your own ClusterIssuer if necessary.
+          customCertificate:
+            type: object
+            additionalProperties: false
+            properties:
+              secretName:
+                type: string
+                description: |
+                  Name of the Secret in the `d8-system` namespace containing a TLS certificate for applications.
+
+                  This Secret must be in the [`kubernetes.io/tls`](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+                default: "false"

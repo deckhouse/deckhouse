@@ -15,7 +15,6 @@
 package deckhouse
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,7 +54,7 @@ var crdGVR = schema.GroupVersionResource{
 }
 
 func TestEnsureModuleConfigCRD(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("creates CRD with heritage label from existing file", func(t *testing.T) {
 		crdPath := filepath.Join(t.TempDir(), "module-config.yaml")

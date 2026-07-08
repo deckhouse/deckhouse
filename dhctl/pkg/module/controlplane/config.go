@@ -15,13 +15,13 @@
 package controlplane
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/go-openapi/spec"
 	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/api/resource"
-
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
@@ -37,18 +37,18 @@ type SchemaStore interface {
 }
 
 type SettingsExtractor struct {
-	edition        string
-	loggerProvider log.LoggerProvider
-	cfg            *config.MetaConfig
-	schemaStore    SchemaStore
+	edition     string
+	logger      *slog.Logger
+	cfg         *config.MetaConfig
+	schemaStore SchemaStore
 }
 
-func NewSettingsExtractor(cfg *config.MetaConfig, schemaStore SchemaStore, edition string, loggerProvider log.LoggerProvider) *SettingsExtractor {
+func NewSettingsExtractor(cfg *config.MetaConfig, schemaStore SchemaStore, edition string, logger *slog.Logger) *SettingsExtractor {
 	return &SettingsExtractor{
-		cfg:            cfg,
-		edition:        edition,
-		loggerProvider: loggerProvider,
-		schemaStore:    schemaStore,
+		cfg:         cfg,
+		edition:     edition,
+		logger:      logger,
+		schemaStore: schemaStore,
 	}
 }
 
@@ -59,14 +59,14 @@ func (e *SettingsExtractor) SignatureMode() (string, error) {
 		return "", fmt.Errorf("Internal error: meta config was not passed to control-plane settings extractor")
 	}
 
-	logger := e.loggerProvider()
+	logger := e.logger
 
 	// TODO after enable signature for ee and fe after full ready sig-migrate
 	// change to !config.IsEEEdition
 	// and after change fix config_test.go (see TODO comments)
 	if !config.IsCSEdition(e.edition) {
 		// TODO fix cse to ee after enable in ee and fe
-		logger.DebugF("Got non-cse edition '%s'. Returning no signature mode", e.edition)
+		logger.DebugContext(context.Background(), fmt.Sprintf("Got non-cse edition '%s'. Returning no signature mode", e.edition))
 		return NoSignatureMode, nil
 	}
 
@@ -77,13 +77,13 @@ func (e *SettingsExtractor) SignatureMode() (string, error) {
 
 	defaultMode := e.findDefaultSignatureMode(schema)
 
-	logger.DebugF("Got ee edition, trying to extract signature mode")
+	logger.DebugContext(context.Background(), "Got ee edition, trying to extract signature mode")
 
 	mc := e.cfg.FindModuleConfig(moduleName)
 
 	logAndReturnDefaultMode := func(msg string, args ...any) (string, error) {
 		msg = fmt.Sprintf(msg, args...)
-		logger.DebugF("%s. Returning mode '%s'", msg, defaultMode)
+		logger.DebugContext(context.Background(), fmt.Sprintf("%s. Returning mode '%s'", msg, defaultMode))
 
 		return defaultMode, nil
 	}
@@ -206,10 +206,10 @@ func (e *SettingsExtractor) extractAPIServerSettings() (map[string]any, error) {
 }
 
 func (e *SettingsExtractor) findDefaultSignatureMode(schema *spec.Schema) string {
-	logger := e.loggerProvider()
+	logger := e.logger
 
 	returnDefault := func(msg string) string {
-		logger.DebugF("%s, returning %s", msg, defaultSignatureMode)
+		logger.DebugContext(context.Background(), fmt.Sprintf("%s, returning %s", msg, defaultSignatureMode))
 		return defaultSignatureMode
 	}
 

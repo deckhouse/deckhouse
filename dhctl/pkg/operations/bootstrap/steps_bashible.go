@@ -30,7 +30,6 @@ import (
 	"github.com/name212/govalue"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
@@ -55,7 +54,6 @@ type BashiblePipelineParams struct {
 	DevicePath             string
 	CommanderMode          bool
 	IsDebug                bool
-	LoggerProvider         dhctllog.LoggerProvider
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	GlobalOpts             *options.GlobalOptions
 }
@@ -67,10 +65,6 @@ func (p *BashiblePipelineParams) Validate() error {
 
 	if govalue.IsNil(p.MetaConfig) {
 		return p.errIsNil("MetaConfig")
-	}
-
-	if govalue.IsNil(p.LoggerProvider) {
-		return p.errIsNil("LoggerProvider")
 	}
 
 	return nil
@@ -100,18 +94,17 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	cfg := params.MetaConfig
 	nodeInterface := params.Node
 	nodeIP := params.NodeIP
-	loggerProvider := params.LoggerProvider
 	devicePath := params.DevicePath
 	globalOpts := params.GlobalOpts
-	logger := params.LoggerProvider()
+	logger := dhlog.FromContext(ctx)
 
-	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
+	depsChecker := deps.NewDependenciesChecker(params.Node)
 	if err := depsChecker.Check(ctx); err != nil {
 		return err
 	}
 
 	templateController := template.NewTemplateController("")
-	bashible := dhbashible.NewRunner(nodeInterface, loggerProvider)
+	bashible := dhbashible.NewRunner(nodeInterface, logger)
 
 	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing bootstrap", func(ctx context.Context) error {
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Rendered templates directory %s", templateController.TmpDir))
@@ -142,7 +135,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	bundleRegistryTunnelStop, err := registry.InitTunnel(ctx, registry.TunnelParams{
 		MetaConfig: cfg,
 		Node:       params.Node,
-		Logger:     params.LoggerProvider(),
+		Logger:     logger,
 		GlobalOpts: globalOpts,
 	})
 	if err != nil {
@@ -152,12 +145,12 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 	// RPP + RPP tunnel
 	registryPackagesProxyCleanup, err := rpp.Init(ctx, rpp.InitParams{
-		MetaConfig:     cfg,
-		Node:           nodeInterface,
-		LoggerProvider: params.LoggerProvider,
-		SignCheck:      config.GetRPPSignCheck(),
-		GlobalOpts:     globalOpts,
-		Interactive:    input.IsTerminal(),
+		MetaConfig:  cfg,
+		Node:        nodeInterface,
+		Logger:      logger,
+		SignCheck:   config.GetRPPSignCheck(),
+		GlobalOpts:  globalOpts,
+		Interactive: input.IsTerminal(),
 	})
 
 	if err != nil {
@@ -173,7 +166,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
 		if !params.IsDebug {
 			if err := os.RemoveAll(templateController.TmpDir); err != nil {
-				params.LoggerProvider().WarnF("failed to cleanup temporary directory: %v", err)
+				dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to cleanup temporary directory: %v", err))
 			}
 		}
 	})
@@ -187,7 +180,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	modulesPreparators, controlPlanePreparator := getModulesPreparators(params)
+	modulesPreparators, controlPlanePreparator := getModulesPreparators(ctx, params)
 
 	if err := PrepareControlPlaneArtifacts(ctx, nodeInfo, controlPlanePreparator, templateController, globalOpts); err != nil {
 		return err
@@ -196,7 +189,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseNodePreparation)
 
 	for _, p := range modulesPreparators {
-		logger.DebugF("Prepare module %s", p.Module())
+		// dhlog.FromContext(ctx).DebugContext(ctx).WarnContext(ctx, fmt.Sprintf("Prepare module %s", p.Module()))
 		if err := p.PrepareModule(ctx); err != nil {
 			return err
 		}
@@ -216,18 +209,18 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	return nil
 }
 
-func getModulesPreparators(params *BashiblePipelineParams) ([]ModulePreparator, *controlplane.BootstrapPreparator) {
+func getModulesPreparators(ctx context.Context, params *BashiblePipelineParams) ([]ModulePreparator, *controlplane.BootstrapPreparator) {
 	controlPlaneSettings := controlplane.NewSettingsExtractor(
 		params.MetaConfig,
 		config.NewSchemaStore(params.GlobalOpts),
 		config.GetEdition(),
-		params.LoggerProvider,
+		dhlog.FromContext(ctx),
 	)
 
 	cp := controlplane.NewBootstrapPreparator(
 		controlPlaneSettings,
 		params.Node,
-		params.LoggerProvider,
+		dhlog.FromContext(ctx),
 	)
 
 	return []ModulePreparator{cp}, cp
@@ -283,7 +276,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 				retry.WithName("%s", name),
 				retry.WithAttempts(150),
 				retry.WithWait(1*time.Second),
-				retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
+				retry.WithLogger(dhlog.FromContext(ctx)),
 			)
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)

@@ -36,7 +36,7 @@ spec:
 Проверка выполняется, чтобы убедиться в следующем:
 
 - указанный [DexProvider](cr.html#dexprovider) существует и включён;
-- внутрикластерный эндпоинт Dex discovery доступен;
+- эндпоинт Dex discovery внутри кластера доступен;
 - эндпоинт внешнего провайдера доступен.
 
 Для OIDC-провайдеров дополнительно читаются discovery-документ и JWKS. Для LDAP-провайдеров проверяется доступность TCP/TLS/StartTLS и, если включён Kerberos, наличие секрета с keytab. Проверка не выполняет полный сценарий входа и не валидирует пароль тестового пользователя.
@@ -94,7 +94,7 @@ spec:
 
 Для этого выполните следующие шаги:
 * **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
-* **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
+* **cloud GitLab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
 * (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` при создании приложения.
 
 Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
@@ -170,7 +170,7 @@ spec:
 
 После выбора `realm` для настройки, добавления пользователя в [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) и создания клиента в разделе [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) с включенной [аутентификацией](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config), которая необходима для генерации `clientSecret`, выполните следующие шаги:
 
-* Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
+* Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределённое сопоставление `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
 * В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
 * В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
 
@@ -199,10 +199,10 @@ spec:
 
 Если в Keycloak не используется подтверждение учетных записей по email, для корректной работы с ним в качестве провайдера аутентификации внесите изменения в настройку [`Client scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) одним из следующих способов:
 
-* Удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»).
+* Удалите сопоставление `Email verified` («Client Scopes» → «Email» → «Mappers»).
   Это необходимо для корректной обработки значения `true` в поле [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав пользователям с неподтвержденным email.
 
-* Если отредактировать или удалить маппинг `Email verified` невозможно, создайте отдельный Client Scope с именем `email_dkp` (или любым другим) и добавьте в него два маппинга:
+* Если отредактировать или удалить сопоставление `Email verified` невозможно, создайте отдельный Client Scope с именем `email_dkp` (или любым другим) и добавьте в него два сопоставления:
   * `email`: «Client Scopes» → `email_dkp` → «Add mapper» → «From predefined mappers» → `email`;
   * `email verified`: «Client Scopes» → `email_dkp` → «Add mapper» → «By configuration» → «Hardcoded claim». Укажите следующие поля:
     * «Name»: `email verified`;
@@ -447,14 +447,14 @@ spec:
 
 Для настройки SAML Identity Provider:
 
-1. Зарегистрируйте Dex как Service Provider (SP) в вашем IdP со следующими параметрами:
+1. Зарегистрируйте Dex как Service Provider (SP) у вашего провайдера идентификации со следующими параметрами:
    - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
    - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
-   - **Формат NameID**: `persistent` или `emailAddress`
+   - **Формат идентификатора имени**: `persistent` или `emailAddress`
 
-1. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
+1. Настройте сопоставление атрибутов в провайдере идентификации для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
 
-1. Экспортируйте сертификат подписи IdP и укажите его в поле `rootCAData` ресурса DexProvider.
+1. Экспортируйте сертификат подписи провайдера идентификации и укажите его в поле `rootCAData` ресурса DexProvider.
 
 {% alert level="info" %}
 SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля `user-authn`.
@@ -549,7 +549,11 @@ spec:
 
 ### Операции над локальным пользователем
 
-Для административных действий над локальными пользователями используйте команды `d8 iam user`. Они создают ресурс [UserOperation](cr.html#useroperation), дожидаются выполнения операции и выводят результат.
+Операции сброса пароля, сброса 2FA и блокировки выполняются через ресурс [UserOperation](cr.html#useroperation). В поле `initiatorType` указывается, кто инициировал операцию: администратор (`admin`), система (`system`) или сам пользователь (`self`).
+
+#### Административные операции
+
+Для административных действий над локальными пользователями используйте команды `d8 iam user`. Они создают ресурс UserOperation с `initiatorType: admin`, дожидаются выполнения операции и выводят результат.
 
 При выполнении операций `ResetPassword`, `Reset2FA` и `Lock` удаляются объекты Dex OfflineSessions и RefreshToken, принадлежащие пользователю. Это завершает активные offline-сессии пользователя и требует повторной аутентификации.
 
@@ -589,13 +593,21 @@ d8 iam user reset2fa admin
 d8 iam user lock admin 30m
 ```
 
-Пример разблокировки пользователя:
+Разблокировка пользователя:
 
 ```shell
 d8 iam user unlock admin
 ```
 
 По умолчанию команды ожидают завершения операции. Чтобы только создать UserOperation и вывести его имя, используйте флаг `--wait=false`.
+
+#### Сброс пароля пользователем
+
+Локальный пользователь может самостоятельно сбросить свой пароль в интерфейсе аутентификации DKP. При этом создаётся ресурс UserOperation с типом `ResetPassword` и `initiatorType: self`.
+
+Самостоятельный сброс пароля доступен только для локальных учётных записей (встроенный коннектор `Local`). Пользователи, которые входят через внешние провайдеры аутентификации, должны обращаться к администратору соответствующей системы.
+
+При сбросе пароля новый пароль должен соответствовать парольной политике, а активные сессии пользователя завершаются — требуется повторная аутентификация.
 
 ### Добавление пользователя в группу
 

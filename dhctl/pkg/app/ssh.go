@@ -17,13 +17,13 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -153,18 +153,18 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause, o *options.BecomeOptions) {
 // Lives in pkg/app (not options) because it depends on the deckhouse-node
 // directory constants defined here, which would create an import cycle
 // if pulled into options.
-func ProviderParams(o *options.GlobalOptions, loggerProvider libdhctl_log.LoggerProvider) settings.ProviderParams {
+func ProviderParams(o *options.GlobalOptions, logger *slog.Logger) settings.ProviderParams {
 	return settings.ProviderParams{
-		LoggerProvider: loggerProvider,
-		IsDebug:        o.IsDebug,
-		NodeTmpPath:    DeckhouseNodeTmpPath,
-		NodeBinPath:    DeckhouseNodeBinPath,
-		TmpDir:         options.DefaultTmpDir(),
+		Logger:      logger,
+		IsDebug:     o.IsDebug,
+		NodeTmpPath: DeckhouseNodeTmpPath,
+		NodeBinPath: DeckhouseNodeBinPath,
+		TmpDir:      options.DefaultTmpDir(),
 	}
 }
 
 // DefaultProviderParams is ProviderParams with the default global logger.
 func DefaultProviderParams(ctx context.Context, o *options.GlobalOptions) (settings.ProviderParams, error) {
-	loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
+	loggerProvider := dhlog.FromContext(ctx)
 	return ProviderParams(o, loggerProvider), nil
 }

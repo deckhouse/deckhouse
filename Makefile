@@ -602,6 +602,7 @@ $(LOCALBIN):
 ## Tool Binaries
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 DECKHOUSE_CLI ?= $(LOCALBIN)/d8
+CRD_ENRICHER ?= $(LOCALBIN)/crd-enricher
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
@@ -612,8 +613,9 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.31.0
-DMT_VERSION ?= 0.1.88
+DECKHOUSE_CLI_VERSION ?= v0.32.0
+CRD_ENRICHER_VERSION ?= v0.0.1
+DMT_VERSION ?= 0.1.91
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
@@ -647,7 +649,7 @@ generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
-generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate
+generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate manifests
 
 ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 .PHONY: controller-gen-generate
@@ -655,11 +657,7 @@ controller-gen-generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	@echo "Removing old CRDs..."
-	@rm -rf ./bin/crd
-	@echo "Generating CRDs..."
-	@-$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases 2>&1
+manifests: controller-gen enrich-crds ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@echo "Copying CRDs to deckhouse-controller/crds..."
 	@cp bin/crd/bases/deckhouse.io_applications.yaml deckhouse-controller/crds/application.yaml
 	@cp bin/crd/bases/deckhouse.io_packagerepositoryoperations.yaml deckhouse-controller/crds/packagerepositoryoperation.yaml
@@ -667,14 +665,22 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
 
+.PHONY: generate-crds
+generate-crds: controller-gen
+	@echo "Removing old CRDs..."
+	@rm -rf ./bin/crd
+	@echo "Generating CRDs..."
+	@-$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases 2>&1
+
 ## Enrich the controller-gen CRDs in bin/crd/bases with custom x-doc-* fields
 ## defined via markers next to the Go API structs.
 .PHONY: enrich-crds
-enrich-crds: ## Add custom x-doc-* fields to the generated CRDs in bin/crd/bases.
+enrich-crds: generate-crds crd-enricher ## Add custom x-doc-* fields to the generated CRDs in bin/crd/bases.
 	@echo "Enriching CRDs with custom x-doc-* fields..."
-	@go run ./pkg/crd-enricher/cmd/crd-enricher \
+	@$(CRD_ENRICHER) \
 		paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." \
-		crds=bin/crd/bases
+		crds=$(CURDIR)/bin/crd/bases \
+		dir=$(CURDIR)
 
 ## Generate clientset
 .PHONY: client-gen-generate
@@ -732,6 +738,11 @@ deckhouse-cli:
 		echo "d8 not found, downloading..."; \
 	fi; \
 	curl -sSfL "$(GITHUB_URL)/deckhouse/deckhouse-cli/releases/download/$(DECKHOUSE_CLI_VERSION)/d8-$(DECKHOUSE_CLI_VERSION)-$(YQ_PLATFORM)-$(YQ_ARCH).tar.gz" | tar -xz -C $(LOCALBIN) --strip-components=2 $(YQ_PLATFORM)-$(YQ_ARCH)/bin/d8
+
+.PHONY: crd-enricher
+crd-enricher: $(CRD_ENRICHER) ## Download crd-enricher locally if necessary.
+$(CRD_ENRICHER): $(LOCALBIN)
+	$(call go-install-tool,$(CRD_ENRICHER),github.com/deckhouse/deckhouse/pkg/crd-enricher/cmd/crd-enricher,$(CRD_ENRICHER_VERSION))
 
 ## Download client-gen locally if necessary.
 .PHONY: client-gen

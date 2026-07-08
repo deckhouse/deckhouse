@@ -27,7 +27,6 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libcon_config "github.com/deckhouse/lib-connection/pkg/ssh/config"
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -77,7 +76,7 @@ func WithKubeConfig(kubeConfig, kubeConfigContext string, inCluster bool) Provid
 
 func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	baseProviderSettings := settings.NewBaseProviders(params)
-	return getProviderInitializer(baseProviderSettings, opts...)
+	return getProviderInitializer(ctx, baseProviderSettings, opts...)
 }
 
 // func to initialize both SSHProviderInitializer and KubeProvider
@@ -85,7 +84,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	options := newProviderOptions(opts...)
 	baseProviderSettings := settings.NewBaseProviders(params)
 
-	sshProviderInitializer, err := getProviderInitializer(baseProviderSettings, opts...)
+	sshProviderInitializer, err := getProviderInitializer(ctx, baseProviderSettings, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -135,7 +134,7 @@ func resolveKubeConfig(baseProviderSettings *settings.BaseProviders, options *pr
 	return flags.ExtractConfig()
 }
 
-func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
+func getProviderInitializer(ctx context.Context, baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	options := newProviderOptions(opts...)
 
 	var config *libcon_config.ConnectionConfig
@@ -153,9 +152,8 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 	} else {
 		// loggerProvider should be forced to non-interactive to ask for password, because our wrapper hides all Info* and Warn* output
 		sett := baseProviderSettings.Clone()
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewAdapter(dhlog.Discard()))
-		sett.WithLogger(loggerProvider)
-		parser := libcon_config.NewFlagsParser(sett)
+		sett.WithLogger(dhlog.FromContext(ctx))
+		parser := libcon_config.NewFlagsParser(ctx, sett)
 		parser.WithEnvsPrefix(global.SSHEnvsPrefix)
 
 		flags, err := parser.InitFlags(

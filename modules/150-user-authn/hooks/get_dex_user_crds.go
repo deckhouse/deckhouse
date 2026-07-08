@@ -27,6 +27,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
@@ -156,6 +157,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
+			// Watch the namespace the Password objects live in. On a fresh
+			// cluster it is created by the module's Helm release, which only runs
+			// after this hook (OnBeforeHelm / OperatorStartup). We gate all
+			// Password mutations on this namespace existing (see getDexUsers), and
+			// this binding re-runs the hook the moment Helm creates it so Passwords
+			// are reconciled immediately instead of waiting for the next cron tick.
+			Name:       "namespace",
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{dexNamespace},
+			},
+			FilterFunc: applyNamespaceNameFilter,
+		},
+		{
 			Name:       "users",
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       "User",
@@ -186,6 +202,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	now := time.Now()
+
+	// dexNamespace is created by the module's Helm release, which runs after this
+	// hook on a fresh cluster (OnBeforeHelm / OperatorStartup). Creating a Password
+	// before the namespace exists fails with "namespaces d8-user-authn not found",
+	// which fails the hook and blocks the /modules/user-authn queue - and with it
+	// OnBeforeHelm - so Helm never creates the namespace, deadlocking the deploy.
+	// Defer all Password mutations until the namespace exists; the "namespace"
+	// binding re-runs the hook as soon as Helm creates it. Values and User status
+	// patches are still written below so Helm can render and create the namespace.
+	namespaceExists := len(input.Snapshots.Get("namespace")) > 0
 
 	users := make([]DexUserInternalValues, 0, len(input.Snapshots.Get("users")))
 	mapOfUsersToGroups := map[string]map[string]bool{}
@@ -349,6 +375,10 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		// incorrectPasswordLoginAttempts, lockedUntil, requireResetHashOnNextSuccLogin)
 		// on an existing object.
 		switch {
+		case !namespaceExists:
+			// Namespace not created by Helm yet: skip the Password mutation. The
+			// user still lands in the internal values and its status is synced
+			// below; the Password will be reconciled once the namespace appears.
 		case passwordExists:
 			reconcileExistingPassword(input, existingPassword, dexUser.Name, email, groups)
 		case isRename:
@@ -384,17 +414,21 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		input.PatchCollector.PatchWithMerge(patchMap, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
-	// Delete Password objects we own that no user references anymore.
-	for _, password := range allPasswords {
-		if _, expected := expectedPasswordNames[password.Name]; expected {
-			continue
+	// Delete Password objects we own that no user references anymore. Skipped
+	// until the namespace exists: there are no Password objects to clean up yet,
+	// and issuing deletes against a missing namespace would fail the hook.
+	if namespaceExists {
+		for _, password := range allPasswords {
+			if _, expected := expectedPasswordNames[password.Name]; expected {
+				continue
+			}
+			if !isModuleManagedPassword(password) {
+				continue
+			}
+			input.Logger.Info("Deleting orphaned Password",
+				slog.String("name", password.Name), slog.String("username", password.Username))
+			input.PatchCollector.Delete("dex.coreos.com/v1", "Password", password.Namespace, password.Name)
 		}
-		if !isModuleManagedPassword(password) {
-			continue
-		}
-		input.Logger.Info("Deleting orphaned Password",
-			slog.String("name", password.Name), slog.String("username", password.Username))
-		input.PatchCollector.Delete("dex.coreos.com/v1", "Password", password.Namespace, password.Name)
 	}
 
 	input.Values.Set("userAuthn.internal.dexUsersCRDs", users)
@@ -599,6 +633,12 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 	return user, nil
+}
+
+// applyNamespaceNameFilter snapshots only the namespace name: the hook just
+// needs to know whether dexNamespace exists before touching Password objects.
+func applyNamespaceNameFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return obj.GetName(), nil
 }
 
 func applyPasswordFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
