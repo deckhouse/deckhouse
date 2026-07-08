@@ -157,8 +157,9 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	values := moduleValues.Get()
 
 	var (
-		inputs Inputs
-		err    error
+		noState bool
+		inputs  Inputs
+		err     error
 	)
 
 	if values.State.Mode == "" {
@@ -182,6 +183,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	if values.State.Mode == "" {
+		noState = true
 		values.State.Mode = registry_const.ModeUnmanaged
 
 		input.Logger.Warn(
@@ -264,8 +266,8 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	// Load checker params
 	values.State.CheckerParams = checker.GetParams(ctx, input)
 
-	// Process the state with init secret
-	if !inputs.InitSecret.Applied {
+	// Process the state with init secret if state not exist
+	if noState && !inputs.InitSecret.Applied {
 		input.Logger.Info("initializing state from init configuration")
 
 		err = values.State.initialize(input.Logger, inputs)
