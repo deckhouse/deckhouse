@@ -135,7 +135,7 @@ rules:
   resources: ["albinstances"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 - apiGroups: ["gateway.networking.k8s.io"]
-  resources: ["gateways", "listenersets", "tlsroutes", "httproutes", "referencegrants"]
+  resources: ["gateways", "listenersets", "tlsroutes", "tcproutes", "httproutes", "referencegrants"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
