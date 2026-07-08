@@ -101,6 +101,8 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		return blobName(elements[i]) < blobName(elements[j])
 	})
 
+	setNodeGroupInfo(elements)
+
 	return r.Context.WriteSecret(ctx, elements)
 }
 
