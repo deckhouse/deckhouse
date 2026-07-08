@@ -137,3 +137,14 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  containers:
+  - name: kube-apiserver
+    args:
+    - --watch-cache-sizes=manifestcheckpointcontentchunks.state-snapshotter.deckhouse.io#0
