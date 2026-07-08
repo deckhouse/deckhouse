@@ -544,9 +544,9 @@ This policy doesn't apply to the following users who are allowed to run `kubectl
 - service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`);
 - service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`).
 
-### Built-in policy for Deckhouse finalizers
+### Built-in policy for finalizers
 
-To protect resources managed by Deckhouse controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `.deckhouse.io/` substring on any cluster resource.
+To protect resources managed by DKP controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `.deckhouse.io/` substring on any cluster objects.
 
 This policy doesn't apply to the following users who are allowed to remove such finalizers:
 
