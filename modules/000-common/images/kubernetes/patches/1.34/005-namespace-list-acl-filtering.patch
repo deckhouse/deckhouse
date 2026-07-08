@@ -1019,6 +1019,125 @@ index da2384aae05..b3a5a523f4f 100644
  	serviceRESTStorage, serviceStatusStorage, serviceRESTProxy, err := servicestore.NewREST(
  		restOptionsGetter,
  		p.primaryServiceClusterIPAllocator.IPFamily(),
+diff --git a/pkg/registry/core/rest/storage_core_generic.go b/pkg/registry/core/rest/storage_core_generic.go
+index 9d82ca85633..0a9f149c3eb 100644
+--- a/pkg/registry/core/rest/storage_core_generic.go
++++ b/pkg/registry/core/rest/storage_core_generic.go
+@@ -106,7 +106,21 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
+ 		return genericapiserver.APIGroupInfo{}, err
+ 	}
+ 
+-	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(restOptionsGetter)
++	// Deckhouse: always wire the filtering-capable namespace storage. The
++	// fetcher is constructed from the loopback client so impersonation
++	// against permission-browser-apiserver works out of the box. Actual
++	// per-request filtering only kicks in when filters.IsNamespaceFilteringMode(ctx)
++	// is true — set by WithAuthorization when a user lacks RBAC for
++	// list/get on namespaces but should still see their accessible subset.
++	//
++	// We omit WithACLRefreshInterval to accept the package default (1s),
++	// which controls how quickly synthetic ADDED/DELETED events surface on
++	// long-lived watches when permissions change. Add WithACLRefreshInterval
++	// to override at runtime if needed.
++	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(
++		restOptionsGetter,
++		namespacestore.WithLoopbackFetcher(c.LoopbackClientConfig),
++	)
+ 	if err != nil {
+ 		return genericapiserver.APIGroupInfo{}, err
+ 	}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
+index 1a730d3310c..cf630c2a06f 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
+@@ -44,6 +44,7 @@ import (
+ 	"k8s.io/apiserver/pkg/endpoints/discovery"
+ 	"k8s.io/apiserver/pkg/endpoints/discovery/aggregated"
+ 	genericregistry "k8s.io/apiserver/pkg/registry/generic"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
+ 	"k8s.io/apiserver/pkg/registry/rest"
+ 	genericapiserver "k8s.io/apiserver/pkg/server"
+ 	serverstorage "k8s.io/apiserver/pkg/server/storage"
+@@ -203,6 +204,20 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
+ 	if err != nil {
+ 		return nil, err
+ 	}
++
++	// Deckhouse: give the CRD handler the shared scope-filter resolver bundle
++	// so it wires generic `-A --scope=<kind>` filtering for every namespaced
++	// CRD version it serves (see crdHandler.getOrCreateServingInfoFor). A nil
++	// LoopbackClientConfig (minimal/test setups) leaves CRDs at vanilla
++	// behavior.
++	if s.GenericAPIServer.LoopbackClientConfig != nil {
++		if resolvers, err := scopefilter.NewLoopbackResolvers(s.GenericAPIServer.LoopbackClientConfig); err != nil {
++			klog.Warningf("scopefilter: failed to build resolvers: %v; generic --scope filtering disabled for CRDs this run", err)
++		} else {
++			crdHandler.scopeResolvers = resolvers
++		}
++	}
++
+ 	s.GenericAPIServer.Handler.NonGoRestfulMux.Handle("/apis", crdHandler)
+ 	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
+ 	s.GenericAPIServer.RegisterDestroyFunc(crdHandler.destroy)
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+index d003bfa34f8..a56e0495195 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+@@ -74,6 +74,7 @@ import (
+ 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
+ 	"k8s.io/apiserver/pkg/features"
+ 	"k8s.io/apiserver/pkg/registry/generic"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
+ 	genericfilters "k8s.io/apiserver/pkg/server/filters"
+ 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+ 	"k8s.io/apiserver/pkg/util/webhook"
+@@ -130,6 +131,14 @@ type crdHandler struct {
+ 	// The limit on the request size that would be accepted and decoded in a write request
+ 	// 0 means no limit.
+ 	maxRequestBodyBytes int64
++
++	// Deckhouse: scopeResolvers, when non-nil, is used to wire every
++	// namespace-scoped CRD version's storage for generic `-A --scope=<kind>`
++	// cross-namespace filtering -- the CRD analogue of the built-in central
++	// loop in pkg/controlplane/apiserver's InstallAPIs. Set once, after
++	// construction, by apiserver.go from a loopback REST config; nil (no
++	// loopback config) leaves every CRD at vanilla behavior.
++	scopeResolvers *scopefilter.Resolvers
+ }
+ 
+ // crdInfo stores enough information to serve the storage for the custom resource
+@@ -582,6 +591,11 @@ func (r *crdHandler) tearDown(oldInfo *crdInfo) {
+ 		// destroy only the main storage. Those for the subresources share cacher and etcd clients.
+ 		storage.CustomResource.DestroyFunc()
+ 	}
++
++	// Deckhouse: drop scope-filter registration so a CRD later recreated with
++	// the same group+resource does not inherit stale registration from this
++	// one. Harmless if it was never registered (cluster-scoped / no resolvers).
++	scopefilter.Unregister(schema.GroupResource{Group: oldInfo.spec.Group, Resource: oldInfo.acceptedNames.Plural})
+ }
+ 
+ // Destroy shuts down storage layer for all registered CRDs.
+@@ -858,6 +872,19 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 
+ 		clusterScoped := crd.Spec.Scope == apiextensionsv1.ClusterScoped
+ 
++		// Deckhouse: wire generic `-A --scope=<kind>` filtering for this
++		// namespaced CRD version -- the CRD analogue of the built-in central
++		// loop. customresource.REST embeds *genericregistry.Store and does not
++		// override List/Get/Watch, so setting store.ScopeFilter takes effect
++		// exactly as it does for built-ins. Cluster-scoped CRDs are skipped
++		// (no namespace to classify/floor, and the authz bypass never fires
++		// for them); a nil resolver bundle (no loopback config) is a no-op.
++		if !clusterScoped && r.scopeResolvers != nil {
++			store := storages[v.Name].CustomResource.Store
++			store.ScopeFilter = r.scopeResolvers.NewDecorator(store, store.PredicateFunc, resource)
++			scopefilter.Register(resource.GroupResource())
++		}
++
+ 		// CRDs explicitly do not support protobuf, but some objects returned by the API server do
+ 		streamingCollections := utilfeature.DefaultFeatureGate.Enabled(features.StreamingCollectionEncodingToJSON)
+ 		negotiatedSerializer := unstructuredNegotiatedSerializer{
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 index 6c6c94ba718..12b16e8f598 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go

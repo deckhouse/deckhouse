@@ -76,10 +76,20 @@ Coverage is wired centrally in `pkg/controlplane/apiserver`'s `InstallAPIs`,
 which walks every built-in API group's storage map and attaches the filter to
 each namespaced, non-subresource resource backed by a `*genericregistry.Store`
 (via the promoted `DeckhouseScopeStore` method). No per-resource storage.go
-edits. CustomResourceDefinitions are excluded structurally (served by the
-apiextensions delegate, never through this install path); `namespaces` is
-excluded structurally (it wraps rather than embeds its Store and keeps its own
-unconditional filter above).
+edits. `namespaces` is excluded structurally (it wraps rather than embeds its
+Store and keeps its own unconditional filter above).
+
+Namespaced **CustomResourceDefinitions** are covered too, wired analogously in
+apiextensions-apiserver's `crdHandler.getOrCreateServingInfoFor` as each CRD
+version's storage is built (`customresource.REST` also embeds
+`*genericregistry.Store` and does not override List/Get/Watch, so the same
+`store.ScopeFilter` hook applies); registration is dropped on CRD teardown.
+Because that wiring edits the same two apiextensions files that
+`010-x-kubernetes-sensitive-data` also edits, and this patch (`005`) applies
+before `010`, patch `010` is shipped **regenerated** so its
+`customresource_handler.go` hunks apply cleanly on top of the CRD wiring — a
+context-only re-roll, no semantic change to `010` (see its README entry).
+Cluster-scoped CRDs are skipped (no namespace to classify/floor).
 
 The filter's `RBACFloor`/`Classify` loopback calls are served through a shared
 TTL cache (default 1s, `SCOPEFILTER_RESOLVE_CACHE_TTL` /
@@ -112,6 +122,13 @@ When set the API server will: encrypt the value at rest in etcd (using the same 
 See our KEP:
 - https://github.com/kubernetes/enhancements/pull/5937
 - https://github.com/kubernetes/enhancements/issues/5933
+
+> Note (Deckhouse): the `apiserver.go` / `customresource_handler.go` hunks of
+> this patch were regenerated so they apply cleanly on top of the CRD
+> scope-filter wiring added by `namespace-list-acl-filtering.patch` (which
+> applies earlier in the chain). This is a context-only re-roll — the
+> sensitive-data feature itself is unchanged. If you update this patch,
+> regenerate it against a tree that already has the earlier patch applied.
 
 ### 011-fix-stale-token-metrics.patch
 
