@@ -670,7 +670,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -969,7 +969,7 @@ jobs:
           # consumed inline just to read the tests image name — it is not kept
           # as an artifact (minimal value for a tests-only build).
           werf build tests \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --final-images-only=true \
             --build-report-path images_tags_werf.json
@@ -1373,7 +1373,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -1744,7 +1744,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -2115,7 +2115,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -2486,7 +2486,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -2857,7 +2857,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -3228,7 +3228,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
