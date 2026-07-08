@@ -193,26 +193,263 @@ func CreateDeckhouseManifests(
 	cfg *config.DeckhouseInstaller,
 	beforeDeckhouseTask func() error,
 ) (*ManifestsResult, error) {
-	tasks := []actions.ManifestTask{
-		{
-			Name: `Namespace "d8-system"`,
-			Manifest: func() any {
-				return manifests.DeckhouseNamespace("d8-system")
-			},
-			CreateFunc: func(ctx context.Context, manifest any) error {
-				_, err := kubeCl.
-					CoreV1().Namespaces().
-					Create(ctx, manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+	namespaceTask := getNSTask(kubeCl)
+	rbacTasks := getRBACTasks(kubeCl)
+	installDataTasks := getInstallDataTasks(kubeCl, map[string]string{"version": cfg.InstallerVersion})
+	registrySecretsTasks, err := getRegistryConfigTasks(ctx, kubeCl, cfg.Registry)
+	if err != nil {
+		return nil, err
+	}
+	tfStateTasks := getTFStateTasks(kubeCl, cfg)
+	clusterConfigTasks := getClusterConfigTasks(kubeCl, cfg)
+	clusterUUIDTasks := getClusterUUIDTasks(kubeCl, cfg)
+	kubeDNSServiceTasks := getKubeDNSServiceTasks(kubeCl, cfg)
+
+	prereqTasks := []actions.ManifestTask{}
+	prereqTasks = append(prereqTasks, rbacTasks...)
+	prereqTasks = append(prereqTasks, installDataTasks...)
+	prereqTasks = append(prereqTasks, registrySecretsTasks...)
+	prereqTasks = append(prereqTasks, tfStateTasks...)
+	prereqTasks = append(prereqTasks, clusterConfigTasks...)
+	prereqTasks = append(prereqTasks, clusterUUIDTasks...)
+
+	if cfg.CommanderMode && cfg.CommanderUUID != uuid.Nil {
+		prereqTasks = append(prereqTasks, commander.ConstructManagedByCommanderConfigMapTask(ctx, cfg.CommanderUUID, kubeCl))
+	}
+
+	prereqTasks = append(prereqTasks, kubeDNSServiceTasks...)
+
+	if beforeDeckhouseTask != nil {
+		err := beforeDeckhouseTask()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	lockCmTask, err := LockDeckhouseQueueBeforeCreatingModuleConfigs(ctx, kubeCl)
+	if err != nil {
+		return nil, err
+	}
+
+	if lockCmTask != nil {
+		prereqTasks = append(prereqTasks, *lockCmTask)
+	}
+
+	// The deckhouse controller Deployment is kept out of the prerequisite task
+	// list and applied only after all of them exist. The pod and its hooks read
+	// those resources on startup (registry pull secret, RBAC/ServiceAccount,
+	// cluster-configuration secrets, d8-cluster-uuid, ...); racing the Deployment
+	// against them can yield a pod that cannot pull images, or hooks that observe
+	// half-initialized state — e.g. an empty global.discovery.clusterUUID, which
+	// makes node-manager render node bootstrap scripts without the cluster-UUID
+	// prefix for registry-packages-proxy and hangs CAPS-adopted nodes ~20m.
+	deploymentTask, err := controllerDeploymentTask(kubeCl, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &ManifestsResult{}
+
+	// The first ModuleConfig's CRD is installed by the now-running deckhouse
+	// pod, so it retry-waits for the CRD to appear; the rest can only succeed
+	// once that CRD exists, so they run after it, not alongside it.
+	var moduleConfigCRDTask *actions.ManifestTask
+	var moduleConfigTasks []actions.ManifestTask
+	if len(cfg.ModuleConfigs) > 0 {
+		prepareModuleConfig(ctx, cfg.ModuleConfigs[0], result)
+		crdTask := createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD...")
+		moduleConfigCRDTask = &crdTask
+
+		for i := 1; i < len(cfg.ModuleConfigs); i++ {
+			prepareModuleConfig(ctx, cfg.ModuleConfigs[i], result)
+			moduleConfigTasks = append(moduleConfigTasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[i], ""))
+		}
+	}
+
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Manifests", func(ctx context.Context) error {
+		// Tasks use Get-then-Create or simple Create-or-Update flows and target
+		// distinct API resources. Retry interval is 1s (was 5s): the loop reacts to
+		// a transient error clearing (e.g. the ModuleConfig CRD appearing) in ~1s
+		// instead of dead-waiting; the total deadline stays 600 attempts × 1s.
+		runTask := func(task actions.ManifestTask) error {
+			return retry.NewSilentLoop(task.Name, 600, 1*time.Second).RunContext(
+				ctx,
+				func() error {
+					return task.CreateOrUpdate(ctx)
+				},
+			)
+		}
+
+		// runParallel applies independent tasks concurrently, capping the number of
+		// parallel writes so we don't hammer the freshly bootstrapped apiserver.
+		runParallel := func(parallelTasks []actions.ManifestTask) error {
+			const maxParallel = 8
+			eg, egCtx := errgroup.WithContext(ctx)
+			eg.SetLimit(maxParallel)
+
+			var logMu sync.Mutex
+			for i := range parallelTasks {
+				task := parallelTasks[i]
+				eg.Go(func() error {
+					if egCtx.Err() != nil {
+						return egCtx.Err()
+					}
+					if err := runTask(task); err != nil {
+						logMu.Lock()
+						dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("manifest task %q failed: %v", task.Name, err))
+						logMu.Unlock()
+						return err
+					}
+					return nil
+				})
+			}
+
+			return eg.Wait()
+		}
+
+		// The d8-system Namespace comes first; everything else lives in it or
+		// references it.
+		if err := runTask(namespaceTask); err != nil {
+			return err
+		}
+
+		// All deckhouse prerequisites (RBAC, ServiceAccount, registry pull
+		// secret, cluster-configuration secrets, d8-cluster-uuid, queue lock,
+		// ...) are independent of each other and applied concurrently — but
+		// before the controller Deployment below, which reads them on startup.
+		if err := runParallel(prereqTasks); err != nil {
+			return err
+		}
+
+		// The controller Deployment, once all its prerequisites exist.
+		if err := runTask(deploymentTask); err != nil {
+			return err
+		}
+
+		if moduleConfigCRDTask != nil {
+			// This one waits (via retry) for the CRD the now-running deckhouse pod
+			// installs; the rest depend on that CRD existing, so it must land first.
+			if err := runTask(*moduleConfigCRDTask); err != nil {
 				return err
-			},
-			UpdateFunc: func(ctx context.Context, manifest any) error {
-				_, err := kubeCl.
-					CoreV1().
-					Namespaces().
-					Update(ctx, manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
-				return err
-			},
+			}
+		}
+
+		// Remaining ModuleConfigs are independent of each other.
+		return runParallel(moduleConfigTasks)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, UnlockDeckhouseQueueAfterCreatingModuleConfigs(ctx, kubeCl)
+}
+
+func WaitForReadiness(ctx context.Context, kubeCl *client.KubernetesClient, timeout time.Duration) error {
+	return WaitForReadinessNotOnNode(ctx, kubeCl, "", timeout)
+}
+
+func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesClient, excludeNode string, timeout time.Duration) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Waiting for Deckhouse to become Ready", func(ctx context.Context) error {
+		ctx, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return ErrTimedOut
+			default:
+				ok, err := NewLogPrinter(kubeCl).
+					WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
+					WaitPodBecomeReady().
+					WithExcludeNode(excludeNode).
+					Print(ctx)
+				if err != nil {
+					if errors.Is(err, ErrTimedOut) {
+						return err
+					}
+					dhlog.FromContext(ctx).InfoContext(ctx, err.Error())
+				}
+
+				if ok {
+					dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse pod is Ready!\n")
+					return nil
+				}
+
+				time.Sleep(1 * time.Second)
+			}
+		}
+	})
+}
+
+func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
+	task, err := controllerDeploymentTask(kubeCl, cfg)
+	if err != nil {
+		return err
+	}
+
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Deployment", task.CreateOrUpdate)
+}
+
+func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) (manifests.DeckhouseDeploymentParams, error) {
+	image, err := cfg.GetInclusterImage(context.Background(), true)
+	if err != nil {
+		return manifests.DeckhouseDeploymentParams{}, err
+	}
+
+	return manifests.DeckhouseDeploymentParams{
+		Registry:           image,
+		LogLevel:           cfg.LogLevel,
+		Bundle:             cfg.Bundle,
+		KubeadmBootstrap:   cfg.KubeadmBootstrap,
+		MasterNodeSelector: cfg.MasterNodeSelector,
+	}, nil
+}
+
+func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) (*appsv1.Deployment, error) {
+	params, err := deckhouseDeploymentParamsFromCfg(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return manifests.DeckhouseDeployment(params), nil
+}
+
+func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 225, 1*time.Second).
+		RunContext(ctx, func() error {
+			_, err := kubeCl.Discovery().ServerVersion()
+			if err == nil {
+				return nil
+			}
+			return fmt.Errorf("kubernetes API is not Ready: %w", err)
+		})
+}
+
+// helpers to get tasks
+func getNSTask(kubeCl *client.KubernetesClient) actions.ManifestTask {
+	return actions.ManifestTask{
+		Name: `Namespace "d8-system"`,
+		Manifest: func() any {
+			return manifests.DeckhouseNamespace("d8-system")
 		},
+		CreateFunc: func(ctx context.Context, manifest any) error {
+			_, err := kubeCl.
+				CoreV1().Namespaces().
+				Create(ctx, manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+			return err
+		},
+		UpdateFunc: func(ctx context.Context, manifest any) error {
+			_, err := kubeCl.
+				CoreV1().
+				Namespaces().
+				Update(ctx, manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
+			return err
+		},
+	}
+}
+
+func getRBACTasks(kubeCl *client.KubernetesClient) []actions.ManifestTask {
+	return []actions.ManifestTask{
 		{
 			Name:     `Admin ClusterRole "cluster-admin"`,
 			Manifest: func() any { return manifests.DeckhouseAdminClusterRole() },
@@ -288,6 +525,11 @@ func CreateDeckhouseManifests(
 				return err
 			},
 		},
+	}
+}
+
+func getInstallDataTasks(kubeCl *client.KubernetesClient, data map[string]string) []actions.ManifestTask {
+	return []actions.ManifestTask{
 		{
 			Name: `ConfigMap "install-data"`,
 			Manifest: func() any {
@@ -300,9 +542,7 @@ func CreateDeckhouseManifests(
 						Name:      "install-data",
 						Namespace: "d8-system",
 					},
-					Data: map[string]string{
-						"version": cfg.InstallerVersion,
-					},
+					Data: data,
 				}
 			},
 			CreateFunc: func(ctx context.Context, manifest any) error {
@@ -325,9 +565,11 @@ func CreateDeckhouseManifests(
 			},
 		},
 	}
+}
 
-	// Registry secrets
-	deckhouseRegistrySecretData, err := cfg.Registry.
+func getRegistryConfigTasks(ctx context.Context, kubeCl *client.KubernetesClient, cfg registry.Config) ([]actions.ManifestTask, error) {
+	tasks := []actions.ManifestTask{}
+	deckhouseRegistrySecretData, err := cfg.
 		Manifest().
 		DeckhouseRegistrySecretData(
 			func() (registry.PKI, error) {
@@ -363,7 +605,7 @@ func CreateDeckhouseManifests(
 		},
 	})
 
-	isExist, registryBashibleConfigSecretData, err := cfg.Registry.
+	isExist, registryBashibleConfigSecretData, err := cfg.
 		Manifest().
 		RegistryBashibleConfigSecretData(
 			func() (registry.PKI, error) {
@@ -402,6 +644,11 @@ func CreateDeckhouseManifests(
 		})
 	}
 
+	return tasks, nil
+}
+
+func getTFStateTasks(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) []actions.ManifestTask {
+	tasks := []actions.ManifestTask{}
 	if len(cfg.InfrastructureState) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-terraform-state"`,
@@ -466,6 +713,11 @@ func CreateDeckhouseManifests(
 		})
 	}
 
+	return tasks
+}
+
+func getClusterConfigTasks(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) []actions.ManifestTask {
+	tasks := []actions.ManifestTask{}
 	if len(cfg.ClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-configuration"`,
@@ -582,6 +834,11 @@ func CreateDeckhouseManifests(
 		})
 	}
 
+	return tasks
+}
+
+func getClusterUUIDTasks(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) []actions.ManifestTask {
+	tasks := []actions.ManifestTask{}
 	if len(cfg.UUID) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `ConfigMap "d8-cluster-uuid"`,
@@ -605,10 +862,11 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	if cfg.CommanderMode && cfg.CommanderUUID != uuid.Nil {
-		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(ctx, cfg.CommanderUUID, kubeCl))
-	}
+	return tasks
+}
 
+func getKubeDNSServiceTasks(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) []actions.ManifestTask {
+	tasks := []actions.ManifestTask{}
 	if cfg.KubeDNSAddress != "" {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Service "kube-dns"`,
@@ -645,200 +903,5 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	if beforeDeckhouseTask != nil {
-		err := beforeDeckhouseTask()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	lockCmTask, err := LockDeckhouseQueueBeforeCreatingModuleConfigs(ctx, kubeCl)
-	if err != nil {
-		return nil, err
-	}
-
-	if lockCmTask != nil {
-		tasks = append(tasks, *lockCmTask)
-	}
-
-	// The deckhouse controller Deployment is kept out of the prerequisite task
-	// list and applied only after all of them exist. The pod and its hooks read
-	// those resources on startup (registry pull secret, RBAC/ServiceAccount,
-	// cluster-configuration secrets, d8-cluster-uuid, ...); racing the Deployment
-	// against them can yield a pod that cannot pull images, or hooks that observe
-	// half-initialized state — e.g. an empty global.discovery.clusterUUID, which
-	// makes node-manager render node bootstrap scripts without the cluster-UUID
-	// prefix for registry-packages-proxy and hangs CAPS-adopted nodes ~20m.
-	deploymentTask, err := controllerDeploymentTask(kubeCl, cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &ManifestsResult{}
-
-	// ModuleConfigs are applied last: their CRD is installed by the running
-	// deckhouse pod, so these retry-wait for it to appear.
-	var moduleConfigTasks []actions.ManifestTask
-	if len(cfg.ModuleConfigs) > 0 {
-		prepareModuleConfig(ctx, cfg.ModuleConfigs[0], result)
-		moduleConfigTasks = append(moduleConfigTasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
-
-		for i := 1; i < len(cfg.ModuleConfigs); i++ {
-			prepareModuleConfig(ctx, cfg.ModuleConfigs[i], result)
-			moduleConfigTasks = append(moduleConfigTasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[i], ""))
-		}
-	}
-
-	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Manifests", func(ctx context.Context) error {
-		// Tasks use Get-then-Create or simple Create-or-Update flows and target
-		// distinct API resources. Retry interval is 1s (was 5s): the loop reacts to
-		// a transient error clearing (e.g. the ModuleConfig CRD appearing) in ~1s
-		// instead of dead-waiting; the total deadline stays 600 attempts × 1s.
-		runTask := func(task actions.ManifestTask) error {
-			return retry.NewSilentLoop(task.Name, 600, 1*time.Second).RunContext(
-				ctx,
-				func() error {
-					return task.CreateOrUpdate(ctx)
-				},
-			)
-		}
-
-		// runParallel applies independent tasks concurrently, capping the number of
-		// parallel writes so we don't hammer the freshly bootstrapped apiserver.
-		runParallel := func(parallelTasks []actions.ManifestTask) error {
-			const maxParallel = 8
-			eg, egCtx := errgroup.WithContext(ctx)
-			eg.SetLimit(maxParallel)
-
-			var logMu sync.Mutex
-			for i := range parallelTasks {
-				task := parallelTasks[i]
-				eg.Go(func() error {
-					if egCtx.Err() != nil {
-						return egCtx.Err()
-					}
-					if err := runTask(task); err != nil {
-						logMu.Lock()
-						dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("manifest task %q failed: %v", task.Name, err))
-						logMu.Unlock()
-						return err
-					}
-					return nil
-				})
-			}
-
-			return eg.Wait()
-		}
-
-		if len(tasks) > 0 {
-			// The d8-system Namespace comes first; everything else lives in it or
-			// references it.
-			if err := runTask(tasks[0]); err != nil {
-				return err
-			}
-
-			// All deckhouse prerequisites (RBAC, ServiceAccount, registry pull
-			// secret, cluster-configuration secrets, d8-cluster-uuid, queue lock,
-			// ...) are independent of each other and applied concurrently — but
-			// before the controller Deployment below, which reads them on startup.
-			if err := runParallel(tasks[1:]); err != nil {
-				return err
-			}
-		}
-
-		// The controller Deployment, once all its prerequisites exist.
-		if err := runTask(deploymentTask); err != nil {
-			return err
-		}
-
-		// ModuleConfigs last: their CRD is installed by the now-running deckhouse
-		// pod, so these retry-wait for it to appear.
-		return runParallel(moduleConfigTasks)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return result, UnlockDeckhouseQueueAfterCreatingModuleConfigs(ctx, kubeCl)
-}
-
-func WaitForReadiness(ctx context.Context, kubeCl *client.KubernetesClient, timeout time.Duration) error {
-	return WaitForReadinessNotOnNode(ctx, kubeCl, "", timeout)
-}
-
-func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesClient, excludeNode string, timeout time.Duration) error {
-	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Waiting for Deckhouse to become Ready", func(ctx context.Context) error {
-		ctx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return ErrTimedOut
-			default:
-				ok, err := NewLogPrinter(kubeCl).
-					WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
-					WaitPodBecomeReady().
-					WithExcludeNode(excludeNode).
-					Print(ctx)
-				if err != nil {
-					if errors.Is(err, ErrTimedOut) {
-						return err
-					}
-					dhlog.FromContext(ctx).InfoContext(ctx, err.Error())
-				}
-
-				if ok {
-					dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse pod is Ready!\n")
-					return nil
-				}
-
-				time.Sleep(1 * time.Second)
-			}
-		}
-	})
-}
-
-func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
-	task, err := controllerDeploymentTask(kubeCl, cfg)
-	if err != nil {
-		return err
-	}
-
-	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Deployment", task.CreateOrUpdate)
-}
-
-func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) (manifests.DeckhouseDeploymentParams, error) {
-	image, err := cfg.GetInclusterImage(context.Background(), true)
-	if err != nil {
-		return manifests.DeckhouseDeploymentParams{}, err
-	}
-
-	return manifests.DeckhouseDeploymentParams{
-		Registry:           image,
-		LogLevel:           cfg.LogLevel,
-		Bundle:             cfg.Bundle,
-		KubeadmBootstrap:   cfg.KubeadmBootstrap,
-		MasterNodeSelector: cfg.MasterNodeSelector,
-	}, nil
-}
-
-func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) (*appsv1.Deployment, error) {
-	params, err := deckhouseDeploymentParamsFromCfg(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifests.DeckhouseDeployment(params), nil
-}
-
-func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 225, 1*time.Second).
-		RunContext(ctx, func() error {
-			_, err := kubeCl.Discovery().ServerVersion()
-			if err == nil {
-				return nil
-			}
-			return fmt.Errorf("kubernetes API is not Ready: %w", err)
-		})
+	return tasks
 }
