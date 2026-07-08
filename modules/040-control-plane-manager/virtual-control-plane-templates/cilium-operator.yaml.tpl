@@ -317,6 +317,10 @@ spec:
         - --config-dir=/tmp/cilium/config-map
         - --debug=$(CILIUM_DEBUG)
         - --k8s-kubeconfig-path=/etc/cilium/kubeconfig/kubeconfig
+        # Lease renewal timings relaxed for the kine/Postgres-backed tenant apiserver
+        - --leader-election-lease-duration=60s
+        - --leader-election-renew-deadline=40s
+        - --leader-election-retry-period=10s
         env:
         - name: K8S_NODE_NAME
           valueFrom:
@@ -337,6 +341,7 @@ spec:
         - name: prometheus
           containerPort: 9963
           protocol: TCP
+        # Timings relaxed for the kine/Postgres-backed tenant apiserver
         livenessProbe:
           httpGet:
             host: "127.0.0.1"
@@ -344,8 +349,9 @@ spec:
             port: health
             scheme: HTTP
           initialDelaySeconds: 60
-          periodSeconds: 10
-          timeoutSeconds: 3
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 6
         readinessProbe:
           httpGet:
             host: "127.0.0.1"
@@ -353,9 +359,9 @@ spec:
             port: health
             scheme: HTTP
           initialDelaySeconds: 0
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 5
+          periodSeconds: 10
+          timeoutSeconds: 10
+          failureThreshold: 10
         volumeMounts:
         - name: cilium-config-path
           mountPath: /tmp/cilium/config-map
