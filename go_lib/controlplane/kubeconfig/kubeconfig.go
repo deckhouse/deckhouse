@@ -22,7 +22,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -32,13 +31,9 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
-
-var logger = log.Default().Named("kubeconfig")
 
 type fileSpec struct {
 	ClusterName             string
@@ -54,8 +49,6 @@ type fileSpec struct {
 // On error, the returned KubeconfigApplyReport may still contain entries for files that were
 // processed successfully before the failure.
 func CreateKubeconfigFiles(files []File, options ...option) (KubeconfigApplyReport, error) {
-	logger.Info("creating kubeconfig files for control-plane")
-
 	opt, err := prepareOptions(options...)
 	if err != nil {
 		return KubeconfigApplyReport{}, fmt.Errorf("failed to prepare Options: %w", err)
@@ -214,11 +207,8 @@ func writeKubeConfigFileIfNeeded(kubeConfigFilePath string, config *clientcmdapi
 
 	err := validateCurrentKubeConfig(kubeConfigFilePath, config)
 	if err == nil {
-		logger.Info("Using existing kubeconfig file", slog.String("path", kubeConfigFilePath))
 		return KubeconfigActionUnchanged, nil
 	}
-
-	logger.Info("Writing new kubeconfig file", slog.String("path", kubeConfigFilePath), slog.String("reason", err.Error()))
 
 	if err := clientcmd.WriteToFile(*config, kubeConfigFilePath); err != nil {
 		return 0, fmt.Errorf("failed to write kubeconfig %q: %w", kubeConfigFilePath, err)

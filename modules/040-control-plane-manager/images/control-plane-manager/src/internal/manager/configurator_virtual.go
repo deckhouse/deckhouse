@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/rest"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	virtualcontrolplaneapprover "control-plane-manager/internal/controllers/virtual-control-plane-approver"
 	virtualcontrolplaneconfiguration "control-plane-manager/internal/controllers/virtual-control-plane-configuration"
 	virtualcontrolplanenode "control-plane-manager/internal/controllers/virtual-control-plane-node"
 	virtualcontrolplaneoperation "control-plane-manager/internal/controllers/virtual-control-plane-operation"
@@ -90,5 +92,14 @@ func (c *virtualConfigurator) configureRuntimeManager(runtimeManager runtimemana
 		return fmt.Errorf("build virtual-control-plane-operation controller: %w", err)
 	}
 
+	if err := virtualcontrolplaneapprover.BuildController(runtimeManager); err != nil {
+		return fmt.Errorf("build virtual-control-plane-approver controller: %w", err)
+	}
+
 	return nil
+}
+
+func (c *virtualConfigurator) configureClient(cfg *rest.Config) {
+	cfg.QPS = 10
+	cfg.Burst = 20
 }

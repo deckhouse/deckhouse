@@ -14,37 +14,46 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package virtualcontrolplanenode
+package controlplaneapprover
 
 import (
+	"time"
+
+	"golang.org/x/time/rate"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-	"control-plane-manager/internal/cpn/cpnplanner"
-	"control-plane-manager/internal/cpn/cpnreconcile"
 )
 
-func BuildController(mgr manager.Manager) error {
-	r := cpnreconcile.New(
-		mgr.GetClient(),
-		mgr.GetAPIReader(),
-		mgr.GetScheme(),
-		cpnplanner.VirtualOperationBuilder{},
-		nil,
-	)
+const (
+	maxConcurrentReconciles = 1
+	cacheSyncTimeout        = 3 * time.Minute
+)
+
+func Register(mgr manager.Manager) error {
+	r := newReconciler(mgr.GetClient())
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.TypedOptions[reconcile.Request]{
-			MaxConcurrentReconciles: 10,
+			MaxConcurrentReconciles: maxConcurrentReconciles,
+			CacheSyncTimeout:        cacheSyncTimeout,
+			RateLimiter: workqueue.NewTypedMaxOfRateLimiter(
+				workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](100*time.Millisecond, 3*time.Second),
+				&workqueue.TypedBucketRateLimiter[reconcile.Request]{
+					Limiter: rate.NewLimiter(rate.Limit(1), 1),
+				},
+			),
 		}).
-		Named(constants.VirtualControlPlaneNodeController).
-		For(&controlplanev1alpha1.ControlPlaneNode{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Owns(&controlplanev1alpha1.ControlPlaneOperation{}, builder.WithPredicates(cpnreconcile.OperationStatusChangedPredicate())).
+		Named(constants.OperationsApproverControllerName).
+		For(
+			&controlplanev1alpha1.ControlPlaneOperation{},
+			builder.WithPredicates(OperationPredicate()),
+		).
 		Complete(r)
 }
