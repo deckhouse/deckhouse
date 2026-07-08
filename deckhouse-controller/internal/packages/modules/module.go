@@ -276,12 +276,6 @@ func (m *Module) GetSettingsChecksum() string {
 	return m.values.GetSettingsChecksum()
 }
 
-// GetConverter returns the schema version converter for this module's settings.
-// Returns nil if no conversions directory was present in the module package.
-func (m *Module) GetConverter() *conversion.Converter {
-	return m.converter
-}
-
 // ValidateSettings converts settings to the latest schema version (if a converter
 // is available and settingsVersion > 0), then validates against OpenAPI schema
 // and calls the settings check hook if defined.
