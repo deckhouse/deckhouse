@@ -65,10 +65,10 @@ type Module struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
-	definition Definition        // Module definition
-	digests    map[string]string // Package digests
-	repository registry.Remote   // Module repository
-	converter   *conversion.Converter // Schema version converter for settings
+	definition Definition            // Module definition
+	digests    map[string]string     // Package digests
+	repository registry.Remote       // Module repository
+	converter  *conversion.Converter // Schema version converter for settings
 
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
