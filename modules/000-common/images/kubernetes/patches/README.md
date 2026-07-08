@@ -85,11 +85,17 @@ version's storage is built (`customresource.REST` also embeds
 `*genericregistry.Store` and does not override List/Get/Watch, so the same
 `store.ScopeFilter` hook applies); registration is dropped on CRD teardown.
 Because that wiring edits the same two apiextensions files that
-`010-x-kubernetes-sensitive-data` also edits, and this patch (`005`) applies
-before `010`, patch `010` is shipped **regenerated** so its
-`customresource_handler.go` hunks apply cleanly on top of the CRD wiring — a
-context-only re-roll, no semantic change to `010` (see its README entry).
+`010-x-kubernetes-sensitive-data` also edits, and the acl-filtering patch
+applies before `010` in the chain, patch `010` is shipped **regenerated** so
+its `customresource_handler.go` hunks apply cleanly on top of the CRD wiring —
+a context-only re-roll, no semantic change to `010` (see its README entry).
 Cluster-scoped CRDs are skipped (no namespace to classify/floor).
+
+This whole mechanism (namespaces + generic `--scope` + CRD coverage) is carried
+on every k8s version DKP builds — 1.32 through 1.36. The acl-filtering patch
+keeps its per-version number (`006` on 1.32, `005` on 1.33/1.34, `007` on
+1.35/1.36) since its position in each version's chain differs; the `010`
+re-roll applies per version too.
 
 The filter's `RBACFloor`/`Classify` loopback calls are served through a shared
 TTL cache (default 1s, `SCOPEFILTER_RESOLVE_CACHE_TTL` /
