@@ -56,7 +56,7 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 
 		name := apps.BuildName(app.Namespace, app.Name)
 
-		res, err := manager.ValidatePackageSettings(ctx, name, app.Spec.Settings.GetMap())
+		res, err := manager.ValidatePackageSettings(ctx, name, 0, app.Spec.Settings.GetMap())
 		if err != nil {
 			return nil, err
 		}

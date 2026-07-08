@@ -55,6 +55,10 @@ const (
 	// globalPath is the relative directory containing global hook definitions and values.
 	// LoadGlobalConf expects this path to exist relative to the process working directory.
 	globalPath = "global-hooks"
+
+	// conversionsDir is the subdirectory within a package's openapi/ directory
+	// that contains schema version conversion files (v<N>.yaml).
+	conversionsDir = "conversions"
 )
 
 // ErrPackageNotFound is returned when the requested package directory doesn't exist
@@ -582,14 +586,14 @@ func loadEmbeddedDigests(packageName string) (map[string]string, error) {
 // loadConversions reads conversion rules from the module's openapi/conversions directory.
 // Returns nil if the directory does not exist (conversions are optional).
 func loadConversions(moduleDir string) (*conversion.Converter, error) {
-	conversionsDir := filepath.Join(moduleDir, "openapi", "conversions")
-	if _, err := os.Stat(conversionsDir); err != nil {
+	d := filepath.Join(moduleDir, "openapi", conversionsDir)
+	if _, err := os.Stat(d); err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("stat conversions dir: %w", err)
 	}
-	return conversion.NewConverterFromDir(conversionsDir)
+	return conversion.NewConverterFromDir(d)
 }
 
 // getModuleVersion returns the version of the package at moduleDir.

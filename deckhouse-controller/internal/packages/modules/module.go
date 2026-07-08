@@ -282,8 +282,18 @@ func (m *Module) GetConverter() *conversion.Converter {
 	return m.converter
 }
 
-// ValidateSettings validates settings against openAPI and call setting check if exists
-func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+// ValidateSettings converts settings to the latest schema version (if a converter
+// is available and settingsVersion > 0), then validates against OpenAPI schema
+// and calls the settings check hook if defined.
+func (m *Module) ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
+	// Convert to latest schema version before validation
+	if m.converter != nil && settingsVersion > 0 {
+		var err error
+		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		if err != nil {
+			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
+		}
+	}
 	if err := m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
@@ -320,7 +330,17 @@ func (m *Module) GetValues() addonutils.Values {
 }
 
 // ApplySettings applies settings values
-func (m *Module) ApplySettings(settings addonutils.Values) error {
+// ApplySettings converts settings to the latest schema version (if a converter
+// is available), then applies them to the values storage.
+func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) error {
+	// Convert to latest schema version before applying
+	if m.converter != nil && settingsVersion > 0 {
+		var err error
+		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		if err != nil {
+			return fmt.Errorf("convert settings: %w", err)
+		}
+	}
 	return m.values.ApplySettings(settings)
 }
 

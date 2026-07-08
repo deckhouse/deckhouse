@@ -44,7 +44,7 @@ type moduleStorage interface {
 }
 
 type packageManager interface {
-	ValidatePackageSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error)
+	ValidatePackageSettings(ctx context.Context, name string, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error)
 	CheckConstraints(name string, constraints schedule.Constraints) error
 }
 

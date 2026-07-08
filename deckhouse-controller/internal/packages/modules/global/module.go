@@ -223,7 +223,7 @@ func (m *Module) GetValues() addonutils.Values {
 }
 
 // ValidateSettings validates settings against openAPI
-func (m *Module) ValidateSettings(_ context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+func (m *Module) ValidateSettings(_ context.Context, _ int, settings addonutils.Values) (settingscheck.Result, error) {
 	if err := m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
@@ -242,7 +242,7 @@ func (m *Module) ValidateSettings(_ context.Context, settings addonutils.Values)
 }
 
 // ApplySettings apply settings values
-func (m *Module) ApplySettings(settings addonutils.Values) error {
+func (m *Module) ApplySettings(_ int, settings addonutils.Values) error {
 	return m.values.ApplySettings(settings)
 }
 

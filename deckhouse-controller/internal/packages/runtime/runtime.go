@@ -831,12 +831,12 @@ func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints
 
 // settingsValidatorI validates settings for a loaded runtime package.
 type settingsValidatorI interface {
-	ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error)
+	ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error)
 }
 
-// ValidatePackageSettings checks settings against the package's OpenAPI schema.
-// Returns valid if the package is not loaded yet (settings validated on load).
-func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+// ValidatePackageSettings converts (if needed) and validates settings against the
+// package's OpenAPI schema. Returns valid if the package is not loaded yet.
+func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidatePackageSettings")
 	defer span.End()
 
@@ -856,5 +856,5 @@ func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, sett
 		return settingscheck.Result{Valid: true}, nil
 	}
 
-	return validator.ValidateSettings(ctx, settings)
+	return validator.ValidateSettings(ctx, settingsVersion, settings)
 }
