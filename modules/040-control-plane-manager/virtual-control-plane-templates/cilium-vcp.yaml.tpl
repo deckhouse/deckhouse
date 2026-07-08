@@ -925,7 +925,7 @@ spec:
               resource: limits.memory
               divisor: '1'
         - name: KUBERNETES_SERVICE_HOST
-          value: "${VCP_API_HOST}"
+          value: "${VCP_API_VIP}"
         - name: KUBERNETES_SERVICE_PORT
           value: "6443"
         - name: KUBE_CLIENT_BACKOFF_BASE
@@ -1044,7 +1044,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.namespace
         - name: KUBERNETES_SERVICE_HOST
-          value: "${VCP_API_HOST}"
+          value: "${VCP_API_VIP}"
         - name: KUBERNETES_SERVICE_PORT
           value: "6443"
         volumeMounts:
@@ -1175,7 +1175,7 @@ spec:
               key: write-cni-conf-when-ready
               optional: true
         - name: KUBERNETES_SERVICE_HOST
-          value: "${VCP_API_HOST}"
+          value: "${VCP_API_VIP}"
         - name: KUBERNETES_SERVICE_PORT
           value: "6443"
         terminationMessagePolicy: FallbackToLogsOnError
