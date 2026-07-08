@@ -3,6 +3,9 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: capo-validating-webhook
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capo-controller-manager,namespace=d8-cloud-provider-openstack
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=capo-controller-manager-webhook-service,namespace=d8-cloud-provider-openstack
   {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
 webhooks:
 - admissionReviewVersions:
