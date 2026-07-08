@@ -716,7 +716,7 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 Before disabling ambient mode, delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by DKP in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
 {% endalert %}
 
-To disable the ambient mode, foow these steps:
+To disable the ambient mode, follow these steps:
 
 1. Check if any WaypointInstance resources remain and delete them as necessary using the following commands:
 
