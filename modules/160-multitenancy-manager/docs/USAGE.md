@@ -31,6 +31,8 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
 
+The `default`, `secure`, and `secure-with-dedicated-nodes` templates are described in the [structured form](#structured-templates) (`deckhouse.io/v1alpha2`); the `simple` template is a minimal legacy (`v1alpha1`) template.
+
 To list all available parameters for a project template, execute the command:
 
 ```shell
@@ -86,9 +88,53 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parameters
 
    A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `d8 k get projects my-project -o yaml`) to get more detailed information about the error.
 
-### Creating a project automatically for a namespace
+### Project naming rules
 
-You can create a new project for a namespace. To do this, add the `projects.deckhouse.io/adopt` annotation to the namespace. For example:
+The project name is also the name of its main namespace, so the following rules are checked when a project is created:
+
+- the name cannot start with `d8-` or `kube-` — these prefixes are reserved for system namespaces;
+- the name cannot be longer than 61 characters;
+- if a project `foo` exists, a project `foo-bar` cannot be created — and vice versa, with an existing project `foo-bar` a project `foo` cannot be created. Names like `<project>-*` are reserved for the project's [additional namespaces](#additional-project-namespaces): without this rule, an additional namespace of one project could clash with another project's name.
+
+## Additional project namespaces
+
+If an application needs several namespaces (for example, a separate one for a cache or queues), add them to the project with the [ProjectNamespace](cr.html#projectnamespace) resource. The resource is created **in the main namespace of the project**; the resulting namespace is named `<project name>-<spec.name>`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectNamespace
+metadata:
+  name: cache
+  namespace: my-project
+spec:
+  name: cache   # The my-project-cache namespace will be created.
+```
+
+You can check the project composition in its status:
+
+```shell
+d8 k get project my-project -o jsonpath='{.status.namespaces}'
+```
+
+Specifics:
+
+- An additional namespace automatically receives the project template settings (pod security profile, network policies, log collection, etc.) and all access granted to the project ([ProjectRoleBinding](cr.html#projectrolebinding), [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding), project administrators). The project quota applies in the main namespace.
+- The `spec.name` field is immutable: to rename a namespace, delete the resource and create a new one.
+- The resulting name `<project name>-<spec.name>` cannot be longer than 63 characters (the Kubernetes limit on namespace names).
+- A `ProjectNamespace` can only be created in the main namespace of a project — it cannot be "nested" into an additional namespace or a foreign project. If a namespace with that name already exists and belongs to another project, the request is rejected.
+- Deleting a `ProjectNamespace` resource deletes its namespace; deleting the project deletes all of its namespaces.
+
+## Creating a project automatically for a namespace
+
+By default (the [`allowNamespacesWithoutProjects: true`](configuration.html#parameters-allownamespaceswithoutprojects) parameter), a namespace created directly (for example, `d8 k create ns my-app`) is automatically wrapped into a project with the same name:
+
+- the project is created without a template and is labelled `multitenancy.deckhouse.io/project-managed-by-namespace: "true"`;
+- the namespace is the source of truth: its labels and annotations are synced into the project parameters; edit and delete the namespace itself (deleting it deletes the project automatically);
+- the specification of such a project cannot be edited manually. To turn it into a regular project (for example, to assign a template), remove the `multitenancy.deckhouse.io/project-managed-by-namespace` label from the project — after that, the project is managed as usual.
+
+If the `allowNamespacesWithoutProjects` parameter is disabled, creating namespaces outside of projects is prohibited — a `d8 k create ns` attempt is rejected with an explanation.
+
+An existing namespace can also be explicitly adopted into a project by adding the `projects.deckhouse.io/adopt` annotation. For example:
 
 1. Create a new namespace:
 
@@ -162,7 +208,17 @@ To grant access to project namespaces beyond the project administrators, use rol
 - [ProjectRoleBinding](cr.html#projectrolebinding) (namespaced, short name `prb`) — grants a role within a **single** project. It must be created in the project's main namespace (the namespace whose name equals the project name). The controller creates a `RoleBinding` in every namespace of that project.
 - [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (cluster-scoped, short name `cprb`) — grants a role across **all** non-virtual projects. The controller creates a `RoleBinding` in every namespace of every project and reports the number of bound projects in `.status.boundProjects`.
 
-`roleRef` must reference a `ClusterRole` whose name starts with one of the allowed prefixes (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). A privilege-escalation check (via `SubjectAccessReview`) ensures the requesting user is allowed to bind the role.
+`roleRef` must reference a `ClusterRole` whose name starts with one of the allowed prefixes (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). See [the user-authz module documentation](../user-authz/) for the description of the roles.
+
+The following checks apply when bindings are created:
+
+- **Privilege escalation protection**: a binding can only be created by a user who has the right to bind (`bind`) the referenced role. For example, a project administrator (`d8:project:admin`) can grant the built-in `d8:project:*` and `d8:namespace:*` roles, but cannot grant a role broader than their own permissions.
+- The role must exist: a binding to a non-existent role is rejected.
+- A `ServiceAccount` used as a subject of a `ProjectRoleBinding` must belong to a namespace of that same project.
+- System and subsystem roles (`d8:system:*`, `d8:subsystem:*`), as well as arbitrary roles outside the listed prefixes, cannot be granted via project bindings.
+- Roles with the `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` annotation are forbidden for granting in projects. A cluster administrator can put this annotation on a role to phase it out: existing bindings keep working, but new ones cannot be created. If such a role is used by a project template, the project switches to the `Error` state with an explanation in the `TemplateRolesAllowed` condition.
+
+The `d8-administrators` binding created by the controller from the [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) field is managed by the controller only — it cannot be edited manually. To change the set of administrators, change the `.spec.administrators` field of the project.
 
 ```yaml
 ---
@@ -192,9 +248,95 @@ spec:
     name: d8:project:viewer
 ```
 
-## Creating your own project template
+## Structured templates
 
-Default templates cover basic project use cases and serve as a good example of template capabilities.
+Starting with the `deckhouse.io/v1alpha2` API version, a project template is described by **structured fields** — instead of a text Helm template, you declaratively specify which settings the project namespaces get. The controller itself creates the corresponding objects (network policies, security policies, log collection settings, etc.) from these fields in every namespace of the project and keeps them up to date.
+
+Available fields (all optional; the complete reference is [in the resource description](cr.html#projecttemplate)):
+
+| Field | What it configures |
+|-------|--------------------|
+| `podSecurityStandard` | Pod security profile: `Privileged`, `Baseline`, or `Restricted` |
+| `networkPolicy.mode` | Network isolation: `Isolated` (traffic is only allowed within the project and from the platform system components) or `NotRestricted` |
+| `features.monitoring` | Extended monitoring of the project namespaces |
+| `features.vulnerabilityScanning` | Scanning of container images for vulnerabilities |
+| `logShipping.clusterDestinationRef` | Collecting the logs of the project pods into the given destination (`ClusterLogDestination`) |
+| `nodeSelector`, `tolerations` | Placing the project pods on dedicated nodes |
+| `allowedUIDs`, `allowedGIDs` | The allowed UID/GID ranges of the project containers |
+| `runtimeAudit.enabled` | Auditing the project processes' access to the Linux kernel |
+| `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Extra labels and annotations of the project namespaces |
+| `resources`, `grantPolicies` | [Granting cluster-scoped resources to projects](#granting-cluster-scoped-resources-to-projects) |
+| `parametersSchema.openAPIV3Schema` | The schema of parameters set when creating a project |
+
+An example of a structured template:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: my-template
+spec:
+  title: "Team template"
+  description: "Isolated project with monitoring"
+  podSecurityStandard: Baseline
+  networkPolicy:
+    mode: Isolated
+  features:
+    monitoring: true
+    vulnerabilityScanning: true
+```
+
+### Template parametrization
+
+Any "leaf" value of a structured field can be turned into a parameter: instead of a concrete value, specify `{fromParam: <parameter name>}` and declare the parameter in `parametersSchema`. Each project then sets its own value in `.spec.parameters`; if the value is not set, the `default` from the schema is used.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: my-parametrized-template
+spec:
+  podSecurityStandard:
+    fromParam: securityProfile
+  networkPolicy:
+    mode:
+      fromParam: networkMode
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        securityProfile:
+          type: string
+          enum: [Baseline, Restricted]
+          default: Baseline
+        networkMode:
+          type: string
+          enum: [Isolated, NotRestricted]
+          default: Isolated
+```
+
+A project using such a template:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: my-project
+spec:
+  projectTemplateName: my-parametrized-template
+  parameters:
+    securityProfile: Restricted
+```
+
+The `fromParam` references are validated when the template is created: a reference to an undeclared parameter or to a parameter of an incompatible type (for example, a string parameter for a boolean field) is rejected.
+
+### Template checks
+
+- A template used by at least one project cannot be deleted.
+- A change to a template is automatically applied to all projects created from it.
+- Legacy `deckhouse.io/v1alpha1` templates with the text `resourcesTemplate` field (Helm templating) keep working but are deprecated — create new templates in the structured form. `ResourceQuota` and `AuthorizationRule` resources from such templates are filtered out during rendering (see [standard project fields](#standard-project-fields)).
+
+## Creating your own project template
 
 To create your own template:
 
@@ -205,14 +347,7 @@ To create your own template:
    d8 k get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
-1. Edit the `my-project-template.yaml` file, make the necessary changes.
-
-   {% alert level="info" %}
-   You must update not only the template itself, but also the input parameters schema to match it.
-
-   Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
-   {% endalert %}
-
+1. Edit the `my-project-template.yaml` file: adjust the [structured fields](#structured-templates) and the input parameters schema to your needs.
 1. Change the template name in the `.metadata.name` field.
 1. Apply your new template with the command:
 
@@ -400,9 +535,8 @@ To do this, custom resources are used:
   `projectSelector`) and, per resource (`resourceName`), the granted names (`allowed`,
   `allowedSelector`) and the per-project `default`. An allow-list restricts the resource to it.
 - `AvailableClusterResource` (namespaced, read-only, short name `available`) — the controller-rendered
-  catalog of what a project may use; tenants read it to discover the available names.
-- `ClusterResourceGrant` (namespaced) — the per-project object-quota pool (limits on object count and
-  on measured quantities such as requested storage); its status reports current usage.
+  catalog of what a project may use; tenants read it to discover the available names. The catalog
+  objects cannot be modified or deleted manually.
 
 {% raw %}
 
@@ -462,3 +596,26 @@ Enforcement notes:
   filled in.
 - A grant that matches no project, or a project with no matching grant, imposes no
   restriction.
+
+### Granting cluster-scoped resources through a project template
+
+The availability rules for cluster-scoped resources can be set directly in a [structured template](#structured-templates) — they then automatically apply to all projects created from that template:
+
+- `spec.resources` — the rules "inside" the template: the same format as `resources` in a `ClusterResourceGrantPolicy` (resource name, `allowed`/`allowedSelector`, `default`);
+- `spec.grantPolicies` — a list of names of **library** `ClusterResourceGrantPolicy` objects. A library policy describes a reusable set of rules and must not have a `projectSelector` — which projects it applies to is determined by the referencing template. This way, for example, a "corporate StorageClasses" policy can be maintained by one administrator and used by several templates.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: my-template
+spec:
+  resources:
+    - resourceName: storageclasses
+      allowed: ["standard"]
+      default: standard
+  grantPolicies:
+    - corporate-issuers   # A library ClusterResourceGrantPolicy without a projectSelector.
+```
+
+For each source, the controller creates a service policy named `template-<template>-<source>` (for `spec.resources` — `template-<template>-inline`); the `inline` name is reserved for library policies. A reference to a non-existent policy or to a policy with a `projectSelector` is rejected when the template is created.

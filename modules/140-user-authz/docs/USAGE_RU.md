@@ -220,7 +220,34 @@ roleRef:
   - `kubectl exec`;
   - `kubectl port-forward`;
   - `kubectl proxy`.
+
+Пользователю **не** будут доступны операции, зарезервированные за уровнем `superadmin` (см. [ограничения уровня admin](./#ограничения-уровня-admin-и-права-superadmin)): выпуск токенов ServiceAccount'ов, выполнение запросов от имени ServiceAccount'ов, изменение системных ресурсов платформы в этом пространстве имён и подключение к системным подам.
 {% endofftopic %}
+
+## Пример назначения прав на все пространства имён проекта
+
+{% alert level="info" %}
+Пример использует [экспериментальную ролевую модель](./#экспериментальная-ролевая-модель) и модуль [multitenancy-manager](../multitenancy-manager/).
+{% endalert %}
+
+Если пространства имён объединены в [проект](../multitenancy-manager/), роль можно выдать сразу на весь проект — она автоматически будет действовать во всех его пространствах имён, включая создаваемые позже. Для этого вместо `RoleBinding` используйте [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) в основном пространстве имён проекта:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: team-developers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: Group
+      name: developers
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:user
+```
+
+Подробнее о привязках ролей в проектах — [в документации модуля multitenancy-manager](../multitenancy-manager/usage.html#предоставление-доступа-внутри-проекта).
 
 ## Пример `ClusterAuthorizationRule`
 

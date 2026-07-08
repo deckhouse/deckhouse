@@ -220,7 +220,34 @@ In the `myapp` namespace, the user will be able to:
   - `kubectl exec`
   - `kubectl port-forward`
   - `kubectl proxy`
+
+The user will **not** get the operations reserved for the `superadmin` level (see [admin level restrictions](./#admin-level-restrictions-and-superadmin-rights)): minting ServiceAccount tokens, making requests on behalf of ServiceAccounts, modifying platform system resources in this namespace, and connecting to system pods.
 {% endofftopic %}
+
+## An example of assigning rights across all namespaces of a project
+
+{% alert level="info" %}
+The example uses the [experimental role-based model](./#experimental-role-based-model) and the [multitenancy-manager](../multitenancy-manager/) module.
+{% endalert %}
+
+If the namespaces are grouped into a [project](../multitenancy-manager/), a role can be granted for the whole project at once — it will automatically apply in all of its namespaces, including those created later. To do that, use a [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) in the main namespace of the project instead of a `RoleBinding`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: team-developers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: Group
+      name: developers
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:user
+```
+
+For more details on role bindings in projects, see [the multitenancy-manager module documentation](../multitenancy-manager/usage.html#granting-access-within-a-project).
 
 ## An example of `ClusterAuthorizationRule`
 

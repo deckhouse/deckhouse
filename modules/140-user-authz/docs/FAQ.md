@@ -302,3 +302,100 @@ If the resource belongs to a namespace, you need to extend the namespace role in
  ```
 
 This capability will be added to the `d8:namespace:user` role.
+
+### Creating a custom namespace or project role
+
+Sometimes the built-in level ladder does not fit: for example, you need a "developer" role — full view of the namespace plus reading logs, but without the right to change quotas or RBAC. Such a role is assembled from ready-made capabilities, without writing RBAC rules by hand.
+
+The rules for custom roles:
+
+- the name must start with `d8:custom:` (for example, `d8:custom:namespace:developer`);
+- the role must carry the `rbac.deckhouse.io/kind: custom-role` label;
+- the role **cannot contain its own rules** (`rules`) — it may only aggregate capabilities via `aggregationRule`. Permissions are described in separate capabilities, so the contents of the role stay transparent;
+- a single role cannot aggregate capabilities of the user-facing scopes (`namespace`, `project`) together with the administrative ones (`system`, subsystems) — such a role is rejected.
+
+An example: a role that includes everything `d8:namespace:viewer` can do, plus one specific capability (connecting to pods), selected precisely by its unique `rbac.deckhouse.io/capability` label:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace:developer
+  labels:
+    rbac.deckhouse.io/kind: custom-role
+    rbac.deckhouse.io/scope: namespace
+  annotations:
+    custom.meta.deckhouse.io/title: "Developer"
+    custom.meta.deckhouse.io/description: "View resources and connect to pods, without managing quotas and RBAC"
+aggregationRule:
+  clusterRoleSelectors:
+    # Everything included in the viewer level of the namespace lineage.
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    # Plus one specific capability selected by its unique name.
+    - matchLabels:
+        rbac.deckhouse.io/capability: "namespace-capability.kubernetes.access_terminal"
+rules: []
+```
+
+If no existing capability grants the permissions you need, create your own (a `custom-capability` may contain rules) and add a selector by its `rbac.deckhouse.io/capability` label to the role's `aggregationRule` (in the example below — `matchLabels: {rbac.deckhouse.io/capability: "custom.logs-reader"}`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace-capability:logs-reader
+  labels:
+    rbac.deckhouse.io/kind: custom-capability
+    rbac.deckhouse.io/capability: "custom.logs-reader"
+rules:
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+```
+
+To list all available capabilities and their unique names:
+
+```shell
+d8 k get clusterroles -l rbac.deckhouse.io/kind=capability \
+  -o custom-columns='NAME:.metadata.name,CAPABILITY:.metadata.labels.rbac\.deckhouse\.io/capability'
+```
+
+The resulting role is assigned exactly like a built-in one: via a `RoleBinding` in a namespace or via a [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) across a whole project (for project roles, use `rbac.deckhouse.io/scope: project` and aggregate `aggregate-to-project-as`). It cannot be assigned via a `ClusterRoleBinding` — just like the built-in roles of these scopes.
+
+> You can also assemble such a role without YAML — with the access grant wizard in the Deckhouse Console web interface: it shows the available capabilities, builds a role out of them, and immediately creates the required binding.
+
+## How do I rename a built-in role?
+
+The permissions of built-in roles cannot be changed, but their display title and description can — for example, so that the interface shows them in your company's terms. Add the `custom.meta.deckhouse.io/title` and `custom.meta.deckhouse.io/description` annotations to the role:
+
+```shell
+d8 k annotate clusterrole d8:namespace:admin \
+  custom.meta.deckhouse.io/title='Team administrator' \
+  custom.meta.deckhouse.io/description='Manages resources and access in the team namespace'
+```
+
+This is the only modification allowed for objects with the `d8:` prefix (except `d8:custom:*`): an attempt to change the rules, aggregation, or labels of a built-in role is rejected.
+
+## How do I find out who has access to a resource?
+
+In the Enterprise Edition, with the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), a reverse authorization query is available — the `WhoCan` resource. It answers the question "who can perform action X on resource Y?" and returns the list of users, groups, and ServiceAccounts:
+
+```shell
+d8 k create -o yaml -f - <<EOF
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: WhoCan
+metadata:
+  name: who-can-create-networkpolicies
+spec:
+  resourceAttributes:
+    namespace: my-namespace
+    verb: create
+    group: networking.k8s.io
+    resource: networkpolicies
+EOF
+```
+
+The answer is returned in the `status` field (`users`, `groups`, `serviceAccounts`) directly in the command output; the object is not stored anywhere.
+
+The right to create `WhoCan` queries is granted by the `d8:user-authz:who-can-checker` cluster role. It is intentionally not bound to anyone by default: the query result discloses access subjects across all namespaces, so grant it only to trusted administrators via a `ClusterRoleBinding`.

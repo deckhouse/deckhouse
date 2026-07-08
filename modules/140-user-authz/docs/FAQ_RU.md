@@ -302,3 +302,100 @@ rules:
  ```
 
 Эта capability дополнит роль `d8:namespace:user`.
+
+### Создание собственной namespace- или проектной роли
+
+Иногда встроенная лестница уровней не подходит: например, нужна роль «разработчик» — просмотр всего пространства имён плюс чтение логов, но без права менять квоты или RBAC. Такая роль собирается из готовых capabilities, без написания RBAC-правил вручную.
+
+Правила для собственных ролей:
+
+- имя должно начинаться с `d8:custom:` (например, `d8:custom:namespace:developer`);
+- роль должна иметь лейбл `rbac.deckhouse.io/kind: custom-role`;
+- роль **не может содержать собственных правил** (`rules`) — только агрегировать capabilities через `aggregationRule`. Права описываются в отдельных capabilities — так состав роли всегда прозрачен;
+- нельзя в одной роли агрегировать capabilities пользовательских областей (`namespace`, `project`) вместе с административными (`system`, подсистемы) — такая роль будет отклонена.
+
+Пример: роль, включающая всё, что умеет `d8:namespace:viewer`, плюс одну конкретную capability (подключение к подам), выбранную адресно по её уникальному лейблу `rbac.deckhouse.io/capability`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace:developer
+  labels:
+    rbac.deckhouse.io/kind: custom-role
+    rbac.deckhouse.io/scope: namespace
+  annotations:
+    custom.meta.deckhouse.io/title: "Разработчик"
+    custom.meta.deckhouse.io/description: "Просмотр ресурсов и подключение к подам, без управления квотами и RBAC"
+aggregationRule:
+  clusterRoleSelectors:
+    # Всё, что входит в уровень viewer namespace-линейки.
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    # Плюс одна конкретная capability, выбранная по её уникальному имени.
+    - matchLabels:
+        rbac.deckhouse.io/capability: "namespace-capability.kubernetes.access_terminal"
+rules: []
+```
+
+Если готовой capability с нужными правами нет, создайте собственную (`custom-capability` может содержать правила) и добавьте в `aggregationRule` роли селектор по её лейблу `rbac.deckhouse.io/capability` (в примере ниже — `matchLabels: {rbac.deckhouse.io/capability: "custom.logs-reader"}`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace-capability:logs-reader
+  labels:
+    rbac.deckhouse.io/kind: custom-capability
+    rbac.deckhouse.io/capability: "custom.logs-reader"
+rules:
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+```
+
+Список всех доступных capabilities и их уникальных имён:
+
+```shell
+d8 k get clusterroles -l rbac.deckhouse.io/kind=capability \
+  -o custom-columns='NAME:.metadata.name,CAPABILITY:.metadata.labels.rbac\.deckhouse\.io/capability'
+```
+
+Готовую роль назначают так же, как встроенную: через `RoleBinding` в пространстве имён или через [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) на весь проект (для проектных ролей используйте `rbac.deckhouse.io/scope: project` и агрегируйте `aggregate-to-project-as`). Назначить её через `ClusterRoleBinding` нельзя — как и встроенные роли этих областей.
+
+> Собрать такую роль можно и без YAML — мастером выдачи доступа в веб-интерфейсе Deckhouse Console: он показывает доступные capabilities, собирает из них роль и сразу создаёт нужную привязку.
+
+## Как переименовать встроенную роль?
+
+Изменять права встроенных ролей нельзя, но можно изменить их отображаемое название и описание — например, чтобы в интерфейсе они назывались в принятых в компании терминах. Для этого добавьте на роль аннотации `custom.meta.deckhouse.io/title` и `custom.meta.deckhouse.io/description`:
+
+```shell
+d8 k annotate clusterrole d8:namespace:admin \
+  custom.meta.deckhouse.io/title='Администратор команды' \
+  custom.meta.deckhouse.io/description='Управление ресурсами и доступом в пространстве имён команды'
+```
+
+Это единственное изменение, которое разрешено вносить в объекты с префиксом `d8:` (кроме `d8:custom:*`): попытка изменить правила, агрегацию или лейблы встроенной роли будет отклонена.
+
+## Как узнать, у кого есть доступ к ресурсу?
+
+В Enterprise Edition при включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен обратный запрос к авторизации — ресурс `WhoCan`. Он отвечает на вопрос «кто может выполнить действие X над ресурсом Y?» и возвращает список пользователей, групп и ServiceAccount'ов:
+
+```shell
+d8 k create -o yaml -f - <<EOF
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: WhoCan
+metadata:
+  name: who-can-create-networkpolicies
+spec:
+  resourceAttributes:
+    namespace: my-namespace
+    verb: create
+    group: networking.k8s.io
+    resource: networkpolicies
+EOF
+```
+
+Ответ возвращается в поле `status` (`users`, `groups`, `serviceAccounts`) сразу в выводе команды; объект нигде не сохраняется.
+
+Право создавать `WhoCan`-запросы даёт кластерная роль `d8:user-authz:who-can-checker`. Она намеренно никому не выдана по умолчанию: результат запроса раскрывает субъектов доступа во всех пространствах имён, поэтому выдавайте её только доверенным администраторам через `ClusterRoleBinding`.
