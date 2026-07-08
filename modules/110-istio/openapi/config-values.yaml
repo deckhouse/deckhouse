@@ -1151,7 +1151,10 @@ properties:
                 description: |
                   Resource management mode for waypoint-controller pods.
 
-                  Use `Static` to set requests and limits explicitly in the [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static) parameter section. Use `VPA` to let [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) manage resources automatically, configured in the [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa) parameter section.
+                  Possible values:
+
+                  - `Static`: Lets you set requests and limits manually in the [`static`](#parameters-ambient-waypointcontroller-resourcesmanagement-static) parameter section.
+                  - `VPA`: Lets [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) manage resources automatically. The mode is configured in the [`vpa`](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa) parameter section.
                 enum: ['VPA', 'Static']
                 default: 'VPA'
               vpa:
