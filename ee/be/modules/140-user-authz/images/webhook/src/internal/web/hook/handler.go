@@ -45,18 +45,34 @@ type Handler struct {
 	nsLister corev1listers.NamespaceLister
 	nsSynced kcache.InformerSynced
 
+	// independentRBAC, when set, is consulted before denying a request:
+	// requests explicitly granted by CAR-independent RBAC (RoleBindings,
+	// non-CAR ClusterRoleBindings) must not be denied by multi-tenancy
+	// filters. See RBACEvaluator for details.
+	independentRBAC independentRBACResolver
+
 	//        [user type] [user name]
 	mu        sync.RWMutex
 	directory map[string]map[string]DirectoryEntry
 }
 
-func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1listers.NamespaceLister, nsSynced kcache.InformerSynced) (*Handler, error) {
+func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1listers.NamespaceLister, nsSynced kcache.InformerSynced, independentRBAC independentRBACResolver) (*Handler, error) {
 	return &Handler{
-		logger:   logger,
-		cache:    discoveryCache,
-		nsLister: nsLister,
-		nsSynced: nsSynced,
+		logger:          logger,
+		cache:           discoveryCache,
+		nsLister:        nsLister,
+		nsSynced:        nsSynced,
+		independentRBAC: independentRBAC,
 	}, nil
+}
+
+// independentRBACAllows reports whether CAR-independent RBAC explicitly
+// grants the request.
+func (h *Handler) independentRBACAllows(request *WebhookRequest) bool {
+	if h.independentRBAC == nil {
+		return false
+	}
+	return h.independentRBAC.AllowsIndependently(&request.Spec)
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -134,6 +150,17 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 		}
 	}
 
+	// The namespace is outside the user's CAR scope, but the request may be
+	// explicitly granted by CAR-independent RBAC: a RoleBinding in the
+	// namespace (including RoleBindings rendered from AuthorizationRules) or
+	// a ClusterRoleBinding not generated from a CAR. Such grants exist
+	// regardless of any CAR and must not be denied here; the final decision
+	// is still made by the RBAC authorizer after this webhook.
+	if request.Status.Denied && h.independentRBACAllows(request) {
+		request.Status.Denied = false
+		request.Status.Reason = ""
+	}
+
 	return request
 }
 
@@ -190,8 +217,12 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 		// could not check whether resource is namespaced or not (from cache) - deny access
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
 	} else if namespaced && hasAnyFilters(entry) {
-		// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
-		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
+		// Cluster-scoped access to a namespaced resource granted by a non-CAR
+		// ClusterRoleBinding is a deliberate cluster-wide grant; do not deny it.
+		if !h.independentRBACAllows(request) {
+			// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
+			h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
+		}
 	}
 
 	return request

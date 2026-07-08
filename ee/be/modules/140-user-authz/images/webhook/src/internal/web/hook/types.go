@@ -68,11 +68,13 @@ type WebhookResourceSpec struct {
 }
 
 type WebhookResourceAttributes struct {
-	Group     string `json:"group,omitempty"`
-	Version   string `json:"version,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Resource  string `json:"resource"`
-	Verb      string `json:"verb"`
+	Group       string `json:"group,omitempty"`
+	Version     string `json:"version,omitempty"`
+	Namespace   string `json:"namespace,omitempty"`
+	Resource    string `json:"resource"`
+	Subresource string `json:"subresource,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Verb        string `json:"verb"`
 }
 
 type WebhookRequestStatus struct {

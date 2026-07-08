@@ -50,6 +50,13 @@ func isPrivilegedUser(groups []string) bool {
 	return false
 }
 
+// IndependentRBACChecker reports whether a request is allowed by RBAC grants
+// that exist independently of ClusterAuthorizationRules: RoleBindings in the
+// request's namespace and ClusterRoleBindings not generated from a CAR.
+type IndependentRBACChecker interface {
+	AllowsIndependently(ctx context.Context, attrs authorizer.Attributes) bool
+}
+
 // Engine implements the multi-tenancy authorization logic from user-authz webhook
 type Engine struct {
 	configPath      string
@@ -59,12 +66,23 @@ type Engine struct {
 	nsSynced        cache.InformerSynced
 	discoveryClient discovery.DiscoveryInterface
 
+	// independentRBAC, when set, is consulted before returning Deny: requests
+	// explicitly granted by CAR-independent RBAC must not be denied by
+	// multi-tenancy filters.
+	independentRBAC IndependentRBACChecker
+
 	mu        sync.RWMutex
 	directory map[string]map[string]DirectoryEntry
 
 	// Cache for namespaced resources
 	namespacedCache   map[string]bool
 	namespacedCacheMu sync.RWMutex
+}
+
+// SetIndependentRBACChecker wires the CAR-independent RBAC checker into the
+// engine. Must be called before the engine starts serving Authorize calls.
+func (e *Engine) SetIndependentRBACChecker(checker IndependentRBACChecker) {
+	e.independentRBAC = checker
 }
 
 // NewEngine creates a new multi-tenancy engine
@@ -114,19 +132,27 @@ func (e *Engine) Authorize(ctx context.Context, attrs authorizer.Attributes) (au
 
 	// Check namespaced request
 	if attrs.GetNamespace() != "" {
-		return e.authorizeNamespacedRequest(attrs, &combinedDir)
+		return e.authorizeNamespacedRequest(ctx, attrs, &combinedDir)
 	}
 
 	// Check cluster-scoped request for namespaced resource
 	if attrs.GetResource() != "" {
-		return e.authorizeClusterScopedRequest(attrs, &combinedDir)
+		return e.authorizeClusterScopedRequest(ctx, attrs, &combinedDir)
 	}
 
 	return authorizer.DecisionNoOpinion, "", nil
 }
 
-// authorizeNamespacedRequest checks if the user can access the specific namespace
-func (e *Engine) authorizeNamespacedRequest(attrs authorizer.Attributes, entry *DirectoryEntry) (authorizer.Decision, string, error) {
+// authorizeNamespacedRequest checks if the user can access the specific namespace.
+//
+// The multi-tenancy scope here is CAR-only (LimitNamespaces, namespaceSelectors,
+// the system-namespace gate): inside that scope the CAR's cluster-wide
+// accessLevel binding is meant to apply, so we return NoOpinion and let RBAC
+// decide. Outside that scope the request is denied unless CAR-independent RBAC
+// explicitly grants it - this both keeps RoleBinding/AuthorizationRule access
+// working and prevents the CAR accessLevel from leaking into namespaces not
+// listed in limitNamespaces.
+func (e *Engine) authorizeNamespacedRequest(ctx context.Context, attrs authorizer.Attributes, entry *DirectoryEntry) (authorizer.Decision, string, error) {
 	if !hasAnyFilters(entry) {
 		return authorizer.DecisionNoOpinion, "", nil
 	}
@@ -165,6 +191,14 @@ func (e *Engine) authorizeNamespacedRequest(attrs authorizer.Attributes, entry *
 		}
 	}
 
+	// The namespace is outside the CAR scope. Requests granted by
+	// CAR-independent RBAC (RoleBindings in the namespace, non-CAR
+	// ClusterRoleBindings) must not be denied.
+	if denied && e.independentRBAC != nil && e.independentRBAC.AllowsIndependently(ctx, attrs) {
+		denied = false
+		reason = ""
+	}
+
 	if denied {
 		return authorizer.DecisionDeny, reason, nil
 	}
@@ -173,7 +207,7 @@ func (e *Engine) authorizeNamespacedRequest(attrs authorizer.Attributes, entry *
 }
 
 // authorizeClusterScopedRequest checks if cluster-scoped requests for namespaced resources should be denied
-func (e *Engine) authorizeClusterScopedRequest(attrs authorizer.Attributes, entry *DirectoryEntry) (authorizer.Decision, string, error) {
+func (e *Engine) authorizeClusterScopedRequest(ctx context.Context, attrs authorizer.Attributes, entry *DirectoryEntry) (authorizer.Decision, string, error) {
 	if !hasAnyFilters(entry) {
 		return authorizer.DecisionNoOpinion, "", nil
 	}
@@ -190,6 +224,11 @@ func (e *Engine) authorizeClusterScopedRequest(attrs authorizer.Attributes, entr
 	}
 
 	if namespaced {
+		// Cluster-scoped access to a namespaced resource granted by a non-CAR
+		// ClusterRoleBinding is a deliberate cluster-wide grant; do not deny it.
+		if e.independentRBAC != nil && e.independentRBAC.AllowsIndependently(ctx, attrs) {
+			return authorizer.DecisionNoOpinion, "", nil
+		}
 		return authorizer.DecisionDeny, namespaceLimitedAccessReason, nil
 	}
 
@@ -423,52 +462,23 @@ func (e *Engine) renewDirectories() {
 		}
 	}
 
-	applyAuthorizationRulesToDirectory(directory, config.ARs)
+	// NOTE: AuthorizationRules (config.ARs) are intentionally NOT applied here.
+	// The directory is built from ClusterAuthorizationRules (CARs) ONLY, mirroring
+	// the real kube-apiserver user-authz webhook authorizer (images/webhook), whose
+	// config struct parses "crds" and ignores "ars" entirely. AR-derived access is
+	// surfaced through the RBAC path instead: each AR creates a RoleBinding that the
+	// RBAC authorizer (BulkSubjectAccessReview) and the namespace resolver
+	// (AccessibleNamespaces) pick up. Feeding ARs into this deny-only engine would
+	// turn them into spurious namespace deny-filters, making the reported view
+	// inconsistent with real authorization. For users that ALSO have a CAR (whose
+	// filters deny outside their scope), AR namespaces are rescued in Authorize by
+	// the CAR-independent RBAC check, which finds the AR's RoleBinding.
 
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	e.directory = directory
 	klog.Info("Multi-tenancy configuration was reloaded successfully")
-}
-
-// applyAuthorizationRulesToDirectory grants each AR's subjects access to the
-// AR's own namespace, so AR-only users aren't rejected by deny-by-default.
-// QuoteMeta keeps the namespace a literal even if config.json is tampered with.
-func applyAuthorizationRulesToDirectory(directory map[string]map[string]DirectoryEntry, ars []authorizationRule) {
-	for _, ar := range ars {
-		if ar.Namespace == "" {
-			continue
-		}
-
-		nsRegex, err := regexp.Compile(wrapRegex(regexp.QuoteMeta(ar.Namespace)))
-		if err != nil {
-			// Unreachable in practice because QuoteMeta + wrapRegex always yields a
-			// valid pattern, but we prefer logging over panicking in a config loader.
-			klog.Warningf("Skipping AuthorizationRule %q: cannot compile namespace pattern %q: %v", ar.Name, ar.Namespace, err)
-			continue
-		}
-
-		arInSystemNS := isSystemNamespace(ar.Namespace)
-
-		for _, subject := range ar.Spec.Subjects {
-			kind, name := subjectDirectoryKey(subject.Kind, subject.Name, subject.Namespace, ar.Namespace)
-
-			if _, ok := directory[kind]; !ok {
-				continue
-			}
-
-			dirEntry := directory[kind][name]
-			dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, nsRegex)
-			if arInSystemNS {
-				if dirEntry.AllowedSystemNamespaces == nil {
-					dirEntry.AllowedSystemNamespaces = make(map[string]struct{})
-				}
-				dirEntry.AllowedSystemNamespaces[ar.Namespace] = struct{}{}
-			}
-			directory[kind][name] = dirEntry
-		}
-	}
 }
 
 // subjectDirectoryKey returns the directory map key for a subject.

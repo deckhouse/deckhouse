@@ -19,6 +19,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
+	"permission-browser-apiserver/pkg/authorizer/rbacadapter"
 )
 
 // NamespaceResolver resolves which namespaces a user has access to.
@@ -55,7 +56,21 @@ func NewNamespaceResolver(
 }
 
 // ResolveAccessibleNamespaces returns a sorted list of namespace names that
-// the given user has access to (any namespaced RBAC permission AND multi-tenancy allows).
+// the given user has access to.
+//
+// The result is a union of two access sources:
+//
+//  1. Multi-tenancy scope: namespaces allowed by the user's
+//     ClusterAuthorizationRules, provided the user has any RBAC grant there
+//     (candidates come from ClusterRoleBindings or RoleBindings).
+//  2. CAR-independent RBAC grants: namespaces where the user has a
+//     RoleBinding with namespaced permissions (including the RoleBindings
+//     that AuthorizationRules materialize), and (if the user has a
+//     ClusterRoleBinding with namespaced permissions that was NOT generated
+//     from a CAR) all namespaces. These grants exist regardless of any CAR,
+//     so multi-tenancy filters must not hide them - this mirrors the
+//     authorization webhook, which does not deny requests granted by
+//     CAR-independent RBAC.
 func (r *NamespaceResolver) ResolveAccessibleNamespaces(userInfo user.Info) ([]string, error) {
 	if userInfo == nil {
 		return nil, nil
@@ -65,10 +80,17 @@ func (r *NamespaceResolver) ResolveAccessibleNamespaces(userInfo user.Info) ([]s
 	userGroups := userInfo.GetGroups()
 
 	// Step 1: Check if user has global namespaced access via ClusterRoleBindings
-	globalAccess, err := r.hasGlobalNamespacedAccess(userName, userGroups)
+	globalAccess, err := r.hasGlobalNamespacedAccess(userName, userGroups, false)
 	if err != nil {
 		klog.V(4).Infof("Error checking global namespaced access: %v", err)
 		// Continue with RoleBinding-based resolution
+	}
+
+	// Namespaces with direct RoleBindings are needed both as candidates and
+	// for the union of CAR-independent grants below.
+	rbNamespaces, err := r.getNamespacesFromRoleBindings(userName, userGroups)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve namespaces from RoleBindings: %w", err)
 	}
 
 	var candidateNamespaces map[string]struct{}
@@ -81,18 +103,45 @@ func (r *NamespaceResolver) ResolveAccessibleNamespaces(userInfo user.Info) ([]s
 		}
 		klog.V(5).Infof("User %s has global namespaced access, candidate namespaces: %d", userName, len(candidateNamespaces))
 	} else {
-		// Scan RoleBindings to find namespaces with access
-		candidateNamespaces, err = r.getNamespacesFromRoleBindings(userName, userGroups)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve namespaces from RoleBindings: %w", err)
-		}
+		candidateNamespaces = rbNamespaces
 		klog.V(5).Infof("User %s has access via RoleBindings to %d namespaces", userName, len(candidateNamespaces))
 	}
 
-	// Step 2: Filter by multi-tenancy rules
-	result := r.filterByMultitenancy(userInfo, candidateNamespaces)
+	// Step 2: Filter candidates by multi-tenancy rules
+	resultSet := make(map[string]struct{})
+	for _, ns := range r.filterByMultitenancy(userInfo, candidateNamespaces) {
+		resultSet[ns] = struct{}{}
+	}
 
-	// Step 3: Sort for deterministic output
+	// Step 3: Union with CAR-independent RBAC grants.
+	// RoleBindings are namespace-scoped, so they are independent by definition.
+	for ns := range rbNamespaces {
+		resultSet[ns] = struct{}{}
+	}
+
+	// A ClusterRoleBinding with namespaced permissions that was not generated
+	// from a CAR is a deliberate cluster-wide grant: every namespace is
+	// accessible.
+	independentGlobal, err := r.hasGlobalNamespacedAccess(userName, userGroups, true)
+	if err != nil {
+		klog.V(4).Infof("Error checking CAR-independent global namespaced access: %v", err)
+	}
+	if independentGlobal {
+		allNamespaces, err := r.getAllNamespaces()
+		if err != nil {
+			return nil, fmt.Errorf("failed to list namespaces: %w", err)
+		}
+		for ns := range allNamespaces {
+			resultSet[ns] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0, len(resultSet))
+	for ns := range resultSet {
+		result = append(result, ns)
+	}
+
+	// Step 4: Sort for deterministic output
 	sort.SliceStable(result, func(i, j int) bool {
 		return result[i] < result[j]
 	})
@@ -103,6 +152,7 @@ func (r *NamespaceResolver) ResolveAccessibleNamespaces(userInfo user.Info) ([]s
 
 // IsNamespaceAccessible checks if a specific namespace is accessible to the user.
 // This is used for GET requests to avoid existence disclosure.
+// Mirrors the union semantics of ResolveAccessibleNamespaces.
 func (r *NamespaceResolver) IsNamespaceAccessible(userInfo user.Info, namespace string) (bool, error) {
 	if userInfo == nil {
 		return false, nil
@@ -115,40 +165,60 @@ func (r *NamespaceResolver) IsNamespaceAccessible(userInfo user.Info, namespace 
 		return false, nil
 	}
 
-	// Check multi-tenancy first (fast path for denial)
+	userName := userInfo.GetName()
+	userGroups := userInfo.GetGroups()
+
+	// CAR-independent grants: a RoleBinding in the namespace is
+	// namespace-scoped and thus always sufficient, regardless of
+	// multi-tenancy filters.
+	rbAccess, err := r.hasAccessViaRoleBindings(userName, userGroups, namespace)
+	if err != nil {
+		klog.V(4).Infof("Error checking RoleBindings in namespace %s: %v", namespace, err)
+	}
+	if rbAccess {
+		return true, nil
+	}
+
+	// A non-CAR ClusterRoleBinding with namespaced permissions is a deliberate
+	// cluster-wide grant.
+	independentGlobal, err := r.hasGlobalNamespacedAccess(userName, userGroups, true)
+	if err != nil {
+		klog.V(4).Infof("Error checking CAR-independent global access: %v", err)
+	}
+	if independentGlobal {
+		return true, nil
+	}
+
+	// Multi-tenancy scope: the namespace must be allowed by the CAR rules AND
+	// backed by some RBAC grant (including CAR-generated ClusterRoleBindings).
 	if !r.isNamespaceAllowedByMultitenancy(userInfo, namespace) {
 		return false, nil
 	}
 
-	userName := userInfo.GetName()
-	userGroups := userInfo.GetGroups()
-
-	// Check global access via ClusterRoleBindings.
 	// Error is intentionally not returned here: this is a fail-open check.
-	// If we can't determine global access (e.g., informer cache issue), we fall through
-	// to RoleBinding check which may still grant access. Returning error here would
-	// deny access to users who have valid RoleBindings in the namespace.
-	globalAccess, err := r.hasGlobalNamespacedAccess(userName, userGroups)
+	// If we can't determine global access (e.g., informer cache issue), we
+	// deny, which is no worse than the RoleBinding check above having failed.
+	globalAccess, err := r.hasGlobalNamespacedAccess(userName, userGroups, false)
 	if err != nil {
-		klog.V(4).Infof("Error checking global access (continuing with RoleBinding check): %v", err)
+		klog.V(4).Infof("Error checking global access: %v", err)
 	}
-	if globalAccess {
-		return true, nil
-	}
-
-	// Check RoleBindings in the specific namespace
-	return r.hasAccessViaRoleBindings(userName, userGroups, namespace)
+	return globalAccess, nil
 }
 
 // hasGlobalNamespacedAccess checks if the user has any ClusterRoleBinding that
-// grants access to namespaced resources cluster-wide.
-func (r *NamespaceResolver) hasGlobalNamespacedAccess(userName string, userGroups []string) (bool, error) {
+// grants access to namespaced resources cluster-wide. With skipCARManaged set,
+// ClusterRoleBindings generated from ClusterAuthorizationRules are ignored,
+// leaving only deliberate CAR-independent cluster-wide grants.
+func (r *NamespaceResolver) hasGlobalNamespacedAccess(userName string, userGroups []string, skipCARManaged bool) (bool, error) {
 	crbs, err := r.clusterRoleBindingLister.List(labels.Everything())
 	if err != nil {
 		return false, fmt.Errorf("failed to list ClusterRoleBindings: %w", err)
 	}
 
 	for _, crb := range crbs {
+		if skipCARManaged && rbacadapter.IsCARManagedClusterRoleBinding(crb) {
+			continue
+		}
 		if !r.subjectMatches(crb.Subjects, userName, userGroups, "") {
 			continue
 		}
@@ -328,6 +398,19 @@ func (r *NamespaceResolver) isResourceNamespaced(group, resource string) bool {
 	return r.scopeCache.IsNamespaced(group, resource)
 }
 
+// broadDiscoveryGroups are the pseudo-groups automatically attached to every (un)authenticated
+// request. They are excluded from AccessibleNamespace discovery so that a broad namespaced grant to
+// "everyone" (e.g. a RoleBinding/ClusterRoleBinding to system:authenticated) does not surface every
+// namespace in every user's AccessibleNamespace list. This filtering is intentionally limited to
+// namespace discovery and does NOT affect real RBAC authorization (BulkSubjectAccessReview / the API
+// authorizer still honor such grants). AccessibleNamespace is a human-facing convenience, so
+// ServiceAccount pseudo-groups are deliberately not included here.
+var broadDiscoveryGroups = map[string]struct{}{
+	"system:authenticated":       {},
+	"system:authenticated:oauth": {},
+	"system:unauthenticated":     {},
+}
+
 // subjectMatches checks if any subject matches the user (for ClusterRoleBindings).
 func (r *NamespaceResolver) subjectMatches(subjects []rbacv1.Subject, userName string, userGroups []string, namespace string) bool {
 	for _, subject := range subjects {
@@ -360,6 +443,12 @@ func (r *NamespaceResolver) singleSubjectMatches(subject rbacv1.Subject, userNam
 	case rbacv1.UserKind:
 		return subject.Name == userName
 	case rbacv1.GroupKind:
+		// For namespace discovery, ignore grants made to the "all (un)authenticated" pseudo-groups:
+		// a single namespaced grant to e.g. system:authenticated would otherwise make every namespace
+		// appear in every user's AccessibleNamespace list. Real authorization still honors them.
+		if _, broad := broadDiscoveryGroups[subject.Name]; broad {
+			return false
+		}
 		for _, group := range userGroups {
 			if subject.Name == group {
 				return true
@@ -392,20 +481,11 @@ func (r *NamespaceResolver) filterByMultitenancy(userInfo user.Info, candidates 
 	accessType, filter := r.mtEngine.GetNamespaceAccessType(userInfo)
 
 	switch accessType {
-	case multitenancy.AllNamespacesAllowed:
-		// No MT restrictions, return all candidates
-		result := make([]string, 0, len(candidates))
-		for ns := range candidates {
-			result = append(result, ns)
-		}
-		return result
-
-	case multitenancy.NoNamespacesAllowed:
-		// Deny-by-default: user has no CAR and is not privileged
-		return []string{}
-
 	case multitenancy.FilteredAccess:
-		// User has restrictions - filter each namespace using pre-computed filter
+		// The user has an explicit CAR with namespace limits: keep it as a deny-filter over the
+		// RBAC-derived candidates. CAR-independent grants (RoleBindings, non-CAR
+		// ClusterRoleBindings) are unioned back by the caller, so this filter only caps the
+		// CAR-provided cluster-wide access.
 		result := make([]string, 0, len(candidates))
 		for ns := range candidates {
 			if r.mtEngine.IsNamespaceAllowedWithFilter(ns, filter) {
@@ -415,8 +495,17 @@ func (r *NamespaceResolver) filterByMultitenancy(userInfo user.Info, candidates 
 		return result
 
 	default:
-		// Should never happen, but return empty for safety
-		return []string{}
+		// AllNamespacesAllowed and NoNamespacesAllowed: multi-tenancy imposes no restriction here.
+		// In particular a user without a CAR — the norm under RBAC v2, where access comes from
+		// RoleBindings/ProjectRoleBindings rather than ClusterAuthorizationRule — must NOT be zeroed
+		// out; accessibility is decided by the RBAC candidates. Flooding from broad pseudo-group
+		// grants is prevented earlier, at the candidate stage (see broadDiscoveryGroups). This
+		// matches the API authorizer, which returns NoOpinion (lets RBAC decide) for such users.
+		result := make([]string, 0, len(candidates))
+		for ns := range candidates {
+			result = append(result, ns)
+		}
+		return result
 	}
 }
 
@@ -426,6 +515,12 @@ func (r *NamespaceResolver) isNamespaceAllowedByMultitenancy(userInfo user.Info,
 		return true
 	}
 
-	// Use the engine's exported method if available, or use Authorize
-	return r.mtEngine.IsNamespaceAllowed(userInfo, namespace)
+	// Only an explicit CAR with namespace limits (FilteredAccess) restricts discovery here. A user
+	// without a CAR (AllNamespacesAllowed/NoNamespacesAllowed) is not denied at this layer — RBAC
+	// decides — consistent with filterByMultitenancy and the API authorizer's NoOpinion behaviour.
+	accessType, filter := r.mtEngine.GetNamespaceAccessType(userInfo)
+	if accessType == multitenancy.FilteredAccess {
+		return r.mtEngine.IsNamespaceAllowedWithFilter(namespace, filter)
+	}
+	return true
 }
