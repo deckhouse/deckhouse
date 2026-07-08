@@ -111,7 +111,7 @@ metadata:
   labels:
     heritage: deckhouse
     control-plane.deckhouse.io/vcp: ${VCP_NAME}
-spec:s
+spec:
   parentRefs:
   - name: ${VCP_NAME}
     namespace: ${NAMESPACE}
