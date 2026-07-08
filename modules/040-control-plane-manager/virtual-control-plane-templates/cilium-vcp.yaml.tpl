@@ -927,7 +927,7 @@ spec:
         - name: KUBERNETES_SERVICE_HOST
           value: "${VCP_API_HOST}"
         - name: KUBERNETES_SERVICE_PORT
-          value: "443"
+          value: "6443"
         - name: KUBE_CLIENT_BACKOFF_BASE
           value: "1"
         - name: KUBE_CLIENT_BACKOFF_DURATION
@@ -1046,7 +1046,7 @@ spec:
         - name: KUBERNETES_SERVICE_HOST
           value: "${VCP_API_HOST}"
         - name: KUBERNETES_SERVICE_PORT
-          value: "443"
+          value: "6443"
         volumeMounts:
         - name: tmp
           mountPath: /tmp
@@ -1177,7 +1177,7 @@ spec:
         - name: KUBERNETES_SERVICE_HOST
           value: "${VCP_API_HOST}"
         - name: KUBERNETES_SERVICE_PORT
-          value: "443"
+          value: "6443"
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
           seLinuxOptions:
