@@ -74,6 +74,8 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +kubebuilder:printcolumn:name=Completed,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].status
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].message
 // +kubebuilder:printcolumn:name=CompletionTime,type=date,JSONPath=.status.completionTime
+// +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)"
+// +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
 
 // PackageRepositoryOperation represents an operation to scan/update a package repository.
 type PackageRepositoryOperation struct {
@@ -92,6 +94,7 @@ type PackageRepositoryOperation struct {
 
 type PackageRepositoryOperationSpec struct {
 	// Name of the package repository to operate on.
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName"`
 
 	// Type of operation to perform.
@@ -112,6 +115,7 @@ type PackageRepositoryOperationUpdate struct {
 
 	// Timeout for the operation.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=5m
 	Timeout string `json:"timeout,omitempty"`
 }
 
@@ -137,6 +141,7 @@ type PackageRepositoryOperationStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
+	// +crd-enricher:raw:items.properties.reason.x-doc-examples=[Discover, Processing, Succeeded, Failed]
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 

@@ -17,6 +17,7 @@ package relay
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"time"
 
@@ -25,7 +26,6 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -41,7 +41,7 @@ type RelayParams struct {
 	TracerName string
 	Span       trace.Span
 	Node       libcon.Interface
-	Logger     log.Logger
+	Logger     *slog.Logger
 	GlobalOpts *options.GlobalOptions
 }
 

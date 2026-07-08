@@ -15,7 +15,6 @@
 package deckhouse
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,7 +44,7 @@ func createMC(name string, settings map[string]any) *config.ModuleConfig {
 }
 
 func TestPrepareDeckhouseModuleConfig(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("ModuleConfig deckhouse with releaseChannel should remove releaseChannel from mc and adds to result task with returning releaseChannel to post bootstrap tasks", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
@@ -72,7 +71,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 
 		u, err := sdk.ToUnstructured(mc)
 		require.NoError(t, err)
-		_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(context.TODO(), u, metav1.CreateOptions{})
+		_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(t.Context(), u, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		require.Equal(t, res.PostBootstrapMCTasks[0].Title, "Set release channel to deckhouse module config")
@@ -80,7 +79,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 		err = res.PostBootstrapMCTasks[0].Do(fakeClient)
 		require.NoError(t, err)
 
-		resMC, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+		resMC, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(t.Context(), "deckhouse", metav1.GetOptions{})
 		require.NoError(t, err)
 
 		rc, found, err := unstructured.NestedString(resMC.Object, "spec", "settings", "releaseChannel")
@@ -118,7 +117,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 
 		u, err := sdk.ToUnstructured(mc)
 		require.NoError(t, err)
-		_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(context.TODO(), u, metav1.CreateOptions{})
+		_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(t.Context(), u, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		require.Len(t, res.WithResourcesMCTasks, 0)
@@ -127,7 +126,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 }
 
 func TestPrepareGlobalModuleConfig(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	assertSaveAnotherFields := func(t *testing.T, mc *unstructured.Unstructured, publicDomainTemplateFound bool) {
 		// does not change another fields
@@ -194,7 +193,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 
 			u, err := sdk.ToUnstructured(mc)
 			require.NoError(t, err)
-			_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(context.TODO(), u, metav1.CreateOptions{})
+			_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(t.Context(), u, metav1.CreateOptions{})
 			require.NoError(t, err)
 
 			require.Equal(t, res.WithResourcesMCTasks[0].Title, "Set https setting to global module config")
@@ -202,7 +201,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 			err = res.WithResourcesMCTasks[0].Do(fakeClient)
 			require.NoError(t, err)
 
-			resMC, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "global", metav1.GetOptions{})
+			resMC, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(t.Context(), "global", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assertHTTPSSettings(t, resMC)
@@ -239,7 +238,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 
 			u, err := sdk.ToUnstructured(mc)
 			require.NoError(t, err)
-			_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(context.TODO(), u, metav1.CreateOptions{})
+			_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(t.Context(), u, metav1.CreateOptions{})
 			require.NoError(t, err)
 
 			require.Equal(t, res.WithResourcesMCTasks[0].Title, "Set https setting to global module config")
@@ -247,7 +246,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 			err = res.WithResourcesMCTasks[0].Do(fakeClient)
 			require.NoError(t, err)
 
-			resMC, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "global", metav1.GetOptions{})
+			resMC, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(t.Context(), "global", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assertHTTPSSettings(t, resMC)
@@ -278,7 +277,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 
 		u, err := sdk.ToUnstructured(mc)
 		require.NoError(t, err)
-		_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(context.TODO(), u, metav1.CreateOptions{})
+		_, err = fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Create(t.Context(), u, metav1.CreateOptions{})
 		require.NoError(t, err)
 	})
 }

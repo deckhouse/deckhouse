@@ -18,7 +18,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the `csi-s3` CSI driver and its interactions with other components of DKP are shown in the following diagram:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![CSI driver architecture (csi-s3)](../../../images/architecture/storage/c4-l2-csi-driver-s3.png)
 
 ## Driver components

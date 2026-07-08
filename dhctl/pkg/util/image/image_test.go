@@ -15,7 +15,6 @@
 package image
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -647,7 +646,7 @@ CRl8TSg922cXTLVt8Q==
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				ctx := context.Background()
+				ctx := t.Context()
 				if c.prepareFunc != nil {
 					err = c.prepareFunc()
 					require.NoError(t, err)
@@ -676,7 +675,7 @@ func TestRestoreImageFromTarGz(t *testing.T) {
 		os.RemoveAll(testDir)
 	})
 
-	err = DownloadAndUnpackImage(context.Background(), "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"}, false)
+	err = DownloadAndUnpackImage(t.Context(), "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"}, false)
 	require.NoError(t, err)
 	cachePath := filepath.Join(testDir, "sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb")
 	require.FileExists(t, cachePath)
@@ -793,10 +792,10 @@ func TestPullImage(t *testing.T) {
 				}
 				ref, err := name.ParseReference(c.imgRef)
 				require.NoError(t, err)
-				opts, err := getOptsFromRegistryConfig(context.Background(), ref, c.rc)
+				opts, err := getOptsFromRegistryConfig(t.Context(), ref, c.rc)
 				require.NoError(t, err)
 
-				_, err = pullImage(context.Background(), ref, opts, ref.Identifier(), c.destDir, filepath.Join(c.destDir, "cache"), false)
+				_, err = pullImage(t.Context(), ref, opts, ref.Identifier(), c.destDir, filepath.Join(c.destDir, "cache"), false)
 				if !c.wantErr {
 					require.NoError(t, err)
 				} else {

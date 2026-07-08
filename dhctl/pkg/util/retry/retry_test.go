@@ -81,7 +81,7 @@ func TestLoop_RunContext_SuccessAfterRetries(t *testing.T) {
 }
 
 func TestLoop_Run_Cancelled(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	attempt := 0
@@ -98,7 +98,7 @@ func TestLoop_Run_Cancelled(t *testing.T) {
 }
 
 func TestLoop_Run_DeadlineExceeded(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Nanosecond)
 	defer cancel()
 
 	attempt := 0

@@ -1319,6 +1319,18 @@ entries:
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
         - title:
+            en: Delivery subsystem
+            ru: Подсистема Delivery
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/delivery/
+            - title:
+                en: Operator-argo module
+                ru: Модуль operator-argo
+              url: /architecture/delivery/operator-argo.html
+        - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
           folders:
@@ -1494,6 +1506,10 @@ entries:
                 en: Cert-manager module
                 ru: Модуль cert-manager
               url: /architecture/security/cert-manager.html
+            - title:
+                en: Runtime-audit-engine module
+                ru: Модуль runtime-audit-engine
+              url: /architecture/security/runtime-audit-engine.html
         - title:
             en: Network subsystem
             ru: Подсистема Network

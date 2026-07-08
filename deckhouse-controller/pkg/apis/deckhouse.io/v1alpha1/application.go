@@ -62,6 +62,8 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
+// +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)."
+// +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)."
 
 // Application represents a namespace-scoped application instance.
 type Application struct {
@@ -80,18 +82,22 @@ type Application struct {
 
 type ApplicationSpec struct {
 	// Name of the application package to install.
+	// +crd-enricher:deckhouse:documentation:examples=console
 	PackageName string `json:"packageName"`
 
 	// Name of the repository where the package is located.
 	// If not specified, the default repository is used.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
 	// Version of the application package to install.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 
 	// Release channel for the application package.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=stable
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
 	// Configuration settings for the application.
@@ -129,7 +135,7 @@ type ApplicationStatus struct {
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
 	// URLs of application endpoints, collected from Ingress resources of the
-	// application chart annotated with packages.deckhouse.io/is-application-endpoint.
+	// application chart annotated with `packages.deckhouse.io/is-application-endpoint`.
 	// +optional
 	URLs []ApplicationStatusURL `json:"urls,omitempty"`
 
@@ -161,6 +167,7 @@ type ApplicationStatusSummary struct {
 	// State is the high-level lifecycle state observed for the application.
 	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended]
 	State string `json:"state,omitempty"`
 
 	// Message is a human-readable description of the current state.
@@ -180,7 +187,8 @@ type ApplicationStatusURL struct {
 	URL string `json:"url"`
 
 	// Description of the endpoint, taken from the value of the
-	// packages.deckhouse.io/is-application-endpoint annotation.
+	// `packages.deckhouse.io/is-application-endpoint` annotation.
+	//
 	// Empty when the annotation value is "true".
 	// +optional
 	Description string `json:"description,omitempty"`

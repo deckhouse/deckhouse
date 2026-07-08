@@ -34,6 +34,12 @@ description: Подготовка к гибридной интеграции с 
 В параметрах [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) используются ресурсы кластера DVP: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk и StorageClass из DVP, а не из подключаемого DKP-кластера.
 {% endalert %}
 
+{% alert level="warning" %}
+Убедитесь, что в статическом DKP-кластере отсутствуют StorageClass с именами, совпадающими с именами StorageClass в кластере DVP.
+
+При включении модуля `cloud-provider-dvp` соответствующие StorageClass автоматически синхронизируются из DVP в DKP-кластер. Если StorageClass с таким именем уже существует в статическом кластере, может возникнуть конфликт ресурсов, из-за которого установка или обновление модуля завершится с ошибкой.
+{% endalert %}
+
 ## Добавление автоматически создаваемых узлов
 
 1. На машине администратора, где настроен доступ к кластеру DVP, подготовьте kubeconfig для доступа модуля `cloud-provider-dvp` к API DVP.

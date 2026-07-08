@@ -51,7 +51,7 @@ metadata:
     werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 spec:
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:

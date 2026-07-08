@@ -21,7 +21,7 @@ shell:
     - rm -rf /src/docker_auth/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
@@ -33,9 +33,6 @@ secrets:
   - id: GOPROXY
     value: "{{ $.GOPROXY }}"
 shell:
-  beforeInstall:
-    {{- include "alpine packages proxy" . | nindent 4 }}
-    - apk add --no-cache make
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export GOOS=linux

@@ -16,7 +16,6 @@ package destroy
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -111,7 +110,7 @@ func TestInitStateLoader(t *testing.T) {
 				before: func(t *testing.T, tst *testInitStateLoader) {
 					testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
 					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache)
-					ctx := context.TODO()
+					ctx := t.Context()
 					_, err := loader.PopulateMetaConfig(ctx, nil)
 					require.NoError(t, err, "populate metaconfig before test")
 					_, _, err = loader.PopulateClusterState(ctx)
@@ -290,7 +289,7 @@ func newTestInitStateLoader(tst *testInitStateLoader) *testInitStateLoader {
 func (ts *testInitStateLoader) do(t *testing.T) {
 	ts.before(t, ts)
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	initParams := ts.params.getStateLoaderParams()
 	require.False(t, initParams.forceFromCache)
@@ -353,7 +352,7 @@ func testCreateMetaConfigForInitLoaderTestInCluster(t *testing.T, tst *testInitS
 	require.False(t, govalue.IsNil(tst.kubeProvider))
 	require.NotEmpty(t, tst.clusterUUID, "cluster UUID should not be empty")
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	client, err := tst.kubeProvider.KubeClientCtx(ctx)
 	require.NoError(t, err, "kube client should returned")

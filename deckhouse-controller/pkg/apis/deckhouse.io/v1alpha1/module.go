@@ -221,6 +221,7 @@ type ModuleDisableMessages struct {
 type ModuleStatus struct {
 	// Module phase.
 	// +kubebuilder:validation:Enum=Unavailable;Available;Downloading;DownloadingError;Reconciling;Installing;HooksDisabled;WaitSyncTasks;Downloaded;Conflict;Ready;Error
+	// +crd-enricher:deckhouse:documentation:examples=[Unavailable, Available, Downloading, DownloadingError, Reconciling, Installing, HooksDisabled, WaitSyncTasks, Downloaded, Conflict, Ready, Error]
 	Phase string `json:"phase,omitempty"`
 	// Hooks status report.
 	HooksState string `json:"hooksState,omitempty"`

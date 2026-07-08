@@ -22,7 +22,6 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -41,7 +40,7 @@ func connectionFlags(parent *kingpin.CmdClause, opts *options.Options) {
 }
 
 func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, secret, dataKey string) *kingpin.CmdClause {
-	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
+	cmd := parent.Command(name, fmt.Sprintf("Edit %s in the Kubernetes cluster.", name))
 	app.DefineEditorConfigFlags(cmd, &opts.Render)
 	app.DefineSanityFlags(cmd, &opts.Global)
 
@@ -51,8 +50,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
@@ -64,13 +62,10 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
-		}
-
-		//nolint: errcheck
-		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
 		}
 
 		kube, err := kubeProvider.Client(ctx)

@@ -409,21 +409,22 @@ jobs:
             sign_supported=false
           fi
 
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
           if $sign_supported; then
-            # Prepare for image and binary signing
             echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
-            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
-              echo "Received Actions token";
-            else
-              echo "Actions token empty";
-            fi
-            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
-            if [ -n "${VAULT_TOKEN}" ]; then
-              echo "Received Vault token";
-            else
-              echo "Vault token empty";
-            fi
             export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
             export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
           else
@@ -434,7 +435,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -707,7 +708,7 @@ jobs:
           # consumed inline just to read the tests image name — it is not kept
           # as an artifact (minimal value for a tests-only build).
           werf build tests \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --final-images-only=true \
             --build-report-path images_tags_werf.json
@@ -1080,21 +1081,22 @@ jobs:
             sign_supported=false
           fi
 
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
           if $sign_supported; then
-            # Prepare for image and binary signing
             echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
-            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
-              echo "Received Actions token";
-            else
-              echo "Actions token empty";
-            fi
-            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
-            if [ -n "${VAULT_TOKEN}" ]; then
-              echo "Received Vault token";
-            else
-              echo "Vault token empty";
-            fi
             export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
             export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
           else
@@ -1105,7 +1107,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -1458,21 +1460,22 @@ jobs:
             sign_supported=false
           fi
 
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
           if $sign_supported; then
-            # Prepare for image and binary signing
             echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
-            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
-              echo "Received Actions token";
-            else
-              echo "Actions token empty";
-            fi
-            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
-            if [ -n "${VAULT_TOKEN}" ]; then
-              echo "Received Vault token";
-            else
-              echo "Vault token empty";
-            fi
             export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
             export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
           else
@@ -1483,7 +1486,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -1836,21 +1839,22 @@ jobs:
             sign_supported=false
           fi
 
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
           if $sign_supported; then
-            # Prepare for image and binary signing
             echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
-            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
-              echo "Received Actions token";
-            else
-              echo "Actions token empty";
-            fi
-            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
-            if [ -n "${VAULT_TOKEN}" ]; then
-              echo "Received Vault token";
-            else
-              echo "Vault token empty";
-            fi
             export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
             export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
           else
@@ -1861,7 +1865,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -2214,21 +2218,22 @@ jobs:
             sign_supported=false
           fi
 
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
           if $sign_supported; then
-            # Prepare for image and binary signing
             echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
-            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
-              echo "Received Actions token";
-            else
-              echo "Actions token empty";
-            fi
-            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
-            if [ -n "${VAULT_TOKEN}" ]; then
-              echo "Received Vault token";
-            else
-              echo "Vault token empty";
-            fi
             export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
             export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
           else
@@ -2239,7 +2244,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -2592,21 +2597,22 @@ jobs:
             sign_supported=false
           fi
 
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
           if $sign_supported; then
-            # Prepare for image and binary signing
             echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
-            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
-              echo "Received Actions token";
-            else
-              echo "Actions token empty";
-            fi
-            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
-            if [ -n "${VAULT_TOKEN}" ]; then
-              echo "Received Vault token";
-            else
-              echo "Vault token empty";
-            fi
             export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
             export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
           else
@@ -2617,7 +2623,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -2970,21 +2976,22 @@ jobs:
             sign_supported=false
           fi
 
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
           if $sign_supported; then
-            # Prepare for image and binary signing
             echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
-            export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-            if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
-              echo "Received Actions token";
-            else
-              echo "Actions token empty";
-            fi
-            export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
-            if [ -n "${VAULT_TOKEN}" ]; then
-              echo "Received Vault token";
-            else
-              echo "Vault token empty";
-            fi
             export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
             export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
           else
@@ -2995,7 +3002,7 @@ jobs:
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
