@@ -23,7 +23,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-	"github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks"
+	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
 func init() {
