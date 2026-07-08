@@ -202,10 +202,15 @@ func (s *Scheduler) addNode(pkg Package) {
 	// override the floor's Static(Disable) (gates still veto via Forbid from any
 	// position). Order within is least-to-most authoritative:
 	//   - bundle: enable-only; turns the module on for its edition/bundle.
-	//   - dynamic: the resolved ModuleConfig + dynamic intent. It is last, so an
-	//     explicit user disable overrides the bundle's enable, and a user enable
-	//     turns on a module the bundle ignores. Hooks are enable-only; the disable
-	//     direction comes solely from ModuleConfig.
+	//   - dynamic: the resolved ModuleConfig + dynamic intent. It overrides the
+	//     bundle, so an explicit user disable beats the bundle's enable and a user
+	//     enable turns on a module the bundle ignores. Hooks are enable-only; the
+	//     disable direction comes solely from ModuleConfig.
+	//   - script: the module's enabled script, evaluated last and thus the most
+	//     authoritative soft vote — a true result (soft Enable) turns the module on
+	//     over any earlier vote, including a user disable. A false result or a
+	//     script that cannot be evaluated vetoes the module via Forbid (which wins
+	//     from any position anyway). Modules without an enabled script abstain.
 	if isModule {
 		if s.bundleChecker != nil {
 			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))

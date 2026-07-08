@@ -238,9 +238,8 @@ func (m *Module) GetEnabledScriptDescriptor() *script.Descriptor {
 		Path:     path,
 		Settings: m.GetSettings(),
 		Values: addonutils.MergeValues(
-			addonutils.Values{},
-			m.values.GetValues(),
-			m.globalValuesGetter(),
+			addonutils.Values{"global": m.globalValuesGetter()},
+			addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): m.values.GetValues()},
 		),
 	}
 }
