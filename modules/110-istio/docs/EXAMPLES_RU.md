@@ -715,7 +715,7 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 ### Отключение ambient mesh
 
 {% alert level="warning" %}
-Перед отключением режима ambient удалите все ресурсы WaypointInstance. При отключенном режиме ambient контроллер waypoint не запускается и не может согласовывать или удалять ресурсы waypoint. Это приводит к появлению orphan-ресурсов, о чём DKP сигнализирует алертом [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled).
+Перед отключением режима ambient удалите все ресурсы WaypointInstance. При отключенном режиме ambient контроллер waypoint не запускается и не может согласовывать или удалять ресурсы waypoint. Это приводит к появлению orphan-ресурсов, о чём Deckhouse Kubernetes Platform (DKP) сигнализирует алертом [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled).
 {% endalert %}
 
 Чтобы отключить режим ambient, выполните следующие шаги:
