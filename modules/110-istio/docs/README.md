@@ -213,7 +213,7 @@ It is also important to get the Ingress controller and the application's Ingress
 Available in Enterprise Edition and Certified Security Edition Pro only.
 {% endalert %}
 
-Deckhouse supports two schemes of inter-cluster interaction:
+DKP supports two schemes of inter-cluster interaction:
 
 - [federation](#federation)
 - [multicluster](#multicluster)
@@ -357,14 +357,14 @@ Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deploymen
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 - Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
-- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This Deckhouse module takes care of the corresponding communication channel.
+- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This DKP module takes care of the corresponding communication channel.
 
 #### Enabling the multicluster
 
 Enabling the multicluster (via the `istio.multicluster.enabled = true` module parameter) results in the following activities:
 
 - A proxy is added to the cluster to publish access to the API server via the standard Ingress resource:
-  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. Deckhouse automatically exchanges trusted public keys during the mutual configuration of the multicluster.
+  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. DKP automatically exchanges trusted public keys during the mutual configuration of the multicluster.
   - The proxy itself has read-only access to a limited set of resources.
 - A service gets added to the cluster that exports the following cluster metadata to the outside:
   - Istio root certificate (accessible without authentication).
@@ -383,7 +383,7 @@ In case of issues when working with a multi-cluster, it is necessary to check in
 
 1. The status of the `IstioMultiCluster` resources. To do this, run the command `d8 k describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
 1. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
-1. Using the `istioctl` utility from the Deckhouse debug container (see [the example](examples.html#debugging-istio-with-istioctl-from-the-debug-container)):
+1. Using the `istioctl` utility from the DKP debug container (see [the example](examples.html#debugging-istio-with-istioctl-from-the-debug-container)):
 
 ```console
 istioctl remote-clusters -i d8-istio

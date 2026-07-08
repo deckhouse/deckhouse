@@ -814,7 +814,7 @@ spec:
 
 #### Example — disable span export for ingress-only namespaces
 
-In Deckhouse, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
+In Deckhouse Kubernetes Platform (DKP), when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -840,7 +840,7 @@ The module-managed `Telemetry` objects for this mode disappear on the next sync;
 
 ## Debugging Istio with `istioctl` from the debug container
 
-The Deckhouse debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
+The DKP debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
 
 Start a temporary debug Pod with the built-in debug image and the `deckhouse` ServiceAccount:
 
@@ -889,7 +889,7 @@ UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. Do not 
 
 ### Upgrading Istio control-plane
 
-* Deckhouse allows you to install different control-plane versions simultaneously:
+* DKP allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
   * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
