@@ -84,6 +84,12 @@ The module creates the following namespace roles:
 
 The detailed split of permissions between `admin` and `superadmin` is described [below](#admin-level-restrictions-and-superadmin-rights).
 
+#### Automatic access to cluster-wide catalog resources
+
+Working in a namespace requires reading some cluster-wide "catalogs": for example, to set `storageClassName` or `ingressClassName` in a manifest, one needs to see the list of StorageClasses and IngressClasses. Therefore, every subject that receives a `RoleBinding` to any `d8:namespace:*` role automatically also gets read access to such catalog resources (StorageClass, IngressClass, PriorityClass, RuntimeClass, VolumeSnapshotClass, ClusterLogDestination, etc.).
+
+Technically this appears as an automatically created `ClusterRoleBinding` to the `d8:dict` role labelled `rbac.deckhouse.io/dict: "true"`. These objects are managed by the platform: they appear when the subject gets its first namespace binding and are removed when the subject has none left — no manual editing is needed.
+
 ### Project roles
 
 {% alert level="warning" %}
@@ -253,6 +259,8 @@ Name mapping:
 | `d8:use:role:<level>` | `d8:namespace:<level>` |
 
 Note: the deprecated `d8:use:role:admin` role maps to `d8:namespace:admin` and, just like it, [no longer grants](#admin-level-restrictions-and-superadmin-rights) the right to mint ServiceAccount tokens — that now requires the `superadmin` level.
+
+As long as bindings to the deprecated names remain in the cluster, the `D8UserAuthzDeprecatedRBACv2RoleInUse` (a binding to an alias role) and `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (a binding to a deprecated capability that no longer grants access) alerts fire.
 
 Migrate your existing `RoleBinding` and `ClusterRoleBinding` objects to the new role names. You can find bindings that still use the deprecated names with:
 

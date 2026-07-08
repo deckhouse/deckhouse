@@ -85,6 +85,12 @@ Namespace-роль определяет права на доступ к namespac
 
 Подробное разделение прав между `admin` и `superadmin` описано [ниже](#ограничения-уровня-admin-и-права-superadmin).
 
+#### Автоматический доступ к справочным cluster-wide-ресурсам
+
+Работа в пространстве имён требует чтения некоторых cluster-wide-«справочников»: например, чтобы указать в манифесте `storageClassName` или `ingressClassName`, нужно видеть список StorageClass'ов и IngressClass'ов. Поэтому каждый субъект, получивший `RoleBinding` на любую роль `d8:namespace:*`, автоматически получает и доступ на чтение таких справочных ресурсов (StorageClass, IngressClass, PriorityClass, RuntimeClass, VolumeSnapshotClass, ClusterLogDestination и т. п.).
+
+Технически это выглядит как автоматически создаваемый `ClusterRoleBinding` на роль `d8:dict` с лейблом `rbac.deckhouse.io/dict: "true"`. Такие объекты управляются платформой: они появляются при выдаче первой namespace-привязки субъекту и удаляются, когда у субъекта не остаётся ни одной, — редактировать их вручную не нужно.
+
 ### Проектные роли
 
 {% alert level="warning" %}
@@ -258,6 +264,8 @@ d8 k annotate clusterrole d8:namespace:admin \
 | `d8:use:role:<уровень>` | `d8:namespace:<уровень>` |
 
 Обратите внимание: устаревшая роль `d8:use:role:admin` соответствует роли `d8:namespace:admin` и, как и она, [больше не даёт](#ограничения-уровня-admin-и-права-superadmin) права выпускать токены ServiceAccount'ов — теперь для этого нужен уровень `superadmin`.
+
+Пока в кластере остаются привязки к устаревшим именам, срабатывают алерты `D8UserAuthzDeprecatedRBACv2RoleInUse` (привязка к роли-псевдониму) и `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (привязка к устаревшей capability, которая больше не даёт прав).
 
 Переведите существующие `RoleBinding` и `ClusterRoleBinding` на новые имена ролей. Найти привязки, использующие устаревшие имена, можно командой:
 

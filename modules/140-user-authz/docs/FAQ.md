@@ -505,3 +505,15 @@ EOF
 The answer is returned in the `status` field (`users`, `groups`, `serviceAccounts`) directly in the command output; the object is not stored anywhere.
 
 The right to create `WhoCan` queries is granted by the `d8:user-authz:who-can-checker` cluster role. It is intentionally not bound to anyone by default: the query result discloses access subjects across all namespaces, so grant it only to trusted administrators via a `ClusterRoleBinding`.
+
+## How does a user see the list of namespaces available to them?
+
+In the Enterprise Edition, with the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the namespace list is filtered automatically: the `d8 k get namespaces` command returns to a user only the namespaces they have access to — via any of the mechanisms (role bindings, `ProjectRoleBinding`/`ClusterProjectRoleBinding`, `ClusterAuthorizationRule`/`AuthorizationRule`). A user does not see foreign namespaces and cannot learn about their existence from the list.
+
+The same list is served by the read-only `accessiblenamespaces` resource — any authenticated user can query it **for themselves**:
+
+```shell
+d8 k get accessiblenamespaces
+```
+
+This is convenient for scripts and interfaces: there is no need to iterate over namespaces checking access to each one.

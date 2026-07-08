@@ -88,6 +88,25 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parameters
 
    A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `d8 k get projects my-project -o yaml`) to get more detailed information about the error.
 
+### A project without a template
+
+The `projectTemplateName` field is optional. A project without a template consists only of the namespace and the [standard fields](#standard-project-fields) (administrators, quota) — no template policies are created in it. This is convenient when no settings are needed or they are managed by other means:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: my-plain-project
+spec:
+  administrators:
+    - kind: Group
+      name: k8s-admins
+  quota:
+    requests.cpu: "2"
+```
+
+A template can be assigned later by setting it in `.spec.projectTemplateName`.
+
 ### Project naming rules
 
 The project name is also the name of its main namespace, so the following rules are checked when a project is created:
@@ -95,6 +114,51 @@ The project name is also the name of its main namespace, so the following rules 
 - the name cannot start with `d8-` or `kube-` — these prefixes are reserved for system namespaces;
 - the name cannot be longer than 61 characters;
 - if a project `foo` exists, a project `foo-bar` cannot be created — and vice versa, with an existing project `foo-bar` a project `foo` cannot be created. Names like `<project>-*` are reserved for the project's [additional namespaces](#additional-project-namespaces): without this rule, an additional namespace of one project could clash with another project's name.
+
+## Project status and diagnostics
+
+The `.status.state` field of a project is either `Deployed` (all project resources are in sync) or `Error`. The cause of an error is detailed in the conditions (`.status.conditions`):
+
+```shell
+d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.status}: {.message}{"\n"}{end}'
+```
+
+| Condition | `False` means |
+|-----------|---------------|
+| `ProjectTemplateFound` | The template referenced in `.spec.projectTemplateName` was not found |
+| `Validated` | The project parameters failed validation against the template schema (`parametersSchema`) |
+| `ResourcesUpgraded` | The project resources could not be created or updated from the template (details in `message`) |
+| `StandardFieldsApplied` | The [standard fields](#standard-project-fields) (quota or administrators) could not be applied |
+| `TemplateRolesAllowed` | The template creates a binding to a role [forbidden for granting in projects](#granting-access-within-a-project) — the project switches to `Error`, the role is named in `message` |
+| `TemplateResourcesFiltered` | `ResourceQuota`/`AuthorizationRule` objects were dropped from the template (see [standard fields](#standard-project-fields)). Informational — the project keeps working |
+
+Other useful status fields:
+
+- `.status.namespaces` — all namespaces of the project with their kind (`Main`/`Additional`);
+- `.status.usage` — the current quota usage (populated when `.spec.quota` is set);
+- `.status.resources` — the state of the individual resources created from the template.
+
+### Service objects of a project
+
+The controller creates service objects in the project namespaces. They are managed automatically — editing them manually is not possible (the attempt is rejected):
+
+| Object | Where | Comes from |
+|--------|-------|------------|
+| `ResourceQuota/d8-project-quota` | The main namespace | The [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) field of the project |
+| `ProjectRoleBinding/d8-administrators` | The main namespace | The [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) field of the project |
+| `RoleBinding/d8:prb:<name>` | Every namespace of the project | The fan-out of the [ProjectRoleBinding](cr.html#projectrolebinding) named `<name>` |
+| `RoleBinding/d8:cprb:<name>` | Every namespace of every project | The fan-out of the [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) named `<name>` |
+
+When the source object (a binding, the quota field, etc.) is removed, the corresponding service objects are removed automatically.
+
+## Virtual projects
+
+Besides the user-created projects, the `d8 k get projects` list always contains two **virtual** projects (labelled `projects.deckhouse.io/virtual-project: "true"`):
+
+- `deckhouse` — groups the system namespaces (with the `d8-` and `kube-` prefixes);
+- `default` — groups all other namespaces that do not belong to any project.
+
+Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them.
 
 ## Additional project namespaces
 
