@@ -60,11 +60,9 @@ properties:
         type: string
         default: nginx
         description: |
-          Class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used by the Deckhouse ecosystem modules.
+          [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem modules when creating Ingress resources.
 
-          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default Ingress controller for all modules.
-
-          If any other IngressClass name is used, a corresponding Ingress controller will not be used by default.
+          The default value is `nginx`. If your cluster uses a different IngressClass, specify its name in this parameter.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
@@ -236,11 +234,9 @@ properties:
         type: string
         default: nginx
         description: |
-          Class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used by the Deckhouse ecosystem applications.
+          [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem applications when creating Ingress resources.
 
-          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default Ingress controller for all applications.
-
-          If any other IngressClass name is used, a corresponding Ingress controller will not be used by default.
+          The default value is `nginx`. If your cluster uses a different IngressClass, specify its name in this parameter.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:

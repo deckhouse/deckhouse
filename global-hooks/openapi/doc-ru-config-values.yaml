@@ -35,11 +35,9 @@ properties:
           Имя объекта Gateway из Gateway API, используемого для модулей экосистемы Deckhouse.
       ingressClass:
         description: |
-          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями экосистемы Deckhouse.
+          Имя [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class), используемого модулями экосистемы Deckhouse при создании Ingress-ресурсов.
 
-          Если в качестве имени IngressClass указано значение `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером по умолчанию для всех модулей.
-
-          При использовании любого другого имени IngressClass такой Ingress-контроллер не будет использоваться по умолчанию.
+          По умолчанию — `nginx`. Если в кластере используется другой IngressClass, укажите его имя в этом параметре.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имен c ключом `%s` в качестве динамической части строки.
@@ -135,11 +133,9 @@ properties:
     properties:
       ingressClass:
         description: |
-          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого приложениями экосистемы Deckhouse.
+          Имя [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class), используемого приложениями экосистемы Deckhouse при создании Ingress-ресурсов.
 
-          Если в качестве имени IngressClass указано значение `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером по умолчанию для всех приложений.
-
-          При использовании любого другого имени IngressClass такой Ingress-контроллер не будет использоваться по умолчанию.
+          По умолчанию — `nginx`. Если в кластере используется другой IngressClass, укажите его имя в этом параметре.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имён с тремя ключами `%s` в качестве динамических частей строки.
