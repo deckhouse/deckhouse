@@ -277,6 +277,30 @@ func executeUserOperation(input *go_hook.HookInput, operation UserOperation) err
 	}
 }
 
+// mutatePasswordObject applies mutate to a deep copy of the live Dex Password
+// object and returns the copy.
+//
+// PatchWithMutatingFunc replaces the whole object via an Update with whatever
+// the mutating function returns (and skips the call when the result is deeply
+// equal to the input). The previous implementation decoded the live object into
+// the typed Password struct and serialized it back, but Password does not model
+// every field Dex stores (groups, userID, hashUpdatedAt, previousHashes,
+// incorrectPasswordLoginAttempts). That round-trip silently dropped those
+// fields from the object - most importantly groups, which Dex needs to keep
+// matching the user's allowedGroups: resetting a password wiped groups from the
+// Password and the user could no longer log in until the groups were re-synced.
+//
+// Mutating a copy of the raw object in place preserves every field we do not
+// explicitly touch. Returning the copy (not the mutated input) keeps the
+// identity check in the patch executor intact so the Update is still issued.
+func mutatePasswordObject(obj *unstructured.Unstructured, mutate func(*unstructured.Unstructured) error) (*unstructured.Unstructured, error) {
+	patched := obj.DeepCopy()
+	if err := mutate(patched); err != nil {
+		return nil, err
+	}
+	return patched, nil
+}
+
 func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 	if operation.Spec.Lock == nil {
 		input.Logger.Error("Lock spec is nil", "userOperation", operation.Name)
@@ -298,26 +322,21 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 	}
 
 	input.Logger.Info("Locking user password", "user", userPassword.Username, "duration", operation.Spec.Lock.For.Duration)
+	lockedUntil := time.Now().Add(operation.Spec.Lock.For.Duration).Format(time.RFC3339)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		var pass Password
-		if err := sdk.FromUnstructured(obj, &pass); err != nil {
-			input.Logger.Error("Failed to convert Password object", "error", err)
-			return nil, err
-		}
-		pass.LockedUntil = ptr.To(time.Now().Add(operation.Spec.Lock.For.Duration))
-		u, err := sdk.ToUnstructured(&pass)
-		if err != nil {
-			return nil, err
-		}
-		annotations := u.GetAnnotations()
-		if annotations == nil {
-			annotations = map[string]string{}
-		}
-		// We need this annotations to find out who has banned user on user CR render later.
-		annotations[PasswordAnnotationLockedByAdministrator] = ""
-		u.SetAnnotations(annotations)
-
-		return u, nil
+		return mutatePasswordObject(obj, func(patched *unstructured.Unstructured) error {
+			if err := unstructured.SetNestedField(patched.Object, lockedUntil, "lockedUntil"); err != nil {
+				return err
+			}
+			annotations := patched.GetAnnotations()
+			if annotations == nil {
+				annotations = map[string]string{}
+			}
+			// We need this annotation to find out who has banned user on user CR render later.
+			annotations[PasswordAnnotationLockedByAdministrator] = ""
+			patched.SetAnnotations(annotations)
+			return nil
+		})
 	}, "dex.coreos.com/v1", "Password", userPassword.Namespace, userPassword.Name)
 
 	return nil
@@ -340,24 +359,20 @@ func executeUnlock(input *go_hook.HookInput, operation UserOperation) error {
 
 	input.Logger.Info("Unlocking user password", "user", userPassword.Username)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		var pass Password
-		if err := sdk.FromUnstructured(obj, &pass); err != nil {
-			input.Logger.Error("Failed to convert Password object", "error", err)
-			return nil, err
-		}
-		pass.LockedUntil = nil
-		u, err := sdk.ToUnstructured(&pass)
-		if err != nil {
-			return nil, err
-		}
-
-		annotations := u.GetAnnotations()
-		if annotations != nil {
-			delete(annotations, PasswordAnnotationLockedByAdministrator)
-			u.SetAnnotations(annotations)
-		}
-
-		return u, nil
+		return mutatePasswordObject(obj, func(patched *unstructured.Unstructured) error {
+			// Match the previous behaviour of writing an explicit null (the
+			// Password.lockedUntil json tag has no omitempty) rather than
+			// dropping the key entirely.
+			if err := unstructured.SetNestedField(patched.Object, nil, "lockedUntil"); err != nil {
+				return err
+			}
+			annotations := patched.GetAnnotations()
+			if annotations != nil {
+				delete(annotations, PasswordAnnotationLockedByAdministrator)
+				patched.SetAnnotations(annotations)
+			}
+			return nil
+		})
 	}, "dex.coreos.com/v1", "Password", userPassword.Namespace, userPassword.Name)
 
 	return nil
@@ -394,17 +409,14 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 	}
 
 	input.Logger.Info("Resetting user password", "user", userPassword.Username)
+	encodedHash := base64.StdEncoding.EncodeToString([]byte(rawHash))
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		var pass Password
-		if err := sdk.FromUnstructured(obj, &pass); err != nil {
-			input.Logger.Error("Failed to convert Password object", "error", err)
-			return nil, err
-		}
-		pass.Hash = base64.StdEncoding.EncodeToString(
-			[]byte(rawHash),
-		)
-		pass.RequireResetHashOnNextSuccLogin = true
-		return sdk.ToUnstructured(&pass)
+		return mutatePasswordObject(obj, func(patched *unstructured.Unstructured) error {
+			if err := unstructured.SetNestedField(patched.Object, encodedHash, "hash"); err != nil {
+				return err
+			}
+			return unstructured.SetNestedField(patched.Object, true, "requireResetHashOnNextSuccLogin")
+		})
 	}, "dex.coreos.com/v1", "Password", userPassword.Namespace, userPassword.Name)
 
 	return nil
