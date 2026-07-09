@@ -20,6 +20,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -74,9 +76,10 @@ func RegisterAdmissionHandlers(
 	settings *helpers.DeckhouseSettingsContainer,
 	exts extenders.IExtendersStack,
 	edition *d8edition.Edition,
+	logger *log.Logger,
 ) {
 	reg.RegisterHandler("/validate/v1/deckhouse-registry-secret", withInvalidReason(RegistrySecretHandler()))
-	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency(), edition)))
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency(), edition, logger)))
 	reg.RegisterHandler("/validate/v1alpha1/modules", withInvalidReason(moduleValidationHandler()))
 	reg.RegisterHandler("/validate/v1/configuration-secret", withInvalidReason(clusterConfigurationHandler(mm, cli, schemaStore)))
 	reg.RegisterHandler("/validate/v1/provider-configuration-secret", withInvalidReason(providerConfigurationHandler(schemaStore)))

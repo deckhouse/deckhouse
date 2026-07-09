@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -41,6 +42,7 @@ import (
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
@@ -79,6 +81,7 @@ func moduleConfigValidationHandler(
 	setting *helpers.DeckhouseSettingsContainer,
 	dependencyExtender moduleDependencyExtender,
 	edition *d8edition.Edition,
+	logger *log.Logger,
 ) http.Handler {
 	validator := &moduleConfigValidator{
 		client:             cli,
@@ -89,6 +92,7 @@ func moduleConfigValidationHandler(
 		settings:           setting,
 		dependencyExtender: dependencyExtender,
 		edition:            edition,
+		logger:             logger,
 	}
 
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
@@ -114,6 +118,7 @@ type moduleConfigValidator struct {
 	settings           *helpers.DeckhouseSettingsContainer
 	dependencyExtender moduleDependencyExtender
 	edition            *d8edition.Edition
+	logger             *log.Logger
 }
 
 // validate is the admission entrypoint. Operation-specific checks run first;
@@ -207,13 +212,16 @@ func (v *moduleConfigValidator) validateUpdate(ctx context.Context, review *kwhm
 	if err != nil {
 		return nil, err
 	}
+	logger := v.logger.With(slog.String("module", cfg.Name))
 
 	oldEnabled := oldConfig.enabled || v.moduleManager.IsModuleEnabled(cfg.Name)
+	logger.Warn("debug validateUpdate", slog.Bool("oldEnabled", oldEnabled))
 
 	// ModuleConfig may not have the spec.enabled field at all. In that case the
 	// module's effective state does not come from this config but falls back to
 	// whatever is enabled by default for the current edition/bundle.
 	newEnabled := isEnabled(cfg, v.isModuleEnabledByBundle(cfg.Name))
+	logger.Warn("debug validateUpdate", slog.Bool("newEnabled", newEnabled))
 
 	if !oldEnabled && newEnabled {
 		// on UPDATE a missing Module CR is tolerated (validateCommon handles it with a warning)
@@ -226,8 +234,15 @@ func (v *moduleConfigValidator) validateUpdate(ctx context.Context, review *kwhm
 	// while it is currently enabled - either explicitly (oldConfig.enabled) or by
 	// default (e.g. enabled in the bundle, but with no explicit enabled flag).
 	disabling := oldEnabled && !newEnabled
+	logger.Warn("debug validateUpdate", slog.Bool("disabling", disabling))
 	if disabling && !hasAllowDisableAnnotation(cfg.Annotations) && !hasAllowDisableAnnotation(oldConfig.annotations) {
 		if res, err := v.confirmationRejection(cfg.Name); res != nil || err != nil {
+			if err != nil {
+				logger.Warn("debug validateUpdate", slog.Bool("confirmationRejection", true), slog.String("error", err.Error()))
+			}
+			if res != nil {
+				logger.Warn("debug validateUpdate", slog.Bool("confirmationRejection", true), slog.String("result", res.Message))
+			}
 			return res, err
 		}
 	}
@@ -246,8 +261,12 @@ func (v *moduleConfigValidator) isModuleEnabledByBundle(moduleName string) bool 
 		return false
 	}
 
+	logger := v.logger.With(slog.String("module", moduleName))
+	logger.Warn("debug isModuleEnabledByBundle", slog.String("edition", v.edition.Name), slog.String("bundle", v.edition.Bundle))
+
 	module, err := v.moduleStorage.GetModuleByName(moduleName)
 	if err != nil {
+		logger.Warn("debug isModuleEnabledByBundle", slog.String("error", err.Error()))
 		return false
 	}
 
