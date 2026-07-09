@@ -22,9 +22,6 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: d8-system
-          podSelector:
-            matchLabels:
-              app: deckhouse
       ports:
         - protocol: TCP
           port: 8081
