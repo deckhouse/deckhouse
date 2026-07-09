@@ -3547,7 +3547,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -u $(id -u):$(id -g) -w /deckhouse/dhctl -v ${{github.workspace}}:/deckhouse -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec -e HOME=/tmp ${TESTS_IMAGE_NAME} make ci
+          docker run -u 0:0 -w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec -e HOME=/tmp ${TESTS_IMAGE_NAME} make ci
     # </template: tests_template>
 
   golint:

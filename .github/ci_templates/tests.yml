@@ -10,7 +10,7 @@ exec_options: '-u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse'
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
 args: 'make ci'
-docker_options: '-u $(id -u):$(id -g) -w /deckhouse/dhctl -v ${{github.workspace}}:/deckhouse -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec -e HOME=/tmp'
+docker_options: '-u 0:0 -w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec -e HOME=/tmp'
 # </template: dhctl_run_args>
 {!{- end -}!}
 
