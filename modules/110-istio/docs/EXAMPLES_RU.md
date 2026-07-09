@@ -940,20 +940,65 @@ spec:
 
 Управляемые модулем `Telemetry` для этого режима будут убраны при следующей синхронизации; снова включится прежний `telemetry.v2`.
 
-## Диагностика Istio с помощью istioctl из debug-контейнера
+## Диагностика Istio с помощью `istioctl` из debug-контейнера
 
-В debug-контейнер DKP входят бинарные файлы `istioctl` для поддерживаемых версий Istio. Используйте их, когда нужно проверить конфигурацию Istio, запустить анализаторы или получить конфигурацию Envoy из прикладных подов.
+В debug-контейнер Deckhouse входят бинарные файлы `istioctl` для поддерживаемых версий Istio. Используйте их, когда нужно проверить конфигурацию Istio, запустить анализаторы или получить конфигурацию Envoy из прикладных подов.
 
-Запустите временный debug-под со встроенным debug-образом и ServiceAccount `deckhouse`:
+Перед запуском debug-контейнера создайте отдельный ServiceAccount и выдайте ему права, необходимые для команд `istioctl`, которые вы планируете запускать. Например, следующий манифест разрешает команды `istioctl proxy-config` для подов в одном прикладном пространстве имён:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istioctl-debug
+  namespace: <debug-namespace>
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - pods/portforward
+  verbs:
+  - get
+  - list
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+subjects:
+- kind: ServiceAccount
+  name: istioctl-debug
+  namespace: <debug-namespace>
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istioctl-debug
+```
+
+Замените `<debug-namespace>` на пространство имён, в котором будет создан временный debug-под, а `<target-namespace>` — на пространство имён прикладного пода, который нужно проверить. Повторите `Role` и `RoleBinding` для каждого целевого пространства имён, где `istioctl` должен получать доступ к подам.
+
+{% alert level="warning" %}
+Создание подов в системных пространствах имён, таких как `d8-system`, и использование системных ServiceAccount, таких как `deckhouse`, обычно требует прав cluster-admin. Используйте отдельный ServiceAccount с минимально необходимыми правами.
+{% endalert %}
+
+Запустите временный debug-под со встроенным debug-образом:
 
 ```shell
 IMG="$(d8 k -n d8-system get cm debug-container -o jsonpath='{.data.image}')"
 
-d8 k -n d8-system run istioctl-debug \
+d8 k -n <debug-namespace> run istioctl-debug \
   --rm -it \
   --restart=Never \
   --image="$IMG" \
-  --overrides='{"spec":{"serviceAccountName":"deckhouse","automountServiceAccountToken":true}}' \
+  --overrides='{"spec":{"serviceAccountName":"istioctl-debug","automountServiceAccountToken":true}}' \
   -- bash
 ```
 
@@ -965,14 +1010,17 @@ export ISTIOCTL_VERSION=1.21
 
 Доступные значения: `1.21`, `1.25` и `1.27`. Также можно запустить конкретный бинарный файл напрямую: `istioctl-1.21`, `istioctl-1.25` или `istioctl-1.27`.
 
-Примеры:
+Пример:
 
 ```shell
-istioctl -n d8-istio analyze -A
-istioctl pc all <pod-name>.<namespace>
+istioctl pc all <pod-name>.<target-namespace>
 ```
 
-Для команд `istioctl pc` у целевого пода должен быть добавлен сайдкар `istio-proxy`, а у ServiceAccount должны быть права на создание `pods/portforward` в целевом неймспейсе. Если у workload нет сайдкара, admin-порт Envoy `15000` будет недоступен.
+Для команд `istioctl pc` у целевого пода должен быть добавлен сайдкар `istio-proxy`. Если у workload нет сайдкара, admin-порт Envoy `15000` будет недоступен.
+
+{% alert level="warning" %}
+Приведённого выше RBAC-манифеста недостаточно для запуска `istioctl analyze` или `istioctl analyze -A`. Для этих команд нужны дополнительные права на чтение namespaces, а также Kubernetes- и Istio-ресурсов, которые проверяют анализаторы. Выдавайте такие права отдельно в соответствии с вашей политикой безопасности.
+{% endalert %}
 
 ## Ограничения режима перенаправления прикладного трафика CNIPlugin
 

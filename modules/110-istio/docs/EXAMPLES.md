@@ -938,20 +938,65 @@ spec:
 
 The module-managed `Telemetry` objects for this mode disappear on the next sync; Istio restores the full `telemetry.v2` configuration.
 
-## Debugging Istio with istioctl from the debug container
+## Debugging Istio with `istioctl` from the debug container
 
-The DKP debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
+The Deckhouse debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
 
-Start a temporary debug Pod with the built-in debug image and the `deckhouse` ServiceAccount:
+Before starting the debug container, create a dedicated ServiceAccount and grant it the permissions required by the `istioctl` commands you want to run. For example, the following manifest allows `istioctl proxy-config` commands for Pods in one application namespace:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istioctl-debug
+  namespace: <debug-namespace>
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - pods/portforward
+  verbs:
+  - get
+  - list
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+subjects:
+- kind: ServiceAccount
+  name: istioctl-debug
+  namespace: <debug-namespace>
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istioctl-debug
+```
+
+Replace `<debug-namespace>` with the namespace where the temporary debug Pod will be created, and `<target-namespace>` with the namespace of the application Pod you want to inspect. Repeat the `Role` and `RoleBinding` for every target namespace where `istioctl` must access Pods.
+
+{% alert level="warning" %}
+Creating Pods in system namespaces such as `d8-system` and using system ServiceAccounts such as `deckhouse` usually requires cluster-admin privileges. Use a dedicated ServiceAccount with the minimum required permissions instead.
+{% endalert %}
+
+Start a temporary debug Pod with the built-in debug image:
 
 ```shell
 IMG="$(d8 k -n d8-system get cm debug-container -o jsonpath='{.data.image}')"
 
-d8 k -n d8-system run istioctl-debug \
+d8 k -n <debug-namespace> run istioctl-debug \
   --rm -it \
   --restart=Never \
   --image="$IMG" \
-  --overrides='{"spec":{"serviceAccountName":"deckhouse","automountServiceAccountToken":true}}' \
+  --overrides='{"spec":{"serviceAccountName":"istioctl-debug","automountServiceAccountToken":true}}' \
   -- bash
 ```
 
@@ -963,14 +1008,17 @@ export ISTIOCTL_VERSION=1.21
 
 Available values are `1.21`, `1.25`, and `1.27`. You can also run a specific binary directly: `istioctl-1.21`, `istioctl-1.25`, or `istioctl-1.27`.
 
-Examples:
+Example:
 
 ```shell
-istioctl -n d8-istio analyze -A
-istioctl pc all <pod-name>.<namespace>
+istioctl pc all <pod-name>.<target-namespace>
 ```
 
-The `istioctl pc` commands require a target Pod with an injected `istio-proxy` sidecar and Kubernetes permissions to create `pods/portforward` in the target namespace. If the target workload has no sidecar, Envoy admin port `15000` will not be available.
+The `istioctl pc` commands require a target Pod with an injected `istio-proxy` sidecar. If the target workload has no sidecar, Envoy admin port `15000` will not be available.
+
+{% alert level="warning" %}
+The RBAC manifest above is not enough to run `istioctl analyze` or `istioctl analyze -A`. These commands require additional read-only access to namespaces and to the Kubernetes and Istio resources covered by the analyzers. Grant such access separately according to your security policy.
+{% endalert %}
 
 ## CNIPlugin application traffic redirection mode restrictions
 
