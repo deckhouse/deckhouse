@@ -36,6 +36,18 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 		svc.metrics.HistogramObserve(metrics.DocsBuilderUploadDurationSeconds, dur, map[string]string{"status": status}, nil)
 	}()
 
+	if err := validateModuleName(moduleName); err != nil {
+		status = "fail"
+
+		return fmt.Errorf("validate module name: %w", err)
+	}
+
+	if err := validateChannels(channels); err != nil {
+		status = "fail"
+
+		return fmt.Errorf("validate channels: %w", err)
+	}
+
 	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
 		status = "fail"
@@ -150,12 +162,23 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
 	}
 
+	checked := func(path string) (string, bool) {
+		if err := ensureWithinBase(svc.baseDir, path); err != nil {
+			svc.logger.Warn("skipping path outside base directory", slog.String("path", path), slog.String("error", err.Error()))
+
+			return "", false
+		}
+
+		return path, true
+	}
+
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
 		// Skip internal documentation directories that should not be published
 		if hasBlockedPrefix(fileName) {
 			return "", false
 		}
-		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
+
+		return checked(filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName))
 	}
 
 	if isAllowedCRDPath(fileName) ||
@@ -163,11 +186,11 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 		fileName == "openapi/conversions" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
-		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
+		return checked(filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName))
 	}
 
 	if fileName == "module.yaml" || fileName == "oss.yaml" {
-		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
+		return checked(filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName))
 	}
 
 	return "", false
@@ -240,12 +263,22 @@ func hasBlockedPrefix(path string) bool {
 func (svc *Service) cleanModulesFiles(moduleName string, channels []string) error {
 	for _, channel := range channels {
 		path := filepath.Join(svc.baseDir, contentDir, moduleName, channel)
+
+		if err := ensureWithinBase(svc.baseDir, path); err != nil {
+			return fmt.Errorf("ensure within base: %w", err)
+		}
+
 		err := os.RemoveAll(path)
 		if err != nil {
 			return fmt.Errorf("remove content %s: %w", path, err)
 		}
 
 		path = filepath.Join(svc.baseDir, modulesDir, moduleName, channel)
+
+		if err := ensureWithinBase(svc.baseDir, path); err != nil {
+			return fmt.Errorf("ensure within base: %w", err)
+		}
+
 		err = os.RemoveAll(path)
 		if err != nil {
 			return fmt.Errorf("remove data %s: %w", path, err)
