@@ -40,11 +40,6 @@ func withInvalidReason(next http.Handler) http.Handler {
 		var review admissionv1.AdmissionReview
 		if err := json.Unmarshal(body, &review); err == nil && review.Response != nil && !review.Response.Allowed {
 			msg := ""
-			if len(review.Response.Warnings) > 0 {
-				for _, warning := range review.Response.Warnings {
-					msg += warning + "\n"
-				}
-			}
 			if review.Response.Result != nil {
 				msg += review.Response.Result.Message
 			}
@@ -53,6 +48,9 @@ func withInvalidReason(next http.Handler) http.Handler {
 				Reason:  metav1.StatusReasonInvalid,
 				Code:    http.StatusUnprocessableEntity,
 				Message: msg,
+				Details: &metav1.StatusDetails{
+					Causes: review.Response.Result.Details.Causes,
+				},
 			}
 			if patched, err := json.Marshal(review); err == nil {
 				body = patched
