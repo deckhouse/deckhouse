@@ -82,25 +82,6 @@ spec:
     tls:
       mode: Passthrough
 ---
-# Backend Service for RPP's tokenless bootstrap port (raw rpp-get binary)
-apiVersion: v1
-kind: Service
-metadata:
-  name: registry-packages-proxy-bootstrap
-  namespace: d8-cloud-instance-manager
-  labels:
-    heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
-spec:
-  type: ClusterIP
-  selector:
-    app: registry-packages-proxy
-  ports:
-  - name: bootstrap
-    port: 4282
-    targetPort: 4282
-    protocol: TCP
----
 # Pure L4 route for the apiserver: matches by port only (no SNI), so it serves both external
 # kubelet traffic (api.<vcp>:6443) and in-cluster clients that dial the ClusterIP by IP.
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -189,7 +170,7 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /
+        value: /${VCP_CLUSTER_UUID}/rpp-get
     backendRefs:
     - name: registry-packages-proxy-bootstrap
       namespace: d8-cloud-instance-manager

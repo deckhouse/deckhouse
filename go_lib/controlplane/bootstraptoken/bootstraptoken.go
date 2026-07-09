@@ -33,6 +33,7 @@ import (
 const (
 	namespace                = "kube-system"
 	alphaNumLowerCaseCharset = "0123456789abcdefghijklmnopqrstuvwxyz"
+	maxCreateAttempts        = 5
 )
 
 // randString mirrors go_lib/pwgen.AlphaNumLowerCase
@@ -121,10 +122,18 @@ func EnsureValid(ctx context.Context, c kubernetes.Interface, labelSelector stri
 		return valid[0].token, nil
 	}
 
-	id, secret := Generate()
-	newSec := BuildSecret(id, secret, groups, ttl, extraLabels)
-	if _, err := c.CoreV1().Secrets(namespace).Create(ctx, newSec, metav1.CreateOptions{}); err != nil && !apierrors.IsAlreadyExists(err) {
-		return "", fmt.Errorf("create bootstrap-token secret: %w", err)
+	// Secret name is derived from token-id. If it collides, the generated token-secret was not stored
+	for attempt := 0; attempt < maxCreateAttempts; attempt++ {
+		id, secret := Generate()
+		newSec := BuildSecret(id, secret, groups, ttl, extraLabels)
+		if _, err := c.CoreV1().Secrets(namespace).Create(ctx, newSec, metav1.CreateOptions{}); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+			return "", fmt.Errorf("create bootstrap-token secret: %w", err)
+		}
+		return fmt.Sprintf("%s.%s", id, secret), nil
 	}
-	return fmt.Sprintf("%s.%s", id, secret), nil
+
+	return "", fmt.Errorf("create bootstrap-token secret: token id collision after %d attempts", maxCreateAttempts)
 }

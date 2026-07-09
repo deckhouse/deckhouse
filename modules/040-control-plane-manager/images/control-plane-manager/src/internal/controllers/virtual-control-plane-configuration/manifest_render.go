@@ -76,7 +76,7 @@ func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.Vir
 		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
 	}
 
-	replacer := buildManifestReplacer(vcp, versioned, table.Fixed, apiAdvertiseAddress)
+	replacer := buildManifestReplacer(vcp, versioned, table.Fixed, apiAdvertiseAddress, string(globalData["cluster-uuid"]))
 
 	rendered := make(map[string][]byte)
 	for key, value := range globalData {
@@ -120,11 +120,18 @@ func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *cor
 	}
 }
 
-func buildManifestReplacer(vcp *controlplanev1alpha1.VirtualControlPlane, versioned versionedImages, fixed fixedImages, apiAdvertiseAddress string) *strings.Replacer {
+func buildManifestReplacer(
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	versioned versionedImages,
+	fixed fixedImages,
+	apiAdvertiseAddress string,
+	clusterUUID string,
+) *strings.Replacer {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
+		"${VCP_CLUSTER_UUID}", clusterUUID,
 		"${IMAGE_KUBE_APISERVER}", versioned.Apiserver,
 		"${IMAGE_KUBE_CONTROLLER_MANAGER}", versioned.ControllerManager,
 		"${IMAGE_KUBE_SCHEDULER}", versioned.Scheduler,

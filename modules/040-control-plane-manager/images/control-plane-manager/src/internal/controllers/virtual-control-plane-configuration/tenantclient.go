@@ -19,6 +19,7 @@ package virtualcontrolplaneconfiguration
 import (
 	"context"
 	"fmt"
+	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
@@ -28,6 +29,12 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	tenantClientTimeout = 10 * time.Second
+	tenantClientQPS     = 5
+	tenantClientBurst   = 10
 )
 
 func (r *reconciler) tenantRESTConfig(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*rest.Config, error) {
@@ -46,6 +53,9 @@ func (r *reconciler) tenantRESTConfig(ctx context.Context, vcp *controlplanev1al
 	if err != nil {
 		return nil, fmt.Errorf("build rest config: %w", err)
 	}
+	cfg.Timeout = tenantClientTimeout
+	cfg.QPS = tenantClientQPS
+	cfg.Burst = tenantClientBurst
 	return cfg, nil
 }
 

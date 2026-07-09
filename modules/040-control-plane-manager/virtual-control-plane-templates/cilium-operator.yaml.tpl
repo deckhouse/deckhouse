@@ -177,7 +177,7 @@ data:
   enable-well-known-identities: "false"
   enable-node-selector-labels: "false"
   synchronize-k8s-nodes: "true"
-  operator-api-serve-addr: "127.0.0.1:9234"
+  operator-api-serve-addr: ":9234"
 
   enable-hubble: "false"
   ipam: "cluster-pool"
@@ -344,7 +344,6 @@ spec:
         # Timings relaxed for the kine/Postgres-backed tenant apiserver
         livenessProbe:
           httpGet:
-            host: "127.0.0.1"
             path: /healthz
             port: health
             scheme: HTTP
@@ -354,7 +353,6 @@ spec:
           failureThreshold: 6
         readinessProbe:
           httpGet:
-            host: "127.0.0.1"
             path: /healthz
             port: health
             scheme: HTTP
