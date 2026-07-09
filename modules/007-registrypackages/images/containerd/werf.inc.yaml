@@ -83,6 +83,7 @@ shell:
   - |
   {{- $buildContext := deepCopy $ -}}
   {{- $parted_version := split "." $runc_version -}}
+  {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
   {{- $_ := set $buildContext "BuildCommand" `make COMMIT="$(cat COMMIT)" EXTRA_LDFLAGS="-s -w" static` -}}
   {{- $_ := set $buildContext "ProjectName" (printf "%s/runc-%s.%s" $.ModuleName $parted_version._0 $parted_version._1) -}}
   {{- include "image-build.build" $buildContext | indent 6 }}
@@ -198,6 +199,7 @@ shell:
   - |
   {{- $buildContext := deepCopy $ -}}
   {{- $parted_version := split "." $containerd_version -}}
+  {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
   {{- $_ := set $buildContext "BuildCommand" (printf "make STATIC=1 VERSION=\"$(cat VERSION)\" REVISION=\"$(cat REVISION)\" %s all" $additionalBuildOptions) -}}
   {{- $_ := set $buildContext "ProjectName" (printf "%s/containerd-%s.%s" $.ModuleName $parted_version._0 $parted_version._1) -}}
   {{- include "image-build.build" $buildContext | indent 6 }}
