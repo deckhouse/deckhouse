@@ -142,9 +142,8 @@ var _ = sdk.RegisterFunc(getCRDsHookConfig, getCRDsHandler)
 // getCRDsHandler builds the thin nodeManager.internal.nodeGroups blob. It is a passthrough
 // of the NodeGroup spec enriched with name, engine and defaulted cloudInstances.zones.
 // All validation, status, instanceClass overlay, capacity, CRI/kubernetesVersion resolution,
-// updateEpoch and serialized labels/taints are owned by node-controller now. The only extra
-// responsibility kept here is the node_group_info metric that feeds the module 340
-// UnsupportedContainerRuntimeVersion alert.
+// updateEpoch, serialized labels/taints and the node_group_info metric are owned by
+// node-controller now.
 func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	// Default zones. Take them from machine_deployments and cloud_provider_secret.zones.
 	defaultZones := set.New()
