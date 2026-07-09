@@ -1164,11 +1164,10 @@ func (s *SchedulerSuite) writeEnabledScript(body string) *script.Descriptor {
 	}
 }
 
-// TestScriptRuleEnablesOverFloor verifies a true enabled-script result is a soft
-// Enable vote that turns on a module whose Disable floor would otherwise keep it
-// off. Order 0 keeps the module in global's tier so the reschedule-on-enable
-// revert does not gate it behind global re-completing (see TestDynamicRuleEnablesOverFloor).
-func (s *SchedulerSuite) TestScriptRuleEnablesOverFloor() {
+// TestScriptRuleTrueDoesNotEnableOverFloor verifies a true enabled-script result
+// is not an enable vote: the script can only veto a module, never turn one on, so
+// a true result leaves the module's Disable floor in force and the module stays off.
+func (s *SchedulerSuite) TestScriptRuleTrueDoesNotEnableOverFloor() {
 	s.activateGlobal()
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
@@ -1181,8 +1180,31 @@ func (s *SchedulerSuite) TestScriptRuleEnablesOverFloor() {
 		enabledScript: s.writeEnabledScript("echo true > $MODULE_ENABLED_RESULT"),
 	}))
 
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a true enabled-script result must not override the module's Disable floor")
+}
+
+// TestScriptRuleTrueDoesNotForbid verifies a true enabled-script result abstains
+// rather than vetoes: a module another intent rule enables stays scheduled when
+// its script passes. Paired with TestScriptRuleTrueDoesNotEnableOverFloor, this
+// pins the true result to Undefined (neither enables nor forbids).
+func (s *SchedulerSuite) TestScriptRuleTrueDoesNotForbid() {
+	enabledState := s.useDynamicScheduler()
+	s.activateGlobal()
+
+	enabledState["mod"] = boolPtr(true) // dynamic intent enables it
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: s.writeEnabledScript("echo true > $MODULE_ENABLED_RESULT"),
+	}))
+
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
-		"a true enabled-script result must override the module's Disable floor")
+		"a true enabled-script result must not veto a dynamically enabled module")
 }
 
 // TestScriptRuleFalseForbids verifies a false enabled-script result vetoes the
@@ -1230,11 +1252,14 @@ func (s *SchedulerSuite) TestScriptRuleErrorForbids() {
 
 // TestScriptRuleDisableSurfacesReason verifies that when a module flips off
 // because its enabled script now reports false, the EventDisable carries the
-// script's reason and the DisabledByScript condition reason. The same descriptor
-// path is rewritten between passes to change the verdict.
+// script's reason and the DisabledByScript condition reason. The module is
+// dynamically enabled (a true script only abstains, it cannot enable); the same
+// descriptor path is rewritten between passes to change the verdict.
 func (s *SchedulerSuite) TestScriptRuleDisableSurfacesReason() {
+	enabledState := s.useDynamicScheduler()
 	s.activateGlobal()
 
+	enabledState["mod"] = boolPtr(true) // dynamic intent enables it; the passing script abstains
 	descriptor := s.writeEnabledScript("echo true > $MODULE_ENABLED_RESULT")
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "mod",

@@ -125,6 +125,11 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 				return fmt.Errorf("load embedded conf: %w", err)
 			}
 
+			// node-manager cant be processed along side with working addon-operator
+			if conf.Definition.Name == "node-manager" {
+				return nil
+			}
+
 			conf.Patcher = r.objectPatcher
 			conf.ScheduleManager = r.scheduleManager
 			conf.KubeEventsManager = r.kubeEventsManager
