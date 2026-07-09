@@ -338,47 +338,12 @@
       }
     },
     {
-      "id": 6,
-      "type": "stat",
-      "title": "Failed/blocked evictions",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 20,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", result=~\"error|blocked\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__range]))",
-          "instant": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      }
-    },
-    {
       "id": 7,
       "type": "stat",
       "title": "Imbalance CPU",
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 8,
         "x": 0,
         "y": 5
       },
@@ -413,8 +378,8 @@
       "title": "Imbalance Memory",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
+        "w": 8,
+        "x": 8,
         "y": 5
       },
       "datasource": {
@@ -448,8 +413,8 @@
       "title": "Imbalance Pods",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 8,
+        "w": 8,
+        "x": 16,
         "y": 5
       },
       "datasource": {
@@ -466,41 +431,6 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      }
-    },
-    {
-      "id": 10,
-      "type": "stat",
-      "title": "Last cycle duration (avg)",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 5
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "rate(descheduler_loop_duration_seconds_sum{job=\"descheduler\"}[$__rate_interval]) / rate(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[$__rate_interval])",
-          "instant": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
         },
         "overrides": []
       },
@@ -960,7 +890,7 @@
     },
     {
       "id": 32,
-      "type": "heatmap",
+      "type": "timeseries",
       "title": "Node CPU usage",
       "gridPos": {
         "h": 8,
@@ -981,17 +911,29 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": true
+          }
         },
         "overrides": []
       },
       "options": {
-        "calculate": false
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
       }
     },
     {
       "id": 34,
-      "type": "heatmap",
+      "type": "timeseries",
       "title": "Node Memory usage",
       "gridPos": {
         "h": 8,
@@ -1012,12 +954,24 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": true
+          }
         },
         "overrides": []
       },
       "options": {
-        "calculate": false
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
       }
     },
     {
