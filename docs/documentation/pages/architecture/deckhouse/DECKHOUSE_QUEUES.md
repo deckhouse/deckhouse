@@ -9,33 +9,33 @@ The [`deckhouse`](/modules/deckhouse/) module implements the core of Deckhouse K
 
 The Deckhouse controller implements addon-operator and marketplace queues.
 
-### Addon-operator queues
+## Addon-operator queues
 
-The **addon-operator queues** are the primary processing mechanism for built-in and external Deckhouse modules. The queue is implemented in [shell-operator](https://github.com/flant/shell-operator) and extended with [addon-operator](https://github.com/flant/addon-operator) task types. The Deckhouse controller synchronizes [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resources and updates global or module values for addon-operator.
+The **addon-operator queues** are the primary processing mechanism for built-in and external DKP modules. The queue is implemented in [shell-operator](https://github.com/flant/shell-operator) and extended with [addon-operator](https://github.com/flant/addon-operator) task types. The Deckhouse controller synchronizes [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resources and updates global or module values for addon-operator.
 
 Task types:
 
 | Task                               | Function                                                                            |
 |------------------------------------|-------------------------------------------------------------------------------------|
-| GlobalHookRun                      | Run global hooks (onStartup, beforeAll, afterAll, kubernetes, schedule)           |
-| GlobalHookEnableKubernetesBindings | Enable Kubernetes monitors from global hooks                                         |
-| GlobalHookWaitKubernetesSynchronization | Block the queue until global hooks with `executeHookOnSynchronization: true` complete |
-| GlobalHookEnableScheduleBindings   | Register cron tasks in the addon-operator scheduler                                 |
-| DiscoverHelmReleases               | Find "extra" Helm releases after the first converge                                |
-| ApplyKubeConfigValues              | Apply changes from ModuleConfig                                                     |
-| ConvergeModules                    | Full converge cycle for all modules                                                 |
-| ModuleRun                          | Configure or update a module; runs subtasks: onStartup -> sync -> beforeHelm -> helm -> afterHelm |
-| ParallelModuleRun                  | Batch parallel launch of modules                                                    |
-| ModuleDelete                       | Remove a module (helm delete, afterDeleteHelm)                                      |
-| ModuleHookRun                      | Run a module hook on event                                                          |
-| ModuleEnsureCRDs                   | Install module CRDs                                                                 |
-| ModulePurge                        | Remove unknown Helm release                                                         |
+| GlobalHookRun                      | Runs global hooks (`onStartup`, `beforeAll`, `afterAll`, `kubernetes`, `schedule`)           |
+| GlobalHookEnableKubernetesBindings | Enables Kubernetes monitors from global hooks                                         |
+| GlobalHookWaitKubernetesSynchronization | Blocks the queue until global hooks with `executeHookOnSynchronization: true` complete |
+| GlobalHookEnableScheduleBindings   | Registers cron tasks in the addon-operator scheduler                                 |
+| DiscoverHelmReleases               | Finds "extra" Helm releases after the first `converge`                                |
+| ApplyKubeConfigValues              | Applies changes from ModuleConfig                                                     |
+| ConvergeModules                    | Full `converge` cycle for all modules                                                 |
+| ModuleRun                          | Configures or updates a module, including subtasks: `onStartup` -> `sync` -> `beforeHelm` -> `helm` -> `afterHelm` |
+| ParallelModuleRun                  | Launches modules in batch and in parallel                                                    |
+| ModuleDelete                       | Removes a module (`helm delete`, `afterDeleteHelm`)                                      |
+| ModuleHookRun                      | Runs a module hook on event                                                          |
+| ModuleEnsureCRDs                   | Installs module CRDs                                                                 |
+| ModulePurge                        | Removes unknown Helm release                                                         |
 
 Addon-operator queue types:
 
 | Queue       | Name                                   | Purpose                                                                                      |
 |-------------|----------------------------------------|----------------------------------------------------------------------------------------------|
-| Main        | `main`                                 | Run global hooks at startup, install critical modules, configure and delete modules          |
+| Main        | `main`                                 | Runs global hooks at startup, installs critical modules, configures and deletes modules          |
 | Parallel    | `parallel_queue_0` ... `parallel_queue_19` | Parallel ModuleRun with module dependencies taken into account (20 queues)                  |
 | Hook queues | From task config ([hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md)) | Tasks for a specific module and global hooks |
 
@@ -68,7 +68,7 @@ After ConvergeModules, the controller adds the DiscoverHelmReleases task to clea
 The module processing order in the ConvergeModules task is determined by several attributes:
 
 - Module criticality: The `critical` parameter in the module `module.yaml` configuration.
-- Module weight: Numeric module processing order. The higher the number, the later the module is processed. The weight is taken from the `weight` parameter in module `module.yaml`; if missing or set to 0, the default weight 900 is used. If no module config file exists, the weight is taken from the numeric prefix of the module directory name (for example, `040-node-manager` means weight 40). If the weight cannot be obtained from the directory name, weight 100 is used.
+- Module *weight*: Numeric module processing order. The higher the number, the later the module is processed. The weight is taken from the `weight` parameter in module `module.yaml`; if missing or set to 0, the default weight 900 is used. If no module config file exists, the weight is taken from the numeric prefix of the module directory name (for example, `040-node-manager` means weight 40). If the weight cannot be obtained from the directory name, weight 100 is used.
 - Module dependencies: A list of modules that must be installed before the current module.
 
 Based on these attributes, the Deckhouse controller scheduler defines processing order according to the following principles:
@@ -91,7 +91,7 @@ If more than one identical task is added to a queue, all duplicates are removed 
 
 To view addon-operator queues, use the `d8 system queue list` command.
 
-### Marketplace queues
+## Marketplace queues
 
 The **Marketplace queues** are a queue implementation used by [Marketplace](../marketplace) functionality.
 
@@ -107,27 +107,28 @@ Queue types:
 
 | Name                           | Purpose                                                           |
 |--------------------------------|-------------------------------------------------------------------|
-| {packageName}                  | Lifecycle: Deploy, Load, Configure, Enable, Run, Disable, Undeploy |
-| {packageName}/{hookQueue}      | Hooks for K8s/schedule events (queue from hook binding)          |
-| {packageName}/{hookQueue}/sync | Hook synchronization at startup (WaitForSynchronization)         |
+| `{packageName}`                  | Lifecycle: Deploy, Load, Configure, Enable, Run, Disable, Undeploy |
+| `{packageName}/{hookQueue}`      | Running hooks triggered by Kubernetes or schedule events (queue from hook binding)          |
+| `{packageName}/{hookQueue}/sync` | Hook synchronization at startup (WaitForSynchronization)         |
 
 Task types:
 
 | Task      | Function                                                                                     |
 |-----------|----------------------------------------------------------------------------------------------|
-| Deploy    | Downloads/mounts the package image                                                           |
-| Load      | Parses configuration, creates Application/Module, registers in scheduler                     |
-| Configure | Applies Application/Module settings using the parameter store                                |
+| Deploy    | Downloads or mounts the package image                                                           |
+| Load      | Parses configuration, creates Application or Module, registers in scheduler                     |
+| Configure | Applies Application or Module settings using the parameter store                                |
 | Enable    | Enables hooks, performs parameter synchronization, runs OnStartup hook                       |
-| Run       | Runs subtasks when installing Application/Module: BeforeHelm -> helm Upgrade -> AfterHelm    |
+| Run       | Runs subtasks when installing Application or Module: `BeforeHelm` -> `helm Upgrade` -> `AfterHelm`    |
 | HookRun   | Runs a hook on event                                                                         |
-| HookSync  | Initial synchronization of Kubernetes binding                                                |
+| HookSync  | Performs initial synchronization of Kubernetes binding                                                |
 | Disable   | Removes Helm, disables hooks, clears hook queues                                             |
 | Undeploy  | Removes the package from disk                                                                |
 
 Task execution in one queue does not block task execution in another queue.
 
-To view Marketplace queues, use the `d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller packages queue dump` command.
+To view Marketplace queues, run the following command:
+
 
 {% alert level="warning" %}
 When performing module installation or configuration tasks in addon-operator, the Deckhouse controller pauses Marketplace queue processing.

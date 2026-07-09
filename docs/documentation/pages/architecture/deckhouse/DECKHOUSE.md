@@ -6,11 +6,12 @@ description: Architecture of the deckhouse module in Deckhouse Kubernetes Platfo
 ---
 
 The [`deckhouse`](/modules/deckhouse/) module implements the core of Deckhouse Kubernetes Platform (DKP), performing the following operations:
-- Platform updates.
-- Module configuration management.
-- Module installation and updates.
-- Module documentation build triggering.
-- Validation of custom resources managed by DKP modules.
+
+- Platform updates
+- Module configuration management
+- Module installation and updates
+- Module documentation build triggering
+- Validation of custom resources managed by DKP modules
 
 The module manages the following custom resources in the `deckhouse.io` API group:
 
@@ -24,7 +25,7 @@ The module manages the following custom resources in the `deckhouse.io` API grou
   - [ModuleUpdatePolicy](../../reference/api/cr.html#moduleupdatepolicy): Rules for module updates and version transition automation.
 
 - Platform management:
-  - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease): An object that defines the Deckhouse release (version) and platform update policy.
+  - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease): An object that defines the DKP release (version) and platform update policy.
 
 - Package management ([Marketplace](../marketplace)):
   - [Application](../../reference/api/cr.html#application): Description and desired state of an application package (a group of components or an application).
@@ -62,21 +63,21 @@ The module consists of the following components:
 
 1. **Deckhouse** (Deployment): A controller that implements platform management operations.
 
-   The controller orchestrates platform management tasks using [the queueing mechanism](./queues.html).
+   The controller coordinates platform management tasks using the [queueing mechanism](./queues.html).
 
    The Deckhouse controller can run in standard mode or in [hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) isolation mode. To enable it, create the `chroot-mode` ConfigMap in the `d8-system` namespace. In isolation mode, shell hooks and module enable scripts run in a chroot environment with a limited set of mounted directories, isolating them from the controller container file system.
 
    If [High Availability (HA)](../../admin/configuration/high-reliability-and-availability/) mode is enabled, multiple Deckhouse controller instances are started. To ensure correct behavior, Deckhouse controllers perform leader election using the `deckhouse-leader-election` Lease resource. The controller elected as leader performs all platform management operations.
 
-   In addition, the Deckhouse controller configures:
+   In addition, you can set the following parameters using the Deckhouse controller:
 
-   | Description       | Module configuration parameter                |
-   |-------------- |-------------------------------------- |
-   | Logging level          | [`.spec.settings.logLevel`](/modules/deckhouse/configuration.html#parameters-loglevel)   |
-   | Default enabled module set | [`.spec.settings.bundle`](/modules/deckhouse/configuration.html#parameters-bundle)   |
-   | Release channel | [`.spec.settings.releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel)   |
-   | Update mode | [`.spec.settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode)   |
-   | Update windows | [`.spec.settings.update.windows.days`](/modules/deckhouse/configuration.html#parameters-update-windows)   |
+   | Module configuration parameter | Description |
+   | ------------------------------ | ----------- |
+   | [`logLevel`](/modules/deckhouse/configuration.html#parameters-loglevel) | Logging level |
+   | [`bundle`](/modules/deckhouse/configuration.html#parameters-bundle) | Set of modules enabled by default |
+   | [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) | Release channel |
+   | [`update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) | Update mode |
+   | [`update.windows.days`](/modules/deckhouse/configuration.html#parameters-update-windows) | Update windows |
 
    For details about module settings, refer to the [module documentation section](/modules/deckhouse/).
 
@@ -88,19 +89,19 @@ The module consists of the following components:
   
 1. **Webhook-handler** (Deployment): Consists of a single **handler** container and implements a generic webhook for conversion and validation of custom resources managed by DKP.
 
-    The component watches [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) and [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) custom resources and, based on them, generates hook Python files for [shell-operator](https://github.com/flant/shell-operator) from templates. When `kube-apiserver` sends resource validation or conversion requests, shell-operator runs the required hook and returns the processing result.
+   The component watches [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) and [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) custom resources and, based on them, generates hook Python files for [shell-operator](https://github.com/flant/shell-operator) from templates. When `kube-apiserver` sends resource validation or conversion requests, shell-operator runs the required hook and returns the processing result.
 
 1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the network plugin (CNI) switching process in the DKP cluster and records the current state in the CNIMigration custom resource. Migration to Flannel, Simple bridge, and Cilium is supported. For details on switching CNI in the cluster, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
 
-    {% alert level="info" %}
-    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command.
-    {% endalert %}
+   {% alert level="info" %}
+   The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command.
+   {% endalert %}
 
 1. **Cni-migration-agent** (DaemonSet): An optional component running on all cluster nodes, consisting of a single **agent** container. The component watches the CNIMigration custom resource and manages the CNINodeMigration custom resource that reflects migration state for a specific node.
 
-    {% alert level="info" %}
-    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command.
-    {% endalert %}
+   {% alert level="info" %}
+   The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command.
+   {% endalert %}
 
 ## Module interactions
 
@@ -116,9 +117,9 @@ The module interacts with the following components:
 
 1. [**Documentation**](/modules/documentation/): Updating documentation when a DKP module is added or updated.
 
-1. **Image registry**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in Unmanaged mode.
+1. **Image registry**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in `Unmanaged` mode.
 
-1. **`registry` module**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in one of the Direct, Proxy, or Local modes.
+1. **`registry` module**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in one of the following modes: `Direct`, `Proxy`, or `Local`.
 
 The module is interacted with by the following external components:
 

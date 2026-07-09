@@ -1312,7 +1312,7 @@ entries:
               url: /architecture/deckhouse/web-modules.html
             - title:
                 en: Deckhouse module
-                ru: Модуль Deckhouse
+                ru: Модуль deckhouse
               url: /architecture/deckhouse/deckhouse.html
             - title:
                 en: Queuing mechanism
