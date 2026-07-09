@@ -40,8 +40,13 @@ func withInvalidReason(next http.Handler) http.Handler {
 		var review admissionv1.AdmissionReview
 		if err := json.Unmarshal(body, &review); err == nil && review.Response != nil && !review.Response.Allowed {
 			msg := ""
+			if len(review.Response.Warnings) > 0 {
+				for _, warning := range review.Response.Warnings {
+					msg += warning + "\n"
+				}
+			}
 			if review.Response.Result != nil {
-				msg = review.Response.Result.Message
+				msg += review.Response.Result.Message
 			}
 			review.Response.Result = &metav1.Status{
 				Status:  metav1.StatusFailure,
