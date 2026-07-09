@@ -40,16 +40,26 @@ func withInvalidReason(next http.Handler) http.Handler {
 		var review admissionv1.AdmissionReview
 		if err := json.Unmarshal(body, &review); err == nil && review.Response != nil && !review.Response.Allowed {
 			msg := ""
+			causes := []metav1.StatusCause{}
+
 			if review.Response.Result != nil {
 				msg += review.Response.Result.Message
+				causes = append(causes, metav1.StatusCause{Message: review.Response.Result.Message})
 			}
+
+			if len(review.Response.Warnings) > 0 {
+				for _, warning := range review.Response.Warnings {
+					causes = append(causes, metav1.StatusCause{Message: warning})
+				}
+			}
+
 			review.Response.Result = &metav1.Status{
 				Status:  metav1.StatusFailure,
 				Reason:  metav1.StatusReasonInvalid,
 				Code:    http.StatusUnprocessableEntity,
 				Message: msg,
 				Details: &metav1.StatusDetails{
-					Causes: review.Response.Result.Details.Causes,
+					Causes: causes,
 				},
 			}
 			if patched, err := json.Marshal(review); err == nil {
