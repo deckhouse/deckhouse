@@ -962,10 +962,13 @@ rules:
 - apiGroups: [""]
   resources:
   - pods
-  - pods/portforward
   verbs:
   - get
   - list
+- apiGroups: [""]
+  resources:
+  - pods/portforward
+  verbs:
   - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -984,6 +987,8 @@ roleRef:
 ```
 
 Замените `<debug-namespace>` на пространство имён, в котором будет создан временный debug-под, а `<target-namespace>` — на пространство имён прикладного пода, который нужно проверить. Повторите `Role` и `RoleBinding` для каждого целевого пространства имён, где `istioctl` должен получать доступ к подам.
+
+Этот RBAC рассчитан на команды, которые обращаются к поду напрямую, например `<pod-name>.<target-namespace>`. Если использовать имена типизированных ресурсов, например `deployment/<name>`, выдайте дополнительный доступ на чтение этих типов ресурсов, чтобы `istioctl` смог определить соответствующие поды.
 
 {% alert level="warning" %}
 Создание подов в системных пространствах имён, таких как `d8-system`, и использование системных ServiceAccount, таких как `deckhouse`, обычно требует прав cluster-admin. Используйте отдельный ServiceAccount с минимально необходимыми правами.
