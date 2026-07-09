@@ -260,17 +260,16 @@ func (v *moduleConfigValidator) isModuleEnabledByBundle(moduleName string) bool 
 	if moduleName == globalModuleName {
 		return false
 	}
-
-	logger := v.logger.With(slog.String("module", moduleName))
-	logger.Warn("debug isModuleEnabledByBundle", slog.String("edition", v.edition.Name), slog.String("bundle", v.edition.Bundle))
-
 	module, err := v.moduleStorage.GetModuleByName(moduleName)
 	if err != nil {
-		logger.Warn("debug isModuleEnabledByBundle", slog.String("error", err.Error()))
 		return false
 	}
-
-	return module.GetModuleDefinition().Accessibility.IsEnabled(v.edition.Name, v.edition.Bundle)
+	access := module.GetModuleDefinition().Accessibility
+	if access == nil || len(access.Editions) == 0 {
+		// embedded-modules do not declare accessibility; their default enabled state is determined by the enabled script/bundle at runtime
+		return v.moduleManager.IsModuleEnabled(moduleName)
+	}
+	return access.IsEnabled(v.edition.Name, v.edition.Bundle)
 }
 
 // validateModuleEnabling runs the checks required before a module may be enabled:
