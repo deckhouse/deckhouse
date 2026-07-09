@@ -30,12 +30,23 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
+
+// versionString renders a *semver.Version for logging, printing "<nil>" when the
+// source read yielded nothing (so an empty kubernetesVersion is traceable to the
+// exact failing source).
+func versionString(v *semver.Version) string {
+	if v == nil {
+		return "<nil>"
+	}
+	return v.String()
+}
 
 type Service struct {
 	Client client.Client
@@ -84,10 +95,17 @@ func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) (Result, error)
 		s.computeCloudFields(ctx, ng, cloudProvider, &result)
 	}
 
-	logger.V(1).Info("derived status computed",
+	// TEMP dev observability: Info (was V(1)) so the resolved kubernetesVersion /
+	// engine / cri are visible at the default verbosity while the bashible-context
+	// path is stabilised. targetVersion/controlPlaneMin are logged too so an empty
+	// kubernetesVersion points straight at the failing source.
+	logger.Info("derived status computed",
 		"nodeGroup", ng.Name,
 		"engine", result.Engine,
 		"kubernetesVersion", result.KubernetesVersion,
+		"targetVersion", versionString(targetVersion),
+		"controlPlaneMinVersion", versionString(controlPlaneMinVersion),
+		"defaultCRI", defaultCRI,
 		"criType", result.CRIType,
 		"updateEpoch", result.UpdateEpoch,
 	)
@@ -115,7 +133,8 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, clou
 	instanceClassSpec, err := s.readInstanceClassSpec(ctx, kind, name)
 	if err != nil || instanceClassSpec == nil {
 		if err != nil {
-			logger.V(1).Info("instance class not found, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name, "error", err.Error())
+			// TEMP dev observability: Info (was V(1)) while stabilising the path.
+			logger.Info("instance class not found, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name, "error", err.Error())
 		}
 		return
 	}

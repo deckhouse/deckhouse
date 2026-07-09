@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
 )
 
@@ -125,7 +126,10 @@ func Marshal(input map[string]interface{}) ([]byte, error) {
 // breaks bashible-apiserver bootstrap. The standard module labels are set so the
 // Secret is managed/selected exactly like the helm-rendered one.
 func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]interface{}) error {
-	raw, err := Marshal(s.Build(ctx, s.ReadGlobals(ctx), nodeGroups))
+	logger := log.FromContext(ctx)
+
+	globals := s.ReadGlobals(ctx)
+	raw, err := Marshal(s.Build(ctx, globals, nodeGroups))
 	if err != nil {
 		return fmt.Errorf("marshal input.yaml: %w", err)
 	}
@@ -133,7 +137,7 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: secretNamespace},
 	}
-	_, err = controllerutil.CreateOrUpdate(ctx, s.Client, secret, func() error {
+	op, err := controllerutil.CreateOrUpdate(ctx, s.Client, secret, func() error {
 		if secret.Labels == nil {
 			secret.Labels = map[string]string{}
 		}
@@ -146,6 +150,29 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 	if err != nil {
 		return fmt.Errorf("upsert %s/%s: %w", secretNamespace, secretName, err)
 	}
+
+	// TEMP dev observability: surface the write at Info so we can watch what the
+	// controller actually produces without bumping verbosity. Downgrade to V(1)
+	// (or drop) once the bashible-context path is stable.
+	ngVersions := make(map[string]interface{}, len(nodeGroups))
+	for _, ng := range nodeGroups {
+		name, _ := ng["name"].(string)
+		if name == "" {
+			continue
+		}
+		ngVersions[name] = ng["kubernetesVersion"]
+	}
+	logger.Info("wrote bashible-apiserver-context Secret",
+		"secret", secretNamespace+"/"+secretName,
+		"operation", op,
+		"bytes", len(raw),
+		"nodeGroupCount", len(nodeGroups),
+		"nodeGroupVersions", ngVersions,
+		"clusterDomain", globals.ClusterDomain,
+		"podSubnetNodeCIDRPrefix", globals.PodSubnetNodeCIDRPrefix,
+		"clusterDNSAddress", globals.ClusterDNSAddress,
+		"clusterUUID", globals.ClusterUUID,
+	)
 	return nil
 }
 

@@ -98,6 +98,8 @@ func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		logger.Error(err, "failed to assemble bashible-apiserver-context")
 		return ctrl.Result{}, err
 	}
-	logger.V(1).Info("assembled bashible-apiserver-context")
+	// TEMP dev observability: Info (was V(1)) so the reconcile is visible at the
+	// default verbosity during bashible-context bring-up.
+	logger.Info("assembled bashible-apiserver-context")
 	return ctrl.Result{}, nil
 }
