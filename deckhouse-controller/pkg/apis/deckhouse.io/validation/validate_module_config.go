@@ -202,9 +202,10 @@ func (v *moduleConfigValidator) validateUpdate(ctx context.Context, review *kwhm
 		return nil, err
 	}
 
+	oldEnabled := oldConfig.enabled || v.moduleManager.IsModuleEnabled(cfg.Name)
 	newEnabled := isEnabled(cfg)
 
-	if !oldConfig.enabled && newEnabled {
+	if !oldEnabled && newEnabled {
 		// on UPDATE a missing Module CR is tolerated (validateCommon handles it with a warning)
 		if res, err := v.validateModuleEnabling(ctx, cfg, allowExperimental, false); res != nil || err != nil {
 			return res, err
@@ -214,7 +215,8 @@ func (v *moduleConfigValidator) validateUpdate(ctx context.Context, review *kwhm
 	// the module is being disabled when the new config does not keep it enabled
 	// while it is currently enabled - either explicitly (oldConfig.enabled) or by
 	// default (e.g. enabled in the bundle, but with no explicit enabled flag).
-	disabling := !newEnabled && (oldConfig.enabled || v.moduleManager.IsModuleEnabled(cfg.Name))
+	// ModuleConfig may not have field spec.enabled, so we check if the module is enabled by other means.
+	disabling := isDisabled(cfg) && oldEnabled
 	if disabling && !hasAllowDisableAnnotation(cfg.Annotations) && !hasAllowDisableAnnotation(oldConfig.annotations) {
 		if res, err := v.confirmationRejection(cfg.Name); res != nil || err != nil {
 			return res, err
