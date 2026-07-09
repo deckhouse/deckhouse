@@ -419,7 +419,6 @@ func NewDeckhouseController(
 		settingsContainer,
 		exts,
 		edition,
-		logger,
 	)
 
 	return &DeckhouseController{
