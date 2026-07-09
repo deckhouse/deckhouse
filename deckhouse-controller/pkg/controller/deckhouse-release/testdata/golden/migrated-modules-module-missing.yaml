@@ -4,31 +4,30 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.49.0
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   version: v1.49.0
 status:
   approved: true
-  phase: Superseded
-  transitionTime: "2019-10-17T15:33:00Z"
+  phase: Deployed
+  transitionTime: "2019-10-17T15:32:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  annotations:
-    release.deckhouse.io/isUpdating: "true"
-    release.deckhouse.io/notified: "false"
-    release.deckhouse.io/update-info: '{"taskCalculation":{"taskType":"process","isPatch":false,"isMajor":false,"isFromTo":false,"isSingle":false,"isLatest":true},"updatePolicy":{"mode":"Auto"},"forceRelease":{"isForced":false},"podReadiness":{"isReady":true},"requirementsCheck":{"requirementsMet":true}}'
   name: v1.50.0
-  resourceVersion: "1001"
+  resourceVersion: "1000"
 spec:
   requirements:
     migratedModules: test-module-1, test-module-missing
   version: v1.50.0
 status:
   approved: false
-  phase: Deployed
+  message: 'migrated module ''test-module-1'' is not pre-downloaded yet: no Deployed
+    ModuleRelease found, wait for the module to be downloaded from a ModuleSource
+    before upgrading'
+  phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: apps/v1
@@ -36,7 +35,7 @@ kind: Deployment
 metadata:
   name: deckhouse
   namespace: d8-system
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   replicas: 1
   selector:
@@ -49,7 +48,7 @@ spec:
         app: deckhouse
     spec:
       containers:
-      - image: my.registry.com/deckhouse:v1.50.0
+      - image: dev-registry.deckhouse.io/deckhouse/deckhouse:v1.49.0
         name: deckhouse
         resources: {}
 status:

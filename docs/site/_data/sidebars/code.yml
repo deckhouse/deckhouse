@@ -92,6 +92,10 @@ entries:
           ru: Интеграция с внешним Vault
         url: /code/documentation/user/external-vault.html
       - title:
+          en: External status checks
+          ru: Внешние проверки статуса
+        url: /code/documentation/user/external-status-checks.html
+      - title:
           en: OmniAuth & LDAP
           ru: OmniAuth и LDAP
         url: /code/documentation/user/oauth-and-ldap.html

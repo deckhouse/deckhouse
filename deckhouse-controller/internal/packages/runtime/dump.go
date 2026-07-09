@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 // dump is the serialization envelope for the debug endpoint.
@@ -146,7 +147,7 @@ func (r *Runtime) renderManifests(ctx context.Context, name string) (string, err
 
 	if module := r.modules[name]; module != nil {
 		r.mu.Unlock()
-		return r.nelmService.Render(ctx, modulesNamespace, module)
+		return r.nelmService.Render(ctx, app.NamespaceDeckhouse, module)
 	}
 
 	r.mu.Unlock()

@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: e2e-minreplicas-rejected
+spec:
+  minReplicas: 2
+  podLabelSelector:
+    matchLabels:
+      e2e-test: minreplicas-rejected
+  strategies:
+    removeDuplicates:
+      enabled: true

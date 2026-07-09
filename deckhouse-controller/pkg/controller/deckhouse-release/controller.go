@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	aoapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	"go.opentelemetry.io/otel"
@@ -58,15 +57,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
-	deckhouseNamespace          = "d8-system"
-	deckhouseDeployment         = "deckhouse"
-	deckhouseRegistrySecretName = "deckhouse-registry"
-
 	controllerName = "d8-deckhouse-release-controller"
 )
 
@@ -227,7 +223,7 @@ func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) error {
 
 func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string {
 	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
+	key := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.SecretDiscovery}
 	err := r.client.Get(ctx, key, &secret)
 	if err != nil {
 		r.logger.Warn("read clusterUUID from secret", slog.Any("namespaced_name", key), log.Err(err))
@@ -861,7 +857,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 var ErrDeploymentContainerIsNotFound = errors.New("deployment container is not found")
 
 func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	key := client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDeployment}
+	key := client.ObjectKey{Namespace: app.NamespaceDeckhouse, Name: app.DeploymentName}
 
 	depl := new(appsv1.Deployment)
 
@@ -944,7 +940,7 @@ func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) 
 	err := r.client.List(
 		ctx,
 		&pods,
-		client.InNamespace("d8-system"),
+		client.InNamespace(app.NamespaceDeckhouse),
 		client.MatchingLabels{"app": "deckhouse", "leader": "true"},
 	)
 	if err != nil {
@@ -1074,7 +1070,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: leaderPod.Namespace,
-				Name:      "deckhouse",
+				Name:      app.DeploymentName,
 			},
 		},
 		client.RawPatch(types.MergePatchType, jsonPatch),
@@ -1090,7 +1086,7 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "getRegistrySecret")
 	defer span.End()
 
-	key := types.NamespacedName{Namespace: deckhouseNamespace, Name: deckhouseRegistrySecretName}
+	key := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.SecretRegistry}
 
 	secret := new(corev1.Secret)
 
@@ -1108,7 +1104,7 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 }
 
 func (r *deckhouseReleaseReconciler) isDeckhousePodReady(ctx context.Context) bool {
-	deckhousePodIP := aoapp.ListenAddress
+	deckhousePodIP := app.ListenAddress()
 
 	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

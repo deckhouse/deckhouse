@@ -32,6 +32,8 @@ Control plane management functions:
   * Prioritizing nodes based on their state (network load, storage subsystem health, etc.).
   * Dividing nodes into zones, etc.
 
+* **Periodic etcd defragmentation**. In clusters with three or more etcd members, this feature is enabled by default. For more details, see the [`control-plane-manager` module documentation](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag).
+
 For detailed configuration options and usage examples, refer to the [`control-plane-manager` module documentation](/modules/control-plane-manager/).
 
 ### Module architecture
@@ -45,7 +47,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`control-plane-manager`](/modules/control-plane-manager/) module and its interactions with other platform components are shown in the following diagram:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![control-plane-manager module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.png)
 
 ## Module components

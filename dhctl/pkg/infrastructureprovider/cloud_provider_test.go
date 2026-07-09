@@ -143,27 +143,27 @@ func TestFailCloudProviderGet(t *testing.T) {
 	cfg := &config.MetaConfig{}
 	cfg.ProviderName = yandex.ProviderName
 
-	_, err := getter(context.TODO(), cfg)
+	_, err := getter(t.Context(), cfg)
 	require.Error(t, err)
 	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 
 	// incorrect provider
 	cfg.ProviderName = "incorrect"
 	cfg.UUID = "fb6dfacc-93fd-11f0-9697-efd55958d098"
-	_, err = getter(context.TODO(), cfg)
+	_, err = getter(t.Context(), cfg)
 	require.Error(t, err)
 	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 
 	cfg.ProviderName = yandex.ProviderName
 
 	// empty prefix
-	_, err = getter(context.TODO(), cfg)
+	_, err = getter(t.Context(), cfg)
 	require.Error(t, err)
 	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 
 	// empty layout
 	cfg.ClusterPrefix = "test"
-	_, err = getter(context.TODO(), cfg)
+	_, err = getter(t.Context(), cfg)
 	require.Error(t, err)
 	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 }
@@ -182,7 +182,7 @@ func TestCloudProviderGetForStatic(t *testing.T) {
 	cfg.ProviderName = ""
 	cfg.UUID = "e97b98de-97d5-11f0-8047-1f15a06cf89b"
 
-	provider, err := getter(context.TODO(), cfg)
+	provider, err := getter(t.Context(), cfg)
 	require.NoError(t, err)
 	require.IsType(t, &infrastructure.DummyCloudProvider{}, provider, "provider should be a DummyCloudProvider for static cluster")
 	// do not cache providers for static
@@ -215,7 +215,7 @@ func TestCloudProviderGet(t *testing.T) {
 
 	// tofu provider
 	providerYandexMetaConfig := getMetaConfig(t, yandex.ProviderName, yandexTestLayout)
-	providerYandex, err := getter(context.TODO(), providerYandexMetaConfig)
+	providerYandex, err := getter(t.Context(), providerYandexMetaConfig)
 	require.NoError(t, err)
 
 	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
@@ -232,7 +232,7 @@ func TestCloudProviderGet(t *testing.T) {
 
 	cfgForYandexWithDifferentPrefix := getMetaConfig(t, yandex.ProviderName, yandexTestLayout)
 	cfgForYandexWithDifferentPrefix.ClusterPrefix = "another"
-	providerYandexWithAnotherPrefix, err := getter(context.TODO(), cfgForYandexWithDifferentPrefix)
+	providerYandexWithAnotherPrefix, err := getter(t.Context(), cfgForYandexWithDifferentPrefix)
 	require.NoError(t, err)
 	require.NotEqual(t, providerYandexWithAnotherPrefix.RootDir(), providerYandex.RootDir())
 	providerInClusterParams = testProviderInCacheParams{
@@ -247,7 +247,7 @@ func TestCloudProviderGet(t *testing.T) {
 
 	cfgForYandexWithDifferentUUID := getMetaConfig(t, yandex.ProviderName, yandexTestLayout)
 	cfgForYandexWithDifferentUUID.UUID = "01204020-9407-11f0-a6e3-6747832ba8ef"
-	providerYandexWithAnotherUUID, err := getter(context.TODO(), cfgForYandexWithDifferentUUID)
+	providerYandexWithAnotherUUID, err := getter(t.Context(), cfgForYandexWithDifferentUUID)
 	require.NoError(t, err)
 	require.NotEqual(t, providerYandexWithAnotherUUID.RootDir(), providerYandex.RootDir())
 	providerInClusterParams = testProviderInCacheParams{
@@ -262,7 +262,7 @@ func TestCloudProviderGet(t *testing.T) {
 
 	// terraform provider
 	cfgProviderGCP := getMetaConfig(t, gcp.ProviderName, gcpTestLayout)
-	providerGCP, err := getter(context.TODO(), cfgProviderGCP)
+	providerGCP, err := getter(t.Context(), cfgProviderGCP)
 	require.NoError(t, err)
 
 	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
@@ -326,7 +326,7 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 
 	// tofu provider
 	providerYandexMetaConfig := getMetaConfig(t, yandex.ProviderName, yandexTestLayout)
-	providerYandex, err := getter(context.TODO(), providerYandexMetaConfig)
+	providerYandex, err := getter(t.Context(), providerYandexMetaConfig)
 	require.NoError(t, err)
 
 	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
@@ -342,7 +342,7 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 
 	// terraform provider
 	cfgProviderGCP := getMetaConfig(t, gcp.ProviderName, gcpTestLayout)
-	providerGCP, err := getter(context.TODO(), cfgProviderGCP)
+	providerGCP, err := getter(t.Context(), cfgProviderGCP)
 	require.NoError(t, err)
 
 	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
@@ -404,13 +404,13 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 	assertProvidersCacheHasCountOfKeys(t, defaultProvidersCache, 0)
 
 	// cleanup default cache
-	providerGCPTmp, err := getter(context.TODO(), cfgProviderGCP)
+	providerGCPTmp, err := getter(t.Context(), cfgProviderGCP)
 	require.NoError(t, err)
 	// provide new provider but for one cluster
 	require.Equal(t, providerGCPTmp.String(), providerGCP.String())
 	require.NotEqual(t, providerGCPTmp, providerGCP)
 
-	providerYandexTmp, err := getter(context.TODO(), providerYandexMetaConfig)
+	providerYandexTmp, err := getter(t.Context(), providerYandexMetaConfig)
 	require.NoError(t, err)
 	// provide new provider but for one cluster
 	require.Equal(t, providerYandexTmp.String(), providerYandex.String())
@@ -423,11 +423,11 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 
 	// do not allow any operations on finalized cache
-	_, err = getter(context.TODO(), providerYandexMetaConfig)
+	_, err = getter(t.Context(), providerYandexMetaConfig)
 	require.Error(t, err)
 	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 
-	_, err = getter(context.TODO(), cfgProviderGCP)
+	_, err = getter(t.Context(), cfgProviderGCP)
 	require.Error(t, err)
 	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 
@@ -435,7 +435,7 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 	require.Error(t, err)
 	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 
-	_, err = defaultProvidersCache.GetOrAdd(context.TODO(), providerYandexMetaConfig.UUID, providerYandexMetaConfig, func(context.Context, string, *config.MetaConfig) (infrastructure.CloudProvider, error) {
+	_, err = defaultProvidersCache.GetOrAdd(t.Context(), providerYandexMetaConfig.UUID, providerYandexMetaConfig, func(context.Context, string, *config.MetaConfig) (infrastructure.CloudProvider, error) {
 		return providerYandex, nil
 	})
 	require.Error(t, err)
@@ -470,13 +470,13 @@ func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
 	cfg.ClusterPrefix = "test"
 	cfg.Layout = yandexTestLayout
 
-	providerYandex, err := getter(context.TODO(), cfg)
+	providerYandex, err := getter(t.Context(), cfg)
 	require.NoError(t, err)
 	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
 
 	step := infrastructure.BaseInfraStep
 
-	executor, err := providerYandex.Executor(context.TODO(), step)
+	executor, err := providerYandex.Executor(t.Context(), step)
 	require.NoError(t, err)
 
 	assertCorrectExecutorStatesDir(t, executor, providerYandex, yandexPluginVersion)
@@ -524,14 +524,14 @@ terraform {
 	})
 
 	// does not corrupt if multiple executor get
-	_, err = providerYandex.Executor(context.TODO(), step)
+	_, err = providerYandex.Executor(t.Context(), step)
 	require.NoError(t, err)
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
 
 	// does not corrupt is another step used
 	anotherStep := infrastructure.MasterNodeStep
 	testParams.usedStep = anotherStep
-	_, err = providerYandex.Executor(context.TODO(), step)
+	_, err = providerYandex.Executor(t.Context(), step)
 	require.NoError(t, err)
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
 
@@ -547,7 +547,7 @@ terraform {
 	// all steps presents
 	staticStep := infrastructure.StaticNodeStep
 	testParams.usedStep = staticStep
-	_, err = providerYandex.Executor(context.TODO(), step)
+	_, err = providerYandex.Executor(t.Context(), step)
 	require.NoError(t, err)
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
 	for _, s := range []infrastructure.Step{step, anotherStep, staticStep} {
@@ -566,7 +566,7 @@ terraform {
 	paramsWithDebug.IsDebug = true
 	getterDebug := CloudProviderGetter(paramsWithDebug)
 	cfg.UUID = "8fff5216-971a-11f0-aa51-f7999b2068b2"
-	providerYandexWithDebug, err := getterDebug(context.TODO(), cfg)
+	providerYandexWithDebug, err := getterDebug(t.Context(), cfg)
 	require.NoError(t, err)
 	assertCloudProvider(t, providerYandexWithDebug, yandex.ProviderName, true)
 	assertGetProviderFromCache(t, testProviderInCacheParams{
@@ -604,13 +604,13 @@ func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
 	cfg.ClusterPrefix = "test"
 	cfg.Layout = gcpTestLayout
 
-	providerGCP, err := getter(context.TODO(), cfg)
+	providerGCP, err := getter(t.Context(), cfg)
 	require.NoError(t, err)
 	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
 
 	step := infrastructure.BaseInfraStep
 
-	executor, err := providerGCP.Executor(context.TODO(), step)
+	executor, err := providerGCP.Executor(t.Context(), step)
 	require.NoError(t, err)
 
 	assertCorrectExecutorStatesDir(t, executor, providerGCP, gcpPluginVersion)
@@ -649,7 +649,7 @@ terraform {
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
 
 	// does not corrupt if multiple executor get
-	_, err = providerGCP.Executor(context.TODO(), step)
+	_, err = providerGCP.Executor(t.Context(), step)
 	require.NoError(t, err)
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
 
@@ -665,7 +665,7 @@ terraform {
 	// does not corrupt is another step used
 	anotherStep := infrastructure.MasterNodeStep
 	testParams.usedStep = anotherStep
-	_, err = providerGCP.Executor(context.TODO(), step)
+	_, err = providerGCP.Executor(t.Context(), step)
 	require.NoError(t, err)
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
 
@@ -681,7 +681,7 @@ terraform {
 	// all steps presents
 	staticStep := infrastructure.StaticNodeStep
 	testParams.usedStep = staticStep
-	_, err = providerGCP.Executor(context.TODO(), step)
+	_, err = providerGCP.Executor(t.Context(), step)
 	require.NoError(t, err)
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
 	for _, s := range []infrastructure.Step{step, anotherStep, staticStep} {
@@ -700,7 +700,7 @@ terraform {
 	paramsWithDebug.IsDebug = true
 	getterDebug := CloudProviderGetter(paramsWithDebug)
 	cfg.UUID = "8fff5216-971a-11f0-aa51-f7999b2068b3"
-	providerGCPWithDebug, err := getterDebug(context.TODO(), cfg)
+	providerGCPWithDebug, err := getterDebug(t.Context(), cfg)
 	require.NoError(t, err)
 	assertCloudProvider(t, providerGCPWithDebug, gcp.ProviderName, false)
 	assertGetProviderFromCache(t, testProviderInCacheParams{
@@ -738,11 +738,11 @@ func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
 	cfg.ClusterPrefix = "test"
 	cfg.Layout = yandexTestLayout
 
-	providerYandex, err := getter(context.TODO(), cfg)
+	providerYandex, err := getter(t.Context(), cfg)
 	require.NoError(t, err)
 	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
 
-	_, err = providerYandex.OutputExecutor(context.TODO())
+	_, err = providerYandex.OutputExecutor(t.Context())
 	require.NoError(t, err)
 	// output executor does not affect cache
 	assertGetProviderFromCache(t, testProviderInCacheParams{
@@ -774,11 +774,11 @@ func TestCloudProviderWithTerraformOutputExecutorGetting(t *testing.T) {
 	cfg.ClusterPrefix = "test"
 	cfg.Layout = gcpTestLayout
 
-	providerGCP, err := getter(context.TODO(), cfg)
+	providerGCP, err := getter(t.Context(), cfg)
 	require.NoError(t, err)
 	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
 
-	_, err = providerGCP.OutputExecutor(context.TODO())
+	_, err = providerGCP.OutputExecutor(t.Context())
 	require.NoError(t, err)
 	// output executor does not affect cache
 	assertGetProviderFromCache(t, testProviderInCacheParams{
@@ -812,7 +812,7 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 
 	getter := CloudProviderGetter(params)
 
-	providerYandex, err := getter(context.TODO(), cfg)
+	providerYandex, err := getter(t.Context(), cfg)
 	require.NoError(t, err)
 	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
 
@@ -873,7 +873,7 @@ func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 
 	getter := CloudProviderGetter(params)
 
-	providerGCP, err := getter(context.TODO(), cfg)
+	providerGCP, err := getter(t.Context(), cfg)
 	require.NoError(t, err)
 	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
 
@@ -1005,7 +1005,7 @@ func assertApplyWithCreatingWorkerFilesInRoot(t *testing.T, params assertApplyWi
 
 	getter := CloudProviderGetter(params.params)
 
-	applyProvider, err := getter(context.TODO(), cfgApply)
+	applyProvider, err := getter(t.Context(), cfgApply)
 
 	_, cleanup := testPrepareFakeLayoutForApply(t, testPrepareFakeLayoutForApplyParams{
 		provider: applyProvider,
@@ -1032,7 +1032,7 @@ func assertApplyWithCreatingWorkerFilesInRoot(t *testing.T, params assertApplyWi
 
 	executorForApply, planParams := assertExecInitAndPlanResults(t, execParams)
 
-	err = executorForApply.Apply(context.TODO(), infrastructure.ApplyOpts{
+	err = executorForApply.Apply(t.Context(), infrastructure.ApplyOpts{
 		StatePath:     planParams.StatePath,
 		PlanPath:      planParams.OutPath,
 		VariablesPath: planParams.VariablesPath,
@@ -1333,7 +1333,7 @@ func assertKeepRootDirWithDebugAndKeepFSDIDirsAndFiles(t *testing.T, provider in
 		anotherCleanupExecutedSecond = true
 	})
 
-	_, err := provider.Executor(context.TODO(), infrastructure.BaseInfraStep)
+	_, err := provider.Executor(t.Context(), infrastructure.BaseInfraStep)
 	require.NoError(t, err)
 
 	err = provider.Cleanup()
@@ -1575,7 +1575,7 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	require.NoError(t, err)
 	require.False(t, stat.IsDir())
 
-	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{}), &options.New().Global)
+	cfg, err := config.ParseConfig(t.Context(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{}), &options.New().Global)
 
 	require.NoError(t, err)
 	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)
@@ -1849,10 +1849,10 @@ func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsPar
 	require.NotEmpty(t, params.pluginVersion)
 	require.NotNil(t, params.pluginsDir)
 
-	executor, err := params.provider.Executor(context.TODO(), params.step)
+	executor, err := params.provider.Executor(t.Context(), params.step)
 	require.NoError(t, err)
 
-	err = executor.Init(context.TODO())
+	err = executor.Init(t.Context())
 	require.NoError(t, err)
 	asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t, executorTestInitParams{
 		provider:      params.provider,
@@ -1873,7 +1873,7 @@ func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsPar
 		layout:         params.layout,
 	})
 
-	exitCode, err := executor.Plan(context.TODO(), planParams)
+	exitCode, err := executor.Plan(t.Context(), planParams)
 	assertPlanResult(t, planParams, exitCode, params.params, err)
 	assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t, params)
 

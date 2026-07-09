@@ -163,6 +163,9 @@ func CheckPipeline(
 	var infrastructurePlan map[string]any
 
 	pipelineFunc := func(ctx context.Context) error {
+		ctx, span := telemetry.StartSpan(ctx, fmt.Sprintf("Infrastructure - CheckPipeline %s for %s", r.GetStep(), name))
+		defer span.End()
+
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -223,6 +226,9 @@ func CheckBaseInfrastructurePipeline(
 	var pl map[string]any
 
 	pipelineFunc := func(ctx context.Context) error {
+		ctx, span := telemetry.StartSpan(ctx, fmt.Sprintf("Infrastructure - CheckBaseInfrastructurePipeline %s for %s", r.GetStep(), name))
+		defer span.End()
+
 		err := r.Init(ctx)
 		if err != nil {
 			return err

@@ -45,10 +45,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docsbuilder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -71,7 +71,7 @@ type reconciler struct {
 func RegisterController(mgr manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	r := &reconciler{
 		client:               mgr.GetClient(),
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		downloadedModulesDir: app.DownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		docsBuilder:          docsbuilder.NewClient(dc.GetHTTPClient()),
 		logger:               logger,
@@ -83,7 +83,7 @@ func RegisterController(mgr manager.Manager, dc dependency.Container, logger *lo
 		Watches(&coordv1.Lease{}, handler.EnqueueRequestsFromMapFunc(r.enqueueLeaseMapFunc), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(event event.CreateEvent) bool {
 				ns := event.Object.GetNamespace()
-				if ns != "d8-system" {
+				if ns != app.NamespaceDeckhouse {
 					return false
 				}
 
@@ -323,7 +323,7 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 
 func (r *reconciler) getDocsBuilderAddresses(ctx context.Context) ([]string, error) {
 	var leasesList coordv1.LeaseList
-	if err := r.client.List(ctx, &leasesList, client.InNamespace("d8-system"), client.HasLabels{"deckhouse.io/documentation-builder-sync"}); err != nil {
+	if err := r.client.List(ctx, &leasesList, client.InNamespace(app.NamespaceDeckhouse), client.HasLabels{"deckhouse.io/documentation-builder-sync"}); err != nil {
 		return nil, fmt.Errorf("list leases: %w", err)
 	}
 

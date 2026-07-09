@@ -8,7 +8,7 @@ lang: en
 You can change the DVCR storage StorageClass only by recreating the PVC. All images previously loaded into DVCR are lost, along with data for existing [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) and [VirtualImage](/modules/virtualization/cr.html#virtualimage) resources.
 {% endalert %}
 
-The [`spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) field in the `virtualization` module ModuleConfig sets the StorageClass for the virtual machine image storage volume (DVCR). While a PVC for that volume exists in the `d8-virtualization` namespace, you cannot change the field via the API.
+The [`spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) field in the `virtualization` module ModuleConfig sets the StorageClass for the virtual machine image storage volume (DVCR). While a PVC for that volume exists in the `d8-virtualization` namespace, you cannot change the field via the API.
 
 You cannot change `storageClassName` on an existing PVC in place, and DVCR data is not migrated between storage classes.
 

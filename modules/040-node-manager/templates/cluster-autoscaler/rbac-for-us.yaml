@@ -56,6 +56,7 @@ rules:
   - zvirtmachinetemplates
   - deckhousemachinetemplates
   - yandexmachinetemplates
+  - openstackmachinetemplates
 - apiGroups:
   - cluster.x-k8s.io
   resources:
@@ -183,6 +184,7 @@ rules:
   - zvirtmachinetemplates
   - deckhousemachinetemplates
   - yandexmachinetemplates
+  - openstackmachinetemplates
 - apiGroups: ["cluster.x-k8s.io"]
   resources:
   - machinedeployments

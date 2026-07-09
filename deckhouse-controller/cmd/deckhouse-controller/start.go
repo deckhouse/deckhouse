@@ -29,10 +29,8 @@ import (
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
-	aoapp "github.com/flant/addon-operator/pkg/app"
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
-	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/executor"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
@@ -54,6 +52,7 @@ import (
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -62,16 +61,12 @@ const (
 	deckhouseControllerBinaryPath         = "/usr/bin/deckhouse-controller"
 	deckhouseControllerWithCapsBinaryPath = "/usr/bin/caps-deckhouse-controller"
 
-	deckhouseBundleEnv = "DECKHOUSE_BUNDLE"
-	chrootDirEnv       = "ADDON_OPERATOR_SHELL_CHROOT_DIR"
-	modulesDirEnv      = "MODULES_DIR"
-	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
-
-	leaseName        = "deckhouse-leader-election"
-	defaultNamespace = "d8-system"
-	leaseDuration    = 35
-	renewalDeadline  = 30
-	retryPeriod      = 10
+	// Leader-election lease for the deckhouse-controller HA lock.
+	// Durations are in seconds to match the leaderelection API call sites.
+	leaseName       = "deckhouse-leader-election"
+	leaseDuration   = 35
+	renewalDeadline = 30
+	retryPeriod     = 10
 )
 
 type reaperMutex struct {
@@ -85,9 +80,9 @@ func (r *reaperMutex) Release() {
 	r.Unlock()
 }
 
-func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args []string) error {
+func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
 	return func(_ *cobra.Command, _ []string) error {
-		if os.Getenv(skipEntrypointEnv) != "true" {
+		if os.Getenv(app.EnvSkipEntrypoint) != "true" {
 			if err := entrypoint(logger); err != nil {
 				logger.Error("entrypoint run", log.Err(err))
 				os.Exit(1)
@@ -95,8 +90,8 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 		}
 
 		// addon-operator prints its own startup banner via its AppStartMessage.
-		aoapp.AppStartMessage = version()
-		shapp.KubeClientFieldManager = "deckhouse-hook"
+		app.SetAppStartMessage(version())
+		app.SetKubeClientFieldManager("deckhouse-hook")
 
 		ctx := context.Background()
 
@@ -115,8 +110,8 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 		admetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
 
 		// Hand the fully-built *Config to addon-operator via WithConfig: it
-		// then calls app.ApplyConfig internally to populate its package
-		// globals and projects the relevant subset onto shell-operator's
+		// then calls addon-operator's ApplyConfig internally to populate its
+		// package globals and projects the relevant subset onto shell-operator's
 		// *Config (kube clients, listen addr, metric prefix), so no env vars
 		// are re-parsed downstream. See deckhouse-controller/pkg/envconfig.
 		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage,
@@ -126,7 +121,7 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 
 		operator.StartAPIServer()
 
-		versionFile := "/deckhouse/version"
+		versionFile := app.VersionFilePath
 
 		version := "unknown"
 		content, err := os.ReadFile(versionFile)
@@ -136,7 +131,7 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 			version = strings.TrimSuffix(string(content), "\n")
 		}
 
-		if version == "dev" && os.Getenv("DECKHOUSE_HA") == "false" {
+		if version == "dev" && !app.EnabledHA() {
 			if err := run(ctx, operator, logger); err != nil {
 				logger.Error("run", log.Err(err))
 				os.Exit(1)
@@ -152,7 +147,7 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 
 func entrypoint(logger *log.Logger) error {
 	var possibleBundles = []string{"Default", "Minimal", "Managed"}
-	bundleEnvValue, found := os.LookupEnv(deckhouseBundleEnv)
+	bundleEnvValue, found := os.LookupEnv(app.EnvBundle)
 	if !found || len(bundleEnvValue) == 0 {
 		bundleEnvValue = "Default"
 	}
@@ -161,16 +156,16 @@ func entrypoint(logger *log.Logger) error {
 		logger.Fatal(fmt.Sprintf("Deckhouse bundle %q doesn't exist! -- Possible bundles: %s", bundleEnvValue, strings.Join(possibleBundles, ", ")))
 	}
 
-	chrootDirEnvValue, found := os.LookupEnv(chrootDirEnv)
+	chrootDirEnvValue, found := os.LookupEnv(app.EnvShellChrootDir)
 	if found && len(chrootDirEnvValue) > 0 {
-		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, aoapp.DefaultTempDir)
+		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, app.DefaultTempDir)
 		if err := os.MkdirAll(chrootedTmpDirPath, 0750); err != nil {
 			return fmt.Errorf("create chroot dir: %w", err)
 		}
 
-		if _, err := os.Stat(aoapp.DefaultTempDir); err != nil {
+		if _, err := os.Stat(app.DefaultTempDir); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				if err := os.Symlink(chrootedTmpDirPath, aoapp.DefaultTempDir); err != nil {
+				if err := os.Symlink(chrootedTmpDirPath, app.DefaultTempDir); err != nil {
 					return fmt.Errorf("create tmp directory symlink: %w", err)
 				}
 			} else {
@@ -179,9 +174,9 @@ func entrypoint(logger *log.Logger) error {
 		}
 	}
 
-	modulesDirEnvValue, found := os.LookupEnv(modulesDirEnv)
+	modulesDirEnvValue, found := os.LookupEnv(app.EnvModulesDir)
 	if !found || len(modulesDirEnvValue) == 0 {
-		return fmt.Errorf("%q env not set", modulesDirEnv)
+		return fmt.Errorf("%q env not set", app.EnvModulesDir)
 	}
 
 	coreModulesDir := strings.Split(modulesDirEnvValue, ":")[0]
@@ -202,22 +197,22 @@ func entrypoint(logger *log.Logger) error {
 
 func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
-	podName := os.Getenv("DECKHOUSE_POD")
+	podName := app.PodName()
 	if len(podName) == 0 {
 		logger.Fatal("DECKHOUSE_POD env not set or empty")
 	}
 
-	podIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
+	podIP := app.PodIP()
 	if len(podIP) == 0 {
 		logger.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
 	}
 
-	podNs := os.Getenv("ADDON_OPERATOR_NAMESPACE")
+	podNs := app.PodNamespace()
 	if len(podNs) == 0 {
-		podNs = defaultNamespace
+		podNs = app.NamespaceDeckhouse
 	}
 
-	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
+	clusterDomain := app.ClusterDomain()
 	if len(clusterDomain) == 0 {
 		logger.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - its value won't be used for the leader election")
 		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
@@ -276,7 +271,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	operatorStarted := false
 	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
 
-	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml"); err != nil {
+	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathDeckhouseCRDs); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
@@ -286,7 +281,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	}
 
 	if DefaultReleaseChannel == "" {
-		DefaultReleaseChannel = defaultReleaseChannel
+		DefaultReleaseChannel = app.DefaultReleaseChannel
 	}
 
 	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, DefaultReleaseChannel, operator, logger.Named("deckhouse-controller"))
@@ -331,7 +326,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 			switch sig {
 			case syscall.SIGUSR1, syscall.SIGUSR2:
 				environ := os.Environ()
-				skipEntrypointKeyValue := fmt.Sprintf("%s=true", skipEntrypointEnv)
+				skipEntrypointKeyValue := fmt.Sprintf("%s=true", app.EnvSkipEntrypoint)
 				if !slices.Contains(environ, skipEntrypointKeyValue) {
 					environ = append(environ, skipEntrypointKeyValue)
 				}
@@ -349,7 +344,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					}
 				}
 				deckhouseBinaryToRun := deckhouseControllerBinaryPath
-				chrootDirEnvValue, found := os.LookupEnv(chrootDirEnv)
+				chrootDirEnvValue, found := os.LookupEnv(app.EnvShellChrootDir)
 				if found && len(chrootDirEnvValue) > 0 {
 					deckhouseBinaryToRun = deckhouseControllerWithCapsBinaryPath
 				}
@@ -426,10 +421,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 	}
 }
 
-const (
-	cmLockName  = "deckhouse-bootstrap-lock"
-	cmNamespace = "d8-system"
-)
+const cmLockName = "deckhouse-bootstrap-lock"
 
 func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {
 	bk := wait.Backoff{
@@ -445,7 +437,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		// retry on any error
 		return true
 	}, func() error {
-		if _, err := client.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
+		if _, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
@@ -458,7 +450,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 			FieldSelector: "metadata.name=" + cmLockName,
 			Watch:         true,
 		}
-		wch, err := client.CoreV1().ConfigMaps(cmNamespace).Watch(ctx, listOpts)
+		wch, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Watch(ctx, listOpts)
 		if err != nil {
 			return fmt.Errorf("watch configmaps: %w", err)
 		}
@@ -481,10 +473,10 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 }
 
 func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
-	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
-	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
-	insecureTransport := os.Getenv("TRACING_OTLP_INSECURE") == "true"
-	tlsSkipVerify := os.Getenv("TRACING_OTLP_TLS_SKIP_VERIFY") == "true"
+	endpoint := app.TracingOTLPEndpoint()
+	authToken := app.TracingOTLPAuthToken()
+	insecureTransport := app.TracingOTLPInsecure()
+	tlsSkipVerify := app.TracingOTLPTLSSkipVerify()
 
 	if endpoint == "" {
 		return func(_ context.Context) error {
@@ -529,10 +521,10 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 
 	resource := sdkresource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String(AppName),
+		semconv.ServiceNameKey.String(app.AppName),
 		semconv.ServiceVersionKey.String(DeckhouseVersion),
 		semconv.TelemetrySDKLanguageKey.String("en"),
-		semconv.K8SDeploymentName(AppName),
+		semconv.K8SDeploymentName(app.AppName),
 	)
 
 	provider := sdktrace.NewTracerProvider(

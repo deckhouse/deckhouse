@@ -176,6 +176,7 @@ func (s *Service) convergeSafe(ctx context.Context, p *convergeParams) (result *
 func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeResult {
 	ctx, span := telemetry.StartSpan(ctx, "grpc.converge")
 	defer span.End()
+	span.SetAttributes(telemetry.CommanderSpanAttributes(p.request.Options.CommanderMode, p.request.Options.CommanderUuid)...)
 
 	var err error
 

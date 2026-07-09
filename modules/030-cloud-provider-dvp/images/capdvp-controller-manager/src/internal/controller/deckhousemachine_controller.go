@@ -287,7 +287,7 @@ func (r *DeckhouseMachineReconciler) reconcileVMPhase(
 ) (ctrl.Result, error) {
 	switch vm.Status.Phase {
 	case v1alpha2.MachineRunning:
-		return r.handleVMRunning(logger, dvpMachine, vm)
+		return r.handleVMRunning(ctx, logger, dvpMachine, vm)
 	case v1alpha2.MachineStopped:
 		return r.handleVMStopped(ctx, logger, dvpMachine, vm)
 	case v1alpha2.MachineDegraded:
@@ -298,6 +298,7 @@ func (r *DeckhouseMachineReconciler) reconcileVMPhase(
 }
 
 func (r *DeckhouseMachineReconciler) handleVMRunning(
+	ctx context.Context,
 	logger logr.Logger,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 	vm *v1alpha2.VirtualMachine,
@@ -327,6 +328,11 @@ func (r *DeckhouseMachineReconciler) handleVMRunning(
 	// 		return ctrl.Result{}, fmt.Errorf("delete cloud-init secret %q: %w", cloudInitSecretName, err)
 	// 	}
 	// }
+
+	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
+	if err := r.DVP.ComputeService.EnsureCloudInitSecretImmutable(ctx, cloudInitSecretName); err != nil {
+		return ctrl.Result{}, fmt.Errorf("ensure cloud-init secret immutable %q: %w", cloudInitSecretName, err)
+	}
 
 	logger.Info("Reconciled DeckhouseMachine successfully")
 	return ctrl.Result{}, nil

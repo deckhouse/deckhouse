@@ -448,13 +448,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -513,9 +520,53 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
+          if $sign_supported; then
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -561,6 +612,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -793,13 +859,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -858,9 +931,53 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
+          if $sign_supported; then
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -906,6 +1023,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1139,13 +1271,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1204,9 +1343,53 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
+          if $sign_supported; then
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -1252,6 +1435,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1485,13 +1683,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1550,9 +1755,53 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
+          if $sign_supported; then
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -1598,6 +1847,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1831,13 +2095,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1896,9 +2167,53 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
+          if $sign_supported; then
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -1944,6 +2259,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -2177,13 +2507,20 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-ec"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          VAULT_ROLE: "dh-signer_dh-signer"
+          WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "0"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2242,9 +2579,53 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
+          # Check whether current DDK version supports signing
+          sign_minimal_version="v2.71.0-dk"
+          sign_current_version="$(werf version)"
+          sign_supported=true
+          if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_minimal_major=${BASH_REMATCH[1]}
+            sign_minimal_minor=${BASH_REMATCH[2]}
+          fi
+          if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+            sign_current_major=${BASH_REMATCH[1]}
+            sign_current_minor=${BASH_REMATCH[2]}
+          else
+            sign_supported=false
+          fi
+          if (( sign_current_major < sign_minimal_major )); then
+            sign_supported=false
+          elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+            sign_supported=false
+          fi
+
+          # Prepare for image and binary signing
+          export WERF_VAULT_AUTH_JWT=$(jq -r .value <<< $(curl -qfsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          if [ -n "${WERF_VAULT_AUTH_JWT}" ]; then
+            echo "Received Actions token";
+          else
+            echo "Actions token empty";
+          fi
+          export VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" -d '{"role":"'${WERF_VAULT_AUTH_ROLE}'","jwt":"'${WERF_VAULT_AUTH_JWT}'"}' | jq -r '.auth.client_token')"
+          if [ -n "${VAULT_TOKEN}" ]; then
+            echo "Received Vault token";
+          else
+            echo "Vault token empty";
+          fi
+
+          if $sign_supported; then
+            echo "Using WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+            export WERF_SIGN_INTERMEDIATES=$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)
+            export WERF_SIGN_CERT=$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)
+          else
+            # fallback to non-signed version
+            export WERF_SIGN_MANIFEST="0"
+            echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=10 \
+            --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
@@ -2290,6 +2671,21 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
+
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      - name: Copy attestations
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+          export IMAGES_TAGS_PATH="images_tags_werf.json"
+          python .github/scripts/python/copy_attestations.py
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -2405,8 +2801,31 @@ jobs:
           jwtGithubAudience: github-access-aud
           secrets: |
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
 
       # </template: import_secrets>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_readonly_registry_step>
       - name: Check readonly registry credentials
@@ -2440,7 +2859,7 @@ jobs:
         id: list_changed_modules
         if: ${{ steps.check-tag.outputs.result == 'true' }}
         env:
-          IMAGE_TO: "${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${{ github.ref_name }}"
+          IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/fe:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
         run: |

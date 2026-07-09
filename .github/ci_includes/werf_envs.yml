@@ -1,5 +1,5 @@
 # WERF version for CI workflows. Read at runtime from this file by read_werf_version_step.
-WERF_VERSION: "v2.73.1"
+WERF_VERSION: "v2.73.2"
 
 {!{ define "werf_envs" }!}
 # <template: werf_envs>

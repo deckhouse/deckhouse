@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
@@ -237,9 +237,7 @@ func TestSignatureMode(t *testing.T) {
 				assertError = require.Error
 			}
 
-			logger := log.NewInMemoryLoggerWithParent(log.NewDummyLogger(true))
-
-			s := NewSettingsExtractor(tst.cfg, tst.schemaStore, tst.edition, log.SimpleLoggerProvider(logger))
+			s := NewSettingsExtractor(tst.cfg, tst.schemaStore, tst.edition, dhlog.FromContext(t.Context()))
 
 			res, err := s.SignatureMode()
 			assertError(t, err)

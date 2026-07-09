@@ -65,9 +65,14 @@ func applyIstioFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 
+	revision := istio.Spec.Revision
+	if revision == "" {
+		revision = istio.GetName()
+	}
+
 	return IstioOperatorCrdInfo{
 		Name:     istio.GetName(),
-		Revision: istio.Spec.Revision,
+		Revision: revision,
 	}, nil
 }
 
@@ -128,7 +133,7 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 		}
 	}
 
-	istios, err := k8sClient.Dynamic().Resource(istioGVR).Namespace(istioNamespace).List(context.TODO(), metav1.ListOptions{})
+	istios, err := k8sClient.Dynamic().Resource(istioGVR).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		// The CRD can be absent on old control planes; this is expected.
 		if !k8serrors.IsNotFound(err) {

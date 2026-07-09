@@ -57,10 +57,10 @@ index 06b7828fada..ad5f575acef 100644
 +	return nil
 +}
 diff --git a/pkg/generated/openapi/zz_generated.openapi.go b/pkg/generated/openapi/zz_generated.openapi.go
-index 9b4f5c04533..0c44f94c75c 100644
+index 1bd9d0c2143..a62dcc481b0 100644
 --- a/pkg/generated/openapi/zz_generated.openapi.go
 +++ b/pkg/generated/openapi/zz_generated.openapi.go
-@@ -59714,6 +59714,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
+@@ -59657,6 +59657,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
  							},
  						},
  					},
@@ -74,7 +74,7 @@ index 9b4f5c04533..0c44f94c75c 100644
  				},
  			},
  		},
-@@ -61283,6 +61290,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
+@@ -61226,6 +61233,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
  							},
  						},
  					},
@@ -845,7 +845,7 @@ index 89051e2af76..f6fd6e7abec 100644
  }
  
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-index e27495de54e..d55c21a95e8 100644
+index de3fddf316a..a1d733152a1 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 @@ -47,6 +47,7 @@ import (
@@ -1938,10 +1938,10 @@ index 00000000000..991000d71d7
 +	}), nil
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
-index 78350c135fc..01c1f3bfd3f 100644
+index a4a35354088..8c8c5287f2b 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
-@@ -272,6 +272,7 @@ func newExtensions(s *apiextensions.JSONSchemaProps) (*Extensions, error) {
+@@ -277,6 +277,7 @@ func newExtensions(s *apiextensions.JSONSchemaProps) (*Extensions, error) {
  		XListMapKeys:      s.XListMapKeys,
  		XListType:         s.XListType,
  		XMapType:          s.XMapType,
@@ -1950,10 +1950,10 @@ index 78350c135fc..01c1f3bfd3f 100644
  
  	if s.XPreserveUnknownFields != nil {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
-index df78ba77e61..56e0c94ca95 100644
+index a8b29a1e61d..3591fde1b14 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
-@@ -87,6 +87,9 @@ func (x *Extensions) toKubeOpenAPI(ret *spec.Schema) {
+@@ -94,6 +94,9 @@ func (x *Extensions) toKubeOpenAPI(ret *spec.Schema) {
  	if x.XMapType != nil {
  		ret.VendorExtensible.AddExtension("x-kubernetes-map-type", *x.XMapType)
  	}
@@ -2835,10 +2835,10 @@ index 00000000000..52ff4cbc20a
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
-index 5688c2ac40b..24eff61025a 100644
+index 9965718b014..cb05e8deab2 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
-@@ -129,6 +129,12 @@ type Extensions struct {
+@@ -139,6 +139,12 @@ type Extensions struct {
  	//      Atomic maps will be entirely replaced when updated.
  	// +optional
  	XMapType *string
@@ -2918,7 +2918,7 @@ index 37f0e31cea9..088cde620bc 100644
  	return config, nil
  }
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
-index e59d6213f61..f0006c4e53d 100644
+index 13ede31c1bd..2a0ee1c777f 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 @@ -50,6 +50,11 @@ const (
@@ -2933,7 +2933,7 @@ index e59d6213f61..f0006c4e53d 100644
  )
  
  func init() {
-@@ -76,4 +81,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
+@@ -77,4 +82,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
  		{Version: version.MustParse("1.31"), Default: true, PreRelease: featuregate.Beta},
  		{Version: version.MustParse("1.32"), Default: true, LockToDefault: true, PreRelease: featuregate.GA},
  	},
@@ -2942,10 +2942,10 @@ index e59d6213f61..f0006c4e53d 100644
 +	},
  }
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
-index 065019b5ebe..818d4bed4af 100644
+index 224416c9226..16f5a68cde8 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
-@@ -2333,6 +2333,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
+@@ -2335,6 +2335,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
  							},
  						},
  					},
@@ -2959,7 +2959,7 @@ index 065019b5ebe..818d4bed4af 100644
  				},
  			},
  		},
-@@ -3902,6 +3909,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
+@@ -3904,6 +3911,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
  							},
  						},
  					},
@@ -3100,10 +3100,10 @@ index 060c7cc3023..7aa3d724307 100644
  
  		var baseContentType string
 diff --git a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
-index e340c9d2ce5..0cc2cbaabda 100644
+index 2d481bc6f7b..920adf8a7c1 100644
 --- a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
 +++ b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
-@@ -915,12 +915,17 @@ func computeEncryptionConfigHash(data []byte) string {
+@@ -905,12 +905,17 @@ func computeEncryptionConfigHash(data []byte) string {
  }
  
  var _ storagevalue.ResourceTransformers = &DynamicTransformers{}
@@ -3121,7 +3121,7 @@ index e340c9d2ce5..0cc2cbaabda 100644
  }
  
  type transformTracker struct {
-@@ -965,8 +970,9 @@ func (d *DynamicTransformers) Name() string {
+@@ -955,8 +960,9 @@ func (d *DynamicTransformers) Name() string {
  // TransformerForResource returns the transformer for the given resource.
  func (d *DynamicTransformers) TransformerForResource(resource schema.GroupResource) storagevalue.Transformer {
  	return &resourceTransformer{
@@ -3133,7 +3133,7 @@ index e340c9d2ce5..0cc2cbaabda 100644
  	}
  }
  
-@@ -997,11 +1003,25 @@ func (d *DynamicTransformers) Set(
+@@ -987,11 +993,25 @@ func (d *DynamicTransformers) Set(
  	}()
  }
  
@@ -3161,7 +3161,7 @@ index e340c9d2ce5..0cc2cbaabda 100644
  }
  
  func (r *resourceTransformer) TransformFromStorage(ctx context.Context, data []byte, dataCtx storagevalue.Context) ([]byte, bool, error) {
-@@ -1013,7 +1033,7 @@ func (r *resourceTransformer) TransformToStorage(ctx context.Context, data []byt
+@@ -1003,7 +1023,7 @@ func (r *resourceTransformer) TransformToStorage(ctx context.Context, data []byt
  }
  
  func (r *resourceTransformer) transformer() storagevalue.Transformer {
@@ -3170,7 +3170,7 @@ index e340c9d2ce5..0cc2cbaabda 100644
  }
  
  var _ storagevalue.ResourceTransformers = &StaticTransformers{}
-@@ -1021,7 +1041,7 @@ var _ storagevalue.ResourceTransformers = &StaticTransformers{}
+@@ -1011,7 +1031,7 @@ var _ storagevalue.ResourceTransformers = &StaticTransformers{}
  type StaticTransformers map[schema.GroupResource]storagevalue.Transformer
  
  func (s StaticTransformers) TransformerForResource(resource schema.GroupResource) storagevalue.Transformer {
@@ -3179,7 +3179,7 @@ index e340c9d2ce5..0cc2cbaabda 100644
  }
  
  var anyGroupAnyResource = schema.GroupResource{
-@@ -1029,7 +1049,9 @@ var anyGroupAnyResource = schema.GroupResource{
+@@ -1019,7 +1039,9 @@ var anyGroupAnyResource = schema.GroupResource{
  	Resource: "*",
  }
  
@@ -3190,7 +3190,7 @@ index e340c9d2ce5..0cc2cbaabda 100644
  	defer func() { out = newRequestInfoTransformer(resource, out) }()
  
  	if transformer := transformerOverrides[resource]; transformer != nil {
-@@ -1047,6 +1069,14 @@ func transformerFromOverrides(transformerOverrides map[schema.GroupResource]stor
+@@ -1037,6 +1059,14 @@ func transformerFromOverrides(transformerOverrides map[schema.GroupResource]stor
  		return transformer
  	}
  
@@ -3206,7 +3206,7 @@ index e340c9d2ce5..0cc2cbaabda 100644
  }
  
 diff --git a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
-index f509b989660..b6dbcc54957 100644
+index f95edbc5eff..4b5bbb770f9 100644
 --- a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
 +++ b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
 @@ -1422,7 +1422,7 @@ func TestWildcardStructure(t *testing.T) {
@@ -3218,7 +3218,7 @@ index f509b989660..b6dbcc54957 100644
  				transformerName := string(
  					reflect.ValueOf(transformer).
  						Elem().
-@@ -2244,3 +2244,137 @@ func TestGetEncryptionConfigHash(t *testing.T) {
+@@ -2243,3 +2243,137 @@ func TestGetEncryptionConfigHash(t *testing.T) {
  		})
  	}
  }

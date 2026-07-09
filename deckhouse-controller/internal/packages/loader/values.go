@@ -19,8 +19,9 @@ import (
 	"os"
 	"path/filepath"
 
-	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 const (
@@ -54,7 +55,7 @@ func loadValues(name, path string) (addonutils.Values, []byte, []byte, error) {
 	valuesPackageName := addonutils.ModuleNameToValuesKey(name)
 
 	// Load static values from values.yaml
-	static, err := addonutils.LoadValuesFileFromDir(path, addonapp.StrictModeEnabled)
+	static, err := addonutils.LoadValuesFileFromDir(path, app.StrictModeEnabled())
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("load values file from dir '%s': %w", path, err)
 	}

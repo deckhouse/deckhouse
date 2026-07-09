@@ -353,6 +353,21 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			},
 		}}
 
+		if err := applyMachineDeploymentSpecPatch(
+			md.Object["spec"].(map[string]interface{}),
+			cloudConfig.capiMachineDeploymentSpecPatch,
+			map[string]string{
+				"bootstrapSecretName": bootstrapSecretName,
+				"clusterName":         cloudConfig.capiClusterName,
+				"mdName":              mdName,
+				"nodeGroupName":       ng.Name,
+				"templateName":        templateName,
+				"zone":                zone,
+			},
+		); err != nil {
+			return fmt.Errorf("apply provider MachineDeployment spec patch for %s: %w", mdName, err)
+		}
+
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MachineDeployment %s: %w", mdName, err)
 		}
@@ -476,10 +491,11 @@ func (r *MachineDeploymentReconciler) reconcileMCMReplicas(ctx context.Context, 
 }
 
 type cloudProviderConfig struct {
-	capiClusterName               string
-	capiMachineTemplateKind       string
-	capiMachineTemplateAPIVersion string
-	zones                         []string
+	capiClusterName                string
+	capiMachineTemplateKind        string
+	capiMachineTemplateAPIVersion  string
+	capiMachineDeploymentSpecPatch string
+	zones                          []string
 }
 
 func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Context) (*cloudProviderConfig, error) {
@@ -494,9 +510,10 @@ func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Contex
 	}
 
 	cfg := &cloudProviderConfig{
-		capiClusterName:               string(secret.Data["capiClusterName"]),
-		capiMachineTemplateKind:       string(secret.Data["capiMachineTemplateKind"]),
-		capiMachineTemplateAPIVersion: string(secret.Data["capiMachineTemplateAPIVersion"]),
+		capiClusterName:                string(secret.Data["capiClusterName"]),
+		capiMachineTemplateKind:        string(secret.Data["capiMachineTemplateKind"]),
+		capiMachineTemplateAPIVersion:  string(secret.Data["capiMachineTemplateAPIVersion"]),
+		capiMachineDeploymentSpecPatch: string(secret.Data["capiMachineDeploymentSpecPatch"]),
 	}
 	if cfg.capiMachineTemplateAPIVersion == "" {
 		cfg.capiMachineTemplateAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
@@ -578,6 +595,57 @@ func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Cont
 		}
 	}
 	return "", nil
+}
+
+func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch string, vars map[string]string) error {
+	if strings.TrimSpace(rawPatch) == "" {
+		return nil
+	}
+
+	patch := map[string]interface{}{}
+	if err := sigsyaml.Unmarshal([]byte(substitutePatchVariables(rawPatch, vars)), &patch); err != nil {
+		return fmt.Errorf("unmarshal spec patch: %w", err)
+	}
+
+	deepMergeMaps(spec, patch)
+	return nil
+}
+
+func substitutePatchVariables(raw string, vars map[string]string) string {
+	if len(vars) == 0 {
+		return raw
+	}
+
+	keys := make([]string, 0, len(vars))
+	for k := range vars {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	replacements := make([]string, 0, len(keys)*2)
+	for _, k := range keys {
+		replacements = append(replacements, "${"+k+"}", vars[k])
+	}
+
+	return strings.NewReplacer(replacements...).Replace(raw)
+}
+
+func deepMergeMaps(dst, src map[string]interface{}) {
+	for k, v := range src {
+		srcMap, srcIsMap := v.(map[string]interface{})
+		if !srcIsMap {
+			dst[k] = v
+			continue
+		}
+
+		dstMap, dstIsMap := dst[k].(map[string]interface{})
+		if !dstIsMap {
+			dst[k] = srcMap
+			continue
+		}
+
+		deepMergeMaps(dstMap, srcMap)
+	}
 }
 
 func getMinMax(ng *deckhousev1.NodeGroup) (int32, int32) {

@@ -18,6 +18,7 @@ package gatekeeper
 
 import (
 	"context"
+	"log/slog"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -25,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -112,7 +112,7 @@ func getMutations(cClient listClient, discoveryClient discovery.DiscoveryInterfa
 				var mutation Mutation
 				err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.UnstructuredContent(), &mutation)
 				if err != nil {
-					klog.Error(err)
+					slog.Error("decode mutation failed", "kind", item.GetKind(), "name", item.GetName(), "error", err)
 					continue
 				}
 

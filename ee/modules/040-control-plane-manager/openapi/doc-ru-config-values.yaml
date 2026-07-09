@@ -207,10 +207,10 @@ properties:
 
           При включении создаётся Secret `kube-system/d8-secret-encryption-key` с ключом шифрования.
 
-          Включение этого параметра автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver`,
-          который защищает поля кастомных ресурсов, помеченные маркером `x-kubernetes-sensitive-data: true`,
-          через шифрование в etcd, фильтрацию полей через субресурс `<resource>/sensitive` на основе RBAC
-          и маскировку значений в журнале аудита.
+          Поля кастомных ресурсов, помеченные маркером `x-kubernetes-sensitive-data: true`, защищаются feature gate
+          `CRDSensitiveData` для `kube-apiserver`, который включён по умолчанию. Включение этого параметра добавляет
+          шифрование в etcd к фильтрации полей через субресурс `<resource>/sensitive` на основе RBAC и маскировке
+          значений в журнале аудита.
 
           > **Внимание.** После включения этот параметр нельзя отключить.
   encryptionAlgorithm:
@@ -267,8 +267,8 @@ properties:
               По умолчанию `true`, если в кластере три и более членов etcd (мастер-узлов ≥ 3 или мастер-узлов = 2 при наличии etcd-арбитра); в остальных случаях — `false`.
               Явно заданное значение всегда имеет приоритет над вычисленным по умолчанию.
 
-              > **Внимание.** Включение дефрагментации на кластере с одним мастер-узлом приведёт к кратковременной
-              > недоступности управляющего слоя на время выполнения дефрагментации.
+              > **Внимание.** Включение дефрагментации в кластере с одним master-узлом приведёт к кратковременной
+              > недоступности control plane на время выполнения дефрагментации.
           cronSchedule:
             description: |
               Расписание дефрагментации etcd в формате cron (UTC).
@@ -296,3 +296,16 @@ properties:
 
       Описание отдельных feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
       Список поддерживаемых в DKP feature gates доступен на [странице описания модуля](./#feature-gates).
+  resourcesRequests:
+    description: |
+      Количество ресурсов CPU и памяти, выделяемых компонентам control plane на каждом master-узле.
+
+      Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например Google Kubernetes Engine или Azure Kubernetes Service.
+      Подробнее об единицах измерения ресурсов — в [документации Kubernetes](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
+    properties:
+      cpu:
+        description: |
+          Суммарные запросы CPU для компонентов control plane на каждом master-узле.
+      memory:
+        description: |
+          Суммарные запросы памяти для компонентов control plane на каждом master-узле.

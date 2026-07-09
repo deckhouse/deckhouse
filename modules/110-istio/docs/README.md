@@ -11,7 +11,7 @@ The table below shows Istio versions and their support status in Deckhouse Kuber
 
 | Istio version | [Kubernetes versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in DKP          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
-|     1.27      |                                                1.29, 1.30, 1.31, 1.32, 1.34, 1.35, 1.36                                                | Supported |
+|     1.27      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Supported |
 |     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                          | Supported |
 |     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                        | Deprecated and will be deleted |
 
@@ -28,6 +28,7 @@ Istio solves the tasks for applications:
 - [Improving Observability](#observability).
 - [Organizing a multi-datacenter cluster by joining clusters into a single Service Mesh (multicluster)](#multicluster).
 - [Grouping isolated clusters into a federation with the ability to provide native (in the Service Mesh sense) access to selected services](#federation).
+- [Joining the mesh without per-pod sidecars using ambient mode](#ambient-mesh).
 
 ## Mutual TLS
 
@@ -213,7 +214,7 @@ It is also important to get the Ingress controller and the application's Ingress
 Available in Enterprise Edition and Certified Security Edition Pro only.
 {% endalert %}
 
-Deckhouse supports two schemes of inter-cluster interaction:
+DKP supports two schemes of inter-cluster interaction:
 
 - [federation](#federation)
 - [multicluster](#multicluster)
@@ -249,7 +250,7 @@ Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deploymen
 #### General principles of federation
 
 - Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. This is achieved by a mutual exchange of root certificates.
-- You also need to share information about government services to use the federation. You can do that using ServiceEntry resource. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
+- You also need to share information about public services to use the federation. You can do that using the `ServiceEntry` resource. A `ServiceEntry` defines the public `ingressgateway` address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
 <div data-presentation="presentations/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
@@ -273,12 +274,63 @@ To establish a federation, you must:
 
 - Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
   - After successful auto-negotiation between clusters, the status of `IstioFederation` resource will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
-- Add the `federation.istio.deckhouse.io/public-service: ""` label to each resource(`service`) that is considered public within the federation.
-  - In the other federation clusters, a corresponding `ServiceEntry` will be created for each `service`, leading to the `ingressgateway` of the original cluster.
+- Add the `federation.istio.deckhouse.io/public-service: ""` label to each Service that is considered public within the federation.
+  - In the other federation clusters, corresponding `ServiceEntry` and DestinationRule resources will be created for each such Service, leading to the `ingressgateway` of the original cluster.
+  - The label value must be empty. You do not need to label other resources, such as Deployment, Pod, or VirtualService, to publish a service in the federation.
 
 {% alert level="warning" %}
-In the `.spec.ports` section of `services`, each port must have the `name` field filled.
+Federation publishing does not support `ExternalName` services, services without `.spec.ports`, or services with ports missing the `name` field.
+
+Each port name must start with a supported Istio prefix: `http`, `http2`, `https`, `tcp`, `tls`, `grpc`, or `grpc-web`. The module uses the port name to determine the protocol in the generated `ServiceEntry`. If the prefix is not recognized, the port will be handled as TCP.
 {% endalert %}
+
+Example of a public service:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews
+  namespace: bookinfo
+  labels:
+    federation.istio.deckhouse.io/public-service: ""
+spec:
+  selector:
+    app: reviews
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+```
+
+To troubleshoot service publishing in the federation, follow these checks:
+
+Check which services are marked as public in the local cluster:
+
+```shell
+d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
+```
+
+Check metadata exchange status with remote clusters:
+
+```shell
+d8 k get istiofederation
+d8 k get istiofederation <name> -o jsonpath='{.status.conditions}'
+```
+
+Check that the remote cluster provided its public services list:
+
+```shell
+d8 k get istiofederation <name> -o jsonpath='{.status.metadataCache.private.publicServices}'
+```
+
+Check that local routing resources were created from the received metadata:
+
+```shell
+d8 k -n d8-istio get serviceentry,destinationrule
+```
+
+In the IstioFederation `status.conditions`, the `PublicMetadataExchangeReady`, `PrivateMetadataExchangeReady`, and `DataplaneConnectionReady` conditions should become `True`. If metadata exchange does not work, check the [`D8IstioFederationMetadataEndpointDoesntWork`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istiofederationmetadataendpointdoesntwork) alert and the availability of the remote cluster `spec.metadataEndpoint`.
 
 ### Multicluster
 
@@ -306,14 +358,14 @@ Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deploymen
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 - Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
-- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This Deckhouse module takes care of the corresponding communication channel.
+- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This DKP module takes care of the corresponding communication channel.
 
 #### Enabling the multicluster
 
 Enabling the multicluster (via the `istio.multicluster.enabled = true` module parameter) results in the following activities:
 
 - A proxy is added to the cluster to publish access to the API server via the standard Ingress resource:
-  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. Deckhouse automatically exchanges trusted public keys during the mutual configuration of the multicluster.
+  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. DKP automatically exchanges trusted public keys during the mutual configuration of the multicluster.
   - The proxy itself has read-only access to a limited set of resources.
 - A service gets added to the cluster that exports the following cluster metadata to the outside:
   - Istio root certificate (accessible without authentication).
@@ -339,6 +391,53 @@ istioctl remote-clusters -i d8-istio
 NAME          SECRET                                     STATUS     ISTIOD
 cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
 ```
+
+## Ambient mesh
+
+{% alert level="warning" %}
+Available in Enterprise Edition only.
+{% endalert %}
+
+{% alert level="warning" %}
+Ambient mesh support is experimental and not recommended for production use.
+{% endalert %}
+
+Besides the classic sidecar mode, Istio can run the data plane in *ambient* mode. In this mode, the mesh functionality is split into two layers, and application pods no longer get a per-pod `istio-proxy` sidecar container:
+
+- A node-level component (`ztunnel`) handles L4 functionality (mutual TLS, identity, basic authorization) for all mesh workloads on the node.
+- An optional per-namespace component (a *waypoint* proxy) handles L7 functionality (HTTP routing, L7 authorization, telemetry).
+
+Compared to the sidecar mode, ambient mode reduces per-pod overhead (no sidecar container injected into every pod) and lets you adopt mesh features incrementally — first L4 via `ztunnel`, then L7 only for the namespaces that need it.
+
+### Components
+
+The following components are used in the ambient mode:
+
+- `ztunnel`: A DaemonSet that runs one pod per node and transparently tunnels traffic of the ambient workloads on that node over [HTTP-Based Overlay Network Encapsulation (HBONE)](https://istio.io/latest/docs/ambient/architecture/) with mutual TLS. It provides L4 features without a sidecar.
+- **Waypoint proxy**: An optional L7 proxy deployed per namespace (or for a subset of its workloads and services). In DKP, it is provisioned through the [WaypointInstance](cr.html#waypointinstance) custom resource, which is a DKP abstraction on top of the native Istio waypoint provisioning. It adds declarative management of replicas (`Static`/`HPA`), resources (`Static`/`VPA`), node placement, and disruption budgets (PDB) per waypoint instance.
+
+### Prerequisites
+
+To use the ambient mode, make sure to follow these requirements:
+
+- Use Istio 1.25 or newer (ambient mode is available starting with Istio 1.25).
+- Set [`dataPlane.trafficRedirectionSetupMode`](configuration.html#parameters-dataplane-trafficredirectionsetupmode) to `CNIPlugin`. Ambient mode requires the CNI plugin to set up traffic redirection.
+- Enable ambient mode via the [`ambient.enabled`](configuration.html#parameters-ambient-enabled) module parameter.
+
+### Enrolling workloads
+
+The module installs and runs the ambient infrastructure (`ztunnel` and the waypoint controller for WaypointInstance resources), but it **does not** enroll your workloads automatically.
+
+To enroll workloads, use the standard Istio labels:
+
+1. Add the `istio.io/dataplane-mode=ambient` label to a namespace (or pod) to capture its traffic with `ztunnel` (L4).
+2. Create a [WaypointInstance](cr.html#waypointinstance) resource in the namespace, then point workloads or services at it with the `istio.io/use-waypoint` label to enable L7 features.
+
+See the ["Examples"](examples.html#ambient-mesh) section for step-by-step configuration.
+
+{% alert level="warning" %}
+Delete all WaypointInstance resources before disabling ambient mode. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources.
+{% endalert %}
 
 ## Authentication
 

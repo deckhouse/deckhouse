@@ -10,6 +10,22 @@ To configure this connection, create a new user (ServiceAccount), assign the nec
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
+{% alert level="warning" %}
+If the `update-hostname` module of the `cloud-init` package is not disabled, it is recommended to change its run frequency from `always` to `once-per-instance`.
+
+To do this, modify the `update-hostname` module configuration in the `/etc/cloud/cloud.cfg` file:
+
+```yaml
+cloud_init_modules:
+  ...
+  - [update-hostname, once-per-instance]
+  ...
+```
+
+The `update-hostname` module can also be disabled completely by removing it from the `cloud_init_modules` module list in the `/etc/cloud/cloud.cfg` file.
+
+{% endalert %}
+
 ## Creating a user
 
 Create a new user in the DVP cluster using the following command:

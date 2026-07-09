@@ -15,7 +15,6 @@
 package vcd
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -40,7 +39,7 @@ func newTestPreparator(prepareConfig bool, client cloudClient) *MetaConfigPrepar
 func TestDisableMetaConfigPreparator(t *testing.T) {
 	preparator := newTestPreparator(false, testGetLegacyClient())
 	cfg := &config.MetaConfig{}
-	err := preparator.Prepare(context.TODO(), cfg)
+	err := preparator.Prepare(t.Context(), cfg)
 
 	require.NoError(t, err)
 	require.Nil(t, cfg.ProviderClusterConfig)
@@ -49,7 +48,7 @@ func TestDisableMetaConfigPreparator(t *testing.T) {
 func TestPreparatorWithCurrentAPI(t *testing.T) {
 	preparator := newTestPreparator(false, testGetCurrentClient())
 	cfg := &config.MetaConfig{}
-	err := preparator.Prepare(context.TODO(), cfg)
+	err := preparator.Prepare(t.Context(), cfg)
 
 	require.NoError(t, err)
 	require.Nil(t, cfg.ProviderClusterConfig)
@@ -70,7 +69,7 @@ func TestPreparatorWithLegacyAPI(t *testing.T) {
 	preparator := newTestPreparator(true, testGetLegacyClient())
 	cfg := &config.MetaConfig{}
 	cfg.ProviderClusterConfig = make(map[string]json.RawMessage)
-	err := preparator.Prepare(context.TODO(), cfg)
+	err := preparator.Prepare(t.Context(), cfg)
 
 	require.NoError(t, err)
 	assertLegacyMode(t, cfg, true)
@@ -83,7 +82,7 @@ func TestPreparatorWithLegacyAPI(t *testing.T) {
 	require.NoError(t, err)
 	cfgWithLegacy.ProviderClusterConfig["legacyMode"] = legacyMode
 
-	err = preparator.Prepare(context.TODO(), cfgWithLegacy)
+	err = preparator.Prepare(t.Context(), cfgWithLegacy)
 	require.NoError(t, err)
 	assertLegacyMode(t, cfgWithLegacy, false)
 }
@@ -110,7 +109,7 @@ func TestValidateMetaConfig(t *testing.T) {
 		setServer(t, validServer, cfg)
 
 		cfg.ClusterPrefix = prefix
-		err := preparator.Validate(context.TODO(), cfg)
+		err := preparator.Validate(t.Context(), cfg)
 
 		if hasError {
 			require.Error(t, err)
@@ -130,7 +129,7 @@ func TestValidateMetaConfig(t *testing.T) {
 
 	cfg.ClusterPrefix = ""
 	setServer(t, validServer, cfg)
-	err := preparator.Validate(context.TODO(), cfg)
+	err := preparator.Validate(t.Context(), cfg)
 	require.NoError(t, err)
 
 	// invalid server
@@ -138,6 +137,6 @@ func TestValidateMetaConfig(t *testing.T) {
 
 	cfgInvalid.ClusterPrefix = "test"
 	setServer(t, "https://myserver:8080/api/", cfg)
-	err = preparator.Validate(context.TODO(), cfg)
+	err = preparator.Validate(t.Context(), cfg)
 	require.Error(t, err)
 }

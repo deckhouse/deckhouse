@@ -288,6 +288,11 @@ rules:
     - yandexclusters
     - yandexmachines
     - yandexmachinetemplates
+    - openstackclusters
+    - openstackclustertemplates
+    - openstackmachines
+    - openstackmachinetemplates
+    - openstackservers
     - deckhouseclusters
     - deckhousemachines
     - deckhousemachinetemplates

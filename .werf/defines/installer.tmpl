@@ -228,9 +228,9 @@
 {{- $hasTargetAvailableModules := false -}}
 {{- range $_, $edition := $context.Editions }}
   {{- if eq $context.Env $edition.name }}
-    {{- if $edition.AvailableModules }}
+    {{- if $edition.availableModules }}
       {{- $hasTargetAvailableModules = true }}
-      {{- range $_, $moduleName := $edition.AvailableModules }}
+      {{- range $_, $moduleName := $edition.availableModules }}
         {{- $_ := set $targetAvailableModules $moduleName true }}
       {{- end }}
     {{- end }}
@@ -288,9 +288,9 @@
 {{- $hasTargetAvailableModules := false -}}
 {{- range $_, $edition := $context.Editions }}
   {{- if eq $context.Env $edition.name }}
-    {{- if $edition.AvailableModules }}
+    {{- if $edition.availableModules }}
       {{- $hasTargetAvailableModules = true }}
-      {{- range $_, $moduleName := $edition.AvailableModules }}
+      {{- range $_, $moduleName := $edition.availableModules }}
         {{- $_ := set $targetAvailableModules $moduleName true }}
       {{- end }}
     {{- end }}

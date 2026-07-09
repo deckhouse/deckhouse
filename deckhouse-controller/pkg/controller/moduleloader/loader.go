@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -47,9 +46,9 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -58,8 +57,6 @@ const (
 
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
-
-	embeddedModulesDir = "/deckhouse/modules"
 )
 
 var (
@@ -78,6 +75,23 @@ var (
 
 var _ loader.ModuleLoader = &Loader{}
 
+// Installer abstracts *installer.Installer so tests can inject a mock and assert
+// which installation path a module took (Restore vs StageFromRegistry) without
+// touching the registry or filesystem. It mirrors the public method set of
+// *installer.Installer that the loader and its getter expose to other controllers.
+type Installer interface {
+	SetClusterUUID(id string)
+	GetInstalled() (map[string]struct{}, error)
+	GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error)
+	Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error)
+	Install(ctx context.Context, module, version, tempModulePath string) error
+	Stage(ctx context.Context, module, version, tempModulePath string) error
+	StageFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	Restore(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	IsEmbeddedPresent(module string) bool
+	Uninstall(ctx context.Context, module string) error
+}
+
 type Loader struct {
 	client         client.Client
 	logger         *log.Logger
@@ -88,7 +102,7 @@ type Loader struct {
 	// global module dir
 	globalDir string
 
-	installer *installer.Installer
+	installer Installer
 
 	registries map[string]*addonmodules.Registry
 
@@ -106,9 +120,9 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		logger:               logger,
 		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		downloadedModulesDir: app.DownloadedModulesDir(),
 		installer:            installer.New(dc, logger),
-		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		symlinksDir:          filepath.Join(app.DownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
 		registries:           make(map[string]*addonmodules.Registry),
 		embeddedPolicy:       embeddedPolicy,
@@ -148,7 +162,7 @@ func (l *Loader) Sync(ctx context.Context) error {
 }
 
 // Installer returns installer instance
-func (l *Loader) Installer() *installer.Installer {
+func (l *Loader) Installer() Installer {
 	return l.installer
 }
 
@@ -194,7 +208,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	valuesModuleName := addonutils.ModuleNameToValuesKey(def.Name)
 
 	// 1. from static values.yaml inside the module
-	moduleStaticValues, err := addonutils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
+	moduleStaticValues, err := addonutils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled())
 	if err != nil {
 		return nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
 	}
@@ -330,7 +344,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 
 			l.logger.Debug("ensure module", slog.String("name", def.Name))
-			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
+			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, app.EmbeddedModulesDir)); err != nil {
 				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
 			}
 

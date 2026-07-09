@@ -47,7 +47,10 @@ spec:
                     enabled:
                       type: boolean
                       default: false
-                      description: Enables the export of extended metrics from Cilium agents.
+                      description: |
+                        Enables the export of extended metrics from Cilium agents.
+
+                        > All exported metrics have the prefix `hubble_*`.
                     collectors:
                       type: array
                       description: |
@@ -121,7 +124,8 @@ spec:
                       default: false
                       description: |
                         Enables event logging for Cilium agents.
-                        The log file is located on the node's filesystem at `/var/log/cilium/hubble/flow.log`.
+
+                        > The log file is located on the node's filesystem at `/var/log/cilium/hubble/flow.log`.
                     allowFilterList:
                       type: array
                       description: >

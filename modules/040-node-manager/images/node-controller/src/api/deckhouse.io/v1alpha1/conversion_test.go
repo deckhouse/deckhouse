@@ -61,4 +61,3 @@ func TestSpecConversion_PreservesSeccompDefault_FromV1(t *testing.T) {
 		t.Fatalf("seccompDefault was not converted from v1")
 	}
 }
-

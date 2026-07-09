@@ -135,6 +135,16 @@ func newModuleCR(name string, availableSources []string, stage string) *v1alpha1
 	}
 }
 
+// newEmbeddedModuleCR builds a Module CR that is still embedded (Source ==
+// "Embedded") but already published in external sources, i.e. a module mid
+// embedded->external migration. It is used to assert that the source-availability
+// check guards this case at admission time too.
+func newEmbeddedModuleCR(name string, availableSources []string) *v1alpha1.Module {
+	m := newModuleCR(name, availableSources, "")
+	m.Properties.Source = v1alpha1.ModuleSourceEmbedded
+	return m
+}
+
 // newModuleCRWithRequirements builds a Module CR that declares parent-module
 // requirements, to exercise the dependency extender fallback that reads them
 // from the Module CR when the extender itself has no registered constraints.
@@ -642,6 +652,28 @@ func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
 			expectCheckEnabling: true,
 			wantAllowed:         true,
 			wantWarning:         "multiple sources",
+		},
+		{
+			// migration scenario: an embedded module pinned to a source that does
+			// not offer it (stale/mistyped .spec.source) must be rejected at
+			// admission, not silently accepted to stall later.
+			name:        "embedded module referencing an unavailable source is rejected",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "beta", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newEmbeddedModuleCR(moduleName, []string{"alpha"}),
+			wantAllowed: false,
+			wantMessage: "unavailable source",
+		},
+		{
+			// the embedded module is published in the chosen source, so pinning it
+			// for migration is allowed.
+			name:        "embedded module referencing an available source is allowed",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "alpha", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newEmbeddedModuleCR(moduleName, []string{"alpha", "beta"}),
+			wantAllowed: true,
 		},
 	}
 
@@ -1222,15 +1254,15 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 	requirements := map[string]string{"log-shipper": ">= 0.0.0", "loki": ">= 0.0.0"}
 
 	tests := []struct {
-		name             string
-		operation        string
-		newConfig        *v1alpha1.ModuleConfig
-		oldConfig        *v1alpha1.ModuleConfig
-		moduleCR         *v1alpha1.Module
-		enabledParents   map[string]bool
-		dependencyErr    error
-		wantAllowed      bool
-		wantMessage      string
+		name           string
+		operation      string
+		newConfig      *v1alpha1.ModuleConfig
+		oldConfig      *v1alpha1.ModuleConfig
+		moduleCR       *v1alpha1.Module
+		enabledParents map[string]bool
+		dependencyErr  error
+		wantAllowed    bool
+		wantMessage    string
 	}{
 		{
 			name:           "create: both required parents disabled is rejected from the Module CR",

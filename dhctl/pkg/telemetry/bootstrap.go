@@ -169,21 +169,6 @@ func initLogs(exporter sdklog.Exporter, r *resource.Resource) ShutdownFunc {
 
 	global.SetLoggerProvider(provider)
 
-	// todo: add to external logger?
-	// slog.SetDefault(
-	//	slog.New(
-	//		slogmulti.Fanout(
-	//			slog.Default().Handler(),
-	//			otelslog.NewHandler(
-	//				os.Getenv("APP_NAME"),
-	//				otelslog.WithLoggerProvider(provider),
-	//				otelslog.WithSource(true),
-	//				otelslog.WithVersion(os.Getenv("CI_APPLICATION_TAG")),
-	//			),
-	//		),
-	//	),
-	//)
-
 	return func(ctx context.Context) error {
 		if err := provider.ForceFlush(ctx); err != nil {
 			return fmt.Errorf("failed to flush traces: %v", err)

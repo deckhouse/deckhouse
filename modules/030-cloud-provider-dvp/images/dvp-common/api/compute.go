@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
@@ -421,6 +423,7 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 				},
 			},
 		},
+		Immutable:  ptr.To(true),
 		Type:       v1alpha2.SecretTypeCloudInit,
 		StringData: map[string]string{"userData": string(userData)},
 	}
@@ -433,7 +436,7 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
 	}
 
-	// Secret already exists — load it and decide whether we may update userData.
+	// Secret already exists — load it and decide what to do.
 	existing, getErr := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
 	if getErr != nil {
 		return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
@@ -448,9 +451,42 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 		return nil
 	}
 
-	existing.StringData = map[string]string{"userData": string(userData)}
-	if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
-		return fmt.Errorf("update '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
+	if bytes.Equal(existing.Data["userData"], userData) {
+		if existing.Immutable == nil || !*existing.Immutable {
+			existing.Immutable = ptr.To(true)
+			if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
+				return fmt.Errorf("patch immutable on existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
+			}
+		}
+		return nil
+	}
+
+	// Immutable secret with different data: delete and recreate.
+	if delErr := c.clientset.CoreV1().Secrets(c.namespace).Delete(ctx, name, metav1.DeleteOptions{}); delErr != nil && !k8serrors.IsNotFound(delErr) {
+		return fmt.Errorf("delete stale '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, delErr)
+	}
+	if _, createErr := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); createErr != nil && !k8serrors.IsAlreadyExists(createErr) {
+		return fmt.Errorf("recreate '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, createErr)
+	}
+	return nil
+}
+
+func (c *ComputeService) EnsureCloudInitSecretImmutable(ctx context.Context, name string) error {
+	secret, err := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+
+	if !isDeckhouseManagedSecret(secret) || (secret.Immutable != nil && *secret.Immutable) {
+		return nil
+	}
+
+	secret.Immutable = ptr.To(true)
+	if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, secret, metav1.UpdateOptions{}); updateErr != nil {
+		return fmt.Errorf("patch immutable on '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
 	}
 	return nil
 }

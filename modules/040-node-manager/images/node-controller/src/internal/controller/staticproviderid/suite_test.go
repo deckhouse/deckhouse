@@ -67,7 +67,7 @@ var _ = BeforeSuite(func() {
 	// The controller only reads and writes core Node objects, so no CRDs are needed.
 	By("bootstrapping the envtest environment")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(scheme, nil)
+	testEnv, cfg, k8sClient, err = testenv.Start(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// The static-provider-id controller registered itself via its package init(); since only this

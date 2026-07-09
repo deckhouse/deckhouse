@@ -19,14 +19,15 @@ package validators
 import (
 	"fmt"
 	"reflect"
+	"slices"
 )
 
 var (
-	absoluteKeysExcludes = map[string]string{
-		"modules/150-user-authn/openapi/config-values.yaml":            "properties.publishAPI.properties.https",
-		"modules/150-user-authn/openapi/values.yaml":                   "properties.internal.properties.publishAPI.properties.https",
-		"modules/040-control-plane-manager/openapi/config-values.yaml": "properties.apiserver.properties.publishAPI.properties.ingress.properties.https",
-		"global-hooks/openapi/config-values.yaml":                      "properties.modules.properties.https",
+	absoluteKeysExcludes = map[string][]string{
+		"modules/150-user-authn/openapi/config-values.yaml":            {"properties.publishAPI.properties.https"},
+		"modules/150-user-authn/openapi/values.yaml":                   {"properties.internal.properties.publishAPI.properties.https"},
+		"modules/040-control-plane-manager/openapi/config-values.yaml": {"properties.apiserver.properties.publishAPI.properties.ingress.properties.https"},
+		"global-hooks/openapi/config-values.yaml":                      {"properties.modules.properties.https", "properties.applications.properties.https"},
 	}
 )
 
@@ -46,7 +47,7 @@ func (en HAValidator) Run(file, absoluteKey string, value interface{}) error {
 
 	for key := range values {
 		if key == "default" {
-			if absoluteKeysExcludes[file] == absoluteKey {
+			if slices.Contains(absoluteKeysExcludes[file], absoluteKey) {
 				continue
 			}
 			return fmt.Errorf("%s is invalid: must have no default value", absoluteKey)

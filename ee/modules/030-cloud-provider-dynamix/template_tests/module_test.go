@@ -59,6 +59,7 @@ const globalValues = `
 
 const moduleValuesA = `
 internal:
+  cniSecretData: "base64-encoded-string-or-placeholder"
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: DynamixClusterConfiguration

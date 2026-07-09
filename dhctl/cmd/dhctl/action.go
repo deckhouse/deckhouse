@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -354,13 +355,13 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	// i.slogRoot + SetDefault + binds klog/shell-op, so logger.FromContext always routes
 	// to a real logger.
 	if i.params.doNotWriteDebugFile || slices.Contains(skipTeeLoggerCommands, commandName) {
-		i.bindSlogRoot(c, logger.NewRoot(logger.Options{
+		i.bindSlogRoot(c, telemetry.WithOTLPLogExport(logger.NewRoot(logger.Options{
 			FileWriter:  os.Stdout,
 			TTYWriter:   os.Stdout,
 			IsTTY:       stdoutTTY,
 			Interactive: interactive,
 			Verbose:     verbose,
-		}))
+		})))
 		return doNothingOnShutdownFunc, nil
 	}
 
@@ -380,14 +381,15 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	shared := newSyncWriter(outFile)
 
 	// The slog root writes records straight to the shared file (its FileWriter), so the file
-	// contains only slog records — no separate legacy tee.
-	i.bindSlogRoot(c, logger.NewRoot(logger.Options{
+	// contains only slog records — no separate legacy tee. WithOTLPLogExport mirrors those same
+	// records to OTLP when telemetry is enabled (no-op otherwise).
+	i.bindSlogRoot(c, telemetry.WithOTLPLogExport(logger.NewRoot(logger.Options{
 		FileWriter:  shared,
 		TTYWriter:   os.Stdout,
 		IsTTY:       stdoutTTY,
 		Interactive: interactive,
 		Verbose:     verbose,
-	}))
+	})))
 
 	// cmd-level notice now goes through the slog root (terminal + file).
 	i.slogRoot.Info("Debug log file: " + logPath)

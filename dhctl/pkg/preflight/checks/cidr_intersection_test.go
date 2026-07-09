@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -220,7 +219,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := CidrIntersectionCheck{MetaConfig: tt.fields.metaConfig}
-			tt.wantErr(t, check.Run(context.Background()), fmt.Sprintf("CheckCidrIntersection()"))
+			tt.wantErr(t, check.Run(t.Context()), fmt.Sprintf("CheckCidrIntersection()"))
 		})
 	}
 }
@@ -364,7 +363,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := CidrIntersectionStaticCheck{MetaConfig: tt.fields.metaConfig}
-			tt.wantErr(t, check.Run(context.Background()), fmt.Sprintf("CheckCidrIntersectionStatic()"))
+			tt.wantErr(t, check.Run(t.Context()), fmt.Sprintf("CheckCidrIntersectionStatic()"))
 		})
 	}
 }

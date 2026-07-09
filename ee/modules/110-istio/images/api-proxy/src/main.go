@@ -51,8 +51,9 @@ func httpHandlerAPIProxy(p *Proxy) http.HandlerFunc {
 			return
 		}
 
-		if r.TLS.PeerCertificates[0].Subject.Organization[0] != "ingress-nginx:auth" {
-			errstring := "[api-proxy] Only requests from ingress are allowed."
+		org := r.TLS.PeerCertificates[0].Subject.Organization[0]
+		if org != "ingress-nginx:auth" && org != "alb:auth" {
+			errstring := "[api-proxy] Only requests from ingress or alb are allowed."
 			http.Error(w, errstring, http.StatusUnauthorized)
 			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
 			return

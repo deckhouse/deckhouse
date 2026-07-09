@@ -25,7 +25,8 @@ resource "kubernetes_secret" "cloudinit-secret" {
       user_data      = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
     })
   }
-  type = "provisioning.virtualization.deckhouse.io/cloud-init"
+  type      = "provisioning.virtualization.deckhouse.io/cloud-init"
+  immutable = true
   lifecycle {
     ignore_changes = [
       data

@@ -86,6 +86,13 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 				}
 				svc.logger.Info("creating file", slog.String("path", path))
 
+				// A tar archive is not guaranteed to carry a directory entry
+				// before each file (e.g. root-level module.yaml/oss.yaml have
+				// none), so ensure the parent directory exists before writing.
+				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					return fmt.Errorf("mkdir %q failed: %w", filepath.Dir(path), err)
+				}
+
 				outFile, err := os.OpenFile(
 					path,
 					os.O_RDWR|os.O_CREATE|os.O_TRUNC,

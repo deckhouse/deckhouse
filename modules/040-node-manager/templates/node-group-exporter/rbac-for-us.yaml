@@ -1,3 +1,4 @@
+{{- if .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -47,3 +48,4 @@ subjects:
 - kind: ServiceAccount
   name: node-group-exporter
   namespace: d8-cloud-instance-manager
+{{- end }}

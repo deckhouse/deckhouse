@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -146,6 +147,10 @@ func (s *Service) checkSafe(ctx context.Context, p *checkParams) (result *pb.Che
 }
 
 func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
+	ctx, span := telemetry.StartSpan(ctx, "grpc.check")
+	defer span.End()
+	span.SetAttributes(telemetry.CommanderSpanAttributes(p.request.Options.CommanderMode, p.request.Options.CommanderUuid)...)
+
 	var err error
 
 	cleanuper := callback.NewCallback()

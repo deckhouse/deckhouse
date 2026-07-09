@@ -64,17 +64,14 @@ spec:
         imagesRepo: <IMAGES_REPO_URI>
         # [<en>] The username for authenticating with the container registry.
         # [<ru>] Имя пользователя для аутентификации в хранилище образов контейнеров.
-        username: <USERNAME>
+        username: <REGISTRY_USERNAME>
         # [<en>] The password for authenticating with the container image repository.
         # [<ru>] Пароль для аутентификации в хранилище образов контейнеров.
-        password: <PASSWORD>
+        password: <REGISTRY_PASSWORD>
         scheme: HTTPS
         # [<en>] The root CA certificate (in PEM format) for validating the container registry’s server certificate.
         # [<ru>] Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
-        ca: |
-          -----BEGIN CERTIFICATE-----
-          ...
-          -----END CERTIFICATE-----
+        ca: <REGISTRY_CA>
 ---
 # [<en>] Global Deckhouse settings.
 # [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
