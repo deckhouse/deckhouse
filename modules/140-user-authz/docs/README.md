@@ -419,6 +419,7 @@ delete,deletecollection:
 patch,update:
     - nodes
 read:
+    - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
@@ -551,6 +552,7 @@ write:
     - constraints.gatekeeper.sh/*
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
+    - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/deschedulers
     - deckhouse.io/dvpinstanceclasses
     - deckhouse.io/dynamixinstanceclasses
