@@ -348,7 +348,7 @@ func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, 
 	vmbda, err := c.getVMBDA(ctx, diskName, vmName)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return nil // already attached
+			return nil // already detached
 		}
 		return err
 	}
