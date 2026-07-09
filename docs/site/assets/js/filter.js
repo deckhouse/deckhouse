@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
       allSelected: 'Выбраны все',
       experimental: 'Экспериментальная версия. Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется.',
       preview: 'Предварительная версия. Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребоваться миграция.',
-      generalAvailability: 'Общедоступная версия. Модуль готов к использованию в production-средах.',
       deprecated: 'Модуль устарел. Дальнейшее развитие и поддержка модуля прекращены.'
     },
     en: {
@@ -41,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
       allSelected: 'All selected',
       experimental: "Experimental version. The module's functionality may change significantly. Compatibility with future versions is not guaranteed.",
       preview: "Preliminary version. The module's functionality may change, but the core features remain. Compatibility with future versions is ensured, but migration may be required.",
-      generalAvailability: 'General availability. The module is ready for use in production environments.',
       deprecated: 'The module is deprecated. Further development and support for this module have been discontinued.'
     }
   };
@@ -635,6 +633,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initTooltip('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img', 'Experimental', texts.experimental);
   initTooltip('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img', 'Preview', texts.preview);
-  initTooltip('.filter__container label[for="generalAvailability"], .button-tile__stage[data-stage="generalAvailability"]', 'General Availability (GA)', texts.generalAvailability);
   initTooltip('.filter__container label[for="deprecated"] > img, .button-tile__stage-deprecated > img', 'Deprecated', texts.deprecated);
 })
