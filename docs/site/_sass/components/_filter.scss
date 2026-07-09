@@ -78,9 +78,12 @@
     &__block {
         @include breakpoints.max-w(l) {
             display: none;
+            flex-direction: column;
+            justify-content: space-between;
             box-sizing: border-box;
             left: 0;
             top: 51px;
+            height: 100%;
             max-height: 100%;
             width: 100%;
             min-width: 100%;
@@ -94,7 +97,7 @@
             transition: .2s;
 
             &.show {
-                display: block;
+                display: flex;
                 transform: translateX(0);
             }
         }
@@ -103,9 +106,9 @@
             display: none;
             position: sticky;
             bottom: 20px;
-            margin-top: 50px;
+            margin-top: 30px;
             background-color: #fff;
-            box-shadow: 0 0 30px 25px #fff;
+            box-shadow: 0 20px 30px 50px #fff;
 
             .filter__container--apply {
                 position: sticky;
@@ -121,7 +124,6 @@
                 &:has(button:disabled) {
                     cursor: not-allowed;
                     background-color: variables.$ntrl-300;
-                    border: 2px solid variables.$ntrl-300;
                     opacity: .6;
                     pointer-events: none;
                 }
@@ -469,61 +471,6 @@
                     border-color: #C4CAD4;
                     background-color: #F5F5FB;
                     background-image: none;
-                }
-            }
-        }
-
-        .reset-check {
-            width: 100%;
-            height: 100%;
-            margin-bottom: 50px;
-            padding: 6px 20px;
-            font-weight: 500;
-            font-size: 16px;
-            line-height: 24px;
-            background-color: #fff;
-            background-position: calc(100% - 50px) center;
-            background-repeat: no-repeat;
-            cursor: pointer;
-            transition: background-image 0.3s ease-in-out, opacity 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out, transform 0.3s ease-in-out, color 0.3s ease-in-out;
-
-            @include breakpoints.max-w(xl) {
-                background-position: calc(100% - 28px) center;
-            }
-
-            @include breakpoints.max-w(l) {
-                margin-bottom: 0;
-                padding: 12px 20px;
-                font-size: 14px;
-                line-height: 21px;
-                text-transform: uppercase;
-            }
-
-            &__en {
-                font-size: 18px;
-                background-position: calc(100% - 75px) center;
-            }
-
-            &:disabled {
-                color: #C4CAD4;
-                border: 1px solid #C4CAD4;
-                background-image: url(/images/icons/reset_icon.svg);
-                cursor: not-allowed;
-                pointer-events: none;
-            }
-
-            &:not(:disabled) {
-                background-image: url(/images/icons/reset_icon-active.svg);
-                border: 1px solid #0064FF;
-                color: #0064FF;
-
-                &:hover {
-                    opacity: 0.7;
-                }
-
-                &:active {
-                    opacity: 0.7;
-                    transform: scale(0.95);
                 }
             }
         }

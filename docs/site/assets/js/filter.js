@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const articles = document.querySelectorAll('.button-tile');
   const selectedFiltersList = document.querySelector('.selected__filters--list');
   const filterCheckboxesTags = document.querySelector('.filter__checkboxes--tags');
-  const resetButton = document.querySelector('.reset-check');
   const applyButton = document.querySelector('.apply-filter');
   const applyButtonBlock = document.querySelector('.filter__block--apply');
   const openMobile =  document.querySelector('.filter__search--filter');
@@ -378,10 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
       applyButton.disabled = !hasCheckedCheckboxes;
     }
 
-    if (resetButton) {
-      resetButton.disabled = !hasCheckedCheckboxes;
-    }
-
     if (selectedFiltersList) {
       const groupedFilters = new Map();
 
@@ -524,10 +519,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (filterSearch) {
     filterSearch.addEventListener('input', filterArticles);
-  }
-
-  if(resetButton) {
-    resetButton.addEventListener('click', resetAllFilters);
   }
 
   document.querySelectorAll('.filter__container').forEach(container => {

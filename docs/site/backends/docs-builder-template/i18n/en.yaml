@@ -171,7 +171,6 @@ module_alert_preview_long: Preliminary version. The functionality may change, bu
 module_alert_general_availability_long: Generally available version. Ready to be used in production environments.
 module_alert_deprecated_long: Deprecated version. Development and support have been terminated.
 related_additional_resources: Additional resources
-reset_filter: reset filter
 deprecated_parameter: Deprecated
 deprecated_parameter_hint: Support for the parameter might be removed in a later release.
 show_more: Show more
