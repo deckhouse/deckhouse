@@ -6,9 +6,15 @@ metadata:
     heritage: deckhouse
     module: secret-copier
     rbac.deckhouse.io/aggregate-to-security-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
-  name: d8:manage:permission:module:secret-copier:edit
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.secret-copier.edit"
+    rbac.deckhouse.io/scope: system
+  name: d8:system-capability:secret-copier:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module secret-copier: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль secret-copier: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the secret-copier module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля secret-copier."
 rules:
 - apiGroups:
   - deckhouse.io

@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-dvp
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cloud-provider-dvp.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-dvp
-  name: d8:manage:permission:module:cloud-provider-dvp:view
+  name: d8:system-capability:cloud-provider-dvp:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cloud-provider-dvp: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль cloud-provider-dvp: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the cloud-provider-dvp module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля cloud-provider-dvp."
 rules:
 - apiGroups:
   - deckhouse.io

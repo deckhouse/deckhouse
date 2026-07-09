@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cni-simple-bridge
     rbac.deckhouse.io/aggregate-to-networking-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cni-simple-bridge.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cni-simple-bridge
-  name: d8:manage:permission:module:cni-simple-bridge:edit
+  name: d8:system-capability:cni-simple-bridge:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module cni-simple-bridge: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль cni-simple-bridge: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the cni-simple-bridge module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля cni-simple-bridge."
 rules:
 - apiGroups:
   - deckhouse.io
