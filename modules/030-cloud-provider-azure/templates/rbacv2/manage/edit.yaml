@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-azure
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cloud-provider-azure.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-azure
-  name: d8:manage:permission:module:cloud-provider-azure:edit
+  name: d8:system-capability:cloud-provider-azure:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module cloud-provider-azure: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль cloud-provider-azure: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the cloud-provider-azure module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля cloud-provider-azure."
 rules:
 - apiGroups:
   - deckhouse.io

@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cilium-hubble
     rbac.deckhouse.io/aggregate-to-networking-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cilium-hubble.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cni-cilium
-  name: d8:manage:permission:module:cilium-hubble:view
+  name: d8:system-capability:cilium-hubble:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cilium-hubble: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль cilium-hubble: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the cilium-hubble module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля cilium-hubble."
 rules:
 - apiGroups:
   - deckhouse.io
