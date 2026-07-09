@@ -44,13 +44,7 @@ func withInvalidReason(next http.Handler) http.Handler {
 
 			if review.Response.Result != nil {
 				msg += review.Response.Result.Message
-				causes = append(causes, metav1.StatusCause{Message: review.Response.Result.Message})
-			}
-
-			if len(review.Response.Warnings) > 0 {
-				for _, warning := range review.Response.Warnings {
-					causes = append(causes, metav1.StatusCause{Message: warning})
-				}
+				causes = []metav1.StatusCause{{Message: review.Response.Result.Message}}
 			}
 
 			review.Response.Result = &metav1.Status{
