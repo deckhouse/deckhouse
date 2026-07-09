@@ -128,7 +128,7 @@ func init() {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/monitoring-kubernetes/helm-releases-scan",
+	Queue: moduleQueue + "/helm-releases-scan",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",

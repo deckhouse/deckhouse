@@ -1960,56 +1960,6 @@
       }
     },
     {
-      "title": "The monitoring-kubernetes module",
-      "description": "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform.",
-      "module": "monitoring-kubernetes",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability",
-        "ssdlc"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "monitoring-kubernetes/",
-      "ru": {
-        "title": "Модуль monitoring-kubernetes",
-        "description": "Базовый мониторинг узлов кластера Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "monitoring-kubernetes",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "requirements": {
-          "modules": {
-            "prometheus": ">= 0.0.0"
-          }
-        },
-        "descriptions": {
-          "en": "Provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.",
-          "ru": "Обеспечивает прозрачный и своевременный контроль состояния всех узлов кластера и ключевых инфраструктурных компонентов."
-        },
-        "oss": [
-          {
-            "name": "Node exporter",
-            "link": "https://github.com/prometheus/node_exporter",
-            "description": "Prometheus exporter for hardware and OS metrics exposed by *NIX kernels, written in Go with pluggable metric collectors.",
-            "logo": "https://avatars.githubusercontent.com/u/3380462?s=200&v=4",
-            "license": "Apache License 2.0"
-          },
-          {
-            "name": "kube-state-metrics",
-            "link": "https://github.com/kubernetes/kube-state-metrics",
-            "description": "A simple service that listens to the Kubernetes API server and generates metrics about the state of the objects.",
-            "logo": "/images/logos/kubernetes.svg",
-            "license": "Apache License 2.0"
-          }
-        ]
-      }
-    },
-    {
       "title": "Module multitenancy-manager",
       "search": "multitenancy",
       "description": "Multitenancy and Projects in Kubernetes. The multitenancy-manager module in Deckhouse allows creating projects for various development teams with the ability to subsequently deploy applications in them.",

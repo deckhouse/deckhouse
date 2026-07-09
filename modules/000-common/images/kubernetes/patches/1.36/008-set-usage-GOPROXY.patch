@@ -1,8 +1,8 @@
 diff --git a/hack/lib/golang.sh b/hack/lib/golang.sh
-index 5fb6a82ba53..070e4ef0bda 100755
+index 95c775f8f70..33aab0968ce 100755
 --- a/hack/lib/golang.sh
 +++ b/hack/lib/golang.sh
-@@ -796,13 +796,13 @@ kube::golang::build_some_binaries() {
+@@ -800,13 +800,13 @@ kube::golang::build_some_binaries() {
      done
      if [[ "${#uncovered[@]}" != 0 ]]; then
        V=2 kube::log::info "Building ${uncovered[*]} without coverage..."
