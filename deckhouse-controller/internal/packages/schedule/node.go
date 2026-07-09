@@ -44,6 +44,9 @@ type Package interface {
 	GetName() string
 	GetVersion() *semver.Version
 	GetConstraints() Constraints
+}
+
+type packageWithScript interface {
 	GetEnabledScriptDescriptor() *script.Descriptor
 }
 
@@ -219,7 +222,9 @@ func (s *Scheduler) addNode(pkg Package) {
 			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
 		}
 
-		n.rules = append(n.rules, script.NewRule(pkg, s.logger))
+		if pkgWithScript, ok := pkg.(packageWithScript); ok {
+			n.rules = append(n.rules, script.NewRule(pkgWithScript, s.logger))
+		}
 	}
 
 	s.nodes[pkg.GetName()] = n

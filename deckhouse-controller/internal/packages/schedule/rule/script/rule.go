@@ -93,5 +93,5 @@ func (r *Rule) Decide() rule.Decision {
 		return rule.Decision{Kind: rule.Forbid, Reason: reasonDisabledByScript, Message: res.reason}
 	}
 
-	return rule.Decision{Kind: rule.Enable, Reason: reasonEnabledByScript}
+	return rule.Decision{Kind: rule.Undefined, Reason: reasonEnabledByScript}
 }
