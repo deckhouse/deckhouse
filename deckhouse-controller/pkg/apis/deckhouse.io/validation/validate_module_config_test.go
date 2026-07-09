@@ -37,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -46,6 +47,11 @@ import (
 )
 
 const confirmationMessage = "Disabling this module will stop the cluster."
+
+// testEdition is the edition/bundle used by every test in this file to
+// resolve the "enabled by default" fallback for ModuleConfigs with no
+// explicit spec.enabled.
+var testEdition = &d8edition.Edition{Name: "ce", Bundle: "Default"}
 
 // fakeModuleStorage implements the moduleStorage interface for tests.
 type fakeModuleStorage struct {
@@ -97,6 +103,13 @@ func newModuleWithDisableOptions(t *testing.T, name string, confirmation bool, m
 		DisableOptions: &v1alpha1.ModuleDisableOptions{
 			Confirmation: confirmation,
 			Message:      message,
+		},
+		// enabled by default for testEdition's bundle, so that a ModuleConfig
+		// with no explicit spec.enabled resolves to "enabled".
+		Accessibility: &moduletypes.ModuleAccessibility{
+			Editions: map[string]moduletypes.ModuleEdition{
+				"_default": {Available: true, EnabledInBundles: []string{testEdition.Bundle}},
+			},
 		},
 	}
 
@@ -235,7 +248,7 @@ func newTestHandlerWithValidator(t *testing.T, storage *fakeModuleStorage, manag
 	deckhouseSettings.AllowedExperimentalModules = allowedExperimental
 	settings := helpers.NewDeckhouseSettingsContainer(deckhouseSettings, metricStorage)
 
-	return moduleConfigValidationHandler(fakeClient, storage, metricStorage, manager, validator, settings, dependencyExtender)
+	return moduleConfigValidationHandler(fakeClient, storage, metricStorage, manager, validator, settings, dependencyExtender, testEdition)
 }
 
 func callHandler(t *testing.T, handler http.Handler, review *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse {
@@ -413,10 +426,9 @@ func TestModuleConfigValidationHandler_DisableConfirmation(t *testing.T) {
 			operation:        "UPDATE",
 			newConfig:        newModuleConfig(moduleName, nil, nil),
 			oldConfig:        newModuleConfig(moduleName, nil, nil),
-			// expectCheckEnabling: *boolPtr(true),
-			dependencyErr: fmt.Errorf("module %q depends on a disabled module", moduleName),
-			wantAllowed:   true,
-			description:   "default-enabled module is treated as enabled, so updating with no spec.enabled field is allowed",
+			dependencyErr:    fmt.Errorf("module %q depends on a disabled module", moduleName),
+			wantAllowed:      true,
+			description:      "default-enabled module is treated as enabled, so updating with no spec.enabled field is allowed",
 		},
 		{
 			name:                "create: enabling a module rejected by dependency constraint",

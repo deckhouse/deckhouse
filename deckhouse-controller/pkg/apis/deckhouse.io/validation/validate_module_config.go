@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -77,6 +78,7 @@ func moduleConfigValidationHandler(
 	configValidator *configtools.Validator,
 	setting *helpers.DeckhouseSettingsContainer,
 	dependencyExtender moduleDependencyExtender,
+	edition *d8edition.Edition,
 ) http.Handler {
 	validator := &moduleConfigValidator{
 		client:             cli,
@@ -86,6 +88,7 @@ func moduleConfigValidationHandler(
 		configValidator:    configValidator,
 		settings:           setting,
 		dependencyExtender: dependencyExtender,
+		edition:            edition,
 	}
 
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
@@ -110,6 +113,7 @@ type moduleConfigValidator struct {
 	configValidator    *configtools.Validator
 	settings           *helpers.DeckhouseSettingsContainer
 	dependencyExtender moduleDependencyExtender
+	edition            *d8edition.Edition
 }
 
 // validate is the admission entrypoint. Operation-specific checks run first;
@@ -155,7 +159,8 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 // validateDelete guards deletion: a confirmation-required module that is still
 // enabled, and any module that still has a ModulePullOverride, may not be removed.
 func (v *moduleConfigValidator) validateDelete(ctx context.Context, cfg *v1alpha1.ModuleConfig) (*kwhvalidating.ValidatorResult, error) {
-	if !hasAllowDisableAnnotation(cfg.Annotations) && isEnabled(cfg) {
+	defaultEnabled := v.isModuleEnabledByBundle(cfg.Name)
+	if !hasAllowDisableAnnotation(cfg.Annotations) && isEnabled(cfg, defaultEnabled) {
 		if res, err := v.confirmationRejection(cfg.Name); res != nil || err != nil {
 			return res, err
 		}
@@ -185,7 +190,8 @@ func (v *moduleConfigValidator) validateCreate(ctx context.Context, cfg *v1alpha
 		}
 	}
 
-	if isEnabled(cfg) {
+	defaultEnabled := v.isModuleEnabledByBundle(cfg.Name)
+	if isEnabled(cfg, defaultEnabled) {
 		// on CREATE the module must exist, so a missing Module CR is rejected
 		return v.validateModuleEnabling(ctx, cfg, allowExperimental, true)
 	}
@@ -203,7 +209,11 @@ func (v *moduleConfigValidator) validateUpdate(ctx context.Context, review *kwhm
 	}
 
 	oldEnabled := oldConfig.enabled || v.moduleManager.IsModuleEnabled(cfg.Name)
-	newEnabled := isEnabled(cfg)
+
+	// ModuleConfig may not have the spec.enabled field at all. In that case the
+	// module's effective state does not come from this config but falls back to
+	// whatever is enabled by default for the current edition/bundle.
+	newEnabled := isEnabled(cfg, v.isModuleEnabledByBundle(cfg.Name))
 
 	if !oldEnabled && newEnabled {
 		// on UPDATE a missing Module CR is tolerated (validateCommon handles it with a warning)
@@ -215,8 +225,7 @@ func (v *moduleConfigValidator) validateUpdate(ctx context.Context, review *kwhm
 	// the module is being disabled when the new config does not keep it enabled
 	// while it is currently enabled - either explicitly (oldConfig.enabled) or by
 	// default (e.g. enabled in the bundle, but with no explicit enabled flag).
-	// ModuleConfig may not have field spec.enabled, so we check if the module is enabled by other means.
-	disabling := isDisabled(cfg) && oldEnabled
+	disabling := oldEnabled && !newEnabled
 	if disabling && !hasAllowDisableAnnotation(cfg.Annotations) && !hasAllowDisableAnnotation(oldConfig.annotations) {
 		if res, err := v.confirmationRejection(cfg.Name); res != nil || err != nil {
 			return res, err
@@ -224,6 +233,25 @@ func (v *moduleConfigValidator) validateUpdate(ctx context.Context, review *kwhm
 	}
 
 	return nil, nil
+}
+
+// isModuleEnabledByBundle reports whether the module would be enabled by
+// default - i.e. with no explicit ModuleConfig spec.enabled - in the current
+// Deckhouse edition and bundle. It is used to resolve the effective enabled
+// state of a ModuleConfig whose spec.enabled is unset. An unknown module (not
+// present in storage) or the global module (no module.yaml accessibility) is
+// treated as not enabled by default.
+func (v *moduleConfigValidator) isModuleEnabledByBundle(moduleName string) bool {
+	if moduleName == globalModuleName {
+		return false
+	}
+
+	module, err := v.moduleStorage.GetModuleByName(moduleName)
+	if err != nil {
+		return false
+	}
+
+	return module.GetModuleDefinition().Accessibility.IsEnabled(v.edition.Name, v.edition.Bundle)
 }
 
 // validateModuleEnabling runs the checks required before a module may be enabled:
@@ -350,7 +378,7 @@ func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha
 		warnings = append(warnings, result.Warning)
 	}
 
-	v.setAllowedToDisableMetric(cfg, allowedToDisableMetricValue(cfg))
+	v.setAllowedToDisableMetric(cfg, allowedToDisableMetricValue(cfg, v.isModuleEnabledByBundle(cfg.Name)))
 
 	// CEL transition rules (x-deckhouse-validations with oldSelf).
 	// Executed only on UPDATE (oldSettings != nil).
@@ -471,7 +499,7 @@ func (v *moduleConfigValidator) resolveModuleSource(ctx context.Context, cfg *v1
 	}
 
 	var warnings []string
-	if isEnabled(cfg) && cfg.Spec.Source == "" && len(module.Properties.AvailableSources) > 1 {
+	if isEnabled(cfg, v.isModuleEnabledByBundle(cfg.Name)) && cfg.Spec.Source == "" && len(module.Properties.AvailableSources) > 1 {
 		warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource ", cfg.GetName(), strings.Join(module.Properties.AvailableSources, ", ")))
 	}
 
@@ -505,7 +533,7 @@ func (v *moduleConfigValidator) validateExclusiveGroup(cfg *v1alpha1.ModuleConfi
 		return nil, nil
 	}
 
-	if !isEnabled(cfg) {
+	if !isEnabled(cfg, v.isModuleEnabledByBundle(cfg.Name)) {
 		return nil, nil
 	}
 
@@ -582,7 +610,10 @@ func hasAllowDisableAnnotation(annotations map[string]string) bool {
 	return ok
 }
 
-func isEnabled(cfg *v1alpha1.ModuleConfig) bool {
+func isEnabled(cfg *v1alpha1.ModuleConfig, defaultEnabled bool) bool {
+	if cfg.Spec.Enabled == nil {
+		return defaultEnabled
+	}
 	return cfg.Spec.Enabled != nil && *cfg.Spec.Enabled
 }
 
@@ -592,8 +623,8 @@ func isDisabled(cfg *v1alpha1.ModuleConfig) bool {
 
 // allowedToDisableMetricValue is 1 when the config keeps the module enabled while
 // carrying the allow-disabling annotation, and 0 otherwise.
-func allowedToDisableMetricValue(cfg *v1alpha1.ModuleConfig) float64 {
-	if hasAllowDisableAnnotation(cfg.Annotations) && isEnabled(cfg) {
+func allowedToDisableMetricValue(cfg *v1alpha1.ModuleConfig, defaultEnabled bool) float64 {
+	if hasAllowDisableAnnotation(cfg.Annotations) && isEnabled(cfg, defaultEnabled) {
 		return 1
 	}
 	return 0
