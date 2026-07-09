@@ -129,7 +129,6 @@ Task execution in one queue does not block task execution in another queue.
 
 To view Marketplace queues, run the following command:
 
-
 {% alert level="warning" %}
 When performing module installation or configuration tasks in addon-operator, the Deckhouse controller pauses Marketplace queue processing.
 {% endalert %}
