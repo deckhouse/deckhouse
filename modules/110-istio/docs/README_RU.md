@@ -397,11 +397,7 @@ cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21
 ## Ambient mesh
 
 {% alert level="warning" %}
-Доступно только в Enterprise Edition и Certified Security Edition Pro.
-{% endalert %}
-
-{% alert level="warning" %}
-Поддержка ambient mesh является экспериментальной и не рекомендуется для использования в production-окружении.
+Доступно только в Enterprise Edition и Certified Security Edition Pro. Поддержка ambient mesh является экспериментальной и не рекомендуется для использования в production-окружении.
 {% endalert %}
 
 Помимо классического режима с сайдкарами, Istio может запускать data plane в режиме *ambient*. В этом режиме функциональность сети разделена на два уровня, и в поды приложений больше не добавляется сайдкар-контейнер `istio-proxy`:
