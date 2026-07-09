@@ -110,7 +110,7 @@ type bashibleClusterConfiguration struct {
 // Secret or key is absent so the caller leaves the derived fields empty.
 func (s *Service) readClusterConfiguration(ctx context.Context) *bashibleClusterConfiguration {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterConfigSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterConfigSecretName}, secret); err != nil {
 		return nil
 	}
 	raw, ok := secret.Data[clusterConfigKey]

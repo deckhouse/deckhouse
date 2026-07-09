@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -34,12 +35,14 @@ import (
 )
 
 const (
-	cloudProviderSecretName      = ngcommon.CloudProviderSecretName
-	cloudProviderSecretNamespace = "kube-system"
-	clusterConfigSecretName      = "d8-cluster-configuration"
-	clusterConfigSecretNamespace = "kube-system"
-	clusterUUIDConfigMapName     = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS       = "kube-system"
+	cloudProviderSecretName       = ngcommon.CloudProviderSecretName
+	cloudProviderSecretNamespace  = "kube-system"
+	clusterConfigSecretName       = "d8-cluster-configuration"
+	clusterConfigSecretNamespace  = "kube-system"
+	automaticKubernetesVersion    = "Automatic"
+	deckhouseDefaultK8sVersionKey = "deckhouseDefaultKubernetesVersion"
+	clusterUUIDConfigMapName      = "d8-cluster-uuid"
+	clusterUUIDConfigMapNS        = "kube-system"
 
 	instanceTypesCatalogName = "for-cluster-autoscaler"
 	instanceClassGroup       = "deckhouse.io"
@@ -87,11 +90,13 @@ type clusterConfiguration struct {
 	DefaultCRI        string `json:"defaultCRI"`
 }
 
-// readClusterConfiguration returns the target Kubernetes version (only when it
-// is a concrete semver; "Automatic" and empty yield nil) and the default CRI.
+// readClusterConfiguration returns the target Kubernetes version and the default
+// CRI. "Automatic" resolves to the deckhouseDefaultKubernetesVersion key (the
+// build default), a concrete version parses as-is, and empty/unparseable yields
+// nil so effectiveKubernetesVersion falls back to the control-plane minimum.
 func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
 		return nil, ""
 	}
 
@@ -109,7 +114,17 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 	}
 
 	var target *semver.Version
-	if cfg.KubernetesVersion != "" {
+	switch {
+	case cfg.KubernetesVersion == automaticKubernetesVersion:
+		// "Automatic" is resolved to the build default the control-plane-manager
+		// stores under deckhouseDefaultKubernetesVersion, matching the value the
+		// original get_crds consumed from the already-resolved global config.
+		if raw, ok := secret.Data[deckhouseDefaultK8sVersionKey]; ok {
+			if ver, err := semver.NewVersion(strings.TrimSpace(string(raw))); err == nil {
+				target = ver
+			}
+		}
+	case cfg.KubernetesVersion != "":
 		if ver, err := semver.NewVersion(cfg.KubernetesVersion); err == nil {
 			target = ver
 		}

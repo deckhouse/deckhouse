@@ -65,9 +65,17 @@ var allowedBundles = []string{"ubuntu-lts", "centos", "debian", "opensuse"}
 // Service reads the bashible input.yaml fields from live kube objects.
 type Service struct {
 	Client client.Client
+	Reader client.Reader
 	// RootCAFile overrides the service-account CA path (tests set it); empty
 	// means defaultRootCAFile.
 	RootCAFile string
+}
+
+func (s *Service) reader() client.Reader {
+	if s.Reader != nil {
+		return s.Reader
+	}
+	return s.Client
 }
 
 // readCloudProvider mirrors discover_cloud_provider: base64-decoded (by the
@@ -102,7 +110,7 @@ func decodeSecretData(data map[string][]byte) map[string]interface{} {
 // hook always sets internal.packagesProxy.token, so the field is always emitted.
 func (s *Service) readPackagesProxyToken(ctx context.Context) string {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: packagesProxyTokenSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: packagesProxyTokenSecretName}, secret); err != nil {
 		return ""
 	}
 	return string(secret.Data["token"])
@@ -132,7 +140,7 @@ type featureGatesData struct {
 // Secret exists).
 func (s *Service) readControlPlaneArguments(ctx context.Context) controlPlaneArguments {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: controlPlaneArgsSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: controlPlaneArgsSecretName}, secret); err != nil {
 		return controlPlaneArguments{}
 	}
 
@@ -169,7 +177,7 @@ type apiserverProxyCerts struct {
 // value which is only re-set on rotation.
 func (s *Service) readAPIServerProxyCerts(ctx context.Context) apiserverProxyCerts {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: apiProxyCertSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: apiProxyCertSecretName}, secret); err != nil {
 		return apiserverProxyCerts{}
 	}
 	return apiserverProxyCerts{
@@ -204,7 +212,7 @@ func (s *Service) readBootstrapTokens(ctx context.Context) map[string]string {
 		return map[string]string{}
 	}
 	secrets := &corev1.SecretList{}
-	if err := s.Client.List(ctx, secrets,
+	if err := s.reader().List(ctx, secrets,
 		client.InNamespace(kubeSystemNS),
 		client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*req)},
 	); err != nil {

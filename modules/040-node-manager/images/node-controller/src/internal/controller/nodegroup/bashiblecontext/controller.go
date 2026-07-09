@@ -18,6 +18,7 @@ package bashiblecontext
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,6 +35,8 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
+const resyncInterval = 10 * time.Minute
+
 func init() {
 	register.RegisterController("bashible-context", &v1.NodeGroup{}, &Controller{})
 }
@@ -48,6 +51,12 @@ func init() {
 // (enabling this + removing the helm define) is atomic and ships in one release.
 type Controller struct {
 	register.Base
+	apiReader client.Reader
+}
+
+func (c *Controller) Setup(mgr ctrl.Manager) error {
+	c.apiReader = mgr.GetAPIReader()
+	return nil
 }
 
 // assembleRequest is the sentinel request the source-object watches enqueue.
@@ -91,8 +100,8 @@ func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 
 	r := &Reconciler{
 		Client:        c.Client,
-		Context:       &Service{Client: c.Client},
-		DerivedStatus: &derived_status.Service{Client: c.Client},
+		Context:       &Service{Client: c.Client, Reader: c.apiReader},
+		DerivedStatus: &derived_status.Service{Client: c.Client, Reader: c.apiReader},
 	}
 	if err := r.Assemble(ctx); err != nil {
 		logger.Error(err, "failed to assemble bashible-apiserver-context")
@@ -101,5 +110,5 @@ func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 	// TEMP dev observability: Info (was V(1)) so the reconcile is visible at the
 	// default verbosity during bashible-context bring-up.
 	logger.Info("assembled bashible-apiserver-context")
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }

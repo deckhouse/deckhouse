@@ -50,6 +50,14 @@ func versionString(v *semver.Version) string {
 
 type Service struct {
 	Client client.Client
+	Reader client.Reader
+}
+
+func (s *Service) reader() client.Reader {
+	if s.Reader != nil {
+		return s.Reader
+	}
+	return s.Client
 }
 
 // Result holds the get_crds-derived fields destined for NodeGroup.status.
