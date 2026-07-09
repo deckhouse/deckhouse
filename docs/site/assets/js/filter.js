@@ -1,8 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const body = document.querySelector('body');
   const articles = document.querySelectorAll('.button-tile');
   const selectedFiltersList = document.querySelector('.selected__filters--list');
   const filterCheckboxesTags = document.querySelector('.filter__checkboxes--tags');
-  const resetButton = document.querySelector('.reset-check');
+  const applyButton = document.querySelector('.apply-filter');
+  const applyButtonBlock = document.querySelector('.filter__block--apply');
+  const openMobile =  document.querySelector('.filter__search--filter');
   const fullReset = document.createElement('div');
   fullReset.classList.add('full-reset');
   let lang = document.documentElement.lang;
@@ -28,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
       allSelected: 'Выбраны все',
       experimental: 'Экспериментальная версия. Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется.',
       preview: 'Предварительная версия. Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребоваться миграция.',
-      generalAvailability: 'Общедоступная версия. Модуль готов к использованию в production-средах.',
       deprecated: 'Модуль устарел. Дальнейшее развитие и поддержка модуля прекращены.'
     },
     en: {
@@ -37,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
       allSelected: 'All selected',
       experimental: "Experimental version. The module's functionality may change significantly. Compatibility with future versions is not guaranteed.",
       preview: "Preliminary version. The module's functionality may change, but the core features remain. Compatibility with future versions is ensured, but migration may be required.",
-      generalAvailability: 'General availability. The module is ready for use in production environments.',
       deprecated: 'The module is deprecated. Further development and support for this module have been discontinued.'
     }
   };
@@ -370,12 +371,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked:not([data-select-all="true"])');
     const query = filterSearch ? filterSearch.value.trim() : '';
 
-    if(resetButton) {
-      if (checkedCheckboxes.length > 0) {
-        resetButton.classList.add('active');
-      } else {
-        resetButton.classList.remove('active');
-      }
+    const hasCheckedCheckboxes = checkedCheckboxes.length > 0;
+
+    if (applyButton) {
+      applyButton.disabled = !hasCheckedCheckboxes;
     }
 
     if (selectedFiltersList) {
@@ -522,10 +521,6 @@ document.addEventListener('DOMContentLoaded', () => {
     filterSearch.addEventListener('input', filterArticles);
   }
 
-  if(resetButton) {
-    resetButton.addEventListener('click', resetAllFilters);
-  }
-
   document.querySelectorAll('.filter__container').forEach(container => {
     const sectionCheckboxes = getFilterContainerCheckboxes(container);
     const selectAllCheckbox = getSectionSelectAllCheckbox(container);
@@ -553,6 +548,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   markEmptyCheckboxes();
   applyFiltersFromUrl();
+
+  if (openMobile) {
+    const filter = document.querySelector('.filter__block');
+    const hamburgerCollapse = document.querySelector('.hamburger--collapse');
+    const content = document.querySelector('.content');
+    const filterOverlay = document.createElement('div');
+    filterOverlay.className = 'sidebar-overlay filter__sidebar-overlay';
+
+    function closeFilterMobilePanel() {
+      if (filter) filter.classList.remove('show');
+      if (body) body.classList.remove('sidebar-opened');
+      if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
+      if (filterOverlay.parentNode) filterOverlay.parentNode.removeChild(filterOverlay);
+    }
+
+    openMobile.addEventListener('click', () => {
+      if (!filter) return;
+      filter.classList.add('show');
+      if (body) body.classList.add('sidebar-opened');
+      if (hamburgerCollapse) hamburgerCollapse.classList.add('show');
+      const overlayParent = content || body;
+      if (overlayParent) overlayParent.appendChild(filterOverlay);
+    });
+
+    filterOverlay.addEventListener('click', closeFilterMobilePanel);
+    if (applyButtonBlock) {
+      applyButtonBlock.addEventListener('click', () => {
+        if (applyButton && !applyButton.disabled) {
+          closeFilterMobilePanel();
+        }
+      });
+    }
+  }
+
   filterArticles();
   window.addEventListener('pageshow', () => {
     filterArticles();
@@ -595,6 +624,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initTooltip('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img', 'Experimental', texts.experimental);
   initTooltip('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img', 'Preview', texts.preview);
-  initTooltip('.filter__container label[for="generalAvailability"], .button-tile__stage[data-stage="generalAvailability"]', 'General Availability (GA)', texts.generalAvailability);
   initTooltip('.filter__container label[for="deprecated"] > img, .button-tile__stage-deprecated > img', 'Deprecated', texts.deprecated);
 })
