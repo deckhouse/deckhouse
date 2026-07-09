@@ -1,7 +1,5 @@
 - name: descheduler.drs-lens.happiness
   rules:
-  # RS -> its controller owner of any kind (e.g. Deployment, Rollout).
-  # Anchor: one series per ReplicaSet that has a controller owner.
   - record: descheduler:replicaset_workload
     expr: |
       max by (namespace, replicaset, workload_kind, workload_name) (
@@ -11,14 +9,6 @@
           "workload_name", "$1", "owner_name", "(.*)")
       )
 
-  # Anchor: one series per live pod in descheduler scope (excludes d8-*/kube-system
-  # namespaces and Succeeded pods), resolved to its owning workload.
-  # Branch 1: pod's controller owner is not a ReplicaSet (StatefulSet, DaemonSet,
-  # Job, bare pod via owner_kind="<none>", etc.) - used directly.
-  # Branch 2: pod's controller owner is a ReplicaSet that itself has a controller
-  # owner (e.g. Deployment, Rollout) - resolved one hop further.
-  # Branch 3: pod's controller owner is an orphan ReplicaSet (no controller owner)
-  # - the ReplicaSet itself is reported as the workload.
   - record: descheduler:pod_workload
     expr: |
       max by (namespace, pod, node, workload_kind, workload_name) (
@@ -53,21 +43,16 @@
       unless on (namespace, pod)
         (kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"} == 1)
 
-  # Anchor: one series per workload, counting its currently live pods (replicas).
   - record: descheduler:workload_replicas
     expr: count by (namespace, workload_kind, workload_name) (descheduler:pod_workload)
 
-  # --- per-pod helper rules ---
-
-  # Helper: keeps only pods that restarted within the last 15m; value = rounded restart count over 15m.
   - record: descheduler:pod_restarts_15m
     expr: |
       round(sum by (namespace, pod) (
         increase(kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace!~"d8-.*|kube-system"}[15m])
       )) > 0
 
-  # Helper: pods OOM-killed within the last 15m; primary source is klog_pod_oomkill,
-  # fallback is last_terminated_reason gated by a recent restart.
+  # Primary source klog_pod_oomkill; fallback last_terminated_reason gated by a recent restart.
   - record: descheduler:pod_oom_15m
     expr: |
       max by (namespace, pod) (
@@ -84,9 +69,7 @@
         and on (namespace, pod) (descheduler:pod_restarts_15m > 0)
       )
 
-  # --- state penalties (per namespace, workload_kind, workload_name) ---
-
-  # Weighted average over pod phases; max 60.
+  # State penalties are share-weighted: sum of per-pod weight over the anchor / replicas.
   - record: descheduler:workload_phase_penalty
     expr: |
       sum by (namespace, workload_kind, workload_name) (
@@ -100,7 +83,7 @@
       )
       / descheduler:workload_replicas
 
-  # 30 x share of not-ready pods; container-level penalty absorbed by pod Ready=False; max 30.
+  # Container-level readiness penalty is absorbed here: pod Ready=False already covers it.
   - record: descheduler:workload_readiness_penalty
     expr: |
       30 * sum by (namespace, workload_kind, workload_name) (
@@ -110,7 +93,6 @@
       )
       / descheduler:workload_replicas
 
-  # 20 x share(pods with >0 restarts) + 15 x share(pods with >=3 restarts); max 35.
   - record: descheduler:workload_restart_penalty
     expr: |
       sum by (namespace, workload_kind, workload_name) (
@@ -123,7 +105,6 @@
       )
       / descheduler:workload_replicas
 
-  # 35 x share of pods OOM-killed within 15m; max 35.
   - record: descheduler:workload_oom_penalty
     expr: |
       35 * sum by (namespace, workload_kind, workload_name) (
@@ -132,8 +113,6 @@
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
       )
       / descheduler:workload_replicas
-
-  # --- resource aggregates and ratios (rolled up over the anchor) ---
 
   - record: descheduler:workload_cpu_request_cores
     expr: |
@@ -167,14 +146,14 @@
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
       )
 
-  # ratios -- the `> 0` guard: zero/absent denominator yields no series (handled in penalties)
+  # The `> 0` guard drops zero/absent denominators so the ratio yields no series (not +Inf/NaN).
   - record: descheduler:workload_cpu_usage_ratio
     expr: descheduler:workload_cpu_usage_cores / (descheduler:workload_cpu_request_cores > 0)
 
   - record: descheduler:workload_memory_request_usage_ratio
     expr: descheduler:workload_memory_usage_bytes / (descheduler:workload_memory_request_bytes > 0)
 
-  # MAX over pods: OOM proximity is per-pod physics
+  # MAX over pods: OOM proximity is per-pod physics.
   - record: descheduler:workload_memory_limit_usage_ratio
     expr: |
       max by (namespace, workload_kind, workload_name) (
@@ -189,9 +168,7 @@
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
       )
 
-  # --- resource penalties ---
-  # "no request" = the workload has NO aggregate series at all (detected via unless -- absent series != 0)
-
+  # "no request" = workload has no aggregate request series at all (detected via `unless`).
   - record: descheduler:workload_cpu_penalty
     expr: |
       clamp_max(
@@ -203,9 +180,7 @@
           ),
         25)
 
-  # "no request" and the usage rungs are additive and independent: each term falls
-  # back to 0 via `or replicas*0`, so a workload with a limit but no request still
-  # accrues the limit-proximity penalty instead of only the flat no-request 10.
+  # Terms are additive; each falls back to 0 via `or replicas*0`, so a limit-only workload still scores the limit rungs.
   - record: descheduler:workload_memory_penalty
     expr: |
       clamp_max(
@@ -219,9 +194,6 @@
             or descheduler:workload_replicas * 0),
         35)
 
-  # --- node/eviction penalties ---
-
-  # node penalty: sum(node weight of each pod's node)/replicas; node weight = max of conditions; max 50
   - record: descheduler:workload_node_penalty
     expr: |
       sum by (namespace, workload_kind, workload_name) (
@@ -237,7 +209,6 @@
       )
       / descheduler:workload_replicas
 
-  # eviction penalty: binary, native from the workload-scoped metric; max 25
   - record: descheduler:workload_eviction_penalty
     expr: |
       max by (namespace, workload_kind, workload_name) (
@@ -246,9 +217,6 @@
         or (increase(descheduler_pod_evictions_total{job="descheduler", result="blocked"}[15m]) > bool 0) * 15
       )
 
-  # --- final score ---
-  # Each term defaults to 0 via `or replicas*0` -- an absent penalty series must not drop the workload.
-  # Intersection with the anchor drops eviction-penalty series of deleted workloads (they live 15m after deletion).
   - record: descheduler:workload_happiness_score
     expr: |
       clamp_min(clamp_max(
@@ -263,7 +231,6 @@
         - (descheduler:workload_eviction_penalty  or descheduler:workload_replicas * 0)
       , 100), 0)
 
-  # buckets -- filter form (series exists only for workloads in the category; value = score); count via count()
   - record: descheduler:workload_happiness_bucket
     labels: { bucket: happy }
     expr: descheduler:workload_happiness_score >= 80
@@ -276,14 +243,12 @@
 
 - name: descheduler.drs-lens.balance
   rules:
-  # --- per-node ratios ---
   - record: descheduler:node_pod_allocation_ratio
     expr: |
       count by (node) (kube_pod_info{job="kube-state-metrics"})
         / on (node) group_left ()
         max by (node) (kube_node_status_allocatable{job="kube-state-metrics", resource="pods", unit="integer"})
 
-  # by(node) aggregation is mandatory for node-exporter metrics: the instance label survives relabeling
   - record: descheduler:node_cpu_usage_ratio
     expr: 1 - avg by (node) (rate(node_cpu_seconds_total{job="node-exporter", mode="idle"}[5m]))
 
@@ -306,8 +271,6 @@
         / on (node) group_left ()
         max by (node) (kube_node_status_allocatable{job="kube-state-metrics", resource="memory", unit="byte"})
 
-  # --- cluster aggregates ---
-  # cluster imbalance: spread between the most and least loaded node, per resource
   - record: descheduler:cluster_imbalance_score
     labels: { resource: pods }
     expr: max(descheduler:node_pod_allocation_ratio) - min(descheduler:node_pod_allocation_ratio)
@@ -318,7 +281,6 @@
     labels: { resource: memory }
     expr: max(descheduler:node_memory_usage_ratio) - min(descheduler:node_memory_usage_ratio)
 
-  # dispersion complement to the max-min spread
   - record: descheduler:cluster_imbalance_stddev
     labels: { resource: pods }
     expr: stddev(descheduler:node_pod_allocation_ratio)
