@@ -10,9 +10,9 @@ title: "Модуль user-authz: FAQ"
 
 ## Как ограничить права пользователю конкретными пространствами имён?
 
-Чтобы ограничить права пользователя конкретными пространствами имён в экспериментальной ролевой модели, используйте в `RoleBinding` [namespace-роль](./#namespace-роли) с соответствующим уровнем доступа. [Пример...](usage.html#пример-назначения-административных-прав-пользователю-в-рамках-пространства-имён).
+Чтобы ограничить права пользователя конкретными пространствами имён в основной ролевой модели, используйте в `RoleBinding` [namespace-роль](./#namespace-роли) с соответствующим уровнем доступа. [Пример...](usage.html#пример-назначения-административных-прав-пользователю-в-рамках-пространства-имён).
 
-В текущей ролевой модели используйте параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [ClusterAuthorizationRule](cr.html#clusterauthorizationrule).
+В устаревшей ролевой модели используйте параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [ClusterAuthorizationRule](cr.html#clusterauthorizationrule).
 
 ## Что, если два ClusterAuthorizationRules подходят для одного пользователя?
 
@@ -64,9 +64,115 @@ spec:
 Если есть правило без опции `namespaceSelector` и без опции `limitNamespaces` (устаревшая), это значит, что доступ разрешён во все пространства имён, кроме системных, что повлияет на результат вычисления доступных пространств имён для пользователя.
 {% endalert %}
 
+## Можно ли использовать устаревшую и основную ролевые модели одновременно?
+
+Да. Обе модели в итоге сводятся к стандартному механизму RBAC Kubernetes, а RBAC — разрешающая модель: права из всех источников **суммируются**. Если действие разрешено хотя бы одним источником — `ClusterAuthorizationRule`, `AuthorizationRule`, `RoleBinding` на роль основной модели или `ProjectRoleBinding`, — оно будет разрешено. Ничего специально «переключать» не нужно: можно оставить существующие `ClusterAuthorizationRule` и постепенно добавлять привязки ролей основной модели.
+
+Единственное исключение — режим мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)). Если у пользователя есть `ClusterAuthorizationRule` с ограничением пространств имён (`limitNamespaces` или `namespaceSelector`), это ограничение работает как **жёсткая граница**: запросы в пространства имён вне списка отклоняются, даже если там у пользователя есть `RoleBinding`. Подробнее — [в описании модуля](./#rolebinding-car). Если пользователю нужен комбинированный доступ, используйте `AuthorizationRule` вместо `ClusterAuthorizationRule` или не задавайте ограничение пространств имён в CAR.
+
+## Как получить аналог ролей ClusterAdmin и SuperAdmin в основной модели?
+
+Роли «одной сущностью», как `ClusterAdmin` и `SuperAdmin` устаревшей модели, в основной модели нет — она сознательно разделяет управление платформой (системные роли) и доступ к приложениям (namespace- и проектные роли). Эквивалент собирается из **двух привязок**: `ClusterRoleBinding` на системную роль и [ClusterProjectRoleBinding](../multitenancy-manager/cr.html#clusterprojectrolebinding) на проектную роль (она действует во всех проектах, включая создаваемые позже).
+
+Приблизительное соответствие уровней:
+
+| Роль устаревшей модели | Эквивалент в основной модели |
+|---------------------|----------------------------------------|
+| `User` | `d8:namespace:viewer` (через `RoleBinding` или `ProjectRoleBinding`) |
+| `PrivilegedUser` | `d8:namespace:user` |
+| `Editor` | `d8:namespace:manager` |
+| `Admin` | `d8:namespace:admin` |
+| `ClusterEditor` | `d8:system:manager` (примерно; область — платформа и системные пространства имён) |
+| `ClusterAdmin` | `d8:system:manager` + `ClusterProjectRoleBinding` на `d8:project:admin` |
+| `SuperAdmin` | `d8:system:superadmin` + `ClusterProjectRoleBinding` на `d8:project:superadmin` |
+
+Пример для `ClusterAdmin` (группа `k8s-admins`):
+
+```yaml
+# Платформа: конфигурация модулей DKP, cluster-wide-ресурсы, системные пространства имён.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-admins-platform
+subjects:
+  - kind: Group
+    name: k8s-admins
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:system:manager
+  apiGroup: rbac.authorization.k8s.io
+---
+# Приложения: администратор во всех пространствах имён всех проектов (включая будущие).
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
+metadata:
+  name: k8s-admins-projects
+spec:
+  subjects:
+    - kind: Group
+      name: k8s-admins
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:admin
+```
+
+Для `SuperAdmin` замените роли на `d8:system:superadmin` и `d8:project:superadmin`.
+
+Особенности:
+
+- При включённом [автоматическом создании проектов](../multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) каждое пользовательское пространство имён является проектом, поэтому пара «системная роль + `ClusterProjectRoleBinding`» покрывает и платформу, и все пользовательские пространства имён. Не покрывается только пространство имён `default` — оно не относится ни к проектам, ни к системным.
+- Создать собственную роль «со всеми правами» (`apiGroups: ["*"], resources: ["*"], verbs: ["*"]`) не получится: такая роль даёт в том числе права на управление проектами и будет отклонена [встроенной защитой](./#встроенные-защиты-ролевой-модели). Если нужен именно неограниченный доступ ко всему API (вне ролевой модели платформы), используйте `ClusterRoleBinding` на встроенную роль Kubernetes `cluster-admin` — назначить её может только тот, у кого такие права уже есть.
+
+## Как дать пользователю доступ только к ресурсам одного модуля?
+
+Типовой запрос: пользователь в пространстве имён должен работать только с ресурсами одного модуля (например, только с виртуальными машинами), не видя остальных ресурсов (`Pod`, `Deployment` и т. п.).
+
+Каждый модуль DKP поставляет отдельные capabilities на свои ресурсы, поэтому такой доступ выдаётся без написания RBAC-правил. Соберите [собственную роль](#создание-собственной-namespace--или-проектной-роли), агрегирующую только capabilities нужного модуля (селектор по лейблу `module`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace:virtualization-only
+  labels:
+    rbac.deckhouse.io/kind: custom-role
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/delegatable: "true"   # Разрешает использовать роль в RoleBinding внутри проектов.
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/kind: capability
+        rbac.deckhouse.io/scope: namespace
+        module: virtualization
+rules: []
+```
+
+Выдайте роль через `RoleBinding` в нужном пространстве имён или через [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) на весь проект. Пользователь получит доступ только к ресурсам модуля — стандартные ресурсы Kubernetes ему видны не будут.
+
+Вне проектов то же самое можно сделать ещё проще — привязать capability модуля напрямую, без создания роли:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: virtualization-view
+  namespace: my-namespace
+subjects:
+  - kind: User
+    name: user@example.com
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:namespace-capability:virtualization:view
+  apiGroup: rbac.authorization.k8s.io
+```
+
+Обратите внимание: внутри пространств имён **проектов** обычный `RoleBinding` может ссылаться только на роли, [доступные проекту](../multitenancy-manager/usage.html#какие-роли-доступны-в-rolebinding-внутри-проекта), — capabilities туда по умолчанию не входят, поэтому для проектов используйте вариант с собственной ролью (лейбл `rbac.deckhouse.io/delegatable: "true"` в примере выше как раз делает её доступной) либо `ProjectRoleBinding`.
+
 ## Как расширить роли или создать новую?
 
-[Экспериментальная ролевая модель](./#экспериментальная-ролевая-модель) построена на принципе агрегации, она собирает более мелкие роли в более обширные,
+[Основная ролевая модель](./#основная-ролевая-модель) построена на принципе агрегации, она собирает более мелкие роли в более обширные,
 тем самым предоставляя лёгкие способы расширения модели собственными ролями.
 
 ### Создание новой роли подсистемы
@@ -302,3 +408,112 @@ rules:
  ```
 
 Эта capability дополнит роль `d8:namespace:user`.
+
+### Создание собственной namespace- или проектной роли
+
+Иногда встроенная лестница уровней не подходит: например, нужна роль «разработчик» — просмотр всего пространства имён плюс чтение логов, но без права менять квоты или RBAC. Такая роль собирается из готовых capabilities, без написания RBAC-правил вручную.
+
+Правила для собственных ролей:
+
+- имя должно начинаться с `d8:custom:` (например, `d8:custom:namespace:developer`);
+- роль должна иметь лейбл `rbac.deckhouse.io/kind: custom-role`;
+- роль **не может содержать собственных правил** (`rules`) — только агрегировать capabilities через `aggregationRule`. Права описываются в отдельных capabilities — так состав роли всегда прозрачен;
+- нельзя в одной роли агрегировать capabilities пользовательских областей (`namespace`, `project`) вместе с административными (`system`, подсистемы) — такая роль будет отклонена.
+
+Пример: роль, включающая всё, что умеет `d8:namespace:viewer`, плюс одну конкретную capability (подключение к подам), выбранную адресно по её уникальному лейблу `rbac.deckhouse.io/capability`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace:developer
+  labels:
+    rbac.deckhouse.io/kind: custom-role
+    rbac.deckhouse.io/scope: namespace
+  annotations:
+    custom.meta.deckhouse.io/title: "Разработчик"
+    custom.meta.deckhouse.io/description: "Просмотр ресурсов и подключение к подам, без управления квотами и RBAC"
+aggregationRule:
+  clusterRoleSelectors:
+    # Всё, что входит в уровень viewer namespace-линейки.
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    # Плюс одна конкретная capability, выбранная по её уникальному имени.
+    - matchLabels:
+        rbac.deckhouse.io/capability: "namespace-capability.kubernetes.access_terminal"
+rules: []
+```
+
+Если готовой capability с нужными правами нет, создайте собственную (`custom-capability` может содержать правила) и добавьте в `aggregationRule` роли селектор по её лейблу `rbac.deckhouse.io/capability` (в примере ниже — `matchLabels: {rbac.deckhouse.io/capability: "custom.logs-reader"}`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace-capability:logs-reader
+  labels:
+    rbac.deckhouse.io/kind: custom-capability
+    rbac.deckhouse.io/capability: "custom.logs-reader"
+rules:
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+```
+
+Список всех доступных capabilities и их уникальных имён:
+
+```shell
+d8 k get clusterroles -l rbac.deckhouse.io/kind=capability \
+  -o custom-columns='NAME:.metadata.name,CAPABILITY:.metadata.labels.rbac\.deckhouse\.io/capability'
+```
+
+Готовую роль назначают так же, как встроенную: через `RoleBinding` в пространстве имён или через [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) на весь проект (для проектных ролей используйте `rbac.deckhouse.io/scope: project` и агрегируйте `aggregate-to-project-as`). Назначить её через `ClusterRoleBinding` нельзя — как и встроенные роли этих областей.
+
+> Собрать такую роль можно и без YAML — мастером выдачи доступа в веб-интерфейсе Deckhouse Console: он показывает доступные capabilities, собирает из них роль и сразу создаёт нужную привязку.
+
+## Как переименовать встроенную роль?
+
+Изменять права встроенных ролей нельзя, но можно изменить их отображаемое название и описание — например, чтобы в интерфейсе они назывались в принятых в компании терминах. Для этого добавьте на роль аннотации `custom.meta.deckhouse.io/title` и `custom.meta.deckhouse.io/description`:
+
+```shell
+d8 k annotate clusterrole d8:namespace:admin \
+  custom.meta.deckhouse.io/title='Администратор команды' \
+  custom.meta.deckhouse.io/description='Управление ресурсами и доступом в пространстве имён команды'
+```
+
+Это единственное изменение, которое разрешено вносить в объекты с префиксом `d8:` (кроме `d8:custom:*`): попытка изменить правила, агрегацию или лейблы встроенной роли будет отклонена.
+
+## Как узнать, у кого есть доступ к ресурсу?
+
+В Enterprise Edition при включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен обратный запрос к авторизации — ресурс `WhoCan`. Он отвечает на вопрос «кто может выполнить действие X над ресурсом Y?» и возвращает список пользователей, групп и ServiceAccount'ов:
+
+```shell
+d8 k create -o yaml -f - <<EOF
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: WhoCan
+metadata:
+  name: who-can-create-networkpolicies
+spec:
+  resourceAttributes:
+    namespace: my-namespace
+    verb: create
+    group: networking.k8s.io
+    resource: networkpolicies
+EOF
+```
+
+Ответ возвращается в поле `status` (`users`, `groups`, `serviceAccounts`) сразу в выводе команды; объект нигде не сохраняется.
+
+Право создавать `WhoCan`-запросы даёт кластерная роль `d8:user-authz:who-can-checker`. Она намеренно никому не выдана по умолчанию: результат запроса раскрывает субъектов доступа во всех пространствах имён, поэтому выдавайте её только доверенным администраторам через `ClusterRoleBinding`.
+
+## Как пользователю увидеть список доступных ему пространств имён?
+
+В Enterprise Edition при включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) список пространств имён фильтруется автоматически: команда `d8 k get namespaces` возвращает пользователю только те пространства имён, к которым у него есть доступ — по любому из механизмов (привязки ролей, `ProjectRoleBinding`/`ClusterProjectRoleBinding`, `ClusterAuthorizationRule`/`AuthorizationRule`). Пользователь не видит чужих пространств имён и не может по списку узнать об их существовании.
+
+Тот же список отдаёт read-only ресурс `accessiblenamespaces` — его может запросить любой аутентифицированный пользователь **для самого себя**:
+
+```shell
+d8 k get accessiblenamespaces
+```
+
+Это удобно для скриптов и интерфейсов: не нужно перебирать пространства имён и проверять доступ к каждому.
