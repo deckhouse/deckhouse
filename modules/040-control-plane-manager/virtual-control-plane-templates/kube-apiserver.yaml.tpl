@@ -118,6 +118,7 @@ spec:
         - --mode=grpc
         - --server-port=0
         - --agent-port=8132
+        - --server-count=${VCP_KONNECTIVITY_SERVER_COUNT}
         - --health-port=8134
         - --admin-port=8133
         - --uds-name=/etc/kubernetes/konnectivity-server/konnectivity-server.socket

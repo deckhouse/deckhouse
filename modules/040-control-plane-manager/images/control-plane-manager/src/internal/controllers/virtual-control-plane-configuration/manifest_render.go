@@ -135,6 +135,7 @@ func buildManifestReplacer(vcp *controlplanev1alpha1.VirtualControlPlane, versio
 		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", namespace,
+		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
 		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
 		"${SERVICE_SUBNET_CIDR}", constants.DefaultTenantServiceSubnetCIDR,
 		"${VCP_API_HOST}", apiExposeHost(vcp),
