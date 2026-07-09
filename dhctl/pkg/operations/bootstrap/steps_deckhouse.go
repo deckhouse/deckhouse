@@ -87,7 +87,7 @@ func InstallDeckhouse(
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
-		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
+		err = registry_config.WaitForRegistryReady(ctx, kubeCl, config.Registry)
 		if err != nil {
 			return fmt.Errorf("registry initialization: %v", err)
 		}

@@ -38,7 +38,7 @@ const (
 	conditionTypeReady = "Ready"
 )
 
-// WaitForRegistryInitialization waits for the registry to become fully initialized and ready.
+// WaitForRegistryReady waits for the registry to become ready.
 // Parameters:
 //   - ctx: context for cancellation and timeouts
 //   - kubeClient: Kubernetes client for API operations
@@ -46,15 +46,15 @@ const (
 //
 // Returns:
 //   - err: error from the operation
-func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
+func WaitForRegistryReady(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	return retry.
 		NewLoop("Waiting for Registry to become Ready", 100, 20*time.Second).
 		RunContext(ctx, func() error {
-			return checkRegistryInitialization(ctx, kubeClient, config)
+			return isRegistryReady(ctx, kubeClient, config)
 		})
 }
 
-// checkRegistryInitialization checks whether the registry is ready, unless legacy mode is enabled.
+// isRegistryReady checks whether the registry is ready, unless legacy mode is enabled.
 // Parameters:
 //   - ctx: context for cancellation and timeouts
 //   - kubeClient: Kubernetes client for API operations
@@ -62,7 +62,7 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 //
 // Returns:
 //   - err: error from the operation
-func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
+func isRegistryReady(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	if config.LegacyMode {
 		return nil
 	}
@@ -75,17 +75,17 @@ func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClie
 		return ErrIsNotReady
 	}
 
-	if !isConditionsReady(conditions) {
-		if msg := formatNotReadyMessage(conditions); msg != "" {
-			err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
-			logger.DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
-			return err
-		}
-
-		return ErrIsNotReady
+	if isConditionsReady(conditions) {
+		return nil
 	}
 
-	return nil
+	if msg := formatNotReadyMessage(conditions); msg != "" {
+		err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
+		logger.DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
+		return err
+	}
+
+	return ErrIsNotReady
 }
 
 // formatNotReadyMessage builds a human-readable message listing all non-True
@@ -157,23 +157,19 @@ func getConditions(ctx context.Context, kubeClient client.KubeClient) ([]metav1.
 		}
 		return nil, fmt.Errorf(
 			"get secret '%s/%s': %w",
-			secretsNamespace,
-			stateSecretName,
-			err,
+			secretsNamespace, stateSecretName, err,
 		)
 	}
 
-	conditionRaw, exists := secret.Data["conditions"]
+	rawConditions, exists := secret.Data["conditions"]
 	if !exists {
 		return conditions, nil
 	}
 
-	if err := yaml.Unmarshal(conditionRaw, &conditions); err != nil {
+	if err := yaml.Unmarshal(rawConditions, &conditions); err != nil {
 		return nil, fmt.Errorf(
 			"unmarshal secret '%s/%s' conditions: %w",
-			secretsNamespace,
-			stateSecretName,
-			err,
+			secretsNamespace, stateSecretName, err,
 		)
 	}
 

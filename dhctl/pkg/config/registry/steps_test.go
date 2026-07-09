@@ -94,7 +94,7 @@ func createOrUpdateSecret(ctx context.Context, kubeClient client.KubeClient, sec
 	return err
 }
 
-func TestCheckRegistryInitialization(t *testing.T) {
+func TestIsRegistryReady(t *testing.T) {
 	t.Run("legacy - returns ready regardless of state secret", func(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
@@ -102,19 +102,22 @@ func TestCheckRegistryInitialization(t *testing.T) {
 			WithLegacyMode(),
 		)
 
-		// Legacy mode skips readiness checks entirely.
-		err := checkRegistryInitialization(ctx, kubeClient, config)
+		// Legacy mode skips readiness checks entirely, so the registry is
+		// considered ready no matter what the state secret contains.
+		err := isRegistryReady(ctx, kubeClient, config)
 		require.NoError(t, err)
-	})
 
-	t.Run("not legacy - not ready when state secret is missing", func(t *testing.T) {
-		ctx := t.Context()
-		kubeClient := client.NewFakeKubernetesClient()
-		config := ConfigBuilder()
+		err = createStatusSecret(ctx, kubeClient, false)
+		require.NoError(t, err)
 
-		// No state secret means conditions are unknown, so the registry is not ready.
-		err := checkRegistryInitialization(ctx, kubeClient, config)
-		require.EqualError(t, err, ErrIsNotReady.Error())
+		err = isRegistryReady(ctx, kubeClient, config)
+		require.NoError(t, err)
+
+		err = createStatusSecret(ctx, kubeClient, true)
+		require.NoError(t, err)
+
+		err = isRegistryReady(ctx, kubeClient, config)
+		require.NoError(t, err)
 	})
 
 	t.Run("not legacy - readiness flow", func(t *testing.T) {
@@ -123,21 +126,21 @@ func TestCheckRegistryInitialization(t *testing.T) {
 		config := ConfigBuilder()
 
 		// First run: not ready when module status is unknown
-		err := checkRegistryInitialization(ctx, kubeClient, config)
+		err := isRegistryReady(ctx, kubeClient, config)
 		require.EqualError(t, err, ErrIsNotReady.Error())
 
 		// Second run: not ready with unready status
 		err = createStatusSecret(ctx, kubeClient, false)
 		require.NoError(t, err)
 
-		err = checkRegistryInitialization(ctx, kubeClient, config)
+		err = isRegistryReady(ctx, kubeClient, config)
 		require.EqualError(t, err, ErrIsNotReady.Error())
 
 		// Third run: ready when status becomes ready
 		err = createStatusSecret(ctx, kubeClient, true)
 		require.NoError(t, err)
 
-		err = checkRegistryInitialization(ctx, kubeClient, config)
+		err = isRegistryReady(ctx, kubeClient, config)
 		require.NoError(t, err)
 	})
 }
