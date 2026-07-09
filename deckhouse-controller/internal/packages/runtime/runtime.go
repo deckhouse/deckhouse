@@ -753,7 +753,8 @@ const applicationMaintenanceMetric = "deckhouse_application_maintenance"
 // as the metric group so it can be expired independently of other applications.
 func (r *Runtime) setMaintenanceMetric(name string, state nelm.MaintenanceState) {
 	if state != nelm.NoResourceReconciliation {
-		r.metricStorage.Grouped().ExpireGroupMetrics(name)
+		// Expire only this feature's gauge in the group, not every collector's.
+		r.metricStorage.Grouped().ExpireGroupMetricByName(name, applicationMaintenanceMetric)
 		return
 	}
 
