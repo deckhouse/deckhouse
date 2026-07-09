@@ -1104,10 +1104,7 @@ autoscaling
 autounattend
 autoverification
 AvailableClusterResource
-<<<<<<< HEAD
 AVD
-=======
->>>>>>> e42719d07d (Fix spellcheck dict conflict)
 Avi
 aws
 AWS
@@ -2713,10 +2710,7 @@ worktree
 worseness
 WSL
 www
-<<<<<<< HEAD
 внешниx
-=======
->>>>>>> e42719d07d (Fix spellcheck dict conflict)
 Xorg
 xz
 Yadro
