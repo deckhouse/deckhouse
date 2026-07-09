@@ -21,11 +21,11 @@ import (
 )
 
 type initSecretSnap struct {
-	Applied bool
-	Config  []byte
+	Applied   bool
+	RawConfig []byte
 }
 
 type Inputs struct {
-	Applied bool
-	Config  init_secret.Config
+	Unapplied bool
+	Config    init_secret.Config
 }

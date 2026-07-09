@@ -267,7 +267,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	values.State.CheckerParams = checker.GetParams(ctx, input)
 
 	// Process the state with init secret if state not exist
-	if noState && !inputs.InitSecret.Applied {
+	if noState && inputs.InitSecret.Unapplied {
 		input.Logger.Info("initializing state from init configuration")
 
 		err = values.State.initialize(input.Logger, inputs)

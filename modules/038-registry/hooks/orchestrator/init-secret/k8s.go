@@ -60,8 +60,8 @@ func KubernetsConfig(snapName string) go_hook.KubernetesConfig {
 
 			_, applied := secret.Annotations[appliedAnnotation]
 			ret := initSecretSnap{
-				Applied: applied,
-				Config:  secret.Data["config"],
+				Applied:   applied,
+				RawConfig: secret.Data["config"],
 			}
 			return ret, nil
 		},
@@ -86,7 +86,7 @@ func InputsFromSnapshot(input *go_hook.HookInput, snapName string) (Inputs, erro
 
 	// Secret exists and needs to be processed
 	var config init_secret.Config
-	if err = yaml.Unmarshal(initSecret.Config, &config); err != nil {
+	if err = yaml.Unmarshal(initSecret.RawConfig, &config); err != nil {
 		return Inputs{}, fmt.Errorf("cannot unmarshal init secret YAML from snapshot %s: %w", snapName, err)
 	}
 
@@ -95,13 +95,13 @@ func InputsFromSnapshot(input *go_hook.HookInput, snapName string) (Inputs, erro
 	}
 
 	return Inputs{
-		Applied: false,
-		Config:  config,
+		Unapplied: true,
+		Config:    config,
 	}, nil
 }
 
 func SetApplied(input *go_hook.HookInput, inputs Inputs) {
-	if !inputs.Applied {
+	if inputs.Unapplied {
 		input.Logger.Debug("Marking init secret as applied by setting annotation")
 
 		patch := map[string]any{
