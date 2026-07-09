@@ -78,6 +78,7 @@ func NewService(client *client.Client, logger *log.Logger) *Service {
 	}
 }
 
+// HasCRDs scans the package's crds directory and returns nil if any CRDs are found.
 func (s *Service) HasCRDs(path string) error {
 	crds, err := getCRDsFromPath(path, crdFilters)
 	if err != nil {

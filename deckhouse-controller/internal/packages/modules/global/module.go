@@ -49,7 +49,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -188,12 +187,6 @@ func (m *Module) GetConstraints() schedule.Constraints {
 // GetPath returns path to the package dir
 func (m *Module) GetPath() string {
 	return m.path
-}
-
-// GetEnabledScriptDescriptor always returns nil: the global module is
-// unconditionally enabled and has no enabled script to evaluate.
-func (m *Module) GetEnabledScriptDescriptor() *script.Descriptor {
-	return nil
 }
 
 // GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
