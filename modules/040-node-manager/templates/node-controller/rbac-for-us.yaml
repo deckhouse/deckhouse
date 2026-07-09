@@ -237,11 +237,32 @@ rules:
   - get
   - list
   - watch
+# Services - read + watch for the bashible-apiserver-context cluster DNS discovery
+# (globals.go clusterDNSAddress) and to keep the bashible-context Service informer synced.
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
 # Endpoints - read for master node count validation
 - apiGroups:
   - ""
   resources:
   - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+# EndpointSlices - read the default/kubernetes slice for clusterMasterEndpoints
+# (bashible-apiserver-context). Missing read silently drops the apiserver endpoint
+# and diverges the bashible bootstrap checksum -> node re-bootstrap.
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
   verbs:
   - get
   - list
