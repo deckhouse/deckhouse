@@ -67,7 +67,7 @@ The same mechanism generalized to arbitrary namespaced resources, gated by two
 request headers (`X-Deckhouse-Scope`, `X-Deckhouse-Project`) rather than being
 unconditional: absent header, absent bypass, byte-for-byte vanilla behavior.
 `scope=accessible` reproduces the namespaces mechanism's RBAC-floor
-semantics for any resource; `scope=system|user|project:<name>` additionally
+semantics for any resource; `scope=system|projects|project:<name>` additionally
 classify by the `projects.deckhouse.io/project` namespace label
 (multitenancy-manager's Project CRD), resolved via a direct loopback
 `Namespace LIST` rather than a new permission-browser endpoint.

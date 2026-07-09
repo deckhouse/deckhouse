@@ -1336,7 +1336,7 @@ index 6c6c94ba718..12b16e8f598 100644
  			decisionAnnotationKey, decisionForbid,
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go
 new file mode 100644
-index 00000000000..3ecb580e67e
+index 00000000000..6b834bf55d5
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go
 @@ -0,0 +1,256 @@
@@ -1467,7 +1467,7 @@ index 00000000000..3ecb580e67e
 +			name:       "watch registered resource with header bypasses",
 +			method:     http.MethodGet,
 +			path:       "/api/v1/widgets?watch=true",
-+			header:     "user",
++			header:     "projects",
 +			wantBypass: true,
 +		},
 +		{
@@ -1696,10 +1696,10 @@ index 722a312270a..996add5ae90 100644
  		label = options.LabelSelector
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go
 new file mode 100644
-index 00000000000..b35742e835f
+index 00000000000..3d544f83c66
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go
-@@ -0,0 +1,263 @@
+@@ -0,0 +1,253 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1752,10 +1752,14 @@ index 00000000000..b35742e835f
 +	// call the client would otherwise have completed.
 +	resolveLoadTimeout = defaultHTTPTimeout + 5*time.Second
 +
-+	// janitorInterval is how often expired entries are swept to reclaim memory
-+	// for identities that never recur. Correctness does not depend on it
-+	// (reads evict lazily); it only bounds memory.
-+	janitorInterval = 60 * time.Second
++	// sweepInterval is how often, at most, expired entries are swept to
++	// reclaim memory for identities that never recur. The sweep is amortized
++	// into set() rather than run on a background goroutine: correctness does
++	// not depend on it (reads evict lazily), it only bounds memory, and a
++	// process-lifetime goroutine would leak past apiserver shutdown (there is
++	// no teardown hook plumbed to the shared cache -- integration tests'
++	// goroutine-leak checker rightly flags that).
++	sweepInterval = 60 * time.Second
 +)
 +
 +// resolveCache is a small TTL cache with singleflight de-duplication, shared by
@@ -1771,11 +1775,11 @@ index 00000000000..b35742e835f
 +	ttl   time.Duration
 +	group singleflight.Group
 +
-+	mu      sync.Mutex
-+	entries map[string]resolveCacheEntry
++	mu        sync.Mutex
++	entries   map[string]resolveCacheEntry
++	nextSweep time.Time
 +
-+	now  func() time.Time // overridable in tests
-+	stop chan struct{}
++	now func() time.Time // overridable in tests
 +}
 +
 +type resolveCacheEntry struct {
@@ -1794,34 +1798,15 @@ index 00000000000..b35742e835f
 +		ttl:     ttl,
 +		entries: make(map[string]resolveCacheEntry),
 +		now:     time.Now,
-+		stop:    make(chan struct{}),
 +	}
 +}
 +
-+// startJanitor launches the periodic sweep. Production calls this once on the
-+// process-lifetime shared cache; tests skip it (lazy eviction keeps them
-+// correct without a background goroutine).
-+func (c *resolveCache) startJanitor() {
-+	go func() {
-+		t := time.NewTicker(janitorInterval)
-+		defer t.Stop()
-+		for {
-+			select {
-+			case <-c.stop:
-+				return
-+			case <-t.C:
-+				c.sweep()
-+			}
-+		}
-+	}()
-+}
-+
-+func (c *resolveCache) close() { close(c.stop) }
-+
-+func (c *resolveCache) sweep() {
++// sweepLocked drops every expired entry. Callers must hold c.mu. It is invoked
++// opportunistically from set() at most once per sweepInterval, which keeps the
++// map bounded (stale identities are reclaimed within a sweep period of the
++// next write) at O(len(entries)) amortized over at least a minute of writes.
++func (c *resolveCache) sweepLocked() {
 +	now := c.now()
-+	c.mu.Lock()
-+	defer c.mu.Unlock()
 +	for k, e := range c.entries {
 +		if now.After(e.expiry) {
 +			delete(c.entries, k)
@@ -1846,7 +1831,12 @@ index 00000000000..b35742e835f
 +func (c *resolveCache) set(key string, s map[string]struct{}) {
 +	c.mu.Lock()
 +	defer c.mu.Unlock()
-+	c.entries[key] = resolveCacheEntry{set: s, expiry: c.now().Add(c.ttl)}
++	now := c.now()
++	if now.After(c.nextSweep) {
++		c.sweepLocked()
++		c.nextSweep = now.Add(sweepInterval)
++	}
++	c.entries[key] = resolveCacheEntry{set: s, expiry: now.Add(c.ttl)}
 +}
 +
 +// getOrLoad returns the cached set for key or runs load exactly once across all
@@ -1965,7 +1955,7 @@ index 00000000000..b35742e835f
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go
 new file mode 100644
-index 00000000000..f710b37e117
+index 00000000000..325693a7754
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go
 @@ -0,0 +1,239 @@
@@ -2193,11 +2183,11 @@ index 00000000000..f710b37e117
 +	c := newResolveCache(time.Minute)
 +	cached := &cachingClassificationResolver{inner: inner, cache: c}
 +
-+	if _, err := cached.Resolve(context.Background(), KindUser, ""); err == nil {
++	if _, err := cached.Resolve(context.Background(), KindProjects, ""); err == nil {
 +		t.Fatal("expected error on first call")
 +	}
 +	fail = false
-+	got, err := cached.Resolve(context.Background(), KindUser, "")
++	got, err := cached.Resolve(context.Background(), KindProjects, "")
 +	if err != nil {
 +		t.Fatalf("second call: %v", err)
 +	}
@@ -2210,7 +2200,7 @@ index 00000000000..f710b37e117
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go
 new file mode 100644
-index 00000000000..9f423e42d64
+index 00000000000..7dffb1f304b
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go
 @@ -0,0 +1,105 @@
@@ -2248,7 +2238,7 @@ index 00000000000..9f423e42d64
 +// project named by its value.
 +const ProjectLabel = "projects.deckhouse.io/project"
 +
-+// ClassificationResolver resolves the "system" / "user" / "project:<name>"
++// ClassificationResolver resolves the "system" / "projects" / "project:<name>"
 +// scope kinds to a set of namespace names. It answers a question that is
 +// identity-independent (which namespaces exist and how are they labeled),
 +// not "can this particular user see them" -- that narrowing is applied
@@ -2263,7 +2253,7 @@ index 00000000000..9f423e42d64
 +	Resolve(ctx context.Context, kind Kind, project string) (map[string]struct{}, error)
 +}
 +
-+// LoopbackClassificationResolver resolves system/user/project classification
++// LoopbackClassificationResolver resolves system/projects/project classification
 +// by listing Namespace objects directly through kube-apiserver's loopback
 +// client with a label selector on ProjectLabel. This deliberately bypasses
 +// permission-browser-apiserver: multitenancy-manager (the controller that
@@ -2296,7 +2286,7 @@ index 00000000000..9f423e42d64
 +	case KindSystem:
 +		// "!key" -- namespace does not carry ProjectLabel at all.
 +		labelSelector = "!" + ProjectLabel
-+	case KindUser:
++	case KindProjects:
 +		// bare "key" -- namespace carries ProjectLabel with any value.
 +		labelSelector = ProjectLabel
 +	case KindProject:
@@ -2321,7 +2311,7 @@ index 00000000000..9f423e42d64
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go
 new file mode 100644
-index 00000000000..3ec97db72b9
+index 00000000000..47d82092629
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go
 @@ -0,0 +1,122 @@
@@ -2378,8 +2368,8 @@ index 00000000000..3ec97db72b9
 +			wantLabelSelector: "!" + scopefilter.ProjectLabel,
 +		},
 +		{
-+			name:              "user is the bare-existence selector",
-+			kind:              scopefilter.KindUser,
++			name:              "projects is the bare-existence selector",
++			kind:              scopefilter.KindProjects,
 +			wantLabelSelector: scopefilter.ProjectLabel,
 +		},
 +		{
@@ -3225,7 +3215,7 @@ index 00000000000..246c5339c72
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go
 new file mode 100644
-index 00000000000..c7a64e37d72
+index 00000000000..3836105c1a8
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go
 @@ -0,0 +1,40 @@
@@ -3246,7 +3236,7 @@ index 00000000000..c7a64e37d72
 +*/
 +
 +// Package scopefilter implements Deckhouse's cross-namespace scope-filtering
-+// mechanism: `kubectl get <resource> -A --scope=<accessible|user|system|project:<name>>`
++// mechanism: `kubectl get <resource> -A --scope=<accessible|projects|system|project:<name>>`
 +// returns the subset of a namespaced resource the caller can see instead of a
 +// flat 403, without changing default `-A` semantics for anyone who does not
 +// ask for it.
@@ -4312,7 +4302,7 @@ index 00000000000..65bbc78eec3
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
 new file mode 100644
-index 00000000000..f0734026926
+index 00000000000..31263c46ddc
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
 @@ -0,0 +1,123 @@
@@ -4356,7 +4346,7 @@ index 00000000000..f0734026926
 +
 +const (
 +	KindAccessible Kind = "accessible"
-+	KindUser       Kind = "user"
++	KindProjects   Kind = "projects"
 +	KindSystem     Kind = "system"
 +	KindProject    Kind = "project"
 +)
@@ -4385,7 +4375,7 @@ index 00000000000..f0734026926
 +	project := h.Get(HeaderProject)
 +
 +	switch kind {
-+	case KindAccessible, KindUser, KindSystem:
++	case KindAccessible, KindProjects, KindSystem:
 +		if project != "" {
 +			return Request{}, true, fmt.Errorf("scopefilter: %s header is only valid together with %s=%s", HeaderProject, HeaderScope, KindProject)
 +		}
@@ -4441,10 +4431,10 @@ index 00000000000..f0734026926
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
 new file mode 100644
-index 00000000000..ed0208b87ac
+index 00000000000..86e5ba49ac6
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,128 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4522,7 +4512,6 @@ index 00000000000..ed0208b87ac
 +	interval := envDuration(envPollInterval, DefaultRefreshInterval)
 +
 +	cache := newResolveCache(ttl)
-+	cache.startJanitor()
 +
 +	return &Resolvers{
 +		Accessible:      accessible,
@@ -5547,4 +5536,376 @@ index 00000000000..6ce7ef1c1a1
 +		klog.Warningf("scopefilter: filtered watch outgoing channel full for user %q; closing watch", w.userName)
 +		return false
 +	}
++}
+diff --git a/test/integration/scopefilter/main_test.go b/test/integration/scopefilter/main_test.go
+new file mode 100644
+index 00000000000..8a69da28403
+--- /dev/null
++++ b/test/integration/scopefilter/main_test.go
+@@ -0,0 +1,27 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"testing"
++
++	"k8s.io/kubernetes/test/integration/framework"
++)
++
++func TestMain(m *testing.M) {
++	framework.EtcdMain(m.Run)
++}
+diff --git a/test/integration/scopefilter/scope_test.go b/test/integration/scopefilter/scope_test.go
+new file mode 100644
+index 00000000000..7f1d32ff3ac
+--- /dev/null
++++ b/test/integration/scopefilter/scope_test.go
+@@ -0,0 +1,333 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Package scopefilter holds integration tests for Deckhouse's generic
++// `-A --scope=<kind>` cross-namespace ACL filtering. Unlike the unit and
++// store-level tests that live next to the scopefilter package itself, these
++// run a REAL kube-apiserver (full chain: apiextensions -> kube -> aggregator,
++// RBAC authorization, etcd storage) and drive it over HTTP, so they exercise
++// the entire request path: header parsing -> authorization-filter tagging ->
++// storage decorator -> filtered response. They cover what no unit layer can:
++//
++//   - the wiring itself (central InstallAPIs loop for built-ins, crdHandler
++//     wiring for CRDs) against a server assembled exactly like production;
++//   - the fail-closed guarantee when Deckhouse's permission-browser aggregated
++//     API is ABSENT (as it is here): a denied caller sending scope headers
++//     must still get 403, never data.
++//
++// The permission-browser (authorization.deckhouse.io) is deliberately not
++// faked: an allowed caller (loopback superuser) never triggers the RBAC-floor
++// path, so classification-only scopes (system / projects / project:<name>)
++// resolve end-to-end through the real loopback Namespace LIST, while a denied
++// caller proves fail-closed behavior. The floor computation itself is covered
++// by the store-level integration test in the scopefilter package.
++package scopefilter
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"sort"
++	"testing"
++	"time"
++
++	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
++	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/util/wait"
++	"k8s.io/client-go/dynamic"
++	clientset "k8s.io/client-go/kubernetes"
++	restclient "k8s.io/client-go/rest"
++	kubeapiservertesting "k8s.io/kubernetes/cmd/kube-apiserver/app/testing"
++	"k8s.io/kubernetes/test/integration/framework"
++
++	corev1 "k8s.io/api/core/v1"
++)
++
++const (
++	scopeHeader   = "X-Deckhouse-Scope"
++	projectHeader = "X-Deckhouse-Project"
++
++	// projectLabel mirrors scopefilter.ProjectLabel; spelled out here so the
++	// test asserts the real wire contract rather than whatever the constant
++	// happens to be.
++	projectLabel = "projects.deckhouse.io/project"
++
++	// probeName is the object name created in every fixture namespace; scoped
++	// listings are asserted by which namespaces' probes they contain.
++	probeName = "scope-probe"
++
++	crdGroup    = "scopetest.deckhouse.io"
++	crdVersion  = "v1"
++	crdPlural   = "widgets"
++	crdKind     = "Widget"
++	crdListKind = "WidgetList"
++)
++
++// fixture namespaces: one system (no project label), two project ones.
++var fixtureNamespaces = map[string]map[string]string{
++	"scope-int-system": nil,
++	"scope-int-alpha":  {projectLabel: "alpha"},
++	"scope-int-beta":   {projectLabel: "beta"},
++}
++
++func TestScopeFilter(t *testing.T) {
++	server := kubeapiservertesting.StartTestServerOrDie(t, nil,
++		append(framework.DefaultTestServerFlags(), "--authorization-mode=RBAC"),
++		framework.SharedEtcd())
++	defer server.TearDownFn()
++
++	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
++	defer cancel()
++
++	admin := clientset.NewForConfigOrDie(server.ClientConfig)
++
++	// A JSON-speaking copy of the admin config: raw scoped requests below
++	// parse response bodies as JSON, and custom resources cannot be served
++	// as protobuf anyway.
++	jsonCfg := restclient.CopyConfig(server.ClientConfig)
++	jsonCfg.ContentType = "application/json"
++	jsonCfg.AcceptContentTypes = "application/json"
++	adminJSON := clientset.NewForConfigOrDie(jsonCfg)
++
++	// An impersonated caller with NO RBAC grants whatsoever. Impersonation is
++	// performed by the superuser client, so the request authenticates fine and
++	// then fails authorization -- exactly the caller class --scope exists for.
++	deniedCfg := restclient.CopyConfig(jsonCfg)
++	deniedCfg.Impersonate = restclient.ImpersonationConfig{UserName: "scope-denied-user"}
++	deniedJSON := clientset.NewForConfigOrDie(deniedCfg)
++
++	// Fixtures: labeled namespaces, each with one probe ConfigMap.
++	for ns, labels := range fixtureNamespaces {
++		if _, err := admin.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
++			ObjectMeta: metav1.ObjectMeta{Name: ns, Labels: labels},
++		}, metav1.CreateOptions{}); err != nil {
++			t.Fatalf("create namespace %s: %v", ns, err)
++		}
++		if _, err := admin.CoreV1().ConfigMaps(ns).Create(ctx, &corev1.ConfigMap{
++			ObjectMeta: metav1.ObjectMeta{Name: probeName},
++		}, metav1.CreateOptions{}); err != nil {
++			t.Fatalf("create probe configmap in %s: %v", ns, err)
++		}
++	}
++
++	// scopedProbeNamespaces GETs path with the given scope headers using the
++	// admin (allowed, superuser) identity and returns the sorted set of
++	// namespaces whose probe object made it into the response.
++	scopedProbeNamespaces := func(path string, headers map[string]string) ([]string, error) {
++		req := adminJSON.Discovery().RESTClient().Get().AbsPath(path)
++		for k, v := range headers {
++			req = req.SetHeader(k, v)
++		}
++		raw, err := req.DoRaw(ctx)
++		if err != nil {
++			return nil, err
++		}
++		var list struct {
++			Items []struct {
++				Metadata struct {
++					Namespace string `json:"namespace"`
++					Name      string `json:"name"`
++				} `json:"metadata"`
++			} `json:"items"`
++		}
++		if err := json.Unmarshal(raw, &list); err != nil {
++			return nil, fmt.Errorf("decode response: %w", err)
++		}
++		var namespaces []string
++		for _, item := range list.Items {
++			if item.Metadata.Name == probeName {
++				namespaces = append(namespaces, item.Metadata.Namespace)
++			}
++		}
++		sort.Strings(namespaces)
++		return namespaces, nil
++	}
++
++	requireNamespaces := func(t *testing.T, got []string, want ...string) {
++		t.Helper()
++		sort.Strings(want)
++		if len(got) != len(want) {
++			t.Fatalf("scoped listing namespaces = %v, want %v", got, want)
++		}
++		for i := range want {
++			if got[i] != want[i] {
++				t.Fatalf("scoped listing namespaces = %v, want %v", got, want)
++			}
++		}
++	}
++
++	t.Run("DeniedCallerWithoutHeaderGets403", func(t *testing.T) {
++		_, err := deniedJSON.Discovery().RESTClient().Get().
++			AbsPath("/api/v1/configmaps").DoRaw(ctx)
++		if !apierrors.IsForbidden(coerceStatusError(err)) {
++			t.Fatalf("expected vanilla Forbidden for cross-namespace list without header, got: %v", err)
++		}
++	})
++
++	t.Run("DeniedCallerWithHeaderStays403FailClosed", func(t *testing.T) {
++		// permission-browser (authorization.deckhouse.io) is not installed in
++		// this server, so the RBAC floor cannot be computed. A denied caller
++		// asking for ANY scope must still get 403 -- the header alone must
++		// never widen access. This is the fail-closed invariant.
++		for _, scope := range []string{"accessible", "projects", "system"} {
++			_, err := deniedJSON.Discovery().RESTClient().Get().
++				AbsPath("/api/v1/configmaps").SetHeader(scopeHeader, scope).DoRaw(ctx)
++			if !apierrors.IsForbidden(coerceStatusError(err)) {
++				t.Fatalf("scope=%s: expected fail-closed Forbidden, got: %v", scope, err)
++			}
++		}
++		_, err := deniedJSON.Discovery().RESTClient().Get().
++			AbsPath("/api/v1/configmaps").
++			SetHeader(scopeHeader, "project").SetHeader(projectHeader, "alpha").DoRaw(ctx)
++		if !apierrors.IsForbidden(coerceStatusError(err)) {
++			t.Fatalf("scope=project:alpha: expected fail-closed Forbidden, got: %v", err)
++		}
++	})
++
++	t.Run("AllowedCallerWithoutHeaderUnchanged", func(t *testing.T) {
++		got, err := scopedProbeNamespaces("/api/v1/configmaps", nil)
++		if err != nil {
++			t.Fatalf("unscoped list: %v", err)
++		}
++		requireNamespaces(t, got, "scope-int-system", "scope-int-alpha", "scope-int-beta")
++	})
++
++	t.Run("SystemScopeExcludesProjectNamespaces", func(t *testing.T) {
++		got, err := scopedProbeNamespaces("/api/v1/configmaps", map[string]string{scopeHeader: "system"})
++		if err != nil {
++			t.Fatalf("scope=system list: %v", err)
++		}
++		requireNamespaces(t, got, "scope-int-system")
++	})
++
++	t.Run("ProjectsScopeIsExactlyProjectNamespaces", func(t *testing.T) {
++		got, err := scopedProbeNamespaces("/api/v1/configmaps", map[string]string{scopeHeader: "projects"})
++		if err != nil {
++			t.Fatalf("scope=projects list: %v", err)
++		}
++		requireNamespaces(t, got, "scope-int-alpha", "scope-int-beta")
++	})
++
++	t.Run("SingleProjectScope", func(t *testing.T) {
++		got, err := scopedProbeNamespaces("/api/v1/configmaps",
++			map[string]string{scopeHeader: "project", projectHeader: "alpha"})
++		if err != nil {
++			t.Fatalf("scope=project:alpha list: %v", err)
++		}
++		requireNamespaces(t, got, "scope-int-alpha")
++	})
++
++	t.Run("NonexistentProjectScopeIsEmptyNotError", func(t *testing.T) {
++		got, err := scopedProbeNamespaces("/api/v1/configmaps",
++			map[string]string{scopeHeader: "project", projectHeader: "no-such-project"})
++		if err != nil {
++			t.Fatalf("scope=project:no-such-project list: %v", err)
++		}
++		requireNamespaces(t, got) // empty; indistinguishable from a real-but-empty project
++	})
++
++	t.Run("CustomResourcesAreFilteredLikeBuiltins", func(t *testing.T) {
++		crdClient := apiextensionsclientset.NewForConfigOrDie(server.ClientConfig)
++		preserveUnknown := true
++		crd := &apiextensionsv1.CustomResourceDefinition{
++			ObjectMeta: metav1.ObjectMeta{Name: crdPlural + "." + crdGroup},
++			Spec: apiextensionsv1.CustomResourceDefinitionSpec{
++				Group: crdGroup,
++				Scope: apiextensionsv1.NamespaceScoped,
++				Names: apiextensionsv1.CustomResourceDefinitionNames{
++					Plural:   crdPlural,
++					Singular: "widget",
++					Kind:     crdKind,
++					ListKind: crdListKind,
++				},
++				Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
++					Name:    crdVersion,
++					Served:  true,
++					Storage: true,
++					Schema: &apiextensionsv1.CustomResourceValidation{
++						OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
++							Type:                   "object",
++							XPreserveUnknownFields: &preserveUnknown,
++						},
++					},
++				}},
++			},
++		}
++		if _, err := crdClient.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{}); err != nil {
++			t.Fatalf("create CRD: %v", err)
++		}
++
++		crPath := "/apis/" + crdGroup + "/" + crdVersion + "/" + crdPlural
++
++		// Wait until the CRD is served (Established + the wildcard list
++		// endpoint answers), then create one CR per fixture namespace.
++		if err := wait.PollUntilContextTimeout(ctx, 200*time.Millisecond, time.Minute, true, func(ctx context.Context) (bool, error) {
++			if _, err := adminJSON.Discovery().RESTClient().Get().AbsPath(crPath).DoRaw(ctx); err != nil {
++				return false, nil
++			}
++			return true, nil
++		}); err != nil {
++			t.Fatalf("CRD never became served: %v", err)
++		}
++
++		dyn := dynamic.NewForConfigOrDie(server.ClientConfig)
++		gvr := schema.GroupVersionResource{Group: crdGroup, Version: crdVersion, Resource: crdPlural}
++		for ns := range fixtureNamespaces {
++			cr := &unstructured.Unstructured{Object: map[string]interface{}{
++				"apiVersion": crdGroup + "/" + crdVersion,
++				"kind":       crdKind,
++				"metadata":   map[string]interface{}{"name": probeName, "namespace": ns},
++			}}
++			if _, err := dyn.Resource(gvr).Namespace(ns).Create(ctx, cr, metav1.CreateOptions{}); err != nil {
++				t.Fatalf("create %s in %s: %v", crdKind, ns, err)
++			}
++		}
++
++		got, err := scopedProbeNamespaces(crPath, map[string]string{scopeHeader: "project", projectHeader: "alpha"})
++		if err != nil {
++			t.Fatalf("CR scope=project:alpha list: %v", err)
++		}
++		requireNamespaces(t, got, "scope-int-alpha")
++
++		got, err = scopedProbeNamespaces(crPath, map[string]string{scopeHeader: "system"})
++		if err != nil {
++			t.Fatalf("CR scope=system list: %v", err)
++		}
++		requireNamespaces(t, got, "scope-int-system")
++
++		// Fail-closed applies to CRDs identically.
++		_, err = deniedJSON.Discovery().RESTClient().Get().
++			AbsPath(crPath).SetHeader(scopeHeader, "accessible").DoRaw(ctx)
++		if !apierrors.IsForbidden(coerceStatusError(err)) {
++			t.Fatalf("CR scope=accessible as denied user: expected fail-closed Forbidden, got: %v", err)
++		}
++	})
++}
++
++// coerceStatusError lets apierrors.IsForbidden see through DoRaw's habit of
++// returning the raw *StatusError already -- and turns a nil error into a
++// non-Forbidden sentinel so `!IsForbidden(...)` fails loudly on unexpected
++// success instead of panicking.
++func coerceStatusError(err error) error {
++	if err == nil {
++		return fmt.Errorf("request unexpectedly succeeded")
++	}
++	return err
 +}
