@@ -76,6 +76,7 @@ type ModulePullOverrideSpec struct {
 	ImageTag string `json:"imageTag"`
 	// Scan interval for checking the image digest. If the digest changes, the module is updated.
 	// +kubebuilder:default="15s"
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(ns|us|ms|s|m|h))+$`
 	ScanInterval libapi.Duration `json:"scanInterval,omitempty"`
 	// Indicates whether the module release should be rollback after deleting mpo.
 	// +kubebuilder:default=false
