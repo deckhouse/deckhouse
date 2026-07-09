@@ -7,8 +7,11 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"slices"
@@ -77,12 +80,21 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		logger.Fatal("Failed to parse GOVMOMI_INSECURE env as bool", "error", err)
 	}
 
+	caBundle := os.Getenv("GOVMOMI_CA_BUNDLE")
+	if insecureFlag && caBundle != "" {
+		logger.Fatal("Cannot set GOVMOMI_CA_BUNDLE env when GOVMOMI_INSECURE is true")
+	}
+
 	parsedURL, err := url.Parse(fmt.Sprintf("https://%s:%s@%s/sdk", url.PathEscape(strings.TrimSpace(username)), url.PathEscape(strings.TrimSpace(password)), url.PathEscape(strings.TrimSpace(host))))
 	if err != nil {
 		logger.Fatal("Failed to build connection url", "error", err)
 	}
 
 	soapClient := soap.NewClient(parsedURL, insecureFlag)
+	if err := setSoapClientCA(soapClient, caBundle); err != nil {
+		logger.Fatal("Failed to set SOAP client CA", "error", err)
+	}
+
 	vimClient, err := vim25.NewClient(context.TODO(), soapClient)
 	if err != nil {
 		logger.Fatal("Failed to create vimClient client", "error", err)
@@ -142,6 +154,7 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 			Username: username,
 			Password: password,
 			Insecure: insecureFlag,
+			CABundle: caBundle,
 		},
 	}
 
@@ -298,4 +311,20 @@ func vsphereZonedDataStoresToV1(in []vsphere.ZonedDataStore) []v1.VsphereDatasto
 		})
 	}
 	return result
+}
+
+func setSoapClientCA(soapClient *soap.Client, caBundle string) error {
+	if caBundle != "" {
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM([]byte(caBundle)) {
+			return fmt.Errorf("failed to parse CA bundle")
+		}
+
+		soapClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: pool,
+			},
+		}
+	}
+	return nil
 }

@@ -16,8 +16,11 @@ package vsphere
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"reflect"
@@ -72,6 +75,7 @@ type Provider struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Insecure bool   `json:"insecure"`
+	CABundle string `json:"caBundle"`
 }
 
 type ZonedDataStore struct {
@@ -199,6 +203,7 @@ func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {
 		username = config.Provider.Username
 		password = config.Provider.Password
 		insecure = config.Provider.Insecure
+		cabundle = config.Provider.CABundle
 	)
 
 	parsedURL, err := url.Parse(fmt.Sprintf("https://%s:%s@%s/sdk", url.PathEscape(strings.TrimSpace(username)), url.PathEscape(strings.TrimSpace(password)), url.PathEscape(strings.TrimSpace(host))))
@@ -208,6 +213,10 @@ func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {
 
 	vcClient, err := govmomi.NewClient(context.TODO(), parsedURL, insecure)
 	if err != nil {
+		return client{}, err
+	}
+
+	if err := setVCClientCA(vcClient, cabundle); err != nil {
 		return client{}, err
 	}
 
@@ -543,4 +552,20 @@ func isZoneAllowed(allowedZones map[string]any, zone string) bool {
 
 	_, allowed := allowedZones[zone]
 	return allowed
+}
+
+func setVCClientCA(vcClient *govmomi.Client, caBundle string) error {
+	if caBundle != "" {
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM([]byte(caBundle)) {
+			return fmt.Errorf("failed to parse CA bundle")
+		}
+
+		vcClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: pool,
+			},
+		}
+	}
+	return nil
 }

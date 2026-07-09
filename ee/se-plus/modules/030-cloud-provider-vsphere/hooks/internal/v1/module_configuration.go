@@ -14,6 +14,8 @@ type VsphereModuleConfiguration struct {
 	Password *string `json:"password,omitempty" yaml:"password,omitempty"`
 	// can be set to `true` if vCenter has a self-signed certificate
 	Insecure *bool `json:"insecure,omitempty" yaml:"insecure,omitempty"`
+	// the CA bundle in PEM format for verifying the vSphere TLS certificate
+	CaBundle *string `json:"caBundle,omitempty" yaml:"caBundle,omitempty"`
 	// the path to the VirtualMachine Folder where the cloned VMs will be created
 	VMFolderPath *string `json:"vmFolderPath,omitempty" yaml:"vmFolderPath,omitempty"`
 	// the name of the tag **category** used to identify the region (vSphere Datacenter)

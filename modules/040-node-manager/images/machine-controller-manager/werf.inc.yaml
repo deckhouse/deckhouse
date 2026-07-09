@@ -23,7 +23,8 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $mcmVersion }}-flant.24 $(cat /run/secrets/SOURCE_REPO)/deckhouse/mcm.git /src
+  # TODO: Change branch after merge MCM PR
+  - git clone --depth 1 --branch feat/vshere-support-ca-bundle $(cat /run/secrets/SOURCE_REPO)/deckhouse/mcm.git /src
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

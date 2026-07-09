@@ -23,6 +23,8 @@ type VsphereNsxt struct {
 	// NSX-T host
 	Host         *string `json:"host,omitempty" yaml:"host,omitempty"`
 	InsecureFlag *bool   `json:"insecureFlag,omitempty" yaml:"insecureFlag,omitempty"`
+	// the CA bundle in PEM format for verifying the NSX-T TLS certificate
+	CaBundle *string `json:"caBundle,omitempty" yaml:"caBundle,omitempty"`
 	// Additional LB classes
 	LoadBalancerClass *[]VsphereNsxtLoadBalancerClass `json:"loadBalancerClass,omitempty" yaml:"loadBalancerClass,omitempty"`
 }

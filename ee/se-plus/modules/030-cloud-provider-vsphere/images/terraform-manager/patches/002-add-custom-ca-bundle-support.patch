@@ -1,0 +1,311 @@
+diff --git a/vsphere/config.go b/vsphere/config.go
+index 405322c0..99406f9d 100644
+--- a/vsphere/config.go
++++ b/vsphere/config.go
+@@ -3,6 +3,8 @@ package vsphere
+ import (
+ 	"context"
+ 	"crypto/sha256"
++	"crypto/tls"
++	"crypto/x509"
+ 	"encoding/json"
+ 	"fmt"
+ 	"io"
+@@ -63,11 +65,11 @@ type Client struct {
+ // Read call to determine if tags are supported on this connection, and if they
+ // are, read them from the object and save them in the resource:
+ //
+-//   if tm, _ := meta.(*VSphereClient).TagsManager(); tm != nil {
+-//     if err := readTagsForResource(restClient, obj, d); err != nil {
+-//       return err
+-//     }
+-//   }
++//	if tm, _ := meta.(*VSphereClient).TagsManager(); tm != nil {
++//	  if err := readTagsForResource(restClient, obj, d); err != nil {
++//	    return err
++//	  }
++//	}
+ func (c *Client) TagsManager() (*tags.Manager, error) {
+ 	if err := viapi.ValidateVirtualCenter(c.vimClient); err != nil {
+ 		return nil, err
+@@ -82,6 +84,7 @@ func (c *Client) TagsManager() (*tags.Manager, error) {
+ // VSphereClient based off the contained settings.
+ type Config struct {
+ 	InsecureFlag    bool
++	CABundle        string
+ 	Debug           bool
+ 	Persist         bool
+ 	User            string
+@@ -117,6 +120,7 @@ func NewConfig(d *schema.ResourceData) (*Config, error) {
+ 		User:            d.Get("user").(string),
+ 		Password:        d.Get("password").(string),
+ 		InsecureFlag:    d.Get("allow_unverified_ssl").(bool),
++		CABundle:        d.Get("ca_bundle").(string),
+ 		VSphereServer:   server,
+ 		Debug:           d.Get("client_debug").(bool),
+ 		DebugPathRun:    d.Get("client_debug_path_run").(string),
+@@ -231,7 +235,9 @@ func (c *Config) SavedRestSessionOrNew(s *cache.Session) (*rest.Client, error) {
+ 	s.DirREST = c.RestSessionPath
+ 	s.Passthrough = !c.Persist
+ 	restClient := new(rest.Client)
+-	err := s.Login(ctx, restClient, nil)
++	err := s.Login(ctx, restClient, func(soapClient *soap.Client) error {
++		return setSoapClientCA(soapClient, c.CABundle)
++	})
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -476,7 +482,7 @@ func (c *Config) SavedVimSessionOrNew(u *url.URL) (*govmomi.Client, error) {
+ 	}
+ 	if client == nil {
+ 		log.Printf("[DEBUG] Creating new SOAP API session on endpoint %s", c.VSphereServer)
+-		client, err = newClientWithKeepAlive(ctx, u, c.InsecureFlag, c.KeepAlive)
++		client, err = newClientWithKeepAlive(ctx, u, c.InsecureFlag, c.CABundle, c.KeepAlive)
+ 		if err != nil {
+ 			return nil, fmt.Errorf("error setting up new vSphere SOAP client: %s", err)
+ 		}
+@@ -485,8 +491,12 @@ func (c *Config) SavedVimSessionOrNew(u *url.URL) (*govmomi.Client, error) {
+ 	return client, nil
+ }
+ 
+-func newClientWithKeepAlive(ctx context.Context, u *url.URL, insecure bool, keepAlive int) (*govmomi.Client, error) {
++func newClientWithKeepAlive(ctx context.Context, u *url.URL, insecure bool, caBundle string, keepAlive int) (*govmomi.Client, error) {
+ 	soapClient := soap.NewClient(u, insecure)
++	if err := setSoapClientCA(soapClient, caBundle); err != nil {
++		return nil, err
++	}
++
+ 	vimClient, err := vim25.NewClient(ctx, soapClient)
+ 	if err != nil {
+ 		return nil, err
+@@ -511,6 +521,22 @@ func newClientWithKeepAlive(ctx context.Context, u *url.URL, insecure bool, keep
+ 	return c, nil
+ }
+ 
++func setSoapClientCA(soapClient *soap.Client, caBundle string) error {
++	if caBundle != "" {
++		pool := x509.NewCertPool()
++		if !pool.AppendCertsFromPEM([]byte(caBundle)) {
++			return fmt.Errorf("failed to parse CA bundle")
++		}
++
++		soapClient.Transport = &http.Transport{
++			TLSClientConfig: &tls.Config{
++				RootCAs: pool,
++			},
++		}
++	}
++	return nil
++}
++
+ func restSessionValid(client *rest.Client) bool {
+ 	sessionURL := client.URL().String() + "/com/vmware/cis/session?~action=get"
+ 	resp, err := client.Post(sessionURL, "", nil)
+diff --git a/vsphere/config_test.go b/vsphere/config_test.go
+index f3d4e477..438d99f7 100644
+--- a/vsphere/config_test.go
++++ b/vsphere/config_test.go
+@@ -1,16 +1,28 @@
+ package vsphere
+ 
+ import (
++	"crypto/ecdsa"
++	"crypto/elliptic"
++	"crypto/rand"
++	"crypto/x509"
++	"crypto/x509/pkix"
++	"encoding/pem"
+ 	"io/ioutil"
+ 	"log"
++	"math/big"
++	"net/http"
++	"net/url"
+ 	"os"
+ 	"reflect"
+ 	"strconv"
+ 	"testing"
++	"time"
+ 
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+ 
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
++
++	"github.com/vmware/govmomi/vim25/soap"
+ )
+ 
+ func init() {
+@@ -74,6 +86,7 @@ func testAccClientGenerateConfig() *Config {
+ 
+ 	return &Config{
+ 		InsecureFlag:  insecure,
++		CABundle:      os.Getenv("TF_VAR_VSPHERE_CA_BUNDLE"),
+ 		Debug:         debug,
+ 		User:          os.Getenv("TF_VAR_VSPHERE_USER"),
+ 		Password:      os.Getenv("TF_VAR_VSPHERE_PASSWORD"),
+@@ -191,16 +204,22 @@ func TestAccClient_noPersistence(t *testing.T) {
+ }
+ 
+ func TestNewConfig(t *testing.T) {
++	caBundle := testGenerateCACertPEM(t)
++
+ 	expected := &Config{
+-		User:           "foo",
+-		Password:       "bar",
+-		InsecureFlag:   true,
+-		VSphereServer:  "vsphere.foo.internal",
+-		Debug:          true,
+-		DebugPathRun:   "./foo",
+-		DebugPath:      "./bar",
+-		Persist:        true,
+-		VimSessionPath: "./baz",
++		User:            "foo",
++		Password:        "bar",
++		InsecureFlag:    true,
++		VSphereServer:   "vsphere.foo.internal",
++		Debug:           true,
++		DebugPathRun:    "./foo",
++		DebugPath:       "./bar",
++		Persist:         true,
++		VimSessionPath:  "./baz",
++		RestSessionPath: "./qux",
++		KeepAlive:       10,
++		APITimeout:      5 * time.Minute,
++		CABundle:        caBundle,
+ 	}
+ 
+ 	r := &schema.Resource{Schema: Provider().Schema}
+@@ -208,12 +227,16 @@ func TestNewConfig(t *testing.T) {
+ 	_ = d.Set("user", expected.User)
+ 	_ = d.Set("password", expected.Password)
+ 	_ = d.Set("allow_unverified_ssl", expected.InsecureFlag)
++	_ = d.Set("ca_bundle", expected.CABundle)
+ 	_ = d.Set("vsphere_server", expected.VSphereServer)
+ 	_ = d.Set("client_debug", expected.Debug)
+ 	_ = d.Set("client_debug_path_run", expected.DebugPathRun)
+ 	_ = d.Set("client_debug_path", expected.DebugPath)
+ 	_ = d.Set("persist_session", expected.Persist)
+ 	_ = d.Set("vim_session_path", expected.VimSessionPath)
++	_ = d.Set("rest_session_path", expected.RestSessionPath)
++	_ = d.Set("vim_keep_alive", expected.KeepAlive)
++	_ = d.Set("api_timeout", int(expected.APITimeout/time.Minute))
+ 
+ 	actual, err := NewConfig(d)
+ 	if err != nil {
+@@ -223,3 +246,99 @@ func TestNewConfig(t *testing.T) {
+ 		t.Fatalf("expected %#v, got %#v", expected, actual)
+ 	}
+ }
++
++// testGenerateCACertPEM generates a self-signed CA certificate and returns it
++// PEM-encoded. It is used to feed setSoapClientCA and NewConfig with a bundle
++// that is guaranteed to be parseable by x509.CertPool.AppendCertsFromPEM.
++func testGenerateCACertPEM(t *testing.T) string {
++	t.Helper()
++
++	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	if err != nil {
++		t.Fatalf("error generating private key: %s", err)
++	}
++
++	tmpl := &x509.Certificate{
++		SerialNumber:          big.NewInt(1),
++		Subject:               pkix.Name{CommonName: "test-ca"},
++		NotBefore:             time.Now().Add(-time.Hour),
++		NotAfter:              time.Now().Add(time.Hour),
++		IsCA:                  true,
++		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
++		BasicConstraintsValid: true,
++	}
++
++	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
++	if err != nil {
++		t.Fatalf("error creating certificate: %s", err)
++	}
++
++	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
++}
++
++// soapTransportRootCAs is a helper to extract the configured RootCAs pool from
++// a soap.Client's underlying HTTP transport.
++func soapTransportRootCAs(t *testing.T, c *soap.Client) *x509.CertPool {
++	t.Helper()
++
++	transport, ok := c.Client.Transport.(*http.Transport)
++	if !ok {
++		t.Fatalf("expected *http.Transport, got %T", c.Client.Transport)
++	}
++	if transport.TLSClientConfig == nil {
++		return nil
++	}
++	return transport.TLSClientConfig.RootCAs
++}
++
++func TestSetSoapClientCA_empty(t *testing.T) {
++	u, _ := url.Parse("https://vsphere.foo.internal/sdk")
++	client := soap.NewClient(u, false)
++
++	if err := setSoapClientCA(client, ""); err != nil {
++		t.Fatalf("unexpected error for empty CA bundle: %s", err)
++	}
++
++	// An empty bundle must be a no-op: the transport should keep the pool that
++	// soap.NewClient set up (nil RootCAs, i.e. the host's default CA set).
++	if pool := soapTransportRootCAs(t, client); pool != nil {
++		t.Fatalf("expected RootCAs to remain nil for empty CA bundle, got %#v", pool)
++	}
++}
++
++func TestSetSoapClientCA_valid(t *testing.T) {
++	caBundle := testGenerateCACertPEM(t)
++
++	u, _ := url.Parse("https://vsphere.foo.internal/sdk")
++	client := soap.NewClient(u, false)
++
++	if err := setSoapClientCA(client, caBundle); err != nil {
++		t.Fatalf("unexpected error for valid CA bundle: %s", err)
++	}
++
++	pool := soapTransportRootCAs(t, client)
++	if pool == nil {
++		t.Fatal("expected RootCAs pool to be set for valid CA bundle, got nil")
++	}
++
++	expected := x509.NewCertPool()
++	if !expected.AppendCertsFromPEM([]byte(caBundle)) {
++		t.Fatal("test setup error: generated CA bundle is not parseable")
++	}
++	if !pool.Equal(expected) {
++		t.Fatal("RootCAs pool does not contain the supplied CA certificate")
++	}
++}
++
++func TestSetSoapClientCA_invalid(t *testing.T) {
++	u, _ := url.Parse("https://vsphere.foo.internal/sdk")
++	client := soap.NewClient(u, false)
++
++	err := setSoapClientCA(client, "this is not a valid PEM certificate")
++	if err == nil {
++		t.Fatal("expected an error for an invalid CA bundle, got nil")
++	}
++	if err.Error() != "failed to parse CA bundle" {
++		t.Fatalf("unexpected error message: %s", err)
++	}
++}
+diff --git a/vsphere/provider.go b/vsphere/provider.go
+index cfe35974..d05402ad 100644
+--- a/vsphere/provider.go
++++ b/vsphere/provider.go
+@@ -96,6 +96,13 @@ func Provider() *schema.Provider {
+ 				DefaultFunc: schema.EnvDefaultFunc("VSPHERE_API_TIMEOUT", 5),
+ 				Description: "API timeout in minutes (Default: 5)",
+ 			},
++			"ca_bundle": {
++				Type:        schema.TypeString,
++				Optional:    true,
++				Sensitive:   true,
++				DefaultFunc: schema.EnvDefaultFunc("VSPHERE_CA_BUNDLE", ""),
++				Description: "PEM-encoded CA certificate bundle for vCenter TLS verification.",
++			},
+ 		},
+ 
+ 		ResourcesMap: map[string]*schema.Resource{
