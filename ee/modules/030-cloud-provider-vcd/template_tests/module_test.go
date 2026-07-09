@@ -191,6 +191,84 @@ const moduleValuesC = `
             storageProfile: nvme
 `
 
+const moduleValuesLegacyNoLB = `
+    internal:
+      legacyMode: true
+      capcdControllerManagerWebhookCert:
+        ca: ca
+        crt: crt
+        key: key
+      providerDiscoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        vcdInstallationVersion: "10.4.2"
+        vcdAPIVersion: "37.1"
+        zones:
+        - default
+      providerClusterConfiguration:
+        apiVersion: deckhouse.io/v1
+        kind: VCDClusterConfiguration
+        provider:
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+          server: "http://server/api/"
+        layout: Standard
+        sshPublicKey: rsa-aaaa
+        organization: org
+        virtualDataCenter: dc
+        virtualApplicationName: v1rtual-app
+        mainNetwork: internal
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            template: Templates/ubuntu-focal-20.04
+            sizingPolicy: 4cpu8ram
+            rootDiskSizeGb: 20
+            etcdDiskSizeGb: 20
+            storageProfile: nvme
+`
+
+const moduleValuesLegacyWithLB = `
+    internal:
+      legacyMode: true
+      capcdControllerManagerWebhookCert:
+        ca: ca
+        crt: crt
+        key: key
+      providerDiscoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        vcdInstallationVersion: "10.4.2"
+        vcdAPIVersion: "37.1"
+        loadBalancer:
+          enabled: true
+        zones:
+        - default
+      providerClusterConfiguration:
+        apiVersion: deckhouse.io/v1
+        kind: VCDClusterConfiguration
+        provider:
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+          server: "http://server/api/"
+        layout: Standard
+        sshPublicKey: rsa-aaaa
+        organization: org
+        virtualDataCenter: dc
+        virtualApplicationName: v1rtual-app
+        mainNetwork: internal
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            template: Templates/ubuntu-focal-20.04
+            sizingPolicy: 4cpu8ram
+            rootDiskSizeGb: 20
+            etcdDiskSizeGb: 20
+            storageProfile: nvme
+`
+
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -695,6 +773,60 @@ node-role.deckhouse.io/control-plane: ""`))
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers=cloud-node-controller,cloud-node-lifecycle-controller,service-lb-controller
+- --v=4
+`))
+		})
+	})
+
+	Context("VCD Suite Legacy :: legacyMode without load balancer", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesLegacyNoLB)
+			f.HelmRender()
+		})
+
+		It("must use legacy CCM controller names", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --leader-elect=true
+- --bind-address=127.0.0.1
+- --secure-port=10471
+- --cloud-config=/etc/cloud/cloud-config
+- --cloud-provider=vmware-cloud-director
+- --allow-untagged-cloud=true
+- --configure-cloud-routes=false
+- --controllers=cloud-node,cloud-node-lifecycle
+- --v=4
+`))
+		})
+	})
+
+	Context("VCD Suite Legacy :: legacyMode with load balancer", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesLegacyWithLB)
+			f.HelmRender()
+		})
+
+		It("must use legacy CCM controller names including service controller", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --leader-elect=true
+- --bind-address=127.0.0.1
+- --secure-port=10471
+- --cloud-config=/etc/cloud/cloud-config
+- --cloud-provider=vmware-cloud-director
+- --allow-untagged-cloud=true
+- --configure-cloud-routes=false
+- --controllers=cloud-node,cloud-node-lifecycle,service
 - --v=4
 `))
 		})
