@@ -33,7 +33,8 @@
     "kubernetesApiProxy" (get $rp "kubernetesApiProxy")
     "registryProxy"      (get $rp "registryProxy") }}
 {{- /* TODO: mirror kas-network-proxy/proxy-server like kine. */ -}}
-{{- $fixed := dict "kine" (printf "%s@%s" $reg (get $dig "kine")) "konnectivityServer" "registry.k8s.io/kas-network-proxy/proxy-server:v0.30.3" "konnectivityAgent" "registry.k8s.io/kas-network-proxy/proxy-agent:v0.30.3" "cilium" "quay.io/cilium/cilium:v1.19.3" "ciliumOperator" "quay.io/cilium/operator-generic:v1.19.3" "deckhouse" (.Values.deckhouse.internal.currentReleaseImageName | default "") }}
+{{- /* TODO: take the parent Deckhouse image instead of a hardcoded CE early-access tag. */ -}}
+{{- $fixed := dict "kine" (printf "%s@%s" $reg (get $dig "kine")) "konnectivityServer" "registry.k8s.io/kas-network-proxy/proxy-server:v0.30.3" "konnectivityAgent" "registry.k8s.io/kas-network-proxy/proxy-agent:v0.30.3" "cilium" "quay.io/cilium/cilium:v1.19.3" "ciliumOperator" "quay.io/cilium/operator-generic:v1.19.3" "deckhouse" "registry.deckhouse.io/deckhouse/ce:early-access" }}
 {{- $imagesTable := dict "versioned" $versioned "fixed" $fixed "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed) }}
 ---
 apiVersion: v1
