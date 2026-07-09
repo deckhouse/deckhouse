@@ -126,11 +126,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileCiliumOperator(ctx, vcp, configSecret); err != nil || !res.IsZero() {
+	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken); err != nil || !res.IsZero() {
+	if res, err := r.reconcileDeckhouseBootstrap(ctx, vcp, configSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 

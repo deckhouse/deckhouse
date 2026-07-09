@@ -47,6 +47,7 @@ type fixedImages struct {
 	KonnectivityAgent  string `json:"konnectivityAgent"`
 	Cilium             string `json:"cilium"`
 	CiliumOperator     string `json:"ciliumOperator"`
+	Deckhouse          string `json:"deckhouse"`
 }
 
 type registryPackagesTable struct {
@@ -60,9 +61,12 @@ type registryPackagesVersioned struct {
 }
 
 type registryPackagesFixed struct {
-	Containerd string `json:"containerd"`
-	TomlMerge  string `json:"tomlMerge"`
-	RppGet     string `json:"rppGet"`
+	Containerd         string `json:"containerd"`
+	TomlMerge          string `json:"tomlMerge"`
+	RppGet             string `json:"rppGet"`
+	Pause              string `json:"pause"`
+	KubernetesAPIProxy string `json:"kubernetesApiProxy"`
+	RegistryProxy      string `json:"registryProxy"`
 }
 
 func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane, apiAdvertiseAddress string) (map[string][]byte, error) {
@@ -133,6 +137,7 @@ func buildManifestReplacer(vcp *controlplanev1alpha1.VirtualControlPlane, versio
 		"${IMAGE_KONNECTIVITY_AGENT}", fixed.KonnectivityAgent,
 		"${IMAGE_CILIUM}", fixed.Cilium,
 		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
+		"${IMAGE_DECKHOUSE}", fixed.Deckhouse,
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", namespace,
 		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),

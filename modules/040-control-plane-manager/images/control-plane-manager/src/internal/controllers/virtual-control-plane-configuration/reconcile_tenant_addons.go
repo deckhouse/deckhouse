@@ -39,14 +39,14 @@ import (
 var tenantAddonManifestKeys = []string{
 	"tenant-rbac.yaml.tpl",        // bootstrap CRBs + kube-apiserver-kubelet-client -> system:kubelet-api-admin
 	"konnectivity-agent.yaml.tpl", // SA + DaemonSet dialing konn.<vcp>:443
-	"cilium-vcp.yaml.tpl",         // CNI: agent DaemonSet + operator RBAC; operator Deployment runs in the parent cluster
 }
 
 // reconcileTenantAddons ensures all tenant-side resources exist:
 // - node bootstrap-token (returned for join.sh),
 // - node-bootstrapper RBAC, the apiserver->kubelet RBAC
 // - konnectivity-agent
-// - Cilium
+// CNI is installed later by Deckhouse in the tenant cluster. Do not apply the
+// legacy VCP Cilium manifests here: they conflict with Deckhouse-managed Cilium.
 // The tenant clients are built once and shared across the sub-steps.
 func (r *reconciler) reconcileTenantAddons(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (string, reconcile.Result, error) {
 	log := logf.FromContext(ctx)

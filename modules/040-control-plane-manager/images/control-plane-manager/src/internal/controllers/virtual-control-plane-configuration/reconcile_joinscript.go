@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net"
 	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -67,7 +68,11 @@ func (r *reconciler) reconcileJoinScript(
 		return reconcile.Result{}, err
 	}
 	rp, ok := table.RegistryPackages.Versioned[vcp.Spec.KubernetesVersion]
-	if !ok || rp.Kubelet == "" {
+	if !ok ||
+		rp.Kubelet == "" ||
+		table.RegistryPackages.Fixed.Pause == "" ||
+		table.RegistryPackages.Fixed.KubernetesAPIProxy == "" ||
+		table.RegistryPackages.Fixed.RegistryProxy == "" {
 		// registrypackages digests not available (e.g. partial build) — skip, retry later.
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
@@ -88,6 +93,10 @@ func (r *reconciler) reconcileJoinScript(
 		"${VCP_CLUSTER_UUID}", string(configSecret.Data["cluster-uuid"]),
 		"${VCP_RPP_GET_DIGEST}", table.RegistryPackages.Fixed.RppGet,
 		"${VCP_CONTAINERD_DIGEST}", table.RegistryPackages.Fixed.Containerd,
+		"${VCP_PAUSE_DIGEST}", table.RegistryPackages.Fixed.Pause,
+		"${VCP_KUBERNETES_API_PROXY_DIGEST}", table.RegistryPackages.Fixed.KubernetesAPIProxy,
+		"${VCP_REGISTRY_PROXY_DIGEST}", table.RegistryPackages.Fixed.RegistryProxy,
+		"${VCP_API_PROXY_UPSTREAM}", net.JoinHostPort(vip, "6443"),
 		"${VCP_CRICTL_DIGEST}", rp.Crictl,
 		"${VCP_KUBELET_DIGEST}", rp.Kubelet,
 		"${VCP_CA_CRT_B64}", base64.StdEncoding.EncodeToString(caPEM),
