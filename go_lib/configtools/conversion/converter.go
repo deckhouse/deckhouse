@@ -36,7 +36,7 @@ type Converter struct {
 
 // NewConverterFromDir reads conversion files from the given directory
 // and builds a Converter that can transform settings between schema versions.
-// Each file must be named v<N>.yaml and contain a "version" field and
+// Reads any *.yaml file; each file must contain a "version" field and
 // a "conversions" list of jq expressions.
 func NewConverterFromDir(pathToConversions string) (*Converter, error) {
 	c := &Converter{conversions: make(map[int]string), latest: 1}

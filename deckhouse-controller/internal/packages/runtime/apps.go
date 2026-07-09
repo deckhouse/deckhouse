@@ -77,7 +77,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	version := app.Definition.Version
 	packageName := app.Definition.Name
 
-	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum()) {
+	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion) {
 		return
 	}
 

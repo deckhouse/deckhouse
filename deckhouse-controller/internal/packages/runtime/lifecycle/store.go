@@ -38,9 +38,10 @@ func NewStore() *Store {
 }
 
 // NeedUpdate reports whether the package needs processing: true if the package
-// is new, the version changed, or the settings checksum differs.
+// is new, the version changed, the settings checksum differs, or the settings
+// schema version changed.
 // Used as a fast-path check before the more expensive Update call.
-func (s *Store) NeedUpdate(name, version, checksum string) bool {
+func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return true
@@ -51,6 +52,10 @@ func (s *Store) NeedUpdate(name, version, checksum string) bool {
 	}
 
 	if pkg.settings.Checksum() != checksum {
+		return true
+	}
+
+	if pkg.settingsVersion != settingsVersion {
 		return true
 	}
 

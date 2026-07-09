@@ -99,7 +99,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	name := module.Name
 	version := module.Definition.Version
 
-	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum()) {
+	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion) {
 		return
 	}
 
