@@ -45,7 +45,7 @@ spec:
                   type: string
                   description: "Scan interval for checking the image digest. If the digest changes, the module is updated."
                   default: 15s
-                  pattern: '^([0-9]+(\.[0-9]+)?(ns|us|ms|s|m|h))+$'
+                  pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 rollback:
                   type: boolean
                   description: Indicates whether the module release should be rollback after deleting ModulePullOverride.
@@ -103,7 +103,7 @@ spec:
                   type: string
                   description: Scan interval for checking the image digest. If the digest changes, the module is updated.
                   default: 15s
-                  pattern: '^([0-9]+(\.[0-9]+)?(ns|us|ms|s|m|h))+$'
+                  pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 rollback:
                   type: boolean
                   description: Indicates whether the module release should be rollback after deleting mpo.
