@@ -165,7 +165,7 @@ metadata:
   name: {{ $policyName }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
 spec:
-  failurePolicy: Fail
+  failurePolicy: Ignore
   matchConstraints:
     resourceRules:
       - apiGroups: ["*"]
@@ -177,15 +177,17 @@ spec:
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: exclude-users
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
-    - name: has-protected-finalizers
+    - name: protected-finalizers-removed
       expression: |
         has(oldObject.metadata.finalizers) &&
-        oldObject.metadata.finalizers.exists(f, f.contains('.deckhouse.io/'))
+        oldObject.metadata.finalizers.exists(f,
+          f.contains('deckhouse.io') &&
+          !(has(object.metadata.finalizers) && f in object.metadata.finalizers))
   variables:
     - name: protectedOldFinalizers
       expression: |
         has(oldObject.metadata.finalizers)
-        ? oldObject.metadata.finalizers.filter(f, f.contains('.deckhouse.io/'))
+        ? oldObject.metadata.finalizers.filter(f, f.contains('deckhouse.io'))
         : []
   validations:
     - expression: |
@@ -194,10 +196,14 @@ spec:
         || variables.protectedOldFinalizers.all(f,
             has(object.metadata.finalizers) && f in object.metadata.finalizers)
       reason: Forbidden
-      message: "Removing Deckhouse finalizers (containing '.deckhouse.io/') is forbidden"
+      message: "Removing Deckhouse finalizers (containing 'deckhouse.io') is forbidden"
   auditAnnotations:
     - key: source-user
-      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to remove Deckhouse finalizers'"
+      valueExpression: |
+        variables.protectedOldFinalizers.exists(f,
+          !(has(object.metadata.finalizers) && f in object.metadata.finalizers))
+        ? 'User: ' + string(request.userInfo.username) + ' tries to remove Deckhouse finalizers'
+        : null
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
