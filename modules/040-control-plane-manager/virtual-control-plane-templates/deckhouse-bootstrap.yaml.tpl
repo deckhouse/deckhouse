@@ -151,6 +151,14 @@ spec:
         env:
         - name: DECKHOUSE_BUNDLE
           value: Minimal
+        - name: DECKHOUSE_POD
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: DECKHOUSE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         - name: LOG_LEVEL
           value: Info
         - name: LOG_TYPE

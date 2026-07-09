@@ -200,6 +200,7 @@ ExecStart=${BIN_DIR}/kubelet \\
   --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \\
   --kubeconfig=/etc/kubernetes/kubelet.conf \\
   --config=/var/lib/kubelet/config.yaml \\
+  --pod-manifest-path=/etc/kubernetes/manifests \\
   --container-runtime-endpoint=unix:///run/containerd/containerd.sock
 EOF
 
