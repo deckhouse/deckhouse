@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-zvirt
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cloud-provider-zvirt.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-zvirt
-  name: d8:manage:permission:module:cloud-provider-zvirt:view
+  name: d8:system-capability:cloud-provider-zvirt:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cloud-provider-zvirt: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль cloud-provider-zvirt: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the cloud-provider-zvirt module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля cloud-provider-zvirt."
 rules:
 - apiGroups:
   - deckhouse.io
