@@ -16,11 +16,9 @@ package vsphere
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"path"
 	"reflect"
@@ -561,11 +559,12 @@ func setVCClientCA(vcClient *govmomi.Client, caBundle string) error {
 			return fmt.Errorf("failed to parse CA bundle")
 		}
 
-		vcClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: pool,
-			},
-		}
+		// Set RootCAs on the soap client's internal transport (DefaultTransport)
+		// rather than replacing Transport. govmomi derives service clients via
+		// NewServiceClient, which copies TLSClientConfig from DefaultTransport();
+		// replacing Transport leaves that internal config without our RootCAs.
+		// It also preserves the custom DialTLS and default transport timeouts.
+		vcClient.Client.Client.DefaultTransport().TLSClientConfig.RootCAs = pool
 	}
 	return nil
 }

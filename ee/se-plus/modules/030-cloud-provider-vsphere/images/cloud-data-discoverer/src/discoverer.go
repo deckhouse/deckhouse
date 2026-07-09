@@ -7,11 +7,9 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"slices"
@@ -320,11 +318,14 @@ func setSoapClientCA(soapClient *soap.Client, caBundle string) error {
 			return fmt.Errorf("failed to parse CA bundle")
 		}
 
-		soapClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: pool,
-			},
-		}
+		// Set RootCAs on the client's internal transport (DefaultTransport) rather
+		// than replacing soapClient.Transport. govmomi derives service clients
+		// (e.g. cns.NewClient) via NewServiceClient, which copies TLSClientConfig
+		// from DefaultTransport(); replacing Transport leaves that internal config
+		// without our RootCAs, so CNS calls fail with "unknown authority" even
+		// though the initial /sdk login succeeds. It also preserves the custom
+		// DialTLS (thumbprint verification) and default transport timeouts.
+		soapClient.DefaultTransport().TLSClientConfig.RootCAs = pool
 	}
 	return nil
 }

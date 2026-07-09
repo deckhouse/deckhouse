@@ -989,6 +989,21 @@ vcenter:
 			Expect(podAnnotations).To(ContainSubstring("checksum/ca"))
 		})
 
+		It("Mounts the CA into the CSI controller as a file, not a directory", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiDeploy := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			Expect(csiDeploy.Exists()).To(BeTrue())
+
+			// The CSI driver reads ca-file = /etc/vsphere-certs/ca.crt. With a
+			// subPath mount the mountPath must be the full file path, otherwise
+			// /etc/vsphere-certs itself becomes a file and the driver fails with
+			// "open /etc/vsphere-certs/ca.crt: not a directory".
+			mounts := csiDeploy.Field("spec.template.spec.containers").String()
+			Expect(mounts).To(ContainSubstring("/etc/vsphere-certs/ca.crt"))
+			Expect(mounts).NotTo(MatchRegexp(`"mountPath":\s*"/etc/vsphere-certs"`))
+		})
+
 		It("Passes GOVMOMI_CA_BUNDLE to the cloud-data-discoverer and disables insecure", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

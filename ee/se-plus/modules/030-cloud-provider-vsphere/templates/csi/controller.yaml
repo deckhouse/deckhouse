@@ -59,7 +59,7 @@
   name: vsphere-csi-config-volume
   readOnly: true
 {{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
-- mountPath: /etc/vsphere-certs
+- mountPath: /etc/vsphere-certs/ca.crt
   name: vsphere-ca-cert
   readOnly: true
   subPath: ca.crt
@@ -138,7 +138,7 @@ ca-bundle-checksum: {{ include (print .Template.BasePath "/ca-secret.yaml") . | 
   name: vsphere-csi-config-volume
   readOnly: true
 {{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
-- mountPath: /etc/vsphere-certs
+- mountPath: /etc/vsphere-certs/ca.crt
   name: vsphere-ca-cert
   readOnly: true
   subPath: ca.crt
