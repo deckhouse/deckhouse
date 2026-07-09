@@ -264,6 +264,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                 nodePort:
                   type: object
                   default: {}
