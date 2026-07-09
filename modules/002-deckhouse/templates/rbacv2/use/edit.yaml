@@ -5,9 +5,16 @@ metadata:
   labels:
     heritage: deckhouse
     module: deckhouse
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:deckhouse:edit
+    rbac.deckhouse.io/aggregate-to-namespace-as: manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.deckhouse.edit"
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:deckhouse:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module deckhouse: edit"
+    ru.meta.deckhouse.io/title: "Модуль deckhouse: редактирование"
+    en.meta.deckhouse.io/description: "Manage deckhouse resources in a namespace."
+    ru.meta.deckhouse.io/description: "Управление ресурсами модуля deckhouse в пространстве имён."
 rules:
 - apiGroups:
   - deckhouse.io
