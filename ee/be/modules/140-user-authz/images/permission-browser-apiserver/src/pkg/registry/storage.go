@@ -33,20 +33,30 @@ const (
 	nonSelfReviewSubresource = "nonself"
 )
 
-// GetStorage returns the storage map for the authorization API group (legacy, without namespace resolver)
-func GetStorage(auth authorizer.Authorizer) map[string]rest.Storage {
-	return map[string]rest.Storage{
+// GetStorage returns the storage map for the authorization API group (legacy, without namespace resolver).
+// whoCan may be nil, in which case the WhoCan resource is not registered.
+func GetStorage(auth authorizer.Authorizer, whoCan WhoCanResolver) map[string]rest.Storage {
+	storage := map[string]rest.Storage{
 		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
 	}
+	if whoCan != nil {
+		storage["whocans"] = NewWhoCanStorage(whoCan)
+	}
+	return storage
 }
 
-// GetStorageWithResolver returns the storage map including the AccessibleNamespace resource.
+// GetStorageWithResolver returns the storage map including the AccessibleNamespace and WhoCan resources.
 // This requires a NamespaceResolver for resolving user-accessible namespaces.
-func GetStorageWithResolver(auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver) map[string]rest.Storage {
-	return map[string]rest.Storage{
+// whoCan may be nil, in which case the WhoCan resource is not registered.
+func GetStorageWithResolver(auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver, whoCan WhoCanResolver) map[string]rest.Storage {
+	storage := map[string]rest.Storage{
 		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
 		"accessiblenamespaces":     NewAccessibleNamespaceStorage(nsResolver),
 	}
+	if whoCan != nil {
+		storage["whocans"] = NewWhoCanStorage(whoCan)
+	}
+	return storage
 }
 
 // BulkSARStorage implements the REST storage for BulkSubjectAccessReview
