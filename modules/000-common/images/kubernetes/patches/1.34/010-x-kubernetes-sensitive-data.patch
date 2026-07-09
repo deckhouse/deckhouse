@@ -2366,7 +2366,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index a56e0495195..5abc51be78d 100644
+index a56e0495195..fbc160e9278 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -37,6 +37,7 @@ import (
@@ -2401,17 +2401,17 @@ index a56e0495195..5abc51be78d 100644
  	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	"k8s.io/apiserver/pkg/util/webhook"
  	"k8s.io/apiserver/pkg/warning"
-@@ -132,6 +136,10 @@ type crdHandler struct {
- 	// 0 means no limit.
- 	maxRequestBodyBytes int64
- 
+@@ -139,6 +143,10 @@ type crdHandler struct {
+ 	// construction, by apiserver.go from a loopback REST config; nil (no
+ 	// loopback config) leaves every CRD at vanilla behavior.
+ 	scopeResolvers *scopefilter.Resolvers
++
 +	// sensitiveRegistrar registers CRD resources with sensitive fields for encryption at rest.
 +	// nil when encryption is not configured or CRDSensitiveData feature gate is disabled.
 +	sensitiveRegistrar storagevalue.SensitiveResourceRegistrar
-+
- 	// Deckhouse: scopeResolvers, when non-nil, is used to wire every
- 	// namespace-scoped CRD version's storage for generic `-A --scope=<kind>`
- 	// cross-namespace filtering -- the CRD analogue of the built-in central
+ }
+ 
+ // crdInfo stores enough information to serve the storage for the custom resource
 @@ -169,6 +177,12 @@ type crdInfo struct {
  	// storageVersion is the CRD version used when storing the object in etcd.
  	storageVersion string
