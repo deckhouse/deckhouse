@@ -6105,6 +6105,7 @@ modules-having-alerts:
     - cni-cilium
     - control-plane-manager
     - deckhouse
+    - descheduler
     - documentation
     - istio
     - kube-dns
