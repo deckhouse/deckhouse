@@ -21,8 +21,23 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
-// Ensure mockUserInfo implements user.Info for IsNamespaceAllowed tests
+// Ensure mockUserInfo implements user.Info for namespace-access tests
 var _ user.Info = &mockUserInfo{}
+
+// nsAllowed mirrors how the namespace resolver consumes the engine:
+// classify the user via GetNamespaceAccessType, then apply the returned
+// filter. This is the only supported per-namespace check path.
+func nsAllowed(e *Engine, userInfo user.Info, namespace string) bool {
+	accessType, filter := e.GetNamespaceAccessType(userInfo)
+	switch accessType {
+	case AllNamespacesAllowed:
+		return true
+	case NoNamespacesAllowed:
+		return false
+	default:
+		return e.IsNamespaceAllowedWithFilter(namespace, filter)
+	}
+}
 
 func TestHasAnyFilters(t *testing.T) {
 	tests := []struct {
@@ -451,7 +466,7 @@ func TestEngine_NonResourceRequest(t *testing.T) {
 	assert.Equal(t, authorizer.DecisionNoOpinion, decision, "non-resource requests should not be restricted")
 }
 
-func TestEngine_IsNamespaceAllowed(t *testing.T) {
+func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 	e := &Engine{
 		directory: map[string]map[string]DirectoryEntry{
 			"User": {
@@ -603,7 +618,7 @@ func TestEngine_IsNamespaceAllowed(t *testing.T) {
 			if tt.userInfo != nil {
 				userInfo = tt.userInfo
 			}
-			result := e.IsNamespaceAllowed(userInfo, tt.namespace)
+			result := nsAllowed(e, userInfo, tt.namespace)
 			assert.Equal(t, tt.expected, result, "unexpected result for %s", tt.name)
 		})
 	}
@@ -1002,22 +1017,22 @@ func TestEngine_RenewDirectories_CARSystemGateIgnoresARs(t *testing.T) {
 	userInfo := &mockUserInfo{name: "alice", groups: []string{"developers"}}
 
 	// CAR's legitimate non-system grant must keep working.
-	assert.True(t, e.IsNamespaceAllowed(userInfo, "team-foo"),
+	assert.True(t, nsAllowed(e, userInfo, "team-foo"),
 		"non-system namespace matched by CAR must remain accessible")
 
 	// The AR is ignored: it must NOT unlock its own (system) namespace. This mirrors
 	// the webhook, which would deny a namespaced request to d8-monitoring under this CAR.
-	assert.False(t, e.IsNamespaceAllowed(userInfo, "d8-monitoring"),
+	assert.False(t, nsAllowed(e, userInfo, "d8-monitoring"),
 		"AR must not unlock a system namespace; the engine ignores ARs")
-	assert.False(t, e.IsNamespaceAllowed(userInfo, "d8-system"),
+	assert.False(t, nsAllowed(e, userInfo, "d8-system"),
 		"other d8-* system namespaces matched by CAR must stay behind the system gate")
-	assert.False(t, e.IsNamespaceAllowed(userInfo, "kube-system"),
+	assert.False(t, nsAllowed(e, userInfo, "kube-system"),
 		"unrelated system namespaces must remain denied")
-	assert.False(t, e.IsNamespaceAllowed(userInfo, "default"),
+	assert.False(t, nsAllowed(e, userInfo, "default"),
 		"`default` is a system namespace and must remain denied")
 
 	// Sanity check: namespaces matched by neither CAR nor AR are denied.
-	assert.False(t, e.IsNamespaceAllowed(userInfo, "random-ns"),
+	assert.False(t, nsAllowed(e, userInfo, "random-ns"),
 		"namespaces outside CAR scope must be denied")
 }
 
@@ -1063,79 +1078,3 @@ func TestEngine_RenewDirectories_CAROnlyUser_ResolverScenario(t *testing.T) {
 		"AR-only namespace must NOT be in the engine filter; the engine ignores ARs")
 }
 
-func TestEngine_GetAllowedNamespaces(t *testing.T) {
-	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"restricted-user": {
-					LimitNamespaces: []*regexp.Regexp{
-						regexp.MustCompile("^allowed-ns$"),
-					},
-					NamespaceFiltersAbsent: false,
-				},
-				"unrestricted-user": {
-					AllowAccessToSystemNamespaces: true,
-					NamespaceFiltersAbsent:        true,
-				},
-			},
-			"Group":          {},
-			"ServiceAccount": {},
-		},
-	}
-
-	tests := []struct {
-		name                    string
-		userInfo                *mockUserInfo
-		expectedNamespaces      []string
-		expectedHasRestrictions bool
-	}{
-		{
-			name:                    "nil user - all allowed",
-			userInfo:                nil,
-			expectedNamespaces:      nil,
-			expectedHasRestrictions: false,
-		},
-		{
-			name:                    "system:masters without CAR - all allowed (privileged bypass)",
-			userInfo:                &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
-			expectedNamespaces:      nil,
-			expectedHasRestrictions: false,
-		},
-		{
-			name:                    "kubeadm:cluster-admins without CAR - all allowed (privileged bypass)",
-			userInfo:                &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
-			expectedNamespaces:      nil,
-			expectedHasRestrictions: false,
-		},
-		{
-			name:                    "unknown user without CAR - empty list (deny-by-default)",
-			userInfo:                &mockUserInfo{name: "unknown-user", groups: []string{"system:authenticated"}},
-			expectedNamespaces:      []string{},
-			expectedHasRestrictions: true,
-		},
-		{
-			name:                    "restricted user with CAR - has restrictions",
-			userInfo:                &mockUserInfo{name: "restricted-user"},
-			expectedNamespaces:      nil,
-			expectedHasRestrictions: true,
-		},
-		{
-			name:                    "unrestricted user with CAR (no filters) - all allowed",
-			userInfo:                &mockUserInfo{name: "unrestricted-user"},
-			expectedNamespaces:      nil,
-			expectedHasRestrictions: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var userInfo user.Info
-			if tt.userInfo != nil {
-				userInfo = tt.userInfo
-			}
-			namespaces, hasRestrictions := e.GetAllowedNamespaces(userInfo)
-			assert.Equal(t, tt.expectedNamespaces, namespaces, "unexpected namespaces for %s", tt.name)
-			assert.Equal(t, tt.expectedHasRestrictions, hasRestrictions, "unexpected hasRestrictions for %s", tt.name)
-		})
-	}
-}
