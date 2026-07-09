@@ -17,6 +17,7 @@
  - If you have used certain features of `operator-trivy` before, a new alert named `VulnerableImagesDenialConfigNotMigrated` might start firing after update. In that case, you must manually move `denyVulnerableImages` section of settings from `admission-policy-engine` to `operator-trivy` module config. Alert message will provide necessary instructions on how to do so.
  - Istio version 1.19.7 has been removed because it is considered outdated. In this regard, errors may occur when updating the Deckhouse version. It is recommended to upgrade Istio from version 1.19.7 to version 1.21.6 before upgrading Deckhouse release.
  - Mode `Auto` is deprecated and will be removed in a future API version. Use explicit modes like `Recreate`, `Initial`, or `InPlaceOrRecreate` instead.
+ - Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
  - The default VPA mode for Loki components is changed from Auto to InPlaceOrRecreate.
     Loki pods will now prefer in-place resource updates when supported by the cluster,
     falling back to pod recreation only when required.
@@ -162,6 +163,7 @@
  - **[candi]** Updated the bashible step to include Linux kernel versions that address CVE-2025-37999 [#17300](https://github.com/deckhouse/deckhouse/pull/17300)
  - **[candi]** fix CVE in cloud-provider-azure [#18177](https://github.com/deckhouse/deckhouse/pull/18177)
  - **[candi]** fix cve node-manager and opentofu. [#19942](https://github.com/deckhouse/deckhouse/pull/19942)
+ - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#20972](https://github.com/deckhouse/deckhouse/pull/20972)
  - **[candi]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
  - **[cert-manager]** Disable SecurityPolicyExceptions for cert-manager namespace [#19280](https://github.com/deckhouse/deckhouse/pull/19280)
  - **[chrony]** Mitigated CVE-2025-58181. [#17959](https://github.com/deckhouse/deckhouse/pull/17959)
@@ -263,6 +265,8 @@
  - **[dashboard]** Fixed CVE-2025-22868, CVE-2025-22870, CVE-2025-22872, CVE-2025-47914, CVE-2025-58181 [#17243](https://github.com/deckhouse/deckhouse/pull/17243)
  - **[dashboard]** Fixed CVE-2025-30204 by updating dashboard components [#16927](https://github.com/deckhouse/deckhouse/pull/16927)
  - **[deckhouse-controller]** A module that conditionally depends on another is no longer disabled when an incompatible version of that dependency is enabled; the enable is rejected instead. [#20345](https://github.com/deckhouse/deckhouse/pull/20345)
+ - **[deckhouse-controller]** Disabling modules with confirmation will be rejected without using the annotation. [#21178](https://github.com/deckhouse/deckhouse/pull/21178)
+ - **[deckhouse-controller]** Don't create an external module release for a module that is still shipped embedded, so it can't replace or duplicate the embedded copy. [#21129](https://github.com/deckhouse/deckhouse/pull/21129)
  - **[deckhouse-controller]** Exclude all service accounts from `d8-` namespaces in `d8ms-prefix` ValidatingAdmissionPolicy. [#17440](https://github.com/deckhouse/deckhouse/pull/17440)
  - **[deckhouse-controller]** Fix conversions for external modules [#16772](https://github.com/deckhouse/deckhouse/pull/16772)
  - **[deckhouse-controller]** Fix false DeckhouseUpdatingFailed alert on registries without version tags in release-channel repo [#18310](https://github.com/deckhouse/deckhouse/pull/18310)
@@ -503,6 +507,8 @@
     the 4200–4299 range and does not take SecurityPolicyException into account.
  - **[user-authz]** Fixed SecurityPolicyException usage, added CR presence check. [#17660](https://github.com/deckhouse/deckhouse/pull/17660)
  - **[user-authz]** cache namespace label checks in the user-authz webhook via informer to avoid per-request apiserver GETs [#16920](https://github.com/deckhouse/deckhouse/pull/16920)
+ - **[user-authz]** user-authz-webhook now uses the node-local kube-apiserver endpoint for its discovery cache and liveness check, instead of resolving the "kubernetes.default" DNS name. [#21080](https://github.com/deckhouse/deckhouse/pull/21080)
+    Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
 
 ## Chore
 

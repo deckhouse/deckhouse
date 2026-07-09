@@ -1,0 +1,41 @@
+candi:
+  fixes:
+    - summary: fix if node has bashible-uninitialized taint in race condition.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20972
+deckhouse:
+  fixes:
+    - summary: add cryptography CVE VEX to deckhouse-controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21166
+    - summary: >-
+        Fix module metadata (`module.yaml`/`oss.yaml`) missing from in-cluster documentation by allowing
+        these files in `IsDocsPath` (sender) and creating parent directories on extraction in the docs-builder
+        (receiver).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21215
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Don't create an external module release for a module that is still shipped embedded, so it can't
+        replace or duplicate the embedded copy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21129
+    - summary: Disabling modules with confirmation will be rejected without using the annotation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21178
+docs:
+  fixes:
+    - summary: Added the ml/ai tag to the ai-models module on the modules homepage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21016
+    - summary: Fix broken-link. Module admission
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21030
+documentation:
+  fixes:
+    - summary: Add /app/hugo to docs-builder mount points
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20823
+user-authz:
+  fixes:
+    - summary: >-
+        user-authz-webhook now uses the node-local kube-apiserver endpoint for its discovery cache and
+        liveness check, instead of resolving the "kubernetes.default" DNS name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21080
+      impact: >-
+        Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe
+        to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy:
+        Deny) could deny all API requests, including cluster-admins, until DNS recovered.

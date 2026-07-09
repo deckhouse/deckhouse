@@ -62,11 +62,16 @@
 **/040-node-manager/images/fencing-agent                         @yalosev @ergoz
 **/040-node-manager/images/cluster-autoscaler                    @yalosev @ergoz
 **/040-node-manager/images/bashible-apiserver                    @borg-z @090809 @sprait
+**/040-node-manager/images/integrity-containerd-configurator     @sprait
+**/040-node-manager/images/integrity-controller                  @sprait
 **/040-node-manager/templates/fencing-agent                      @yalosev @ergoz
 **/040-node-manager/templates/cluster-autoscaler                 @yalosev @ergoz
+**/040-node-manager/templates/integrity-containerd-configurator  @sprait
+**/040-node-manager/templates/integrity-controller               @sprait
 **/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu     @serg-su
 **/040-node-manager/templates/nvidia-gpu                         @serg-su
 **/040-node-manager/hooks/fencing**                              @yalosev @ergoz
+**/040-node-manager/hooks/enable_integrity_controller**          @sprait
 **/040-node-manager/e2e/fencing**                                @yalosev @ergoz
 **/040-node-manager/e2e/cluster-autoscaler                       @yalosev @ergoz
 040-terraform-manager/                                           @borg-z @090809

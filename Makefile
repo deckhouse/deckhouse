@@ -447,6 +447,7 @@ BASE_LIMIT_KEYS := REGISTRY_PATH \
                 builder/golang-1.25 \
                 builder/golang-1.26 \
                 builder/golang \
+                builder/golang-alt-1.26 \
                 minget-0.1 \
                 minget
 
