@@ -5,9 +5,16 @@ metadata:
   labels:
     heritage: deckhouse
     module: deckhouse
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:deckhouse:view
+    rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.deckhouse.view"
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:deckhouse:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module deckhouse: view"
+    ru.meta.deckhouse.io/title: "Модуль deckhouse: просмотр"
+    en.meta.deckhouse.io/description: "Read-only access to deckhouse resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к ресурсам модуля deckhouse в пространстве имён."
 rules:
 - apiGroups:
   - deckhouse.io
