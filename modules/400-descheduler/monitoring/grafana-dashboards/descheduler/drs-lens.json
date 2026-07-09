@@ -97,7 +97,7 @@
         },
         "enable": false,
         "iconColor": "blue",
-        "expr": "sum(increase(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[1m])) > 0",
+        "expr": "sum(increase(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[$__rate_interval])) > 0",
         "titleFormat": "descheduler cycle"
       }
     ]
@@ -133,7 +133,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"happy\", namespace=~\"$namespace\"})",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"happy\", namespace=~\"$namespace\"}) or vector(0)",
           "instant": true
         }
       ],
@@ -177,7 +177,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"warning\", namespace=~\"$namespace\"})",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"warning\", namespace=~\"$namespace\"}) or vector(0)",
           "instant": true
         }
       ],
@@ -221,7 +221,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"unhappy\", namespace=~\"$namespace\"})",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"unhappy\", namespace=~\"$namespace\"}) or vector(0)",
           "instant": true
         }
       ],
@@ -565,17 +565,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"happy\", namespace=~\"$namespace\"})",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"happy\", namespace=~\"$namespace\"}) or vector(0)",
           "legendFormat": "happy"
         },
         {
           "refId": "B",
-          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"warning\", namespace=~\"$namespace\"})",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"warning\", namespace=~\"$namespace\"}) or vector(0)",
           "legendFormat": "warning"
         },
         {
           "refId": "C",
-          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"unhappy\", namespace=~\"$namespace\"})",
+          "expr": "count(descheduler:workload_happiness_bucket{bucket=\"unhappy\", namespace=~\"$namespace\"}) or vector(0)",
           "legendFormat": "unhappy"
         }
       ],
@@ -707,6 +707,24 @@
           "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_eviction_penalty{namespace=~\"$namespace\"})",
           "format": "table",
           "instant": true
+        },
+        {
+          "refId": "K",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_cpu_usage_ratio{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "L",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_memory_request_usage_ratio{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "M",
+          "expr": "max by (namespace, workload_kind, workload_name) (descheduler:workload_memory_limit_usage_ratio{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true
         }
       ],
       "transformations": [
@@ -730,7 +748,10 @@
               "Value #G": "cpu",
               "Value #H": "memory",
               "Value #I": "node",
-              "Value #J": "eviction"
+              "Value #J": "eviction",
+              "Value #K": "cpu ratio",
+              "Value #L": "mem req ratio",
+              "Value #M": "mem lim ratio"
             }
           }
         }
@@ -771,6 +792,42 @@
                     }
                   ]
                 }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cpu ratio"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mem req ratio"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mem lim ratio"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
               }
             ]
           }

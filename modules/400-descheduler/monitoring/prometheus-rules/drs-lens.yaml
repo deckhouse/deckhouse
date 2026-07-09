@@ -203,18 +203,20 @@
           ),
         25)
 
+  # "no request" and the usage rungs are additive and independent: each term falls
+  # back to 0 via `or replicas*0`, so a workload with a limit but no request still
+  # accrues the limit-proximity penalty instead of only the flat no-request 10.
   - record: descheduler:workload_memory_penalty
     expr: |
       clamp_max(
-          ((descheduler:workload_replicas unless descheduler:workload_memory_request_bytes) > bool 0) * 10
-        or
-          (
-              (descheduler:workload_memory_request_usage_ratio > bool 1) * 10
-            + ((descheduler:workload_memory_limit_usage_ratio > bool 0.8) * 20
-                or descheduler:workload_memory_request_usage_ratio * 0)
-            + ((descheduler:workload_memory_limit_usage_ratio > bool 0.95) * 15
-                or descheduler:workload_memory_request_usage_ratio * 0)
-          ),
+          (((descheduler:workload_replicas unless descheduler:workload_memory_request_bytes) > bool 0) * 10
+            or descheduler:workload_replicas * 0)
+        + ((descheduler:workload_memory_request_usage_ratio > bool 1) * 10
+            or descheduler:workload_replicas * 0)
+        + ((descheduler:workload_memory_limit_usage_ratio > bool 0.8) * 20
+            or descheduler:workload_replicas * 0)
+        + ((descheduler:workload_memory_limit_usage_ratio > bool 0.95) * 15
+            or descheduler:workload_replicas * 0),
         35)
 
   # --- node/eviction penalties ---
