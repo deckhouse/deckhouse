@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,10 +53,16 @@ func init() {
 type Controller struct {
 	register.Base
 	apiReader client.Reader
+	clientset kubernetes.Interface
 }
 
 func (c *Controller) Setup(mgr ctrl.Manager) error {
 	c.apiReader = mgr.GetAPIReader()
+	cs, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	c.clientset = cs
 	return nil
 }
 
@@ -97,6 +104,14 @@ func inNamespaces(namespaces ...string) predicate.Predicate {
 // singleton aggregator, so any trigger re-assembles the complete payload.
 func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
+	// Ensure the api-proxy discovery cert Secret exists before assembling, so the
+	// blob's apiserverProxyCerts field is never nil (readAPIServerProxyCerts reads
+	// the same Secret below in this loop).
+	if err := c.ensureCertificate(ctx, logger); err != nil {
+		logger.Error(err, "failed to ensure kubernetes-api-proxy discovery certificate")
+		return ctrl.Result{}, err
+	}
 
 	r := &Reconciler{
 		Client:        c.Client,

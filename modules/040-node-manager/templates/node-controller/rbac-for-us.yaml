@@ -290,6 +290,34 @@ rules:
   - create
   - patch
   - update
+# CertificateSigningRequests - issue the kubernetes-api-proxy discovery client
+# cert (apiproxycert controller, taken over from the create_rbac_and_certificate
+# _for_kubernetes_api_proxy hook): create + self-approve on the kube-apiserver
+# -client signer, then delete the CSR.
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests/approval
+  verbs:
+  - update
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - signers
+  resourceNames:
+  - kubernetes.io/kube-apiserver-client
+  verbs:
+  - approve
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -361,6 +389,47 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: d8:node-manager:node-controller:bashible-context
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
+# Namespaced write access for the kubernetes-api-proxy-discovery-cert Secret the
+# apiproxycert controller issues (taken over from the hook). Scoped to kube-system
+# (least privilege) rather than widening the cluster-wide secret read to write.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:node-controller:apiproxy-cert
+  namespace: kube-system
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+  - update
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:node-controller:apiproxy-cert
+  namespace: kube-system
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:node-controller:apiproxy-cert
 subjects:
 - kind: ServiceAccount
   name: node-controller

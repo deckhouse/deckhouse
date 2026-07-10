@@ -16,9 +16,10 @@ limitations under the License.
 
 // Package bashiblecontext assembles the bashible-apiserver-context Secret's
 // input.yaml from live kube objects, taking over the heavy bashible consumer of
-// the get_crds hook. Every field is READ from an already-materialised object
-// (Secret/ConfigMap/file) — the lifecycle hooks that own token rotation and cert
-// issuance keep running; the node-controller only copies their output. The one
+// the get_crds hook. Most fields are READ from an already-materialised object
+// (Secret/ConfigMap/file) — the lifecycle hooks that own token rotation keep
+// running and this only copies their output. The api-proxy discovery cert is now
+// issued by this same controller (apiproxycert.go, at the top of Reconcile). The one
 // computed field is clusterMasterEndpoints (no ready Secret exists), which must
 // stay byte-parity with discover_apiserver_endpoints.
 package bashiblecontext
@@ -172,9 +173,9 @@ type apiserverProxyCerts struct {
 	key     string
 }
 
-// readAPIServerProxyCerts reads the materialised kube-system/kubernetes-api-proxy-
-// discovery-cert Secret directly (crt/key keys), rather than the hook's snapshot
-// value which is only re-set on rotation.
+// readAPIServerProxyCerts reads the kube-system/kubernetes-api-proxy-discovery-cert
+// Secret (crt/key keys). ensureCertificate (apiproxycert.go) issues and writes that
+// Secret at the top of the same Reconcile, so it is always present by this read.
 func (s *Service) readAPIServerProxyCerts(ctx context.Context) apiserverProxyCerts {
 	secret := &corev1.Secret{}
 	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: apiProxyCertSecretName}, secret); err != nil {
