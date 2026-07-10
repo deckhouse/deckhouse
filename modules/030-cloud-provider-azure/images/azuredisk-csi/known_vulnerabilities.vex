@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://deckhouse.io/vex/cloud-provider-azure/azuredisk-csi",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-13281"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Образ azuredisk CSI собирает бинарный файл CSI-драйвера, а не kube-controller-manager. Уязвимый путь SSRF для Portworx находится в kube-controller-manager и не выполняется бинарным файлом azurediskplugin.",
+      "timestamp": "2026-07-06T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-1767"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Образ azuredisk CSI собирает бинарный файл CSI-драйвера, а не kubelet. Уязвимый встроенный путь обработки томов gitRepo относится к kubelet и не выполняется бинарным файлом azurediskplugin.",
+      "timestamp": "2026-07-06T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-07-06T12:00:00Z"
+}
