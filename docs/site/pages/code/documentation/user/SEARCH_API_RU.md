@@ -1,6 +1,6 @@
 ---
-title: "Search API"
-menuTitle: Search API
+title: "API поиска"
+menuTitle: API поиска
 searchable: true
 description: "Справочник по Search REST API в Deckhouse Code: OpenSearch и FE-фильтры"
 permalink: ru/code/documentation/user/search-api.html
@@ -9,8 +9,9 @@ weight: 46
 ---
 
 На этой странице описан Search REST API в Deckhouse Code.
+Для работы с поиском в интерфейсе используйте [руководство по поиску](/code/documentation/user/search.html).
 
-Источник истины: код FE-расширения поиска Deckhouse Code (а не upstream GitLab `doc/api/search.md`, где часть семантики фильтров/скоупов отличается).
+Источник истины: код FE-расширения (frontend extension) поиска Deckhouse Code (а не upstream GitLab `doc/api/search.md`, где часть семантики фильтров/скоупов отличается).
 
 ## Эндпоинты
 
@@ -18,13 +19,13 @@ weight: 46
 - `GET /api/v4/groups/:id/search` (вариант с `-/`: `/api/v4/groups/:id/-/search` тоже принимается)
 - `GET /api/v4/projects/:id/search` (вариант с `-/`: `/api/v4/projects/:id/-/search` тоже принимается)
 
-Все эндпоинты требуют аутентификацию.
+Все эндпоинты требуют аутентификации.
 
-## Скоупы и backend
+## Скоупы и бэкенд
 
 Параметр `scope` обязателен. Поддерживаемые значения зависят от эндпоинта.
 
-| Scope | Instance | Group | Project | Backend при включенном OpenSearch |
+| `scope` | Инстанс | Группа | Проект | Бэкенд при включённом OpenSearch |
 |---|---:|---:|---:|---|
 | `projects` | ✅ | ✅ | ❌ | CE/Postgres |
 | `users` | ✅ | ✅ | ✅ | CE/Postgres |
@@ -47,38 +48,38 @@ weight: 46
 | Параметр | Тип | Обязательный | Эндпоинты | Примечание |
 |---|---|---:|---|---|
 | `search` | string | ✅ | все | Поисковый запрос |
-| `scope` | string | ✅ | все | См. матрицу выше |
-| `confidential` | boolean | ❌ | все | Передается в search service |
-| `include_archived` | boolean | ❌ | instance, group | Для project-эндпоинта недоступен |
-| `page` / `per_page` | integer | ❌ | все | Пагинация offset-based |
-| `ref` | string | ❌ | project | Ветка/тег для поиска в проекте |
+| `scope` | string | ✅ | все | Описано в матрице выше |
+| `confidential` | boolean | ❌ | все | Передаётся в службу поиска |
+| `include_archived` | boolean | ❌ | инстанс, группа | Для эндпоинта проекта недоступен |
+| `page` / `per_page` | integer | ❌ | все | Пагинация со смещением (offset) |
+| `ref` | string | ❌ | проект | Ветка или тег для поиска в проекте |
 | `state` | string | ❌ | все | `all`, `opened`, `closed`, `merged` |
 | `type` | array[string] | ❌ | все | Фильтр типа work item (фактически для `work_items`) |
 
-### Параметры OpenSearch / FE-фильтры
+### Параметры OpenSearch и FE-фильтры
 
-Если параметр передан для неподдерживаемого scope, API возвращает `400`:
+Если параметр передан для неподдерживаемого `scope`, API возвращает `400`:
 `<param_name> is supported only for <scope list>`.
 
-| Параметр | Тип | Применяется к `scope` | Валидация |
+| Параметр | Тип | Применяется к `scope` | Ограничения |
 |---|---|---|---|
 | `author_username` | string | `merge_requests` | фильтр по автору |
-| `exclude_forks` | boolean | `work_items`, `issues` | только в этих scope |
+| `exclude_forks` | boolean | `work_items`, `issues` | только в этих `scope` |
 | `fields` | array[string] | `work_items`, `issues` | допустимо только `title`; иначе `400` |
-| `label_name` | array[string] | `work_items`, `issues`, `merge_requests` | поддерживается comma-separated |
-| `language` | array[string] | `blobs` | поддерживается comma-separated |
+| `label_name` | array[string] | `work_items`, `issues`, `merge_requests` | поддерживаются значения через запятую |
+| `language` | array[string] | `blobs` | поддерживаются значения через запятую |
 | `not_author_username` | string | `merge_requests` | исключение по автору |
 | `not_source_branch` | string | `merge_requests` | исключающий фильтр |
 | `not_target_branch` | string | `merge_requests` | исключающий фильтр |
 | `num_context_lines` | integer | `blobs` | диапазон `0..20` |
 | `regex` | boolean | `blobs` | длина запроса `3..512` и минимум один буквенно-цифровой литерал; иначе `400` |
-| `source_branch` | string | `merge_requests` | точный фильтр по source branch |
-| `target_branch` | string | `merge_requests` | точный фильтр по target branch |
+| `source_branch` | string | `merge_requests` | точный фильтр по исходной ветке |
+| `target_branch` | string | `merge_requests` | точный фильтр по целевой ветке |
 
 ## Заголовки ответа
 
 - `X-Search-Type`: итоговый тип поиска для запроса.
-- `X-Search-Aggregations`: присутствует только когда OpenSearch включен и для выбранного scope есть агрегаты.
+- `X-Search-Aggregations`: присутствует только когда OpenSearch включён и для выбранного `scope` есть агрегаты.
 
 `X-Search-Aggregations` — JSON с корзинами агрегатов. Агрегаты возвращаются для:
 
@@ -88,9 +89,9 @@ weight: 46
 
 ## Тело ответа
 
-Эндпоинт возвращает JSON-массив объектов, тип которых зависит от scope:
+Эндпоинт возвращает JSON-массив объектов, тип которых зависит от `scope`:
 
-| Scope | Тип объекта |
+| `scope` | Тип объекта |
 |---|---|
 | `issues` | `IssueBasic` |
 | `work_items` | `WorkItem` |
@@ -130,9 +131,11 @@ curl --request GET \
   --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy.*job&regex=true&num_context_lines=5&language=Ruby"
 ```
 
-## Ошибки (`400`)
+## Ошибки (400 Bad Request)
 
-### Неверный scope для параметра
+Тексты полей `message` в примерах ниже возвращаются API на английском языке.
+
+### Неверный `scope` для параметра
 
 Пример: `regex=true` с `scope=work_items`:
 

@@ -9,8 +9,9 @@ weight: 46
 ---
 
 This page documents the Search REST API implemented in Deckhouse Code.
+For using search in the UI, see the [Search](/code/documentation/user/search.html) guide.
 
-Source of truth: the Deckhouse Code FE search extension code (not upstream GitLab `doc/api/search.md`, which has different behavior for some filters/scopes).
+Source of truth: the Deckhouse Code frontend extension (FE) search code (not upstream GitLab `doc/api/search.md`, which has different behavior for some filters/scopes).
 
 ## Endpoints
 
@@ -130,7 +131,7 @@ curl --request GET \
   --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy.*job&regex=true&num_context_lines=5&language=Ruby"
 ```
 
-## Error cases (`400`)
+## Error cases (400 Bad Request)
 
 ### Wrong scope for parameter
 

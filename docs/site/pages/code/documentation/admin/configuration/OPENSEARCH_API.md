@@ -9,13 +9,14 @@ weight: 38
 ---
 
 This page documents Deckhouse Code admin OpenSearch endpoints.
+For user-facing search parameters, see [Search API](/code/documentation/user/search-api.html).
 
 ## Permissions
 
 - `POST /api/v4/admin/opensearch/recreate_indices`: admin only (`authenticated_as_admin!`).
 - `GET /api/v4/admin/opensearch/indexing_queue_stats`: authenticated user with permission `read_admin_search_indexing_queue_stats` on `:global`.
 
-## POST `/api/v4/admin/opensearch/recreate_indices`
+## POST /api/v4/admin/opensearch/recreate_indices
 
 Synchronously recreates OpenSearch index(es) and enqueues background reindex jobs.
 
@@ -53,7 +54,7 @@ curl --request POST \
   --url "https://gitlab.example.com/api/v4/admin/opensearch/recreate_indices"
 ```
 
-## GET `/api/v4/admin/opensearch/indexing_queue_stats`
+## GET /api/v4/admin/opensearch/indexing_queue_stats
 
 Returns Sidekiq queue stats for OpenSearch indexing.
 

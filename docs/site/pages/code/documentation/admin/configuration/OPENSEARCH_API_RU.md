@@ -1,6 +1,6 @@
 ---
-title: "OpenSearch API"
-menuTitle: OpenSearch API
+title: "API OpenSearch"
+menuTitle: API OpenSearch
 searchable: true
 description: "Административный REST API для пересоздания индексов OpenSearch и статистики очереди индексации"
 permalink: ru/code/documentation/admin/configuration/opensearch-api.html
@@ -9,15 +9,16 @@ weight: 38
 ---
 
 На этой странице описаны административные OpenSearch-эндпоинты Deckhouse Code.
+Параметры пользовательского поиска — в [API поиска](/code/documentation/user/search-api.html).
 
 ## Права доступа
 
 - `POST /api/v4/admin/opensearch/recreate_indices`: только администратор (`authenticated_as_admin!`).
 - `GET /api/v4/admin/opensearch/indexing_queue_stats`: аутентифицированный пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
 
-## POST `/api/v4/admin/opensearch/recreate_indices`
+## POST /api/v4/admin/opensearch/recreate_indices
 
-Синхронно пересоздает индекс(ы) OpenSearch и ставит фоновые задачи реиндексации.
+Синхронно пересоздаёт индекс(ы) OpenSearch и ставит фоновые задачи реиндексации.
 
 ### Тело запроса
 
@@ -26,6 +27,8 @@ weight: 38
 | `schema_class` | string | ✅ | `recreate_all`, `Search::Opensearch::IndicesSchema::Code`, `Search::Opensearch::IndicesSchema::Wiki`, `Search::Opensearch::IndicesSchema::Note`, `Search::Opensearch::IndicesSchema::Milestone`, `Search::Opensearch::IndicesSchema::WorkItem`, `Search::Opensearch::IndicesSchema::MergeRequest` |
 
 ### Ответы
+
+Тексты полей `message` в примерах ниже возвращаются API на английском языке.
 
 - `202 Accepted`
 
@@ -53,7 +56,7 @@ curl --request POST \
   --url "https://gitlab.example.com/api/v4/admin/opensearch/recreate_indices"
 ```
 
-## GET `/api/v4/admin/opensearch/indexing_queue_stats`
+## GET /api/v4/admin/opensearch/indexing_queue_stats
 
 Возвращает статистику Sidekiq-очереди индексации OpenSearch.
 

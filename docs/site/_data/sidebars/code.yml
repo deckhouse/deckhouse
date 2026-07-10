@@ -24,6 +24,10 @@ entries:
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
       - title:
+          en: OpenSearch API
+          ru: API OpenSearch
+        url: /code/documentation/admin/configuration/opensearch-api.html
+      - title:
           en: Service account
           ru: Сервисный аккаунт
         url: /code/documentation/admin/service-account.html
@@ -35,10 +39,6 @@ entries:
           en: Security сredentials
           ru: Ключи доступа
         url: /code/documentation/admin/security-credentials.html
-      - title:
-          en: OpenSearch API
-          ru: OpenSearch API
-        url: /code/documentation/admin/configuration/opensearch-api.html
   - title:
       en: User guide
       ru: Руководство пользователя
@@ -117,7 +117,7 @@ entries:
         url: /code/documentation/user/search.html
       - title:
           en: Search API
-          ru: Search API
+          ru: API поиска
         url: /code/documentation/user/search-api.html
       - title:
           en: Push rules
