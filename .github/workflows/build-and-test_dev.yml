@@ -3640,6 +3640,7 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
+
       # <template: read_werf_version_step>
       - name: Read werf version from werf_envs.yml
         id: read_werf_version
@@ -3659,6 +3660,26 @@ jobs:
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
       # </template: read_werf_version_step>
+
+      # <template: werf_install_step>
+      - name: Install werf-dk CLI
+        run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -3708,14 +3729,14 @@ jobs:
 
 
       - name: Run doc web build
-        uses: werf/actions/build@v2
-        with:
-          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
           WERF_ENV: "development"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build
 
     # </template: web_build_template>
 
@@ -3746,6 +3767,7 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
+
       # <template: read_werf_version_step>
       - name: Read werf version from werf_envs.yml
         id: read_werf_version
@@ -3765,6 +3787,26 @@ jobs:
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
       # </template: read_werf_version_step>
+
+      # <template: werf_install_step>
+      - name: Install werf-dk CLI
+        run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -3814,9 +3856,6 @@ jobs:
 
 
       - name: Run main web build
-        uses: werf/actions/build@v2
-        with:
-          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
@@ -3825,6 +3864,9 @@ jobs:
           DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
           WERF_ENV: "development"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build
 
     # </template: web_build_template>
 

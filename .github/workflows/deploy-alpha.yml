@@ -1382,6 +1382,7 @@ jobs:
 
       # </template: checkout_step>
 
+
       # <template: read_werf_version_step>
       - name: Read werf version from werf_envs.yml
         id: read_werf_version
@@ -1402,6 +1403,26 @@ jobs:
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
       # </template: read_werf_version_step>
 
+      # <template: werf_install_step>
+      - name: Install werf-dk CLI
+        run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
+
       - name: Download artifacts
         uses: actions/download-artifact@v4.1.8
         with:
@@ -1409,15 +1430,15 @@ jobs:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
-          env: web-production
         env:
+          WERF_ENV: web-production
+          WERF_KUBE_CONFIG_BASE64: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           WERF_NAMESPACE: "deckhouse-web-production"
           WERF_DIR: "publish-channels"
           WERF_DEV: "true"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf converge
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -1472,6 +1493,7 @@ jobs:
 
       # </template: checkout_step>
 
+
       # <template: read_werf_version_step>
       - name: Read werf version from werf_envs.yml
         id: read_werf_version
@@ -1492,6 +1514,26 @@ jobs:
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
       # </template: read_werf_version_step>
 
+      # <template: werf_install_step>
+      - name: Install werf-dk CLI
+        run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
+
       - name: Download artifacts
         uses: actions/download-artifact@v4.1.8
         with:
@@ -1499,15 +1541,15 @@ jobs:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-stage
         env:
+          WERF_ENV: web-stage
+          WERF_KUBE_CONFIG_BASE64: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           WERF_NAMESPACE: "deckhouse-web-stage"
           WERF_DIR: "publish-channels"
           WERF_DEV: "true"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf converge
 
       # <template: send_fail_report>
       - name: Send fail report
