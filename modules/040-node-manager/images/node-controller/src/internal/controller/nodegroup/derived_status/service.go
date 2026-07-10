@@ -60,6 +60,14 @@ func (s *Service) reader() client.Reader {
 	return s.Client
 }
 
+// ComputeEngine reads the cloud-provider secret and derives the NodeGroup
+// engine (sticky). Exported so the status reconciler can persist
+// NodeGroup.status.engine, which get_crds used to write and which the
+// MachineDeployment reconciler gates on.
+func (s *Service) ComputeEngine(ctx context.Context, ng *v1.NodeGroup) string {
+	return s.computeEngine(ng, s.readCloudProviderData(ctx))
+}
+
 // Result holds the get_crds-derived fields destined for NodeGroup.status.
 type Result struct {
 	Engine            string
