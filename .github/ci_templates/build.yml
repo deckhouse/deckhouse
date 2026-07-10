@@ -36,6 +36,12 @@ runs-on: [self-hosted, large]
 {!{- end }!}
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+{!{- if eq $buildType "dev" }!}
+  changed_count:    ${{ steps.diff.outputs.changed_count }}
+  matrix:           ${{ steps.diff.outputs.matrix }}
+  changed_compact:  ${{ steps.diff.outputs.changed_compact }}
+{!{- end }!}
+  tags: ${{ steps.set-pr-tag.tags }}
 steps:
 {!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ if eq $buildType "release" }!}
@@ -83,7 +89,19 @@ steps:
   {!{- end }!}
   {!{ tmpl.Exec "werf_setup_steps" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
-
+  - name: Set PR tag
+    id: set-pr-tag
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    run: |
+      REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+      if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+        TAG="pr${PR_NUMBER}"
+      else
+        TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+      fi
+      echo "PR tag to scan: $TAG"
+      echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
   {!{/* `make generate` + drift check live in the dedicated `go_generate`
        job. werf builds committed content, so the generated-code guard does
        not need to run inside every build_* job. */}!}
@@ -350,10 +368,38 @@ steps:
     with:
       name: build_report_${{ env.WERF_ENV }}
       path: images_tags_werf.json
-
+{!{- if eq $buildType "dev" }!}
+  - name: Extract images_digests.json
+    env:
+      DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+      CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+    run: |
+      set -euo pipefail
+      if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+        IMAGE_EDITION=${WERF_ENV,,}
+      fi
+      REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+      IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+      regctl image get-file "${DEV_REGISTRY}/sys/deckhouse-oss:${IMAGE_TAG}" \
+        /deckhouse/modules/images_digests.json > images_digests.json
+      modules=$(jq 'keys | length' images_digests.json)
+      images=$(jq '[.[] | to_entries[]] | length' images_digests.json)
+      echo "images_digests.json: ${modules} modules, ${images} module images."
+  - name: Compute changed images
+    id: diff
+    env:
+      BUILD_REPORT_PATH:   ./images_tags_werf.json
+      IMAGES_DIGESTS_PATH: ./images_digests.json
+      OUTPUT_CHANGED:      ./changed_images.json
+    run: |
+      python3 .github/scripts/python/changed_images.py
+{!{ end }!}
   - name: Cleanup workdir
     if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-    run: rm images_tags_werf.json || true
+    run: |
+      rm images_tags_werf.json || true
+      rm changed_images.json || true
+      rm images_digests.json || true
 {!{ if not (eq $buildType "dev") -}!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 2 -}!}
 {!{ end }!}

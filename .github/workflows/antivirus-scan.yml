@@ -114,7 +114,6 @@ jobs:
             echo "tags=[\"main\"]" >> $GITHUB_OUTPUT
           fi
 
-
   # <template: drweb_scan_job>
   drweb-scan:
     name: Dr.Web Scan
@@ -127,6 +126,8 @@ jobs:
         branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
       fail-fast: false
     permissions:
+      contents: read
+      pull-requests: write
       id-token: write
     outputs:
       scan_id: ${{ steps.scan.outputs.scan_id }}
@@ -158,6 +159,7 @@ jobs:
 
       # </template: import_secrets>
 
+      # <template: av_scan_step>
       - name: Run drweb scan
         id: scan
         run: |
@@ -243,9 +245,9 @@ jobs:
           if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
             rm -rf ${SCAN_DIR}/${SCAN_ID} || true
           fi
+      # </template: av_scan_step>
 
   # </template: drweb_scan_job>
-
 
 
   # <template: kaspersky_scan_job>
@@ -260,6 +262,8 @@ jobs:
         branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
       fail-fast: false
     permissions:
+      contents: read
+      pull-requests: write
       id-token: write
     outputs:
       scan_id: ${{ steps.scan.outputs.scan_id }}
@@ -291,6 +295,7 @@ jobs:
 
       # </template: import_secrets>
 
+      # <template: av_scan_step>
       - name: Run kaspersky scan
         id: scan
         run: |
@@ -376,6 +381,7 @@ jobs:
           if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
             rm -rf ${SCAN_DIR}/${SCAN_ID} || true
           fi
+      # </template: av_scan_step>
 
   # </template: kaspersky_scan_job>
 
