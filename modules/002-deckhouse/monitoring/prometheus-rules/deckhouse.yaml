@@ -551,8 +551,8 @@
 
         To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
 
-        To get the exact error, check the deckhouse logs:
-        `kubectl -n d8-system logs deploy/deckhouse | grep "failed to download module"`
+        To get the exact error, check Deckhouse logs:
+        `d8 k -n d8-system logs deploy/deckhouse | grep "failed to download module"`
 
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
