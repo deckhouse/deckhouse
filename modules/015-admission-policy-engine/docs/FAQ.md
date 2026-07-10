@@ -546,7 +546,7 @@ This policy doesn't apply to the following users who are allowed to run `kubectl
 
 ### Built-in policy for finalizers
 
-To protect resources managed by DKP controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `.deckhouse.io/` substring on any cluster objects.
+To protect objects managed by DKP controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `deckhouse.io` substring on any cluster objects.
 
 This policy doesn't apply to the following users who are allowed to remove such finalizers:
 
