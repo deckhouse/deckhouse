@@ -220,12 +220,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function closeFilter() {
         const filterBlock = document.querySelector('.filter__block');
-        const filterOverlay = document.querySelector('.filter__sidebar-overlay');
         const isOpen = filterBlock !== null && filterBlock.classList.contains('show');
         if (filterBlock) filterBlock.classList.remove('show');
-        if (filterOverlay && filterOverlay.parentNode) {
-            filterOverlay.parentNode.removeChild(filterOverlay);
-        }
         return isOpen;
     }
 
