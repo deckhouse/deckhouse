@@ -14,11 +14,11 @@ weight: 38
 ## Права доступа
 
 - `POST /api/v4/admin/opensearch/recreate_indices`: только администратор (`authenticated_as_admin!`).
-- `GET /api/v4/admin/opensearch/indexing_queue_stats`: аутентифицированный пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
+- `GET /api/v4/admin/opensearch/indexing_queue_stats`: пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
 
 ## POST /api/v4/admin/opensearch/recreate_indices
 
-Синхронно пересоздаёт индекс(ы) OpenSearch и ставит фоновые задачи реиндексации.
+Синхронно пересоздаёт индекс(ы) OpenSearch и ставит фоновые задачи повторной индексации.
 
 ### Тело запроса
 

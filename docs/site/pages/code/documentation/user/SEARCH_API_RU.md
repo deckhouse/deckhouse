@@ -11,7 +11,7 @@ weight: 46
 На этой странице описан Search REST API в Deckhouse Code.
 Для работы с поиском в интерфейсе используйте [руководство по поиску](/code/documentation/user/search.html).
 
-Источник истины: код FE-расширения (frontend extension) поиска Deckhouse Code (а не upstream GitLab `doc/api/search.md`, где часть семантики фильтров/скоупов отличается).
+Источник истины: код FE-расширения (frontend extension) поиска Deckhouse Code (а не upstream GitLab `doc/api/search.md`, где часть семантики фильтров и значений `scope` отличается).
 
 ## Эндпоинты
 
@@ -21,15 +21,15 @@ weight: 46
 
 Все эндпоинты требуют аутентификации.
 
-## Скоупы и бэкенд
+## Значения scope и бэкенд
 
 Параметр `scope` обязателен. Поддерживаемые значения зависят от эндпоинта.
 
 | `scope` | Инстанс | Группа | Проект | Бэкенд при включённом OpenSearch |
 |---|---:|---:|---:|---|
-| `projects` | ✅ | ✅ | ❌ | CE/Postgres |
-| `users` | ✅ | ✅ | ✅ | CE/Postgres |
-| `snippet_titles` | ✅ | ❌ | ❌ | CE/Postgres |
+| `projects` | ✅ | ✅ | ❌ | CE/PostgreSQL |
+| `users` | ✅ | ✅ | ✅ | CE/PostgreSQL |
+| `snippet_titles` | ✅ | ❌ | ❌ | CE/PostgreSQL |
 | `issues` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |
 | `work_items` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |
 | `merge_requests` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |
@@ -51,14 +51,14 @@ weight: 46
 | `scope` | string | ✅ | все | Описано в матрице выше |
 | `confidential` | boolean | ❌ | все | Передаётся в службу поиска |
 | `include_archived` | boolean | ❌ | инстанс, группа | Для эндпоинта проекта недоступен |
-| `page` / `per_page` | integer | ❌ | все | Пагинация со смещением (offset) |
+| `page` / `per_page` | integer | ❌ | все | Постраничный вывод со смещением (offset) |
 | `ref` | string | ❌ | проект | Ветка или тег для поиска в проекте |
 | `state` | string | ❌ | все | `all`, `opened`, `closed`, `merged` |
 | `type` | array[string] | ❌ | все | Фильтр типа work item (фактически для `work_items`) |
 
 ### Параметры OpenSearch и FE-фильтры
 
-Если параметр передан для неподдерживаемого `scope`, API возвращает `400`:
+Если параметр передан для `scope`, который не поддерживается, API возвращает `400`:
 `<param_name> is supported only for <scope list>`.
 
 | Параметр | Тип | Применяется к `scope` | Ограничения |

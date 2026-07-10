@@ -27,9 +27,9 @@ All endpoints require authentication.
 
 | Scope | Instance | Group | Project | Backend when OpenSearch is enabled |
 |---|---:|---:|---:|---|
-| `projects` | ✅ | ✅ | ❌ | CE/Postgres |
-| `users` | ✅ | ✅ | ✅ | CE/Postgres |
-| `snippet_titles` | ✅ | ❌ | ❌ | CE/Postgres |
+| `projects` | ✅ | ✅ | ❌ | CE/PostgreSQL |
+| `users` | ✅ | ✅ | ✅ | CE/PostgreSQL |
+| `snippet_titles` | ✅ | ❌ | ❌ | CE/PostgreSQL |
 | `issues` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |
 | `work_items` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |
 | `merge_requests` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |

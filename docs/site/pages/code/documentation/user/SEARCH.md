@@ -96,6 +96,6 @@ Allows searching across all projects and groups within the instance.
 
 ### Additional features
 
-- Search in Deckhouse Code supports autocomplete for projects, groups, and users.
-- If full-text search is enabled, autocomplete also works for commit messages, filenames, code, issues, and merge requests.
+- Search in Deckhouse Code supports query completion for projects, groups, and users.
+- If full-text search is enabled, query completion also works for commit messages, filenames, code, issues, and merge requests.
 - When searching, you can quickly navigate to the required commit via its SHA.
