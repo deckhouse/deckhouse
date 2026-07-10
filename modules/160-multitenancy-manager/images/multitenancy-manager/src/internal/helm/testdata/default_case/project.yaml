@@ -1,18 +1,21 @@
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha3
 kind: Project
 metadata:
   name: test
 spec:
   description: This is an example from the Deckhouse documentation.
   projectTemplateName: default
+  administrators:
+    - kind: User
+      name: user@gmail.com
+  quota:
+    requests.cpu: "1"
+    limits.memory: 15Gi
   parameters:
     extendedMonitoringEnabled: true
     podSecurityProfile: Baseline
-    resourceQuota:
-      requests:
-        cpu: 1
-      limits:
-        memory: 15Gi
-    administrators:
-      - subject: User
-        name: user@gmail.com
+    namespace:
+      labels:
+        team: backend
+      annotations:
+        owner: platform

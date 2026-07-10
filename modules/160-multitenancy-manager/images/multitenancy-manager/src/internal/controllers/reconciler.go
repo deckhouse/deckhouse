@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -140,10 +141,16 @@ func (r *ProjectReconciler) upsertAvailable(ctx context.Context, ns, project, na
 	if err != nil {
 		return fmt.Errorf("upsert AvailableClusterResource %s/%s: %w", ns, name, err)
 	}
+	// Reassigning the whole Available slice (not mutating it) means a value snapshot is enough to
+	// detect a real change and skip the status write on the frequent no-op resync/grant-change passes.
+	before := ar.Status
 	ar.Status.GrantedResourceKind = kind
 	ar.Status.Available = available
 	ar.Status.Default = def
 	ar.Status.AvailableCount = len(available)
+	if reflect.DeepEqual(before, ar.Status) {
+		return nil
+	}
 	if err := r.Status().Update(ctx, ar); err != nil {
 		return fmt.Errorf("update AvailableClusterResource status %s/%s: %w", ns, name, err)
 	}

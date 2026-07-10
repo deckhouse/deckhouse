@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"controller/apis/deckhouse.io/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha2"
 	templatemanager "controller/internal/manager/template"
 )
 
@@ -77,7 +77,7 @@ func Register(runtimeManager manager.Manager, templatesPath string, logger logr.
 
 	r.logger.Info("initialize template controller")
 	return ctrl.NewControllerManagedBy(runtimeManager).
-		For(&v1alpha1.ProjectTemplate{}).
+		For(&v1alpha2.ProjectTemplate{}).
 		WithEventFilter(predicate.Or[client.Object](
 			predicate.GenerationChangedPredicate{},
 			predicate.AnnotationChangedPredicate{})).
@@ -98,7 +98,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	r.init.Wait()
 
 	r.logger.Info("reconcile the template", "template", req.Name)
-	template := new(v1alpha1.ProjectTemplate)
+	template := new(v1alpha2.ProjectTemplate)
 	if err := r.client.Get(ctx, req.NamespacedName, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("the template not found", "template", req.Name)
