@@ -291,6 +291,7 @@
  - **[deckhouse]** Fix module enabling. [#17009](https://github.com/deckhouse/deckhouse/pull/17009)
  - **[deckhouse]** Fix module installer cleanup. [#17301](https://github.com/deckhouse/deckhouse/pull/17301)
  - **[deckhouse]** Fix module rerun. [#17478](https://github.com/deckhouse/deckhouse/pull/17478)
+ - **[deckhouse]** Fix nil pointer panic in resource and namespace informers by using each informer's own logger instead of the possibly-nil Monitor.Logger. [#21231](https://github.com/deckhouse/deckhouse/pull/21231)
  - **[deckhouse]** Fixed deckhouse-registry secret validation. [#17122](https://github.com/deckhouse/deckhouse/pull/17122)
  - **[deckhouse]** Fixed global configuration generation. [#19689](https://github.com/deckhouse/deckhouse/pull/19689)
  - **[deckhouse]** Fixed missing module stage in the Module CR, restoring experimental module warnings. [#17244](https://github.com/deckhouse/deckhouse/pull/17244)
@@ -493,6 +494,7 @@
     DexAuthenticator resources with IP addresses in domain fields will now be rejected at creation/update time with a clear error message. Previously, such resources were accepted but failed silently during Ingress creation.
  - **[user-authn]** Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior. [#20090](https://github.com/deckhouse/deckhouse/pull/20090)
  - **[user-authn]** Improved Dex LDAP Kerberos (SPNEGO) logs and error handling. [#17543](https://github.com/deckhouse/deckhouse/pull/17543)
+ - **[user-authn]** Preserve Dex Password fields (notably groups) when resetting password, locking or unlocking a user, so users are no longer locked out after these operations. [#21260](https://github.com/deckhouse/deckhouse/pull/21260)
  - **[user-authn]** Quote service names to prevent digit-only names from breaking yaml parser [#17020](https://github.com/deckhouse/deckhouse/pull/17020)
  - **[user-authn]** Restore ContinueOnConnectorFailure flag handling in Dex configuration [#18219](https://github.com/deckhouse/deckhouse/pull/18219)
  - **[user-authn]** Ships Dex Kubernetes storage CRDs with the module to prevent missing-CRD bootstrap failures. [#17885](https://github.com/deckhouse/deckhouse/pull/17885)
