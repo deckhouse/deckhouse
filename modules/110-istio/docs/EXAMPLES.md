@@ -196,13 +196,44 @@ spec:
       weight: 10
 ```
 
-## Ingress to publish applications
+## Ingress and egress gateways
 
-### Istio Ingress Gateway
+[`IngressIstioController`](cr.html#ingressistiocontroller) and [`EgressIstioController`](cr.html#egressistiocontroller) deploy dedicated Istio gateway proxies. Each controller instance has its own gateway class. Select an instance from an Istio `Gateway` resource using the corresponding label:
 
-The [IngressIstioController](cr.html#ingressistiocontroller) custom resource spins up a dedicated Istio Ingress Gateway proxy. Each controller instance gets its own gateway class, and you select the instance from an Istio `Gateway` resource by referencing the matching `istio.deckhouse.io/ingress-gateway-class` label. The module manages the gateway workload and its `Service`, while the `Gateway` and routing resources (`VirtualService`) remain yours to manage.
+| Controller | Gateway selector label |
+| --- | --- |
+| `IngressIstioController` | `istio.deckhouse.io/ingress-gateway-class` |
+| `EgressIstioController` | `istio.deckhouse.io/egress-gateway-class` |
 
-Start by creating an `IngressIstioController`. In the example below, HTTP and HTTPS are exposed on the selected frontend nodes using host ports:
+The module manages each gateway workload and its `Service`. You manage the `Gateway` and routing resources.
+
+### Managing gateway resource requests
+
+Both controller resources use `spec.resourcesRequests` to configure CPU and memory requests for gateway pods. See the [`IngressIstioController`](cr.html#ingressistiocontroller-v1alpha1-spec-resourcesrequests) and [`EgressIstioController`](cr.html#egressistiocontroller-v1alpha1-spec-resourcesrequests) parameter references.
+
+Two resource management modes are available:
+
+- `Static` — requests are set explicitly and remain fixed.
+- `VPA` — a [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) adjusts requests within the configured `min` and `max` bounds. Starting from DKP version 1.75, the recommended VPA mode is `InPlaceOrRecreate`. It updates pod resources in place when supported and recreates the pod otherwise. The legacy `Auto` mode always recreates the pod.
+
+For example:
+
+```yaml
+resourcesRequests:
+  mode: VPA
+  vpa:
+    mode: InPlaceOrRecreate
+    cpu:
+      min: 100m
+      max: 1000m
+    memory:
+      min: 128Mi
+      max: 2000Mi
+```
+
+### Publishing applications with an ingress gateway
+
+Start by creating an `IngressIstioController`. In the example below, HTTP and HTTPS are exposed on the frontend nodes you select, using host ports:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -228,7 +259,7 @@ spec:
     mode: VPA
 ```
 
-Note that the TLS secret for an ingress gateway must be created in the `d8-ingress-istio` namespace, not in your application's namespace — this is an easy detail to miss.
+Create the TLS Secret for the ingress gateway in the `d8-ingress-istio` namespace, not in the application namespace.
 
 ```yaml
 apiVersion: v1
@@ -243,6 +274,8 @@ data:
   tls.key: |
     <tls.key data>
 ```
+
+Create an Istio `Gateway` that selects the controller and a `VirtualService` that routes requests through the gateway:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -339,54 +372,193 @@ spec:
 `numTrustedProxies` and `proxyProtocol` can be used together. When both are configured and an incoming request contains an `X-Forwarded-For` header, Istio uses the trusted `X-Forwarded-For` chain in preference to the PROXY protocol attributes.
 {% endalert %}
 
-#### Managing gateway resource requests
+### Routing external traffic through an egress gateway
 
-Use [`spec.resourcesRequests`](cr.html#ingressistiocontroller-v1alpha1-spec-resourcesrequests) to control CPU and memory requests for the ingress gateway pods. Two modes are available:
+Create an `EgressIstioController` and specify the nodes where its proxies will run:
 
-- `Static` — requests are specified directly and stay fixed:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: EgressIstioController
+metadata:
+  name: external
+spec:
+  egressGatewayClass: external
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: Static
+    static:
+      cpu: 100m
+      memory: 128Mi
+```
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: IngressIstioController
-  metadata:
-    name: main
-  spec:
-    ingressGatewayClass: istio-hp
-    inlet: HostPort
-    hostPort:
-      httpPort: 80
-      httpsPort: 443
-    resourcesRequests:
-      mode: Static
-      static:
-        cpu: 100m
-        memory: 128Mi
-  ```
+The module creates the `egress-gateway-controller-external` Service in the `d8-egress-istio` namespace. To route traffic through it:
 
-- `VPA` — a [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) adjusts requests within the configured `min`/`max` bounds. Starting from DKP version 1.75, the recommended VPA mode is `InPlaceOrRecreate`, which updates pod resources in place when the cluster supports it and falls back to recreating the pod otherwise (the legacy `Auto` mode always recreates the pod):
+1. Register the external destination with a `ServiceEntry`.
+1. Configure the egress gateway to forward requests to that destination.
+1. Route mesh traffic to the gateway Service.
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: IngressIstioController
-  metadata:
-    name: main
-  spec:
-    ingressGatewayClass: istio-hp
-    inlet: HostPort
-    hostPort:
-      httpPort: 80
-      httpsPort: 443
-    resourcesRequests:
-      mode: VPA
-      vpa:
-        mode: InPlaceOrRecreate
-        cpu:
-          min: 100m
-          max: 1000m
-        memory:
-          min: 128Mi
-          max: 2000Mi
-  ```
+```yaml
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: httpbin
+  namespace: app-ns
+spec:
+  hosts:
+  - httpbin.org
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: external
+  namespace: d8-egress-istio
+spec:
+  selector:
+    istio.deckhouse.io/egress-gateway-class: external
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - httpbin.org
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin-egress
+  namespace: d8-egress-istio
+spec:
+  hosts:
+  - httpbin.org
+  gateways:
+  - external
+  http:
+  - route:
+    - destination:
+        host: httpbin.org
+        port:
+          number: 80
+```
+
+Create a `VirtualService` and a `DestinationRule` in the workload namespace to send the original request to the gateway Service. Replace `<cluster-domain>` with the cluster domain:
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin-via-egress
+  namespace: app-ns
+spec:
+  hosts:
+  - httpbin.org
+  gateways:
+  - mesh
+  http:
+  - match:
+    - port: 80
+    route:
+    - destination:
+        host: egress-gateway-controller-external.d8-egress-istio.svc.<cluster-domain>
+        subset: httpbin
+        port:
+          number: 80
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: external-egress
+  namespace: app-ns
+spec:
+  host: egress-gateway-controller-external.d8-egress-istio.svc.<cluster-domain>
+  subsets:
+  - name: httpbin
+```
+
+#### Routing federation service traffic through an egress gateway
+
+This example assumes that [federation is configured](./#federation) and the remote service is published. For every service a remote cluster publishes, federation generates a `ServiceEntry` and a `DestinationRule`. The `ServiceEntry` points to the remote cluster's federation ingress gateway, and the `DestinationRule` sets up `ISTIO_MUTUAL` TLS.
+
+To route calls to a published federation service through an egress gateway, do not replace the generated resources. Add a mesh `VirtualService` that routes the federation host to the egress gateway Service. On the egress gateway, add a `Gateway` and a `VirtualService` that route the same host to the original federation `ServiceEntry`.
+
+The following example routes calls from `app-ns` to the federation service `helloworld.remote-ns.svc.<remote-cluster-domain>:5000` through the `external` controller. The remote service must already be published, with its generated `ServiceEntry` and `DestinationRule` available in the local cluster.
+
+Replace `<remote-cluster-domain>` with the domain of the remote cluster that publishes the service. Replace `<cluster-domain>` with the local cluster domain, where the egress gateway Service resides.
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: federation-egress
+  namespace: d8-egress-istio
+spec:
+  selector:
+    istio.deckhouse.io/egress-gateway-class: external
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - helloworld.remote-ns.svc.<remote-cluster-domain>
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: federation-egress
+  namespace: d8-egress-istio
+spec:
+  hosts:
+  - helloworld.remote-ns.svc.<remote-cluster-domain>
+  gateways:
+  - federation-egress
+  http:
+  - route:
+    - destination:
+        # This is the host of the module-generated federation ServiceEntry.
+        host: helloworld.remote-ns.svc.<remote-cluster-domain>
+        port:
+          number: 5000
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: federation-via-egress
+  namespace: app-ns
+spec:
+  hosts:
+  - helloworld.remote-ns.svc.<remote-cluster-domain>
+  gateways:
+  - mesh
+  http:
+  - match:
+    - port: 5000
+    route:
+    - destination:
+        host: egress-gateway-controller-external.d8-egress-istio.svc.<cluster-domain>
+        subset: federation
+        port:
+          number: 80
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: federation-egress
+  namespace: app-ns
+spec:
+  host: egress-gateway-controller-external.d8-egress-istio.svc.<cluster-domain>
+  subsets:
+  - name: federation
+```
+
+This configuration preserves the TLS policy and remote ingress endpoints created by federation.
 
 ### Ingress NGINX
 

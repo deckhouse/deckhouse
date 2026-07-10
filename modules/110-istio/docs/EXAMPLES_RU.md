@@ -197,11 +197,42 @@ spec:
       weight: 10
 ```
 
-## Ingress для публикации приложений
+## Ingress- и egress-шлюзы
 
-### Istio Ingress Gateway
+[`IngressIstioController`](cr.html#ingressistiocontroller) и [`EgressIstioController`](cr.html#egressistiocontroller) разворачивают выделенные прокси Istio gateway. Каждый экземпляр контроллера имеет собственный класс шлюза. Выберите экземпляр из ресурса Istio `Gateway` с помощью соответствующего лейбла:
 
-Кастомный ресурс [IngressIstioController](cr.html#ingressistiocontroller) разворачивает выделенный прокси Istio Ingress Gateway. Каждый экземпляр контроллера получает собственный класс шлюза, и нужный экземпляр выбирается из ресурса Istio `Gateway` по соответствующему лейблу `istio.deckhouse.io/ingress-gateway-class`. Модуль управляет рабочей нагрузкой шлюза и его ресурсом `Service`, тогда как ресурсы `Gateway` и маршрутизации (`VirtualService`) остаются под вашим управлением.
+| Контроллер | Лейбл селектора Gateway |
+| --- | --- |
+| `IngressIstioController` | `istio.deckhouse.io/ingress-gateway-class` |
+| `EgressIstioController` | `istio.deckhouse.io/egress-gateway-class` |
+
+Модуль управляет рабочей нагрузкой каждого шлюза и его ресурсом `Service`. Ресурсы `Gateway` и маршрутизации остаются под вашим управлением.
+
+### Управление запросами ресурсов шлюза
+
+Оба ресурса контроллеров используют параметр `spec.resourcesRequests` для настройки запросов CPU и памяти подов шлюза. Описание параметров приведено в справочниках [`IngressIstioController`](cr.html#ingressistiocontroller-v1alpha1-spec-resourcesrequests) и [`EgressIstioController`](cr.html#egressistiocontroller-v1alpha1-spec-resourcesrequests).
+
+Доступны два режима управления ресурсами:
+
+- `Static` — запросы задаются явно и остаются фиксированными.
+- `VPA` — [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) изменяет запросы в заданных пределах `min` и `max`. Начиная с версии DKP 1.75 рекомендуется режим VPA `InPlaceOrRecreate`. Он изменяет ресурсы пода «на месте», если это поддерживается кластером, и пересоздаёт под в противном случае. Устаревший режим `Auto` всегда пересоздаёт под.
+
+Пример:
+
+```yaml
+resourcesRequests:
+  mode: VPA
+  vpa:
+    mode: InPlaceOrRecreate
+    cpu:
+      min: 100m
+      max: 1000m
+    memory:
+      min: 128Mi
+      max: 2000Mi
+```
+
+### Публикация приложений через ingress gateway
 
 Начните с создания `IngressIstioController`. В примере ниже HTTP и HTTPS публикуются на выбранных frontend-узлах через host-порты:
 
@@ -229,7 +260,7 @@ spec:
     mode: VPA
 ```
 
-Обратите внимание, что ресурс Secret с TLS для ingress gateway должен быть создан в пространстве имён `d8-ingress-istio`, а не в пространстве имён приложения — эту деталь легко упустить.
+Создайте Secret с TLS для ingress gateway в пространстве имён `d8-ingress-istio`, а не в пространстве имён приложения.
 
 ```yaml
 apiVersion: v1
@@ -244,6 +275,8 @@ data:
   tls.key: |
     <tls.key data>
 ```
+
+Создайте Istio `Gateway`, который выбирает контроллер, и `VirtualService`, который направляет запросы через шлюз.
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -340,54 +373,193 @@ spec:
 `numTrustedProxies` и `proxyProtocol` можно использовать вместе. Если настроены оба параметра и входящий запрос содержит заголовок `X-Forwarded-For`, Istio использует доверенную цепочку `X-Forwarded-For` вместо атрибутов PROXY-протокола.
 {% endalert %}
 
-#### Управление запросами ресурсов шлюза
+### Маршрутизация внешнего трафика через egress gateway
 
-Используйте [`spec.resourcesRequests`](cr.html#ingressistiocontroller-v1alpha1-spec-resourcesrequests) для управления запросами (requests) CPU и памяти для подов ingress gateway. Доступны два режима:
+Создайте `EgressIstioController` и укажите узлы, на которых будут запущены его прокси:
 
-- `Static` — запросы задаются напрямую и остаются фиксированными:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: EgressIstioController
+metadata:
+  name: external
+spec:
+  egressGatewayClass: external
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: Static
+    static:
+      cpu: 100m
+      memory: 128Mi
+```
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: IngressIstioController
-  metadata:
-    name: main
-  spec:
-    ingressGatewayClass: istio-hp
-    inlet: HostPort
-    hostPort:
-      httpPort: 80
-      httpsPort: 443
-    resourcesRequests:
-      mode: Static
-      static:
-        cpu: 100m
-        memory: 128Mi
-  ```
+Модуль создаёт Service `egress-gateway-controller-external` в пространстве имён `d8-egress-istio`. Чтобы направить через него трафик:
 
-- `VPA` — [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) изменяет запросы в заданных пределах `min`/`max`. Начиная с версии DKP 1.75, рекомендуемым режимом VPA является `InPlaceOrRecreate`: он изменяет ресурсы пода «на месте» (in-place), если это поддерживается кластером, и пересоздаёт под в противном случае (устаревший режим `Auto` всегда пересоздаёт под):
+1. Зарегистрируйте внешний адрес назначения с помощью `ServiceEntry`.
+1. Настройте egress gateway для перенаправления запросов по этому адресу.
+1. Направьте трафик сервисной сети на Service шлюза.
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: IngressIstioController
-  metadata:
-    name: main
-  spec:
-    ingressGatewayClass: istio-hp
-    inlet: HostPort
-    hostPort:
-      httpPort: 80
-      httpsPort: 443
-    resourcesRequests:
-      mode: VPA
-      vpa:
-        mode: InPlaceOrRecreate
-        cpu:
-          min: 100m
-          max: 1000m
-        memory:
-          min: 128Mi
-          max: 2000Mi
-  ```
+```yaml
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: httpbin
+  namespace: app-ns
+spec:
+  hosts:
+  - httpbin.org
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: external
+  namespace: d8-egress-istio
+spec:
+  selector:
+    istio.deckhouse.io/egress-gateway-class: external
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - httpbin.org
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin-egress
+  namespace: d8-egress-istio
+spec:
+  hosts:
+  - httpbin.org
+  gateways:
+  - external
+  http:
+  - route:
+    - destination:
+        host: httpbin.org
+        port:
+          number: 80
+```
+
+Создайте `VirtualService` и `DestinationRule` в пространстве имён рабочей нагрузки, чтобы направить исходный запрос на Service шлюза. Замените `<cluster-domain>` доменом кластера:
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin-via-egress
+  namespace: app-ns
+spec:
+  hosts:
+  - httpbin.org
+  gateways:
+  - mesh
+  http:
+  - match:
+    - port: 80
+    route:
+    - destination:
+        host: egress-gateway-controller-external.d8-egress-istio.svc.<cluster-domain>
+        subset: httpbin
+        port:
+          number: 80
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: external-egress
+  namespace: app-ns
+spec:
+  host: egress-gateway-controller-external.d8-egress-istio.svc.<cluster-domain>
+  subsets:
+  - name: httpbin
+```
+
+#### Маршрутизация трафика сервисов федерации через egress gateway
+
+В этом примере предполагается, что [федерация настроена](./#федерация), а удалённый сервис опубликован. Для каждого опубликованного удалённым кластером сервиса федерация создаёт `ServiceEntry` и `DestinationRule`. Ресурс `ServiceEntry` указывает на ingress gateway федерации удалённого кластера, а `DestinationRule` настраивает TLS в режиме `ISTIO_MUTUAL`.
+
+Чтобы направить обращения к опубликованному сервису федерации через egress gateway, не заменяйте созданные федерацией ресурсы. Добавьте `VirtualService` сервисной сети, который направляет трафик хоста федерации на Service egress gateway. Для egress gateway добавьте `Gateway` и `VirtualService`, которые направляют тот же хост на исходный `ServiceEntry` федерации.
+
+В следующем примере обращения из `app-ns` к сервису федерации `helloworld.remote-ns.svc.<remote-cluster-domain>:5000` направляются через контроллер `external`. Удалённый сервис должен быть заранее опубликован, а созданные для него `ServiceEntry` и `DestinationRule` должны присутствовать в локальном кластере.
+
+Замените `<remote-cluster-domain>` доменом удалённого кластера, который публикует сервис. Замените `<cluster-domain>` доменом локального кластера, где находится Service egress gateway.
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: federation-egress
+  namespace: d8-egress-istio
+spec:
+  selector:
+    istio.deckhouse.io/egress-gateway-class: external
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - helloworld.remote-ns.svc.<remote-cluster-domain>
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: federation-egress
+  namespace: d8-egress-istio
+spec:
+  hosts:
+  - helloworld.remote-ns.svc.<remote-cluster-domain>
+  gateways:
+  - federation-egress
+  http:
+  - route:
+    - destination:
+        # Хост ресурса ServiceEntry, созданного модулем для федерации.
+        host: helloworld.remote-ns.svc.<remote-cluster-domain>
+        port:
+          number: 5000
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: federation-via-egress
+  namespace: app-ns
+spec:
+  hosts:
+  - helloworld.remote-ns.svc.<remote-cluster-domain>
+  gateways:
+  - mesh
+  http:
+  - match:
+    - port: 5000
+    route:
+    - destination:
+        host: egress-gateway-controller-external.d8-egress-istio.svc.<cluster-domain>
+        subset: federation
+        port:
+          number: 80
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: federation-egress
+  namespace: app-ns
+spec:
+  host: egress-gateway-controller-external.d8-egress-istio.svc.<cluster-domain>
+  subsets:
+  - name: federation
+```
+
+Такая конфигурация сохраняет TLS-политику и эндпоинты удалённого ingress gateway, созданные федерацией.
 
 ### Ingress NGINX
 

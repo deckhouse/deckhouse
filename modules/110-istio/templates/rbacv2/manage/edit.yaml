@@ -16,6 +16,7 @@ rules:
   - deckhouse.io
   resources:
   - ingressistiocontrollers
+  - egressistiocontrollers
   - istiofederations
   - istiomulticlusters
   verbs:

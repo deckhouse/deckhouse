@@ -317,6 +317,7 @@ users:
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
   - system:serviceaccount:d8-istio:cni
+  - system:serviceaccount:d8-istio:egress-gateway-controller
   - system:serviceaccount:d8-istio:ingress-gateway-controller
   - system:serviceaccount:d8-istio:kiali
   - system:serviceaccount:d8-istio:multicluster-api-proxy
@@ -792,6 +793,7 @@ rules:
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter
       - system:serviceaccount:d8-istio:cni
+      - system:serviceaccount:d8-istio:egress-gateway-controller
       - system:serviceaccount:d8-istio:ingress-gateway-controller
       - system:serviceaccount:d8-istio:kiali
       - system:serviceaccount:d8-istio:multicluster-api-proxy

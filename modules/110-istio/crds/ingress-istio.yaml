@@ -289,4 +289,3 @@ spec:
           name: Inlet
           description: 'The way traffic goes to current Ingress Controller from the outer network.'
           type: string
-
