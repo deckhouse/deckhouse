@@ -458,7 +458,7 @@ steps:
 {!{ define "go_generate_template" }!}
 {!{- $ctx := index . 0 -}!}
 # <template: go_generate_template>
-runs-on: [self-hosted, regular]
+runs-on: [self-hosted, self-slim]
 steps:
 {!{ tmpl.Exec "started_at_output"  $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}

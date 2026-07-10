@@ -989,7 +989,7 @@ jobs:
       - git_info
       - pull_request_info
     # <template: go_generate_template>
-    runs-on: [self-hosted, regular]
+    runs-on: [self-hosted, self-slim]
     steps:
 
       # <template: started_at_output>
