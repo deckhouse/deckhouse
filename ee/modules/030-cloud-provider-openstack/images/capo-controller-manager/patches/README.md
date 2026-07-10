@@ -10,3 +10,7 @@ from the `OpenStackMachineReconciler` and the `OpenStackServerReconciler`, and
 by not starting the `OpenStackFloatingIPPoolReconciler`. Deckhouse does not use
 the upstream CAPO IPAM flow for floating IP management, so this integration is
 removed to avoid conflicts.
+
+### 002-go-mod.patch
+
+Bump go.mod dependencies to fix known CVEs.
