@@ -61,7 +61,7 @@ status:
 
 	Context("VCDCluster ready and Cluster without status", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(vcdCluster+cluster, 2))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(vcdCluster+cluster, 1))
 			f.RunHook()
 		})
 
@@ -83,13 +83,24 @@ metadata:
 status:
   ready: false
 `
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(vcdClusterNotReady+cluster, 2))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(vcdClusterNotReady+cluster, 1))
 			f.RunHook()
 		})
 
 		It("Hook must not fail and not patch Cluster", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "test-cluster").ToYaml()).To(MatchYAML(cluster))
+		})
+	})
+
+	Context("VCDCluster ready but Cluster object absent (early bootstrap)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(vcdCluster, 1))
+			f.RunHook()
+		})
+
+		It("must not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 })

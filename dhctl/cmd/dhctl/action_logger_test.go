@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func TestRootWritesFileAndTTY(t *testing.T) {

@@ -2,16 +2,6 @@
 
 ### Обратите внимание
 
-- При включённом модуле `user-authz` изменена модель прав для `admin.conf`:
-  вместо привязки к встроенной роли `cluster-admin` используется [управляемая DKP RBAC-модель](https://deckhouse.ru/modules/control-plane-manager/v1.76/faq.html#административный-доступ-на-основе-rbac) с более точечными правами.
-  Это повышает безопасность доступа к кластеру.
-  При этом сохраняется [аварийный доступ](https://deckhouse.ru/modules/control-plane-manager/v1.76/faq.html#аварийный-доступ-break-glass) через `super-admin.conf`.
-  **Если в кластере используются сторонние Kubernetes-операторы (не из DKP), дополнительно выдайте права на их CRD,
-  иначе доступ к таким ресурсам будет ограничен.**
-
-- [Используемая по умолчанию](https://deckhouse.ru/modules/ingress-nginx/v1.76/configuration.html#parameters-defaultcontrollerversion) версия Ingress NGINX Controller повышена с 1.10 до 1.12.
-  Контроллеры, использующие версию по умолчанию, будут обновлены автоматически.
-
 - [Компонент fencing-agent](https://deckhouse.ru/modules/node-manager/v1.76/cr.html#nodegroup-v1-spec-fencing-mode) модуля `node-manager` переведён на gossip-протокол ([библиотека memberlist](https://github.com/hashicorp/memberlist))
   для распределённого мониторинга состояния узлов.
   Это снижает риск ложных перезагрузок worker-узлов при недоступности control plane или высокой нагрузке на API-сервер.

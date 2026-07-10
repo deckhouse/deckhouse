@@ -152,10 +152,6 @@ func writeSections(settings writeSettings) {
 		if strings.Contains(file, "ee/modules/000-common") {
 			return
 		}
-		// remove 098_upd_tfadm.sh.tpl in CSE
-		if strings.Contains(file, "/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl") && settings.Edition == "CSE" {
-			return
-		}
 		// remove /ee/modules/040-node-manager/templates/nvidia-gpu in CSE
 		if strings.Contains(file, "/ee/modules/040-node-manager/templates/nvidia-gpu") && settings.Edition == "CSE" {
 			return
@@ -491,7 +487,8 @@ type edition struct {
 	ModulesDir       string         `yaml:"modulesDir,omitempty"`
 	BuildIncludes    *buildIncludes `yaml:"buildIncludes,omitempty"`
 	ExcludeModules   []string       `yaml:"excludeModules,omitempty"`
-	AvailableModules []string       `yaml:"AvailableModules,omitempty"`
+	AvailableModules []string       `yaml:"availableModules,omitempty"`
+	ExcludeEditions  []string       `yaml:"excludeEditions,omitempty"`
 }
 
 type editions struct {
@@ -564,6 +561,7 @@ func (e *executor) executeEdition(editionName string) {
 
 	modulesDict := make(map[string]string)
 	availableModules := make(map[string]struct{})
+	excludedEditions := make(map[string]struct{})
 	for _, ed := range e.Editions {
 		if ed.Name != editionName {
 			continue
@@ -571,10 +569,16 @@ func (e *executor) executeEdition(editionName string) {
 		for _, moduleName := range ed.AvailableModules {
 			availableModules[moduleName] = struct{}{}
 		}
+		for _, excludedEditionName := range ed.ExcludeEditions {
+			excludedEditions[excludedEditionName] = struct{}{}
+		}
 		break
 	}
 
 	for _, ed := range e.Editions {
+		if _, ok := excludedEditions[ed.Name]; ok {
+			continue
+		}
 		// get moduleName => path dict
 		searchDir := filepath.Join(workDir, ed.ModulesDir)
 		entries, err := os.ReadDir(searchDir)

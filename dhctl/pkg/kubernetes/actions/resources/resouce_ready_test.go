@@ -15,7 +15,6 @@
 package resources
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -1005,7 +1004,7 @@ func assertResourceReadyAfterAttempts(t *testing.T, checker *resourceReadinessCh
 }
 
 func assertCheckResourceReady(t *testing.T, checker *resourceReadinessChecker, expectedReady bool, attempt int, cooldownPassed bool) {
-	ctx := context.TODO()
+	ctx := t.Context()
 	ready, err := checker.IsReady(ctx)
 	require.NoError(t, err)
 	require.Equal(t, expectedReady, ready, "ready")
@@ -1020,7 +1019,7 @@ func testResourceReadinessChecker(t *testing.T, resourceYAML string) *resourceRe
 func testResourceReadinessCheckerWithOptionalCreatingResource(t *testing.T, resourceYAML string, createResource bool) *resourceReadinessChecker {
 	require.NotEmpty(t, resourceYAML)
 
-	resources, err := template.ParseResourcesContent(context.Background(), resourceYAML, make(map[string]any))
+	resources, err := template.ParseResourcesContent(t.Context(), resourceYAML, make(map[string]any))
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
 
@@ -1042,7 +1041,7 @@ func testResourceReadinessCheckerWithOptionalCreatingResource(t *testing.T, reso
 	if createResource {
 		var created *unstructured.Unstructured
 		var errCreate error
-		ctx := context.TODO()
+		ctx := t.Context()
 		if ns != "" {
 			created, errCreate = kubeCl.Dynamic().Resource(gvr).Namespace(ns).Create(ctx, &resource.Object, metav1.CreateOptions{})
 		} else {

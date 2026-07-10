@@ -43,7 +43,7 @@ type fakePackageManager struct {
 	gotConstraints schedule.Constraints
 }
 
-func (f *fakePackageManager) ValidateAppSettings(_ context.Context, _ string, _ addonutils.Values) (settingscheck.Result, error) {
+func (f *fakePackageManager) ValidatePackageSettings(_ context.Context, _ string, _ addonutils.Values) (settingscheck.Result, error) {
 	return f.validateResult, f.validateErr
 }
 
@@ -138,7 +138,7 @@ func TestParsePackageConstraint(t *testing.T) {
 	})
 }
 
-func TestValidateAppSettings(t *testing.T) {
+func TestValidateApplicationSettings(t *testing.T) {
 	objectSchema := func(props map[string]openapi.OpenAPIV3Schema, required []string) *v1alpha1.PackageSchema {
 		return &v1alpha1.PackageSchema{
 			OpenAPIV3Schema: &openapi.OpenAPIV3Schema{

@@ -31,7 +31,8 @@ import (
 	typedv1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	kuberetry "k8s.io/client-go/util/retry"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )

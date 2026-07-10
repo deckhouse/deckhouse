@@ -62,7 +62,6 @@ The following simplifications are made in the diagram:
 
 The architecture of the [`multitenancy-manager`](/modules/multitenancy-manager/) module at Level 2 of the C4 model and its interactions with other DKP components are shown in the following diagram.
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Multitenancy-manager module architecture](../../images/architecture/iam/c4-l2-multitenancy-manager.png)
 
 ## Module components

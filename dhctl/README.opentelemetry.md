@@ -41,6 +41,35 @@ Converting to Tempo-compatible export:
 - `lovie tempo-export /path/to/trace-file.jsonl`
   This converts the dhctl trace format into a trace file suitable for importing into Grafana Tempo (or your DOP). After conversion, follow your backend's import instructions to load the trace.
 
+## Trace attributes
+
+dhctl attaches context to spans so runs can be filtered and correlated in a
+tracing backend. All values are derived from the parsed cluster config or the
+gRPC request — dhctl reads no environment variables from the caller.
+
+On the bootstrap operation span (`ClusterBootstrapper.Bootstrap`):
+
+- `deckhouse.cluster.type` — `Cloud` / `Static`
+- `deckhouse.cloud.provider` — provider name (cloud clusters only)
+- `deckhouse.cloud.layout` — layout (cloud clusters only)
+- `deckhouse.cluster.prefix` — cluster prefix; equals the Commander cluster name
+- `deckhouse.cluster.uuid` — Deckhouse cluster UUID (when set)
+
+On the gRPC operation spans (`grpc.bootstrap`, `grpc.destroy`, `grpc.converge`):
+
+- `dhctl.commander_mode` — whether dhctl was driven by Deckhouse Commander
+- `dhctl.commander_uuid` — Commander cluster UUID (when set)
+
+`dhctl.commander_uuid` is the cluster UUID in the Commander URL. A backend can
+build a link to the cluster page as:
+
+```text
+<commander-base-url>/workspaces/<workspace>/clusters/{dhctl.commander_uuid}/configurations
+```
+
+The base URL and workspace are environment-specific and are supplied by the
+backend (e.g. a Grafana data-link template), not by dhctl.
+
 ## Security and privacy
 
 - Traces may include CLI arguments, file paths, resource names and other identifiers. Scrub or redact sensitive traces before sharing with third parties.

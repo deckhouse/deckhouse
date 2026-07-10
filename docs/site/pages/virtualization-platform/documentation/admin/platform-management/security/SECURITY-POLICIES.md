@@ -509,7 +509,7 @@ To enable container image signature verification in a DVP cluster:
 
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
-   More details about selector usage are available in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+   More details about selector usage are available in the [documentation](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 1. Create an [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) that restricts running pods from third-party registries:
 
@@ -532,7 +532,7 @@ To enable container image signature verification in a DVP cluster:
 
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
-   More details about selector usage are available in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+   More details about selector usage are available in the [documentation](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 1. Add a label to the namespace where signature verification should be enabled (specify your namespace):
 

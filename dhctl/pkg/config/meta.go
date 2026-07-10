@@ -32,11 +32,11 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 )
 
@@ -107,32 +107,9 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	return m, nil
 }
 
-var deprecatedClusterConfigFields = []struct {
-	field   string
-	message string
-}{
-	{
-		field:   "encryptionAlgorithm",
-		message: "Please migrate it to the \"control-plane-manager\" ModuleConfig: spec.settings.encryptionAlgorithm.",
-	},
-}
-
-func (m *MetaConfig) warnDeprecatedClusterConfigFields(ctx context.Context) {
-	for _, d := range deprecatedClusterConfigFields {
-		if _, ok := m.ClusterConfig[d.field]; ok {
-			dhlog.FromContext(ctx).WarnContext(ctx, "=================================================================")
-			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("DEPRECATED: %q in ClusterConfiguration is deprecated.", d.field))
-			dhlog.FromContext(ctx).WarnContext(ctx, d.message)
-			dhlog.FromContext(ctx).WarnContext(ctx, "Support for this field in ClusterConfiguration will be removed in a future release.")
-			dhlog.FromContext(ctx).WarnContext(ctx, "=================================================================")
-		}
-	}
-}
-
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
-		m.warnDeprecatedClusterConfigFields(ctx)
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
 		}

@@ -29,7 +29,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -167,21 +168,6 @@ func initLogs(exporter sdklog.Exporter, r *resource.Resource) ShutdownFunc {
 	)
 
 	global.SetLoggerProvider(provider)
-
-	// todo: add to external logger?
-	// slog.SetDefault(
-	//	slog.New(
-	//		slogmulti.Fanout(
-	//			slog.Default().Handler(),
-	//			otelslog.NewHandler(
-	//				os.Getenv("APP_NAME"),
-	//				otelslog.WithLoggerProvider(provider),
-	//				otelslog.WithSource(true),
-	//				otelslog.WithVersion(os.Getenv("CI_APPLICATION_TAG")),
-	//			),
-	//		),
-	//	),
-	//)
 
 	return func(ctx context.Context) error {
 		if err := provider.ForceFlush(ctx); err != nil {

@@ -18,8 +18,10 @@ import (
 	"context"
 	"log/slog"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type logAttributesProvider interface {
@@ -47,7 +49,7 @@ func initLoggerOptions[T any](ctx context.Context, params *initLoggerOptionsPara
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
 
-	logWriter := logger.NewLogWriter(loggerDefault, params.sendCh, params.consumer)
+	logWriter := logger.NewLogWriter(ctx, loggerDefault, params.sendCh, params.consumer)
 
 	debugWriter := logger.NewDebugLogWriter(loggerDefault)
 
@@ -70,7 +72,11 @@ func initDhctlLoggerCtx(ctx context.Context, action actionForInitLogger) context
 	// streaming slog logger over the client-stream writer, carried on ctx for operations.
 	// NewStreamLogger renders the compact logboek UI (process boxes, milestones) so the commander
 	// client receives the pretty tree format instead of raw slog text.
-	streamLogger := dhlog.NewStreamLogger(opts.DefaultWriter)
+	//
+	// WithOTLPLogExport mirrors those same records to OTLP (no-op when telemetry is disabled). The
+	// operation ctx carries the grpc.* span, so exported records are correlated to it. Without this
+	// wrap, gRPC-driven runs (the commander path) export traces but no logs.
+	streamLogger := telemetry.WithOTLPLogExport(dhlog.NewStreamLogger(opts.DefaultWriter))
 	ctx = dhlog.ToContext(ctx, streamLogger)
 
 	return ctx

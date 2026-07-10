@@ -17,6 +17,7 @@ package values
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/ettle/strcase"
@@ -24,6 +25,8 @@ import (
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/swag/conv"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -227,6 +230,35 @@ func (s *Storage) ApplyValuesPatch(patch addonutils.ValuesPatch) error {
 
 	s.valuesPatches = addonutils.AppendValuesPatch(s.valuesPatches, patch)
 	return s.calculateResultValues()
+}
+
+// ApplyValuesPatchWithLegacyRoot applies a patch after unwrapping the legacy package-name root.
+func (s *Storage) ApplyValuesPatchWithLegacyRoot(patch addonutils.ValuesPatch) error {
+	return s.ApplyValuesPatch(unwrapValuesPatchRoot(patch, s.name))
+}
+
+// unwrapValuesPatchRoot maps legacy /<package>/ paths onto the flat values document.
+func unwrapValuesPatchRoot(patch addonutils.ValuesPatch, root string) addonutils.ValuesPatch {
+	prefix := "/" + strings.NewReplacer("~", "~0", "/", "~1").Replace(root)
+	operations := make([]*sdkutils.ValuesPatchOperation, len(patch.Operations))
+
+	for i, operation := range patch.Operations {
+		if operation == nil {
+			continue
+		}
+
+		normalized := *operation
+		switch {
+		case normalized.Path == prefix:
+			normalized.Path = ""
+		case strings.HasPrefix(normalized.Path, prefix+"/"):
+			normalized.Path = strings.TrimPrefix(normalized.Path, prefix)
+		}
+
+		operations[i] = &normalized
+	}
+
+	return addonutils.ValuesPatch{Operations: operations}
 }
 
 // calculateResultValues merges all value layers and applies patches.

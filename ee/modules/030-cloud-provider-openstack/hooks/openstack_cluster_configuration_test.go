@@ -317,6 +317,8 @@ data: {}
 subnetID: "subnetID"
 floatingNetworkID: "floatingNetworkID"
 `))
+			Expect(f.ValuesGet(internal + "layout").String()).To(Equal("Standard"))
+			Expect(f.ValuesGet(internal + "apiServerFloatingIP").Bool()).To(BeTrue())
 			Expect(f.ValuesGet(internal + "tags").String()).To(MatchYAML(`
 project: default
 env: production
@@ -335,6 +337,7 @@ env: production
 		It("Should fill values from cloudProviderOpenstack", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderOpenstack.internal").String()).To(MatchYAML(`
+apiServerFloatingIP: true
 connection:
   authURL: https://test.tests.com:5000/v3/
   domainName: default
@@ -352,6 +355,7 @@ instances:
   securityGroups:
   - security_group_1
   - security_group_2
+layout: ""
 zones: []
 loadBalancer:
   subnetID: overrideSubnetID
@@ -513,6 +517,8 @@ securityGroups:
 sshKeyPairName: my-ssh-keypair
 `))
 			Expect(c.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`{}`))
+			Expect(c.ValuesGet(internal + "layout").String()).To(Equal("StandardWithNoRouter"))
+			Expect(c.ValuesGet(internal + "apiServerFloatingIP").Bool()).To(BeFalse())
 			Expect(c.ValuesGet(internal + "tags").String()).To(MatchYAML(`
 project: default
 env: production
@@ -564,6 +570,8 @@ env: production
 subnetID: "subnetID"
 floatingNetworkID: "floatingNetworkID"
 `))
+			Expect(d.ValuesGet(internal + "layout").String()).To(Equal("SimpleWithInternalNetwork"))
+			Expect(d.ValuesGet(internal + "apiServerFloatingIP").Bool()).To(BeTrue())
 			Expect(d.ValuesGet(internal + "tags").String()).To(MatchYAML(`
 project: default
 env: production

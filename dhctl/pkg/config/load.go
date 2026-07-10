@@ -34,10 +34,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type SchemaStore struct {
@@ -392,6 +392,8 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 	}
 
 	schema = transformer.TransformSchema(schema, &transformer.AdditionalPropertiesTransformer{})
+
+	warnDeprecatedFields(ctx, index, extractMetadataName(*doc), docForValidate, schema)
 
 	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {

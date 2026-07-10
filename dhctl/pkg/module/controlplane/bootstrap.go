@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -28,7 +29,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -74,20 +75,20 @@ type Signature struct {
 type TimeFunc func() time.Time
 
 type BootstrapPreparator struct {
-	settings       ModuleSettings
-	node           libcon.Interface
-	loggerProvider log.LoggerProvider
-	timeNow        TimeFunc
-	dirPathPrefix  string
-	loopsParams    LoopsParams
+	settings      ModuleSettings
+	node          libcon.Interface
+	logger        *slog.Logger
+	timeNow       TimeFunc
+	dirPathPrefix string
+	loopsParams   LoopsParams
 }
 
-func NewBootstrapPreparator(settings ModuleSettings, node libcon.Interface, loggerProvider log.LoggerProvider) *BootstrapPreparator {
+func NewBootstrapPreparator(settings ModuleSettings, node libcon.Interface, logger *slog.Logger) *BootstrapPreparator {
 	return &BootstrapPreparator{
-		settings:       settings,
-		node:           node,
-		loggerProvider: loggerProvider,
-		timeNow:        time.Now,
+		settings: settings,
+		node:     node,
+		logger:   logger,
+		timeNow:  time.Now,
 	}
 }
 
@@ -116,7 +117,7 @@ func (p *BootstrapPreparator) TemplateConfigForBootstrap(nodeIP string) (*Templa
 }
 
 func (p *BootstrapPreparator) PrepareModule(ctx context.Context) error {
-	logger := p.loggerProvider()
+	logger := p.logger
 
 	signatureMode, err := p.settings.SignatureMode()
 	if err != nil {
@@ -124,11 +125,11 @@ func (p *BootstrapPreparator) PrepareModule(ctx context.Context) error {
 	}
 
 	if signatureMode == NoSignatureMode {
-		logger.DebugF("No signature mode provided. Skipping signature preparation")
+		logger.DebugContext(context.Background(), "No signature mode provided. Skipping signature preparation")
 		return nil
 	}
 
-	return logger.Process(log.ProcessBootstrap, "Configure signature certificates for control-plane", func() error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Configure signature certificates for control-plane", func(context.Context) error {
 		return p.generateKeysAndUpload(ctx, signatureMode)
 	})
 }
@@ -138,19 +139,19 @@ func (p *BootstrapPreparator) Module() string {
 }
 
 func (p *BootstrapPreparator) generateKeysAndUpload(ctx context.Context, signatureMode string) error {
-	p.loggerProvider().DebugF("Got signature mode: %s. Starting to prepare control-plane signature", signatureMode)
+	p.logger.DebugContext(ctx, fmt.Sprintf("Got signature mode: %s. Starting to prepare control-plane signature", signatureMode))
 
 	certs, err := tlsutils.GenerateCertificate("signature", "apiserver", tlsutils.CertKeyTypeED25519, 365)
 	if err != nil {
 		return fmt.Errorf("Cannot generate TLS certificate: %w", err)
 	}
 
-	keys, err := p.generateKeys(certs, p.timeNow())
+	keys, err := p.generateKeys(ctx, certs, p.timeNow())
 	if err != nil {
 		return err
 	}
 
-	encConfig, err := p.encryptionConfig(signatureMode)
+	encConfig, err := p.encryptionConfig(ctx, signatureMode)
 	if err != nil {
 		return err
 	}
@@ -166,13 +167,11 @@ type keys struct {
 	jwksJSON       []byte
 }
 
-func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time) (*keys, error) {
+func (p *BootstrapPreparator) generateKeys(ctx context.Context, certs *tls.Certificate, now time.Time) (*keys, error) {
 	privKey, ok := certs.PrivateKey.(ed25519.PrivateKey)
 	if !ok {
 		return nil, fmt.Errorf("unexpected key type %T, expected ed25519.PrivateKey", certs.PrivateKey)
 	}
-
-	logger := p.loggerProvider()
 
 	timeNow := now.Format("2006-01-02 15:04")
 	privJWK := jose.JSONWebKey{
@@ -187,7 +186,7 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 		return nil, fmt.Errorf("Cannot marshal private key JWK: %w", err)
 	}
 
-	logger.DebugF("Generating key for signature")
+	p.logger.DebugContext(ctx, "Generating key for signature")
 	pubKeyCert, err := x509.ParseCertificate(certs.Certificate[0])
 	if err != nil {
 		return nil, fmt.Errorf("Cannot parse certificate: %w", err)
@@ -198,7 +197,7 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 		return nil, fmt.Errorf("Unexpected public key type %T, expected ed25519.PublicKey", pubKeyCert.PublicKey)
 	}
 
-	logger.DebugF("Generating certificate for signature")
+	p.logger.DebugContext(ctx, "Generating certificate for signature")
 	pubJWK := jose.JSONWebKey{
 		Key:          pubKey,
 		KeyID:        timeNow,
@@ -221,8 +220,8 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 	}, nil
 }
 
-func (p *BootstrapPreparator) encryptionConfig(signatureMode string) ([]byte, error) {
-	p.loggerProvider().DebugF("Generating encryption config")
+func (p *BootstrapPreparator) encryptionConfig(ctx context.Context, signatureMode string) ([]byte, error) {
+	p.logger.DebugContext(ctx, "Generating encryption config")
 
 	config := EncryptionConfiguration{
 		APIVersion: "apiserver.config.k8s.io/v1",
@@ -263,14 +262,12 @@ func (p *BootstrapPreparator) signaturePath(parts ...string) string {
 func (p *BootstrapPreparator) createSignatureDir(ctx context.Context) error {
 	signaturePath := p.signaturePath()
 
-	logger := p.loggerProvider()
-
-	logger.DebugF("Creating signature dir %s", signaturePath)
+	p.logger.DebugContext(ctx, fmt.Sprintf("Creating signature dir %s", signaturePath))
 
 	loopParams := retry.SafeCloneOrNewParams(p.loopsParams.CreateSigDir, createSigDirDefaultOpts...).
 		Clone(
 			retry.WithName("Prepare %s", signaturePath),
-			retry.WithLogger(logger),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
@@ -294,7 +291,7 @@ func (p *BootstrapPreparator) uploadSignatureFiles(ctx context.Context, sig *sig
 		return err
 	}
 
-	p.loggerProvider().DebugF("Uploading signature files")
+	p.logger.DebugContext(ctx, "Uploading signature files")
 	files := map[string][]byte{
 		p.signaturePath(privKeyFilename): sig.privateKeyJSON,
 		p.signaturePath(pubKeyFilename):  sig.jwksJSON,

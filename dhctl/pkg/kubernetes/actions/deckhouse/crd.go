@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"os"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 // EnsureModuleConfigCRD applies the ModuleConfig CRD shipped in the installer

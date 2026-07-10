@@ -29,8 +29,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
 
-	dhlogger "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
+	dhlogger "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // captureSlog installs a buffer-backed slog logger as the process default so

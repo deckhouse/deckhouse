@@ -23,7 +23,7 @@ import (
 
 	terminal "golang.org/x/term"
 
-	logger "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
+	logger "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type Confirmation struct {

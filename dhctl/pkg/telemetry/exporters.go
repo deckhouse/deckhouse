@@ -32,8 +32,9 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type exporterType string

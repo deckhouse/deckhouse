@@ -65,7 +65,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping the envtest environment (Node is core, no CRDs needed)")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(scheme, nil)
+	testEnv, cfg, k8sClient, err = testenv.Start(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// The bashible-cleanup controller registered itself via its package init(); since only this

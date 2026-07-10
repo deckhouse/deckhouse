@@ -37,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -46,6 +47,11 @@ import (
 )
 
 const confirmationMessage = "Disabling this module will stop the cluster."
+
+// testEdition is the edition/bundle used by every test in this file to
+// resolve the "enabled by default" fallback for ModuleConfigs with no
+// explicit spec.enabled.
+var testEdition = &d8edition.Edition{Name: "ce", Bundle: "Default"}
 
 // fakeModuleStorage implements the moduleStorage interface for tests.
 type fakeModuleStorage struct {
@@ -98,6 +104,13 @@ func newModuleWithDisableOptions(t *testing.T, name string, confirmation bool, m
 			Confirmation: confirmation,
 			Message:      message,
 		},
+		// enabled by default for testEdition's bundle, so that a ModuleConfig
+		// with no explicit spec.enabled resolves to "enabled".
+		Accessibility: &moduletypes.ModuleAccessibility{
+			Editions: map[string]moduletypes.ModuleEdition{
+				"_default": {Available: true, EnabledInBundles: []string{testEdition.Bundle}},
+			},
+		},
 	}
 
 	module, err := moduletypes.NewModule(def, nil, nil, nil, log.NewNop())
@@ -133,6 +146,16 @@ func newModuleCR(name string, availableSources []string, stage string) *v1alpha1
 			AvailableSources: availableSources,
 		},
 	}
+}
+
+// newEmbeddedModuleCR builds a Module CR that is still embedded (Source ==
+// "Embedded") but already published in external sources, i.e. a module mid
+// embedded->external migration. It is used to assert that the source-availability
+// check guards this case at admission time too.
+func newEmbeddedModuleCR(name string, availableSources []string) *v1alpha1.Module {
+	m := newModuleCR(name, availableSources, "")
+	m.Properties.Source = v1alpha1.ModuleSourceEmbedded
+	return m
 }
 
 // newModuleCRWithRequirements builds a Module CR that declares parent-module
@@ -225,7 +248,7 @@ func newTestHandlerWithValidator(t *testing.T, storage *fakeModuleStorage, manag
 	deckhouseSettings.AllowedExperimentalModules = allowedExperimental
 	settings := helpers.NewDeckhouseSettingsContainer(deckhouseSettings, metricStorage)
 
-	return moduleConfigValidationHandler(fakeClient, storage, metricStorage, manager, validator, settings, dependencyExtender)
+	return moduleConfigValidationHandler(fakeClient, storage, metricStorage, manager, validator, settings, dependencyExtender, testEdition)
 }
 
 func callHandler(t *testing.T, handler http.Handler, review *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse {
@@ -384,6 +407,28 @@ func TestModuleConfigValidationHandler_DisableConfirmation(t *testing.T) {
 			wantAllowed:         false,
 			wantMessage:         "depends on a disabled module",
 			description:         "an absent old enabled flag is treated as disabled, so enabling triggers the dependency check",
+		},
+		{
+			name:             "update: disabling a default-enabled module",
+			confirmation:     true,
+			currentlyEnabled: true,
+			operation:        "UPDATE",
+			newConfig:        newModuleConfig(moduleName, boolPtr(false), nil),
+			oldConfig:        newModuleConfig(moduleName, boolPtr(true), nil),
+			wantAllowed:      false,
+			wantMessage:      confirmationMessage,
+			description:      "default-enabled module is treated as disabled, so disabling triggers the dependency check",
+		},
+		{
+			name:             "update: updating a default-enabled module with no spec.enabled field",
+			confirmation:     true,
+			currentlyEnabled: true,
+			operation:        "UPDATE",
+			newConfig:        newModuleConfig(moduleName, nil, nil),
+			oldConfig:        newModuleConfig(moduleName, nil, nil),
+			dependencyErr:    fmt.Errorf("module %q depends on a disabled module", moduleName),
+			wantAllowed:      true,
+			description:      "default-enabled module is treated as enabled, so updating with no spec.enabled field is allowed",
 		},
 		{
 			name:                "create: enabling a module rejected by dependency constraint",
@@ -642,6 +687,28 @@ func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
 			expectCheckEnabling: true,
 			wantAllowed:         true,
 			wantWarning:         "multiple sources",
+		},
+		{
+			// migration scenario: an embedded module pinned to a source that does
+			// not offer it (stale/mistyped .spec.source) must be rejected at
+			// admission, not silently accepted to stall later.
+			name:        "embedded module referencing an unavailable source is rejected",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "beta", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newEmbeddedModuleCR(moduleName, []string{"alpha"}),
+			wantAllowed: false,
+			wantMessage: "unavailable source",
+		},
+		{
+			// the embedded module is published in the chosen source, so pinning it
+			// for migration is allowed.
+			name:        "embedded module referencing an available source is allowed",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "alpha", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newEmbeddedModuleCR(moduleName, []string{"alpha", "beta"}),
+			wantAllowed: true,
 		},
 	}
 
@@ -1222,15 +1289,15 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 	requirements := map[string]string{"log-shipper": ">= 0.0.0", "loki": ">= 0.0.0"}
 
 	tests := []struct {
-		name             string
-		operation        string
-		newConfig        *v1alpha1.ModuleConfig
-		oldConfig        *v1alpha1.ModuleConfig
-		moduleCR         *v1alpha1.Module
-		enabledParents   map[string]bool
-		dependencyErr    error
-		wantAllowed      bool
-		wantMessage      string
+		name           string
+		operation      string
+		newConfig      *v1alpha1.ModuleConfig
+		oldConfig      *v1alpha1.ModuleConfig
+		moduleCR       *v1alpha1.Module
+		enabledParents map[string]bool
+		dependencyErr  error
+		wantAllowed    bool
+		wantMessage    string
 	}{
 		{
 			name:           "create: both required parents disabled is rejected from the Module CR",

@@ -16,7 +16,6 @@ package destroy
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -33,13 +32,13 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var rootTmpDirStaticAbort = path.Join(os.TempDir(), "dhctl-test-static-abort")
@@ -88,7 +87,7 @@ func TestStaticAbort(t *testing.T) {
 	for _, tst := range tests {
 		t.Run(tst.name, func(t *testing.T) {
 			ts := testCreateAbortStaticProviderTest(t, tst)
-			ctx := context.TODO()
+			ctx := t.Context()
 
 			destroyer, err := GetAbortDestroyer(ctx, ts.abortParams)
 			require.NoError(t, err, "GetAbortDestroyer should return destroyer")
@@ -130,7 +129,7 @@ func (ts *testAbortStaticTest) getStateCache() dhctlstate.Cache {
 
 func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestParams) *testAbortStaticTest {
 	require.NotEmpty(t, params.host.Host)
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), nil)
+	metaConfig, err := config.ParseConfigFromData(t.Context(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), nil)
 	require.NoError(t, err, "parsing config from data")
 	metaConfig.UUID = uuid.Must(uuid.NewRandom()).String()
 

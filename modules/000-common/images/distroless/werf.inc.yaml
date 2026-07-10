@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/scratch" }}
+final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /relocate

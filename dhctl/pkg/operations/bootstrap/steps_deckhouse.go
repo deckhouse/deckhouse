@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -29,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -112,7 +112,7 @@ func applyPostBootstrapModuleConfigs(
 			retry.WithName("%s", task.Title),
 			retry.WithAttempts(75),
 			retry.WithWait(1*time.Second),
-			retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
 		err := retry.NewLoopWithParams(p).
 			Run(func() error {

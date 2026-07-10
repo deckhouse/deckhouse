@@ -598,7 +598,7 @@ func TestHandleConversion_MultipleObjects_V1ToAlpha2(t *testing.T) {
 		},
 	}
 
-	resp := h.handleConversion(context.Background(),req, cfg)
+	resp := h.handleConversion(context.Background(), req, cfg)
 	if resp.Result.Status != "Success" {
 		t.Fatalf("expected Success, got %s: %s", resp.Result.Status, resp.Result.Message)
 	}
@@ -652,7 +652,7 @@ func TestHandleConversion_MultipleObjects_Alpha2ToV1(t *testing.T) {
 		},
 	}
 
-	resp := h.handleConversion(context.Background(),req, cfg)
+	resp := h.handleConversion(context.Background(), req, cfg)
 	if resp.Result.Status != "Success" {
 		t.Fatalf("expected Success, got %s: %s", resp.Result.Status, resp.Result.Message)
 	}

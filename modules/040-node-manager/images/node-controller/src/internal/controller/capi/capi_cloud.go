@@ -19,6 +19,7 @@ package capi
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -323,6 +324,24 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			drainTimeout:        drainTimeout,
 		})
 
+		// Provider-specific MachineDeployment spec patch (capiMachineDeploymentSpecPatch
+		// from the cloud-provider secret), applied after the base object is built so it
+		// overlays the same fields the helm CAPI define patched.
+		if err := applyMachineDeploymentSpecPatch(
+			md.Object["spec"].(map[string]interface{}),
+			cloudConfig.capiMachineDeploymentSpecPatch,
+			map[string]string{
+				"bootstrapSecretName": bootstrapSecretName,
+				"clusterName":         cloudConfig.capiClusterName,
+				"mdName":              mdName,
+				"nodeGroupName":       ng.Name,
+				"templateName":        templateName,
+				"zone":                zone,
+			},
+		); err != nil {
+			return fmt.Errorf("apply provider MachineDeployment spec patch for %s: %w", mdName, err)
+		}
+
 		// Apply the MachineTemplate first: the MachineDeployment's infrastructureRef
 		// points at templateName, so the template must exist before the deployment
 		// references it (mirrors the helm hook ordering the checksum enforced).
@@ -404,4 +423,58 @@ func (r *MachineDeploymentReconciler) reconcileStaticMDRendered(ctx context.Cont
 	}
 	logger.V(1).Info("applied static MachineTemplate + MachineDeployment", "name", ng.Name)
 	return nil
+}
+
+// applyMachineDeploymentSpecPatch overlays the provider-supplied
+// capiMachineDeploymentSpecPatch (a YAML fragment with ${var} placeholders) onto
+// the MachineDeployment spec via a recursive deep merge.
+func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch string, vars map[string]string) error {
+	if strings.TrimSpace(rawPatch) == "" {
+		return nil
+	}
+
+	patch := map[string]interface{}{}
+	if err := sigsyaml.Unmarshal([]byte(substitutePatchVariables(rawPatch, vars)), &patch); err != nil {
+		return fmt.Errorf("unmarshal spec patch: %w", err)
+	}
+
+	deepMergeMaps(spec, patch)
+	return nil
+}
+
+func substitutePatchVariables(raw string, vars map[string]string) string {
+	if len(vars) == 0 {
+		return raw
+	}
+
+	keys := make([]string, 0, len(vars))
+	for k := range vars {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	replacements := make([]string, 0, len(keys)*2)
+	for _, k := range keys {
+		replacements = append(replacements, "${"+k+"}", vars[k])
+	}
+
+	return strings.NewReplacer(replacements...).Replace(raw)
+}
+
+func deepMergeMaps(dst, src map[string]interface{}) {
+	for k, v := range src {
+		srcMap, srcIsMap := v.(map[string]interface{})
+		if !srcIsMap {
+			dst[k] = v
+			continue
+		}
+
+		dstMap, dstIsMap := dst[k].(map[string]interface{})
+		if !dstIsMap {
+			dst[k] = srcMap
+			continue
+		}
+
+		deepMergeMaps(dstMap, srcMap)
+	}
 }

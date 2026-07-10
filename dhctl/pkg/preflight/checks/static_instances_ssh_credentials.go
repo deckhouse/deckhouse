@@ -30,11 +30,11 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -269,7 +269,7 @@ func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinit
 	}
 	defer client.Stop()
 
-	if err := client.Start(); err != nil {
+	if err := client.Start(ctx); err != nil {
 		return fmt.Errorf("Cannot connect to SSH host %s: %w", address, err)
 	}
 	defer client.Stop()

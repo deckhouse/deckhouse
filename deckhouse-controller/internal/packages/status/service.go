@@ -16,6 +16,7 @@ package status
 
 import (
 	"errors"
+	"slices"
 	"sync"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -101,6 +102,15 @@ type Status struct {
 	Conditions []Condition       `json:"conditions"`
 	Tracking   Tracking          `json:"tracking"`
 	Settings   addonutils.Values `json:"settings,omitempty"`
+
+	// URLs are application endpoints collected from the rendered manifests.
+	URLs []URL `json:"urls,omitempty"`
+}
+
+// URL is a single application endpoint collected from the rendered manifests.
+type URL struct {
+	URL         string `json:"url"`
+	Description string `json:"description,omitempty"`
 }
 
 type Tracking struct {
@@ -159,6 +169,7 @@ func (s *Service) GetStatus(name string) Status {
 		Conditions: condsCopy,
 		Tracking:   status.Tracking,
 		Settings:   status.Settings,
+		URLs:       slices.Clone(status.URLs),
 	}
 }
 
@@ -287,6 +298,28 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.mu.Unlock()
 
 	s.queue.Add(name)
+}
+
+// UpdateURLs stores application endpoint URLs collected from the rendered
+// manifests and notifies listeners if they changed.
+// If the package is not tracked by the service, the update is silently ignored.
+func (s *Service) UpdateURLs(name string, urls []URL) {
+	s.mu.Lock()
+	status, ok := s.statuses[name]
+	if !ok {
+		s.mu.Unlock()
+		return
+	}
+
+	notify := !slices.Equal(status.URLs, urls)
+	if notify {
+		status.URLs = slices.Clone(urls)
+	}
+	s.mu.Unlock()
+
+	if notify {
+		s.queue.Add(name)
+	}
 }
 
 // UpdateSettings stores the effective settings of a package.

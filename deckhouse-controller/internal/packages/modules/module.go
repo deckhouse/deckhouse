@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"sync/atomic"
 
@@ -42,6 +43,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -145,8 +147,10 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 		return nil, fmt.Errorf("build values storage: %v", err)
 	}
 
-	// TODO(ipaqsa): get rid of it after migration to module v2
-	m.values.InjectRegistryValue(cfg.Repository)
+	if cfg.Repository.Repository != "" {
+		// TODO(ipaqsa): get rid of it after migration to module v2
+		m.values.InjectRegistryValue(cfg.Repository)
+	}
 
 	return m, nil
 }
@@ -203,9 +207,9 @@ func (m *Module) GetRuntimeValues() string {
 	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	marshalledGlobal := m.globalValuesGetter()
+	marshalledGlobal, _ := json.Marshal(m.globalValuesGetter())
 
-	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
+	return fmt.Sprintf("Module=%s,Platform=%s", marshalled, marshalledGlobal)
 }
 
 // GetName returns the full module identifier.
@@ -221,6 +225,23 @@ func (m *Module) GetVersion() *semver.Version {
 // GetPath returns path to the package dir
 func (m *Module) GetPath() string {
 	return m.path
+}
+
+// GetEnabledScriptDescriptor returns the enabled script descriptor for the package
+func (m *Module) GetEnabledScriptDescriptor() *script.Descriptor {
+	path := filepath.Join(m.path, "enabled")
+	if _, err := os.Stat(path); err != nil {
+		return nil
+	}
+
+	return &script.Descriptor{
+		Path:     path,
+		Settings: m.GetSettings(),
+		Values: addonutils.MergeValues(
+			addonutils.Values{"global": m.globalValuesGetter()},
+			addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): m.values.GetValues()},
+		),
+	}
 }
 
 // GetHooksQueues returns package queues from all hooks
@@ -247,7 +268,7 @@ func (m *Module) GetHooksQueues() []string {
 // GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
 // If include is provided, only hooks matching those names are included.
 func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]interface{})
+	d := make(map[string]any)
 	for _, h := range m.hooks.GetHooks() {
 		if len(include) == 0 || slices.Contains(include, h.GetName()) {
 			d[h.GetName()] = h.GetHookController().SnapshotsDump()
@@ -463,7 +484,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
 	hookConfigValues := m.values.GetSettings()
-	hookValues := m.values.GetValues()
+	hookValues := m.GetValues()
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
@@ -486,7 +507,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = m.values.ApplyValuesPatch(*valuesPatch); err != nil {
+		if err = m.values.ApplyValuesPatchWithLegacyRoot(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}

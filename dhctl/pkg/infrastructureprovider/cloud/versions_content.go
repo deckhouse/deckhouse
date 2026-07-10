@@ -19,11 +19,12 @@ import (
 	"fmt"
 	"sync"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/version"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 var versionContentProviders = map[string]VersionContentProvider{

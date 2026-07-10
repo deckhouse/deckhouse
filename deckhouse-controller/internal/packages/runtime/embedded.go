@@ -21,6 +21,7 @@ import (
 	"os"
 	"slices"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -28,6 +29,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
 const (
@@ -44,6 +47,38 @@ const (
 var dummyModules = []string{
 	"000-common",
 	"007-registrypackages",
+}
+
+// loadGlobal loads the global module from the embedded directory and registers
+// it in the status service and the package store. Scheduler wiring happens
+// later in buildScheduler/AddNode, not here.
+func (r *Runtime) loadGlobal(ctx context.Context) error {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadGlobal")
+	defer span.End()
+
+	r.logger.Debug("load global package")
+
+	conf, err := loader.LoadGlobalConf(ctx, r.logger)
+	if err != nil {
+		return fmt.Errorf("load global conf: %w", err)
+	}
+
+	conf.Patcher = r.objectPatcher
+	conf.ScheduleManager = r.scheduleManager
+	conf.KubeEventsManager = r.kubeEventsManager
+
+	r.global, err = global.NewModuleByConfig(conf, r.logger)
+	if err != nil {
+		return fmt.Errorf("new global module: %w", err)
+	}
+
+	r.status.NewStatus(r.global.GetName())
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionRequirementsMet)
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionReadyOnFilesystem)
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionLoaded)
+	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), make(addonutils.Values))
+
+	return nil
 }
 
 // loadEmbedded discovers embedded modules under embeddedDir and registers the
@@ -105,6 +140,14 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 			r.mu.Lock()
 			r.modules[module.GetName()] = module
 			r.mu.Unlock()
+
+			// register package in status and packages stores
+			r.status.NewStatus(module.GetName())
+			r.status.SetConditionTrue(module.GetName(), status.ConditionRequirementsMet)
+			r.status.SetConditionTrue(module.GetName(), status.ConditionReadyOnFilesystem)
+			r.status.SetConditionTrue(module.GetName(), status.ConditionLoaded)
+			r.status.UpdateVersion(module.GetName(), module.GetVersion().String())
+			r.packages.Update(module.GetName(), module.GetVersion().String(), make(addonutils.Values))
 
 			return nil
 		})

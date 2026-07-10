@@ -26,10 +26,11 @@ import (
 	"strconv"
 	"strings"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -162,6 +163,9 @@ func CheckPipeline(
 	var infrastructurePlan map[string]any
 
 	pipelineFunc := func(ctx context.Context) error {
+		ctx, span := telemetry.StartSpan(ctx, fmt.Sprintf("Infrastructure - CheckPipeline %s for %s", r.GetStep(), name))
+		defer span.End()
+
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -222,6 +226,9 @@ func CheckBaseInfrastructurePipeline(
 	var pl map[string]any
 
 	pipelineFunc := func(ctx context.Context) error {
+		ctx, span := telemetry.StartSpan(ctx, fmt.Sprintf("Infrastructure - CheckBaseInfrastructurePipeline %s for %s", r.GetStep(), name))
+		defer span.End()
+
 		err := r.Init(ctx)
 		if err != nil {
 			return err

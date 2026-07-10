@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -322,9 +323,10 @@ func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata
 
 // setFromPackageDefinition projects a parsed v2 package.yaml onto the MPV status.
 // Mirrors the APV controller: only fields present on dto.ModuleDefinition are
-// surfaced (stage, descriptions, requirements). Module-only status fields
-// (category, licensing, version-compatibility) are intentionally not populated
-// here — extend dto.ModuleDefinition if you need to surface them.
+// surfaced (stage, descriptions, disable options, licensing, requirements).
+// Remaining module-only status fields (category, version-compatibility) are
+// intentionally not populated here — extend dto.ModuleDefinition if you need to
+// surface them.
 func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.ModuleDefinition) {
 	mpv.Status.PackageMetadata = &v1alpha1.ModulePackageVersionStatusMetadata{
 		Stage: pd.Stage,
@@ -333,6 +335,7 @@ func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.Module
 			En: pd.Descriptions.En,
 		},
 		DisableOptions: disableOptionsToCR(pd.DisableOptions),
+		Licensing:      licensingToCR(pd.Licensing),
 		Requirements:   requirementsToCR(pd.Requirements),
 	}
 }
@@ -356,6 +359,8 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 	if def.Requirements != nil {
 		mpv.Status.PackageMetadata.Requirements = legacyRequirementsToCR(def.Requirements)
 	}
+
+	mpv.Status.PackageMetadata.Licensing = legacyAccessibilityToCR(def.Accessibility)
 }
 
 // disableOptionsToCR projects parsed disable protection onto the CR shape,
@@ -387,6 +392,40 @@ func requirementsToCR(r dto.Requirements) *v1alpha1.PackageRequirements {
 		Deckhouse:  deckhouse,
 		Modules:    modulesCR,
 	}
+}
+
+// licensingToCR projects dto.Licensing onto the v1alpha1 PackageLicensing CR shape.
+func licensingToCR(l dto.Licensing) *v1alpha1.PackageLicensing {
+	if len(l.Editions) == 0 {
+		return nil
+	}
+
+	editions := make(map[string]v1alpha1.PackageEditionLicense, len(l.Editions))
+	for name, e := range l.Editions {
+		editions[name] = v1alpha1.PackageEditionLicense{
+			Available:        e.Available,
+			EnabledInBundles: slices.Clone(e.EnabledInBundles),
+		}
+	}
+
+	return &v1alpha1.PackageLicensing{Editions: editions}
+}
+
+// legacyAccessibilityToCR projects legacy module.yaml accessibility onto package licensing.
+func legacyAccessibilityToCR(access *moduletypes.ModuleAccessibility) *v1alpha1.PackageLicensing {
+	if access == nil || len(access.Editions) == 0 {
+		return nil
+	}
+
+	editions := make(map[string]v1alpha1.PackageEditionLicense, len(access.Editions))
+	for name, e := range access.Editions {
+		editions[name] = v1alpha1.PackageEditionLicense{
+			Available:        e.Available,
+			EnabledInBundles: slices.Clone(e.EnabledInBundles),
+		}
+	}
+
+	return &v1alpha1.PackageLicensing{Editions: editions}
 }
 
 // legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as

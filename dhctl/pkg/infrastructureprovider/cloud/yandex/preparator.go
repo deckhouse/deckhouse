@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"regexp"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 

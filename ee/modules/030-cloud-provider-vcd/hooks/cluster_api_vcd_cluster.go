@@ -20,7 +20,9 @@ import (
 
 const (
 	clusterAPINamespace = "d8-cloud-instance-manager"
-	// node-manager creates Cluster as v1beta1; watch must match production path.
+	// clusterWatchAPIVersion is the API version used when patching Cluster status.
+	// clusters.cluster.x-k8s.io CRD is installed by node-manager and may not exist
+	// during early bootstrap — do NOT add a kubernetes watch for it here.
 	clusterWatchAPIVersion = "cluster.x-k8s.io/v1beta1"
 )
 
@@ -39,17 +41,6 @@ var _ = sdk.RegisterFunc(
 				},
 				FilterFunc: filterVCDCluster,
 			},
-			{
-				Name:       "cluster",
-				ApiVersion: clusterWatchAPIVersion,
-				Kind:       "Cluster",
-				NamespaceSelector: &types.NamespaceSelector{
-					NameSelector: &types.NameSelector{
-						MatchNames: []string{clusterAPINamespace},
-					},
-				},
-				FilterFunc: filterCluster,
-			},
 		},
 	},
 	updateClusterInfrastructureProvisioned,
@@ -58,12 +49,6 @@ var _ = sdk.RegisterFunc(
 type vcdCluster struct {
 	Name  string
 	Ready bool
-}
-
-type cluster struct {
-	Kind      string
-	Name      string
-	Namespace string
 }
 
 func filterVCDCluster(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -81,24 +66,19 @@ func filterVCDCluster(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}, nil
 }
 
-func filterCluster(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return cluster{
-		Kind:      obj.GetKind(),
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-	}, nil
-}
-
 func updateClusterInfrastructureProvisioned(_ context.Context, input *go_hook.HookInput) error {
-	// Build a map of ready VCDClusters
 	readyVCDClusters := make(map[string]bool)
-	for vcdCluster, err := range sdkobjectpatch.SnapshotIter[vcdCluster](input.Snapshots.Get("vcd_cluster")) {
+	for vc, err := range sdkobjectpatch.SnapshotIter[vcdCluster](input.Snapshots.Get("vcd_cluster")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'vcd_cluster': %w", err)
 		}
-		if vcdCluster.Ready {
-			readyVCDClusters[vcdCluster.Name] = true
+		if vc.Ready {
+			readyVCDClusters[vc.Name] = true
 		}
+	}
+
+	if len(readyVCDClusters) == 0 {
+		return nil
 	}
 
 	// Patch v1beta1 status fields that CAPI maps to status.initialization.infrastructureProvisioned
@@ -110,25 +90,18 @@ func updateClusterInfrastructureProvisioned(_ context.Context, input *go_hook.Ho
 		},
 	}
 
-	// Patch Clusters that have ready VCDCluster infrastructure
-	for cluster, err := range sdkobjectpatch.SnapshotIter[cluster](input.Snapshots.Get("cluster")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'cluster': %w", err)
-		}
-
-		// Check if corresponding VCDCluster is ready
-		if readyVCDClusters[cluster.Name] {
-			// Patch cluster status
-			input.PatchCollector.PatchWithMerge(
-				statusPatch,
-				clusterWatchAPIVersion,
-				cluster.Kind,
-				cluster.Namespace,
-				cluster.Name,
-				object_patch.WithIgnoreMissingObject(),
-				object_patch.WithSubresource("/status"),
-			)
-		}
+	// Cluster.name == VCDCluster.name by CAPI convention; patch by name to avoid
+	// watching clusters.cluster.x-k8s.io, which does not exist until node-manager runs.
+	for name := range readyVCDClusters {
+		input.PatchCollector.PatchWithMerge(
+			statusPatch,
+			clusterWatchAPIVersion,
+			"Cluster",
+			clusterAPINamespace,
+			name,
+			object_patch.WithIgnoreMissingObject(),
+			object_patch.WithSubresource("/status"),
+		)
 	}
 
 	return nil

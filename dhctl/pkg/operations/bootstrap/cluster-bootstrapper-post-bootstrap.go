@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/lib-connection/pkg/ssh"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
@@ -38,7 +38,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		return fmt.Errorf("post bootstrap executor is not supported for local execution contexts")
 	}
 
-	if err := wrapper.Client().Start(); err != nil {
+	if err := wrapper.Client().Start(ctx); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 

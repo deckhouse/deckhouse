@@ -17,8 +17,9 @@ package manager
 import (
 	"context"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 func RestartAutoConverger(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx) error {

@@ -48,10 +48,10 @@ func newScheme(t *testing.T) *runtime.Scheme {
 	if err := capiv1beta2.AddToScheme(scheme); err != nil {
 		t.Fatalf("add capi: %v", err)
 	}
-	scheme.AddKnownTypeWithName(common.MCMMachineDeploymentGVK, &unstructured.Unstructured{})
-	scheme.AddKnownTypeWithName(common.MCMMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"), &unstructured.UnstructuredList{})
-	scheme.AddKnownTypeWithName(common.CAPIMachineDeploymentGVK, &unstructured.Unstructured{})
-	scheme.AddKnownTypeWithName(common.CAPIMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"), &unstructured.UnstructuredList{})
+	// scheme.AddKnownTypeWithName(common.MCMMachineDeploymentGVK, &unstructured.Unstructured{})
+	// scheme.AddKnownTypeWithName(common.MCMMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"), &unstructured.UnstructuredList{})
+	// scheme.AddKnownTypeWithName(common.CAPIMachineDeploymentGVK, &unstructured.Unstructured{})
+	// scheme.AddKnownTypeWithName(common.CAPIMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"), &unstructured.UnstructuredList{})
 	return scheme
 }
 

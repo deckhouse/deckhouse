@@ -15,7 +15,6 @@
 package client
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -43,7 +42,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		err := k8sCache.Init(t.Context())
 		require.NoError(t, err)
 
-		secret, err := fakeClient.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		secret, err := fakeClient.CoreV1().Secrets(namespace).Get(t.Context(), name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		require.Equal(t, secret.Name, name)
@@ -74,14 +73,14 @@ func TestDeckhouseInstall(t *testing.T) {
 			Data: map[string][]byte{},
 		}
 
-		_, err := fakeClient.CoreV1().Secrets(namespace).Create(context.TODO(), secretToCreate, metav1.CreateOptions{})
+		_, err := fakeClient.CoreV1().Secrets(namespace).Create(t.Context(), secretToCreate, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		k8sCache := NewK8sStateCache(fakeClient, namespace, name, "/tmp/dhctl_tst")
 		err = k8sCache.Init(t.Context())
 		require.NoError(t, err)
 
-		list, err := fakeClient.CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelKey("state")})
+		list, err := fakeClient.CoreV1().Secrets(namespace).List(t.Context(), metav1.ListOptions{LabelSelector: labelKey("state")})
 		require.NoError(t, err)
 		require.Len(t, list.Items, 1)
 	})

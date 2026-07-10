@@ -26,12 +26,12 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -74,7 +75,7 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	f := fsm.New("initial", s.checkServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.CheckRequest)
 	sendCh := make(chan *pb.CheckResponse)
 	pt := progressTracker[*pb.CheckResponse]{
@@ -114,10 +115,10 @@ connectionProcessor:
 				go func() {
 					result := s.checkSafe(ctx, &checkParams{
 						request:      message.Start,
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}})
 				}()
 
 			case *pb.CheckRequest_Cancel:
@@ -146,6 +147,10 @@ func (s *Service) checkSafe(ctx context.Context, p *checkParams) (result *pb.Che
 }
 
 func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
+	ctx, span := telemetry.StartSpan(ctx, "grpc.check")
+	defer span.End()
+	span.SetAttributes(telemetry.CommanderSpanAttributes(p.request.Options.CommanderMode, p.request.Options.CommanderUuid)...)
+
 	var err error
 
 	cleanuper := callback.NewCallback()

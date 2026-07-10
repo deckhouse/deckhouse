@@ -21,9 +21,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func TestPipelineWrapper(t *testing.T) {

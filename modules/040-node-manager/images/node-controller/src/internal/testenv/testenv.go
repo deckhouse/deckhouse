@@ -14,11 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package testenv holds controller-agnostic helpers for envtest-based integration suites.
-// Any node-controller controller can use it to bootstrap a real apiserver, wire its
-// registered controllers into a manager, and get the common test plumbing (unique names,
-// finalizer stripping, kubectl-style dumps, a kubectl pause hook). It is intentionally
-// free of Ginkgo/Gomega so it can back any test runner.
 package testenv
 
 import (
@@ -86,38 +81,9 @@ func AssetsAvailable() bool {
 	return BinaryAssetsDir() != ""
 }
 
-// CRDPaths resolves the given CRD file names against the module's crds/ directory (found by
-// walking up from the test working directory), e.g. CRDPaths("instance.yaml", "machine.yaml").
-func CRDPaths(files ...string) []string {
-	crds := findDirUp("crds")
-	paths := make([]string, 0, len(files))
-	for _, f := range files {
-		paths = append(paths, filepath.Join(crds, f))
-	}
-	return paths
-}
-
-func findDirUp(name string) string {
-	dir, err := os.Getwd()
-	if err != nil {
-		return ""
-	}
-	for {
-		candidate := filepath.Join(dir, name)
-		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
-			return candidate
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return ""
-		}
-		dir = parent
-	}
-}
-
 // Start boots an envtest apiserver with the given scheme and CRD files and returns a client.
 // Call testEnv.Stop() in AfterSuite.
-func Start(scheme *runtime.Scheme, crdPaths []string) (*envtest.Environment, *rest.Config, client.Client, error) {
+func Start(scheme *runtime.Scheme, crdPaths ...string) (*envtest.Environment, *rest.Config, client.Client, error) {
 	env := &envtest.Environment{
 		CRDDirectoryPaths:     crdPaths,
 		ErrorIfCRDPathMissing: true,

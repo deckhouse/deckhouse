@@ -30,10 +30,10 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -392,12 +392,12 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSH
 	}
 
 	logger.DebugContext(ctx, fmt.Sprintf("New SSH Client: %-v", newSSHClient))
-	err = newSSHClient.Start()
+	err = newSSHClient.Start(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to start SSH client: %w", err)
 	}
 
-	if err := newSSHClient.RefreshPrivateKeys(); err != nil {
+	if err := newSSHClient.RefreshPrivateKeys(ctx); err != nil {
 		return nil, fmt.Errorf("Failed to refresh private keys: %w", err)
 	}
 

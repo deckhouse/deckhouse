@@ -66,7 +66,8 @@ import (
 	"time"
 
 	env "github.com/caarlos0/env/v11"
-	ad_app "github.com/flant/addon-operator/pkg/app"
+
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 // Config mirrors the leaf settings of addon-operator's *Config with env tags
@@ -145,13 +146,13 @@ type Config struct {
 // addon-operator (and the shell-operator globals addon-operator manages).
 //
 // It seeds a Config from cfg so that addon-operator's hardcoded defaults from
-// ad_app.NewConfig stay in place when an env var is absent, then applies the
+// app.NewConfig stay in place when an env var is absent, then applies the
 // SHELL_OPERATOR_* fallbacks (lower priority), then overlays the
 // ADDON_OPERATOR_*/historical unprefixed env vars (higher priority — they
 // always win on conflict), then copies everything back into cfg. Callers
-// should follow this with ad_app.BindFlags so CLI flags still win over env
+// should follow this with app.BindFlags so CLI flags still win over env
 // values.
-func Load(cfg *ad_app.Config) error {
+func Load(cfg *app.Config) error {
 	c := fromAddonOperator(cfg)
 	applyShellOperatorEnv(c)
 	if err := env.ParseWithOptions(c, env.Options{}); err != nil {
@@ -198,7 +199,7 @@ func applyShellOperatorEnv(c *Config) {
 // Apply copies parsed env values into cfg, overwriting whatever was there.
 // Exposed for tests and for callers that want to drive a *Config directly
 // (e.g. when seeding addon-operator from a non-env source).
-func (c *Config) Apply(cfg *ad_app.Config) {
+func (c *Config) Apply(cfg *app.Config) {
 	cfg.App.ModulesDir = c.ModulesDir
 	cfg.App.GlobalHooksDir = c.GlobalHooksDir
 	cfg.App.TempDir = c.TempDir
@@ -247,7 +248,7 @@ func (c *Config) Apply(cfg *ad_app.Config) {
 
 // fromAddonOperator snapshots cfg into a Config so that env parsing can use
 // addon-operator's hardcoded defaults as the baseline.
-func fromAddonOperator(cfg *ad_app.Config) *Config {
+func fromAddonOperator(cfg *app.Config) *Config {
 	return &Config{
 		ModulesDir:                     cfg.App.ModulesDir,
 		GlobalHooksDir:                 cfg.App.GlobalHooksDir,

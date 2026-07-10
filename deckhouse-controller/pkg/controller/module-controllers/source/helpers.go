@@ -175,7 +175,8 @@ func (r *reconciler) needToEnsureRelease(
 	module *v1alpha1.Module,
 	sourceModule v1alpha1.AvailableModule,
 	meta *downloader.ModuleDownloadResult,
-	releaseExists bool) bool {
+	releaseExists bool,
+	embeddedTargetSource string) bool {
 	// skip experimental modules when deckhouse does not allow them
 	if module.IsExperimental() && !r.deckhouseSettings.ExperimentalModuleAllowed(module.Name) {
 		r.logger.Debug("experimental module not allowed, skip release ensure",
@@ -185,8 +186,19 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	// check the active source
-	if module.Properties.Source != "" && module.Properties.Source != source.Name {
+	// An embedded module keeps Source == "Embedded" while its embedded copy is
+	// shipped, so the active-source check below would always skip it. Instead
+	// pre-stage the release from the source resolved for migration so the module is
+	// already on the filesystem when the embedded copy is dropped on upgrade.
+	// embeddedTargetSource is the resolved source (operator's ModuleConfig
+	// .spec.source, or the only available source); it is empty when the source is
+	// undecided (several sources, none chosen) - a conflict handled in processModules.
+	if module.IsEmbedded() {
+		if embeddedTargetSource == "" || embeddedTargetSource != source.Name {
+			return false
+		}
+	} else if module.Properties.Source != "" && module.Properties.Source != source.Name {
+		// check the active source
 		r.logger.Debug("source not active, skip module",
 			slog.String("source_name", source.Name),
 			slog.String("name", module.Name))
@@ -214,6 +226,78 @@ func (r *reconciler) needToEnsureRelease(
 	}
 
 	return sourceModule.Checksum != meta.Checksum || !releaseExists
+}
+
+// getConfiguredModuleSource returns the source explicitly selected by the operator
+// in the module's ModuleConfig (.spec.source), or an empty string if there is no
+// config or no source is set. It is used to resolve which source to pre-stage an
+// embedded module from while its embedded copy is still shipped (the module-config
+// controller skips embedded modules, so .spec.source is not reflected in
+// Module.Properties.Source).
+func (r *reconciler) getConfiguredModuleSource(ctx context.Context, moduleName string) (string, error) {
+	moduleConfig := new(v1alpha1.ModuleConfig)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, moduleConfig); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("get the '%s' module config: %w", moduleName, err)
+	}
+
+	// "Embedded" is the sentinel for the built-in copy, not a real ModuleSource, so
+	// it can never be a valid externally selected source - treat it as not chosen.
+	if moduleConfig.Spec.Source == v1alpha1.ModuleSourceEmbedded {
+		return "", nil
+	}
+
+	return moduleConfig.Spec.Source, nil
+}
+
+// defaultModuleSourceName is the name of the built-in OSS ModuleSource that ships
+// with Deckhouse. When a module is offered by it alongside mirrors (e.g. the EE
+// source), it is the canonical choice rather than an ambiguous conflict.
+const defaultModuleSourceName = "deckhouse"
+
+// resolveEmbeddedTargetSource decides which source an embedded module should be
+// pre-staged from while its embedded copy is still shipped, and whether the choice
+// is a genuine conflict.
+//
+// Being offered by several sources is not automatically a conflict:
+//   - an explicitly chosen source wins (if it still offers the module);
+//   - the "Embedded" sentinel is not a real source, so "Embedded" + one real source
+//     is not a conflict - the real source is used;
+//   - the built-in "deckhouse" source is the canonical default and wins over mirrors
+//     such as "deckhouse-upstream-ee".
+//
+// It is a conflict only when the chosen source no longer offers the module, or when
+// several real, non-default sources offer it and none is selected.
+func resolveEmbeddedTargetSource(chosenSource string, availableSources []string) (string, bool) {
+	if chosenSource != "" {
+		if slices.Contains(availableSources, chosenSource) {
+			return chosenSource, false
+		}
+		// the configured .spec.source does not (or no longer does) offer the module
+		return "", true
+	}
+
+	// "Embedded" is a sentinel for the built-in copy, not a selectable source.
+	candidates := make([]string, 0, len(availableSources))
+	for _, source := range availableSources {
+		if source != v1alpha1.ModuleSourceEmbedded {
+			candidates = append(candidates, source)
+		}
+	}
+
+	switch {
+	case len(candidates) == 0:
+		// nothing but the embedded copy is available - nothing to pre-stage, not a conflict
+		return "", false
+	case len(candidates) == 1:
+		return candidates[0], false
+	case slices.Contains(candidates, defaultModuleSourceName):
+		return defaultModuleSourceName, false
+	default:
+		return "", true
+	}
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {

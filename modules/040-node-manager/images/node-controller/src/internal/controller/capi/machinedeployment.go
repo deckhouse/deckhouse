@@ -265,10 +265,11 @@ func buildStaticMD(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
 }
 
 type cloudProviderConfig struct {
-	capiClusterName               string
-	capiMachineTemplateKind       string
-	capiMachineTemplateAPIVersion string
-	zones                         []string
+	capiClusterName                string
+	capiMachineTemplateKind        string
+	capiMachineTemplateAPIVersion  string
+	capiMachineDeploymentSpecPatch string
+	zones                          []string
 }
 
 func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Context) (*cloudProviderConfig, error) {
@@ -283,9 +284,10 @@ func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Contex
 	}
 
 	cfg := &cloudProviderConfig{
-		capiClusterName:               string(secret.Data["capiClusterName"]),
-		capiMachineTemplateKind:       string(secret.Data["capiMachineTemplateKind"]),
-		capiMachineTemplateAPIVersion: string(secret.Data["capiMachineTemplateAPIVersion"]),
+		capiClusterName:                string(secret.Data["capiClusterName"]),
+		capiMachineTemplateKind:        string(secret.Data["capiMachineTemplateKind"]),
+		capiMachineTemplateAPIVersion:  string(secret.Data["capiMachineTemplateAPIVersion"]),
+		capiMachineDeploymentSpecPatch: string(secret.Data["capiMachineDeploymentSpecPatch"]),
 	}
 	if cfg.capiMachineTemplateAPIVersion == "" {
 		cfg.capiMachineTemplateAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"

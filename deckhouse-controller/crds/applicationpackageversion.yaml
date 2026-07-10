@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: applicationpackageversions.deckhouse.io
 spec:
   group: deckhouse.io
@@ -38,13 +38,15 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ApplicationPackageVersion represents a version of an application package.
+        description: ApplicationPackageVersion represents a version of an application
+          package.
         properties:
           apiVersion:
             description: |-
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
+
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)
             type: string
           kind:
@@ -53,6 +55,7 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
+
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
             type: string
           metadata:
@@ -63,20 +66,28 @@ spec:
               packageName:
                 description: Name of the application package.
                 type: string
+                x-doc-examples:
+                - console
               packageRepositoryName:
                 description: Name of the package repository containing the package.
                 type: string
+                x-doc-examples:
+                - deckhouse
               packageVersion:
                 description: Version of the application package.
                 type: string
+                x-doc-examples:
+                - v1.0.0
             type: object
           status:
             description: Application package version status.
             properties:
               conditions:
-                description: Conditions reflecting the latest observations of the package version state.
+                description: Conditions reflecting the latest observations of the
+                  package version state.
                 items:
-                  description: Condition describing one aspect of the current package version state.
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -133,7 +144,8 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               packageMetadata:
-                description: Metadata about the package such as description, requirements, etc.
+                description: Metadata about the package such as description, requirements,
+                  etc.
                 properties:
                   category:
                     description: The category this package belongs to.
@@ -187,10 +199,21 @@ spec:
                     properties:
                       editions:
                         additionalProperties:
+                          description: |-
+                            PackageEditionLicense is a single edition's licensing, shared by applications
+                            and modules: whether the edition is available and which bundles enable the
+                            package by default. Bundle membership is meaningful for modules; applications
+                            have no bundles and typically leave EnabledInBundles empty.
                           properties:
                             available:
                               description: Whether this edition is available for use.
                               type: boolean
+                            enabledInBundles:
+                              description: Bundles that enable the module by default
+                                in this edition.
+                              items:
+                                type: string
+                              type: array
                           type: object
                         description: Licensing information for different package editions.
                         type: object
@@ -213,7 +236,8 @@ spec:
                             type: string
                         type: object
                       modules:
-                        description: Required modules, partitioned into mandatory, conditional, and anyOf dependencies.
+                        description: Required modules, partitioned into mandatory,
+                          conditional, and anyOf dependencies.
                         properties:
                           anyOf:
                             description: |-
@@ -228,10 +252,12 @@ spec:
                                 Description is optional human-facing documentation.
                               properties:
                                 description:
-                                  description: Human-readable description of the group's purpose.
+                                  description: Human-readable description of the group's
+                                    purpose.
                                   type: string
                                 modules:
-                                  description: Alternative module dependencies in this group.
+                                  description: Alternative module dependencies in
+                                    this group.
                                   items:
                                     description: |-
                                       PackageModuleDependency is a single named module dependency with an optional
@@ -248,7 +274,8 @@ spec:
                                     type: object
                                   type: array
                                 name:
-                                  description: Stable identifier used by the scheduler in diagnostics.
+                                  description: Stable identifier used by the scheduler
+                                    in diagnostics.
                                   type: string
                               required:
                               - modules
@@ -309,10 +336,12 @@ spec:
                                 Description is optional human-facing documentation.
                               properties:
                                 description:
-                                  description: Human-readable description of the group's purpose.
+                                  description: Human-readable description of the group's
+                                    purpose.
                                   type: string
                                 modules:
-                                  description: Alternative module dependencies in this group.
+                                  description: Alternative module dependencies in
+                                    this group.
                                   items:
                                     description: |-
                                       PackageModuleDependency is a single named module dependency with an optional
@@ -329,7 +358,8 @@ spec:
                                     type: object
                                   type: array
                                 name:
-                                  description: Stable identifier used by the scheduler in diagnostics.
+                                  description: Stable identifier used by the scheduler
+                                    in diagnostics.
                                   type: string
                               required:
                               - modules
@@ -339,13 +369,20 @@ spec:
                         type: object
                     type: object
                   stage:
-                    description: The development stage of the package (e.g., alpha, beta, stable).
+                    description: The development stage of the package (e.g., Experimental,
+                      Preview, General Availability, Deprecated).
                     type: string
+                    x-doc-examples:
+                    - Experimental
+                    - Preview
+                    - General Availability
+                    - Deprecated
                   versionCompatibilityRules:
                     description: Version compatibility rules for upgrades and downgrades.
                     properties:
                       downgrade:
-                        description: Compatibility rules for downgrading from this version.
+                        description: Compatibility rules for downgrading from this
+                          version.
                         properties:
                           allowSkipMajor:
                             description: How many major versions can be skipped.
@@ -360,7 +397,8 @@ spec:
                             description: Starting version range for compatibility.
                             type: string
                           maxRollback:
-                            description: Maximum number of versions that can be rolled back.
+                            description: Maximum number of versions that can be rolled
+                              back.
                             type: integer
                           to:
                             description: Ending version range for compatibility.
@@ -382,7 +420,8 @@ spec:
                             description: Starting version range for compatibility.
                             type: string
                           maxRollback:
-                            description: Maximum number of versions that can be rolled back.
+                            description: Maximum number of versions that can be rolled
+                              back.
                             type: integer
                           to:
                             description: Ending version range for compatibility.
@@ -391,7 +430,8 @@ spec:
                     type: object
                 type: object
               packageSchemas:
-                description: Schemas for validating settings and values passed to the package.
+                description: Schemas for validating settings and values passed to
+                  the package.
                 properties:
                   settingsSchema:
                     description: |-
@@ -413,7 +453,8 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                 type: object
               usedBy:
-                description: Information about applications that are using this package version.
+                description: Information about applications that are using this package
+                  version.
                 items:
                   properties:
                     name:
@@ -429,6 +470,15 @@ spec:
                 type: integer
             type: object
         type: object
+        x-doc-examples:
+        - apiVersion: deckhouse.io/v1alpha1
+          kind: ApplicationPackageVersion
+          metadata:
+            name: example
+          spec:
+            packageName: console
+            packageRepositoryName: deckhouse
+            packageVersion: v1.0.0
     served: true
     storage: true
     subresources:

@@ -217,7 +217,7 @@ spec:
                                             Выражение semver-ограничения для запрещённого диапазона версий.
                     stage:
                       description: |
-                        Стадия разработки пакета (например, alpha, beta, stable).
+                        Стадия разработки пакета (например, Experimental, Preview, General Availability, Deprecated).
                     versionCompatibilityRules:
                       description: |
                         Правила совместимости версий для обновлений и откатов.

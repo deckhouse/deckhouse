@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: test-sts-pdb
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      e2e-test: sts-pdb-blocks

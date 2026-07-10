@@ -17,6 +17,8 @@ properties:
               - type: string
               - type: boolean
                 enum: [ false ]
+      cniSecretData:
+        type: string
       customCertificateData:
         type: object
         properties:

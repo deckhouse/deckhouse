@@ -253,7 +253,7 @@ spec:
     app: dns
 ```
 
-### Создание сервиса и назначение ему IPAddressPools при использовании mettalb в режиме BGP LoadBalancer
+### Создание сервиса и назначение ему IPAddressPools при использовании metallb в режиме BGP LoadBalancer
 
 Создание сервиса и назначение ему IPAddressPools возможно в режиме BGP LoadBalancer через аннотацию `network.deckhouse.io/load-balancer-pool`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
 

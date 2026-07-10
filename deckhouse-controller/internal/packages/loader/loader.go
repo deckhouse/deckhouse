@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/ettle/strcase"
@@ -431,6 +432,7 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 			Stage:        def.Stage,
 			Descriptions: descriptions,
 			Requirements: requirements,
+			Licensing:    legacyModuleLicensing(def.Accessibility),
 		},
 		Weight:   int(def.Weight),
 		Critical: def.Critical,
@@ -473,6 +475,23 @@ func legacyModuleRequirements(parentModules map[string]string) dto.ModulesRequir
 		Mandatory:   mandatory,
 		Conditional: conditional,
 	}
+}
+
+// legacyModuleLicensing projects legacy module.yaml accessibility onto package licensing.
+func legacyModuleLicensing(access *moduletypes.ModuleAccessibility) dto.Licensing {
+	if access == nil || len(access.Editions) == 0 {
+		return dto.Licensing{}
+	}
+
+	editions := make(map[string]dto.Edition, len(access.Editions))
+	for name, e := range access.Editions {
+		editions[name] = dto.Edition{
+			Available:        e.Available,
+			EnabledInBundles: slices.Clone(e.EnabledInBundles),
+		}
+	}
+
+	return dto.Licensing{Editions: editions}
 }
 
 // loadModuleDefinition reads and parses the legacy module.yaml file from the package directory.

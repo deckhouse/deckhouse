@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"os/exec"
 	"testing"
 
@@ -129,7 +128,7 @@ func TestCheckPythonAndItsModules(t *testing.T) {
 			tt.setupMock(mockNode)
 
 			check := PythonCheck{NodeInterface: mockNode}
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
@@ -207,7 +206,7 @@ func TestDetectPythonBinary(t *testing.T) {
 			mockNode := &mocks.MockNodeInterface{}
 			tt.setupMock(mockNode)
 
-			binary, err := detectPythonBinary(context.Background(), mockNode)
+			binary, err := detectPythonBinary(t.Context(), mockNode)
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

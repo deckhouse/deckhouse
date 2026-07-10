@@ -165,11 +165,21 @@
 
         This alert often indicates that the Deckhouse Pod is experiencing connectivity issues with the Internet.
 
+  - record: d8:deckhouse_queue_is_hung:with_head
+    expr: |
+      (max by (pod, instance, queue) (
+        min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])
+      ) != 0)
+      * on(pod, instance, queue) group_left(module, task_type, hook)
+        max by (pod, instance, queue, module, task_type, hook) (deckhouse_tasks_queue_head_info)
+
   - alert: D8DeckhouseQueueIsHung
-    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])) != 0
+    expr: |
+      d8:deckhouse_queue_is_hung:with_head
+      * on(module) group_left() max by (module) (deckhouse_mm_module_info{critical="false", module!=""})
     for: 10m
     labels:
-      severity_level: "7"
+      severity_level: "6"
       tier: cluster
       d8_module: deckhouse
       d8_component: deckhouse
@@ -178,12 +188,80 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_labels_as_annotations: "instance,pod"
-      summary: The `{{ $labels.queue }}` Deckhouse queue is stuck with {{ $value }} pending task(s).
+      plk_labels_as_annotations: "module,task_type,hook"
+      summary: Module queue `{{ $labels.module }}` (type `{{ $labels.task_type }}`, hook `{{ $labels.hook }}`) is hung.
       description: |
-        Deckhouse cannot finish processing of the `{{ $labels.queue }}` queue, which currently has {{ $value }} pending task(s).
+        The module queue head has remained unchanged for more than 10 minutes.
 
-        To investigate the issue, check the logs by running the following command:
+        Affected queue:
+
+        - Module: `{{ $labels.module }}`
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+
+  - alert: D8DeckhouseQueueIsHungCritical
+    expr: |
+      d8:deckhouse_queue_is_hung:with_head
+      * on(module) group_left() max by (module) (deckhouse_mm_module_info{critical="true", module!=""})
+    for: 10m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "module,task_type,hook"
+      summary: Critical module queue `{{ $labels.module }}` (type `{{ $labels.task_type }}`, hook `{{ $labels.hook }}`) is hung.
+      description: |
+        The critical module queue head has remained unchanged for more than 10 minutes.
+
+        Affected queue:
+
+        - Module: `{{ $labels.module }}`
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse
+        ```
+
+  - alert: D8DeckhouseQueueIsHungGlobal
+    expr: |
+      d8:deckhouse_queue_is_hung:with_head{module=""}
+    for: 10m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "module,task_type,hook"
+      summary: Global/Parallel task `{{ $labels.task_type }}` (hook `{{ $labels.hook }}`) is hung.
+      description: |
+        The global/parallel task head has remained unchanged for more than 10 minutes.
+
+        Affected task:
+
+        - Task type: `{{ $labels.task_type }}`
+        - Hook: `{{ $labels.hook }}`
+
+        To investigate the issue, check the logs of the `deckhouse` controller pods:
 
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
@@ -213,7 +291,7 @@
         The `{{ $labels.hook }}` hook has failed multiple times in the last `__SCRAPE_INTERVAL_X_4__`.
 
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -264,7 +342,7 @@
       summary: Deckhouse is unable to discover modules.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -286,7 +364,7 @@
       summary: Deckhouse is unable to start the `{{ $labels.module }}` module.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -308,7 +386,7 @@
       summary: Deckhouse is unable to delete the `{{ $labels.module }}` module.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -330,7 +408,7 @@
       summary: Deckhouse is unable to run the `{{ $labels.hook }}` global hook.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -352,7 +430,7 @@
       summary: Deckhouse is unable to run the `{{ $labels.module }}`/`{{ $labels.hook }}` module hook.
       description: |
         To investigate the issue, check the logs by running the following command:
-        
+
         ```bash
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
@@ -378,7 +456,7 @@
         Steps to troubleshoot:
 
         1. Check Deckhouse logs by running the following command:
-        
+
            ```bash
            d8 k -n d8-system logs -f -l app=deckhouse
            ```
@@ -388,7 +466,7 @@
            ```bash
            d8 k edit mc global
            ```
-           
+
            Or edit configuration of a specific module:
 
            ```bash
@@ -473,6 +551,9 @@
 
         To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
 
+        To get the exact error, check Deckhouse logs:
+        `d8 k -n d8-system logs deploy/deckhouse | grep "failed to download module"`
+
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
     for: 1m
@@ -492,7 +573,7 @@
         Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.
 
         Steps to investigate:
-        
+
         1. Check Deckhouse logs for more information by running:
 
            ```bash
@@ -500,7 +581,7 @@
            ```
 
         1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.
-           
+
            To compare the snapshot with the actual node objects for this hook, run the following command:
 
            ```bash
@@ -520,7 +601,7 @@
       summary: Deprecated Deckhouse ConfigMap managed by Argo CD.
       description: |
         The Deckhouse ConfigMap is no longer used.
-        
+
         To resolve this issue, remove the `d8-system/deckhouse` ConfigMap from Argo CD.
 
   - alert: D8DeckhouseModuleUpdatePolicyNotFound
@@ -539,7 +620,7 @@
         The module update policy for {{ $labels.moduleRelease }} is missing.
 
         To resolve this issue, remove the label from the module release using the following command:
-        
+
         ```bash
         d8 k label mr {{ $labels.moduleRelease }} modules.deckhouse.io/update-policy-
         ```
@@ -558,10 +639,10 @@
       plk_protocol_version: "1"
       summary: Module configuration failed for module {{ $labels.module }}.
       description: |
-        Initial config for module {{ $labels.module }} is not valid. 
-        
+        Initial config for module {{ $labels.module }} is not valid.
+
         You can get more details via
-        
+
         ```bash
         d8 k get mr -l module={{ $labels.module }}
         ```
@@ -580,33 +661,83 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "module"
-      summary: Migrated module {{ $labels.module }} not found in registry.
+      summary: Migrated module {{ $labels.module }} was not found in any ModuleSource registry.
       description: |
-        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
-        
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and was not found in any available ModuleSource registry. DeckhouseRelease will be locked until the module becomes available in one of the configured ModuleSource registries.
+
         This may indicate:
-        - The module source registry is not properly configured.
+
+        - A ModuleSource registry is misconfigured.
         - The module has not been published to the registry yet.
-        - There is a network issue preventing access to the registry.
-        
-        Please check:
-        1. ModuleSource configurations: `d8 k get modulesources`.
-        2. Registry accessibility and credentials.
-        3. Module availability in the configured registries.
-        
-        To investigate, run the following commands:
-        
-        ```bash
-        # Check ModuleSource status
-        d8 k get modulesources
-        
-        # Check available modules in all sources
-        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
-        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
-        
-        # Check Deckhouse logs for more details
-        d8 k -n d8-system logs -f -l app=deckhouse
-        ```
+        - A network issue is preventing access to the registry.
+
+        To investigate the issue, do the following:
+
+        - Check the configured ModuleSources:
+
+          ```bash
+          d8 k get modulesources
+          ```
+
+        - List the available module sources:
+
+          ```bash
+          d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+          ```
+
+        - List the modules available in a specific source:
+
+          ```bash
+          d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+          ```
+
+        - Check the `deckhouse` logs for more details:
+
+          ```bash
+          d8 k -n d8-system logs -f -l app=deckhouse
+          ```
+  - alert: DeckhouseMigratedModuleNotDownloaded
+    expr: d8_migrated_module_not_downloaded == 1
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "module"
+      summary: Migrated module {{ $labels.module }} has not been downloaded yet.
+      description: |
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to an external source and is available in a ModuleSource registry, but it has not been downloaded yet (no deployed ModuleRelease exists). DeckhouseRelease will be locked until the module is downloaded.
+
+        This alert is usually temporary while the module source controller downloads the module from the registry. If the alert persists, this may indicate:
+
+        - The module's update policy or ModuleSource is misconfigured, preventing the module from being downloaded.
+        - A network issue is preventing the module from being downloaded.
+
+        To investigate the issue, do the following:
+
+        - Check the ModuleRelease objects for the module:
+
+          ```bash
+          d8 k get mr -l module={{ $labels.module }}
+          ```
+
+        - Check the configured ModuleSources:
+
+          ```bash
+          d8 k get modulesources
+          ```
+
+        - Check the `deckhouse` logs for more details:
+
+          ```bash
+          d8 k -n d8-system logs -f -l app=deckhouse
+          ```
   - alert: DeckhouseEditionNotFound
     expr: |
       d8_edition_not_found > 0

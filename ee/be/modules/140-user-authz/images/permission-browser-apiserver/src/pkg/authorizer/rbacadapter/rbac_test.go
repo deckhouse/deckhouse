@@ -153,6 +153,23 @@ func TestContainsOrWildcard(t *testing.T) {
 	}
 }
 
+func TestSubjectMatches_ServiceAccountDefaultsRoleBindingNamespace(t *testing.T) {
+	r := &RBACAuthorizer{}
+	subjects := []rbacv1.Subject{{
+		Kind: rbacv1.ServiceAccountKind,
+		Name: "reader",
+	}}
+
+	assert.True(
+		t,
+		r.subjectMatches(subjects, "system:serviceaccount:team-a:reader", nil, "team-a"),
+	)
+	assert.False(
+		t,
+		r.subjectMatches(subjects, "system:serviceaccount:team-b:reader", nil, "team-a"),
+	)
+}
+
 // mockAttrs implements authorizer.Attributes for testing
 type mockAttrs struct {
 	user        user.Info
