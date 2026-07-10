@@ -38,6 +38,7 @@ import (
 	"bashible-apiserver/pkg/apis/bashible"
 	"bashible-apiserver/pkg/apis/bashible/install"
 	bashibleregistry "bashible-apiserver/pkg/registry"
+	"bashible-apiserver/pkg/runtimeconfig"
 	"bashible-apiserver/pkg/template"
 )
 
@@ -69,7 +70,8 @@ func init() {
 
 // ExtraConfig holds custom apiserver config
 type ExtraConfig struct { // Place you custom config here.
-	CtrlManager ctrl.Manager
+	CtrlManager   ctrl.Manager
+	RuntimeConfig runtimeconfig.RuntimeConfig
 }
 
 // Config defines the config for the apiserver

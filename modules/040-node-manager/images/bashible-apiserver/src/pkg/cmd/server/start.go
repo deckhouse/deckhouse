@@ -36,6 +36,7 @@ import (
 	"bashible-apiserver/pkg/apiserver/readyz"
 	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
 	"bashible-apiserver/pkg/requestlog"
+	"bashible-apiserver/pkg/runtimeconfig"
 	"bashible-apiserver/pkg/util/retry"
 )
 
@@ -110,6 +111,13 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
 	}
 
+	runtimeConfig := runtimeconfig.Load()
+	if runtimeConfig.KubeconfigPath != "" {
+		o.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = runtimeConfig.KubeconfigPath
+		o.RecommendedOptions.Authentication.RemoteKubeConfigFile = runtimeConfig.KubeconfigPath
+		o.RecommendedOptions.Authorization.RemoteKubeConfigFile = runtimeConfig.KubeconfigPath
+	}
+
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 	serverConfig.BuildHandlerChainFunc = func(apiHandler http.Handler, c *genericapiserver.Config) http.Handler {
 		return genericapiserver.DefaultBuildHandlerChain(requestlog.WithRequestLogging(apiHandler), c)
@@ -143,12 +151,14 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		return nil, err
 	}
 
-	deployInformer := serverConfig.SharedInformerFactory.Apps().V1().Deployments().Informer()
-	deployHealthChecker, err := readyz.NewDeploymentReadinessCheck(stopCh, deployInformer, "d8-system", "deckhouse")
-	if err != nil {
-		return nil, fmt.Errorf("readyz.NewDeploymentReadinessCheck: %w", err)
+	if runtimeConfig.DeckhouseReadyzEnabled {
+		deployInformer := serverConfig.SharedInformerFactory.Apps().V1().Deployments().Informer()
+		deployHealthChecker, err := readyz.NewDeploymentReadinessCheck(stopCh, deployInformer, "d8-system", "deckhouse")
+		if err != nil {
+			return nil, fmt.Errorf("readyz.NewDeploymentReadinessCheck: %w", err)
+		}
+		serverConfig.ReadyzChecks = append(serverConfig.ReadyzChecks, deployHealthChecker)
 	}
-	serverConfig.ReadyzChecks = append(serverConfig.ReadyzChecks, deployHealthChecker)
 
 	ctrlManager, err := apiserver.NewCtrlManager()
 	if err != nil {
@@ -158,7 +168,8 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
 		ExtraConfig: apiserver.ExtraConfig{
-			CtrlManager: ctrlManager,
+			CtrlManager:   ctrlManager,
+			RuntimeConfig: runtimeConfig,
 		},
 	}
 	return config, nil
