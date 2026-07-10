@@ -21,6 +21,26 @@ spec:
                     * `HostPort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `HostPort`.
 
                     > **Внимание.** На одном хосте может быть только один контроллер с данным типом инлета.
+                networkTopology:
+                  description: |
+                    Настройки определения исходных атрибутов клиента (например, IP-адреса источника), когда шлюз развёрнут за другими прокси или балансировщиками нагрузки.
+
+                    См. [Configuring Gateway Network Topology](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/).
+                  properties:
+                    numTrustedProxies:
+                      description: |
+                        Количество доверенных прокси, развёрнутых перед прокси Istio gateway.
+
+                        Используется для корректного извлечения адреса клиента из заголовка `X-Forwarded-For` и заполнения заголовка `X-Envoy-External-Address`, который используется вышестоящими сервисами.
+
+                        Например, если перед шлюзом находятся облачный балансировщик и обратный прокси, укажите `2`.
+
+                        Может использоваться вместе с `proxyProtocol`. Если настроены оба параметра и входящий запрос содержит заголовок `X-Forwarded-For`, Istio использует доверенную цепочку `X-Forwarded-For` вместо атрибутов PROXY-протокола.
+                    proxyProtocol:
+                      description: |
+                        Включает [PROXY-протокол](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) на TCP-листенерах шлюза, чтобы сохранить атрибуты клиента (например, IP-адрес источника), передаваемые вышестоящим L4/TCP-балансировщиком.
+
+                        Может использоваться вместе с `numTrustedProxies`. Если настроены оба параметра и входящий запрос содержит заголовок `X-Forwarded-For`, Istio использует доверенную цепочку `X-Forwarded-For` вместо атрибутов PROXY-протокола.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у подов.

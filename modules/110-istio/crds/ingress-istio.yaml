@@ -45,6 +45,32 @@ spec:
 
                       > **Caution.** There can be only one controller with this inlet type on a host.
                   enum: ["LoadBalancer","HostPort","NodePort"]
+                networkTopology:
+                  type: object
+                  description: |
+                    Configures how the gateway extracts the client's original attributes (e.g. the source IP address) when it is deployed behind other proxies or load balancers.
+
+                    See [Configuring Gateway Network Topology](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/).
+                  properties:
+                    numTrustedProxies:
+                      type: integer
+                      minimum: 0
+                      x-doc-examples: [2]
+                      description: |
+                        Number of trusted proxies deployed in front of the Istio gateway proxy.
+
+                        It is used to correctly extract the client address from the `X-Forwarded-For` header and populate the `X-Envoy-External-Address` header consumed by upstream services.
+
+                        For example, if there is a cloud load balancer and a reverse proxy in front of the gateway, set this to `2`.
+
+                        It can be used with `proxyProtocol`. When both are configured and an incoming request contains an `X-Forwarded-For` header, Istio uses the trusted `X-Forwarded-For` chain in preference to the PROXY protocol attributes.
+                    proxyProtocol:
+                      type: boolean
+                      x-doc-examples: [true]
+                      description: |
+                        Enables the [PROXY protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) on the gateway's TCP listeners, so that client attributes (such as the source IP) forwarded by an upstream L4/TCP load balancer are preserved.
+
+                        It can be used with `numTrustedProxies`. When both are configured and an incoming request contains an `X-Forwarded-For` header, Istio uses the trusted `X-Forwarded-For` chain in preference to the PROXY protocol attributes.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -181,12 +207,12 @@ spec:
                             max:
                               description: |
                                 Maximum allowed CPU requests.
-                              default: '100m'
+                              default: '1000m'
                               type: string
                             min:
                               description: |
                                 Minimum allowed CPU requests.
-                              default: '50m'
+                              default: '100m'
                               type: string
                         memory:
                           type: object
@@ -196,12 +222,12 @@ spec:
                             max:
                               description: |
                                 Maximum allowed memory requests.
-                              default: '200Mi'
+                              default: '2000Mi'
                               type: string
                             min:
                               description: |
                                 Minimum allowed memory requests.
-                              default: '100Mi'
+                              default: '128Mi'
                               type: string
                     static:
                       type: object
@@ -212,12 +238,12 @@ spec:
                           type: string
                           description: |
                             CPU requests.
-                          default: '350m'
+                          default: '100m'
                         memory:
                           type: string
                           description: |
                             Memory requests.
-                          default: '500Mi'
+                          default: '128Mi'
               oneOf:
                 - properties:
                     inlet:

@@ -1,0 +1,32 @@
+{{- range $controller := .Values.istio.internal.ingressControllers }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if and $controller.spec.resourcesRequests (eq ($controller.spec.resourcesRequests.mode | default "VPA") "VPA") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ingress-gateway-controller-{{ $controller.name }}
+  namespace: d8-ingress-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict
+      "app" "ingress-gateway-controller"
+      "instance" $controller.name
+  )) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: ingress-gateway-controller-{{ $controller.name }}
+  updatePolicy:
+    updateMode: {{ (($controller.spec.resourcesRequests).vpa).mode | default "Initial" | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: istio-proxy
+      minAllowed:
+        cpu: {{ ((($controller.spec.resourcesRequests).vpa).cpu).min | default "100m" | quote }}
+        memory: {{ ((($controller.spec.resourcesRequests).vpa).memory).min | default "128Mi" | quote }}
+      maxAllowed:
+        cpu: {{ ((($controller.spec.resourcesRequests).vpa).cpu).max | default "1000m" | quote }}
+        memory: {{ ((($controller.spec.resourcesRequests).vpa).memory).max | default "2000Mi" | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
