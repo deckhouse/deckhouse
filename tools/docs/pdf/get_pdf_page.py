@@ -28,6 +28,9 @@ from typing import Any, List, Dict, Optional, Tuple
 # Languages to build (order = PDF generation order).
 SUPPORTED_LANGS: Tuple[str, ...] = ("ru", "en")
 
+# Languages for which DOCX is produced (RU only, per product requirement).
+DOCX_LANGS: Tuple[str, ...] = ("ru",)
+
 SIDEBAR_YAML = "main.yml"
 
 # H1 before embedded-modules block in merged HTML.
@@ -56,6 +59,13 @@ def pdf_output_path_for_lang(base_pdf_path: str, lang: str) -> str:
     base, ext = os.path.splitext(base_pdf_path)
     if not ext:
         ext = ".pdf"
+    return f"{base}_{lang}{ext}"
+
+
+def docx_output_path_for_lang(base_docx_path: str, lang: str) -> str:
+    base, ext = os.path.splitext(base_docx_path)
+    if not ext:
+        ext = ".docx"
     return f"{base}_{lang}{ext}"
 
 
@@ -1349,6 +1359,102 @@ def generate_cover_html(
     return cover_path
 
 
+def _extract_body_inner(html: str) -> str:
+    """Return the inner HTML of <body>…</body>, or the whole string if absent."""
+    m = re.search(r"<body[^>]*>(.*)</body>", html, re.DOTALL | re.IGNORECASE)
+    return m.group(1) if m else html
+
+
+def build_docx_source_html(
+    chunk_paths: List[str],
+    lang: str,
+    title: str,
+    doc_version: str,
+    out_html_path: str,
+) -> str:
+    """Merge per-language chunk HTML files into one HTML document for pandoc.
+
+    Chunk bodies already carry absolute /app/… resource paths (see _ChunkWriter),
+    so pandoc — run with cwd /app — embeds images into the DOCX automatically.
+    """
+    if lang == "ru":
+        date_label = f"Дата генерации: {datetime.now().strftime('%d.%m.%Y')}"
+        version_label = f"Версия {doc_version}" if doc_version else ""
+    else:
+        date_label = f"Generated: {datetime.now().strftime('%B %d, %Y')}"
+        version_label = f"Version {doc_version}" if doc_version else ""
+
+    parts: List[str] = [generate_html_header(title, lang=lang)]
+    # Title/version/date as plain paragraphs (not headings) so they stay out of
+    # the pandoc-generated table of contents.
+    parts.append(f'<p style="font-size:20pt; font-weight:bold;">{title}</p>')
+    if version_label:
+        parts.append(f'<p style="font-size:12pt;">{version_label}</p>')
+    parts.append(f'<p style="font-size:12pt; color:#444;">{date_label}</p>')
+
+    for chunk_path in chunk_paths:
+        try:
+            with open(chunk_path, "r", encoding="utf-8") as f:
+                parts.append(_extract_body_inner(f.read()))
+        except OSError as e:
+            print(f"Warning: cannot read chunk {chunk_path}: {e}")
+
+    parts.append("</body>\n</html>\n")
+
+    with open(out_html_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(parts))
+    return out_html_path
+
+
+def generate_docx(
+    chunk_paths: List[str],
+    lang: str,
+    title: str,
+    doc_version: str,
+    docx_out: str,
+) -> bool:
+    """Convert the merged chunk HTML to DOCX via pandoc. Returns True on success."""
+    tmp_dir = tempfile.mkdtemp(prefix=f"docx-{lang}-")
+    merged_html = os.path.join(tmp_dir, f"merged_{lang}.html")
+    build_docx_source_html(chunk_paths, lang, title, doc_version, merged_html)
+
+    # Optional Word reference document (styles) if present in the working dir.
+    reference_doc = os.path.join(os.getcwd(), "reference.docx")
+
+    pandoc_cmd = [
+        "pandoc",
+        merged_html,
+        "-o", docx_out,
+        "--from=html",
+        "--to=docx",
+        "--standalone",
+        "--toc",
+        "--toc-depth=3",
+        f"--metadata=lang:{lang}",
+    ]
+    if os.path.isfile(reference_doc):
+        pandoc_cmd.append(f"--reference-doc={reference_doc}")
+
+    try:
+        proc = subprocess.run(pandoc_cmd, check=False, timeout=600)
+    except subprocess.TimeoutExpired:
+        print("Error: pandoc timed out after 10 minutes.")
+        return False
+    except FileNotFoundError:
+        print("Error: pandoc not found. Please install pandoc.")
+        return False
+
+    if not os.path.isfile(docx_out) or proc.returncode != 0:
+        print(
+            f"Error: DOCX was not created at {docx_out!r} "
+            f"(pandoc exit code {getattr(proc, 'returncode', 'n/a')})."
+        )
+        return False
+
+    print(f"DOCX generated successfully: {docx_out}")
+    return True
+
+
 def _wkhtml_ui_strings(
     lang: str,
     doc_version: str,
@@ -1422,6 +1528,7 @@ def selected_pdf_langs() -> Tuple[str, ...]:
 # === Main execution ===
 if __name__ == "__main__":
     base_pdf = os.environ.get("PDF_OUTPUT_PATH", "deckhouse-admin-guide.pdf")
+    base_docx = os.environ.get("DOCX_OUTPUT_PATH", "").strip()
     doc_version = os.environ.get("DOC_VERSION", "").strip()
     section_filter = os.environ.get("SECTION_FILTER", "").strip() or None
     _exc_raw = os.environ.get("EXCLUDE_SECTIONS", "").strip()
@@ -1529,3 +1636,10 @@ if __name__ == "__main__":
             )
         else:
             print(f"PDF generated successfully: {pdf_out}")
+
+        # DOCX (RU only): reuse the already-extracted chunk HTML.
+        if base_docx and lang in DOCX_LANGS:
+            docx_out = docx_output_path_for_lang(base_docx, lang)
+            print(f"Generating DOCX ({lang}) → {docx_out}...")
+            if not generate_docx(chunk_paths, lang, cover_title, doc_version, docx_out):
+                print(f"Warning: DOCX generation failed for {lang}.")

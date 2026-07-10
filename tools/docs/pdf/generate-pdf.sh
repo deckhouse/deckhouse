@@ -106,6 +106,7 @@ SIDEBAR_YAML="${REPO_ROOT}/docs/documentation/_data/sidebars/main.yml"
 docker run --rm \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
+  -e DOCX_OUTPUT_PATH=/out/deckhouse-admin-guide.docx \
   -e DOC_VERSION="${DOC_VERSION}" \
   -e BUILD_LANG="${BUILD_LANG:-}" \
   -e EXCLUDE_SECTIONS="Using" \
@@ -119,6 +120,7 @@ docker run --rm \
 docker run --rm \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-user-guide.pdf \
+  -e DOCX_OUTPUT_PATH=/out/deckhouse-user-guide.docx \
   -e DOC_VERSION="${DOC_VERSION}" \
   -e BUILD_LANG="${BUILD_LANG:-}" \
   -e SECTION_FILTER="Using" \
