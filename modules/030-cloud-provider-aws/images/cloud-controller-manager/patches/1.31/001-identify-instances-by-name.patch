@@ -1,30 +1,30 @@
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
-index a6e2597..39dab8f 100644
+index e1070ee..79e2efd 100644
 --- a/pkg/providers/v1/aws.go
 +++ b/pkg/providers/v1/aws.go
-@@ -5001,6 +5001,11 @@ func mapNodeNameToPrivateDNSName(nodeName types.NodeName) string {
+@@ -3278,6 +3278,11 @@ func mapNodeNameToPrivateDNSName(nodeName types.NodeName) string {
  // Deprecated: use instanceIDToNodeName instead. See
  // mapNodeNameToPrivateDNSName for details.
- func mapInstanceToNodeName(i *ec2.Instance) types.NodeName {
+ func mapInstanceToNodeName(i *ec2types.Instance) types.NodeName {
 +	for _, tag := range i.Tags {
-+		if aws.StringValue(tag.Key) == "Name" {
-+			return types.NodeName(aws.StringValue(tag.Value))
++		if aws.ToString(tag.Key) == "Name" {
++			return types.NodeName(aws.ToString(tag.Value))
 +		}
 +	}
- 	return types.NodeName(aws.StringValue(i.PrivateDnsName))
+ 	return types.NodeName(aws.ToString(i.PrivateDnsName))
  }
  
-@@ -5028,7 +5033,19 @@ func (c *Cloud) findInstanceByNodeName(nodeName types.NodeName) (*ec2.Instance,
+@@ -3305,7 +3310,19 @@ func (c *Cloud) findInstanceByNodeName(ctx context.Context, nodeName types.NodeN
  	}
  
  	if len(instances) == 0 {
 -		return nil, nil
-+		filters := []*ec2.Filter{
++		filters := []ec2types.Filter{
 +			newEc2Filter("tag:Name", privateDNSName),
 +			newEc2Filter("instance-state-name", aliveFilter...),
 +		}
 +
-+		instances, err = c.describeInstances(filters)
++		instances, err = c.describeInstances(ctx, filters)
 +		if err != nil {
 +			return nil, err
 +		}

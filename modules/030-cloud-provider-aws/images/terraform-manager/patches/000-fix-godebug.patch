@@ -1,0 +1,16 @@
+snip: no filter for "git", passing through -- you can run "git" directly
+diff --git a/go.mod b/go.mod
+index a0274c844a7..6730c7d90c7 100644
+--- a/go.mod
++++ b/go.mod
+@@ -2,10 +2,6 @@ module github.com/hashicorp/terraform-provider-aws
+ 
+ go 1.23.3
+ 
+-// Disable experimental post-quantum key exchange mechanism X25519Kyber768Draft00
+-// This was causing errors with AWS Network Firewall
+-godebug tlskyber=0
+-
+ require (
+ 	github.com/ProtonMail/go-crypto v1.1.4
+ 	github.com/YakDriver/go-version v0.1.0

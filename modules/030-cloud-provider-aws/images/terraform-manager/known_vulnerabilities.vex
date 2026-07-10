@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://deckhouse.io/vex/cloud-provider-aws/terraform-manager/1",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "timestamp": "2026-07-08T00:00:00Z",
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость GO-2026-5932 в пакете golang.org/x/crypto не имеет исправленной версии в текущей ветке. Уязвимый код не находится в пути исполнения terraform-provider-aws в контексте его использования Deckhouse для управления облачной инфраструктурой AWS. Эксплуатация уязвимости требует специфических условий, недостижимых в данном сценарии применения.",
+      "timestamp": "2026-07-08T00:00:00Z"
+    }
+  ]
+}
