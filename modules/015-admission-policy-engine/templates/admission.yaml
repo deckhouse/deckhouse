@@ -199,11 +199,7 @@ spec:
       message: "Removing Deckhouse finalizers (containing 'deckhouse.io') is forbidden"
   auditAnnotations:
     - key: source-user
-      valueExpression: |
-        variables.protectedOldFinalizers.exists(f,
-          !(f in object.metadata.?finalizers.orValue([])))
-        ? 'User: ' + string(request.userInfo.username) + ' tries to remove Deckhouse finalizers'
-        : null
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to remove Deckhouse finalizers'"
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
