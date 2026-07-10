@@ -86,21 +86,40 @@ func (c *KubeProxyChecker) WithSSHProvider(s libcon.SSHProvider, sett *settings.
 }
 
 func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
+	if c.initParams == nil {
+		return false, fmt.Errorf("kube proxy checker: Kubernetes init params are not configured")
+	}
+	if c.baseProviderSettings == nil {
+		return false, fmt.Errorf("kube proxy checker: base provider settings are not configured")
+	}
+	if c.sshProvider == nil {
+		return false, fmt.Errorf("kube proxy checker: SSH provider is not configured")
+	}
+
 	sshClient, err := c.sshProvider.Client(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get SSH client: %w", err)
 	}
 
 	if len(c.nodesExternalIPs) > 0 {
 		ip, ok := c.nodesExternalIPs[nodeName]
 		if !ok {
-			return false, fmt.Errorf("No external IP found for node %s", nodeName)
+			return false, fmt.Errorf("no external IP found for node %s", nodeName)
 		}
 
-		sshClient.Session().SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
+		sshClient.Session().SetAvailableHosts([]session.Host{
+			{
+				Host: ip,
+				Name: nodeName,
+			},
+		})
 	}
 
-	kubeCl := kube.NewKubernetesClient(c.baseProviderSettings).WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient, c.baseProviderSettings))
+	kubeCl := kube.NewKubernetesClient(c.baseProviderSettings).
+		WithNodeInterface(
+			ssh.NewNodeInterfaceWrapper(sshClient, c.baseProviderSettings),
+		)
+
 	params := &kube.Config{
 		KubeConfig:          c.initParams.KubeConfig,
 		KubeConfigContext:   c.initParams.KubeConfigContext,
@@ -108,9 +127,8 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		RestConfig:          c.initParams.RestConfig,
 	}
 
-	err = kubeCl.InitContext(ctx, params)
-	if err != nil {
-		return false, fmt.Errorf("failed to open kubernetes connection: %v", err)
+	if err := kubeCl.InitContext(ctx, params); err != nil {
+		return false, fmt.Errorf("failed to open Kubernetes connection: %w", err)
 	}
 
 	defer func() {
@@ -121,23 +139,24 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		if kubeCl.KubeProxy != nil {
 			kubeCl.KubeProxy.StopAll()
 		}
-
-		if wrapper, ok := kubeCl.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-			wrapper.Client().Stop()
-		}
 	}()
 
-	// d8-cluster-uuid
-	ns, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-uuid", v1.GetOptions{})
+	cm, err := kubeCl.CoreV1().
+		ConfigMaps("kube-system").
+		Get(ctx, "d8-cluster-uuid", v1.GetOptions{})
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get cluster UUID ConfigMap: %w", err)
 	}
 
-	c.printNs(ctx, ns)
+	c.printNs(ctx, cm)
 
-	uuidInCluster := ns.Data["cluster-uuid"]
+	uuidInCluster := cm.Data["cluster-uuid"]
 	if c.clusterUUID != "" && c.clusterUUID != uuidInCluster {
-		return false, fmt.Errorf("Incorrect cluster UUID: cluster has %s, but %s was passed.", uuidInCluster, c.clusterUUID)
+		return false, fmt.Errorf(
+			"incorrect cluster UUID: cluster has %s, but %s was passed",
+			uuidInCluster,
+			c.clusterUUID,
+		)
 	}
 
 	return true, nil
