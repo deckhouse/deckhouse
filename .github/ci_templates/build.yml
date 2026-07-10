@@ -372,14 +372,15 @@ steps:
   - name: Extract images_digests.json
     env:
       DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-      CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
     run: |
       set -euo pipefail
-      if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-        IMAGE_EDITION=${WERF_ENV,,}
-      fi
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-      IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+      if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+        IMAGE_TAG="pr${PR_NUMBER}"
+      else
+        IMAGE_TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+      fi
       regctl image get-file "${DEV_REGISTRY}/sys/deckhouse-oss:${IMAGE_TAG}" \
         /deckhouse/modules/images_digests.json > images_digests.json
       modules=$(jq 'keys | length' images_digests.json)
