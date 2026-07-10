@@ -1,3 +1,4 @@
 ## 001-go-mod.patch
 
-Update dependencies in go.mod file.
+Bump go.mod dependencies to fix known CVEs.
+
