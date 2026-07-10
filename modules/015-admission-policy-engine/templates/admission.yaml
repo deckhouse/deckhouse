@@ -177,31 +177,31 @@ spec:
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: exclude-users
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: finalizers-changed
+      expression: |
+        oldObject.metadata.?finalizers.orValue([]) != object.metadata.?finalizers.orValue([])
     - name: protected-finalizers-removed
       expression: |
         has(oldObject.metadata.finalizers) &&
         oldObject.metadata.finalizers.exists(f,
           f.contains('deckhouse.io') &&
-          !(has(object.metadata.finalizers) && f in object.metadata.finalizers))
+          !(f in object.metadata.?finalizers.orValue([])))
   variables:
     - name: protectedOldFinalizers
-      expression: |
-        has(oldObject.metadata.finalizers)
-        ? oldObject.metadata.finalizers.filter(f, f.contains('deckhouse.io'))
-        : []
+      expression: oldObject.metadata.finalizers.filter(f, f.contains('deckhouse.io'))
   validations:
     - expression: |
         request.userInfo.username.startsWith("system:serviceaccount:d8-")
         || request.userInfo.username.startsWith("system:serviceaccount:kube-")
         || variables.protectedOldFinalizers.all(f,
-            has(object.metadata.finalizers) && f in object.metadata.finalizers)
+            f in object.metadata.?finalizers.orValue([]))
       reason: Forbidden
       message: "Removing Deckhouse finalizers (containing 'deckhouse.io') is forbidden"
   auditAnnotations:
     - key: source-user
       valueExpression: |
         variables.protectedOldFinalizers.exists(f,
-          !(has(object.metadata.finalizers) && f in object.metadata.finalizers))
+          !(f in object.metadata.?finalizers.orValue([])))
         ? 'User: ' + string(request.userInfo.username) + ' tries to remove Deckhouse finalizers'
         : null
 ---

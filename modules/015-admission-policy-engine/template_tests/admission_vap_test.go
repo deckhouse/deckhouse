@@ -56,8 +56,10 @@ admissionPolicyEngine:
 
 		vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "deny-deckhouse-finalizers.deckhouse.io")
 		Expect(vap.Exists()).To(BeTrue())
-		Expect(vap.Field("spec.matchConstraints.resourceRules.0.operations").String()).To(MatchJSON(`["UPDATE"]`))
 		Expect(vap.Field("spec.failurePolicy").String()).To(Equal("Ignore"))
+		Expect(vap.Field("spec.matchConstraints.resourceRules.0.operations").String()).To(MatchJSON(`["UPDATE"]`))
+		Expect(vap.Field("spec.matchConditions").Array()).To(HaveLen(4))
+		Expect(vap.Field(`spec.matchConditions.#(name=="finalizers-changed").name`).String()).To(Equal("finalizers-changed"))
 		Expect(vap.Field("spec.validations.0.message").String()).To(
 			Equal("Removing Deckhouse finalizers (containing 'deckhouse.io') is forbidden"),
 		)
