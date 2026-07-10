@@ -29,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 )
@@ -49,12 +48,9 @@ var tenantAddonManifestKeys = []string{
 // - Cilium
 // The tenant clients are built once and shared across the sub-steps.
 func (r *reconciler) reconcileTenantAddons(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (string, reconcile.Result, error) {
-	log := logf.FromContext(ctx)
-
 	ts, tc, err := r.tenantClients(ctx, vcp)
 	if err != nil {
-		log.Info("tenant not reachable yet, requeuing", "error", err.Error())
-		return "", reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
+		return "", reconcile.Result{}, fmt.Errorf("build tenant clients: %w", err)
 	}
 
 	scopeLabels := map[string]string{
@@ -72,8 +68,7 @@ func (r *reconciler) reconcileTenantAddons(ctx context.Context, vcp *controlplan
 		scopeLabels,
 	)
 	if err != nil {
-		log.Info("bootstrap-token ensure failed, requeuing", "error", err.Error())
-		return "", reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
+		return "", reconcile.Result{}, fmt.Errorf("ensure bootstrap token: %w", err)
 	}
 
 	for _, key := range tenantAddonManifestKeys {

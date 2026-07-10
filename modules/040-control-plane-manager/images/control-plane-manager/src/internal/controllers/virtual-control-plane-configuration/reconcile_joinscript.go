@@ -30,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const registryPackagesProxyTokenNamespace = "d8-cloud-instance-manager"
@@ -40,17 +41,13 @@ func (r *reconciler) reconcileJoinScript(
 	pkiSecret *corev1.Secret,
 	configSecret *corev1.Secret,
 	joinToken string,
+	albVIP string,
 ) (reconcile.Result, error) {
 	host, port := externalAPIEndpoint(vcp)
 	if joinToken == "" {
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
-
-	vip, err := r.albVIP(ctx, vcp)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
-	}
-	if vip == "" {
+	if albVIP == "" {
 		// ALB LoadBalancer address not assigned yet, waiting — the join.sh /etc/hosts entry needs it.
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
@@ -74,6 +71,7 @@ func (r *reconciler) reconcileJoinScript(
 
 	rppToken, err := r.registryPackagesProxyToken(ctx)
 	if err != nil {
+		logf.FromContext(ctx).Error(err, "get registry-packages-proxy token, requeuing")
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
 
@@ -94,7 +92,7 @@ func (r *reconciler) reconcileJoinScript(
 		"${VCP_BOOTSTRAP_KUBECONFIG}", string(bootstrapKubeconfig),
 		"${VCP_CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
 		"${VCP_CLUSTER_DNS}", "10.96.0.10",
-		"${VCP_ALB_VIP}", vip,
+		"${VCP_ALB_VIP}", albVIP,
 		"${VCP_API_HOST}", host,
 		"${VCP_KONN_HOST}", konnExposeHost(vcp),
 		"${VCP_PKG_HOST}", packagesExposeHost(vcp),
@@ -130,5 +128,9 @@ func (r *reconciler) registryPackagesProxyToken(ctx context.Context) (string, er
 	if err != nil {
 		return "", fmt.Errorf("get rpp token: %w", err)
 	}
-	return string(sec.Data["token"]), nil
+	raw, ok := sec.Data["token"]
+	if !ok {
+		return "", fmt.Errorf("registry-packages-proxy-token secret missing key %q", "token")
+	}
+	return string(raw), nil
 }

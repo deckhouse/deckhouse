@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -56,6 +57,10 @@ var _ reconcile.Reconciler = (*reconciler)(nil)
 type reconciler struct {
 	client client.Client
 	scheme *runtime.Scheme
+
+	// tenantClientSets caches per-VCP tenant clients (vcp name -> *tenantClientSet);
+	// entries are invalidated by kubeconfig hash and dropped when the VCP is deleted.
+	tenantClientSets sync.Map
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -63,6 +68,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	vcp, err := r.getVirtualControlPlane(ctx, req.Name)
 	if apierrors.IsNotFound(err) {
+		r.forgetTenantClients(req.Name)
 		return reconcile.Result{}, nil
 	}
 	if err != nil {
@@ -73,7 +79,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp)
+	albVIP, err := r.albVIP(ctx, vcp)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
+	}
+
+	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp, albVIP)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -91,10 +102,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	albVIP, err := r.albVIP(ctx, vcp)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
-	}
 	if albVIP == "" {
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
@@ -130,7 +137,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken); err != nil || !res.IsZero() {
+	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -222,9 +229,6 @@ func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *control
 func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
-	// Always ClusterIP: external exposure is handled by the per-VCP ALB (TLSRoute backend), not the Service.
-	serviceType := corev1.ServiceTypeClusterIP
-
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-apiserver",
@@ -234,7 +238,8 @@ func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) 
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type: serviceType,
+			// Always ClusterIP: external exposure is handled by the per-VCP ALB (TLSRoute backend), not the Service.
+			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
 				"app": "kube-apiserver",
 			},
@@ -259,16 +264,7 @@ func isAPIServerServiceInSync(current, target *corev1.Service) bool {
 
 	return current.Spec.Type == target.Spec.Type &&
 		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
-		equality.Semantic.DeepEqual(portsWithoutNodePort(current.Spec.Ports), portsWithoutNodePort(target.Spec.Ports))
-}
-
-func portsWithoutNodePort(ports []corev1.ServicePort) []corev1.ServicePort {
-	out := make([]corev1.ServicePort, len(ports))
-	copy(out, ports)
-	for i := range out {
-		out[i].NodePort = 0
-	}
-	return out
+		equality.Semantic.DeepEqual(current.Spec.Ports, target.Spec.Ports)
 }
 
 func applyAPIServerServiceTarget(current, target *corev1.Service) {
@@ -282,13 +278,6 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 
 	current.Spec.Type = target.Spec.Type
 	current.Spec.Selector = target.Spec.Selector
-	if target.Spec.Type == corev1.ServiceTypeNodePort {
-		for i := range target.Spec.Ports {
-			if i < len(current.Spec.Ports) && current.Spec.Ports[i].NodePort != 0 {
-				target.Spec.Ports[i].NodePort = current.Spec.Ports[i].NodePort
-			}
-		}
-	}
 	current.Spec.Ports = target.Spec.Ports
 }
 
@@ -586,7 +575,7 @@ func readKubeconfigSecretData(outDir string, kubeconfigFiles []kubeconfig.File) 
 	return data, nil
 }
 
-func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Secret, reconcile.Result, error) {
+func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, albVIP string) (*corev1.Secret, reconcile.Result, error) {
 	global, err := r.getSecret(ctx, constants.KubeSystemNamespace, constants.VirtualControlPlaneConfigSecretName)
 	if apierrors.IsNotFound(err) {
 		return nil, reconcile.Result{RequeueAfter: requeueInterval}, nil
@@ -599,11 +588,7 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 	// resolves to an address reachable from worker nodes. Until the LoadBalancer address
 	// is assigned (first bootstrap, before the ALB exists) fall back to the pod IP so the
 	// apiserver still starts; the eastbound endpoint only matters once nodes join.
-	vip, err := r.albVIP(ctx, vcp)
-	if err != nil {
-		return nil, reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
-	}
-	apiAdvertiseAddress := vip
+	apiAdvertiseAddress := albVIP
 	if apiAdvertiseAddress == "" {
 		apiAdvertiseAddress = "$(POD_IP)"
 	}
