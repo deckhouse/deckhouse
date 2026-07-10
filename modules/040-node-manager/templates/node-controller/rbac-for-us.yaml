@@ -157,6 +157,11 @@ rules:
   verbs:
   - get
   - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
 # MCM Machine
 - apiGroups:
   - machine.sapcloud.io
