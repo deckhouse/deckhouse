@@ -32,3 +32,8 @@ required to run CAPY on Cluster API 1.11:
 
 This patch intentionally excludes upstream CI, README, tests, and CRD churn. It
 only carries the runtime and API changes required by the Deckhouse CAPY fork.
+
+## 004-go-mod.patch
+
+Bumps `google.golang.org/grpc` to `v1.79.3` and the dependency set required by
+that version to fix CVE-2026-33186.
