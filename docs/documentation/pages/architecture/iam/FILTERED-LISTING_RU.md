@@ -153,4 +153,4 @@ curl -H "Authorization: Bearer $TOKEN" \
 | [Deckhouse CLI](../../cli/d8/) | Флаг `--scope`, трансляция в заголовки |
 | kube-apiserver (патч DKP) | Байпас `403 Forbidden` + фильтрация на слое хранилища |
 | [`user-authz`](/modules/user-authz/) (permission-browser) | `AccessibleNamespaces`, `BulkSubjectAccessReview` — граница доступа |
-| [`multitenancy-manager`](modules/multitenancy-manager/) | Лейбл `projects.deckhouse.io/project` — классификация неймспейсов |
+| [`multitenancy-manager`](/modules/multitenancy-manager/) | Лейбл `projects.deckhouse.io/project` — классификация неймспейсов |

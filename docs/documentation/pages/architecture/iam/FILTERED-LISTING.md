@@ -154,4 +154,4 @@ enabled explicitly.
 | [Deckhouse CLI](../../cli/d8/)| The `--scope` flag, translation into headers |
 | kube-apiserver (DKP patch) | `403 Forbidden` bypass + filtering at the storage layer |
 | [`user-authz`](/modules/user-authz/) (permission-browser) | `AccessibleNamespaces`, `BulkSubjectAccessReview` — the access boundary |
-| [`multitenancy-manager`](modules/multitenancy-manager/) | The `projects.deckhouse.io/project` label — namespace classification |
+| [`multitenancy-manager`](/modules/multitenancy-manager/) | The `projects.deckhouse.io/project` label — namespace classification |
