@@ -1,0 +1,20 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:system:viewer
+  annotations:
+    en.meta.deckhouse.io/title: "System Viewer"
+    ru.meta.deckhouse.io/title: "Просмотр системы"
+    en.meta.deckhouse.io/description: "Read-only access to the Deckhouse platform configuration across all subsystems."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации платформы Deckhouse во всех подсистемах."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: viewer
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: system
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-system-as: viewer
+rules: []
