@@ -35,9 +35,11 @@ properties:
           Имя объекта Gateway из Gateway API, используемого для модулей экосистемы Deckhouse.
       ingressClass:
         description: |
-          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями экосистемы Deckhouse.
 
-          Если имя IngressClass задано как `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером, используемым по умолчанию для всех модулей. При использовании любого другого имени Ingress-контроллера, он не будет использоваться по умолчанию.
+          Если в качестве имени IngressClass указано значение `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером по умолчанию для всех модулей.
+
+          При использовании любого другого имени IngressClass такой Ingress-контроллер не будет использоваться по умолчанию.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имен c ключом `%s` в качестве динамической части строки.
@@ -62,29 +64,40 @@ properties:
               Необходимо указывать, чтобы позволить планировщику размещать критически важные компоненты Deckhouse, такие как cni и csi, на выделенных узлах.
       https:
         description: |
-          Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+          Способ организации доступа по протоколу HTTPS для модулей экосистемы Deckhouse.
         properties:
           mode:
             description: |
               Режим работы HTTPS:
-              * `CertManager` — модули Deckhouse будут работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, указанного в параметре `certManager.clusterIssuerName`;
-              * `CustomCertificate` — модули Deckhouse будут работать по HTTPS, используя сертификат из пространства имен `d8-system`;
-              * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](https://deckhouse.ru/modules/user-authn/));
-              * `OnlyInURI` — модули Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+
+              * `CertManager` — модули работают по HTTPS и самостоятельно заказывают сертификаты с помощью ClusterIssuer, указанного [в параметре `certManager.clusterIssuerName`](#parameters-modules-https-certmanager-clusterissuername);
+              * `CustomCertificate` — модули работают по HTTPS, используя сертификат из неймспейса `d8-system`;
+              * `Disabled` — модули работают только по HTTP (при этом некоторые модули могут не работать — например, [`user-authn`](/modules/user-authn/));
+              * `OnlyInURI` — модули работают по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Такой балансировщик должен обеспечивать перенаправление запросов с HTTP на HTTPS.
           certManager:
             properties:
               clusterIssuerName:
                 description: |
-                  Имя `ClusterIssuer`, используемого модулями Deckhouse.
+                  Имя ClusterIssuer, используемого модулями для получения TLS-сертификатов.
 
-                  В модуле [cert-manager](https://deckhouse.ru/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+                  Модуль [`cert-manager`](/modules/cert-manager/) предоставляет следующие ClusterIssuer: 
+
+                  - `letsencrypt`;
+                  - `letsencrypt-staging`;
+                  - `selfsigned`;
+                  - `clouddns`;
+                  - `cloudflare`;
+                  - `digitalocean`;
+                  - `route53`.
+                  
+                  При необходимости вы можете использовать собственный `ClusterIssuer`.
           customCertificate:
             properties:
               secretName:
                 description: |
-                  Имя Secret'а в пространстве имен `d8-system`, который будет использоваться модулями Deckhouse.
+                  Имя Secret в неймспейсе `d8-system`, содержащего TLS-сертификат, который будет использоваться модулями.
 
-                  Указанный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+                  Указанный Secret должен быть в формате [`kubernetes.io/tls`](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
       resourcesRequests:
         description: |
           Количество ресурсов (CPU и памяти), выделяемых для работы некоторых компонентов.
@@ -124,7 +137,9 @@ properties:
         description: |
           Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого приложениями экосистемы Deckhouse.
 
-          Если имя IngressClass задано как `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером, используемым по умолчанию для всех приложений. При использовании любого другого имени Ingress-контроллера, он не будет использоваться по умолчанию.
+          Если в качестве имени IngressClass указано значение `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером по умолчанию для всех приложений.
+
+          При использовании любого другого имени IngressClass такой Ingress-контроллер не будет использоваться по умолчанию.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имён с тремя ключами `%s` в качестве динамических частей строки.
@@ -147,26 +162,37 @@ properties:
           - Если домен шаблона совпадает с доменом сети узлов, используйте только А-записи для назначения служебным веб-интерфейсам платформы адресов frontend-узлов. Например, если для узлов заведена зона `company.my`, шаблон должен иметь вид `%s.%s.%s.company.my`.
       https:
         description: |
-          Способ реализации протокола HTTPS, используемый приложениями экосистемы Deckhouse.
+          Способ организации доступа по протоколу HTTPS для приложений экосистемы Deckhouse.
         properties:
           mode:
             description: |
               Режим работы HTTPS:
-              * `CertManager` — приложения экосистемы Deckhouse будут работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, указанного в параметре `certManager.clusterIssuerName`;
-              * `CustomCertificate` — приложения экосистемы Deckhouse будут работать по HTTPS, используя сертификат из неймспейса `d8-system`;
-              * `Disabled` — приложения экосистемы Deckhouse будут работать только по HTTP;
-              * `OnlyInURI` — приложения экосистемы Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+
+              * `CertManager` — приложения работают по HTTPS и самостоятельно заказывают сертификаты с помощью ClusterIssuer, указанного [в параметре `certManager.clusterIssuerName`](#parameters-applications-https-certmanager-clusterissuername);
+              * `CustomCertificate` — приложения работают по HTTPS, используя сертификат из неймспейса `d8-system`;
+              * `Disabled` — приложения работают только по HTTP;
+              * `OnlyInURI` — приложения работают по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление запросов с HTTP на HTTPS.
           certManager:
             properties:
               clusterIssuerName:
                 description: |
-                  Имя `ClusterIssuer`, используемого приложениями экосистемы Deckhouse.
+                  Имя ClusterIssuer, используемого приложениями для получения TLS-сертификатов.
 
-                  В модуле [cert-manager](https://deckhouse.ru/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+                  Модуль [`cert-manager`](/modules/cert-manager/) предоставляет следующие ClusterIssuer:
+
+                  - `letsencrypt`;
+                  - `letsencrypt-staging`;
+                  - `selfsigned`;
+                  - `clouddns`;
+                  - `cloudflare`;
+                  - `digitalocean`;
+                  - `route53`.
+
+                  При необходимости вы можете использовать собственный ClusterIssuer.
           customCertificate:
             properties:
               secretName:
                 description: |
-                  Имя Secret'а в неймспейсе `d8-system`, который будет использоваться приложениями экосистемы Deckhouse.
+                  Имя Secret в неймспейсе `d8-system`, содержащего TLS-сертификат, который будет использоваться приложениями.
 
-                  Указанный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+                  Указанный Secret должен быть в формате [`kubernetes.io/tls`](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).

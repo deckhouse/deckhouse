@@ -1,8 +1,8 @@
 diff --git a/pkg/apis/core/validation/validation.go b/pkg/apis/core/validation/validation.go
-index 213f4d7b7d4..649cb64ee51 100644
+index 3a228e2ec17..b82ecfbcfa5 100644
 --- a/pkg/apis/core/validation/validation.go
 +++ b/pkg/apis/core/validation/validation.go
-@@ -2397,6 +2397,86 @@ func allowInvalidAPIGroupInDataSourceOrRef(spec *core.PersistentVolumeClaimSpec)
+@@ -2390,6 +2390,86 @@ func allowInvalidAPIGroupInDataSourceOrRef(spec *core.PersistentVolumeClaimSpec)
  func ValidatePersistentVolumeClaim(pvc *core.PersistentVolumeClaim, opts PersistentVolumeClaimSpecValidationOptions) field.ErrorList {
  	allErrs := ValidateObjectMeta(&pvc.ObjectMeta, true, ValidatePersistentVolumeName, field.NewPath("metadata"))
  	allErrs = append(allErrs, ValidatePersistentVolumeClaimSpec(&pvc.Spec, field.NewPath("spec"), opts)...)
@@ -89,7 +89,7 @@ index 213f4d7b7d4..649cb64ee51 100644
  	return allErrs
  }
  
-@@ -4503,6 +4583,7 @@ func validatePodMetadataAndSpec(pod *core.Pod, opts PodValidationOptions) field.
+@@ -4509,6 +4589,7 @@ func validatePodMetadataAndSpec(pod *core.Pod, opts PodValidationOptions) field.
  
  	allErrs := ValidateObjectMeta(&pod.ObjectMeta, true, ValidatePodName, metaPath)
  	allErrs = append(allErrs, ValidatePodSpecificAnnotations(pod.ObjectMeta.Annotations, &pod.Spec, metaPath.Child("annotations"), opts)...)

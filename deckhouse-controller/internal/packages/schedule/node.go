@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
@@ -43,6 +44,7 @@ type Package interface {
 	GetName() string
 	GetVersion() *semver.Version
 	GetConstraints() Constraints
+	GetEnabledScriptDescriptor() *script.Descriptor
 }
 
 // Constraints defines the scheduling requirements for a Package:
@@ -198,12 +200,16 @@ func (s *Scheduler) addNode(pkg Package) {
 
 	// Module intent rules, appended after the floor and gates so their soft votes
 	// override the floor's Static(Disable) (gates still veto via Forbid from any
-	// position). Order within is least-to-most authoritative:
+	// position):
 	//   - bundle: enable-only; turns the module on for its edition/bundle.
-	//   - dynamic: the resolved ModuleConfig + dynamic intent. It is last, so an
-	//     explicit user disable overrides the bundle's enable, and a user enable
-	//     turns on a module the bundle ignores. Hooks are enable-only; the disable
-	//     direction comes solely from ModuleConfig.
+	//   - dynamic: the resolved ModuleConfig + dynamic intent. An enable intent is
+	//     a soft Enable that turns on a module the bundle ignores; a disable intent
+	//     is a hard Forbid, so an explicit user disable is final — it beats the
+	//     bundle enable and short-circuits resolution before the script even runs.
+	//   - script: the module's enabled script. A true result is a soft Enable that
+	//     can turn the module on; a false result or a script that cannot be
+	//     evaluated vetoes it via Forbid. It is appended last, but placement does
+	//     not affect a user disable, which the dynamic Forbid already settled.
 	if isModule {
 		if s.bundleChecker != nil {
 			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
@@ -212,6 +218,8 @@ func (s *Scheduler) addNode(pkg Package) {
 		if s.dynamicGetter != nil {
 			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
 		}
+
+		n.rules = append(n.rules, script.NewRule(pkg, s.logger))
 	}
 
 	s.nodes[pkg.GetName()] = n

@@ -80,8 +80,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/160-multitenancy-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/302-vertical-pod-autoscaler/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/hooks"

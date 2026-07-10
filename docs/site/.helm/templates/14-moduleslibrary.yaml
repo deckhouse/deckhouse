@@ -5,6 +5,7 @@ metadata:
   annotations:
     "werf.io/replicas-on-creation": "1"
     "pod-reloader.deckhouse.io/auto": "true"
+    "werf.io/no-activity-timeout": "10m"
   labels:
     service: moduleslibrary
     app.kubernetes.io/part-of: deckhouse-docs

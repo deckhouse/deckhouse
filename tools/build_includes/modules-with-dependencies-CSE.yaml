@@ -167,22 +167,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/340-monitoring-kubernetes/hooks
-  to: /deckhouse/modules/340-monitoring-kubernetes/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/340-monitoring-kubernetes/requirements
-  to: /deckhouse/modules/340-monitoring-kubernetes/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/400-descheduler/hooks
   to: /deckhouse/modules/400-descheduler/hooks
   excludePaths:
@@ -275,6 +259,16 @@
         - '**/*'
 - add: /ee/modules/150-user-authn/hooks/custom_logo_test.go
   to: /deckhouse/modules/150-user-authn/hooks/custom_logo_test.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
   stageDependencies:
     install:
         - '**/*'

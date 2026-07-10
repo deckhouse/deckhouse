@@ -29,7 +29,7 @@
 # `.deckhouseImageRef`, ~200 MiB), deckhouse/*, cniCilium/*, coredns, nodeManager (minus
 # nvidia*/nodeFeatureDiscovery/stale clusterAutoscaler), current cloudProvider/*, common
 # runtime bits, kubeProxy, csi-sidecars, common misc, then chrony/*, registryPackagesProxy/*,
-# monitoringKubernetes/* and kubeDns/*.
+# and kubeDns/*.
 #
 # Each line is "<section>/<imageKey> <ref>"; pull_one splits on the first space.
 # Fire-and-forget: failures never block bashible; kubelet fetches anything missing later.
@@ -148,7 +148,7 @@ kubeProxy/{{ $name }} {{ $base }}@{{ $digest }}
 common/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}
 {{- end }}
-{{- range $section := (list "chrony" "registryPackagesProxy" "monitoringKubernetes" "kubeDns") }}
+{{- range $section := (list "chrony" "registryPackagesProxy" "kubeDns") }}
 {{- range $name, $digest := (index $.images $section | default dict) }}
 {{ $section }}/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}
