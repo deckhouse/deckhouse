@@ -207,7 +207,6 @@ func TestIntegration_BulkSARWithFakeClient(t *testing.T) {
 			// Create BulkSubjectAccessReview request
 			bsar := &v1alpha1.BulkSubjectAccessReview{
 				Spec: v1alpha1.BulkSubjectAccessReviewSpec{
-					User:     tt.user,
 					Requests: tt.requests,
 				},
 			}
@@ -274,8 +273,6 @@ func TestIntegration_BulkSARWithGroups(t *testing.T) {
 	// User in developers group
 	bsar := &v1alpha1.BulkSubjectAccessReview{
 		Spec: v1alpha1.BulkSubjectAccessReviewSpec{
-			User:   "dev-user",
-			Groups: []string{"developers", "authenticated"},
 			Requests: []v1alpha1.SubjectAccessReviewRequest{
 				{
 					ResourceAttributes: &v1alpha1.ResourceAttributes{
@@ -362,7 +359,6 @@ func TestIntegration_BulkSARWithServiceAccount(t *testing.T) {
 	saUser := "system:serviceaccount:kube-system:my-sa"
 	bsar := &v1alpha1.BulkSubjectAccessReview{
 		Spec: v1alpha1.BulkSubjectAccessReviewSpec{
-			User: saUser,
 			Requests: []v1alpha1.SubjectAccessReviewRequest{
 				{
 					ResourceAttributes: &v1alpha1.ResourceAttributes{
@@ -440,7 +436,6 @@ func TestIntegration_CompositeAuthorizerWithFakeClient(t *testing.T) {
 
 	bsar := &v1alpha1.BulkSubjectAccessReview{
 		Spec: v1alpha1.BulkSubjectAccessReviewSpec{
-			User: "admin-user",
 			Requests: []v1alpha1.SubjectAccessReviewRequest{
 				{
 					ResourceAttributes: &v1alpha1.ResourceAttributes{
@@ -512,8 +507,6 @@ func TestIntegration_NonResourceURLs(t *testing.T) {
 
 	bsar := &v1alpha1.BulkSubjectAccessReview{
 		Spec: v1alpha1.BulkSubjectAccessReviewSpec{
-			User:   "any-user",
-			Groups: []string{"system:authenticated"},
 			Requests: []v1alpha1.SubjectAccessReviewRequest{
 				{
 					NonResourceAttributes: &v1alpha1.NonResourceAttributes{
@@ -602,7 +595,6 @@ func TestIntegration_LargeBulkRequest(t *testing.T) {
 
 	bsar := &v1alpha1.BulkSubjectAccessReview{
 		Spec: v1alpha1.BulkSubjectAccessReviewSpec{
-			User:     "viewer-user",
 			Requests: requests,
 		},
 	}
