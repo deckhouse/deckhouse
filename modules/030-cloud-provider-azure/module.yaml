@@ -12,3 +12,5 @@ accessibility:
   editions:
     _default:
       available: true
+    cse:
+      available: false
