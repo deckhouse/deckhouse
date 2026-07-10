@@ -20,8 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
 var (
@@ -61,8 +59,10 @@ type ModulePullOverride struct {
 }
 
 type ModulePullOverrideSpec struct {
-	ImageTag     string          `json:"imageTag"`
-	ScanInterval libapi.Duration `json:"scanInterval"`
+	ImageTag string `json:"imageTag"`
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
+	ScanInterval metav1.Duration `json:"scanInterval"`
 	Rollback     bool            `json:"rollback"`
 }
 
