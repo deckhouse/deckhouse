@@ -501,7 +501,14 @@
       "ee"
     ],
     "external": "true",
-    "path": "/modules/sdn/stable/"
+    "path": "/modules/sdn/"
+  },
+  "sds-elastic": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/sds-elastic/"
   },
   "sds-local-volume": {
     "editions": [

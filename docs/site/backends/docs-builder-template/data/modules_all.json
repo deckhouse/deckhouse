@@ -548,6 +548,15 @@
       "ssdlc"
     ]
   },
+  "sds-elastic": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage",
+      "ssdlc"
+    ]
+  },
   "sds-local-volume": {
     "editions": [
       "ce",
