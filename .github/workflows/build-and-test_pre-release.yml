@@ -142,7 +142,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -829,7 +829,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -1223,7 +1223,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -1617,7 +1617,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -2011,7 +2011,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -2405,7 +2405,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -2799,7 +2799,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
