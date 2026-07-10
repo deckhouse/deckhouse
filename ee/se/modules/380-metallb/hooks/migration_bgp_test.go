@@ -196,11 +196,12 @@ version: 2
 		})
 	})
 
-	Context("With many BGP pools sharing a single IP address", func() {
-		const (
-			poolCount = 80
-			sharedIP  = "192.168.100.100/32"
-		)
+	Context("With many BGP pools each having its own IP address", func() {
+		const poolCount = 80
+
+		poolIP := func(i int) string {
+			return fmt.Sprintf("10.10.0.%d/32", i)
+		}
 
 		BeforeEach(func() {
 			var sb strings.Builder
@@ -232,7 +233,7 @@ spec:
 				sb.WriteString(fmt.Sprintf("    - name: pool-%02d-bgp\n", i))
 				sb.WriteString("      protocol: bgp\n")
 				sb.WriteString("      addresses:\n")
-				sb.WriteString(fmt.Sprintf("      - %s\n", sharedIP))
+				sb.WriteString(fmt.Sprintf("      - %s\n", poolIP(i)))
 				// Every 4th pool has no bgp-advertisements (like haproxy pools in the example).
 				if i%4 != 0 {
 					sb.WriteString("      bgp-advertisements:\n")
@@ -245,15 +246,15 @@ spec:
 			f.RunHook()
 		})
 
-		It("Should migrate all pools that share the same IP", func() {
+		It("Should migrate all pools with their own IP", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			// Every pool must be migrated into its own MetalLoadBalancerPool with the shared address.
+			// Every pool must be migrated into its own MetalLoadBalancerPool with its own address.
 			for i := 0; i < poolCount; i++ {
 				name := fmt.Sprintf("pool-%02d-bgp", i)
 				pool := f.KubernetesResource("MetalLoadBalancerPool", "", name)
 				Expect(pool.Exists()).To(BeTrue(), "pool %q should exist", name)
-				Expect(pool.Field("spec.addresses").AsStringSlice()).To(Equal([]string{sharedIP}))
+				Expect(pool.Field("spec.addresses").AsStringSlice()).To(Equal([]string{poolIP(i)}))
 			}
 
 			// The single configuration must contain one advertisement per pool and both peers.
