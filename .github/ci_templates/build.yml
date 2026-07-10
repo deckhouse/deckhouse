@@ -41,7 +41,7 @@ outputs:
   matrix:           ${{ steps.diff.outputs.matrix }}
   changed_compact:  ${{ steps.diff.outputs.changed_compact }}
 {!{- end }!}
-  tags: ${{ steps.set-pr-tag.tags }}
+  tags: ${{ steps.set-pr-tag.outputs.tags }}
 steps:
 {!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ if eq $buildType "release" }!}

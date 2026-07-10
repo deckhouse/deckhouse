@@ -378,7 +378,7 @@ jobs:
       changed_count:    ${{ steps.diff.outputs.changed_count }}
       matrix:           ${{ steps.diff.outputs.matrix }}
       changed_compact:  ${{ steps.diff.outputs.changed_compact }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -1091,7 +1091,7 @@ jobs:
       changed_count:    ${{ steps.diff.outputs.changed_count }}
       matrix:           ${{ steps.diff.outputs.matrix }}
       changed_compact:  ${{ steps.diff.outputs.changed_compact }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -1506,7 +1506,7 @@ jobs:
       changed_count:    ${{ steps.diff.outputs.changed_count }}
       matrix:           ${{ steps.diff.outputs.matrix }}
       changed_compact:  ${{ steps.diff.outputs.changed_compact }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -1921,7 +1921,7 @@ jobs:
       changed_count:    ${{ steps.diff.outputs.changed_count }}
       matrix:           ${{ steps.diff.outputs.matrix }}
       changed_compact:  ${{ steps.diff.outputs.changed_compact }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -2336,7 +2336,7 @@ jobs:
       changed_count:    ${{ steps.diff.outputs.changed_count }}
       matrix:           ${{ steps.diff.outputs.matrix }}
       changed_compact:  ${{ steps.diff.outputs.changed_compact }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -2751,7 +2751,7 @@ jobs:
       changed_count:    ${{ steps.diff.outputs.changed_count }}
       matrix:           ${{ steps.diff.outputs.matrix }}
       changed_compact:  ${{ steps.diff.outputs.changed_compact }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -3166,7 +3166,7 @@ jobs:
       changed_count:    ${{ steps.diff.outputs.changed_count }}
       matrix:           ${{ steps.diff.outputs.matrix }}
       changed_compact:  ${{ steps.diff.outputs.changed_compact }}
-      tags: ${{ steps.set-pr-tag.tags }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
