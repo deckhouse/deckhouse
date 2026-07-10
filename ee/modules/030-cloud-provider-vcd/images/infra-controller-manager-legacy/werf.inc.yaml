@@ -13,6 +13,7 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 git:
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/infra-controller-manager/src
     to: /src
