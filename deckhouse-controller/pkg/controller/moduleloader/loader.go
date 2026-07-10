@@ -410,6 +410,10 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 			}
 			deletedCount++
 			deleteSpan.End()
+
+			// The module has just been deleted; skip the status update below so we
+			// don't try to update a non-existent module.
+			continue
 		}
 
 		var found bool
