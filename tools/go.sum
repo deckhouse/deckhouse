@@ -174,6 +174,7 @@ github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
 github.com/deckhouse/module-sdk v0.11.1 h1:dMhL08TbKNhtBdI+1eVVk7iR2OnRp4mSoeyEMg6uVtQ=
 github.com/deckhouse/module-sdk v0.11.1/go.mod h1:v3pnOUIY8hCv7qQ5YaffiAYKj5oH8WBonG614KvRPXw=
+github.com/deckhouse/module-sdk v0.12.0/go.mod h1:v3pnOUIY8hCv7qQ5YaffiAYKj5oH8WBonG614KvRPXw=
 github.com/denis-tingajkin/go-header v0.4.2 h1:jEeSF4sdv8/3cT/WY8AgDHUoItNSoEZ7qg9dX7pc218=
 github.com/denis-tingajkin/go-header v0.4.2/go.mod h1:eLRHAVXzE5atsKAnNRDB90WHCFFnBUn4RN0nRcs1LJA=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
@@ -218,6 +219,7 @@ github.com/flant/addon-operator v1.23.3 h1:Oar92wUyiGSxUjzm5nF/PE0uzYw4y5S29oOrz
 github.com/flant/addon-operator v1.23.3/go.mod h1:CmNT5z7W30Uo4JP3YWxEz+o6Hl6q6ibCSVb450YJ08U=
 github.com/flant/addon-operator v1.23.4 h1:2EgIh1CTohv7Adzeaqv71kQ+fZ0thm/AxLhiZ5Wg8V0=
 github.com/flant/addon-operator v1.23.4/go.mod h1:CmNT5z7W30Uo4JP3YWxEz+o6Hl6q6ibCSVb450YJ08U=
+github.com/flant/addon-operator v1.24.0/go.mod h1:5p49PcDYh1dxugm60oDS8Q12IW+ooiXimjP50CWXEjw=
 github.com/flant/kube-client v1.9.1 h1:B5Sa++5arl3N/KBdL1KNMlUBtzQXKz1o2FIiFb4X+VA=
 github.com/flant/kube-client v1.9.1/go.mod h1:jAQ01+f5Q8UJJ4RYZlk5xqoA+OOalpr/QJ3e3Q/saqw=
 github.com/flant/shell-operator v1.20.1 h1:v8+5r9H2bQGUDhh2hPC/GXzw1vfC8hFhO0fxSGnVCD0=
