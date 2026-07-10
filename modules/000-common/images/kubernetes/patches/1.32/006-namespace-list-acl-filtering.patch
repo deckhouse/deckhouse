@@ -53,7 +53,7 @@ index 7ed3a58489b..efd130af546 100644
  }
 diff --git a/pkg/controlplane/apiserver/scopefilter_wiring.go b/pkg/controlplane/apiserver/scopefilter_wiring.go
 new file mode 100644
-index 00000000000..900a2d57147
+index 00000000000..e2a93db9857
 --- /dev/null
 +++ b/pkg/controlplane/apiserver/scopefilter_wiring.go
 @@ -0,0 +1,89 @@
@@ -140,7 +140,7 @@ index 00000000000..900a2d57147
 +
 +			store := provider.DeckhouseScopeStore()
 +			gvr := schema.GroupVersionResource{Group: group, Version: version, Resource: name}
-+			store.ScopeFilter = r.NewDecorator(store, store.PredicateFunc, gvr)
++			store.ScopeFilter = r.NewDecorator(store, store.PredicateFunc, store.Decorator, gvr)
 +			scopefilter.Register(gvr.GroupResource())
 +			klog.V(4).InfoS("scopefilter: wired built-in resource", "resource", gvr)
 +		}
@@ -1085,7 +1085,7 @@ index d791dd228c9..b1c03703446 100644
  	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
  	s.GenericAPIServer.RegisterDestroyFunc(crdHandler.destroy)
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 55d31fc8eda..b93da7ec087 100644
+index 55d31fc8eda..47228c4ae9a 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -72,6 +72,7 @@ import (
@@ -1123,7 +1123,19 @@ index 55d31fc8eda..b93da7ec087 100644
  }
  
  // Destroy shuts down storage layer for all registered CRDs.
-@@ -850,6 +864,19 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -719,6 +733,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 		replicasPathInCustomResource[schema.GroupVersion{Group: crd.Spec.Group, Version: v.Name}.String()] = path
+ 	}
+ 
++	// Deckhouse: whether at least one served version got a ScopeFilter wired
++	// below; the shared-registry Register happens once, after the whole
++	// crdInfo is built and cached.
++	scopeFilterWired := false
++
+ 	for _, v := range crd.Spec.Versions {
+ 		// In addition to Unstructured objects (Custom Resources), we also may sometimes need to
+ 		// decode unversioned Options objects, so we delegate to parameterScheme for such types.
+@@ -850,6 +869,25 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  
  		clusterScoped := crd.Spec.Scope == apiextensionsv1.ClusterScoped
  
@@ -1134,20 +1146,42 @@ index 55d31fc8eda..b93da7ec087 100644
 +		// exactly as it does for built-ins. Cluster-scoped CRDs are skipped
 +		// (no namespace to classify/floor, and the authz bypass never fires
 +		// for them); a nil resolver bundle (no loopback config) is a no-op.
++		// Registration in the shared scopefilter registry is deliberately
++		// deferred until the WHOLE crdInfo has been built and cached (see the
++		// end of this function): a later per-version build step can still
++		// fail, and registering here would leave IsRegistered true -- opening
++		// the authorization bypass -- for a resource that is not served and
++		// has no teardown path to unregister it.
 +		if !clusterScoped && r.scopeResolvers != nil {
 +			store := storages[v.Name].CustomResource.Store
-+			store.ScopeFilter = r.scopeResolvers.NewDecorator(store, store.PredicateFunc, resource)
-+			scopefilter.Register(resource.GroupResource())
++			store.ScopeFilter = r.scopeResolvers.NewDecorator(store, store.PredicateFunc, store.Decorator, resource)
++			scopeFilterWired = true
 +		}
 +
  		// CRDs explicitly do not support protobuf, but some objects returned by the API server do
  		negotiatedSerializer := unstructuredNegotiatedSerializer{
  			typer:                 typer,
+@@ -1046,6 +1084,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 	storageMap2[crd.UID] = ret
+ 	r.customStorage.Store(storageMap2)
+ 
++	// Deckhouse: register in the shared scopefilter registry only now that
++	// every version's storage was built successfully and the crdInfo is
++	// cached -- so IsRegistered never says true for a resource that failed
++	// mid-build (and would have no teardown to unregister it). Mirrors the
++	// Unregister in tearDown, which uses the same group/plural pair.
++	if scopeFilterWired {
++		scopefilter.Register(schema.GroupResource{Group: crd.Spec.Group, Resource: crd.Status.AcceptedNames.Plural})
++	}
++
+ 	return ret, nil
+ }
+ 
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index eec02e5722f..580482b6091 100644
+index eec02e5722f..2fd44c7f7aa 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-@@ -24,6 +24,7 @@ import (
+@@ -24,16 +24,19 @@ import (
  
  	"k8s.io/apimachinery/pkg/fields"
  	"k8s.io/apimachinery/pkg/labels"
@@ -1155,7 +1189,11 @@ index eec02e5722f..580482b6091 100644
  	genericfeatures "k8s.io/apiserver/pkg/features"
  	utilfeature "k8s.io/apiserver/pkg/util/feature"
  
-@@ -34,6 +35,7 @@ import (
+ 	"k8s.io/klog/v2"
+ 
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apiserver/pkg/audit"
  	"k8s.io/apiserver/pkg/authorization/authorizer"
  	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
  	"k8s.io/apiserver/pkg/endpoints/request"
@@ -1163,7 +1201,7 @@ index eec02e5722f..580482b6091 100644
  )
  
  const (
-@@ -45,8 +47,88 @@ const (
+@@ -45,8 +48,88 @@ const (
  	decisionAllow  = "allow"
  	decisionForbid = "forbid"
  	reasonError    = "internal error"
@@ -1252,7 +1290,31 @@ index eec02e5722f..580482b6091 100644
  type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
  
  // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
-@@ -80,6 +162,24 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -68,6 +151,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+ 			responsewriters.InternalError(w, req, err)
+ 			return
+ 		}
++
++		// Deckhouse: a malformed scope header (unknown value, project header
++		// without a scope header, ...) on a request the mechanism would
++		// otherwise engage for fails loudly with 400 -- for every caller,
++		// before authorization even runs. Silently ignoring it would hand a
++		// privileged caller with a typo the full unfiltered listing they
++		// explicitly asked to narrow (data-minimization violated), and would
++		// give a denied caller a misleading 403 instead of pointing at the
++		// bad header. Requests the mechanism ignores anyway (mutating verbs,
++		// subresources) keep ignoring the headers, valid or not.
++		if requestInfo, ok := request.RequestInfoFrom(ctx); ok && isFilteredRequest(requestInfo) {
++			if _, present, perr := scopefilter.ParseHeaders(req.Header); present && perr != nil {
++				responsewriters.ErrorNegotiated(apierrors.NewBadRequest(perr.Error()), s, schema.GroupVersion{}, w, req)
++				return
++			}
++		}
++
+ 		authorized, reason, err := a.Authorize(ctx, attributes)
+ 
+ 		authorizationFinish := time.Now()
+@@ -80,6 +180,24 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			audit.AddAuditAnnotations(ctx,
  				decisionAnnotationKey, decisionAllow,
  				reasonAnnotationKey, reason)
@@ -1277,7 +1339,7 @@ index eec02e5722f..580482b6091 100644
  			handler.ServeHTTP(w, req)
  			return
  		}
-@@ -89,6 +189,61 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -89,6 +207,60 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			return
  		}
  
@@ -1319,11 +1381,10 @@ index eec02e5722f..580482b6091 100644
 +		//     filtering for, handing back everything to a denied
 +		//     caller.
 +		if isFilteredRequest(requestInfo) {
-+			if scopeReq, present, perr := scopefilter.ParseHeaders(req.Header); present {
-+				if perr != nil {
-+					klog.V(4).InfoS("scopefilter: invalid scope header, falling through to Forbidden",
-+						"URI", req.RequestURI, "err", perr)
-+				} else if gr := (schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}); scopefilter.IsRegistered(gr) {
++			// A malformed header (present && perr != nil) cannot reach this
++			// point: it was rejected with 400 before authorization ran.
++			if scopeReq, present, perr := scopefilter.ParseHeaders(req.Header); present && perr == nil {
++				if gr := (schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}); scopefilter.IsRegistered(gr) {
 +					klog.V(4).InfoS("scopefilter: bypassing authorization denial for scoped read; storage will filter",
 +						"URI", req.RequestURI, "verb", requestInfo.Verb, "resource", gr, "scope", scopeReq.Kind, "reason", reason)
 +					audit.AddAuditAnnotations(ctx,
@@ -1341,10 +1402,10 @@ index eec02e5722f..580482b6091 100644
  			decisionAnnotationKey, decisionForbid,
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go
 new file mode 100644
-index 00000000000..6b834bf55d5
+index 00000000000..981e25d412f
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go
-@@ -0,0 +1,256 @@
+@@ -0,0 +1,353 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1599,6 +1660,103 @@ index 00000000000..6b834bf55d5
 +	}
 +	if handler.gotRequest.Kind != scopefilter.KindSystem {
 +		t.Fatalf("scope request kind = %q, want %q", handler.gotRequest.Kind, scopefilter.KindSystem)
++	}
++}
++
++// TestWithAuthorization_MalformedScopeHeaderIs400 pins the fail-loud contract
++// for garbage in the scope header namespace: a malformed header on a request
++// the mechanism would engage for (read of a top-level resource) is rejected
++// with 400 for EVERY caller -- before authorization runs. The dangerous
++// alternative this guards against: a privileged backend with a typo'd scope
++// value silently receiving the full unfiltered listing it explicitly asked
++// to narrow. Requests the mechanism ignores by design (mutating verbs,
++// subresources) keep ignoring the headers entirely, malformed or not.
++func TestWithAuthorization_MalformedScopeHeaderIs400(t *testing.T) {
++	registered := schema.GroupResource{Resource: "widgets"}
++	scopefilter.Register(registered)
++	t.Cleanup(func() { scopefilter.Unregister(registered) })
++
++	scheme := runtime.NewScheme()
++	negotiatedSerializer := serializer.NewCodecFactory(scheme).WithoutConversion()
++	allowAll := fakeAuthorizer{authorizer.DecisionAllow, "allowed for test", nil}
++
++	tests := []struct {
++		name          string
++		method        string
++		path          string
++		scopeHeader   string
++		projectHeader string
++		authz         fakeAuthorizer
++		wantCode      int
++	}{
++		{
++			name:        "typo'd scope value from a PRIVILEGED caller is 400, not a silent full listing",
++			method:      http.MethodGet,
++			path:        "/api/v1/widgets",
++			scopeHeader: "projcts", // the typo Ivan's review comment warns about
++			authz:       allowAll,
++			wantCode:    http.StatusBadRequest,
++		},
++		{
++			name:        "typo'd scope value from a denied caller is 400, not a misleading 403",
++			method:      http.MethodGet,
++			path:        "/api/v1/widgets",
++			scopeHeader: "bogus",
++			authz:       denyAllAuthorizer(),
++			wantCode:    http.StatusBadRequest,
++		},
++		{
++			name:          "project header without a scope header is 400",
++			method:        http.MethodGet,
++			path:          "/api/v1/widgets",
++			projectHeader: "team-a",
++			authz:         allowAll,
++			wantCode:      http.StatusBadRequest,
++		},
++		{
++			name:        "scope=project without the project header is 400",
++			method:      http.MethodGet,
++			path:        "/api/v1/widgets",
++			scopeHeader: "project",
++			authz:       allowAll,
++			wantCode:    http.StatusBadRequest,
++		},
++		{
++			name:        "header validity is resource-independent: malformed value 400s even on an unregistered resource",
++			method:      http.MethodGet,
++			path:        "/api/v1/pods", // not Register'd in this test
++			scopeHeader: "bogus",
++			authz:       allowAll,
++			wantCode:    http.StatusBadRequest,
++		},
++		{
++			name:        "mutating request ignores the headers entirely -- malformed value included",
++			method:      http.MethodPost,
++			path:        "/api/v1/namespaces/ns-a/widgets",
++			scopeHeader: "bogus",
++			authz:       denyAllAuthorizer(),
++			wantCode:    http.StatusForbidden, // plain RBAC outcome, no 400
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			handler := &scopeTestHandler{}
++			wrapped := WithAuthorization(handler, tt.authz, negotiatedSerializer)
++			req := newScopeTestRequest(t, tt.method, tt.path, tt.scopeHeader)
++			if tt.projectHeader != "" {
++				req.Header.Set(scopefilter.HeaderProject, tt.projectHeader)
++			}
++			w := httptest.NewRecorder()
++			wrapped.ServeHTTP(w, req)
++
++			if handler.called && tt.wantCode != http.StatusOK {
++				t.Fatalf("expected HTTP %d without reaching the handler, but the handler ran", tt.wantCode)
++			}
++			if w.Code != tt.wantCode {
++				t.Fatalf("HTTP code = %d, want %d (body: %s)", w.Code, tt.wantCode, w.Body.String())
++			}
++		})
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
@@ -2444,10 +2602,10 @@ index 00000000000..47d82092629
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator.go
 new file mode 100644
-index 00000000000..f78d62829a1
+index 00000000000..f4f6b2571bc
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator.go
-@@ -0,0 +1,360 @@
+@@ -0,0 +1,376 @@
 +/*
 +Copyright 2025 The Kubernetes Authors.
 +
@@ -2562,6 +2720,18 @@ index 00000000000..f78d62829a1
 +	// RefreshInterval overrides DefaultRefreshInterval for the watch-path
 +	// poller.
 +	RefreshInterval time.Duration
++
++	// PostRead is the store's post-read decoration hook (the real Store's
++	// `Decorator` field, passed by value like BuildPredicate). Some
++	// resources (Services, PersistentVolumeClaims) apply read-time
++	// defaulting through it; the vanilla Store.List applies it AFTER
++	// ListPredicate, which the filtering List path here replaces -- so it
++	// must be re-applied explicitly, or scoped listings (and synthesized
++	// watch ADDED events, see watch.go) would return a different object
++	// representation than plain GET/WATCH. Nil when the resource has no
++	// decoration hook. The Get path needs no equivalent: its rawGet is the
++	// store's own unhooked Get body, which already applies the hook.
++	PostRead func(runtime.Object)
 +}
 +
 +func (d *Decorator) identityField() string {
@@ -2674,6 +2844,9 @@ index 00000000000..f78d62829a1
 +	if err != nil {
 +		return nil, storageerr.InterpretListError(err, d.Resource.GroupResource())
 +	}
++	if d.PostRead != nil {
++		d.PostRead(out)
++	}
 +	return out, nil
 +}
 +
@@ -2784,6 +2957,7 @@ index 00000000000..f78d62829a1
 +		Mode:           d.Mode,
 +		Store:          d.Store,
 +		BuildPredicate: d.BuildPredicate,
++		PostRead:       d.PostRead,
 +		CallerLabel:    label,
 +		CallerField:    field,
 +		Poll: func(pctx context.Context) (map[string]struct{}, error) {
@@ -2810,10 +2984,10 @@ index 00000000000..f78d62829a1
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator_test.go
 new file mode 100644
-index 00000000000..246c5339c72
+index 00000000000..874425f86ae
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/decorator_test.go
-@@ -0,0 +1,404 @@
+@@ -0,0 +1,445 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2994,7 +3168,9 @@ index 00000000000..246c5339c72
 +// fakeClassify answers classification per scope Kind with a fixed,
 +// pre-programmed set -- Project is ignored since the invariant test below
 +// only exercises KindSystem.
-+type fakeClassify struct{ byKind map[scopefilter.Kind]map[string]struct{} }
++type fakeClassify struct {
++	byKind map[scopefilter.Kind]map[string]struct{}
++}
 +
 +func (f *fakeClassify) Resolve(_ context.Context, kind scopefilter.Kind, _ string) (map[string]struct{}, error) {
 +	return f.byKind[kind], nil
@@ -3004,7 +3180,9 @@ index 00000000000..246c5339c72
 +// point of TestDecorator_List_RBACFloorNarrowsByResourceAndVerb is to prove
 +// Decorator only ever consults the entry for the ACTUAL resource+verb of the
 +// request, never a broader "has access to something in this namespace" set.
-+type fakeFloor struct{ allowed map[string]map[string]struct{} }
++type fakeFloor struct {
++	allowed map[string]map[string]struct{}
++}
 +
 +func floorKey(gvr schema.GroupVersionResource, verb string) string {
 +	return gvr.Resource + "/" + verb
@@ -3094,6 +3272,43 @@ index 00000000000..246c5339c72
 +				t.Fatalf("List names: got %v, want %v", got, want)
 +			}
 +		})
++	}
++}
++
++// TestDecorator_List_AppliesPostRead pins the read-time-defaulting contract
++// from review: the vanilla Store.List applies the store's post-read
++// decoration hook (Services'/PVCs' defaultOnRead) AFTER ListPredicate, and
++// the filtering List path replaces exactly that stretch of Store.List -- so
++// it must re-apply the hook itself, or a scoped listing would return a
++// different object representation than a plain one.
++func TestDecorator_List_AppliesPostRead(t *testing.T) {
++	store := newFakeStore()
++	store.put("ns-a", "pod-1")
++
++	var decorated []runtime.Object
++	d := &scopefilter.Decorator{
++		Store:          store,
++		BuildPredicate: store.buildPredicate,
++		Resource:       schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"},
++		Mode:           scopefilter.IdentityByNamespace,
++		Classify: &fakeClassify{byKind: map[scopefilter.Kind]map[string]struct{}{
++			scopefilter.KindSystem: {"ns-a": {}},
++		}},
++		RBACFloor:  &fakeFloor{allowed: map[string]map[string]struct{}{"pods/list": {"ns-a": {}}}},
++		Accessible: &fakeAccessible{names: []string{"ns-a"}},
++		PostRead:   func(obj runtime.Object) { decorated = append(decorated, obj) },
++	}
++
++	ctx := genericapirequest.WithUser(genericapirequest.NewContext(), &user.DefaultInfo{Name: "alice"})
++	ctx = scopefilter.WithRequest(ctx, scopefilter.Request{Kind: scopefilter.KindSystem})
++	ctx = scopefilter.WithBypass(ctx)
++
++	out, err := d.List(ctx, nil)
++	if err != nil {
++		t.Fatalf("List: %v", err)
++	}
++	if len(decorated) != 1 || decorated[0] != out {
++		t.Fatalf("PostRead was not applied exactly once to the returned list (calls: %d)", len(decorated))
 +	}
 +}
 +
@@ -4307,10 +4522,10 @@ index 00000000000..65bbc78eec3
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
 new file mode 100644
-index 00000000000..31263c46ddc
+index 00000000000..aed7e883430
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
-@@ -0,0 +1,123 @@
+@@ -0,0 +1,130 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4365,14 +4580,21 @@ index 00000000000..31263c46ddc
 +
 +// ParseHeaders extracts a Request from the two scope headers.
 +//
-+// present is false when no scope header was sent at all -- the caller is not
-+// asking for scope filtering, and callers of this function must treat that
-+// identically to plain upstream behavior (no bypass, no filtering). This is
-+// distinct from Request{Kind: KindAccessible}, which IS an explicit request,
-+// just the broadest one available.
++// present is false only when NEITHER scope header was sent -- the caller is
++// not asking for scope filtering, and callers of this function must treat
++// that identically to plain upstream behavior (no bypass, no filtering).
++// This is distinct from Request{Kind: KindAccessible}, which IS an explicit
++// request, just the broadest one available. A HeaderProject without a
++// HeaderScope is present-with-error: the caller clearly tried to use the
++// mechanism, and silently ignoring the attempt would hand a privileged
++// caller the full unfiltered listing they specifically asked to narrow --
++// see the authorization filter, which turns present+err into 400.
 +func ParseHeaders(h http.Header) (req Request, present bool, err error) {
 +	raw := h.Get(HeaderScope)
 +	if raw == "" {
++		if h.Get(HeaderProject) != "" {
++			return Request{}, true, fmt.Errorf("scopefilter: %s header requires the %s header", HeaderProject, HeaderScope)
++		}
 +		return Request{}, false, nil
 +	}
 +
@@ -4436,10 +4658,10 @@ index 00000000000..31263c46ddc
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
 new file mode 100644
-index 00000000000..86e5ba49ac6
+index 00000000000..2ec33aca03c
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
-@@ -0,0 +1,128 @@
+@@ -0,0 +1,132 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4465,6 +4687,7 @@ index 00000000000..86e5ba49ac6
 +
 +	"k8s.io/apimachinery/pkg/fields"
 +	"k8s.io/apimachinery/pkg/labels"
++	"k8s.io/apimachinery/pkg/runtime"
 +	"k8s.io/apimachinery/pkg/runtime/schema"
 +	"k8s.io/apiserver/pkg/storage"
 +	restclient "k8s.io/client-go/rest"
@@ -4528,12 +4751,14 @@ index 00000000000..86e5ba49ac6
 +}
 +
 +// NewDecorator builds a generic (IdentityByNamespace, header-triggered)
-+// Decorator over the given store. store is passed as a StoreAccessor and
-+// buildPredicate as the store's PredicateFunc value, so this package never
-+// imports the concrete *genericregistry.Store (which would be an import cycle
-+// -- registry imports scopefilter for the ScopeFilter field). The caller
-+// assigns the returned Decorator to store.ScopeFilter and calls Register.
-+func (r *Resolvers) NewDecorator(store StoreAccessor, buildPredicate func(labels.Selector, fields.Selector) storage.SelectionPredicate, gvr schema.GroupVersionResource) *Decorator {
++// Decorator over the given store. store is passed as a StoreAccessor,
++// buildPredicate as the store's PredicateFunc value and postRead as the
++// store's Decorator value (nil when the resource has none), so this package
++// never imports the concrete *genericregistry.Store (which would be an
++// import cycle -- registry imports scopefilter for the ScopeFilter field).
++// The caller assigns the returned Decorator to store.ScopeFilter and calls
++// Register.
++func (r *Resolvers) NewDecorator(store StoreAccessor, buildPredicate func(labels.Selector, fields.Selector) storage.SelectionPredicate, postRead func(runtime.Object), gvr schema.GroupVersionResource) *Decorator {
 +	return &Decorator{
 +		Store:           store,
 +		BuildPredicate:  buildPredicate,
@@ -4544,6 +4769,7 @@ index 00000000000..86e5ba49ac6
 +		RBACFloor:       r.Floor,
 +		Accessible:      r.Accessible,
 +		RefreshInterval: r.RefreshInterval,
++		PostRead:        postRead,
 +	}
 +}
 +
@@ -4987,10 +5213,10 @@ index 00000000000..07a3c9d337b
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/watch.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/watch.go
 new file mode 100644
-index 00000000000..6ce7ef1c1a1
+index 00000000000..f1478613066
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/watch.go
-@@ -0,0 +1,551 @@
+@@ -0,0 +1,568 @@
 +/*
 +Copyright 2025 The Kubernetes Authors.
 +
@@ -5096,6 +5322,14 @@ index 00000000000..6ce7ef1c1a1
 +	// lists a newly-gained namespace's contents.
 +	BuildPredicate func(label labels.Selector, field fields.Selector) storage.SelectionPredicate
 +
++	// PostRead mirrors Decorator.PostRead -- the store's post-read
++	// decoration hook, applied to the list fetched when materializing
++	// synthesized ADDED events so they carry the same object representation
++	// (e.g. Services'/PVCs' read-time defaulting) as storage-pump events,
++	// which the store already decorates itself. Nil when the resource has
++	// no decoration hook.
++	PostRead func(runtime.Object)
++
 +	// CallerLabel / CallerField are the requesting client's own selectors
 +	// (from the original List/Watch call), reused via BuildPredicate when
 +	// IdentityByNamespace mode lists a newly-gained namespace's contents.
@@ -5166,6 +5400,7 @@ index 00000000000..6ce7ef1c1a1
 +	mode           IdentityMode
 +	store          StoreAccessor
 +	buildPredicate func(label labels.Selector, field fields.Selector) storage.SelectionPredicate
++	postRead       func(runtime.Object)
 +
 +	callerLabel labels.Selector
 +	callerField fields.Selector
@@ -5210,6 +5445,7 @@ index 00000000000..6ce7ef1c1a1
 +		mode:            cfg.Mode,
 +		store:           cfg.Store,
 +		buildPredicate:  cfg.BuildPredicate,
++		postRead:        cfg.PostRead,
 +		callerLabel:     cfg.CallerLabel,
 +		callerField:     cfg.CallerField,
 +		poll:            cfg.Poll,
@@ -5508,6 +5744,13 @@ index 00000000000..6ce7ef1c1a1
 +	if err != nil {
 +		return nil, err
 +	}
++	// Apply the store's post-read decoration hook exactly where the vanilla
++	// Store.List would: synthesized ADDED events must carry the same object
++	// representation as storage-pump events, which the store decorates
++	// itself.
++	if w.postRead != nil {
++		w.postRead(list)
++	}
 +	return meta.ExtractList(list)
 +}
 +
@@ -5577,10 +5820,10 @@ index 00000000000..8a69da28403
 +}
 diff --git a/test/integration/scopefilter/scope_test.go b/test/integration/scopefilter/scope_test.go
 new file mode 100644
-index 00000000000..7f1d32ff3ac
+index 00000000000..b84886535ee
 --- /dev/null
 +++ b/test/integration/scopefilter/scope_test.go
-@@ -0,0 +1,333 @@
+@@ -0,0 +1,359 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -5781,6 +6024,32 @@ index 00000000000..7f1d32ff3ac
 +			SetHeader(scopeHeader, "project").SetHeader(projectHeader, "alpha").DoRaw(ctx)
 +		if !apierrors.IsForbidden(coerceStatusError(err)) {
 +			t.Fatalf("scope=project:alpha: expected fail-closed Forbidden, got: %v", err)
++		}
++	})
++
++	t.Run("MalformedScopeHeaderIs400ForEveryCaller", func(t *testing.T) {
++		// A typo'd scope value must fail loudly with 400 -- NOT silently
++		// hand a privileged caller the full listing they asked to narrow,
++		// and NOT turn into a misleading 403 for a denied caller.
++		for name, client := range map[string]clientset.Interface{"admin": adminJSON, "denied": deniedJSON} {
++			_, err := client.Discovery().RESTClient().Get().
++				AbsPath("/api/v1/configmaps").SetHeader(scopeHeader, "projcts").DoRaw(ctx)
++			if !apierrors.IsBadRequest(coerceStatusError(err)) {
++				t.Fatalf("%s with typo'd scope value: expected 400 BadRequest, got: %v", name, err)
++			}
++		}
++		// Project header without a scope header is an attempt to use the
++		// mechanism too -- same 400, not a silent full listing.
++		_, err := adminJSON.Discovery().RESTClient().Get().
++			AbsPath("/api/v1/configmaps").SetHeader(projectHeader, "alpha").DoRaw(ctx)
++		if !apierrors.IsBadRequest(coerceStatusError(err)) {
++			t.Fatalf("project header without scope header: expected 400 BadRequest, got: %v", err)
++		}
++		// scope=project without the project name is malformed as well.
++		_, err = adminJSON.Discovery().RESTClient().Get().
++			AbsPath("/api/v1/configmaps").SetHeader(scopeHeader, "project").DoRaw(ctx)
++		if !apierrors.IsBadRequest(coerceStatusError(err)) {
++			t.Fatalf("scope=project without project header: expected 400 BadRequest, got: %v", err)
 +		}
 +	})
 +
