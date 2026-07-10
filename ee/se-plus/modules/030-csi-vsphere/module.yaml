@@ -9,5 +9,9 @@ descriptions:
   ru: Предоставляет CSI для сред VMware vSphere.
 accessibility:
   editions:
-    _default:
+    se-plus:
+      available: true
+    ee:
+      available: true
+    fe:
       available: true

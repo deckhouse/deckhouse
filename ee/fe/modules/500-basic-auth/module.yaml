@@ -6,5 +6,5 @@ descriptions:
   ru: Устанавливает сервис для базовой авторизации. Не предназначен для высоких нагрузок.
 accessibility:
   editions:
-    _default:
+    fe:
       available: true

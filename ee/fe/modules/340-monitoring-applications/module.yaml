@@ -11,7 +11,7 @@ requirements:
     prometheus: ">= 0.0.0"
 accessibility:
   editions:
-    _default:
+    fe:
       available: true
       enabledInBundles:
         - Default

@@ -10,5 +10,7 @@ descriptions:
   ru: Управляет взаимодействием с облачными ресурсами VMware Cloud Director. Позволяет использовать ресурсы VMware Cloud Director при создании узлов.
 accessibility:
   editions:
-    _default:
+    ee:
+      available: true
+    fe:
       available: true

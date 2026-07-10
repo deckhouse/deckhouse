@@ -10,5 +10,9 @@ descriptions:
   ru: Управляет взаимодействием с облачными ресурсами zVirt. Позволяет использовать ресурсы zVirt при создании узлов.
 accessibility:
   editions:
-    _default:
+    se-plus:
+      available: true
+    ee:
+      available: true
+    fe:
       available: true

@@ -10,5 +10,7 @@ descriptions:
   ru: Создает сетевой шлюз из Kubernetes-узлов. Содержит в себе DHCP-сервер и настройщик SNAT.
 accessibility:
   editions:
-    _default:
+    ee:
+      available: true
+    fe:
       available: true

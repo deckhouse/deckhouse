@@ -10,5 +10,7 @@ descriptions:
   ru: Управляет взаимодействием с облачными ресурсами Базис.DynamiX. Позволяет использовать ресурсы Базис.DynamiX при создании узлов.
 accessibility:
   editions:
-    _default:
+    ee:
+      available: true
+    fe:
       available: true

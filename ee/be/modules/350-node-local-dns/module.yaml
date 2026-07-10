@@ -11,7 +11,23 @@ descriptions:
   ru: Разворачивает кеширующий DNS-сервер на каждом узле кластера, экспортирует данные в систему мониторинга для анализа.
 accessibility:
   editions:
-    _default:
+    be:
+      available: true
+      enabledInBundles:
+        - Default
+    se:
+      available: true
+      enabledInBundles:
+        - Default
+    se-plus:
+      available: true
+      enabledInBundles:
+        - Default
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
+    fe:
       available: true
       enabledInBundles:
         - Default

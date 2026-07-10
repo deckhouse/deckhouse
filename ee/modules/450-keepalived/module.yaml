@@ -8,5 +8,7 @@ descriptions:
   ru: Настраивает keepalived-кластеры на узлах через custom resources. Не работает с модулем cilium.
 accessibility:
   editions:
-    _default:
+    ee:
+      available: true
+    fe:
       available: true

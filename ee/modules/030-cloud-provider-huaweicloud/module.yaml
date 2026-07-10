@@ -10,5 +10,7 @@ descriptions:
   ru: Управляет взаимодействием с облачными ресурсами Huawei Cloud. Позволяет использовать ресурсы Huawei Cloud при создании узлов.
 accessibility:
   editions:
-    _default:
+    ee:
+      available: true
+    fe:
       available: true

@@ -10,5 +10,7 @@ descriptions:
   ru: Управляет взаимодействием с облачными ресурсами OpenStack. Позволяет использовать ресурсы OpenStack при создании узлов.
 accessibility:
   editions:
-    _default:
+    ee:
+      available: true
+    fe:
       available: true

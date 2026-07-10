@@ -6,5 +6,9 @@ descriptions:
   ru: Предоставляет внутренний LoadBalancer с проверками работоспособности для каждого порта. Позволяет выполнять независимые проверки работоспособности для разных портов, в отличие от стандартного балансировщика Service Kubernetes.
 accessibility:
   editions:
-    _default:
+    ee:
+      available: true
+    fe:
+      available: true
+    cse:
       available: true

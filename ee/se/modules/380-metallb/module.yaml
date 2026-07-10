@@ -8,5 +8,13 @@ descriptions:
   ru: Реализует механизм LoadBalancer для сервисов в кластерах bare metal. Поддерживает режим Layer 2 с улучшенной балансировкой нагрузки и режим BGP на базе решения MetalLB.
 accessibility:
   editions:
-    _default:
+    se:
+      available: true
+    se-plus:
+      available: true
+    ee:
+      available: true
+    fe:
+      available: true
+    cse:
       available: true
