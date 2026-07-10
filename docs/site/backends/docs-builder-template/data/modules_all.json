@@ -635,10 +635,6 @@
   },
   "sds-elastic": {
     "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
       "ee"
     ],
     "tags": [
