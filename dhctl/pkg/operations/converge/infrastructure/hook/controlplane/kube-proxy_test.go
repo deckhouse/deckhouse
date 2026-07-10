@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/deckhouse/lib-connection/pkg/settings"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
@@ -31,28 +32,34 @@ func TestKubeProxyCheckerIsReadyValidation(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			name:        "Kubernetes init params are not configured",
-			checker:     NewKubeProxyChecker(),
-			expectedErr: "kube proxy checker: Kubernetes init params are not configured",
+			name:    "Kubernetes init params are not configured",
+			checker: NewKubeProxyChecker(),
+			expectedErr: "kube proxy checker: " +
+				"Kubernetes init params are not configured",
 		},
 		{
 			name: "base provider settings are not configured",
 			checker: NewKubeProxyChecker().
 				WithInitParams(&client.KubernetesInitParams{}),
-			expectedErr: "kube proxy checker: base provider settings are not configured",
+			expectedErr: "kube proxy checker: " +
+				"base provider settings are not configured",
 		},
 		{
 			name: "SSH provider is not configured",
 			checker: NewKubeProxyChecker().
 				WithInitParams(&client.KubernetesInitParams{}).
 				WithSSHProvider(nil, &settings.BaseProviders{}),
-			expectedErr: "kube proxy checker: SSH provider is not configured",
+			expectedErr: "kube proxy checker: " +
+				"SSH provider is not configured",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.checker.IsReady(context.Background(), "master-0")
+			_, err := tt.checker.IsReady(
+				context.Background(),
+				"master-0",
+			)
 			if err == nil {
 				t.Fatal("expected an error, got nil")
 			}
@@ -65,5 +72,106 @@ func TestKubeProxyCheckerIsReadyValidation(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestCopyKubernetesInitParams(t *testing.T) {
+	original := &client.KubernetesInitParams{
+		KubeConfig:        "original-kubeconfig",
+		KubeConfigContext: "original-context",
+		RestConfig: &rest.Config{
+			Host: "https://original-api-server:6443",
+		},
+	}
+
+	copied := copyKubernetesInitParams(original)
+
+	if copied == nil {
+		t.Fatal("expected copied init params, got nil")
+	}
+
+	if copied == original {
+		t.Fatal(
+			"expected a separate KubernetesInitParams instance",
+		)
+	}
+
+	if copied.RestConfig == original.RestConfig {
+		t.Fatal("expected a separate RestConfig instance")
+	}
+
+	if copied.KubeConfig != original.KubeConfig {
+		t.Fatalf(
+			"expected copied KubeConfig %q, got %q",
+			original.KubeConfig,
+			copied.KubeConfig,
+		)
+	}
+
+	if copied.KubeConfigContext != original.KubeConfigContext {
+		t.Fatalf(
+			"expected copied KubeConfigContext %q, got %q",
+			original.KubeConfigContext,
+			copied.KubeConfigContext,
+		)
+	}
+
+	copied.KubeConfig = "changed-kubeconfig"
+	copied.KubeConfigContext = "changed-context"
+	copied.RestConfig.Host = "http://127.0.0.1:22322"
+
+	if original.KubeConfig != "original-kubeconfig" {
+		t.Fatalf(
+			"original KubeConfig was modified: got %q",
+			original.KubeConfig,
+		)
+	}
+
+	if original.KubeConfigContext != "original-context" {
+		t.Fatalf(
+			"original KubeConfigContext was modified: got %q",
+			original.KubeConfigContext,
+		)
+	}
+
+	if original.RestConfig.Host !=
+		"https://original-api-server:6443" {
+		t.Fatalf(
+			"original RestConfig was modified: got %q",
+			original.RestConfig.Host,
+		)
+	}
+}
+
+func TestCopyKubernetesInitParamsWithoutRestConfig(t *testing.T) {
+	original := &client.KubernetesInitParams{
+		KubeConfig:        "original-kubeconfig",
+		KubeConfigContext: "original-context",
+	}
+
+	copied := copyKubernetesInitParams(original)
+
+	if copied == nil {
+		t.Fatal("expected copied init params, got nil")
+	}
+
+	if copied == original {
+		t.Fatal(
+			"expected a separate KubernetesInitParams instance",
+		)
+	}
+
+	if copied.RestConfig != nil {
+		t.Fatalf(
+			"expected nil RestConfig, got %#v",
+			copied.RestConfig,
+		)
+	}
+}
+
+func TestCopyKubernetesInitParamsNil(t *testing.T) {
+	copied := copyKubernetesInitParams(nil)
+	if copied != nil {
+		t.Fatalf("expected nil, got %#v", copied)
 	}
 }

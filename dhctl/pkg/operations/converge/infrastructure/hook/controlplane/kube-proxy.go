@@ -20,6 +20,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/yaml"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
@@ -120,11 +121,13 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 			ssh.NewNodeInterfaceWrapper(sshClient, c.baseProviderSettings),
 		)
 
+	localInitParams := copyKubernetesInitParams(c.initParams)
+
 	params := &kube.Config{
-		KubeConfig:          c.initParams.KubeConfig,
-		KubeConfigContext:   c.initParams.KubeConfigContext,
-		KubeConfigInCluster: c.initParams.KubeConfigInCluster,
-		RestConfig:          c.initParams.RestConfig,
+		KubeConfig:          localInitParams.KubeConfig,
+		KubeConfigContext:   localInitParams.KubeConfigContext,
+		KubeConfigInCluster: localInitParams.KubeConfigInCluster,
+		RestConfig:          localInitParams.RestConfig,
 	}
 
 	if err := kubeCl.InitContext(ctx, params); err != nil {
@@ -141,6 +144,7 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		}
 	}()
 
+	// d8-cluster-uuid
 	cm, err := kubeCl.CoreV1().
 		ConfigMaps("kube-system").
 		Get(ctx, "d8-cluster-uuid", v1.GetOptions{})
@@ -160,6 +164,22 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	}
 
 	return true, nil
+}
+
+func copyKubernetesInitParams(
+	params *client.KubernetesInitParams,
+) *client.KubernetesInitParams {
+	if params == nil {
+		return nil
+	}
+
+	result := *params
+
+	if params.RestConfig != nil {
+		result.RestConfig = rest.CopyConfig(params.RestConfig)
+	}
+
+	return &result
 }
 
 func (c *KubeProxyChecker) Name() string {
