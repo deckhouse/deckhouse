@@ -62,7 +62,7 @@ properties:
         description: |
           [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem modules when creating Ingress resources.
 
-          The default value is `nginx`. If your cluster uses a different IngressClass, specify its name in this parameter.
+          If your cluster uses an IngressClass different from the default one, specify its name in this parameter.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
@@ -236,7 +236,7 @@ properties:
         description: |
           [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem applications when creating Ingress resources.
 
-          The default value is `nginx`. If your cluster uses a different IngressClass, specify its name in this parameter.
+          If your cluster uses an IngressClass different from the default one, specify its name in this parameter.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
