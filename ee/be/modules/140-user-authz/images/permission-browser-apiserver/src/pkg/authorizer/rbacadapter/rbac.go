@@ -197,7 +197,7 @@ func (r *RBACAuthorizer) checkRoleBindings(attrs authorizer.Attributes, userName
 }
 
 // subjectMatches checks if any subject in the list matches the user
-func (r *RBACAuthorizer) subjectMatches(subjects []rbacv1.Subject, userName string, userGroups []string, _ string) bool {
+func (r *RBACAuthorizer) subjectMatches(subjects []rbacv1.Subject, userName string, userGroups []string, defaultNamespace string) bool {
 	for _, subject := range subjects {
 		switch subject.Kind {
 		case rbacv1.UserKind:
@@ -212,7 +212,11 @@ func (r *RBACAuthorizer) subjectMatches(subjects []rbacv1.Subject, userName stri
 			}
 		case rbacv1.ServiceAccountKind:
 			// ServiceAccount subjects are in format "system:serviceaccount:<namespace>:<name>"
-			saName := fmt.Sprintf("system:serviceaccount:%s:%s", subject.Namespace, subject.Name)
+			namespace := subject.Namespace
+			if namespace == "" {
+				namespace = defaultNamespace
+			}
+			saName := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, subject.Name)
 			if saName == userName {
 				return true
 			}

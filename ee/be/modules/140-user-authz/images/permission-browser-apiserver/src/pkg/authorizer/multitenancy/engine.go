@@ -411,8 +411,6 @@ func (e *Engine) renewDirectories() {
 		return
 	}
 
-	e.lastAppliedStat = fileStat
-
 	var config UserAuthzConfig
 
 	configRawData, err := os.ReadFile(e.configPath)
@@ -448,7 +446,11 @@ func (e *Engine) renewDirectories() {
 
 			if crd.Spec.NamespaceSelector == nil {
 				for _, ln := range crd.Spec.LimitNamespaces {
-					r, _ := regexp.Compile(wrapRegex(ln))
+					r, err := regexp.Compile(wrapRegex(ln))
+					if err != nil {
+						klog.Errorf("Cannot compile limitNamespaces pattern %q from ClusterAuthorizationRule %q: %v", ln, crd.Name, err)
+						return
+					}
 					dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, r)
 				}
 
@@ -476,9 +478,9 @@ func (e *Engine) renewDirectories() {
 	// the CAR-independent RBAC check, which finds the AR's RoleBinding.
 
 	e.mu.Lock()
-	defer e.mu.Unlock()
-
 	e.directory = directory
+	e.lastAppliedStat = fileStat
+	e.mu.Unlock()
 	klog.Info("Multi-tenancy configuration was reloaded successfully")
 }
 

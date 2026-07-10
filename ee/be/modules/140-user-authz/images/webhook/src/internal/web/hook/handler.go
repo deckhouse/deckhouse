@@ -276,8 +276,6 @@ func (h *Handler) renewDirectories() {
 		return
 	}
 
-	h.lastAppliedStat = fileStat
-
 	var config UserAuthzConfig
 
 	configRawData, err := os.ReadFile(configPath)
@@ -321,7 +319,11 @@ func (h *Handler) renewDirectories() {
 			if crd.Spec.NamespaceSelector == nil {
 				// This is an important thing! All regular expressions is wrapped in the ^...$
 				for _, ln := range crd.Spec.LimitNamespaces {
-					r, _ := regexp.Compile(wrapRegex(ln))
+					r, err := regexp.Compile(wrapRegex(ln))
+					if err != nil {
+						h.logger.Printf("cannot compile limitNamespaces pattern %q from ClusterAuthorizationRule %q: %v", ln, crd.Name, err)
+						return
+					}
 					dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, r)
 				}
 
@@ -338,9 +340,9 @@ func (h *Handler) renewDirectories() {
 	}
 
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	h.directory = directory
+	h.lastAppliedStat = fileStat
+	h.mu.Unlock()
 	h.logger.Println("configuration was reloaded successfully")
 }
 

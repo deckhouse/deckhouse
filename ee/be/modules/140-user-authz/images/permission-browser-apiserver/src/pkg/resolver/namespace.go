@@ -9,7 +9,6 @@ package resolver
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -349,35 +348,8 @@ func (r *NamespaceResolver) hasNamespacedRules(rules []rbacv1.PolicyRule) bool {
 			continue
 		}
 
-		// Wildcard resources: assume namespaced access exists
-		for _, res := range rule.Resources {
-			if res == "*" {
-				return true
-			}
-		}
-
-		// Wildcard API groups with any resource: assume namespaced access
-		hasWildcardGroup := false
-		for _, group := range rule.APIGroups {
-			if group == "*" {
-				hasWildcardGroup = true
-				break
-			}
-		}
-		if hasWildcardGroup && len(rule.Resources) > 0 {
-			// With wildcard group, any resource could be namespaced
+		if r.scopeCache != nil && r.scopeCache.HasNamespacedResourceMatching(rule.APIGroups, rule.Resources) {
 			return true
-		}
-
-		// For specific resources, check if any is namespaced
-		for _, group := range rule.APIGroups {
-			for _, resource := range rule.Resources {
-				// Strip subresource if present
-				baseResource := strings.Split(resource, "/")[0]
-				if r.isResourceNamespaced(group, baseResource) {
-					return true
-				}
-			}
 		}
 	}
 

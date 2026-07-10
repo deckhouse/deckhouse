@@ -382,6 +382,19 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:bulk-sar-creator").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:self-bulk-sar-creator").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:bulk-sar-creator").Field("rules").String()).
+				To(ContainSubstring("bulksubjectaccessreviews/nonself"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:self-bulk-sar-creator").Field("rules").String()).
+				ToNot(ContainSubstring("bulksubjectaccessreviews/nonself"))
+			selfBulkSARBinding := f.KubernetesGlobalResource(
+				"ClusterRoleBinding",
+				"d8:user-authz:self-bulk-sar-creator:system-authenticated",
+			)
+			Expect(selfBulkSARBinding.Exists()).To(BeTrue())
+			Expect(selfBulkSARBinding.Field("roleRef.name").String()).
+				To(Equal("d8:user-authz:self-bulk-sar-creator"))
+			Expect(selfBulkSARBinding.Field("subjects.0.kind").String()).To(Equal("Group"))
+			Expect(selfBulkSARBinding.Field("subjects.0.name").String()).To(Equal("system:authenticated"))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:permission-browser-apiserver:auth-delegator").Exists()).To(BeTrue())
 		})

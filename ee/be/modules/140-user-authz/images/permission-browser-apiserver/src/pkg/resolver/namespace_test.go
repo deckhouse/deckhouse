@@ -135,6 +135,39 @@ func TestHasNamespacedRules(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "wildcard apiGroups with cluster-scoped resource only",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"*"},
+					Resources: []string{"clusterroles"},
+					Verbs:     []string{"get"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "wildcard resource in cluster-scoped API group",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"apiextensions.k8s.io"},
+					Resources: []string{"*"},
+					Verbs:     []string{"get"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "namespaced subresource",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods/log"},
+					Verbs:     []string{"get"},
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "common namespaced resource - pods",
 			rules: []rbacv1.PolicyRule{
 				{
@@ -736,7 +769,7 @@ func newTestScopeCache() *ResourceScopeCache {
 	c.mu.Lock()
 	c.scopeMap = map[string]bool{
 		// Core namespaced
-		"/pods": true, "/services": true, "/configmaps": true, "/secrets": true,
+		"/pods": true, "/pods/log": true, "/services": true, "/configmaps": true, "/secrets": true,
 		"/serviceaccounts": true, "/endpoints": true, "/events": true,
 		"/persistentvolumeclaims": true, "/replicationcontrollers": true,
 		// Core cluster-scoped
@@ -749,6 +782,7 @@ func newTestScopeCache() *ResourceScopeCache {
 		// RBAC
 		"rbac.authorization.k8s.io/roles": true, "rbac.authorization.k8s.io/rolebindings": true,
 		"rbac.authorization.k8s.io/clusterroles": false, "rbac.authorization.k8s.io/clusterrolebindings": false,
+		"apiextensions.k8s.io/customresourcedefinitions": false,
 		// Networking
 		"networking.k8s.io/ingresses": true, "networking.k8s.io/networkpolicies": true,
 	}

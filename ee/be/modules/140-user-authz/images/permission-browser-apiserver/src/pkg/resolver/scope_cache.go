@@ -76,6 +76,60 @@ func (c *ResourceScopeCache) IsNamespaced(group, resource string) bool {
 	return namespaced
 }
 
+// HasNamespacedResourceMatching reports whether the discovery snapshot
+// contains at least one namespaced resource matched by the RBAC apiGroups and
+// resources fields. Both top-level resources and subresources participate so
+// wildcard rules are evaluated with the same semantics as Kubernetes RBAC.
+func (c *ResourceScopeCache) HasNamespacedResourceMatching(apiGroups, resources []string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for key, namespaced := range c.scopeMap {
+		if !namespaced {
+			continue
+		}
+
+		group, resource, ok := strings.Cut(key, "/")
+		if !ok {
+			continue
+		}
+		if !matchesAPIGroup(apiGroups, group) {
+			continue
+		}
+		if matchesResource(resources, resource) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func matchesAPIGroup(ruleGroups []string, group string) bool {
+	for _, ruleGroup := range ruleGroups {
+		if ruleGroup == "*" || ruleGroup == group {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesResource(ruleResources []string, resource string) bool {
+	subresource := ""
+	if _, value, ok := strings.Cut(resource, "/"); ok {
+		subresource = value
+	}
+
+	for _, ruleResource := range ruleResources {
+		if ruleResource == "*" || ruleResource == resource {
+			return true
+		}
+		if subresource != "" && ruleResource == "*/"+subresource {
+			return true
+		}
+	}
+	return false
+}
+
 // HasData returns true if the cache has been populated with any entries.
 // This can be used for readiness checks: an empty cache means we could not
 // fetch discovery data yet and would treat all unknown resources as cluster-scoped.
@@ -152,11 +206,6 @@ func (c *ResourceScopeCache) refresh() {
 		}
 
 		for _, res := range resourceList.APIResources {
-			// Skip subresources (e.g., "pods/status")
-			if strings.Contains(res.Name, "/") {
-				continue
-			}
-
 			key := group + "/" + res.Name
 			newMap[key] = res.Namespaced
 		}

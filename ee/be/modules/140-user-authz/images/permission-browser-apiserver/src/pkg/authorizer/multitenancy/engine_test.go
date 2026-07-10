@@ -774,6 +774,61 @@ func writeConfigJSON(t *testing.T, body string) string {
 	return path
 }
 
+func TestEngine_RenewDirectories_RetriesSameFileAfterInvalidJSON(t *testing.T) {
+	path := writeConfigJSON(t, `{`)
+	e := &Engine{
+		configPath: path,
+		directory:  map[string]map[string]DirectoryEntry{},
+	}
+
+	e.renewDirectories()
+
+	valid := `{
+		"crds": [{
+			"name": "car0",
+			"spec": {
+				"limitNamespaces": ["team-a"],
+				"subjects": [{"kind": "User", "name": "alice"}]
+			}
+		}]
+	}`
+	require.NoError(t, os.WriteFile(path, []byte(valid), 0o600))
+
+	e.renewDirectories()
+
+	require.Len(t, e.affectedDirs("alice", nil), 1)
+}
+
+func TestEngine_RenewDirectories_InvalidRegexPreservesPreviousDirectory(t *testing.T) {
+	path := writeConfigJSON(t, `{
+		"crds": [{
+			"name": "broken",
+			"spec": {
+				"limitNamespaces": ["["],
+				"subjects": [{"kind": "User", "name": "bob"}]
+			}
+		}]
+	}`)
+	e := &Engine{
+		configPath: path,
+		directory: map[string]map[string]DirectoryEntry{
+			"User": {
+				"alice": {
+					LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^team-a$")},
+					NamespaceFiltersAbsent: false,
+				},
+			},
+			"Group":          {},
+			"ServiceAccount": {},
+		},
+	}
+
+	e.renewDirectories()
+
+	assert.Len(t, e.affectedDirs("alice", nil), 1)
+	assert.Empty(t, e.affectedDirs("bob", nil))
+}
+
 // fakeIndependentChecker simulates the CAR-independent RBAC check: it grants
 // requests only in the listed namespaces (e.g. as an AR's RoleBinding or a
 // plain RoleBinding would).
@@ -1077,4 +1132,3 @@ func TestEngine_RenewDirectories_CAROnlyUser_ResolverScenario(t *testing.T) {
 	assert.False(t, e.IsNamespaceAllowedWithFilter("team-baz", filter),
 		"AR-only namespace must NOT be in the engine filter; the engine ignores ARs")
 }
-
