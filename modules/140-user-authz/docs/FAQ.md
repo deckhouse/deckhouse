@@ -10,7 +10,7 @@ title: "The user-authz module: FAQ"
 
 ## How do I limit user rights to specific namespaces?
 
-To limit a user's rights to specific namespaces in the experimental role-based model, use `RoleBinding` with the [namespace role](./#namespace-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
+To limit a user's rights to specific namespaces in the experimental role-based model, use `RoleBinding` with the [use role](./#use-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
 
 In the current role-based model, use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) CR.
 
@@ -80,57 +80,59 @@ To meet this need, create the following role:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:custom:subsystem:mycustom:manager
+  name: custom:manage:mycustom:manager
   labels:
     rbac.deckhouse.io/use-role: admin
-    rbac.deckhouse.io/kind: custom-role
-    rbac.deckhouse.io/scope: subsystem
-    rbac.deckhouse.io/subsystem: mycustom
-    rbac.deckhouse.io/aggregate-to-system-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: subsystem
+    rbac.deckhouse.io/subsystem: custom
+    rbac.deckhouse.io/aggregate-to-all-as: manager
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
+        rbac.deckhouse.io/kind: manage
         rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
     - matchLabels:
+        rbac.deckhouse.io/kind: manage
         rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
     - matchLabels:
-        rbac.deckhouse.io/scope: system
+        rbac.deckhouse.io/kind: manage
         module: user-authn
 rules: []
 ```
 
 The labels for the new role listed at the top suggest that:
 
-- The hook will use this namespace role when creating `RoleBinding` in the module namespaces:
+- The hook will use this use role:
 
   ```yaml
   rbac.deckhouse.io/use-role: admin
   ```
 
-- The role is a custom role (custom roles never define their own rules, they only aggregate capabilities):
+- The role must be treated as a managed one:
 
   ```yaml
-  rbac.deckhouse.io/kind: custom-role
+  rbac.deckhouse.io/kind: manage
   ```
 
   > Note that this label is mandatory.
-
+  
 - The role is a subsystem one, and it shall be handled accordingly:
 
   ```yaml
-  rbac.deckhouse.io/scope: subsystem
+  rbac.deckhouse.io/level: subsystem
   ```
 
 - There is a subsystem for which the role is responsible:
 
   ```yaml
-  rbac.deckhouse.io/subsystem: mycustom
+  rbac.deckhouse.io/subsystem: custom
   ```
 
-- The `d8:system:manager` role can aggregate this role:
+- The `manage:all` role can aggregate this role:
 
   ```yaml
-  rbac.deckhouse.io/aggregate-to-system-as: manager
+  rbac.deckhouse.io/aggregate-to-all-as: manager
   ```
 
 Then there are selectors that implement aggregation:
@@ -138,13 +140,14 @@ Then there are selectors that implement aggregation:
 - This one aggregates the manager role from the `deckhouse` subsystem:
 
   ```yaml
+  rbac.deckhouse.io/kind: manage
   rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
   ```
 
-- This one aggregates all the system-scope capabilities defined for the user-authn module:
+- This one aggregates all the rules defined for the user-authn module:
 
   ```yaml
-   rbac.deckhouse.io/scope: system
+   rbac.deckhouse.io/kind: manage
    module: user-authn
   ```
 
@@ -152,8 +155,8 @@ This way, your role will combine permissions of the `deckhouse` subsystem, `kube
 
 Notes:
 
-* Custom roles and capabilities must be named with the `d8:custom:` prefix (the rest of the `d8:` prefix space is reserved for Deckhouse built-in objects).
-* Namespace roles (`RoleBinding` with `d8:namespace:<level>`) will be created in the namespaces of the aggregated subsystems' modules, the level is specified by the `rbac.deckhouse.io/use-role` label.
+* There are no restrictions on role name, but we recommend following the same pattern for the sake of readability.
+* Use-roles will be created in aggregate subsystems and the module namespace, the role type is specified by the label.
 
 ### Extending the custom role
 
@@ -162,46 +165,50 @@ Suppose a new cluster CRD object, MySuperResource, has been created in the clust
 First, you have to add a new selector to the role:
 
 ```yaml
-rbac.deckhouse.io/aggregate-to-mycustom-as: manager
+rbac.deckhouse.io/kind: manage
+rbac.deckhouse.io/aggregate-to-custom-as: manager
 ```
 
-This selector would enable capabilities to be aggregated to a new subsystem by specifying this label. After adding the new selector, the role will look as follows:
+This selector would enable roles to be aggregated to a new subsystem by specifying this label. After adding the new selector, the role will look as follows:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
-   name: d8:custom:subsystem:mycustom:manager
+   name: custom:manage:mycustom:manager
    labels:
      rbac.deckhouse.io/use-role: admin
-     rbac.deckhouse.io/kind: custom-role
-     rbac.deckhouse.io/scope: subsystem
-     rbac.deckhouse.io/subsystem: mycustom
-     rbac.deckhouse.io/aggregate-to-system-as: manager
+     rbac.deckhouse.io/kind: manage
+     rbac.deckhouse.io/level: subsystem
+     rbac.deckhouse.io/subsystem: custom
+     rbac.deckhouse.io/aggregate-to-all-as: manager
  aggregationRule:
    clusterRoleSelectors:
      - matchLabels:
+         rbac.deckhouse.io/kind: manage
          rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
      - matchLabels:
+         rbac.deckhouse.io/kind: manage
          rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
      - matchLabels:
-         rbac.deckhouse.io/scope: system
+         rbac.deckhouse.io/kind: manage
          module: user-authn
      - matchLabels:
-         rbac.deckhouse.io/aggregate-to-mycustom-as: manager
+         rbac.deckhouse.io/kind: manage
+         rbac.deckhouse.io/aggregate-to-custom-as: manager
  rules: []
  ```
 
- Next, you need to create a new capability and define permissions for the new resource, e. g., the read-only permission:
+ Next, you need to create a new role and define permissions for the new resource, e. g., the read-only permission:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-mycustom-as: manager
-     rbac.deckhouse.io/kind: custom-capability
-   name: d8:custom:capability:mycustom:superresource:view
+     rbac.deckhouse.io/aggregate-to-custom-as: manager
+     rbac.deckhouse.io/kind: manage
+   name: custom:manage:permission:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -213,17 +220,17 @@ This selector would enable capabilities to be aggregated to a new subsystem by s
    - watch
  ```
 
-The capability will update the subsystem role to include its rights, so that the role bearer will be able to view the new object.
+The role will update the subsystem role to include its rights, so that the role bearer will be able to view the new object.
 
 Notes:
 
-* Custom capabilities must be named with the `d8:custom:` prefix; the rest of the name is not restricted, but we recommend following the same pattern for the sake of readability.
+* There are no restrictions on capability names, but we recommend following the same pattern for the sake of readability.
 
-### Extending the existing subsystem roles
+### Extending the existing manage subsystem roles
 
 To extend an existing role, follow the procedure outlined in the section above. Be sure to change the labels and the role name!
 
-For example, here's how you can extend the manager role from the `deckhouse` (`d8:subsystem:deckhouse:manager`) subsystem:
+For example, here's how you can extend the manager role from the `deckhouse`(`d8:manage:deckhouse:manager`) subsystem:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -231,8 +238,8 @@ kind: ClusterRole
 metadata:
   labels:
     rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-    rbac.deckhouse.io/kind: custom-capability
-  name: d8:custom:capability:mycustom:superresource:view
+    rbac.deckhouse.io/kind: manage
+  name: custom:manage:permission:mycustom:superresource:view
 rules:
 - apiGroups:
   - mygroup.io
@@ -244,17 +251,17 @@ rules:
   - watch
 ```
 
-This way, the new capability will extend the `d8:subsystem:deckhouse:manager` role.
+This way, the new role will extend the `d8:manage:deckhouse:manager` role.
 
-### Extending subsystem roles and adding a new namespace
+### Extending manage subsystem roles and adding a new namespace
 
-If you need to create a new namespace (to create a namespace role binding in it by the hook), you only need to add one label:
+If you need to create a new namespace (to create a use role in it by the hook), you only need to add one label:
 
 ```yaml
 "rbac.deckhouse.io/namespace": namespace
 ```
 
-This label instructs the hook to create a `RoleBinding` with the namespace role in this namespace:
+This label instructs the hook to create a use role in this namespace:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
@@ -262,9 +269,9 @@ This label instructs the hook to create a `RoleBinding` with the namespace role 
  metadata:
    labels:
      rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-     rbac.deckhouse.io/kind: custom-capability
+     rbac.deckhouse.io/kind: manage
      rbac.deckhouse.io/namespace: namespace
-   name: d8:custom:capability:mycustom:superresource:view
+   name: custom:manage:permission:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -276,20 +283,20 @@ This label instructs the hook to create a `RoleBinding` with the namespace role 
    - watch
  ```
 
-The hook monitors `ClusterRoleBinding`, and when creating a bindings, it loops through all the system and subsystem roles to find all the aggregated capabilities by checking the aggregation rule. It then fetches the namespace from the `rbac.deckhouse.io/namespace` label and creates a `RoleBinding` with the namespace role in that namespace.
+The hook monitors `ClusterRoleBinding`, and when creating a bindings, it loops through all the manage roles to find all the aggregated roles by checking the aggregation rule. It then fetches the namespace from the `rbac.deckhouse.io/namespace` label and creates a use role in that namespace.
 
-### Extending the existing namespace roles
+### Extending the existing use roles
 
-If the resource belongs to a namespace, you need to extend the namespace role instead of the system/subsystem role. The only difference is the labels and the name:
+If the resource belongs to a namespace, you need to extend the use role instead of the manage role. The only difference is the labels and the name:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-namespace-as: user
-     rbac.deckhouse.io/kind: custom-capability
-   name: d8:custom:namespace-capability:mycustom:superresource:view
+     rbac.deckhouse.io/aggregate-to-kubernetes-as: user
+     rbac.deckhouse.io/kind: use
+   name: custom:use:capability:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -301,11 +308,15 @@ If the resource belongs to a namespace, you need to extend the namespace role in
    - watch
  ```
 
-This capability will be added to the `d8:namespace:user` role.
+This role will be added to the `d8:use:role:user:kubernetes` role.
 
 ## How do I migrate my custom roles to the new scheme?
 
-Along with the role renaming ([name mapping](./#deprecated-role-names)), the label scheme that drives aggregation has changed. Custom roles created with the old scheme **stop aggregating permissions** after the upgrade: the built-in capabilities were relabeled, and the old aggregation selectors (e.g., `rbac.deckhouse.io/kind: manage` + `rbac.deckhouse.io/aggregate-to-<subsystem>-as`) no longer match them. No compatibility aliases are created for custom roles — they must be updated manually.
+{% alert level="warning" %}
+This section describes [the role model renaming](./#migration-to-the-new-role-names) that will take effect in one of the upcoming DKP releases. In the current release, custom roles keep working under the old scheme described above.
+{% endalert %}
+
+Along with the role renaming ([name mapping](./#migration-to-the-new-role-names)), the label scheme that drives aggregation will change. Custom roles created with the old scheme **will stop aggregating permissions** after upgrading to the release with the renaming: the built-in capabilities will be relabeled, and the old aggregation selectors (e.g., `rbac.deckhouse.io/kind: manage` + `rbac.deckhouse.io/aggregate-to-<subsystem>-as`) will no longer match them. No compatibility aliases are created for custom roles — they must be updated manually.
 
 Mapping between the old and the new scheme:
 
@@ -320,7 +331,7 @@ Mapping between the old and the new scheme:
 | Selector for use permissions: `rbac.deckhouse.io/kind: use` + `rbac.deckhouse.io/aggregate-to-kubernetes-as: <level>` | `rbac.deckhouse.io/aggregate-to-namespace-as: <level>` |
 | Per-module selector: `rbac.deckhouse.io/kind: manage` + `module: <module>` | `rbac.deckhouse.io/scope: system` + `module: <module>` |
 
-The names of the built-in capabilities have changed as well (no aliases): `d8:manage:permission:module:<module>:view|edit` → `d8:system-capability:<module>:view|edit`, `d8:use:capability:module:<module>:view|edit` → `d8:namespace-capability:<module>:view|edit`. Aggregation selectors match labels, not names, so updating the selectors is enough; do not bind capabilities directly.
+The names of the built-in capabilities will change as well (no aliases): `d8:manage:permission:module:<module>:view|edit` → `d8:system-capability:<module>:view|edit`, `d8:use:capability:module:<module>:view|edit` → `d8:namespace-capability:<module>:view|edit`. Aggregation selectors match labels, not names, so updating the selectors is enough; do not bind capabilities directly.
 
 ### Example: a custom role before and after
 
@@ -461,9 +472,9 @@ Annotations on `ClusterRole` objects (the old scheme did not use annotations):
 | `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | Same in English |
 | `rbac.deckhouse.io/deprecated-replaced-by` | On deprecated alias roles: the name of the new role the bindings should be migrated to |
 
-### How do I add my own custom capability?
+### How do I add my own custom capability (in the new scheme)?
 
-A capability is a regular `ClusterRole` with rules that is automatically included into the chosen role via an aggregation label:
+A capability is a regular `ClusterRole` with rules that is automatically included into the chosen role via an aggregation label. In the new scheme, a custom capability is created as follows:
 
 1. Decide which role you want to extend: a namespace role, a subsystem role, the system role, or your own custom role.
 1. Create a `ClusterRole` with the `d8:custom:` name prefix (for readability — `d8:custom:capability:<name>:<resource>:<action>`), the `rbac.deckhouse.io/kind: custom-capability` label, and the aggregation label of the target role:
@@ -475,9 +486,11 @@ A capability is a regular `ClusterRole` with rules that is automatically include
 
 Kubernetes aggregates the rules automatically: right after the capability is created, its permissions appear for all holders of the target role. You can verify the result with `d8 k auth can-i --as <user>` or by inspecting the resulting role rules: `d8 k get clusterrole <role> -o yaml`.
 
-Ready-made examples are provided in the sections on [extending subsystem roles](#extending-the-existing-subsystem-roles) and [namespace roles](#extending-the-existing-namespace-roles) above.
+Ready-made examples in the new scheme are provided above, in the "[Example: a custom role before and after](#example-a-custom-role-before-and-after)" and "[Example: a custom capability before and after](#example-a-custom-capability-before-and-after)" subsections.
 
 ### Migration steps
+
+After upgrading to the release with the renaming:
 
 1. Create a new version of your role — with the `d8:custom:` prefix, the `rbac.deckhouse.io/kind: custom-role` label, and the new aggregation selectors (see the before/after example above).
 1. Recreate your capabilities with the `rbac.deckhouse.io/kind: custom-capability` label and the `d8:custom:` name prefix.
