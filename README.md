@@ -26,6 +26,7 @@
 
 _Deckhouse Kubernetes Platform [has passed](https://landscape.cncf.io/?view-mode=card&item=platform--certified-kubernetes-distribution--flant-deckhouse#app-definition-and-development--application-definition-image-build) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.26—1.30._
 
+
 ## Platform features across layers
 
 The diagram below illustrates how Deckhouse Kubernetes Platform features are distributed across different layers of the platform — from infrastructure to the control plane and cluster nodes.
