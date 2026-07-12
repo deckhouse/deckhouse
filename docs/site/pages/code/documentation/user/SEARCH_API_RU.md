@@ -47,14 +47,14 @@ weight: 46
 
 | Параметр | Тип | Обязательный | Эндпоинты | Примечание |
 |---|---|---:|---|---|
-| `search` | string | ✅ | все | Поисковый запрос |
-| `scope` | string | ✅ | все | Описано в матрице выше |
-| `confidential` | boolean | ❌ | все | Передаётся в службу поиска |
-| `include_archived` | boolean | ❌ | инстанс, группа | Для эндпоинта проекта недоступен |
-| `page` / `per_page` | integer | ❌ | все | Постраничный вывод со смещением (offset) |
-| `ref` | string | ❌ | проект | Ветка или тег для поиска в проекте |
-| `state` | string | ❌ | все | `all`, `opened`, `closed`, `merged` |
-| `type` | array[string] | ❌ | все | Фильтр типа work item (фактически для `work_items`) |
+| `search` | string | Да | все | Поисковый запрос |
+| `scope` | string | Да | все | Описано в матрице выше |
+| `confidential` | boolean | Нет | все | Передаётся в службу поиска |
+| `include_archived` | boolean | Нет | инстанс, группа | Для эндпоинта проекта недоступен |
+| `page` / `per_page` | integer | Нет | все | Постраничный вывод со смещением (offset) |
+| `ref` | string | Нет | проект | Ветка или тег для поиска в проекте |
+| `state` | string | Нет | все | `all`, `opened`, `closed`, `merged` |
+| `type` | array[string] | Нет | все | Фильтр типа work item (фактически для `work_items`) |
 
 ### Параметры OpenSearch и FE-фильтры
 

@@ -47,14 +47,14 @@ Response header `X-Search-Type` returns the resolved search type (`advanced`/oth
 
 | Parameter | Type | Required | Endpoints | Notes |
 |---|---|---:|---|---|
-| `search` | string | ✅ | all | Search query |
-| `scope` | string | ✅ | all | See matrix above |
-| `confidential` | boolean | ❌ | all | Passed to search service |
-| `include_archived` | boolean | ❌ | instance, group | Not available for project endpoint |
-| `page` / `per_page` | integer | ❌ | all | Offset pagination |
-| `ref` | string | ❌ | project | Branch/tag for project search |
-| `state` | string | ❌ | all | `all`, `opened`, `closed`, `merged` |
-| `type` | array[string] | ❌ | all | Work item type filter (effective for `work_items`) |
+| `search` | string | Yes | all | Search query |
+| `scope` | string | Yes | all | See matrix above |
+| `confidential` | boolean | No | all | Passed to search service |
+| `include_archived` | boolean | No | instance, group | Not available for project endpoint |
+| `page` / `per_page` | integer | No | all | Offset pagination |
+| `ref` | string | No | project | Branch/tag for project search |
+| `state` | string | No | all | `all`, `opened`, `closed`, `merged` |
+| `type` | array[string] | No | all | Work item type filter (effective for `work_items`) |
 
 ### OpenSearch / FE filter parameters
 
