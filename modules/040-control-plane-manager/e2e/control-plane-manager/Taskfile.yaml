@@ -1,17 +1,22 @@
 version: "3"
 
 includes:
-  apiserver-operation:
-    taskfile: ./tests/apiserver-operation/Taskfile.yml
-    dir: ./tests/apiserver-operation
+  basic-audit-policy:
+    taskfile: ./tests/basic-audit-policy/Taskfile.yml
+    dir: ./tests/basic-audit-policy
+  feature-gates:
+    taskfile: ./tests/feature-gates/Taskfile.yml
+    dir: ./tests/feature-gates
 
 tasks:
   run:
     desc: Run all control-plane-manager e2e tests
     cmds:
-      - task: apiserver-operation:run
+      - task: basic-audit-policy:run
+      - task: feature-gates:run
 
   dry-run:
     desc: Dry-Run all control-plane-manager e2e tests
     cmds:
-      - task: apiserver-operation:dry-run
+      - task: basic-audit-policy:dry-run
+      - task: feature-gates:dry-run

@@ -5,13 +5,13 @@ vars:
 
 tasks:
   run:
-    desc: Run apiserver-operation e2e test with JUNIT report
+    desc: Run basic-audit-policy e2e test with JUNIT report
     cmds:
       - mkdir -p ./reports
       - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/
 
   run:verbose:
-    desc: Run apiserver-operation e2e test with verbose output
+    desc: Run basic-audit-policy e2e test with verbose output
     cmds:
       - mkdir -p ./reports
       - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ --verbose
