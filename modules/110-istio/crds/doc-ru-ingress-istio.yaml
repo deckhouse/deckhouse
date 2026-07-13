@@ -42,6 +42,9 @@ spec:
                     annotations:
                       description: |
                         Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+                    loadBalancerClass:
+                      description: |
+                        Класс балансировщика входящих сетевых запросов (передаётся в параметре `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
                 hostPort:
                   description: |
                     Секция настроек для инлета `HostPort`.

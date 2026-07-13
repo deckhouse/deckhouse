@@ -94,6 +94,10 @@ spec:
                         Annotations to assign to the service for flexible configuration of the load balancer.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
                 hostPort:
                   type: object
                   description: |

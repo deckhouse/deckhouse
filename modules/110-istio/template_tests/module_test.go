@@ -1390,6 +1390,35 @@ MY_VAR: "myvalue"
 
 			Expect(ingressSvc.Field("metadata.annotations").String()).To(MatchJSON(`{ "aaa": "bbb" }`))
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("LoadBalancer"))
+			Expect(ingressSvc.Field("spec.loadBalancerClass").Exists()).To(BeFalse())
+		})
+	})
+	Context("ingress gateway controller with inlet LoadBalancer and loadBalancerClass is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: loadbalancerclass-test
+  spec:
+    ingressGatewayClass: lbc
+    inlet: LoadBalancer
+    loadBalancer:
+      loadBalancerClass: my-lb-class
+    resourcesRequests:
+      mode: Static
+`)
+			f.HelmRender()
+		})
+
+		It("should render the service with spec.loadBalancerClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-loadbalancerclass-test")
+			Expect(ingressSvc.Exists()).To(BeTrue())
+
+			Expect(ingressSvc.Field("spec.type").String()).To(Equal("LoadBalancer"))
+			Expect(ingressSvc.Field("spec.loadBalancerClass").String()).To(Equal("my-lb-class"))
 		})
 	})
 	Context("ingress gateway controller with inlet HostPort is enabled", func() {
