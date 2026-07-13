@@ -16,3 +16,7 @@ Adopted upstream pr https://github.com/istio/istio/pull/58567.
 ## 002-kiali-logout.patch
 
 Enable Logout in Kiali for header auth (DexAuthenticator). The tab that clicks Logout calls `/logout?rd=<app-origin>/` once; other tabs receive a `localStorage` event and only dispatch `sessionExpired` locally (no second sign_out, no reload) to avoid oauth2-proxy CSRF races.
+
+## 003-istio-implement-sidecar-to-waypoint-routing.patch
+
+Add Istio Pilot support for routing eligible Service-addressed traffic from sidecar workloads through service waypoints. For HBONE-enabled sidecars, CDS, LDS, RDS, and EDS generation honors Service waypoint bindings, uses cluster-local waypoint endpoints, and triggers the required xDS updates when bindings or waypoint workloads change. Direct pod-IP, headless-Service, and workload-waypoint traffic is outside this interoperability path. Native ambient multicluster lookups preserve each cluster's waypoint binding. Controlled by `ENABLE_SIDECAR_WAYPOINT_ROUTING`, which is enabled by default.
