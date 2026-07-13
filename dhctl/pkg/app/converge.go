@@ -36,7 +36,7 @@ func DefineConvergeExporterFlags(cmd *kingpin.CmdClause, o *options.ConvergeOpti
 }
 
 func DefineConvergeFlags(cmd *kingpin.CmdClause, o *options.ConvergeOptions) {
-	cmd.Flag("converge-destructive-approved", "Destructive changes are approved").
+	cmd.Flag("converge-destructive-auto-approve", "Destructive changes are auto-approved").
 		Envar(configEnvName("DESTRUCTIVE_APPROVED")).
 		BoolVar(&o.DestructiveApproved)
 }
