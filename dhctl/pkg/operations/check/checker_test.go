@@ -512,7 +512,7 @@ provider:
 	for _, params := range tests {
 		tst := createTestCheckClusterConfig(t, params)
 		t.Run(tst.testName, func(t *testing.T) {
-			syncStatus, err := tst.checker.checkConfiguration(context.TODO(), tst.kubeCl, tst.commanderMetaConfig)
+			syncStatus, err := tst.checker.checkConfiguration(t.Context(), tst.kubeCl, tst.commanderMetaConfig)
 
 			if tst.isError {
 				require.Error(t, err)
@@ -582,7 +582,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 		})
 	}
 
-	_, err := config.DoByClusterType(context.TODO(), commanderMetaConfig, &testCheckSpecificClusterFiller{
+	_, err := config.DoByClusterType(t.Context(), commanderMetaConfig, &testCheckSpecificClusterFiller{
 		params: p,
 		t:      t,
 		kubeCl: kubeCl,
@@ -605,7 +605,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 			CommanderMode: true,
 			IsDebug:       false,
 			CommanderUUID: commanderUUID,
-			Options: opts,
+			Options:       opts,
 		}),
 	}
 }
@@ -635,7 +635,7 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -650,7 +650,7 @@ func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(context.TODO(), cm, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), cm, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 

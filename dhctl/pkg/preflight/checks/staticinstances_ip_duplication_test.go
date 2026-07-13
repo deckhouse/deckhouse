@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -139,7 +138,7 @@ spec:
 				MetaConfig: tt.fields.metaConfig,
 			}
 
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			tt.wantErr(t, err, "StaticInstancesIPDuplicationCheck.Run()")
 		})

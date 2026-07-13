@@ -82,5 +82,7 @@ func extractDocumentation(rc io.ReadCloser, output io.Writer) error {
 func IsDocsPath(path string) bool {
 	return strings.HasPrefix(path, "docs") ||
 		strings.HasPrefix(path, "crds") ||
-		strings.HasPrefix(path, "openapi")
+		strings.HasPrefix(path, "openapi") ||
+		path == "module.yaml" ||
+		path == "oss.yaml"
 }

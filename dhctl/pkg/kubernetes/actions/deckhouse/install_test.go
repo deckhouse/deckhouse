@@ -15,7 +15,6 @@
 package deckhouse
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -31,7 +30,7 @@ import (
 )
 
 func TestDeckhouseInstall(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "1.54.1")
@@ -103,7 +102,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "deckhouse-registry", metav1.GetOptions{})
+				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(t.Context(), "deckhouse-registry", metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
@@ -119,7 +118,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"With bashible cfg",
 			func() error {
-				err := registry_mocks.CreatePKISecret(context.TODO(), fakeClient)
+				err := registry_mocks.CreatePKISecret(t.Context(), fakeClient)
 				if err != nil {
 					return err
 				}
@@ -134,7 +133,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "registry-bashible-config", metav1.GetOptions{})
+				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(t.Context(), "registry-bashible-config", metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
@@ -160,7 +159,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				_, err = fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "registry-bashible-config", metav1.GetOptions{})
+				_, err = fakeClient.CoreV1().Secrets("d8-system").Get(t.Context(), "registry-bashible-config", metav1.GetOptions{})
 				if err != nil && !errors.IsNotFound(err) {
 					return err
 				}
@@ -207,7 +206,7 @@ func TestDeckhouseInstall(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithDevBranch(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -233,7 +232,7 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -273,18 +272,18 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 
 	require.NoError(t, err)
 
-	mc, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "global", metav1.GetOptions{})
+	mc, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(t.Context(), "global", metav1.GetOptions{})
 	require.NoError(t, err)
 
 	require.NotNil(t, mc)
 
 	// should be not found for unlock deckhouse queue
-	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
+	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(t.Context(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
 	require.True(t, errors.IsNotFound(err))
 }
 
 func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -337,18 +336,18 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 
 	require.NoError(t, err)
 
-	mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+	mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)
 
 	require.Len(t, mcs.Items, 2)
 
 	// should be not found for unlock deckhouse queue
-	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
+	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(t.Context(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
 	require.True(t, errors.IsNotFound(err))
 }
 
 func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -386,7 +385,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Len(t, res.PostBootstrapMCTasks, 1)
 			require.Equal(t, res.PostBootstrapMCTasks[0].Title, "Set release channel to deckhouse module config")
 
-			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 			require.NoError(t, err)
 
 			require.Len(t, mcs.Items, 1)
@@ -429,7 +428,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Len(t, res.PostBootstrapMCTasks, 0)
 			require.Equal(t, res.WithResourcesMCTasks[0].Title, "Set https setting to global module config")
 
-			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 			require.NoError(t, err)
 
 			require.Len(t, mcs.Items, 1)
@@ -463,7 +462,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Len(t, res.WithResourcesMCTasks, 0)
 			require.Len(t, res.PostBootstrapMCTasks, 0)
 
-			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 			require.NoError(t, err)
 
 			require.Len(t, mcs.Items, 1)
@@ -510,7 +509,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Equal(t, res.PostBootstrapMCTasks[0].Title, "Set release channel to deckhouse module config")
 			require.Equal(t, res.WithResourcesMCTasks[0].Title, "Set https setting to global module config")
 
-			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 			require.NoError(t, err)
 
 			require.Len(t, mcs.Items, 2)
@@ -525,7 +524,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 // nodes stall the whole StaticInstanceBootstrapTimeout (~20m) on a 404 from
 // registry-packages-proxy. This guards against the extraction regressing that task.
 func TestDeckhouseInstallCreatesClusterUUIDConfigMap(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	require.NoError(t, os.Setenv("DHCTL_TEST", "yes"))
 	require.NoError(t, os.Setenv("DHCTL_TEST_VERSION_TAG", "1.54.1"))
 	defer func() {

@@ -212,6 +212,7 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
+    - --watch-cache-sizes=manifestcheckpointcontentchunks.state-snapshotter.deckhouse.io#0
     env:
     - name: GOGC
       value: "50"

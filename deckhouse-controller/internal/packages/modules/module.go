@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"sync/atomic"
 
@@ -42,6 +43,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -223,6 +225,23 @@ func (m *Module) GetVersion() *semver.Version {
 // GetPath returns path to the package dir
 func (m *Module) GetPath() string {
 	return m.path
+}
+
+// GetEnabledScriptDescriptor returns the enabled script descriptor for the package
+func (m *Module) GetEnabledScriptDescriptor() *script.Descriptor {
+	path := filepath.Join(m.path, "enabled")
+	if _, err := os.Stat(path); err != nil {
+		return nil
+	}
+
+	return &script.Descriptor{
+		Path:     path,
+		Settings: m.GetSettings(),
+		Values: addonutils.MergeValues(
+			addonutils.Values{"global": m.globalValuesGetter()},
+			addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): m.values.GetValues()},
+		),
+	}
 }
 
 // GetHooksQueues returns package queues from all hooks

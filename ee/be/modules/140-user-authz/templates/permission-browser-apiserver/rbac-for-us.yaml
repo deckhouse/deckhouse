@@ -44,6 +44,9 @@ rules:
 - apiGroups: ["authorization.deckhouse.io"]
   resources: ["bulksubjectaccessreviews"]
   verbs: ["create"]
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["bulksubjectaccessreviews/nonself"]
+  verbs: ["create"]
 ---
 # ClusterRole for users who can only check their own permissions (self mode)
 apiVersion: rbac.authorization.k8s.io/v1
@@ -55,6 +58,20 @@ rules:
 - apiGroups: ["authorization.deckhouse.io"]
   resources: ["bulksubjectaccessreviews"]
   verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authz:self-bulk-sar-creator:system-authenticated
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:user-authz:self-bulk-sar-creator
+subjects:
+- kind: Group
+  apiGroup: rbac.authorization.k8s.io
+  name: system:authenticated
 ---
 # ClusterRole for clients who can list/get accessible namespaces
 # This enables UI/service accounts to discover which namespaces the user has access to

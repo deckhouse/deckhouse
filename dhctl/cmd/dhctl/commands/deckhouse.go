@@ -21,7 +21,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -44,9 +43,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		ctx := kpcontext.ExtractContext(c)
 		l := logger.FromContext(ctx)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
-
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
@@ -97,8 +94,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,

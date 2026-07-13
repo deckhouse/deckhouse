@@ -37,6 +37,9 @@ spec:
     instance: {{ $controller.name }}
     istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
   sessionAffinity: None
+  {{- if and (eq $controller.spec.inlet "LoadBalancer") $loadBalancer.loadBalancerClass }}
+  loadBalancerClass: {{ $loadBalancer.loadBalancerClass | quote }}
+  {{- end }}
   {{- if eq $controller.spec.inlet "NodePort" }}
   type: NodePort
   {{- else if eq $controller.spec.inlet "HostPort" }}

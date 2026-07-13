@@ -15,7 +15,6 @@
 package config
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,7 @@ import (
 func TestValidateCNIBootstrap_PayloadWithoutClusterConfig_ReturnsNil(t *testing.T) {
 	// Garbage payload without ClusterConfiguration must not be CNI's concern;
 	// validateUserResources still vets its apiVersion/kind separately.
-	res := validateCNIBootstrap(context.Background(), "not yaml: : :", nil, ValidateOptionCommanderMode(true))
+	res := validateCNIBootstrap(t.Context(), "not yaml: : :", nil, ValidateOptionCommanderMode(true))
 	require.Nil(t, res)
 }
 
@@ -38,7 +37,7 @@ kind: Secret
 metadata:
   name: my-secret
 `
-	res := validateCNIBootstrap(context.Background(), cfg, nil, ValidateOptionCommanderMode(true))
+	res := validateCNIBootstrap(t.Context(), cfg, nil, ValidateOptionCommanderMode(true))
 	require.Nil(t, res, "payload without ClusterConfiguration must be a noop")
 }
 
@@ -52,7 +51,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: Automatic
 clusterDomain: cluster.local
 `
-	res := validateCNIBootstrap(context.Background(), cfg, nil, ValidateOptionCommanderMode(true))
+	res := validateCNIBootstrap(t.Context(), cfg, nil, ValidateOptionCommanderMode(true))
 	require.Nil(t, res, "static cluster has no CNI to validate")
 }
 
@@ -80,7 +79,7 @@ spec:
   settings:
     tunnelMode: NOT_AN_ENUM
 `
-	res := validateCNIBootstrap(context.Background(), cfg, nil, ValidateOptionCommanderMode(true))
+	res := validateCNIBootstrap(t.Context(), cfg, nil, ValidateOptionCommanderMode(true))
 	if res == nil {
 		t.Skip("cni-cilium schema not available in this test environment")
 	}
@@ -108,7 +107,7 @@ spec:
   version: 2
   enabled: not-a-bool
 `
-	res := validateCNIBootstrap(context.Background(), cfg, nil, ValidateOptionCommanderMode(true))
+	res := validateCNIBootstrap(t.Context(), cfg, nil, ValidateOptionCommanderMode(true))
 	require.Nil(t, res, "user-authn validation is not the CNI validator's job")
 }
 
@@ -195,4 +194,3 @@ func TestCNIMismatchReasonToErrorKind(t *testing.T) {
 	require.Equal(t, ErrKindCNISettingsMismatch, cniMismatchReasonToErrorKind(CNIBootstrapMismatchReasonDifferentSettings))
 	require.Equal(t, ErrKindValidationFailed, cniMismatchReasonToErrorKind(CNIBootstrapMismatchReasonNone))
 }
-

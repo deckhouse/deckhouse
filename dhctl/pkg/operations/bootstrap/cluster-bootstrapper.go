@@ -27,7 +27,6 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -107,8 +106,7 @@ type ClusterBootstrapper struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
-	lastState      phases.DhctlState
-	loggerProvider dhctllog.LoggerProvider
+	lastState phases.DhctlState
 }
 
 func (b *ClusterBootstrapper) applyCommanderModeConfig(cfg *config.DeckhouseInstaller) {
@@ -145,8 +143,7 @@ func NewClusterBootstrapper(ctx context.Context, params *Params) *ClusterBootstr
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		lastState:      params.InitialState,
-		loggerProvider: dhctllog.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx)),
+		lastState: params.InitialState,
 	}
 }
 
@@ -206,7 +203,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
-		b.loggerProvider(),
+		dhlog.FromContext(ctx),
 		b.Options.Global.ConfigPaths,
 		b.Options.Registry.ImgBundlePath,
 	)
@@ -687,7 +684,6 @@ func (b *ClusterBootstrapper) bootstrapKubernetes(ctx context.Context, bctx *boo
 		MetaConfig:             bctx.metaConfig,
 		CommanderMode:          b.CommanderMode,
 		GlobalOpts:             &b.Options.Global,
-		LoggerProvider:         b.loggerProvider,
 		PhasedExecutionContext: b.PhasedExecutionContext,
 	})
 

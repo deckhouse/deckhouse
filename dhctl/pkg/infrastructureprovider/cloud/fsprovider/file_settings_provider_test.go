@@ -49,7 +49,7 @@ var tofuProviders = []string{
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(context.Background(), options.DefaultInfrastructureVersions)
+	s, err := loadTerraformVersionFileSettings(t.Context(), options.DefaultInfrastructureVersions)
 	require.NoError(t, err)
 
 	all := append(make([]string, 0), tofuProviders...)
@@ -59,7 +59,7 @@ func TestAllProviderPresentInStore(t *testing.T) {
 }
 
 func TestProvidersSettings(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(context.Background(), options.DefaultInfrastructureVersions)
+	s, err := loadTerraformVersionFileSettings(t.Context(), options.DefaultInfrastructureVersions)
 	require.NoError(t, err)
 
 	assertSettings := func(t *testing.T, s settingsStore, p string, assertProvider func(t *testing.T, settings settings.ProviderSettings)) {
@@ -93,7 +93,7 @@ func TestProvidersSettings(t *testing.T) {
 
 func TestProviderSettingsLoadError(t *testing.T) {
 	// settings store returns error on not exists file
-	sFailed := newSettingsProvider(context.Background(), "/not/exists/file-aakjdiejfuefuefjej", func(_ context.Context, _ string) (settingsStore, error) {
+	sFailed := newSettingsProvider(t.Context(), "/not/exists/file-aakjdiejfuefuefjej", func(_ context.Context, _ string) (settingsStore, error) {
 		return nil, fmt.Errorf("file does not exist")
 	})
 	require.Error(t, sFailed.initError)
@@ -101,7 +101,7 @@ func TestProviderSettingsLoadError(t *testing.T) {
 	require.Len(t, fileToSettingsStore, 0)
 
 	// failed store returns init error due getting
-	_, err := sFailed.GetSettings(context.TODO(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
+	_, err := sFailed.GetSettings(t.Context(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
 	require.Error(t, err)
 }
 
@@ -122,23 +122,23 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 		require.Len(t, store.store, len(allProviders))
 	}
 
-	sFirst := newSettingsProvider(context.Background(), file, loadOrGetStore)
+	sFirst := newSettingsProvider(t.Context(), file, loadOrGetStore)
 	assertOneStoreInCache(t, sFirst)
 
-	sSecond := newSettingsProvider(context.Background(), file, loadOrGetStore)
+	sSecond := newSettingsProvider(t.Context(), file, loadOrGetStore)
 	assertOneStoreInCache(t, sSecond)
 
 	require.Equal(t, sFirst.store, sSecond.store)
 
 	// get settings for existing provider
-	settingsYandex, err := sFirst.GetSettings(context.TODO(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
+	settingsYandex, err := sFirst.GetSettings(t.Context(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
 	require.NoError(t, err)
 	require.False(t, govalue.IsNil(settingsYandex))
 	require.Equal(t, settingsYandex.CloudName(), yandex.ProviderName)
 	assertGettingDoesNotAffectStores(t, sFirst)
 
 	// returns error for non exists store
-	_, err = sFirst.GetSettings(context.TODO(), "incorrect", cloud.ProviderAdditionalParams{})
+	_, err = sFirst.GetSettings(t.Context(), "incorrect", cloud.ProviderAdditionalParams{})
 	require.Error(t, err)
 	assertGettingDoesNotAffectStores(t, sFirst)
 }

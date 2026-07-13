@@ -15,7 +15,6 @@
 package config
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -186,7 +185,7 @@ func TestParseConnectionConfig(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			config, err := ParseConnectionConfig(context.Background(), tt.config, newStore, tt.opts...)
+			config, err := ParseConnectionConfig(t.Context(), tt.config, newStore, tt.opts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
 				require.Equal(t, tt.expected, config)

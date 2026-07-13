@@ -20,7 +20,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module and its interactions with other DKP components are shown in the following diagram:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Runtime-audit-engine module architecture](../../images/architecture/security/c4-l2-runtime-audit-engine.svg)
 
 ## Module components

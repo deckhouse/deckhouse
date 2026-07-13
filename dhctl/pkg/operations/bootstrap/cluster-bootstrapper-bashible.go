@@ -32,7 +32,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
-		b.loggerProvider(),
+		dhlog.FromContext(ctx),
 		b.Options.Global.ConfigPaths,
 		b.Options.Registry.ImgBundlePath,
 	)
@@ -72,14 +72,13 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 
 		return RunBashiblePipeline(ctx, &BashiblePipelineParams{
-			Node:           nodeInterface,
-			NodeIP:         b.Options.Bootstrap.InternalNodeIP,
-			DevicePath:     b.Options.Bootstrap.DevicePath,
-			MetaConfig:     metaConfig,
-			CommanderMode:  b.CommanderMode,
-			IsDebug:        b.IsDebug,
-			GlobalOpts:     &b.Options.Global,
-			LoggerProvider: b.loggerProvider,
+			Node:          nodeInterface,
+			NodeIP:        b.Options.Bootstrap.InternalNodeIP,
+			DevicePath:    b.Options.Bootstrap.DevicePath,
+			MetaConfig:    metaConfig,
+			CommanderMode: b.CommanderMode,
+			IsDebug:       b.IsDebug,
+			GlobalOpts:    &b.Options.Global,
 		})
 	}
 

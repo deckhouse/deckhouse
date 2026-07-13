@@ -95,7 +95,7 @@ func TestStaticDestroy(t *testing.T) {
 			testCreateNodes(t, tst.kubeCl, hosts)
 			resources := testCreateResourcesForStatic(t, tst.kubeCl)
 
-			err := tst.destroyer.DestroyCluster(context.TODO(), true)
+			err := tst.destroyer.DestroyCluster(t.Context(), true)
 			require.Error(t, err)
 			tst.assertStateCacheIsEmpty(t)
 			// skip deleting
@@ -296,7 +296,7 @@ func TestStaticDestroy(t *testing.T) {
 
 				tst.addCleanCommand(tst.sshProvider, hosts[0], tt.sshOut, tt.sshErr, tst.logger)
 
-				err := tst.destroyer.DestroyCluster(context.TODO(), true)
+				err := tst.destroyer.DestroyCluster(t.Context(), true)
 				assertClusterDestroyError(t, tt.destroyClusterShouldReturnsError, err)
 
 				tst.assertNodeUserDidNotCreate(t)
@@ -1190,7 +1190,7 @@ func TestStaticDestroy(t *testing.T) {
 					}
 				}
 
-				ctx := context.TODO()
+				ctx := t.Context()
 
 				var waiter *testNodeUserWaiter
 				if len(hostsToCreateNodeUser) > 0 {
@@ -1375,7 +1375,7 @@ func (ts *testStaticDestroyTest) generateAndSaveNodeUserToCache(t *testing.T, pa
 	}
 
 	require.False(t, govalue.IsNil(ts.kubeCl))
-	err = entity.CreateOrUpdateNodeUser(context.TODO(), newFakeKubeClientProvider(ts.kubeCl), ts.nodeUser, retry.NewEmptyParams())
+	err = entity.CreateOrUpdateNodeUser(t.Context(), newFakeKubeClientProvider(ts.kubeCl), ts.nodeUser, retry.NewEmptyParams())
 	require.NoError(t, err, "create or update node user")
 }
 
@@ -1393,7 +1393,7 @@ func (ts *testStaticDestroyTest) assertNodeUserIsNotUpdated(t *testing.T, checkI
 
 	require.False(t, govalue.IsNil(ts.kubeCl))
 	require.False(t, govalue.IsNil(ts.nodeUser))
-	nodeUserUnstruct, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(context.TODO(), ts.nodeUser.GetName(), metav1.GetOptions{})
+	nodeUserUnstruct, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(t.Context(), ts.nodeUser.GetName(), metav1.GetOptions{})
 	require.NoError(t, err, "node user should in kubernetes cluster")
 
 	nodeUser := v1.NodeUser{}
@@ -1553,7 +1553,7 @@ func (ts *testStaticDestroyTest) assertPrivateKeyWritten(t *testing.T, keysCount
 func (ts *testStaticDestroyTest) assertNodeUserCreated(t *testing.T, created bool) {
 	require.False(t, govalue.IsNil(ts.kubeCl))
 
-	_, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(context.TODO(), global.ConvergeNodeUserName, metav1.GetOptions{})
+	_, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(t.Context(), global.ConvergeNodeUserName, metav1.GetOptions{})
 
 	if created {
 		require.NoError(t, err, "node user should created ")
@@ -1663,7 +1663,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	kubeCl := testCreateFakeKubeClient()
 	kubeClProvider := newFakeKubeClientProvider(kubeCl)
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	clusterUUID := uuid.Must(uuid.NewRandom()).String()
 
@@ -1813,11 +1813,11 @@ func testCreateNodes(t *testing.T, kubeCl *client.KubernetesClient, hosts []sess
 			},
 		}
 
-		_, err := kubeCl.CoreV1().Nodes().Create(context.TODO(), &obj, metav1.CreateOptions{})
+		_, err := kubeCl.CoreV1().Nodes().Create(t.Context(), &obj, metav1.CreateOptions{})
 		require.NoError(t, err, host.Name)
 	}
 
-	nodes, err := kubeCl.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	nodes, err := kubeCl.CoreV1().Nodes().List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err, hosts)
 	require.Len(t, nodes.Items, len(hosts))
 	for _, node := range nodes.Items {

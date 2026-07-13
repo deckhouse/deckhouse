@@ -35,7 +35,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
-		b.loggerProvider(),
+		dhlog.FromContext(ctx),
 		b.Options.Global.ConfigPaths,
 		b.Options.Registry.ImgBundlePath,
 	)

@@ -23,7 +23,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -43,12 +42,11 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 
 	runFunc := func(ctx context.Context) error {
 		l := logger.FromContext(ctx)
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 
 		// Registry shoud run before LoadConfigFromFile
 		registryStop, err := registry.InitFromConfig(
 			ctx,
-			loggerProvider(),
+			l,
 			opts.Global.ConfigPaths,
 			opts.Registry.ImgBundlePath,
 		)
@@ -102,12 +100,11 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 
 	runFunc := func(ctx context.Context) error {
 		l := logger.FromContext(ctx)
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 
 		// Registry shoud run before LoadConfigFromFile
 		registryStop, err := registry.InitFromConfig(
 			ctx,
-			loggerProvider(),
+			l,
 			opts.Global.ConfigPaths,
 			opts.Registry.ImgBundlePath,
 		)
@@ -150,12 +147,10 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 	runFunc := func(ctx context.Context) error {
 		l := logger.FromContext(ctx)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
-
 		// Registry shoud run before LoadConfigFromFile
 		registryStop, err := registry.InitFromConfig(
 			ctx,
-			loggerProvider(),
+			l,
 			opts.Global.ConfigPaths,
 			opts.Registry.ImgBundlePath,
 		)
@@ -180,7 +175,7 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			metaConfig,
 			config.NewSchemaStore(&opts.Global),
 			config.GetEdition(),
-			loggerProvider,
+			l,
 		)
 
 		controlPlaneConfig, err := extractor.TemplateConfigForBootstrap("")

@@ -1,0 +1,51 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+imageSpec:
+  config:
+    entrypoint: ["/integrity-controller"]
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /integrity-controller
+  to: /integrity-controller
+  before: setup
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  - hack
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+shell:
+  install:
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /integrity-controller cmd/main.go
+  - chown 64535:64535 /integrity-controller
+  - chmod 0700 /integrity-controller
