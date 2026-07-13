@@ -942,7 +942,7 @@ The module-managed `Telemetry` objects for this mode disappear on the next sync;
 
 The DKP debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
 
-Before starting the debug container, create a dedicated ServiceAccount and grant it the permissions required by the `istioctl` commands you want to run. For example, the following manifest allows `istioctl proxy-config` commands for Pods in one application namespace:
+Before starting the debug container, create a dedicated ServiceAccount and grant it the permissions required by the `istioctl` commands you want to run. For example, the following manifest grants permissions that allow running the `istioctl proxy-config` commands for Pods in a single application namespace:
 
 ```yaml
 apiVersion: v1
