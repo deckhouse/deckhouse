@@ -1,4 +1,4 @@
-{{- $protocVersion := "30.2" }}
+{{- $protocVersion := "35.1" }}
 {{- $bazelVersions := "7.7.1" }}
 #
 ---
@@ -102,9 +102,9 @@ shell:
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   # Install protoc plugins
-  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.5.1 $(cat /run/secrets/SOURCE_REPO)/grpc/grpc-go.git /src/grpc-go
-  - git clone --depth 1 --branch v1.36.6 $(cat /run/secrets/SOURCE_REPO)/protocolbuffers/protobuf-go.git /src/protobuf-go
-  - git clone --depth 1 --branch v1.5.0 $(cat /run/secrets/SOURCE_REPO)/mfridman/protoc-gen-go-json.git /src/protoc-gen-go-json
+  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.6.2 $(cat /run/secrets/SOURCE_REPO)/grpc/grpc-go.git /src/grpc-go
+  - git clone --depth 1 --branch v1.36.11 $(cat /run/secrets/SOURCE_REPO)/protocolbuffers/protobuf-go.git /src/protobuf-go
+  - git clone --depth 1 --branch v1.6.0 $(cat /run/secrets/SOURCE_REPO)/mfridman/protoc-gen-go-json.git /src/protoc-gen-go-json
   - git clone --depth 1 --branch v1.5.1 $(cat /run/secrets/SOURCE_REPO)/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
   - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
   - cd /src/protobuf-go/cmd/protoc-gen-go && go install
