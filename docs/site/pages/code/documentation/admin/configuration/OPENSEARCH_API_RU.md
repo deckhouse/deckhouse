@@ -9,12 +9,12 @@ weight: 38
 ---
 
 На этой странице описаны административные OpenSearch-эндпоинты Deckhouse Code.
-Параметры пользовательского поиска — в [API поиска](/code/documentation/user/search-api.html).
+Параметры пользовательского поиска — [в разделе «API поиска»](../../user/search-api.html).
 
 ## Права доступа
 
-- `POST /api/v4/admin/opensearch/recreate_indices`: только администратор (`authenticated_as_admin!`).
-- `GET /api/v4/admin/opensearch/indexing_queue_stats`: пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
+- `POST /api/v4/admin/opensearch/recreate_indices` — только администратор (`authenticated_as_admin!`);
+- `GET /api/v4/admin/opensearch/indexing_queue_stats` — пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
 
 ## POST /api/v4/admin/opensearch/recreate_indices
 
@@ -23,30 +23,22 @@ weight: 38
 ### Тело запроса
 
 | Поле | Тип | Обязательное | Допустимые значения |
-|---|---|---:|---|
+|---|---|---|---|
 | `schema_class` | string | Да | `recreate_all`, `Search::Opensearch::IndicesSchema::Code`, `Search::Opensearch::IndicesSchema::Wiki`, `Search::Opensearch::IndicesSchema::Note`, `Search::Opensearch::IndicesSchema::Milestone`, `Search::Opensearch::IndicesSchema::WorkItem`, `Search::Opensearch::IndicesSchema::MergeRequest` |
 
 ### Ответы
 
 Тексты полей `message` в примерах ниже возвращаются API на английском языке.
 
-- `202 Accepted`
+- `202 Accepted`:
 
-```json
-{
-  "message": "OpenSearch indices were reset; reindex jobs were enqueued."
-}
-```
+  
 
-- `400 Bad Request` (например, OpenSearch выключен или сервис вернул ошибку)
+- `400 Bad Request` (например, OpenSearch выключен или сервис вернул ошибку):
 
-```json
-{
-  "message": "OpenSearch is disabled"
-}
-```
+  
 
-### Пример
+### Пример запроса
 
 ```bash
 curl --request POST \
@@ -60,7 +52,7 @@ curl --request POST \
 
 Возвращает статистику Sidekiq-очереди индексации OpenSearch.
 
-### Ответ (`200 OK`)
+### Ответ (200 OK)
 
 ```json
 {
@@ -71,10 +63,10 @@ curl --request POST \
 
 Поля:
 
-- `total` — общее количество задач индексации в очереди.
+- `total` — общее количество задач индексации в очереди;
 - `updated_at` — timestamp ISO8601 с миллисекундами (или `null`).
 
-### Пример
+### Пример запроса
 
 ```bash
 curl --request GET \

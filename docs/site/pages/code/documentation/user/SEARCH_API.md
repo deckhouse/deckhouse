@@ -8,25 +8,27 @@ lang: en
 weight: 46
 ---
 
-This page documents the Search REST API implemented in Deckhouse Code.
-For using search in the UI, see the [Search](/code/documentation/user/search.html) guide.
+Search REST API lets you conduct a search across a Deckhouse Code instance, a specific group, or a project.
+To work with the search using web UI, see the [search guide](search.html).
 
 Source of truth: the Deckhouse Code frontend extension (FE) search code (not upstream GitLab `doc/api/search.md`, which has different behavior for some filters/scopes).
 
 ## Endpoints
 
-- `GET /api/v4/search`
-- `GET /api/v4/groups/:id/search` (the `-/` variant `/api/v4/groups/:id/-/search` is also accepted)
-- `GET /api/v4/projects/:id/search` (the `-/` variant `/api/v4/projects/:id/-/search` is also accepted)
+The following endpoints are available for searching:
+
+- `GET /api/v4/search`: Search across a Deckhouse Code instance.
+- `GET /api/v4/groups/:id/search` (or `/api/v4/groups/:id/-/search`): Search in a group.
+- `GET /api/v4/projects/:id/search` (or `/api/v4/projects/:id/-/search`): Search in a project.
 
 All endpoints require authentication.
 
-## Scopes and backend
+## Search scopes
 
-`scope` is required. Supported values differ by endpoint.
+A search scope is defined via the required parameter `scope`. Supported values differ by endpoints:
 
-| Scope | Instance | Group | Project | Backend when OpenSearch is enabled |
-|---|---:|---:|---:|---|
+| `Scope` value | Instance | Group | Project | Backend when OpenSearch is enabled |
+|---|---|---|---|---|
 | `projects` | ✅ | ✅ | ❌ | CE/PostgreSQL |
 | `users` | ✅ | ✅ | ✅ | CE/PostgreSQL |
 | `snippet_titles` | ✅ | ❌ | ❌ | CE/PostgreSQL |
@@ -39,22 +41,22 @@ All endpoints require authentication.
 | `commits` | ❌ | ❌ | ✅ | OpenSearch (`advanced`) |
 | `blobs` | ❌ | ❌ | ✅ | OpenSearch (`advanced`) |
 
-Response header `X-Search-Type` returns the resolved search type (`advanced`/other).
+The response header `X-Search-Type` returns the resolved search type.
 
 ## Request parameters
 
-### Common
+### Common parameters
 
 | Parameter | Type | Required | Endpoints | Notes |
-|---|---|---:|---|---|
-| `search` | string | Yes | all | Search query |
-| `scope` | string | Yes | all | See matrix above |
-| `confidential` | boolean | No | all | Passed to search service |
-| `include_archived` | boolean | No | instance, group | Not available for project endpoint |
-| `page` / `per_page` | integer | No | all | Offset pagination |
-| `ref` | string | No | project | Branch/tag for project search |
-| `state` | string | No | all | `all`, `opened`, `closed`, `merged` |
-| `type` | array[string] | No | all | Work item type filter (effective for `work_items`) |
+|---|---|---|---|---|
+| `search` | string | Yes | All | Search query |
+| `scope` | string | Yes | All | Search scope. See the earlier table for available values |
+| `confidential` | boolean | No | All | Passed to search service |
+| `include_archived` | boolean | No | Instance, group | Not available for searching in a project |
+| `page` / `per_page` | integer | No | All | Offset pagination |
+| `ref` | string | No | Project | Branch or tag for project search |
+| `state` | string | No | All | Object state: `all`, `opened`, `closed`, `merged` |
+| `type` | array[string] | No | All | Work item type filter (effective for `work_items`) |
 
 ### OpenSearch / FE filter parameters
 

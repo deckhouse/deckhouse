@@ -9,12 +9,12 @@ weight: 38
 ---
 
 This page documents Deckhouse Code admin OpenSearch endpoints.
-For user-facing search parameters, see [Search API](/code/documentation/user/search-api.html).
+For user-facing search parameters, see ["Search API"](../../user/search-api.html).
 
 ## Permissions
 
-- `POST /api/v4/admin/opensearch/recreate_indices`: admin only (`authenticated_as_admin!`).
-- `GET /api/v4/admin/opensearch/indexing_queue_stats`: authenticated user with permission `read_admin_search_indexing_queue_stats` on `:global`.
+- `POST /api/v4/admin/opensearch/recreate_indices`: Admin only (`authenticated_as_admin!`).
+- `GET /api/v4/admin/opensearch/indexing_queue_stats`: Authenticated user with permission `read_admin_search_indexing_queue_stats` on `:global`.
 
 ## POST /api/v4/admin/opensearch/recreate_indices
 
@@ -23,28 +23,20 @@ Synchronously recreates OpenSearch index(es) and enqueues background reindex job
 ### Request body
 
 | Field | Type | Required | Allowed values |
-|---|---|---:|---|
+|---|---|---|---|
 | `schema_class` | string | Yes | `recreate_all`, `Search::Opensearch::IndicesSchema::Code`, `Search::Opensearch::IndicesSchema::Wiki`, `Search::Opensearch::IndicesSchema::Note`, `Search::Opensearch::IndicesSchema::Milestone`, `Search::Opensearch::IndicesSchema::WorkItem`, `Search::Opensearch::IndicesSchema::MergeRequest` |
 
 ### Responses
 
-- `202 Accepted`
+- `202 Accepted`:
 
-```json
-{
-  "message": "OpenSearch indices were reset; reindex jobs were enqueued."
-}
-```
+  
 
-- `400 Bad Request` (for example, OpenSearch disabled or service error)
+- `400 Bad Request` (for example, if OpenSearch is disabled or there is a service error):
 
-```json
-{
-  "message": "OpenSearch is disabled"
-}
-```
+  
 
-### Example
+### Request example
 
 ```bash
 curl --request POST \
@@ -58,7 +50,7 @@ curl --request POST \
 
 Returns Sidekiq queue stats for OpenSearch indexing.
 
-### Response (`200 OK`)
+### Response (200 OK)
 
 ```json
 {
@@ -69,10 +61,10 @@ Returns Sidekiq queue stats for OpenSearch indexing.
 
 Fields:
 
-- `total` — total number of indexing jobs in the queue.
-- `updated_at` — ISO8601 timestamp with milliseconds (or `null`).
+- `total`: Total number of indexing jobs in the queue.
+- `updated_at`: ISO8601 timestamp with milliseconds (or `null`).
 
-### Example
+### Request example
 
 ```bash
 curl --request GET \
