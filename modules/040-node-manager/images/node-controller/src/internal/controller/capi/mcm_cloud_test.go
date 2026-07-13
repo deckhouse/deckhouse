@@ -34,6 +34,14 @@ func TestBlobZones(t *testing.T) {
 		}
 		assert.Equal(t, []string{"eu-west-1a", "eu-west-1b"}, blobZones(blob))
 	})
+	t.Run("extracts zones stored as []string (real BuildNodeGroupBlob output)", func(t *testing.T) {
+		blob := map[string]interface{}{
+			"cloudInstances": map[string]interface{}{
+				"zones": []string{"ru-central1-a", "ru-central1-b"},
+			},
+		}
+		assert.Equal(t, []string{"ru-central1-a", "ru-central1-b"}, blobZones(blob))
+	})
 	t.Run("no cloudInstances", func(t *testing.T) {
 		assert.Nil(t, blobZones(map[string]interface{}{}))
 	})

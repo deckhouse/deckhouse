@@ -252,17 +252,20 @@ func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string
 // blobZones extracts cloudInstances.zones from the blob element as a string slice.
 func blobZones(blob map[string]interface{}) []string {
 	ci := blobMap(blob, "cloudInstances")
-	raw, ok := ci["zones"].([]interface{})
-	if !ok {
+	switch raw := ci["zones"].(type) {
+	case []string:
+		return raw
+	case []interface{}:
+		zones := make([]string, 0, len(raw))
+		for _, z := range raw {
+			if s, ok := z.(string); ok {
+				zones = append(zones, s)
+			}
+		}
+		return zones
+	default:
 		return nil
 	}
-	zones := make([]string, 0, len(raw))
-	for _, z := range raw {
-		if s, ok := z.(string); ok {
-			zones = append(zones, s)
-		}
-	}
-	return zones
 }
 
 func blobInstanceClassSpot(blob map[string]interface{}) bool {
