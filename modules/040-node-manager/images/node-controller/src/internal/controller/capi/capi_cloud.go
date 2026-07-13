@@ -201,6 +201,13 @@ func (r *MachineDeploymentReconciler) capiDesiredReplicas(ctx context.Context, m
 	return calculateReplicas(int32(replicas), minReplicas, maxReplicas)
 }
 
+func resolveCAPIZones(ng *deckhousev1.NodeGroup, defaultZones []string) []string {
+	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 {
+		return ng.Spec.CloudInstances.Zones
+	}
+	return defaultZones
+}
+
 // reconcileCloudMDsRendered is the controller-rendered CAPI branch that replaces
 // the helm CAPI generation (node-group.yaml capi_node_group_machine_template +
 // instance-class checksum + bootstrap Secret naming). Per zone it:
@@ -252,10 +259,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		return nil
 	}
 
-	zones := blobZones(blob)
-	if len(zones) == 0 {
-		zones = cloudConfig.zones
-	}
+	zones := resolveCAPIZones(ng, cloudConfig.zones)
 	if len(zones) == 0 {
 		logger.V(1).Info("skipping CAPI: no zones")
 		return nil
