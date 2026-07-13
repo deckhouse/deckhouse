@@ -83,6 +83,7 @@ spec:
             memory: 10Mi
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
           limits:
+            cpu: 10m
             memory: 10Mi
       containers:
       - name: user-api

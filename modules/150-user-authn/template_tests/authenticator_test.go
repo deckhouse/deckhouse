@@ -416,6 +416,12 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-with-resources-dex-authenticator")
 			Expect(deployment.Exists()).To(BeTrue())
 
+			// Check init container resources
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.memory").String()).To(Equal("10Mi"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("10Mi"))
+
 			// Check dex-authenticator container resources
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("100m"))
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("128Mi"))
