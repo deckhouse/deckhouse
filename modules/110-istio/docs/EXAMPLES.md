@@ -1019,7 +1019,7 @@ Example:
 istioctl pc all <pod-name>.<target-namespace>
 ```
 
-The `istioctl pc` commands require a target Pod with an injected `istio-proxy` sidecar. If the target workload has no sidecar, Envoy admin port `15000` will not be available.
+The `istioctl pc` commands require a target Pod with an injected `istio-proxy` sidecar. If the target Pod has no sidecar, Envoy admin port `15000` will not be available.
 
 {% alert level="warning" %}
 The RBAC manifest above is not enough to run `istioctl analyze` or `istioctl analyze -A`. These commands require additional read-only access to namespaces and to the Kubernetes and Istio resources covered by the analyzers. Grant such access separately according to your security policy.
