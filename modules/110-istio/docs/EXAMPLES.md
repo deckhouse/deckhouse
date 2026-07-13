@@ -541,7 +541,7 @@ spec:
 ### Allow from any cluster (via mTLS)
 
 {% alert level="warning" %}
-The denying rules (if they exist) have priority over any other rules. For details, refer to the [Decision-making algorithm](#decision-making-algorithm).
+The denying rules (if they exist) have priority over any other rules. For details, refer to ["Decision-making algorithm"](#decision-making-algorithm).
 {% endalert %}
 
 Example:
