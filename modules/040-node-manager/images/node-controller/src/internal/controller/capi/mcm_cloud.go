@@ -40,7 +40,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
-		logger.V(1).Info("skipping MCM: no cloudInstances")
+		logger.Info("skipping MCM: no cloudInstances", "nodeGroup", ng.Name)
 		return nil
 	}
 
@@ -50,7 +50,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	}
 	machineClassKind, _ := cloudProvider["machineClassKind"].(string)
 	if machineClassKind == "" {
-		logger.V(1).Info("skipping MCM: machineClassKind not set (not an MCM cloud)")
+		logger.Info("skipping MCM: machineClassKind not set (not an MCM cloud)", "nodeGroup", ng.Name)
 		return nil
 	}
 	cloudType, _ := cloudProvider["type"].(string)
@@ -65,14 +65,15 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	if err != nil {
 		return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
 	}
+	zones := blobZones(blob)
+	logger.Info("MCM reconcile decision", "nodeGroup", ng.Name, "validationErr", validationErr, "zones", zones, "machineClassKind", machineClassKind)
 	if validationErr != "" {
-		logger.V(1).Info("skipping MCM: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
+		logger.Info("skipping MCM: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
 		return nil
 	}
 
-	zones := blobZones(blob)
 	if len(zones) == 0 {
-		logger.V(1).Info("skipping MCM: no zones")
+		logger.Info("skipping MCM: no zones", "nodeGroup", ng.Name)
 		return nil
 	}
 
