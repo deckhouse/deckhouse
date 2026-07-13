@@ -58,42 +58,46 @@ The response header `X-Search-Type` returns the resolved search type.
 | `state` | string | No | All | Object state: `all`, `opened`, `closed`, `merged` |
 | `type` | array[string] | No | All | Work item type filter (effective for `work_items`) |
 
-### OpenSearch / FE filter parameters
+### OpenSearch and FE filter parameters
 
-When parameter scope is invalid, API returns `400` with message:
-`<param_name> is supported only for <scope list>`.
+Support for additional parameters depends on the selected search scope.
+If a parameter is submitted with invalid `scope` values, API returns the `400` response with the message `<param_name> is supported only for <scope list>`.
 
-| Parameter | Type | Applies to `scope` | Validation |
+| Parameter | Type | Applies to `scope` | Restrictions |
 |---|---|---|---|
-| `author_username` | string | `merge_requests` | author filter |
-| `exclude_forks` | boolean | `work_items`, `issues` | only in those scopes |
-| `fields` | array[string] | `work_items`, `issues` | only `title`; otherwise `400` |
-| `label_name` | array[string] | `work_items`, `issues`, `merge_requests` | comma-separated values supported |
-| `language` | array[string] | `blobs` | comma-separated values supported |
-| `not_author_username` | string | `merge_requests` | author exclusion filter |
-| `not_source_branch` | string | `merge_requests` | exclusion filter |
-| `not_target_branch` | string | `merge_requests` | exclusion filter |
-| `num_context_lines` | integer | `blobs` | range `0..20` |
-| `regex` | boolean | `blobs` | query length `3..512` and at least one alphanumeric literal; otherwise `400` |
-| `source_branch` | string | `merge_requests` | exact branch filter |
-| `target_branch` | string | `merge_requests` | exact branch filter |
+| `author_username` | string | `merge_requests` | Author filter |
+| `exclude_forks` | boolean | `work_items`, `issues` | Only in these `scope` values |
+| `fields` | array[string] | `work_items`, `issues` | Only `title` is supported. For other values, API returns `400` |
+| `label_name` | array[string] | `work_items`, `issues`, `merge_requests` | Comma-separated values are supported |
+| `language` | array[string] | `blobs` | Comma-separated values are supported |
+| `not_author_username` | string | `merge_requests` | Author exclusion filter |
+| `not_source_branch` | string | `merge_requests` | Exclusion filter |
+| `not_target_branch` | string | `merge_requests` | Exclusion filter |
+| `num_context_lines` | integer | `blobs` | Supported range `0..20` |
+| `regex` | boolean | `blobs` | Query length `3..512` and at least one alphanumeric literal; otherwise API returns `400` |
+| `source_branch` | string | `merge_requests` | Exact branch filter |
+| `target_branch` | string | `merge_requests` | Exact branch filter |
 
 ## Response headers
 
-- `X-Search-Type`: resolved search type for current request.
-- `X-Search-Aggregations`: present only when OpenSearch is enabled and aggregations exist for the requested scope.
+The API can return the following headers:
 
-`X-Search-Aggregations` is JSON with aggregation buckets. Aggregations are returned for:
+- `X-Search-Type`: Resolved search type for current request.
+- `X-Search-Aggregations`: Present only when OpenSearch is enabled and aggregations exist for the requested scope.
 
-- `blobs` (`language` buckets),
-- `work_items`/`issues` (`work_item_type_ids` and `labels` buckets),
-- `merge_requests` (`labels` buckets).
+The aggregation scope depends on the `scope` value:
+
+| `Scope` value | Aggregations |
+| ------------- | ------------ |
+| `blobs` | `language` |
+| `work_items`, `issues` | `work_item_type_ids`, `labels` |
+| `merge_requests` | `labels` |
 
 ## Response body
 
 The endpoint returns a JSON array of scope-specific entities:
 
-| Scope | Entity type |
+| `Scope` value | Entity type |
 |---|---|
 | `issues` | `IssueBasic` |
 | `work_items` | `WorkItem` |
@@ -137,7 +141,7 @@ curl --request GET \
 
 ### Wrong scope for parameter
 
-Example: `regex=true` with `scope=work_items`:
+Error message example when `regex=true` is incorrectly used together with `scope=work_items`:
 
 ```json
 {
@@ -147,6 +151,9 @@ Example: `regex=true` with `scope=work_items`:
 
 ### Invalid regex query constraints
 
+Regex mode requires a query length of `3..512` and at least one alphanumeric literal.
+The following is an error message example when the requirements are not met:
+
 ```json
 {
   "message": "regex search requires 3-512 chars and at least one alphanumeric literal"
@@ -155,7 +162,9 @@ Example: `regex=true` with `scope=work_items`:
 
 ## Notes on divergence from upstream GitLab docs
 
-- `fields` is supported only for `work_items` and `issues` (not `merge_requests`).
-- `exclude_forks` is scoped to `work_items` and `issues`.
-- Additional FE filters are implemented: `language`, `label_name`, MR branch/author filters, `not_*` filters.
-- `X-Search-Aggregations` response header is available when OpenSearch aggregations exist.
+The FE implementation of Deckhosue Code is different from the upstream GitLab `doc/api/search.md`. The differences are as follows:
+
+- The `fields` parameter is supported only for `work_items` and `issues` search scopes (not `merge_requests`).
+- The `exclude_forks` parameter is supported only for `work_items` and `issues` search scopes.
+- Additional FE filters are implemented: `language`, `label_name`, MR branch and author filters, and `not_*` filters.
+- The `X-Search-Aggregations` response header is returned when OpenSearch aggregations exist.
