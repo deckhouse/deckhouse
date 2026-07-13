@@ -200,16 +200,19 @@ spec:
 
 ### Istio Ingress Gateway
 
-Example:
+The [IngressIstioController](cr.html#ingressistiocontroller) custom resource spins up a dedicated Istio Ingress Gateway proxy. Each controller instance gets its own gateway class, and you select the instance from an Istio `Gateway` resource by referencing the matching `istio.deckhouse.io/ingress-gateway-class` label. The module manages the gateway workload and its `Service`, while the `Gateway` and routing resources (`VirtualService`) remain yours to manage.
+
+Start by creating an `IngressIstioController`. In the example below, HTTP and HTTPS are exposed on the selected frontend nodes using host ports:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IngressIstioController
 metadata:
- name: main
+  name: main
 spec:
-  # ingressGatewayClass contains the label selector value used to create the Gateway resource
+  # The value selected by Gateway resources via the istio.deckhouse.io/ingress-gateway-class label.
   ingressGatewayClass: istio-hp
+  # IngressIstioController works with LoadBalancer, NodePort, and HostPort inlets.
   inlet: HostPort
   hostPort:
     httpPort: 80
@@ -224,6 +227,8 @@ spec:
   resourcesRequests:
     mode: VPA
 ```
+
+Note that the TLS secret for an ingress gateway must be created in the `d8-ingress-istio` namespace, not in your application's namespace — this is an easy detail to miss.
 
 ```yaml
 apiVersion: v1
@@ -287,6 +292,101 @@ spec:
         - destination:
             host: app-svc
 ```
+
+For the full list of controller settings — load-balancer annotations, network topology, scheduling, and resource management — see the [IngressIstioController custom resource reference](cr.html#ingressistiocontroller).
+
+#### Preserving client attributes behind external proxies
+
+When the gateway is deployed behind other proxies or load balancers (for example, a cloud load balancer or a reverse proxy), configure [`spec.networkTopology`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology) so that the gateway can correctly extract the client's original attributes, such as the source IP address. See [Configuring Gateway Network Topology](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/) in the Istio documentation for details.
+
+Use [`numTrustedProxies`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-numtrustedproxies) when the upstream proxies pass the client IP address in the `X-Forwarded-For` header. Set it to the number of trusted proxies deployed in front of the gateway so that Istio extracts the correct client address and populates the `X-Envoy-External-Address` header for upstream services. For example, if a cloud load balancer and a reverse proxy sit in front of the gateway, set the value to `2`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+  name: main
+spec:
+  ingressGatewayClass: istio-hp
+  inlet: LoadBalancer
+  networkTopology:
+    numTrustedProxies: 2
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: VPA
+```
+
+Use [`proxyProtocol`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-proxyprotocol) when an upstream L4/TCP load balancer forwards the client attributes via the [PROXY protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) instead of HTTP headers. Enabling it makes the gateway's TCP listeners parse the PROXY protocol header:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+  name: main
+spec:
+  ingressGatewayClass: istio-hp
+  inlet: LoadBalancer
+  networkTopology:
+    proxyProtocol: true
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: VPA
+```
+
+{% alert level="info" %}
+`numTrustedProxies` and `proxyProtocol` can be used together. When both are configured and an incoming request contains an `X-Forwarded-For` header, Istio uses the trusted `X-Forwarded-For` chain in preference to the PROXY protocol attributes.
+{% endalert %}
+
+#### Managing gateway resource requests
+
+Use [`spec.resourcesRequests`](cr.html#ingressistiocontroller-v1alpha1-spec-resourcesrequests) to control CPU and memory requests for the ingress gateway pods. Two modes are available:
+
+- `Static` — requests are specified directly and stay fixed:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: IngressIstioController
+  metadata:
+    name: main
+  spec:
+    ingressGatewayClass: istio-hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    resourcesRequests:
+      mode: Static
+      static:
+        cpu: 100m
+        memory: 128Mi
+  ```
+
+- `VPA` — a [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) adjusts requests within the configured `min`/`max` bounds. Starting from DKP version 1.75, the recommended VPA mode is `InPlaceOrRecreate`, which updates pod resources in place when the cluster supports it and falls back to recreating the pod otherwise (the legacy `Auto` mode always recreates the pod):
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: IngressIstioController
+  metadata:
+    name: main
+  spec:
+    ingressGatewayClass: istio-hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    resourcesRequests:
+      mode: VPA
+      vpa:
+        mode: InPlaceOrRecreate
+        cpu:
+          min: 100m
+          max: 1000m
+        memory:
+          min: 128Mi
+          max: 2000Mi
+  ```
 
 ### Ingress NGINX
 
