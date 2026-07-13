@@ -989,7 +989,7 @@ Replace `<debug-namespace>` with the namespace where the temporary debug Pod wil
 This RBAC manifest is intended for commands that address a Pod directly, for example, to a resource like `<pod-name>.<target-namespace>`. If you use typed resource names such as `deployment/<name>`, grant additional read access to those resource types so `istioctl` can resolve them to Pods.
 
 {% alert level="warning" %}
-Creating Pods in system namespaces such as `d8-system` and using system ServiceAccounts such as `deckhouse` usually requires cluster-admin privileges. Use a dedicated ServiceAccount with the minimum required permissions instead.
+Creating Pods in system namespaces such as `d8-system` and using system ServiceAccounts such as `deckhouse` usually requires the `cluster-admin` level of privileges. Use a dedicated ServiceAccount with the minimum required permissions instead.
 {% endalert %}
 
 Start a temporary debug Pod with the built-in debug image:
