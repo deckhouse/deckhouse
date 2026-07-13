@@ -13,6 +13,8 @@ spec:
                     Значение данного параметра используется в качестве селектора лейблов ресурса [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/).
 
                     Пример лейбла ресурса Gateway: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`
+
+                    Неизменяемый в течение жизни ресурса параметр.
                 inlet:
                   description: |
                     Способ поступления трафика из внешнего мира:

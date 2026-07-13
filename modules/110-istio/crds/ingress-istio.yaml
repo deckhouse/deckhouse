@@ -21,18 +21,29 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          x-kubernetes-validations:
+            - rule: 'size(self.metadata.name) <= 36'
+              message: 'IngressIstioController name must be no longer than 36 characters.'
+            - rule: "self.metadata.name.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')"
+              message: 'IngressIstioController name must be a DNS label.'
           required: ['spec']
           properties:
             spec:
               type: object
+              x-kubernetes-validations:
+                - rule: 'self.ingressGatewayClass == oldSelf.ingressGatewayClass'
+                  message: 'ingressGatewayClass is immutable.'
               required: ['ingressGatewayClass', 'inlet']
               properties:
                 ingressGatewayClass:
                   type: string
+                  maxLength: 63
                   description: |
                     Ingress gateway class is used by application [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resources for identifying the right Ingress gateway setup.
 
                     The identification is organized by setting the spec.selector: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`.
+
+                    This parameter does not change during the entire resource life.
                   x-doc-examples: ['istio']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                 inlet:
