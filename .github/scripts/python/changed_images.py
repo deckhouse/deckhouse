@@ -25,7 +25,11 @@ Algorithm:
        Commit in PR commits
   4. Convert werf image name into module/image fields for matrix output.
   5. Read images_digests.json and map changed digests to scanner keys.
-  6. Write changed_images.json and GitHub Actions outputs.
+  6. For attestation sidecars (*-vex-artifact, *-trivy-ignore-artifact),
+     map to the parent image compact key from images_digests.json.
+     These images are final but intentionally omitted from digests (suffix
+     "artifact"), so their own digest never yields a compact key.
+  7. Write changed_images.json and GitHub Actions outputs.
 
 changed_compact must use keys from images_digests.json, for example:
   nodeManager.bashibleApiserver
@@ -59,6 +63,12 @@ NON_MODULE_WERF_IMAGE_NAMES = {
 
 NON_MODULE_WERF_IMAGE_PREFIXES = (
     "dev/",
+)
+
+# sidecar-образы. в images_digests.json их нет
+ATTESTATION_ARTIFACT_SUFFIXES = (
+    "-vex-artifact",
+    "-trivy-ignore-artifact",
 )
 
 
@@ -232,6 +242,51 @@ def is_non_module_werf_image(name: str) -> bool:
     return name.startswith(NON_MODULE_WERF_IMAGE_PREFIXES)
 
 
+# helpers: sidecar → parent compact
+def is_attestation_artifact(name: str) -> bool:
+    return any(name.endswith(suffix) for suffix in ATTESTATION_ARTIFACT_SUFFIXES)
+
+
+def parent_werf_image_name(name: str) -> Optional[str]:
+    for suffix in ATTESTATION_ARTIFACT_SUFFIXES:
+        if name.endswith(suffix):
+            return name[: -len(suffix)] or None
+
+    return None
+
+
+def find_image_entry(images: dict, werf_image_name: str) -> Optional[dict]:
+    entry = images.get(werf_image_name)
+    if isinstance(entry, dict):
+        return entry
+
+    for candidate in images.values():
+        if not isinstance(candidate, dict):
+            continue
+
+        if candidate.get("WerfImageName") == werf_image_name:
+            return candidate
+
+    return None
+
+
+def compact_keys_for_parent(
+    images: dict,
+    parent_name: str,
+    compact_keys_by_digest: dict[str, list[str]],
+) -> list[str]:
+    parent_entry = find_image_entry(images, parent_name)
+    if not parent_entry:
+        return []
+
+    parent_digest = normalize_digest(str(parent_entry.get("DockerImageDigest", "")))
+    if not parent_digest:
+        return []
+
+    return list(compact_keys_by_digest.get(parent_digest, []))
+# [ADD] конец helpers
+
+
 def requires_compact_key(name: str) -> bool:
     if "/" not in name:
         return False
@@ -267,16 +322,33 @@ def compute_changed(
         werf_image_name = entry.get("WerfImageName") or name
         module, image = split_werf_image_name(werf_image_name)
 
-        compact_keys = compact_keys_by_digest.get(digest, [])
+        # list(...) — можно дописать keys parent'а без мутации кэша
+        compact_keys = list(compact_keys_by_digest.get(digest, []))
+        parent_name = None  # [ADD]
 
-        changed.append({
+        # sidecar без своего compact → compact parent'а
+        if not compact_keys and is_attestation_artifact(werf_image_name):
+            parent_name = parent_werf_image_name(werf_image_name)
+            if parent_name:
+                compact_keys = compact_keys_for_parent(
+                    images,
+                    parent_name,
+                    compact_keys_by_digest,
+                )
+
+        item = {
             "module": module,
             "image": image,
             "digest": digest,
             "commit": commit,
             "werf_image_name": werf_image_name,
             "compact_keys": compact_keys,
-        })
+        }
+        
+        if parent_name:
+            item["parent_werf_image_name"] = parent_name
+
+        changed.append(item)
 
     changed.sort(key=lambda c: (c["module"], c["image"]))
     return changed
@@ -342,11 +414,14 @@ def print_changed(changed: list) -> None:
 
     for item in changed:
         compact_keys = item.get("compact_keys") or ["<no compact key>"]
+        parent = item.get("parent_werf_image_name")
+        parent_note = f"  (parent {parent})" if parent else ""
         print(
             f"  {item['werf_image_name']}  "
             f"{','.join(compact_keys)}  "
             f"{item['commit']}  "
             f"{item['digest']}"
+            f"{parent_note}" 
         )
 
 
@@ -376,10 +451,10 @@ def main() -> int:
 
     missing_compact = get_missing_compact_key_images(changed)
     if missing_compact:
-        print("WARNING: failed to map changed module images to images_digests.json keys:")
+        print("ERROR: failed to map changed module images to images_digests.json keys:")
         for item in missing_compact:
             print(f"  {item['werf_image_name']}  {item['digest']}  {item['commit']}")
-        print("WARNING: unmapped images will be skipped by scanners that use changed_compact")
+        return 1 
 
     changed_compact = build_changed_compact(changed)
 
