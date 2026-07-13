@@ -183,7 +183,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MCM MachineDeployment %s: %w", mdName, err)
 		}
-		logger.V(1).Info("applied MCM MachineClass + MachineDeployment", "name", mdName, "zone", zone)
+		logger.Info("applied MCM MachineClass + MachineDeployment", "name", mdName, "zone", zone)
 	}
 
 	return nil

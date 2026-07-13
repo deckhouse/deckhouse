@@ -351,7 +351,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply CAPI MachineDeployment %s: %w", mdName, err)
 		}
-		logger.V(1).Info("applied CAPI MachineTemplate + MachineDeployment", "name", mdName, "zone", zone)
+		logger.Info("applied CAPI MachineTemplate + MachineDeployment", "name", mdName, "zone", zone)
 	}
 
 	return nil
@@ -421,7 +421,7 @@ func (r *MachineDeploymentReconciler) reconcileStaticMDRendered(ctx context.Cont
 	if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 		return fmt.Errorf("apply static MachineDeployment %s: %w", ng.Name, err)
 	}
-	logger.V(1).Info("applied static MachineTemplate + MachineDeployment", "name", ng.Name)
+	logger.Info("applied static MachineTemplate + MachineDeployment", "name", ng.Name)
 	return nil
 }
 
