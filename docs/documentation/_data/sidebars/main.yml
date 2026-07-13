@@ -1475,8 +1475,8 @@ entries:
                 ru: Мультитенантность
               url: /architecture/iam/multitenancy.html
             - title:
-                en: Filtered resource listing
-                ru: Фильтрованный листинг ресурсов
+                en: Resource listing with access-based filtering
+                ru: Листинг ресурсов с фильтрацией по правам доступа
               url: /architecture/iam/filtered-listing.html
             - title:
                 en: User-authn module
