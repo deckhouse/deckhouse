@@ -32,7 +32,10 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
       key: namespace
 {{- end -}}
 
-{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle,service-lb-controller" -}}
+{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle" -}}
+{{- if not .Values.cloudProviderDvp.internal.disableLoadBalancer -}}
+  {{- $ccmEnabledControllers = printf "%s,service-lb-controller" $ccmEnabledControllers -}}
+{{- end -}}
 
 {{- $ccmConfig := dict -}}
 {{- $_ := set $ccmConfig "fullname" "cloud-controller-manager" -}}

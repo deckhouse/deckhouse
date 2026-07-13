@@ -10,6 +10,15 @@ properties:
         type: string
         x-examples:
         - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lsWllURUZPSW4wPQo="
+      disableLoadBalancer:
+        type: boolean
+        default: false
+        description: |
+          Disables the LoadBalancer functionality of the cloud controller manager.
+          Set to `true` by the disable-lb ConfigMap hook when the ConfigMap is present,
+          which excludes the service-lb-controller from the cloud controller manager.
+        x-examples:
+        - true
       providerClusterConfiguration:
         type: object
         additionalProperties: false
