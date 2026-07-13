@@ -70,12 +70,8 @@ func NewNodeGroupController(name string, state state.NodeGroupInfrastructureStat
 
 func (c *NodeGroupController) Run(ctx *context.Context) error {
 	// we hide deckhouse logs because we always have config
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
 
-	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs)
+	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
 	if err != nil {
 		return err
 	}
@@ -392,7 +388,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			}
 
 			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs)
+			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
 			if err != nil {
 				return err
 			}
