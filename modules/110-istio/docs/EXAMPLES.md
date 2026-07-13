@@ -957,17 +957,17 @@ metadata:
   name: istioctl-debug
   namespace: <target-namespace>
 rules:
-- apiGroups: [""]
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-- apiGroups: [""]
-  resources:
-  - pods/portforward
-  verbs:
-  - create
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups: [""]
+    resources:
+      - pods/portforward
+    verbs:
+      - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
