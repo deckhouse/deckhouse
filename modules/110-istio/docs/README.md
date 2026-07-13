@@ -390,7 +390,19 @@ In case of issues when working with a multi-cluster, it is necessary to check in
 istioctl remote-clusters -i d8-istio
 NAME          SECRET                                     STATUS     ISTIOD
 cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
-```
+   ```shell
+   istioctl remote-clusters -i d8-istio
+   ```
+
+   Example output:
+
+   <!-- markdownlint-disable MD031 -->
+   ```console
+   NAME          SECRET                                     STATUS     ISTIOD
+   cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
+   ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 ## Ambient mesh
 
