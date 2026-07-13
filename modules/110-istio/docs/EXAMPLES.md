@@ -975,9 +975,9 @@ metadata:
   name: istioctl-debug
   namespace: <target-namespace>
 subjects:
-- kind: ServiceAccount
-  name: istioctl-debug
-  namespace: <debug-namespace>
+  - kind: ServiceAccount
+    name: istioctl-debug
+    namespace: <debug-namespace>
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
