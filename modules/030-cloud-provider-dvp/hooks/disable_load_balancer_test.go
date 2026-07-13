@@ -45,9 +45,9 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Should set disableLoadBalancer to false", func() {
+		It("Should set loadBalancer.disabled to false", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudProviderDvp.internal.disableLoadBalancer").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("cloudProviderDvp.internal.loadBalancer.disabled").Bool()).To(BeFalse())
 		})
 	})
 
@@ -58,9 +58,9 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Should set disableLoadBalancer to true", func() {
+		It("Should set loadBalancer.disabled to true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudProviderDvp.internal.disableLoadBalancer").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("cloudProviderDvp.internal.loadBalancer.disabled").Bool()).To(BeTrue())
 		})
 	})
 })

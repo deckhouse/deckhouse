@@ -55,7 +55,9 @@ func applyDisableLoadBalancerConfigMapFilter(obj *unstructured.Unstructured) (go
 }
 
 func handleDisableLoadBalancer(_ context.Context, input *go_hook.HookInput) error {
-	disable := len(input.Snapshots.Get("disable_load_balancer_config_map")) > 0
-	input.Values.Set("cloudProviderDvp.internal.disableLoadBalancer", disable)
+	lbSettings := map[string]any{
+		"disabled": len(input.Snapshots.Get("disable_load_balancer_config_map")) > 0,
+	}
+	input.Values.Set("cloudProviderDvp.internal.loadBalancer", lbSettings)
 	return nil
 }
