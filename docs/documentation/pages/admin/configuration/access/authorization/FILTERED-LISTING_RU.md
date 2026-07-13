@@ -1,6 +1,6 @@
 ---
 title: Листинг ресурсов с фильтрацией по правам доступа
-permalink: ru/architecture/iam/filtered-listing.html
+permalink: ru/admin/configuration/access/authorization/filtered-listing.html
 lang: ru
 search: scope, фильтрованный листинг, cross-namespace, доступные неймспейсы
 description: Принцип работы листинга ресурсов из нескольких неймспейсов с фильтрацией по правам доступа в Deckhouse Kubernetes Platform.

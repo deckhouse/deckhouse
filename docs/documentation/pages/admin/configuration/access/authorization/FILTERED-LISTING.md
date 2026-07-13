@@ -1,6 +1,6 @@
 ---
 title: Resource listing with access-based filtering
-permalink: en/architecture/iam/filtered-listing.html
+permalink: en/admin/configuration/access/authorization/filtered-listing.html
 lang: en
 search: scope, filtered listing, cross-namespace, accessible namespaces
 description: How access-filtered resource listing across namespaces works in Deckhouse Kubernetes Platform.
