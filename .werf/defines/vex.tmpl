@@ -5,10 +5,6 @@
 # list ($ "common/kubernetes")
 {{- define "vex mitigation" }}
   {{- if or (ne (env "VAULT_ADDR" "") "") (ne (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "") }}
-  {{- /* VEX signing disabled: the build runs on runtime-provisioned machines where VAULT_ADDR / ACTIONS_ID_TOKEN_REQUEST_TOKEN
-         are set but Vault/cosign credentials are unavailable. Forcing this gate to false skips all *-vex-artifact images.
-         Original condition was: or (ne (env VAULT_ADDR) "") (ne (env ACTIONS_ID_TOKEN_REQUEST_TOKEN) ""). */}}
-  # {{- if false }}
   {{- $context := index . 0 }}
   {{- $imageName := index . 1 }}
   {{- $knownVulnPath := "" }}
