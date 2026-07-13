@@ -34,19 +34,18 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 ## API availability
 
-Applying `ModuleConfig` restarts kube-apiserver, so the Kubernetes API may be briefly unavailable during the test.
-
-`scripts/kubectl-retry.sh` provides helpers:
+Applying `ModuleConfig` restarts kube-apiserver, so the Kubernetes API may be briefly unavailable. `scripts/functions.sh` provides helpers:
 
 - `e2e_log` — progress messages with UTC timestamp
-- `kubectl_run` — logs and runs a single kubectl command (reads / existence checks)
-- `kubectl_mutate` — waits for API once, then runs apply/patch/delete with a 60s timeout (no retry loop)
-- `wait_for_api [seconds]` — polls `/healthz` or `namespace/kube-system` until the API responds
-- `kubectl_retry` — retries only on transient connection errors; `NotFound` fails immediately
+- `kubectl_run` — waits for the API and retries kubectl on transient or conflict errors; `NotFound` fails immediately
+- `wait_until <timeout> <interval> <command...>` — polls a command until it succeeds or times out
 - `apply_or_patch_moduleconfig <path>` — creates or merge-patches `control-plane-manager` ModuleConfig from a manifest
+- `backup_moduleconfig_spec <path>` / `restore_moduleconfig <path>` — backup and restore `control-plane-manager` ModuleConfig spec
+- `snapshot_component_cpos <label> <path>` — snapshots existing ControlPlaneOperations for a component
+- `wait_for_new_component_cpo <label> <existing> <output> [timeout]` — waits for a new ControlPlaneOperation
 - `is_flag_in_component <component> <needle>` — returns 0 when needle appears in kube-system pod manifests for the component label
 
-Scripts use `kubectl_retry` for mutating operations (apply/patch/delete). The wait-for-new-CPO loop calls `wait_for_api` then plain `kubectl` per iteration — no nested retry loops.
+Test scripts call `kubectl_run` for cluster operations; retries, API waits, and polling loops live in `functions.sh`.
 
 Completion and steps are verified with a Chainsaw `assert` (10m timeout), which polls the resource until it matches or times out.
 
@@ -78,7 +77,7 @@ Existing kube-apiserver operations are captured before the `ModuleConfig` change
 task run
 
 # From control-plane-manager e2e root
-task apiserver-operation:run
+task basic-audit-policy:run
 
 # Or directly
 chainsaw test --test-dir . --config ../../chainsaw-config.yaml
@@ -118,9 +117,8 @@ If the test process was killed before cleanup, restore manually from the backup 
 BACKUP_FILE="${TMPDIR:-/tmp}/cpm-e2e-moduleconfig-backup.json"
 kubectl patch moduleconfig control-plane-manager --type=json \
   -p "$(jq -c '[{op: "replace", path: "/spec", value: .spec}]' "$BACKUP_FILE")"
-```
-
-Or source the helper: `. ./scripts/kubectl-retry.sh && restore_moduleconfig "$BACKUP_FILE"`
+Or source the helper: `. ./scripts/functions.sh && restore_moduleconfig "$BACKUP_FILE"`
+P_FILE"`
 
 ## Safety
 

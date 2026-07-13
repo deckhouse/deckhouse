@@ -1,7 +1,7 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: apiserver-operation
+  name: basic-audit-policy
 spec:
   description: |
     Verifies that changing control-plane-manager apiserver settings triggers a new
@@ -19,7 +19,7 @@ spec:
               set -eu
               . ./scripts/functions.sh
               backup_moduleconfig_spec "$CPM_E2E_BACKUP_FILE"
-              snapshot_kube_apiserver_cpos "$CPM_E2E_EXISTING_CPOS_FILE"
+              snapshot_component_cpos kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE"
             check:
               ($error == null): true
       cleanup:
@@ -30,8 +30,6 @@ spec:
               set -eu
               . ./scripts/functions.sh
               restore_moduleconfig "$CPM_E2E_BACKUP_FILE"
-              e2e_log "waiting for API to stabilize after ModuleConfig restore"
-              wait_for_api 120
             check:
               ($error == null): true
 
@@ -43,10 +41,7 @@ spec:
             content: |
               set -eu
               . ./scripts/functions.sh
-              e2e_log "apply ModuleConfig: begin"
-              wait_for_api 30
               apply_or_patch_moduleconfig "manifests/moduleconfig-target.yaml"
-              e2e_log "apply ModuleConfig: done"
             check:
               ($error == null): true
 
@@ -58,28 +53,7 @@ spec:
             content: |
               set -eu
               . ./scripts/functions.sh
-
-              deadline=$(( $(date +%s) + 300 ))
-              while [ "$(date +%s)" -lt "$deadline" ]; do
-                wait_for_api 30 || { sleep 5; continue; }
-                names=$(kubectl_run --request-timeout=15s get controlplaneoperations -n kube-system \
-                  -l control-plane.deckhouse.io/component=kube-apiserver \
-                  -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null) || true
-                for NAME in $(printf '%s\n' "$names"); do
-                  [ -z "$NAME" ] && continue
-                  if ! grep -qxF "$NAME" "$CPM_E2E_EXISTING_CPOS_FILE"; then
-                    printf '%s' "$NAME" > "$CPM_E2E_NEW_CPO_FILE"
-                    printf '%s' "$NAME"
-                    exit 0
-                  fi
-                done
-                sleep 5
-              done
-
-              echo "Timed out waiting for a new kube-apiserver ControlPlaneOperation" >&2
-              kubectl_retry get controlplaneoperations -n kube-system \
-                -l control-plane.deckhouse.io/component=kube-apiserver >&2 || true
-              exit 1
+              wait_for_new_component_cpo kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE" "$CPM_E2E_NEW_CPO_FILE" 300
             check:
               ($error == null): true
       catch:
@@ -150,7 +124,6 @@ spec:
               set -eu
               . ./scripts/functions.sh
               e2e_log "checking kube-apiserver pods for audit-policy-file flag"
-              wait_for_api 30
               if is_flag_in_component kube-apiserver audit-policy-file; then
                 exit 1
               fi
