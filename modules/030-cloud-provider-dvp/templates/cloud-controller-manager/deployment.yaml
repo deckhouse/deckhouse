@@ -3,6 +3,12 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
+{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle" -}}
+{{- $loadBalancerDisabled := dig "loadBalancer" "disabled" false .Values.cloudProviderDvp.internal -}}
+{{- if not $loadBalancerDisabled -}}
+  {{- $ccmEnabledControllers = printf "%s,service-lb-controller" $ccmEnabledControllers -}}
+{{- end -}}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -20,12 +26,12 @@ spec:
     updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
-    - containerName: "dvp-cloud-controller-manager"
-      minAllowed:
+      - containerName: "dvp-cloud-controller-manager"
+        minAllowed:
         {{- include "dvp_cloud_controller_manager_resources" . | nindent 8 }}
-      maxAllowed:
-        cpu: 50m
-        memory: 50Mi
+        maxAllowed:
+          cpu: 50m
+          memory: 50Mi
 {{- end }}
 ---
 apiVersion: policy/v1
@@ -62,7 +68,7 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
-      - name: deckhouse-registry
+        - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -76,44 +82,44 @@ spec:
           {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "cloudControllerManager") }}
           args:
-          - --leader-elect=true
-          - --cloud-provider=dvp
-          - --allow-untagged-cloud=true
-          - --configure-cloud-routes=false
-          - --controllers=cloud-node,cloud-node-lifecycle,service-lb-controller
-          - --bind-address=127.0.0.1
-          - --secure-port=10471
-          - --v=4
+            - --leader-elect=true
+            - --cloud-provider=dvp
+            - --allow-untagged-cloud=true
+            - --configure-cloud-routes=false
+            - --controllers={{ $ccmEnabledControllers }}
+            - --bind-address=127.0.0.1
+            - --secure-port=10471
+            - --v=4
           env:
-      # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
+            # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
       {{- if not .Values.global.clusterIsBootstrapped }}
-          - name: KUBERNETES_SERVICE_HOST
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: status.hostIP
-          - name: KUBERNETES_SERVICE_PORT
-            value: "6443"
+            - name: KUBERNETES_SERVICE_HOST
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.hostIP
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6443"
       {{- end }}
-          - name: HOST_IP
-            valueFrom:
-              fieldRef:
-                fieldPath: status.hostIP
-          - name: DVP_KUBERNETES_CONFIG_BASE64
-            valueFrom:
-              secretKeyRef:
-                name: dvp-credentials
-                key: kubernetesConfigBase64
-          - name: CLUSTER_UUID
-            valueFrom:
-              secretKeyRef:
-                name: dvp-credentials
-                key: clusterUUID
-          - name: DVP_NAMESPACE
-            valueFrom:
-              secretKeyRef:
-                name: dvp-credentials
-                key: namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DVP_KUBERNETES_CONFIG_BASE64
+              valueFrom:
+                secretKeyRef:
+                  name: dvp-credentials
+                  key: kubernetesConfigBase64
+            - name: CLUSTER_UUID
+              valueFrom:
+                secretKeyRef:
+                  name: dvp-credentials
+                  key: clusterUUID
+            - name: DVP_NAMESPACE
+              valueFrom:
+                secretKeyRef:
+                  name: dvp-credentials
+                  key: namespace
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           livenessProbe:
             httpGet:

@@ -217,4 +217,44 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
 		})
 	})
+
+	Context("DVP with LoadBalancer enabled (default)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
+			f.ValuesSet("cloudProviderDvp.internal.loadBalancer.disabled", false)
+			f.HelmRender()
+		})
+
+		It("Should include service-lb-controller in the cloud-controller-manager controllers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field(`spec.template.spec.containers.0.args`).String()).
+				To(ContainSubstring(`--controllers=cloud-node,cloud-node-lifecycle,service-lb-controller`))
+		})
+	})
+
+	Context("DVP with LoadBalancer disabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
+			f.ValuesSet("cloudProviderDvp.internal.loadBalancer.disabled", true)
+			f.HelmRender()
+		})
+
+		It("Should exclude service-lb-controller from the cloud-controller-manager controllers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field(`spec.template.spec.containers.0.args`).String()).
+				To(ContainSubstring(`--controllers=cloud-node,cloud-node-lifecycle`))
+			Expect(ccmDeployment.Field(`spec.template.spec.containers.0.args`).String()).
+				ToNot(ContainSubstring(`service-lb-controller`))
+		})
+	})
 })
