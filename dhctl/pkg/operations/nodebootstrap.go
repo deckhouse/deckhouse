@@ -123,7 +123,7 @@ func BootstrapSequentialTerraNodes(
 				return err
 			}
 
-			cloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, ng.Name, global.ShowDeckhouseLogs)
+			cloudConfig, err := entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), ng.Name, global.ShowDeckhouseLogs)
 			if err != nil {
 				return err
 			}
@@ -360,7 +360,7 @@ func ParallelCreateNodeGroup(
 					return
 				}
 
-				nodeCloudConfig, err := entity.GetCloudConfig(ngCtx, kubeCl, group.Name, global.ShowDeckhouseLogs)
+				nodeCloudConfig, err := entity.GetCloudConfig(ngCtx, kubernetes.NewSimpleKubeClientGetter(kubeCl), group.Name, global.ShowDeckhouseLogs)
 				if err != nil {
 					resultsChan <- checkResult{
 						name:    group.Name,

@@ -283,7 +283,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		}
 
 		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
+		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
 		if err != nil {
 			return err
 		}

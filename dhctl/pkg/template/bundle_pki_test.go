@@ -138,7 +138,7 @@ func TestGeneratePKIArtifacts_ApiserverSANContainsServiceIP(t *testing.T) {
 			if !found {
 				t.Errorf(
 					"apiserver cert SAN does not contain service IP %s; got: %v",
-					tt.expectedFirstSvc, 
+					tt.expectedFirstSvc,
 					cert.IPAddresses,
 				)
 			}
