@@ -1,6 +1,6 @@
 {{- $dcgm_version := "4.2.3" }}
 {{- $libs := "libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1 ld-linux-x86-64.so.2" }}
-{{- $dcgm_deb_base := "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64" }}
+{{- $deps_ref := "dcgm-deps-4.2.3" }}
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -26,12 +26,43 @@ shell:
   - cd /src/DCGM
   - git apply /patches/*.patch --verbose
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+final: false
+from: {{ index $.Images "builder/golang-bookworm" }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  beforeInstall:
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt-get update
+  - apt-get install --quiet --assume-yes --no-install-recommends git git-lfs
+  - apt-get clean --quiet --assume-yes
+  - rm -rf /var/lib/apt/lists/*
+  install:
+  - git lfs install
+  - export DEPS_REPO=$(sed 's|/3p$|/ml-ai/gpu-build-deps|' <<< "$(cat /run/secrets/SOURCE_REPO)")
+  - git clone --depth 1 --branch {{ $deps_ref }} "${DEPS_REPO}.git" /src/gpu-build-deps
+  - cd /src/gpu-build-deps
+  - git lfs pull
+  - mkdir -p /deps
+  - cp -a {{ $dcgm_version }}/. /deps/
+  - rm -rf /src/gpu-build-deps
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
 final: false
 from: {{ index $.Images "builder/golang-bookworm" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+  add: /deps/crosstool-ng
+  to: /deps/crosstool-ng
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+  add: /deps/crosstool-ng-src
+  to: /deps/crosstool-ng-src
   before: install
 shell:
   beforeInstall:
@@ -47,7 +78,7 @@ shell:
   - export CROSSTOOL_URL=https://github.com/crosstool-ng/crosstool-ng/archive/c5a17024a9af713a218d533fe78b7cf9a02ec67e.tar.gz
   - cd /root; set -ex
   - mkdir -p crosstool-ng
-  - wget $CROSSTOOL_URL -O crosstool-ng.tar.gz
+  - cp /deps/crosstool-ng-src/crosstool-ng.tar.gz crosstool-ng.tar.gz
   - echo "$CROSSTOOL_SHA512SUM  crosstool-ng.tar.gz" | sha512sum -c -
   - tar xf crosstool-ng.tar.gz -C crosstool-ng --strip-components=1
   - cd crosstool-ng
@@ -59,7 +90,9 @@ shell:
   - useradd --create-home builder
   - mkdir -p /home/builder/x86_64 && chown -R builder:builder /home/builder/
   - mkdir /opt/cross
-  - cp /src/DCGM/dcgmbuild/crosstool-ng/x86_64.config /home/builder/x86_64/.config && chown -R builder:builder /home/builder/
+  - cp /src/DCGM/dcgmbuild/crosstool-ng/x86_64.config /home/builder/x86_64/.config
+  - printf 'CT_LOCAL_TARBALLS_DIR="/deps/crosstool-ng"\nCT_FORBID_DOWNLOAD=y\nCT_SAVE_TARBALLS=n\n' >> /home/builder/x86_64/.config
+  - chown -R builder:builder /home/builder/
   - chown builder:builder /opt/cross
   - su - builder -c 'cd /home/builder/x86_64/ && CT_PREFIX=/opt/cross /opt/crosstool-ng/bin/ct-ng build'
 ---
@@ -73,6 +106,10 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
   add: /opt/cross
   to: /opt/cross
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+  add: /deps/host
+  to: /deps/host
   before: install
 shell:
   beforeInstall:
@@ -88,6 +125,7 @@ shell:
   - cp /src/scripts/llvm.sh /tmp/scripts/
   - |
     set -ex
+    sed -E -i 's#^([^ ]+) https?://[^ ]+/([^/ ]+)#\1 file:///deps/host/\2#' /tmp/scripts/host/urls.txt
     find /tmp/scripts/host -name '*.sh' | sort | while read -r SCRIPT
     do $SCRIPT /tmp/scripts/host/urls.txt
     done
@@ -103,6 +141,14 @@ fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+  add: /deps/target
+  to: /deps/target
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+  add: /deps/nvidia
+  to: /deps/nvidia
   before: install
 shell:
   beforeInstall:
@@ -128,8 +174,10 @@ shell:
     export CMAKE_BUILD_TYPE=RelWithDebInfo
     export CMAKE_TOOLCHAIN_FILE=/tmp/$TARGET.cmake
     cp -a /src/DCGM/dcgmbuild/scripts/target /tmp/scripts/target
-    sed -E -i "s#(cuda11-x86_64-linux-gnu) ([^ ]+) (.+)#\1 https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda-repo-debian11-11-8-local_11.8.0-520.61.05-1_amd64.deb d0f173c6ec89fa2f8e3b73fac711ffcd7ed19b0f556fd9a803354d0c94e04385c63f5cc6be1d09d245052bedd412034567b59964418341656667d35faf5512b7#" /tmp/scripts/target/urls.txt
-    sed -E -i "s#(cuda12-x86_64-linux-gnu) ([^ ]+) (.+)#\1 https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda-repo-debian12-12-8-local_12.8.0-570.86.10-1_amd64.deb aa4e02e39bbc9c764446aa774b6cca0a81f432c0306f6dc2d61fd5e8c2f013834f0951a43e184743310921b75fbd9086bc7176ddc7ab92b7461c9d387b68de65#" /tmp/scripts/target/urls.txt
+    sed -E -i "s#(cuda11-x86_64-linux-gnu) ([^ ]+) (.+)#\1 file:///deps/nvidia/cuda-repo-debian11-11-8-local_11.8.0-520.61.05-1_amd64.deb d0f173c6ec89fa2f8e3b73fac711ffcd7ed19b0f556fd9a803354d0c94e04385c63f5cc6be1d09d245052bedd412034567b59964418341656667d35faf5512b7#" /tmp/scripts/target/urls.txt
+    sed -E -i "s#(cuda12-x86_64-linux-gnu) ([^ ]+) (.+)#\1 file:///deps/nvidia/cuda-repo-debian12-12-8-local_12.8.0-570.86.10-1_amd64.deb aa4e02e39bbc9c764446aa774b6cca0a81f432c0306f6dc2d61fd5e8c2f013834f0951a43e184743310921b75fbd9086bc7176ddc7ab92b7461c9d387b68de65#" /tmp/scripts/target/urls.txt
+    sed -E -i 's#^(tclap) git://[^ ]+ #\1 /deps/target/tclap.bundle #' /tmp/scripts/target/urls.txt
+    sed -E -i 's#^([^ ]+) https?://[^ ]+/([^/ ]+)#\1 file:///deps/target/\2#' /tmp/scripts/target/urls.txt
     set -ex
     echo $CC
     $CC --version
@@ -155,6 +203,10 @@ import:
   includePaths:
   - usr/*
   - lib64/*
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+  add: /deps/nvidia
+  to: /deps/nvidia
   before: install
 shell:
   install:
@@ -185,7 +237,7 @@ shell:
         strip $i
     done
     export DCGM_PROPRIETARY_DEB=datacenter-gpu-manager-4-proprietary_{{ $dcgm_version }}_amd64.deb
-    curl -fsSL -o /tmp/${DCGM_PROPRIETARY_DEB} {{ $dcgm_deb_base }}/${DCGM_PROPRIETARY_DEB}
+    cp /deps/nvidia/${DCGM_PROPRIETARY_DEB} /tmp/${DCGM_PROPRIETARY_DEB}
     mkdir -p /tmp/dcgm-proprietary
     dpkg-deb -x /tmp/${DCGM_PROPRIETARY_DEB} /tmp/dcgm-proprietary
     mkdir -p /out/usr/lib/x86_64-linux-gnu /out/usr/libexec/datacenter-gpu-manager-4/plugins/cudaless
