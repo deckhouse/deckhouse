@@ -418,6 +418,7 @@ func NewDeckhouseController(
 		config.NewSchemaStore(nil),
 		settingsContainer,
 		exts,
+		edition,
 	)
 
 	return &DeckhouseController{

@@ -1311,6 +1311,14 @@ entries:
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
             - title:
+                en: Deckhouse module
+                ru: Модуль deckhouse
+              url: /architecture/deckhouse/deckhouse.html
+            - title:
+                en: Queuing mechanism
+                ru: Механизм очередей
+              url: /architecture/deckhouse/queues.html
+            - title:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html

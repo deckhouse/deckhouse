@@ -1,0 +1,12 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ContainerdIntegrityPolicy
+metadata:
+  creationTimestamp: null
+  name: default
+spec:
+  ca: test-ca
+  protectedNamespaces:
+    matchLabels:
+      team: security
+status: {}

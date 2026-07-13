@@ -118,11 +118,11 @@ func discoverNodeUsersForClear(_ context.Context, input *go_hook.HookInput) erro
 			return fmt.Errorf("failed to iterate over node_users_for_clear snapshot: %w", err)
 		}
 
-		input.Logger.Debug("clearErrors", slog.Any("NodeUsers", nuForClear), slog.Any("Nodes", nodes))
+		input.Logger.Debug("clearErrors", slog.Any("node_users", nuForClear), slog.Any("nodes", nodes))
 		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(
 			incorrectNodes,
 		) > 0 {
-			input.Logger.Debug("clearErrors", slog.Any("incorrectNodes", incorrectNodes))
+			input.Logger.Debug("clearErrors", slog.Any("incorrect_nodes", incorrectNodes))
 			err := clearNodeUserIncorrectErrors(nuForClear.Name, incorrectNodes, input)
 			if err != nil {
 				return err

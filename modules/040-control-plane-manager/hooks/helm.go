@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -42,7 +43,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -160,24 +162,27 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
 	}
 
-	var metaConfig *config.MetaConfig
-	// only cluster configuration, provider preparation and validation do not need here
-	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	kubernetesVersion, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
+	kubernetesVersion, err := getKubernetesVersion(ccYaml)
 	if err != nil {
 		return nil, err
 	}
 
 	return kubernetesVersion, err
 }
-func rawMessageToString(message json.RawMessage) (string, error) {
-	var result string
-	err := json.Unmarshal(message, &result)
-	return result, err
+
+func getKubernetesVersion(data []byte) (string, error) {
+	if err := validation.ValidateData([]string{}, &data); err != nil {
+		if !errors.Is(err, validation.ErrSchemaNotFound) {
+			return "", err
+		}
+	}
+	var cfg struct {
+		KubernetesVersion string `yaml:"kubernetesVersion"`
+	}
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return "", fmt.Errorf("unmarshal YAML: %w", err)
+	}
+	return cfg.KubernetesVersion, nil
 }
 
 func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {

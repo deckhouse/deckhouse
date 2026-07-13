@@ -1,7 +1,7 @@
 allowed_values: допустимые значения
 additional_property_name: имя параметра (ключ объекта)
 pattern_property_name: регулярное выражение для имени параметра
-search_placeholder_text: Поиск...
+search_placeholder_text: Поиск по документации
 search_context_dkpdocs_and_modules: Поиск выполняется по всей документации DKP и модулям.
 search_context_modules: Поиск выполняется по всем модулям, не включая документацию DKP.
 search_context_only_product_docs: Поиск выполняется по всей документации продукта, не включая модули.
@@ -170,7 +170,6 @@ module_alert_preview_long: Предварительная версия. Функ
 module_alert_general_availability_long: Общедоступная версия. Готово к использованию в production-средах.
 module_alert_deprecated_long: Устарело. Развитие и поддержка прекращены.
 related_additional_resources: Дополнительные ресурсы
-reset_filter: Сбросить фильтр
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
 show_more: Показать ещё
