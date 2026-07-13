@@ -32,12 +32,21 @@ properties:
     properties:
       gatewayAPIGateway:
         description: |
-          Имя объекта Gateway из Gateway API, используемого для модулей экосистемы Deckhouse.
+          Ссылка на объект Gateway (из Gateway API), используемый модулями экосистемы Deckhouse при создании ресурсов Gateway API.
+
+          Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
+        properties:
+          name:
+            description: |
+              Имя объекта Gateway.
+          namespace:
+            description: |
+              Неймспейс объекта Gateway.
       ingressClass:
         description: |
-          Имя [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class), используемого модулями экосистемы Deckhouse при создании Ingress-ресурсов.
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями экосистемы Deckhouse по умолчанию при создании Ingress-ресурсов.
 
-          Если в кластере используется IngressClass, отличный от применяемого по умолчанию, укажите его имя в этом параметре.
+          Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имен c ключом `%s` в качестве динамической части строки.
@@ -78,7 +87,7 @@ properties:
                 description: |
                   Имя ClusterIssuer, используемого модулями для получения TLS-сертификатов.
 
-                  Модуль [`cert-manager`](/modules/cert-manager/) предоставляет следующие ClusterIssuer: 
+                  Модуль [`cert-manager`](/modules/cert-manager/) предоставляет следующие ClusterIssuer:
 
                   - `letsencrypt`;
                   - `letsencrypt-staging`;
@@ -87,7 +96,7 @@ properties:
                   - `cloudflare`;
                   - `digitalocean`;
                   - `route53`.
-                  
+
                   При необходимости вы можете использовать собственный `ClusterIssuer`.
           customCertificate:
             properties:
@@ -133,15 +142,15 @@ properties:
     properties:
       ingressClass:
         description: |
-          Имя [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class), используемого приложениями экосистемы Deckhouse при создании Ingress-ресурсов.
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого приложениями экосистемы Deckhouse по умолчанию при создании Ingress-ресурсов.
 
-          Если в кластере используется IngressClass, отличный от применяемого по умолчанию, укажите его имя в этом параметре.
+          Некоторые приложения поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имён с тремя ключами `%s` в качестве динамических частей строки.
-          
+
           При формировании DNS-имени:
-          
+
           - первый ключ заменяется на имя компонента;
           - второй — на имя экземпляра приложения;
           - третий — на имя неймспейса приложения.
