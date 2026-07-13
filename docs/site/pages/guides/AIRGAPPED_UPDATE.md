@@ -109,7 +109,7 @@ The image contains two key files:
       "istioMinimalVersion": "1.21",
       "metallbHasStandardConfiguration": "true",
       "unmetCloudConditions": "true",
-      "nodesMinimalLinuxKernelVersion": "5.8.0"
+      "nodesMinimalLinuxKernelVersion": "5.11.0"
     },
     "disruptions": {
       "1.36": [

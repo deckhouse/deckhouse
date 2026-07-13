@@ -2182,7 +2182,7 @@ alerts:
 
         Kernel requirements for each module:
 
-        - **Cilium module**: Kernel version must be **>= 5.8**.
+        - **Cilium module**: Kernel version must be **>= 5.11**.
 
         To list all affected nodes, use the `d8_node_kernel_does_not_satisfy_requirements == 1` expression in Prometheus.
       summary: |
