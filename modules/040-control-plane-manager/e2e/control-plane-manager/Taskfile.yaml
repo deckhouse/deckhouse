@@ -1,0 +1,17 @@
+version: "3"
+
+includes:
+  apiserver-operation:
+    taskfile: ./tests/apiserver-operation/Taskfile.yml
+    dir: ./tests/apiserver-operation
+
+tasks:
+  run:
+    desc: Run all control-plane-manager e2e tests
+    cmds:
+      - task: apiserver-operation:run
+
+  dry-run:
+    desc: Dry-Run all control-plane-manager e2e tests
+    cmds:
+      - task: apiserver-operation:dry-run

@@ -1,0 +1,159 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: apiserver-operation
+spec:
+  description: |
+    Verifies that changing control-plane-manager apiserver settings triggers a new
+    kube-apiserver ControlPlaneOperation that completes successfully with the
+    expected pipeline steps. Restores the original ModuleConfig on completion.
+  concurrent: false
+  namespace: default
+  steps:
+    - name: backup-and-snapshot
+      try:
+        - description: Backup ModuleConfig spec and snapshot existing kube-apiserver ControlPlaneOperations
+          script:
+            timeout: 60s
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              backup_moduleconfig_spec "$CPM_E2E_BACKUP_FILE"
+              snapshot_kube_apiserver_cpos "$CPM_E2E_EXISTING_CPOS_FILE"
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Always restore original control-plane-manager ModuleConfig
+          script:
+            timeout: 5m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              restore_moduleconfig "$CPM_E2E_BACKUP_FILE"
+              e2e_log "waiting for API to stabilize after ModuleConfig restore"
+              wait_for_api 120
+            check:
+              ($error == null): true
+
+    - name: apply-moduleconfig
+      try:
+        - description: Apply control-plane-manager ModuleConfig (create or patch)
+          script:
+            timeout: 3m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              e2e_log "apply ModuleConfig: begin"
+              wait_for_api 30
+              apply_or_patch_moduleconfig "manifests/moduleconfig-target.yaml"
+              e2e_log "apply ModuleConfig: done"
+            check:
+              ($error == null): true
+
+    - name: wait-for-operation
+      try:
+        - description: Wait for a newly created ControlPlaneOperation kube-apiserver
+          script:
+            timeout: 5m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+
+              deadline=$(( $(date +%s) + 300 ))
+              while [ "$(date +%s)" -lt "$deadline" ]; do
+                wait_for_api 30 || { sleep 5; continue; }
+                names=$(kubectl_run --request-timeout=15s get controlplaneoperations -n kube-system \
+                  -l control-plane.deckhouse.io/component=kube-apiserver \
+                  -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null) || true
+                for NAME in $(printf '%s\n' "$names"); do
+                  [ -z "$NAME" ] && continue
+                  if ! grep -qxF "$NAME" "$CPM_E2E_EXISTING_CPOS_FILE"; then
+                    printf '%s' "$NAME" > "$CPM_E2E_NEW_CPO_FILE"
+                    printf '%s' "$NAME"
+                    exit 0
+                  fi
+                done
+                sleep 5
+              done
+
+              echo "Timed out waiting for a new kube-apiserver ControlPlaneOperation" >&2
+              kubectl_retry get controlplaneoperations -n kube-system \
+                -l control-plane.deckhouse.io/component=kube-apiserver >&2 || true
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Collect kube-apiserver ControlPlaneOperations on failure
+          script:
+            content: |
+              . ./scripts/functions.sh
+              kubectl_run get controlplaneoperations -n kube-system \
+                -l control-plane.deckhouse.io/component=kube-apiserver -o wide || true
+            check:
+              ($error == null): true
+        - description: Collect control-plane-manager ModuleConfig on failure
+          script:
+            content: |
+              . ./scripts/functions.sh
+              kubectl_run get moduleconfig control-plane-manager -o yaml || true
+            check:
+              ($error == null): true
+        - description: Collect control-plane-manager pod logs on failure
+          podLogs:
+            namespace: kube-system
+            selector: app=d8-control-plane-manager
+            tail: 200
+
+    - name: assert-operation-complete
+      try:
+        - description: Load new ControlPlaneOperation name from snapshot file
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              if [ ! -s "$CPM_E2E_NEW_CPO_FILE" ]; then
+                e2e_log "new ControlPlaneOperation file is missing or empty: $CPM_E2E_NEW_CPO_FILE"
+                exit 1
+              fi
+              cat "$CPM_E2E_NEW_CPO_FILE"
+            outputs:
+              - name: newCPO
+                value: ($stdout)
+            check:
+              ($error == null): true
+        - description: Assert the new operation has expected steps and completed successfully
+          assert:
+            timeout: 10m
+            resource:
+              apiVersion: control-plane.deckhouse.io/v1alpha1
+              kind: ControlPlaneOperation
+              metadata:
+                name: ($newCPO)
+                namespace: kube-system
+              spec:
+                component: KubeAPIServer
+                steps:
+                  - Backup
+                  - SyncManifests
+                  - WaitPodReady
+                  - CertObserve
+              status:
+                (conditions[?type == 'Completed' && status == 'True' && reason == 'OperationCompleted'] | length(@) > `0`): true
+
+    - name: assert-no-audit-policy
+      try:
+        - description: Assert kube-apiserver pods have no audit-policy-file flag
+          script:
+            timeout: 2m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              e2e_log "checking kube-apiserver pods for audit-policy-file flag"
+              wait_for_api 30
+              if is_flag_in_component kube-apiserver audit-policy-file; then
+                exit 1
+              fi
+              e2e_log "kube-apiserver pods do not contain audit-policy-file"
+            check:
+              ($error == null): true
