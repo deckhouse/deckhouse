@@ -1,6 +1,9 @@
 {{- range $controller := .Values.istio.internal.ingressControllers }}
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-{{- if and $controller.spec.resourcesRequests (eq ($controller.spec.resourcesRequests.mode | default "VPA") "VPA") }}
+{{- $resourcesRequests := default (dict) $controller.spec.resourcesRequests }}
+{{- $mode := ($resourcesRequests.mode | default "VPA") }}
+{{- if eq $mode "VPA" }}
+{{- $resourcesManagement := include "istio_ingress_gateway_resources_management" $controller | fromYaml }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -12,21 +15,13 @@ metadata:
       "instance" $controller.name
   )) | nindent 2 }}
 spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: DaemonSet
-    name: ingress-gateway-controller-{{ $controller.name }}
-  updatePolicy:
-    updateMode: {{ (($controller.spec.resourcesRequests).vpa).mode | default "Initial" | quote }}
-  resourcePolicy:
-    containerPolicies:
-    - containerName: istio-proxy
-      minAllowed:
-        cpu: {{ ((($controller.spec.resourcesRequests).vpa).cpu).min | default "100m" | quote }}
-        memory: {{ ((($controller.spec.resourcesRequests).vpa).memory).min | default "128Mi" | quote }}
-      maxAllowed:
-        cpu: {{ ((($controller.spec.resourcesRequests).vpa).cpu).max | default "1000m" | quote }}
-        memory: {{ ((($controller.spec.resourcesRequests).vpa).memory).max | default "2000Mi" | quote }}
+{{- include "helm_lib_resources_management_vpa_spec" (list
+  "apps/v1"
+  "DaemonSet"
+  (printf "ingress-gateway-controller-%s" $controller.name)
+  "istio-proxy"
+  $resourcesManagement
+) | nindent 2 }}
 {{- end }}
 {{- end }}
 {{- end }}

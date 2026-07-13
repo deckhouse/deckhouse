@@ -2,6 +2,7 @@
 {{- $versionInfo := get $.Values.istio.internal.versionMap $.Values.istio.internal.globalVersion }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+{{- $resourcesManagement := include "istio_ingress_gateway_resources_management" $controller | fromYaml }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -211,15 +212,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-            {{- if not $controller.spec.resourcesRequests }}
-            cpu: "100m"
-            memory: "128Mi"
-            {{- else if eq ($controller.spec.resourcesRequests.mode | default "VPA") "Static" }}
-            cpu: {{ ($controller.spec.resourcesRequests.static).cpu | default "100m" | quote }}
-            memory: {{ ($controller.spec.resourcesRequests.static).memory | default "128Mi" | quote }}
-            {{- end }}
+          {{- include "helm_lib_resources_management_pod_resources" (list $resourcesManagement "60Mi") | nindent 10 }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

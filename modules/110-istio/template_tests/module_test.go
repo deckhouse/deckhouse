@@ -1345,7 +1345,7 @@ MY_VAR: "myvalue"
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
 			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
-			Expect(ingressVpa.Field("spec.resourcePolicy").String()).To(MatchJSON(`{"containerPolicies":[{"containerName":"istio-proxy","maxAllowed":{"cpu":"1000m","memory":"2000Mi"},"minAllowed":{"cpu":"100m","memory":"128Mi"}}]}`))
+			Expect(ingressVpa.Field("spec.resourcePolicy").String()).To(MatchJSON(`{"containerPolicies":[{"containerName":"istio-proxy","controlledValues":"RequestsAndLimits","maxAllowed":{"cpu":"1000m","memory":"2000Mi"},"minAllowed":{"cpu":"100m","memory":"128Mi"}}]}`))
 
 			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"nodeport-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"np","istio.io/dataplane-mode":"none","module":"istio"}`))
 
@@ -1382,6 +1382,7 @@ MY_VAR: "myvalue"
 			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-loadbalancer-test")
 			// Static mode does not render a VPA.
 			Expect(ingressVpa.Exists()).To(BeFalse())
+			Expect(ingressDs.Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchJSON(`{"cpu":"100m","memory":"128Mi","ephemeral-storage":"60Mi"}`))
 			Expect(ingressDs.Exists()).To(BeTrue())
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
@@ -1446,8 +1447,10 @@ MY_VAR: "myvalue"
 			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
 			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
 			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
-			// No resourcesRequests specified, so no VPA is rendered.
-			Expect(ingressVpa.Exists()).To(BeFalse())
+			// Omitted resourcesRequests uses the built-in VPA defaults.
+			Expect(ingressVpa.Exists()).To(BeTrue())
+			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+			Expect(ingressDs.Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchJSON(`{"cpu":"100m","memory":"128Mi","ephemeral-storage":"60Mi"}`))
 			Expect(ingressDs.Exists()).To(BeTrue())
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
