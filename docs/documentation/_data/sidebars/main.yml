@@ -106,6 +106,10 @@ entries:
                         en: Access for CI/CD
                         ru: Доступ для CI/CD
                       url: /admin/configuration/access/authorization/ci_cd.html
+                    - title:
+                        en: Resource listing with access-based filtering
+                        ru: Листинг ресурсов с фильтрацией по правам доступа
+                      url: /admin/configuration/access/authorization/filtered-listing.html
             - title:
                 en: Integration with IaaS
                 ru: Интеграция с IaaS
