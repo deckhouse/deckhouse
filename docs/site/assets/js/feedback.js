@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setup() {
             const currentUrl = window.location.href;
             const cookieName = 'userFeedback';
-            
+
             const activeModal = ref(null); // 'access', 'later', 'error', 'form'
             const formReasons = ref([]);
             const formDetailed = ref('');
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             async function initUserData() {
                 cookieUserData = getCookie(cookieName) || { cookieUserId: generateUUID(), cookieUserIp: null, pages: {} };
-                
+
                 if (!cookieUserData.cookieUserId) cookieUserData.cookieUserId = generateUUID();
 
                 if (!cookieUserData.cookieUserIp) {
@@ -117,9 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         feedback_data: JSON.stringify(reasons),
                         feedback_comment: comment
                     });
-                    
-                    const url = '/wp-json/articles-feedback/v1/feedback?' + urlParams.toString();
-                    
+
+                    // TODO: Убрать хардкод домена после тестов
+                    const url = 'https://test.deckhouse.ru/wp-json/articles-feedback/v1/feedback?' + urlParams.toString();
+
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: {
