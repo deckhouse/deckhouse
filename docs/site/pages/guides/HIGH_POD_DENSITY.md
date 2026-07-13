@@ -58,7 +58,7 @@ Starting each pod involves disk-intensive operations of unpacking and working wi
 
 Recommendations:
 
-- Use fast disks with performance of at least 400+ IOPS (see the ["Resource requirements"](./production.html#resource-requirements) section). For nodes with high pod density, prioritize local NVMe disks.
+- Use fast disks with performance of at least 400 IOPS (see the ["Resource requirements"](./production.html#resource-requirements) section). For nodes with high pod density, prioritize local NVMe disks.
 - Do not place container runtime and kubelet directories in a network or distributed file system. Network latency on mount operations is multiplied by the number of started pods and makes startup time unpredictable.
 
 ## Application images
@@ -74,9 +74,9 @@ Recommendations:
 - Use minimal base images (for example, `distroless`, `*-slim`, or `alpine`), without unnecessary packages and tools.
 - Reduce the number of image layers and merge them when possible to decrease the amount of unpacking and mounting.
 - Keep images small — remove package manager caches, build artifacts, and temporary files.
-- Use multi-stage builds.
+- Use multi-stage builds to reduce the size and number of layers in the final image.
 
-Pod startup delays can also be caused not by the image itself, but by the container registry and the network bandwidth to it. During a mass startup or update of multiple applications, a node may download several images at once, which can mane the registry a bottleneck.
+Pod startup delays can also be caused not by the image itself, but by the container registry and the network bandwidth to it. During a mass startup or update of multiple applications, a node may download several images at once, which can make the registry a bottleneck.
 
 Recommendations:
 
