@@ -1005,7 +1005,7 @@ d8 k -n <debug-namespace> run istioctl-debug \
   -- bash
 ```
 
-Select the Istio minor version used by the target control plane:
+Select the minor version of Istio used by the target control plane:
 
 ```shell
 export ISTIOCTL_VERSION=1.21
