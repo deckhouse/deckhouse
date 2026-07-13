@@ -36,17 +36,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-// reconcileCloudMCMs ports the helm MCM branch of node-group.yaml
-// (node_group_machine_class + node_group_machine_deployment) into the controller:
-// per zone it renders the provider MachineClass CR and builds the MachineDeployment
-// from the internal.nodeGroups blob element — the same source helm reads as $ng.*.
-// The MachineClass Secret (config-for-machine-controller-manager) stays in helm;
-// this only generates the CR (whose secretRef points at that helm-rendered Secret)
-// and the MachineDeployment.
-//
-// ⚠ It must not run while the helm define still renders the same MCM objects
-// (dual-writer / SSA ownership conflict). Wiring this into Reconcile and removing
-// the helm MCM resources must ship together (brick 4e).
 func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
@@ -173,10 +162,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 			awsSpot:          awsSpot,
 		})
 
-		// Apply the MachineClass first: its checksum is baked into the
-		// MachineDeployment annotation below, so the class must be current before
-		// the deployment references that checksum (mirrors the helm ordering that
-		// the machineclass_checksum hooks enforced).
 		if err := r.Client.Patch(ctx, machineClassObj, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MachineClass %s: %w", machineClassName, err)
 		}
@@ -189,10 +174,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	return nil
 }
 
-// mcmDesiredReplicas returns the replica count to write for the zone's MCM
-// MachineDeployment: it reads the current replicas of an existing deployment and
-// clamps to [min,max] via calculateReplicas (preserving an in-range autoscaler
-// value), or seeds a new deployment at min.
 func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) int64 {
 	existing := newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment")
 	err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing)
@@ -203,10 +184,6 @@ func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, md
 	return int64(calculateReplicas(int32(current), minReplicas, maxReplicas))
 }
 
-// readCloudProviderTree decodes the whole d8-node-manager-cloud-provider Secret
-// into the internal.cloudProvider value tree (.type, .region, .machineClassKind,
-// .<provider>, ...), mirroring derived_status.readCloudProviderData so the tree
-// fed to RenderMachineClass matches what helm reads from internal.cloudProvider.
 func (r *MachineDeploymentReconciler) readCloudProviderTree(ctx context.Context) (map[string]interface{}, error) {
 	secret := &corev1.Secret{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
@@ -220,9 +197,6 @@ func (r *MachineDeploymentReconciler) readCloudProviderTree(ctx context.Context)
 	return decodeCloudProviderSecret(secret.Data), nil
 }
 
-// decodeCloudProviderSecret JSON-decodes each Secret value (already base64-decoded
-// by the client), falling back to the raw string for non-JSON values — identical
-// to derived_status.decodeSecretData.
 func decodeCloudProviderSecret(data map[string][]byte) map[string]interface{} {
 	res := make(map[string]interface{}, len(data))
 	for k, v := range data {
@@ -236,9 +210,6 @@ func decodeCloudProviderSecret(data map[string][]byte) map[string]interface{} {
 	return res
 }
 
-// readNodeGroupRawSpec fetches the NodeGroup as unstructured and returns its raw
-// .spec (CRD-shaped, apiserver-pruned) — the input BuildElement needs to preserve
-// byte-parity, since the hand-rolled typed spec's JSON shape diverges from the CRD.
 func (r *MachineDeploymentReconciler) readNodeGroupRawSpec(ctx context.Context, name string) (map[string]interface{}, error) {
 	obj := newUnstructured(deckhousev1.GroupVersion.Group, deckhousev1.GroupVersion.Version, "NodeGroup")
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, obj); err != nil {
@@ -251,9 +222,6 @@ func (r *MachineDeploymentReconciler) readNodeGroupRawSpec(ctx context.Context, 
 	return spec, nil
 }
 
-// readPodSubnet returns global.discovery.podSubnet — the podSubnetCIDR of the
-// d8-cluster-configuration Secret — which the openstack MachineClass template reads.
-// The value is base64-decoded with a raw fallback, matching readInstancePrefix.
 func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string, error) {
 	secret := &corev1.Secret{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
@@ -296,8 +264,6 @@ func blobZones(blob map[string]interface{}) []string {
 	return zones
 }
 
-// blobInstanceClassSpot reports whether the resolved instanceClass has spot: true,
-// gating the aws creationTimeout the helm node_group_spot_creation_timeout define adds.
 func blobInstanceClassSpot(blob map[string]interface{}) bool {
 	ic := blobMap(blob, "instanceClass")
 	spot, _ := ic["spot"].(bool)

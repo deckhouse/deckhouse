@@ -27,9 +27,6 @@ import (
 
 const gcpMachineClassTemplatePath = "../../../../../../../../030-cloud-provider-gcp/cloud-instance-manager/machine-class.yaml"
 
-// gcpRenderContext mirrors the helm tpl context for gcp. serviceAccountJSON is a
-// JSON string the template feeds through fromJson to extract client_email — the
-// case that exercises the machineclass FuncMap's fromJson.
 func gcpRenderContext() map[string]interface{} {
 	return map[string]interface{}{
 		"Chart": map[string]interface{}{"Name": "node-manager"},
@@ -42,17 +39,17 @@ func gcpRenderContext() map[string]interface{} {
 					"cloudProvider": map[string]interface{}{
 						"type": "gcp",
 						"gcp": map[string]interface{}{
-							"region":            "europe-west1",
-							"diskSizeGb":        float64(30),
-							"diskType":          "pd-ssd",
-							"image":             "img-default",
+							"region":             "europe-west1",
+							"diskSizeGb":         float64(30),
+							"diskType":           "pd-ssd",
+							"image":              "img-default",
 							"serviceAccountJSON": `{"client_email":"sa@project.iam.gserviceaccount.com"}`,
-							"networkName":       "kube-net",
-							"subnetworkName":    "kube-subnet",
-							"disableExternalIP": true,
-							"labels":            map[string]interface{}{"team": "platform"},
-							"sshKey":            "ssh-rsa AAAA",
-							"networkTags":       []interface{}{"tag-a"},
+							"networkName":        "kube-net",
+							"subnetworkName":     "kube-subnet",
+							"disableExternalIP":  true,
+							"labels":             map[string]interface{}{"team": "platform"},
+							"sshKey":             "ssh-rsa AAAA",
+							"networkTags":        []interface{}{"tag-a"},
 						},
 					},
 				},
@@ -68,9 +65,6 @@ func gcpRenderContext() map[string]interface{} {
 	}
 }
 
-// TestRenderMachineClass_GCPByteParity renders the real gcp machine-class.yaml,
-// exercising fromJson (serviceAccountJSON→client_email), cloudProvider disk/image
-// fallbacks, and the bool disableExternalIP.
 func TestRenderMachineClass_GCPByteParity(t *testing.T) {
 	tmpl, err := os.ReadFile(gcpMachineClassTemplatePath)
 	require.NoError(t, err, "gcp machine-class.yaml must exist")

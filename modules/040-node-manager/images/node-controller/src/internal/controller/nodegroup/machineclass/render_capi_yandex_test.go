@@ -27,10 +27,6 @@ import (
 
 const yandexCAPIMachineTemplatePath = "../../../../../../../../030-cloud-provider-yandex/capi/machine-template.yaml"
 
-// yandexCAPIRenderContext mirrors the helm capi_node_group_machine_template tpl
-// context: the same cloudProvider tree plus the reconciler-supplied templateName
-// and instanceClassChecksum. The node-controller renders this same template via
-// the shared RenderMachineClass engine instead of helm.
 func yandexCAPIRenderContext() map[string]interface{} {
 	return map[string]interface{}{
 		"Chart": map[string]interface{}{"Name": "node-manager"},
@@ -67,10 +63,6 @@ func yandexCAPIRenderContext() map[string]interface{} {
 	}
 }
 
-// TestRenderMachineTemplate_YandexCAPIByteParity renders the real yandex CAPI
-// machine-template.yaml through the shared engine, asserting the reconciler-owned
-// fields (templateName, checksum/instance-class annotation) and the two-argument
-// helm_lib_module_labels form (node-group label) the template uses.
 func TestRenderMachineTemplate_YandexCAPIByteParity(t *testing.T) {
 	tmpl, err := os.ReadFile(yandexCAPIMachineTemplatePath)
 	require.NoError(t, err, "yandex capi/machine-template.yaml must exist")

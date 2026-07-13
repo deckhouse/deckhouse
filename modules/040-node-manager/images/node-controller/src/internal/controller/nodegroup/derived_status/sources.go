@@ -49,10 +49,6 @@ const (
 	instanceClassVersion     = "v1alpha1"
 )
 
-// readCloudProviderData mirrors discover_cloud_provider + decodeDataFromSecret:
-// it base64-decodes each Secret data value and JSON-unmarshals it, producing the
-// same shape as the internal.cloudProvider value tree
-// (.type, .machineClassKind, .capiClusterKind, .<provider>, ...).
 func (s *Service) readCloudProviderData(ctx context.Context) map[string]interface{} {
 	secret := &corev1.Secret{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret); err != nil {
@@ -61,9 +57,6 @@ func (s *Service) readCloudProviderData(ctx context.Context) map[string]interfac
 	return decodeSecretData(secret.Data)
 }
 
-// decodeSecretData decodes each Secret value as JSON, falling back to the raw
-// string when it is not valid JSON. corev1.Secret.Data is already base64-decoded
-// by the client, matching decodeDataFromSecret's post-base64 behaviour.
 func decodeSecretData(data map[string][]byte) map[string]interface{} {
 	res := make(map[string]interface{}, len(data))
 	for k, v := range data {
@@ -90,10 +83,6 @@ type clusterConfiguration struct {
 	DefaultCRI        string `json:"defaultCRI"`
 }
 
-// readClusterConfiguration returns the target Kubernetes version and the default
-// CRI. "Automatic" resolves to the deckhouseDefaultKubernetesVersion key (the
-// build default), a concrete version parses as-is, and empty/unparseable yields
-// nil so effectiveKubernetesVersion falls back to the control-plane minimum.
 func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
 	secret := &corev1.Secret{}
 	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
@@ -116,9 +105,6 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 	var target *semver.Version
 	switch {
 	case cfg.KubernetesVersion == automaticKubernetesVersion:
-		// "Automatic" is resolved to the build default the control-plane-manager
-		// stores under deckhouseDefaultKubernetesVersion, matching the value the
-		// original get_crds consumed from the already-resolved global config.
 		if raw, ok := secret.Data[deckhouseDefaultK8sVersionKey]; ok {
 			if ver, err := semver.NewVersion(strings.TrimSpace(string(raw))); err == nil {
 				target = ver
@@ -132,9 +118,6 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 	return target, cfg.DefaultCRI
 }
 
-// readControlPlaneMinVersion lists control-plane nodes and returns the minimum
-// kubelet version, mirroring get_crds's controlPlaneMinVersion (derived from
-// global.discovery.kubernetesVersions).
 func (s *Service) readControlPlaneMinVersion(ctx context.Context) *semver.Version {
 	nodeList := &corev1.NodeList{}
 	if err := s.Client.List(ctx, nodeList, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""}); err != nil {
@@ -154,9 +137,6 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) *semver.Versio
 	return min
 }
 
-// readDefaultZones mirrors get_crds's defaultZones: the union of cloud-provider
-// secret zones (machine_deployments zones are covered by the controller's own
-// MachineDeployment reconciliation and are not re-derived here).
 func (s *Service) readDefaultZones(_ context.Context, cloudProvider map[string]interface{}) []string {
 	seen := make(map[string]struct{})
 	zones := make([]string, 0)
@@ -185,8 +165,6 @@ func (s *Service) readDefaultZones(_ context.Context, cloudProvider map[string]i
 	return zones
 }
 
-// readInstanceClassSpec performs a dynamic GET of the InstanceClass referenced
-// by the NodeGroup (kind carried by the NodeGroup itself), returning its spec.
 func (s *Service) readInstanceClassSpec(ctx context.Context, kind, name string) (interface{}, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceClassVersion, Kind: kind})
@@ -196,8 +174,6 @@ func (s *Service) readInstanceClassSpec(ctx context.Context, kind, name string) 
 	return obj.Object["spec"], nil
 }
 
-// readInstanceTypesCatalog fetches the InstanceTypesCatalog object and builds a
-// capacity catalog, mirroring get_crds.applyInstanceTypesCatalog.
 func (s *Service) readInstanceTypesCatalog(ctx context.Context) *capacity.InstanceTypesCatalog {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceClassVersion, Kind: "InstanceTypesCatalog"})

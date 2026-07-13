@@ -23,22 +23,12 @@ import (
 	"text/template"
 )
 
-// genFuncMap is the FuncMap for rendering the provider machine-class.yaml
-// templates (the get_crds node_group_machine_class define). It extends the shared
-// checksum FuncMap with a real include for the single partial those templates
-// reference — helm_lib_module_labels. It is deliberately kept separate from
-// FuncMap so the synced checksum FuncMap (dhctl/helm-mod/bashible) stays
-// byte-identical; only the machine-class render path gets a working include.
 func genFuncMap() template.FuncMap {
 	f := FuncMap()
 	f["include"] = renderInclude
 	return f
 }
 
-// renderInclude implements the Helm include for the only partial every provider
-// machine-class.yaml references: helm_lib_module_labels. Any other name errors so
-// a template that starts using a not-yet-ported partial fails loudly instead of
-// silently diverging the rendered MachineClass.
 func renderInclude(name string, data interface{}) (string, error) {
 	switch name {
 	case "helm_lib_module_labels":
@@ -48,14 +38,6 @@ func renderInclude(name string, data interface{}) (string, error) {
 	}
 }
 
-// renderModuleLabels reproduces deckhouse_lib_helm _module_labels.tpl for both
-// call forms used by the provider templates: (list .) — mandatory labels only
-// (MCM machine-class.yaml) — and (list . (dict ...)) — mandatory labels plus a
-// sorted block of additional labels (CAPI machine-template.yaml and the static
-// StaticMachineTemplate, which add node-group: <name>). The result carries no
-// surrounding newline; the template's `| nindent N` supplies indentation. The
-// additional labels are emitted in sorted key order to match Helm's range over a
-// map. This must stay byte-identical to the define or the label block diverges.
 func renderModuleLabels(data interface{}) (string, error) {
 	args, ok := data.([]interface{})
 	if !ok || (len(args) != 1 && len(args) != 2) {
@@ -86,10 +68,6 @@ func renderModuleLabels(data interface{}) (string, error) {
 	return out, nil
 }
 
-// RenderMachineClass renders a provider's machine-class.yaml (node_group_machine_class)
-// into the MachineClass manifest bytes. ctx must carry the same shape the Helm tpl
-// call builds: Chart{Name}, Values (the full tree, incl. nodeManager.internal and
-// global.discovery.clusterUUID), nodeGroup (the blob element) and zoneName.
 func RenderMachineClass(templateContent []byte, ctx map[string]interface{}) ([]byte, error) {
 	t, err := template.New("machine-class.yaml").Funcs(genFuncMap()).Parse(string(templateContent))
 	if err != nil {

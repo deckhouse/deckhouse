@@ -44,10 +44,10 @@ func vsphereRenderContext() map[string]interface{} {
 							"vmFolderPath": "kube/vms",
 							"sshKey":       "ssh-rsa AAAA",
 							"instanceClassDefaults": map[string]interface{}{
-								"template":        "base-tmpl",
-								"datastore":       "ds1",
+								"template":         "base-tmpl",
+								"datastore":        "ds1",
 								"resourcePoolPath": "",
-								"disableTimesync": false,
+								"disableTimesync":  false,
 							},
 						},
 					},
@@ -66,10 +66,6 @@ func vsphereRenderContext() map[string]interface{} {
 	}
 }
 
-// TestRenderMachineClass_VsphereByteParity renders the real vsphere
-// machine-class.yaml, exercising the arithmetic pipeline (memory rounding via
-// add+mod, memoryReservation via mul/div), the runtimeOptions default block, and
-// the template/datastore cloudProvider fallbacks.
 func TestRenderMachineClass_VsphereByteParity(t *testing.T) {
 	tmpl, err := os.ReadFile(vsphereMachineClassTemplatePath)
 	require.NoError(t, err, "vsphere machine-class.yaml must exist")

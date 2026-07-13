@@ -35,15 +35,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-// capiInstanceClassChecksum computes the checksum/instance-class value the CAPI
-// MachineTemplate carries, in the controller instead of helm: it reads the baked
-// capi/<type>/instance-class.checksum template and renders it against the blob
-// element (the resolved instanceClass). This replaces readInstanceClassChecksum's
-// "waiting for helm" dependency on the helm-rendered MachineTemplate annotation.
-//
-// The value must stay byte-identical to the helm define — it is hashed into the
-// MachineTemplate name (templateName), so any drift renames the template and rolls
-// every CAPI node.
 func capiInstanceClassChecksum(cloudType string, blob map[string]interface{}) (string, error) {
 	checksumTemplate, err := machineclass.ReadChecksumTemplate(
 		machineclass.DefaultTemplateBaseDirs, machineclass.FallbackTemplateBaseDir,
@@ -58,11 +49,6 @@ func capiInstanceClassChecksum(cloudType string, blob map[string]interface{}) (s
 	return checksum, nil
 }
 
-// capiMachineTemplateContext builds the render context for capi/<type>/machine-template.yaml,
-// mirroring the helm capi_node_group_machine_template tpl context. All CAPI provider
-// templates read only .Values.nodeManager.internal.cloudProvider.<provider>, .nodeGroup
-// (the blob element with the resolved instanceClass), .zoneName, .templateName and
-// .instanceClassChecksum — so no global.discovery/podSubnet is needed here.
 func capiMachineTemplateContext(cloudProvider, blob map[string]interface{}, zone, templateName, checksum string) map[string]interface{} {
 	return map[string]interface{}{
 		"Chart": map[string]interface{}{"Name": "node-manager"},
@@ -80,10 +66,6 @@ func capiMachineTemplateContext(cloudProvider, blob map[string]interface{}, zone
 	}
 }
 
-// renderCAPIMachineTemplate reads the baked capi/<type>/machine-template.yaml and
-// renders it (through the shared RenderMachineClass engine) into the infrastructure
-// MachineTemplate object the controller applies — replacing the helm-rendered
-// MachineTemplate. renderCtx is built by capiMachineTemplateContext.
 func renderCAPIMachineTemplate(cloudType string, renderCtx map[string]interface{}) (*unstructured.Unstructured, error) {
 	tmpl, err := machineclass.ReadChecksumTemplate(
 		machineclass.DefaultTemplateBaseDirs, machineclass.FallbackTemplateBaseDir,
@@ -102,9 +84,6 @@ func renderCAPIMachineTemplate(cloudType string, renderCtx map[string]interface{
 	return &unstructured.Unstructured{Object: obj}, nil
 }
 
-// capiMDInput is the resolved, side-effect-free input for a single zone's CAPI
-// MachineDeployment, extracted so both the live reconcileCloudMDs and the
-// controller-rendered reconcileCloudMDsRendered build byte-identical objects.
 type capiMDInput struct {
 	ng                  *deckhousev1.NodeGroup
 	mdName              string
@@ -121,10 +100,6 @@ type capiMDInput struct {
 	drainTimeout        int
 }
 
-// buildCAPIMachineDeployment renders the cluster.x-k8s.io/v1beta2 MachineDeployment
-// for one zone. It mirrors the helm _machine_deployment CAPI shape: autoscaler
-// min/max-size annotations, capacity labels/taints annotations, module labels and
-// the RollingUpdate strategy.
 func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	annotations := map[string]interface{}{
 		"cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size": fmt.Sprintf("%d", in.minReplicas),
@@ -189,9 +164,6 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	}}
 }
 
-// capiDesiredReplicas reads the current replicas of an existing CAPI MachineDeployment
-// and clamps to [min,max] (preserving an in-range autoscaler value), or seeds a new
-// deployment at min. Mirrors mcmDesiredReplicas for the CAPI GVK.
 func (r *MachineDeploymentReconciler) capiDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) int32 {
 	existing := newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment")
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing); err != nil {
@@ -208,20 +180,6 @@ func resolveCAPIZones(ng *deckhousev1.NodeGroup, defaultZones []string) []string
 	return defaultZones
 }
 
-// reconcileCloudMDsRendered is the controller-rendered CAPI branch that replaces
-// the helm CAPI generation (node-group.yaml capi_node_group_machine_template +
-// instance-class checksum + bootstrap Secret naming). Per zone it:
-//   - computes the instance-class checksum from the blob (no "waiting for helm"),
-//   - renders and applies the infrastructure MachineTemplate,
-//   - applies the MachineDeployment referencing that template.
-//
-// The bootstrap Secret keeps living in helm but under the checksum-independent name
-// {ng.name}-{sha(clusterUUID+zone)} (path 2b), so the MachineDeployment's
-// dataSecretName points at that stable Secret.
-//
-// ⚠ Must not run while the helm CAPI define still renders the same MachineTemplate
-// (dual-writer / SSA ownership conflict). Wiring this into Reconcile and removing
-// the helm CAPI resources + renaming the Secret must ship together (cutover brick).
 func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
@@ -302,8 +260,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		}
 
 		templateName := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone+checksum))
-		// Path 2b: the bootstrap Secret name no longer embeds the instance-class
-		// checksum (helm renders it on the thin blob under this stable name).
 		bootstrapSecretName := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone))
 
 		mtCtx := capiMachineTemplateContext(cloudProvider, blob, zone, templateName, checksum)
@@ -328,9 +284,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			drainTimeout:        drainTimeout,
 		})
 
-		// Provider-specific MachineDeployment spec patch (capiMachineDeploymentSpecPatch
-		// from the cloud-provider secret), applied after the base object is built so it
-		// overlays the same fields the helm CAPI define patched.
 		if err := applyMachineDeploymentSpecPatch(
 			md.Object["spec"].(map[string]interface{}),
 			cloudConfig.capiMachineDeploymentSpecPatch,
@@ -346,9 +299,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			return fmt.Errorf("apply provider MachineDeployment spec patch for %s: %w", mdName, err)
 		}
 
-		// Apply the MachineTemplate first: the MachineDeployment's infrastructureRef
-		// points at templateName, so the template must exist before the deployment
-		// references it (mirrors the helm hook ordering the checksum enforced).
 		if err := r.Client.Patch(ctx, mt, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MachineTemplate %s: %w", templateName, err)
 		}
@@ -361,12 +311,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	return nil
 }
 
-// buildStaticMachineTemplate renders the infrastructure.cluster.x-k8s.io/v1alpha1
-// StaticMachineTemplate for a NodeGroup, mirroring the helm
-// node_group_static_or_hybrid_machine_template define: name = ng.Name, the
-// two-arg module labels (heritage/module/node-group) on both metadata and
-// spec.template.metadata, and spec.template.spec.labelSelector copied from
-// staticInstances.labelSelector when set (else an empty spec).
 func buildStaticMachineTemplate(ng *deckhousev1.NodeGroup) (*unstructured.Unstructured, error) {
 	labels := map[string]interface{}{
 		"heritage":   "deckhouse",
@@ -402,14 +346,6 @@ func buildStaticMachineTemplate(ng *deckhousev1.NodeGroup) (*unstructured.Unstru
 	}}, nil
 }
 
-// reconcileStaticMDRendered is the controller-rendered static branch that replaces
-// the helm node_group_static_or_hybrid_machine_template. It applies the
-// StaticMachineTemplate (the MachineDeployment's infrastructureRef points at it, so
-// it must exist first) then the static MachineDeployment via the shared buildStaticMD.
-//
-// ⚠ Must not run while the helm static define still renders the same
-// StaticMachineTemplate (dual-writer / SSA ownership conflict). Wiring this into
-// Reconcile and removing the helm static machine_template must ship together.
 func (r *MachineDeploymentReconciler) reconcileStaticMDRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
@@ -429,9 +365,6 @@ func (r *MachineDeploymentReconciler) reconcileStaticMDRendered(ctx context.Cont
 	return nil
 }
 
-// applyMachineDeploymentSpecPatch overlays the provider-supplied
-// capiMachineDeploymentSpecPatch (a YAML fragment with ${var} placeholders) onto
-// the MachineDeployment spec via a recursive deep merge.
 func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch string, vars map[string]string) error {
 	if strings.TrimSpace(rawPatch) == "" {
 		return nil

@@ -26,9 +26,6 @@ import (
 )
 
 func TestBuildNodeGroupBlob_SpecPassthrough(t *testing.T) {
-	// gpu.sharing is a CRD field absent from the hand-rolled node-controller
-	// v1.GPUSpec. Passthrough must preserve it verbatim, proving the blob does
-	// not round-trip through the divergent typed struct.
 	blob := BuildNodeGroupBlob(BlobInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeStatic,
@@ -78,14 +75,14 @@ func TestBuildNodeGroupBlob_StaticEmbedded(t *testing.T) {
 	static := map[string]interface{}{"internalNetworkCIDRs": []interface{}{"192.168.0.0/24"}}
 
 	staticNG := BuildNodeGroupBlob(BlobInput{
-		Name:     "s", NodeType: v1.NodeTypeStatic,
+		Name: "s", NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{"nodeType": "Static"},
 		Static:  static,
 	}, Result{CRIType: "Containerd"})
 	assert.Equal(t, static, staticNG["static"], "static value embedded for Static NG")
 
 	cloudNG := BuildNodeGroupBlob(BlobInput{
-		Name:     "c", NodeType: v1.NodeTypeCloudEphemeral,
+		Name: "c", NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{"nodeType": "CloudEphemeral"},
 		Static:  static,
 	}, Result{CRIType: "Containerd"})
@@ -120,8 +117,6 @@ func TestBuildNodeGroupBlob_CloudProcessed(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_CloudNotProcessed(t *testing.T) {
-	// When the provider/instance-class checks are skipped, get_crds does not add
-	// instanceClass/nodeCapacity/zones.
 	blob := BuildNodeGroupBlob(BlobInput{
 		Name:     "cloud",
 		NodeType: v1.NodeTypeCloudEphemeral,
@@ -137,10 +132,6 @@ func TestBuildNodeGroupBlob_CloudNotProcessed(t *testing.T) {
 	assert.NotContains(t, blob, "cloudInstances")
 }
 
-// fencing is a CRD field the hand-rolled node-controller v1.NodeGroupSpec lacks
-// entirely, yet it is part of the blob and the bashible bootstrap-checksum. Raw
-// passthrough must carry it verbatim; assembling from the typed struct would drop
-// it and trigger a mass node re-bootstrap.
 func TestBuildNodeGroupBlob_FencingPassthrough(t *testing.T) {
 	blob := BuildNodeGroupBlob(BlobInput{
 		Name:     "worker",
@@ -170,9 +161,6 @@ func TestBuildNodeGroupBlob_FencingPassthrough(t *testing.T) {
 	}, blob["staticInstances"], "staticInstances passthrough preserved")
 }
 
-// serializedTaints is a computed Result field placed verbatim into the blob. The
-// get_crds format is "key=value:effect" joined by "," with no sorting; the blob
-// must reproduce it byte-for-byte (input to the bashible checksum).
 func TestBuildNodeGroupBlob_SerializedTaints(t *testing.T) {
 	blob := BuildNodeGroupBlob(BlobInput{
 		Name:     "test",

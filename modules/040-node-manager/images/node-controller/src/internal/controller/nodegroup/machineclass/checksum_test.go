@@ -28,20 +28,10 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// awsChecksumTemplatePath points at the real provider template rendered by the
-// machineclass_checksum hooks; the parity test renders the exact same file.
 const awsChecksumTemplatePath = "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum"
 
-// yandexCAPIChecksumTemplatePath is the real CAPI instance-class.checksum for the
-// yandex provider; it uses the same tail pipeline as the MCM template but is
-// rendered for the CAPI MachineTemplate the node-controller reconciler creates.
 const yandexCAPIChecksumTemplatePath = "../../../../../../../../030-cloud-provider-yandex/capi/instance-class.checksum"
 
-// expectedChecksum reproduces the tail pipeline of every provider template
-// (`$options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum`) so the test
-// asserts RenderChecksum against an independently computed digest, not a frozen
-// constant. toYaml trims the trailing newline and printf re-adds exactly one, so
-// the sha256 input is TrimSuffix(yaml,"\n")+"\n".
 func expectedChecksum(t *testing.T, options map[string]interface{}) string {
 	t.Helper()
 	raw, err := yaml.Marshal(options)
@@ -51,10 +41,6 @@ func expectedChecksum(t *testing.T, options map[string]interface{}) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// TestRenderChecksum_AWSParity renders the real AWS machine-class.checksum against
-// a blob element and checks the digest matches the independently computed one —
-// proving the FuncMap (toYaml/sha256sum) and data shape reproduce the hook byte
-// for byte.
 func TestRenderChecksum_AWSParity(t *testing.T) {
 	tmpl, err := os.ReadFile(awsChecksumTemplatePath)
 	require.NoError(t, err, "provider checksum template must exist")
@@ -73,8 +59,6 @@ func TestRenderChecksum_AWSParity(t *testing.T) {
 	got, err := RenderChecksum(tmpl, blobElement)
 	require.NoError(t, err)
 
-	// The AWS template builds $options from the whitelisted instanceClass fields
-	// (diskSizeGb kept because 50 != 20) plus manualRolloutID.
 	want := expectedChecksum(t, map[string]interface{}{
 		"ami":             "ami-0abc123",
 		"instanceType":    "m5.large",
@@ -88,10 +72,6 @@ func TestRenderChecksum_AWSParity(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-// TestRenderChecksum_CAPIYandexParity renders the real yandex CAPI
-// instance-class.checksum — the template the active node-controller reconciler
-// needs — and checks the digest against the independently computed one, proving
-// the same engine covers the CAPI checksum family byte for byte.
 func TestRenderChecksum_CAPIYandexParity(t *testing.T) {
 	tmpl, err := os.ReadFile(yandexCAPIChecksumTemplatePath)
 	require.NoError(t, err, "provider CAPI checksum template must exist")
@@ -110,8 +90,6 @@ func TestRenderChecksum_CAPIYandexParity(t *testing.T) {
 	got, err := RenderChecksum(tmpl, blobElement)
 	require.NoError(t, err)
 
-	// The yandex CAPI template always sets platformID/cores/memory/diskType/imageID
-	// and adds manualRolloutID; the optional fields are absent here.
 	want := expectedChecksum(t, map[string]interface{}{
 		"platformID":      "standard-v3",
 		"cores":           float64(4),
@@ -125,9 +103,6 @@ func TestRenderChecksum_CAPIYandexParity(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-// The default diskSizeGb (20) is intentionally excluded from $options by the
-// template; a NodeGroup that only differs by that default must not change its
-// checksum, so it must render identically to one with no diskSizeGb at all.
 func TestRenderChecksum_AWSDefaultDiskSizeExcluded(t *testing.T) {
 	tmpl, err := os.ReadFile(awsChecksumTemplatePath)
 	require.NoError(t, err)
@@ -152,10 +127,6 @@ func TestRenderChecksum_AWSDefaultDiskSizeExcluded(t *testing.T) {
 	assert.Equal(t, b, a, "default diskSizeGb=20 is excluded, so checksum must not change")
 }
 
-// BuildChecksumElement must produce a checksum byte-identical to a "full" blob
-// element carrying extra fields (nodeType/cri/zones/...): the templates read only
-// instanceClass + manualRolloutID, so passing the minimal element at wiring time is
-// safe. Proven for both the MCM (aws) and CAPI (yandex) template families.
 func TestBuildChecksumElement_OnlyInstanceClassAndRolloutMatter(t *testing.T) {
 	awsTmpl, err := os.ReadFile(awsChecksumTemplatePath)
 	require.NoError(t, err)
@@ -193,15 +164,13 @@ func TestBuildChecksumElement_OnlyInstanceClassAndRolloutMatter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			minimal := BuildChecksumElement(tc.ic, "rollout-9")
 
-			// A "full" blob element carries the whole get_crds blob shape: the same
-			// instanceClass + manualRolloutID plus noise fields the templates ignore.
 			full := map[string]interface{}{
-				"instanceClass":   tc.ic,
-				"manualRolloutID": "rollout-9",
-				"name":            "worker",
-				"nodeType":        "CloudEphemeral",
-				"cri":             map[string]interface{}{"type": "Containerd"},
-				"zones":           []interface{}{"a", "b"},
+				"instanceClass":     tc.ic,
+				"manualRolloutID":   "rollout-9",
+				"name":              "worker",
+				"nodeType":          "CloudEphemeral",
+				"cri":               map[string]interface{}{"type": "Containerd"},
+				"zones":             []interface{}{"a", "b"},
 				"kubernetesVersion": "1.29",
 			}
 
@@ -216,9 +185,6 @@ func TestBuildChecksumElement_OnlyInstanceClassAndRolloutMatter(t *testing.T) {
 	}
 }
 
-// MCM machine-class.checksum templates for the remaining providers (AWS covered
-// by TestRenderChecksum_AWSParity). CE providers sit under modules/ (8 levels up);
-// openstack/vsphere sit under ee/ (9 levels up).
 const (
 	yandexMCMChecksumPath    = "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum"
 	gcpMCMChecksumPath       = "../../../../../../../../030-cloud-provider-gcp/cloud-instance-manager/machine-class.checksum"
@@ -227,12 +193,6 @@ const (
 	openstackMCMChecksumPath = "../../../../../../../../../ee/modules/030-cloud-provider-openstack/cloud-instance-manager/machine-class.checksum"
 )
 
-// TestRenderChecksum_MCMProviderParity proves RenderChecksum reproduces every
-// remaining MCM machine-class.checksum byte for byte against an independently
-// computed digest. This is the guard that makes the helm→controller MCM cutover
-// safe: the checksum/machine-class annotation is the only thing that rolls nodes,
-// so it must render identically whether produced by the hook or the controller.
-// Each case deliberately exercises the template's whitelist/default/quirk logic.
 func TestRenderChecksum_MCMProviderParity(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -287,9 +247,6 @@ func TestRenderChecksum_MCMProviderParity(t *testing.T) {
 			},
 		},
 		{
-			// The azure template has a real quirk: when diskSizeGb!=50 it stores
-			// the value of .diskSize (not .diskSizeGb) under the diskSizeGb key.
-			// Parity means the controller must reproduce that quirk exactly.
 			name: "azure: diskSizeGb key sourced from .diskSize, acceleratedNetworking=false kept",
 			path: azureMCMChecksumPath,
 			blob: map[string]interface{}{
@@ -313,8 +270,6 @@ func TestRenderChecksum_MCMProviderParity(t *testing.T) {
 			},
 		},
 		{
-			// vsphere: memory = add memory (mod memory 4); rootDiskSize is always
-			// present, set to nil when it equals the default (20) or is absent.
 			name: "vsphere: memory arithmetic, default rootDiskSize=20 becomes nil",
 			path: vsphereMCMChecksumPath,
 			blob: map[string]interface{}{
@@ -375,8 +330,6 @@ func TestRenderChecksum_MCMProviderParity(t *testing.T) {
 	}
 }
 
-// manualRolloutID feeds the checksum (that is the whole point of M19): changing it
-// must roll the checksum, so nodes re-bootstrap on a manual rollout bump.
 func TestRenderChecksum_ManualRolloutIDChangesChecksum(t *testing.T) {
 	tmpl, err := os.ReadFile(awsChecksumTemplatePath)
 	require.NoError(t, err)

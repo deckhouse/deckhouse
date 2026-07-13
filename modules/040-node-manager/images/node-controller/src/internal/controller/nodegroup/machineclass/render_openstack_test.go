@@ -43,10 +43,10 @@ func openstackRenderContext() map[string]interface{} {
 					"cloudProvider": map[string]interface{}{
 						"type": "openstack",
 						"openstack": map[string]interface{}{
-							"connection":          map[string]interface{}{"region": "RegionOne"},
-							"externalNetworkDHCP": false,
+							"connection":           map[string]interface{}{"region": "RegionOne"},
+							"externalNetworkDHCP":  false,
 							"internalNetworkNames": []interface{}{"internal-net"},
-							"podNetworkMode":      "DirectRoutingWithPortSecurityEnabled",
+							"podNetworkMode":       "DirectRoutingWithPortSecurityEnabled",
 							"instances": map[string]interface{}{
 								"imageName":      "ubuntu-22",
 								"mainNetwork":    "internal-net",
@@ -70,10 +70,6 @@ func openstackRenderContext() map[string]interface{} {
 	}
 }
 
-// TestRenderMachineClass_OpenstackByteParity renders the real openstack
-// machine-class.yaml, exercising useConfigDrive (externalNetworkDHCP=false), the
-// network prepend/uniq + podNetwork logic, security-group concat/uniq, and the
-// tag merge.
 func TestRenderMachineClass_OpenstackByteParity(t *testing.T) {
 	tmpl, err := os.ReadFile(openstackMachineClassTemplatePath)
 	require.NoError(t, err, "openstack machine-class.yaml must exist")

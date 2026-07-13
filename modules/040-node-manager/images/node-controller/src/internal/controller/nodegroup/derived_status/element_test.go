@@ -51,9 +51,6 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-// TestReadStatic_ParsesInternalNetworkCIDRs proves readStatic reproduces the
-// internal.static value shape ({internalNetworkCIDRs: [...]}) the blob's "static"
-// field carries, matching the golden Static fixture.
 func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {
 	s := newTestService(t, testSecret(staticConfigSecretNamespace, staticConfigSecretName, map[string][]byte{
 		staticConfigKey: []byte("apiVersion: deckhouse.io/v1\nkind: StaticClusterConfiguration\ninternalNetworkCIDRs:\n- 172.18.200.0/24\n"),
@@ -68,9 +65,6 @@ func TestReadStatic_AbsentReturnsNil(t *testing.T) {
 	assert.Nil(t, newTestService(t).readStatic(context.Background()))
 }
 
-// TestBuildElement_StaticWiresNameRolloutAndStatic checks the element.go glue for
-// a Static NodeGroup: the manual-rollout-id annotation, the static passthrough,
-// and the absence of cloud overlays / validation error.
 func TestBuildElement_StaticWiresNameRolloutAndStatic(t *testing.T) {
 	s := newTestService(t, testSecret(staticConfigSecretNamespace, staticConfigSecretName, map[string][]byte{
 		staticConfigKey: []byte("internalNetworkCIDRs:\n- 172.18.200.0/24\n"),
@@ -96,10 +90,6 @@ func TestBuildElement_StaticWiresNameRolloutAndStatic(t *testing.T) {
 	assert.NotContains(t, element, "instanceClass", "static NG must not receive cloud overlays")
 }
 
-// TestBuildElement_CloudKindMismatchErrors verifies check #1 wiring: a
-// CloudEphemeral NodeGroup whose classReference.kind differs from the
-// cloud-provider secret's instanceClassKind yields the get_crds error and no
-// cloud overlays (CloudProcessed=false).
 func TestBuildElement_CloudKindMismatchErrors(t *testing.T) {
 	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
 		"instanceClassKind": []byte(`"YandexInstanceClass"`),

@@ -28,19 +28,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// FuncMap must stay byte-for-byte compatible with the Helm/dhctl engine that
-// renders the provider machine-class.checksum templates, otherwise the computed
-// checksum diverges from the get_crds machineclass_checksum hooks and triggers a
-// mass node rollout.
-//
-// NOTE: Sync the content of this function among these files!
-//                 dhctl/pkg/template/funcs.go
-//                 helm-mod/pkg/engine/funcs.go
-//                 modules/040-node-manager/images/bashible-apiserver/pkg/template/funcs.go
-//  (you are here) modules/040-node-manager/images/node-controller/src/internal/controller/nodegroup/machineclass/funcs.go
-//
-// include/tpl/required/lookup are placeholders: the checksum templates do not use
-// them, but they are kept so the FuncMap matches the shared definition verbatim.
 func FuncMap() template.FuncMap {
 	f := sprig.TxtFuncMap()
 	delete(f, "env")

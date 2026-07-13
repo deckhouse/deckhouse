@@ -28,11 +28,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/common"
 )
 
-// TestBuildStaticMachineTemplate_LabelSelector mirrors the helm
-// node_group_static_or_hybrid_machine_template define for a NodeGroup whose
-// staticInstances declares a labelSelector: name = ng.Name, the two-arg module
-// labels on both metadata blocks (heritage/module/node-group), and the selector
-// copied into spec.template.spec.labelSelector.
 func TestBuildStaticMachineTemplate_LabelSelector(t *testing.T) {
 	ng := &deckhousev1.NodeGroup{}
 	ng.Name = "worker-static"
@@ -67,8 +62,6 @@ func TestBuildStaticMachineTemplate_LabelSelector(t *testing.T) {
 	assert.Equal(t, map[string]string{"role": "worker"}, ls)
 }
 
-// TestBuildStaticMachineTemplate_NoLabelSelector mirrors the define's else branch:
-// no labelSelector key, an empty spec.template.spec (spec: {}).
 func TestBuildStaticMachineTemplate_NoLabelSelector(t *testing.T) {
 	ng := &deckhousev1.NodeGroup{}
 	ng.Name = "worker-hybrid"

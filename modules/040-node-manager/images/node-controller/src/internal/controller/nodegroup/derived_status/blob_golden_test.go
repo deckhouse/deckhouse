@@ -27,17 +27,6 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// The golden blobs below are lifted verbatim from the get_crds hook test suite
-// (modules/040-node-manager/hooks/get_crds_test.go, the "NGs must be stored to
-// nodeManager.internal.nodeGroups" expectation). They are the byte-parity ground
-// truth: BuildNodeGroupBlob must reproduce them exactly given the corresponding
-// raw spec passthrough and computed Result.
-//
-// updateEpoch is elided from the fixtures (it is a pure Result passthrough,
-// covered by the derived_status compute tests).
-
-// kubeletDefaults is the CRD-defaulted kubelet block the apiserver stores on the
-// live object; it flows through the blob as verbatim spec passthrough.
 func kubeletDefaults() map[string]interface{} {
 	return map[string]interface{}{
 		"containerLogMaxSize":  "50Mi",
@@ -146,9 +135,6 @@ func TestBuildNodeGroupBlob_Golden_CloudEphemeralProcessed(t *testing.T) {
 	}`)
 }
 
-// get_crds emits an empty resolved zones list as [] (get_crds_test.go:380), not
-// null. resolveZones/readDefaultZones return non-nil empty slices to preserve
-// this; a nil slice would marshal as null and break the bashible checksum.
 func TestBuildNodeGroupBlob_Golden_EmptyZones(t *testing.T) {
 	blob := BuildNodeGroupBlob(BlobInput{
 		Name:     "proper1",

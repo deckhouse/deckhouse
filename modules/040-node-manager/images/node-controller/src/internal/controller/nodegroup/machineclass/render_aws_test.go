@@ -25,17 +25,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// awsMachineClassTemplatePath points at the real AWS provider MachineClass
-// template the helm node_group_machine_class define renders. The parity test
-// renders the exact same file the get_crds path renders, from the same
-// internal.cloudProvider tree (= the decoded d8-node-manager-cloud-provider
-// Secret), so a divergence here would be the same divergence helm produces.
 const awsMachineClassTemplatePath = "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.yaml"
 
-// awsRenderContext builds the tpl context the helm node_group_machine_class define
-// passes: Chart (for helm_lib_module_labels), the full Values tree (global.discovery
-// + nodeManager.internal.cloudProvider.aws — the decoded cloud-provider Secret),
-// nodeGroup (blob element) and zoneName.
 func awsRenderContext() map[string]interface{} {
 	return map[string]interface{}{
 		"Chart": map[string]interface{}{"Name": "node-manager"},
@@ -53,10 +44,10 @@ func awsRenderContext() map[string]interface{} {
 							"region":  "eu-central-1",
 							"keyName": "kube-key",
 							"instances": map[string]interface{}{
-								"ami":                       "ami-default",
-								"iamProfileName":            "node-profile",
-								"associatePublicIPAddress":  true,
-								"additionalSecurityGroups":  []interface{}{"sg-base"},
+								"ami":                      "ami-default",
+								"iamProfileName":           "node-profile",
+								"associatePublicIPAddress": true,
+								"additionalSecurityGroups": []interface{}{"sg-base"},
 							},
 							"internal": map[string]interface{}{
 								"zoneToSubnetIdMap": map[string]interface{}{
@@ -80,11 +71,6 @@ func awsRenderContext() map[string]interface{} {
 	}
 }
 
-// TestRenderMachineClass_AWSByteParity renders the real AWS machine-class.yaml and
-// asserts the produced manifest is valid YAML with the fields the template maps
-// from the NodeGroup + cloud-provider tree. Parsing (not raw-string compare) keeps
-// the assertion robust to insignificant whitespace while still proving the values
-// the checksum is computed over land where helm puts them.
 func TestRenderMachineClass_AWSByteParity(t *testing.T) {
 	tmpl, err := os.ReadFile(awsMachineClassTemplatePath)
 	require.NoError(t, err, "AWS machine-class.yaml must exist")

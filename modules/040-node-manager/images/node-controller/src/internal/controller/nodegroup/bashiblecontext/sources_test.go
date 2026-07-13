@@ -191,7 +191,7 @@ func TestReadEndpoints_UnionSortedSplit(t *testing.T) {
 		apiserverPod("kube-apiserver-1", "10.0.0.2", true),
 		apiserverPod("kube-apiserver-2", "10.0.0.1", true),
 		apiserverPod("kube-apiserver-3", "10.0.0.9", false), // not ready -> excluded
-		endpointSlice([]string{"10.0.0.1"}, "https", 6443),   // duplicate of pod 2
+		endpointSlice([]string{"10.0.0.1"}, "https", 6443),  // duplicate of pod 2
 	)
 	got := s.readEndpoints(context.Background())
 

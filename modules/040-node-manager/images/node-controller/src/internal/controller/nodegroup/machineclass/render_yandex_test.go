@@ -27,9 +27,6 @@ import (
 
 const yandexMachineClassTemplatePath = "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.yaml"
 
-// yandexRenderContext mirrors the helm node_group_machine_class tpl context for
-// yandex: the decoded cloud-provider Secret lives under
-// nodeManager.internal.cloudProvider.yandex.
 func yandexRenderContext() map[string]interface{} {
 	return map[string]interface{}{
 		"Chart": map[string]interface{}{"Name": "node-manager"},
@@ -69,9 +66,6 @@ func yandexRenderContext() map[string]interface{} {
 	}
 }
 
-// TestRenderMachineClass_YandexByteParity renders the real yandex
-// machine-class.yaml and checks the fields the template maps, including the sprig
-// arithmetic (memory MiB→bytes, disk GiB→bytes) and the subnet lookup.
 func TestRenderMachineClass_YandexByteParity(t *testing.T) {
 	tmpl, err := os.ReadFile(yandexMachineClassTemplatePath)
 	require.NoError(t, err, "yandex machine-class.yaml must exist")

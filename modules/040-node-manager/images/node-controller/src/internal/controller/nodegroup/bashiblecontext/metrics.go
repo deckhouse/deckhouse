@@ -21,10 +21,6 @@ import (
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
-// nodeGroupInfo is the node_group_info metric previously emitted by the get_crds
-// hook. It carries the resolved CRI type per NodeGroup and feeds the module 340
-// UnsupportedContainerRuntimeVersion alert (cri-version.tpl), which joins on the
-// name label and filters cri_type != "NotManaged".
 var nodeGroupInfo = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Name: "node_group_info",
@@ -37,9 +33,6 @@ func init() {
 	ctrlmetrics.Registry.MustRegister(nodeGroupInfo)
 }
 
-// setNodeGroupInfo resets the gauge and re-populates it from the assembled blob
-// elements, mirroring the get_crds Expire("")+Set-per-NodeGroup behaviour. Each
-// element carries the resolved cri.type set by BuildNodeGroupBlob.
 func setNodeGroupInfo(elements []map[string]interface{}) {
 	nodeGroupInfo.Reset()
 	for _, element := range elements {

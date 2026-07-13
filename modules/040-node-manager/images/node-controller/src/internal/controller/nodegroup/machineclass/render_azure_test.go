@@ -62,9 +62,6 @@ func azureRenderContext() map[string]interface{} {
 	}
 }
 
-// TestRenderMachineClass_AzureByteParity renders the real azure machine-class.yaml,
-// exercising mergeOverwrite (additionalTags), dig (acceleratedNetworking default
-// true) and the urn/diskType cloudProvider fallbacks.
 func TestRenderMachineClass_AzureByteParity(t *testing.T) {
 	tmpl, err := os.ReadFile(azureMachineClassTemplatePath)
 	require.NoError(t, err, "azure machine-class.yaml must exist")

@@ -28,20 +28,11 @@ import (
 )
 
 const (
-	// secretName/secretNamespace/secretInputKey identify the Secret the helm
-	// define bashible_input_data currently renders; the controller becomes its
-	// single writer at cutover (both must never write it at the same time).
 	secretName      = "bashible-apiserver-context"
 	secretNamespace = "d8-cloud-instance-manager"
 	secretInputKey  = "input.yaml"
 )
 
-// Globals carries the global.*/deckhouse.* input.yaml fields. ReadGlobals
-// assembles it from live kube objects (the version-info ConfigMap, the
-// cluster-configuration Secret, the cluster-uuid ConfigMap and the DNS Service),
-// so a standalone pod re-derives the values the helm path resolves from global
-// values. clusterDomain/clusterDNSAddress are emitted verbatim; Proxy, when
-// non-nil, is passed through as the proxy block.
 type Globals struct {
 	DeckhouseChannel        string
 	DeckhouseVersion        string
@@ -50,18 +41,9 @@ type Globals struct {
 	ClusterDomain           string
 	ClusterDNSAddress       string
 	ClusterUUID             string
-	// Proxy is the resolved proxy block (httpProxy/httpsProxy/noProxy) or nil
-	// when the cluster has no proxy configured.
-	Proxy map[string]interface{}
+	Proxy                   map[string]interface{}
 }
 
-// Build assembles the bashible input.yaml value tree, mirroring the helm define
-// bashible_input_data (templates/bashible-apiserver/deployment.yaml). nodeGroups
-// is the internal.nodeGroups blob (one BuildNodeGroupBlob element per NodeGroup)
-// the node-controller now owns; every other field is read from live kube objects
-// or carried in globals. Optional blocks are omitted exactly where the template
-// gates on hasKey/truthiness, so the produced YAML is value-equivalent to the
-// helm render and keeps the bashible bootstrap checksum stable.
 func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}) map[string]interface{} {
 	cpArgs := s.readControlPlaneArguments(ctx)
 	certs := s.readAPIServerProxyCerts(ctx)
@@ -112,19 +94,10 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 	return input
 }
 
-// Marshal renders the input.yaml payload the same way the helm path stores it
-// (sigs.k8s.io/yaml, i.e. JSON-tagged marshalling with sorted keys). This is the
-// exact string written under the Secret's input.yaml key.
 func Marshal(input map[string]interface{}) ([]byte, error) {
 	return yaml.Marshal(input)
 }
 
-// WriteSecret assembles input.yaml and upserts the bashible-apiserver-context
-// Secret — the single-writer counterpart to the helm define bashible_input_data.
-// Globals are read from kube here; the caller is the completeness gate for the
-// nodeGroups blob, which must contain every NodeGroup since a partial input.yaml
-// breaks bashible-apiserver bootstrap. The standard module labels are set so the
-// Secret is managed/selected exactly like the helm-rendered one.
 func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]interface{}) error {
 	logger := log.FromContext(ctx)
 
@@ -151,9 +124,6 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 		return fmt.Errorf("upsert %s/%s: %w", secretNamespace, secretName, err)
 	}
 
-	// TEMP dev observability: surface the write at Info so we can watch what the
-	// controller actually produces without bumping verbosity. Downgrade to V(1)
-	// (or drop) once the bashible-context path is stable.
 	ngVersions := make(map[string]interface{}, len(nodeGroups))
 	for _, ng := range nodeGroups {
 		name, _ := ng["name"].(string)

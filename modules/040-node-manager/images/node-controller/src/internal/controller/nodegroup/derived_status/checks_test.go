@@ -25,8 +25,6 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// A non-cloud NodeGroup is valid but never "processed": get_crds skips the whole
-// cloud branch, so no checks run, no overlays are emitted and no error is set.
 func TestRunCloudChecks_NonCloud(t *testing.T) {
 	res := RunCloudChecks(CloudCheckInput{
 		NodeType:     v1.NodeTypeStatic,
@@ -37,8 +35,6 @@ func TestRunCloudChecks_NonCloud(t *testing.T) {
 	assert.Empty(t, res.Error, "non-cloud NG must not run checks or set an error")
 }
 
-// A CloudEphemeral NG with an unresolvable kind (empty kindInUse) is skipped the
-// same way: get_crds's cloud branch is gated on kindInUse != "".
 func TestRunCloudChecks_NoKindInUse(t *testing.T) {
 	res := RunCloudChecks(CloudCheckInput{
 		NodeType:     v1.NodeTypeCloudEphemeral,
@@ -96,8 +92,6 @@ func TestRunCloudChecks_ScaleFromZeroCapacityFailure(t *testing.T) {
 		res.Error)
 }
 
-// check #3 does not fire when the group is not scaling from zero, even if the
-// capacity calc reported an error (get_crds only consults it for min==0&&max>0).
 func TestRunCloudChecks_CapacityErrorIgnoredWhenNotScaleFromZero(t *testing.T) {
 	res := RunCloudChecks(CloudCheckInput{
 		NodeType:        v1.NodeTypeCloudEphemeral,
@@ -113,8 +107,6 @@ func TestRunCloudChecks_CapacityErrorIgnoredWhenNotScaleFromZero(t *testing.T) {
 	assert.Empty(t, res.Error)
 }
 
-// check #4: every spec zone must be a known default zone; the error lists the
-// offending zones and the sorted set of available zones.
 func TestRunCloudChecks_InvalidZones(t *testing.T) {
 	res := RunCloudChecks(CloudCheckInput{
 		NodeType:        v1.NodeTypeCloudEphemeral,

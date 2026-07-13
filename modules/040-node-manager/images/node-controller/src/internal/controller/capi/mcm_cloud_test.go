@@ -109,9 +109,6 @@ func TestDecodeCloudProviderSecret(t *testing.T) {
 	assert.Equal(t, "not-json", tree["plainString"])
 }
 
-// TestReconcileCloudMCMs_NoCloudInstances exercises the earliest guard: a
-// NodeGroup without cloudInstances returns nil before any kube access, so it runs
-// without a client.
 func TestReconcileCloudMCMs_NoCloudInstances(t *testing.T) {
 	r := &MachineDeploymentReconciler{}
 	ng := &deckhousev1.NodeGroup{}

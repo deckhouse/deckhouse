@@ -52,8 +52,6 @@ var epochTimestampAccessor = func() int64 {
 	return time.Now().Unix()
 }
 
-// computeEngine mirrors get_crds.calculateNodeGroupEngine. The engine is
-// sticky: once observed in status it is preserved.
 func (s *Service) computeEngine(ng *v1.NodeGroup, cloudProvider map[string]interface{}) string {
 	if ng.Status.Engine != "" {
 		return ng.Status.Engine
@@ -75,10 +73,6 @@ func (s *Service) computeEngine(ng *v1.NodeGroup, cloudProvider map[string]inter
 	}
 }
 
-// defaultCloudEphemeralEngine mirrors
-// get_crds.defaultCloudEphemeralNodeGroupEngineForNewNodeGroups. It reads
-// machineClassKind/capiClusterKind from the decoded cloud-provider secret,
-// which correspond to internal.cloudProvider.{machineClassKind,capiClusterKind}.
 func defaultCloudEphemeralEngine(cloudProvider map[string]interface{}, useMCM bool) string {
 	hasMCM := nonEmptyString(cloudProvider["machineClassKind"])
 	hasCAPI := nonEmptyString(cloudProvider["capiClusterKind"])
@@ -117,8 +111,6 @@ func serializeLabels(ng *v1.NodeGroup) string {
 	return labels.FormatLabels(merged)
 }
 
-// serializeTaints mirrors get_crds.serializeTaints. Order is preserved (NOT
-// sorted) to match get_crds byte-for-byte.
 func serializeTaints(ng *v1.NodeGroup) string {
 	if ng.Spec.NodeTemplate == nil || len(ng.Spec.NodeTemplate.Taints) == 0 {
 		return ""
@@ -148,8 +140,6 @@ func calculateUpdateEpoch(ts int64, clusterUUID string, nodeGroupName string) st
 	return strconv.FormatInt(epoch, 10)
 }
 
-// effectiveKubernetesVersion mirrors get_crds: the target version capped at the
-// control-plane minimum (nodes must not be above the control plane).
 func effectiveKubernetesVersion(target, controlPlaneMin *semver.Version) *semver.Version {
 	effective := target
 	if controlPlaneMin != nil {
@@ -213,8 +203,6 @@ func calculateNodeCapacity(kind string, instanceClassSpec interface{}, catalog *
 	return capacity.CalculateNodeTemplateCapacity(kind, instanceClassSpec, catalog)
 }
 
-// applyCloudSpecificDefaults mirrors get_crds.applyCloudSpecificDefaults. The
-// only registered filler is vsphere's mainNetwork.
 func applyCloudSpecificDefaults(cloudProvider map[string]interface{}, instanceClassSpec interface{}) (interface{}, error) {
 	specMap, ok := instanceClassSpec.(map[string]interface{})
 	if !ok {

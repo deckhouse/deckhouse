@@ -34,28 +34,14 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
-// nodeGroupListGVK is the list GVK used to enumerate every NodeGroup as an
-// unstructured object, so the raw .spec (CRD-shaped, apiserver-pruned) can be
-// passed to BuildElement verbatim — building the blob from the hand-rolled typed
-// spec would diverge and break byte-parity.
 var nodeGroupListGVK = schema.GroupVersionKind{Group: v1.GroupVersion.Group, Version: v1.GroupVersion.Version, Kind: "NodeGroupList"}
 
-// Reconciler assembles the whole internal.nodeGroups blob from every NodeGroup
-// and writes the bashible-apiserver-context Secret — the single-writer
-// replacement for the get_crds hook + helm define bashible_input_data.
-//
-// ⚠ It must NOT be registered as an active controller while the helm define
-// still renders the same Secret (dual-writer). The cutover — registering this
-// and removing the helm define — must be atomic.
 type Reconciler struct {
 	Client        client.Client
 	Context       *Service
 	DerivedStatus *derived_status.Service
 }
 
-// Assemble lists every NodeGroup, builds its blob element (preserving the
-// previously-stored element on validation failure, exactly like get_crds), and
-// upserts the Secret. Elements are sorted by name for a deterministic payload.
 func (r *Reconciler) Assemble(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 
@@ -83,9 +69,6 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 			return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
 		}
 
-		// Validation failure: reuse the previously-stored element to avoid
-		// disruption, mirroring get_crds. With no prior element the NodeGroup is
-		// omitted entirely (get_crds does the same `continue`).
 		if errStr != "" {
 			logger.Info("NodeGroup failed validation", "nodeGroup", ng.Name, "error", errStr)
 			if p, ok := prior[ng.Name]; ok {
@@ -106,9 +89,6 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	return r.Context.WriteSecret(ctx, elements)
 }
 
-// readPriorNodeGroups parses the current Secret's input.yaml and returns its
-// nodeGroups keyed by name, so a NodeGroup that fails validation can keep its
-// last-good element. An absent/unparseable Secret yields an empty map.
 func (r *Reconciler) readPriorNodeGroups(ctx context.Context) map[string]map[string]interface{} {
 	out := map[string]map[string]interface{}{}
 

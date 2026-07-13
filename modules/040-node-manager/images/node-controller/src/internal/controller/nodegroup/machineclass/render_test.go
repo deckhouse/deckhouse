@@ -23,9 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestRenderModuleLabels_ListOneForm proves the ported include reproduces
-// _module_labels.tpl for the (list .) one-element call: no surrounding newline,
-// module set from Chart.Name.
 func TestRenderModuleLabels_ListOneForm(t *testing.T) {
 	out, err := renderModuleLabels([]interface{}{
 		map[string]interface{}{"Chart": map[string]interface{}{"Name": "node-manager"}},
@@ -34,17 +31,11 @@ func TestRenderModuleLabels_ListOneForm(t *testing.T) {
 	assert.Equal(t, "labels:\n  heritage: deckhouse\n  module: node-manager", out)
 }
 
-// TestRenderInclude_RejectsUnportedPartial proves an unexpected partial fails
-// loudly instead of silently diverging the rendered MachineClass.
 func TestRenderInclude_RejectsUnportedPartial(t *testing.T) {
 	_, err := renderInclude("helm_lib_something_else", []interface{}{})
 	require.Error(t, err)
 }
 
-// TestRenderMachineClass_IncludeNindentByteParity renders the exact metadata
-// label idiom every provider machine-class.yaml uses
-// (`{{- include "helm_lib_module_labels" (list .) | nindent 2 }}`) and asserts the
-// byte-identical label block the Helm engine produces.
 func TestRenderMachineClass_IncludeNindentByteParity(t *testing.T) {
 	tmpl := []byte("metadata:\n" +
 		"  name: worker-abcd1234\n" +

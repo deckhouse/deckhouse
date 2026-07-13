@@ -22,18 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// mcmMachineDeploymentInput carries everything the MCM MachineDeployment build
-// needs that is not on the blob element: the resolved names, the per-zone
-// replica count already computed by the caller, and the pieces read from kube
-// (machine class kind, cloud-provider region, and the checksum value).
-//
-// blob is the internal.nodeGroups blob element (derived_status.BuildNodeGroupBlob
-// output). The builder reads $ng.* from it exactly as helm _machine_deployment.tpl
-// does — the blob is the single source of truth shared with RenderMachineClass
-// and RenderChecksum. Fields such as nodeCapacity, nodeTemplate.{labels,
-// annotations,taints}, cloudInstances.{maxSurgePerZone,maxUnavailablePerZone,
-// quickShutdown}, nodeDrainTimeoutSecond live in the blob, NOT on the
-// node-controller CRD spec.
 type mcmMachineDeploymentInput struct {
 	blob             map[string]interface{}
 	ngName           string
@@ -47,10 +35,6 @@ type mcmMachineDeploymentInput struct {
 	awsSpot          bool // aws provider + instanceClass.spot → creationTimeout 5m
 }
 
-// buildMCMMachineDeployment ports the helm node_group_machine_deployment define
-// (_machine_deployment.tpl) into an unstructured MachineDeployment. It is a pure
-// function so the byte-parity-critical field layout (drainTimeout tiers,
-// scale-from-zero annotations, nodeTemplate labels) is unit-testable without kube.
 func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstructured {
 	blob := in.blob
 
@@ -148,9 +132,6 @@ func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstr
 	return md
 }
 
-// mcmDrainTimeout ports the drainTimeout/maxEvictRetries tiers of the helm
-// template: quickShutdown → 5m/9, explicit nodeDrainTimeoutSecond → {n}s/(n/20),
-// otherwise the 600s/30 default. Reads from the blob element ($ng.*).
 func mcmDrainTimeout(blob map[string]interface{}) (string, int64) {
 	if cloudInstances := blobMap(blob, "cloudInstances"); cloudInstances != nil {
 		if q, ok := cloudInstances["quickShutdown"].(bool); ok && q {
@@ -163,8 +144,6 @@ func mcmDrainTimeout(blob map[string]interface{}) (string, int64) {
 	return "600s", 30
 }
 
-// mcmNodeTemplateLabels ports the nodeTemplate label block: the three mandatory
-// deckhouse labels plus the NodeGroup's own nodeTemplate.labels.
 func mcmNodeTemplateLabels(ngName string, nodeTemplate map[string]interface{}) map[string]interface{} {
 	res := map[string]interface{}{
 		"node-role.kubernetes.io/" + ngName: "",
@@ -177,8 +156,6 @@ func mcmNodeTemplateLabels(ngName string, nodeTemplate map[string]interface{}) m
 	return res
 }
 
-// mcmNodeTemplateTaints returns the taints slice for the nodeTemplate spec, or nil
-// when the NodeGroup has none (so the spec.taints key is omitted, matching helm).
 func mcmNodeTemplateTaints(nodeTemplate map[string]interface{}) []interface{} {
 	raw, ok := nodeTemplate["taints"].([]interface{})
 	if !ok || len(raw) == 0 {
@@ -202,8 +179,6 @@ func mcmNodeTemplateTaints(nodeTemplate map[string]interface{}) []interface{} {
 	return res
 }
 
-// blobMap returns m[key] as a map, or nil when absent or not a map. The blob is
-// JSON-decoded, so nested objects are map[string]interface{}.
 func blobMap(m map[string]interface{}, key string) map[string]interface{} {
 	if m == nil {
 		return nil
@@ -221,8 +196,6 @@ func blobString(m map[string]interface{}, key string) string {
 	return s
 }
 
-// blobInt64 returns m[key] as an int64. JSON decoding yields float64 for
-// numbers, so both float64 and integer kinds are accepted.
 func blobInt64(m map[string]interface{}, key string) (int64, bool) {
 	if m == nil {
 		return 0, false
@@ -241,8 +214,6 @@ func blobInt64(m map[string]interface{}, key string) (int64, bool) {
 	}
 }
 
-// blobInt32Ptr returns m[key] as an *int32, or nil when absent, so it feeds the
-// existing intOrDefault helper (which distinguishes "unset" from an explicit 0).
 func blobInt32Ptr(m map[string]interface{}, key string) *int32 {
 	if n, ok := blobInt64(m, key); ok {
 		v := int32(n)

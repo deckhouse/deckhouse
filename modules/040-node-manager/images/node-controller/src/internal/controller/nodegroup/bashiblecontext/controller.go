@@ -42,14 +42,6 @@ func init() {
 	register.RegisterController("bashible-context", &v1.NodeGroup{}, &Controller{})
 }
 
-// Controller is the single writer of the bashible-apiserver-context Secret,
-// replacing the helm define bashible_input_data. It reconciles on any NodeGroup
-// change (primary For) and on changes to the kube objects the input.yaml blob is
-// assembled from, re-running Assemble to rebuild the whole Secret each time.
-//
-// ⚠ It must never be enabled while the helm define still renders the same Secret
-// — that would make two writers fight over one object (flapping). The cutover
-// (enabling this + removing the helm define) is atomic and ships in one release.
 type Controller struct {
 	register.Base
 	apiReader client.Reader
@@ -66,17 +58,8 @@ func (c *Controller) Setup(mgr ctrl.Manager) error {
 	return nil
 }
 
-// assembleRequest is the sentinel request the source-object watches enqueue.
-// Reconcile ignores the request entirely and always rebuilds the whole Secret,
-// so its identity is irrelevant — it only coalesces source events into a rebuild.
 var assembleRequest = []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "assemble"}}}
 
-// SetupWatches wires the source objects that feed the blob. NodeGroups are the
-// primary watch (For); the rest are the kube objects ReadGlobals/Build/BuildElement
-// read — Secrets (bootstrap tokens, certs, cloud provider, control-plane args,
-// packages-proxy, cluster/static config), ConfigMaps (cluster-uuid, version-info),
-// Services (DNS) and Pods (apiserver endpoints) — scoped to their namespaces so a
-// change to any of them re-assembles the Secret.
 func (c *Controller) SetupWatches(w register.Watcher) {
 	enqueue := handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
 		return assembleRequest
@@ -87,8 +70,6 @@ func (c *Controller) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Pod{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))
 }
 
-// inNamespaces filters events to objects in the given namespaces, keeping the
-// controller from waking on every Secret/ConfigMap in the cluster.
 func inNamespaces(namespaces ...string) predicate.Predicate {
 	set := make(map[string]bool, len(namespaces))
 	for _, ns := range namespaces {
@@ -99,15 +80,9 @@ func inNamespaces(namespaces ...string) predicate.Predicate {
 	})
 }
 
-// Reconcile rebuilds the whole bashible-apiserver-context Secret from every
-// NodeGroup and the source kube objects. The request is ignored: this is a
-// singleton aggregator, so any trigger re-assembles the complete payload.
 func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	// Ensure the api-proxy discovery cert Secret exists before assembling, so the
-	// blob's apiserverProxyCerts field is never nil (readAPIServerProxyCerts reads
-	// the same Secret below in this loop).
 	if err := c.ensureCertificate(ctx, logger); err != nil {
 		logger.Error(err, "failed to ensure kubernetes-api-proxy discovery certificate")
 		return ctrl.Result{}, err
@@ -122,8 +97,6 @@ func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		logger.Error(err, "failed to assemble bashible-apiserver-context")
 		return ctrl.Result{}, err
 	}
-	// TEMP dev observability: Info (was V(1)) so the reconcile is visible at the
-	// default verbosity during bashible-context bring-up.
 	logger.Info("assembled bashible-apiserver-context")
 	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }

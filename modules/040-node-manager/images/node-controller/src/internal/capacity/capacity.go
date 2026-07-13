@@ -14,11 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package capacity is a port of the get_crds hook's node-capacity calculation
-// (was modules/040-node-manager/hooks/internal/autoscaler/capacity). It computes
-// the node template capacity used for scale-from-zero. The JSON shape of
-// InstanceType is kept byte-identical to go_lib/cloud-data/apis/v1alpha1.InstanceType
-// so the resulting blob matches get_crds exactly (bashible bootstrap-checksum parity).
 package capacity
 
 import (
@@ -34,9 +29,6 @@ var (
 	ErrNotFound    = errors.New("Instance Type not found")
 )
 
-// InstanceType mirrors go_lib/cloud-data/apis/v1alpha1.InstanceType. Defined
-// locally to avoid pulling the whole cloud-data module (old k8s deps) into the
-// node-controller module. JSON tags MUST stay identical for blob byte-parity.
 type InstanceType struct {
 	Name     string            `json:"name"`
 	CPU      resource.Quantity `json:"cpu"`
@@ -70,10 +62,6 @@ func (c *InstanceTypesCatalog) Get(ic instanceClass) (*InstanceType, error) {
 		return &inst, nil
 	}
 
-	// TODO remove after 1.48
-	// we cannot remove capacity now
-	// because InstanceTypesCatalog may not have time for discovery
-	// and we get empty catalog, machine deployment will be changed
 	capacity := ic.GetCapacity()
 	if capacity != nil {
 		return capacity.ToInstanceType(), nil
@@ -411,8 +399,6 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 		return nil, errors.New("Unknown cloud provider")
 	}
 
-	// unless we don't have structs for InstanceClasses this is the easiest way to get fields from abstract spec
-	// trying to use type assertion is much uglier, don't try to use it
 	data, _ := json.Marshal(instanceClassSpec)
 	err := json.Unmarshal(data, extractor)
 	if err != nil {

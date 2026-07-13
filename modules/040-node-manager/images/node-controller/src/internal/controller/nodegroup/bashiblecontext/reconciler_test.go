@@ -35,9 +35,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
-// newReconciler builds a Reconciler backed by a single fake client whose scheme
-// knows the deckhouse v1 types (so Assemble can List NodeGroups) plus corev1 /
-// discoveryv1 for the source objects the blob is assembled from.
 func newReconciler(t *testing.T, objs ...client.Object) *Reconciler {
 	t.Helper()
 	scheme := runtime.NewScheme()
@@ -52,8 +49,6 @@ func newReconciler(t *testing.T, objs ...client.Object) *Reconciler {
 	}
 }
 
-// readAssembledNodeGroups parses the produced Secret's input.yaml and returns
-// its nodeGroups list.
 func readAssembledNodeGroups(t *testing.T, c client.Client) []interface{} {
 	t.Helper()
 	secret := &corev1.Secret{}
@@ -71,8 +66,6 @@ func staticNodeGroup(name string) *v1.NodeGroup {
 	}
 }
 
-// TestAssemble_SortsAndWritesAllNodeGroups proves Assemble builds one element per
-// NodeGroup and emits them name-sorted for a deterministic payload.
 func TestAssemble_SortsAndWritesAllNodeGroups(t *testing.T) {
 	r := newReconciler(t,
 		staticNodeGroup("zzz"),
@@ -90,8 +83,6 @@ func TestAssemble_SortsAndWritesAllNodeGroups(t *testing.T) {
 	assert.Equal(t, "zzz", ngs[1].(map[string]interface{})["name"])
 }
 
-// TestAssemble_PreservesPriorOnValidationFailure verifies get_crds preserve-prior:
-// a NodeGroup that fails validation keeps its previously-stored blob element.
 func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 	priorInput, err := Marshal(map[string]interface{}{
 		"nodeGroups": []interface{}{
@@ -127,8 +118,6 @@ func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 	assert.Equal(t, "kept-from-prior", el["marker"], "failed NG must reuse the prior element")
 }
 
-// TestAssemble_OmitsFailingNodeGroupWithoutPrior verifies a validation failure
-// with no prior element drops the NodeGroup entirely (get_crds `continue`).
 func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 	r := newReconciler(t,
 		&v1.NodeGroup{

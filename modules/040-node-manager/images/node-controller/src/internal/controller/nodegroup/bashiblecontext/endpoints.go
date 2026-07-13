@@ -29,29 +29,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Port constants mirror discover_apiserver_endpoints: the apiserver port used to
-// build a pod endpoint and the static registry-packages-proxy ports every
-// clusterMasterEndpoints entry carries.
 const (
 	apiserverPort              = 6443
 	packagesProxyPort          = 4219
 	packagesProxyBootstrapPort = 4282
 )
 
-// endpoints holds the two derived fields: apiserverEndpoints (the sorted
-// host:port list, internal.clusterMasterAddresses) and clusterMasterEndpoints
-// (each split into address/kubeApiPort plus the static rpp ports).
 type endpoints struct {
 	apiserverEndpoints     []string
 	clusterMasterEndpoints []map[string]interface{}
 }
 
-// readEndpoints reproduces discover_apiserver_endpoints byte-for-byte: the union
-// of Ready kube-apiserver pod IPs (:6443) and the default/kubernetes EndpointSlice
-// https addresses, de-duplicated, "" removed, sorted; then each entry expanded
-// into the clusterMasterEndpoints record. This is the sole COMPUTED field (no
-// ready Secret exists), so it must match the hook exactly to keep the bashible
-// bootstrap checksum stable.
 func (s *Service) readEndpoints(ctx context.Context) endpoints {
 	set := make(map[string]struct{})
 
@@ -65,8 +53,6 @@ func (s *Service) readEndpoints(ctx context.Context) endpoints {
 			if !podReady(pod) {
 				continue
 			}
-			// fmt.Sprintf("%s:%d", ...) matches apiserverPodFilter verbatim
-			// (net.JoinHostPort would bracket IPv6, shifting the checksum).
 			set[fmt.Sprintf("%s:%d", pod.Status.PodIP, apiserverPort)] = struct{}{}
 		}
 	}
@@ -119,8 +105,6 @@ func (s *Service) readEndpoints(ctx context.Context) endpoints {
 	return res
 }
 
-// podReady reports whether a pod has a Ready condition set to True, matching
-// apiserverPodFilter.
 func podReady(pod *corev1.Pod) bool {
 	for _, cond := range pod.Status.Conditions {
 		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {

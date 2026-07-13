@@ -23,50 +23,27 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// CloudCheckInput carries the inputs for the CloudEphemeral validation checks
-// #1-4 that get_crds runs before emitting the cloud overlay fields
-// (get_crds.go:353-477).
 type CloudCheckInput struct {
-	NodeType v1.NodeType
-	// KindInUse is the instanceClassKind from the cloud-provider secret. When
-	// empty, get_crds skips the whole cloud branch: no checks, no overlays.
+	NodeType  v1.NodeType
 	KindInUse string
 
-	ClassRefKind string
-	ClassRefName string
-	// KnownClassNames are the names of existing InstanceClass objects of
-	// KindInUse (check #2).
+	ClassRefKind    string
+	ClassRefName    string
 	KnownClassNames []string
 
-	MinPerZone int32
-	MaxPerZone int32
-	// CapacityErr is the outcome of the scale-from-zero capacity calculation; it
-	// is consulted only when MinPerZone==0 && MaxPerZone>0 (check #3).
+	MinPerZone  int32
+	MaxPerZone  int32
 	CapacityErr error
 
 	SpecZones    []string
 	DefaultZones []string
 }
 
-// CloudCheckResult reports whether the NodeGroup passed the cloud checks and may
-// receive the cloud overlay fields (instanceClass, nodeCapacity, zones), plus a
-// validation error message on failure. Error is set verbatim to match the status
-// error get_crds writes to the NodeGroup.
 type CloudCheckResult struct {
 	Processed bool
 	Error     string
 }
 
-// RunCloudChecks ports get_crds's checks #1-4. Processed is true only when the
-// NodeGroup is a CloudEphemeral with a resolvable instance class kind and all
-// checks pass — i.e. the branch where get_crds sets instanceClass/zones/capacity
-// (BlobInput.CloudProcessed). Non-cloud NodeGroups and cloud NodeGroups without a
-// resolvable kind are valid but not "processed" (no overlays, no error).
-//
-// Note: get_crds additionally appends " Using previously stored NodeGroup
-// configuration to prevent cluster disruption." to the #1/#2 messages when a
-// previously stored blob exists and is reused. That preservation behaviour is
-// orchestrator-level (it needs the prior blob) and is applied by the caller.
 func RunCloudChecks(in CloudCheckInput) CloudCheckResult {
 	if in.NodeType != v1.NodeTypeCloudEphemeral || in.KindInUse == "" {
 		return CloudCheckResult{Processed: false}

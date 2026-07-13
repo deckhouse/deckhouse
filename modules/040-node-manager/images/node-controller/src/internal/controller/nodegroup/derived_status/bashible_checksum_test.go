@@ -30,21 +30,6 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// bashibleNodeGroupChecksum mirrors the node-group contribution to the bashible
-// bootstrap checksum computed by bashible-apiserver
-// (images/bashible-apiserver/src/pkg/template/context_builder.go:431 AddToChecksum):
-// it strips the scaling counters and the resolved zones from cloudInstances
-// (the apiserver deletes maxPerZone/maxSurgePerZone/maxUnavailablePerZone/
-// minPerZone/zones so scaling up or down never re-bootstraps existing nodes),
-// then sha256s the sigs.k8s.io/yaml marshalling — the exact lib (:28) and
-// procedure the apiserver uses.
-//
-// This isolates the nodeGroup element that the node-controller-written Secret
-// must reproduce byte-for-byte: if this digest changes for the same NodeGroup,
-// every node in the group re-bootstraps. When node-controller starts writing
-// bashible-apiserver-context it must feed a nodeGroups element whose digest here
-// equals the one the current get_crds+helm path produces (proven elsewhere by
-// the golden blob tests), otherwise the cutover rolls the whole cluster.
 func bashibleNodeGroupChecksum(t *testing.T, blob map[string]interface{}) string {
 	t.Helper()
 
@@ -68,9 +53,6 @@ func bashibleNodeGroupChecksum(t *testing.T, blob map[string]interface{}) string
 	return hex.EncodeToString(sum[:])
 }
 
-// buildCloudBlob assembles a CloudEphemeral blob element with the given scaling
-// counters and zones, holding every checksum-relevant field constant, so tests
-// can vary only the stripped-vs-meaningful fields.
 func buildCloudBlob(t *testing.T, kubernetesVersion string, minPerZone, maxPerZone float64, zones []string) map[string]interface{} {
 	t.Helper()
 	return BuildNodeGroupBlob(BlobInput{
@@ -98,11 +80,6 @@ func buildCloudBlob(t *testing.T, kubernetesVersion string, minPerZone, maxPerZo
 	})
 }
 
-// Upscale invariance: two blobs that differ ONLY in the stripped fields
-// (min/maxPerZone and resolved zones) must yield the same bashible checksum —
-// this is the apiserver's "prevent updating nodes while upscale" contract
-// (context_builder.go:439-444). Our blob must be compatible with it, i.e. those
-// fields must land under cloudInstances where the strip removes them.
 func TestBashibleChecksum_UpscaleInvariance(t *testing.T) {
 	small := buildCloudBlob(t, "1.32", float64(1), float64(3), []string{"a", "b"})
 	large := buildCloudBlob(t, "1.32", float64(5), float64(10), []string{"a", "b", "c"})
@@ -114,9 +91,6 @@ func TestBashibleChecksum_UpscaleInvariance(t *testing.T) {
 	)
 }
 
-// A meaningful field (kubernetesVersion) survives the strip and so MUST change
-// the checksum — proving the strip is targeted, not blanket, and that a real
-// config change still re-bootstraps nodes as intended.
 func TestBashibleChecksum_MeaningfulFieldChanges(t *testing.T) {
 	v132 := buildCloudBlob(t, "1.32", float64(1), float64(3), []string{"a", "b"})
 	v131 := buildCloudBlob(t, "1.31", float64(1), float64(3), []string{"a", "b"})
@@ -128,11 +102,6 @@ func TestBashibleChecksum_MeaningfulFieldChanges(t *testing.T) {
 	)
 }
 
-// End-to-end parity: a blob built by BuildNodeGroupBlob must produce the same
-// bashible checksum as the golden get_crds element decoded from its stored YAML.
-// The golden JSON is the byte-parity ground truth (get_crds_test.go); feeding
-// both through the exact apiserver procedure proves the cutover keeps the
-// bootstrap checksum stable, not merely the JSON representation.
 func TestBashibleChecksum_GoldenParity(t *testing.T) {
 	blob := BuildNodeGroupBlob(BlobInput{
 		Name:     "proper1",

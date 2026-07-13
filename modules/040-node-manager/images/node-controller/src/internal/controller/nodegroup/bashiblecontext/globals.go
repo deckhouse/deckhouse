@@ -28,17 +28,9 @@ import (
 )
 
 const (
-	// versionInfoCM carries deckhouse channel/version/edition — the values the
-	// helm path renders from deckhouse-image files (/deckhouse/version,
-	// /deckhouse/edition) and the deckhouse ModuleConfig releaseChannel. The
-	// 002-deckhouse module already materialises them into this ConfigMap, so the
-	// node-controller (a different image) reads them from kube instead of files.
 	versionInfoCMName = "d8-deckhouse-version-info"
 	versionInfoCMNS   = "d8-system"
 
-	// clusterConfigSecret holds the cluster-configuration.yaml the helm path
-	// reads global.clusterConfiguration.* from (podSubnetNodeCIDRPrefix,
-	// clusterDomain, podSubnetCIDR, serviceSubnetCIDR, proxy).
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
 
@@ -49,10 +41,6 @@ const (
 	dnsAppLabel = "k8s-app"
 )
 
-// ReadGlobals assembles the Globals block from live kube objects, mirroring the
-// helm values the define bashible_input_data reads from. It replaces the earlier
-// env-injection: every global field is now sourced from an already-materialised
-// object (ConfigMap/Secret/Service), consistent with the rest of the package.
 func (s *Service) ReadGlobals(ctx context.Context) Globals {
 	g := Globals{}
 	g.DeckhouseChannel, g.DeckhouseVersion, g.DeckhouseEdition = s.readDeckhouseInfo(ctx)
@@ -72,9 +60,6 @@ type deckhouseVersionInfo struct {
 	Edition string `json:"edition"`
 }
 
-// readDeckhouseInfo reads the d8-system/d8-deckhouse-version-info ConfigMap's
-// data.json ({channel,version,edition}). Empty strings when absent — Build then
-// applies the same channel default ("unknown") as the template.
 func (s *Service) readDeckhouseInfo(ctx context.Context) (channel, version, edition string) {
 	cm := &corev1.ConfigMap{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: versionInfoCMNS, Name: versionInfoCMName}, cm); err != nil {
@@ -87,8 +72,6 @@ func (s *Service) readDeckhouseInfo(ctx context.Context) (channel, version, edit
 	return info.Channel, info.Version, info.Edition
 }
 
-// readClusterUUID reads the kube-system/d8-cluster-uuid ConfigMap's cluster-uuid
-// key ("" when absent — Build applies the all-zeros default like the template).
 func (s *Service) readClusterUUID(ctx context.Context) string {
 	cm := &corev1.ConfigMap{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterUUIDConfigMapName}, cm); err != nil {
@@ -105,9 +88,6 @@ type bashibleClusterConfiguration struct {
 	Proxy                   map[string]interface{} `json:"proxy,omitempty"`
 }
 
-// readClusterConfiguration parses the cluster-configuration.yaml Secret value,
-// tolerating the extra base64 layer the way derived_status does. nil when the
-// Secret or key is absent so the caller leaves the derived fields empty.
 func (s *Service) readClusterConfiguration(ctx context.Context) *bashibleClusterConfiguration {
 	secret := &corev1.Secret{}
 	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterConfigSecretName}, secret); err != nil {
@@ -127,11 +107,6 @@ func (s *Service) readClusterConfiguration(ctx context.Context) *bashibleCluster
 	return cfg
 }
 
-// buildProxy mirrors the define's proxy block: httpProxy/httpsProxy passed
-// through only when present, and noProxy = the fixed prefix
-// (127.0.0.1, 169.254.169.254, clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
-// concatenated with any custom noProxy. nil when the config has no proxy key, so
-// the whole block is omitted like `if hasKey clusterConfiguration "proxy"`.
 func buildProxy(cfg *bashibleClusterConfiguration) map[string]interface{} {
 	if cfg.Proxy == nil {
 		return nil
@@ -151,9 +126,6 @@ func buildProxy(cfg *bashibleClusterConfiguration) map[string]interface{} {
 	return proxy
 }
 
-// readClusterDNSAddress mirrors discovery/cluster_dns_address: the ClusterIP of
-// the kube-system Service labelled k8s-app in (kube-dns, coredns), preferring the
-// one named "kube-dns", skipping headless ("None"/"") services.
 func (s *Service) readClusterDNSAddress(ctx context.Context) string {
 	list := &corev1.ServiceList{}
 	if err := s.Client.List(ctx, list, client.InNamespace(kubeSystemNS)); err != nil {

@@ -27,9 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// The always-present keys mirror the unconditional part of the helm define
-// bashible_input_data; Build must emit exactly these plus whatever optional
-// blocks apply, so bashible-apiserver never sees a partial context.
 var mandatoryInputKeys = []string{
 	"deckhouse", "podSubnetNodeCIDRPrefix", "clusterDomain", "clusterDNSAddress",
 	"clusterUUID", "bootstrapTokens", "apiserverEndpoints", "clusterMasterEndpoints",
@@ -94,8 +91,6 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 	assert.Equal(t, "uuid-1", input["clusterUUID"])
 }
 
-// Marshal must produce YAML that round-trips to the same value tree, confirming
-// the payload is the sigs.k8s.io/yaml form bashible-apiserver unmarshals.
 func TestMarshal_RoundTrips(t *testing.T) {
 	s := newService(t)
 	input := s.Build(context.Background(), Globals{ClusterUUID: "u"}, nil)
@@ -106,9 +101,6 @@ func TestMarshal_RoundTrips(t *testing.T) {
 	assert.Contains(t, string(raw), "clusterUUID: u")
 }
 
-// WriteSecret upserts the bashible-apiserver-context Secret with the assembled
-// input.yaml and the module labels, and re-writes cleanly on the second call
-// (create then update path).
 func TestWriteSecret_UpsertsInputYAML(t *testing.T) {
 	s := newService(t,
 		configMap(kubeSystemNS, clusterUUIDConfigMapName, map[string]string{clusterUUIDKey: "uuid-1"}),

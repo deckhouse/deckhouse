@@ -36,15 +36,9 @@ import (
 )
 
 const (
-	// certCommonName / certRoleName mirror the former create_rbac_and_certificate
-	// _for_kubernetes_api_proxy hook: the cert authenticates as user
-	// "kubernetes-api-proxy" in group "node-manager:kubernetes-api-proxy", the
-	// group the kubernetes-api-proxy ClusterRoleBinding grants.
 	certCommonName = "kubernetes-api-proxy"
 	certRoleName   = "node-manager:kubernetes-api-proxy"
 
-	// certOutdatedDuration rotates the cert once less than half its 10-year life
-	// remains, identical to the hook's threshold.
 	certOutdatedDuration = (24 * time.Hour) * 365 / 2
 
 	csrWaitTimeout = time.Minute
@@ -53,13 +47,6 @@ const (
 // certExpirationSeconds requests a 10-year cert from the signer.
 var certExpirationSeconds = int32((time.Hour * 24 * 365 * 10).Seconds())
 
-// ensureCertificate issues (or re-issues) the discovery cert into the
-// kube-system/kubernetes-api-proxy-discovery-cert Secret when it is absent or the
-// stored cert is within certOutdatedDuration of expiry. It runs at the top of
-// Reconcile, before the blob is assembled, so readAPIServerProxyCerts below always
-// finds the Secret in the same loop — closing the fresh-cluster window where the
-// blob would render with a nil apiserverProxyCerts. In steady state it is a cheap
-// Get that returns early.
 func (c *Controller) ensureCertificate(ctx context.Context, logger logr.Logger) error {
 	secret, err := c.clientset.CoreV1().Secrets(kubeSystemNS).Get(ctx, apiProxyCertSecretName, metav1.GetOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -83,9 +70,6 @@ func (c *Controller) ensureCertificate(ctx context.Context, logger logr.Logger) 
 	return c.writeCertSecret(ctx, crtPEM, keyPEM)
 }
 
-// issueCertificate runs the CSR flow against the kube-apiserver-client signer:
-// generate a key + CSR, submit, self-approve, wait for the signed cert, then
-// delete the CSR. This is the controller-runtime port of tls_certificate.IssueCertificate.
 func (c *Controller) issueCertificate(ctx context.Context) ([]byte, []byte, error) {
 	csrPEM, keyPEM, err := generateCSR(certCommonName, []string{certRoleName})
 	if err != nil {
@@ -135,8 +119,6 @@ func (c *Controller) issueCertificate(ctx context.Context) ([]byte, []byte, erro
 	return crtPEM, keyPEM, nil
 }
 
-// writeCertSecret upserts the crt/key into the discovery cert Secret, preserving
-// the hook's labels so ownership/reporting is unchanged.
 func (c *Controller) writeCertSecret(ctx context.Context, crtPEM, keyPEM []byte) error {
 	labels := map[string]string{
 		"heritage": "deckhouse",
@@ -180,9 +162,6 @@ func (c *Controller) writeCertSecret(ctx context.Context, crtPEM, keyPEM []byte)
 	return nil
 }
 
-// generateCSR builds an ECDSA P-256 key and a client CSR whose Organization is
-// the RBAC group (the signer maps it to the "node-manager:kubernetes-api-proxy"
-// group). It returns PEM-encoded CSR and PKCS#8 key.
 func generateCSR(commonName string, organizations []string) (csrPEM, keyPEM []byte, err error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

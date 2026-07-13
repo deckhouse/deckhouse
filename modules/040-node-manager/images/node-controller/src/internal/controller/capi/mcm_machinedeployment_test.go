@@ -24,9 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// blobFromJSON decodes a JSON literal into a blob element the same way the
-// runtime blob is produced (json.Unmarshal into interface{} → float64 numbers),
-// so the test exercises the exact numeric kinds mcmDrainTimeout/intOrDefault see.
 func blobFromJSON(t *testing.T, s string) map[string]interface{} {
 	t.Helper()
 	var m map[string]interface{}
@@ -47,10 +44,6 @@ func mdTemplateSpec(t *testing.T, md map[string]interface{}) map[string]interfac
 	return tmpl["spec"].(map[string]interface{})
 }
 
-// TestBuildMCMMachineDeployment_Defaults covers the plain path: no nodeCapacity,
-// no quickShutdown, no nodeDrainTimeoutSecond, no nodeTemplate → 600s/30 drain,
-// maxSurge 1 / maxUnavailable 0 defaults, only the mandatory nodeTemplate labels,
-// no scale-from-zero annotations, no creationTimeout.
 func TestBuildMCMMachineDeployment_Defaults(t *testing.T) {
 	blob := blobFromJSON(t, `{"name":"worker","nodeType":"CloudEphemeral"}`)
 	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
@@ -119,8 +112,6 @@ func TestBuildMCMMachineDeployment_Defaults(t *testing.T) {
 	assert.False(t, hasSpec)
 }
 
-// TestBuildMCMMachineDeployment_ScaleFromZero covers the nodeCapacity branch:
-// the five cluster-autoscaler annotations with region wired in.
 func TestBuildMCMMachineDeployment_ScaleFromZero(t *testing.T) {
 	blob := blobFromJSON(t, `{"name":"worker","nodeCapacity":{"cpu":"4","memory":"8Gi"}}`)
 	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
@@ -149,8 +140,6 @@ func TestBuildMCMMachineDeployment_QuickShutdown(t *testing.T) {
 	assert.Equal(t, int64(9), ts["maxEvictRetries"])
 }
 
-// TestBuildMCMMachineDeployment_NodeDrainTimeout covers the {n}s/(n/20) tier
-// with the integer division floor (200/20=10, 210/20=10).
 func TestBuildMCMMachineDeployment_NodeDrainTimeout(t *testing.T) {
 	blob := blobFromJSON(t, `{"name":"worker","nodeDrainTimeoutSecond":210}`)
 	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{blob: blob, ngName: "worker", zone: "z"})
@@ -168,8 +157,6 @@ func TestBuildMCMMachineDeployment_MaxSurgeUnavailable(t *testing.T) {
 	assert.Equal(t, int64(2), ru["maxUnavailable"])
 }
 
-// TestBuildMCMMachineDeployment_NodeTemplate covers labels merge, annotations
-// passthrough, and the taints slice (with and without value).
 func TestBuildMCMMachineDeployment_NodeTemplate(t *testing.T) {
 	blob := blobFromJSON(t, `{
 		"name":"worker",
