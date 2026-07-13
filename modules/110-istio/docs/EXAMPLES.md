@@ -984,9 +984,9 @@ roleRef:
   name: istioctl-debug
 ```
 
-Replace `<debug-namespace>` with the namespace where the temporary debug Pod will be created, and `<target-namespace>` with the namespace of the application Pod you want to inspect. Repeat the `Role` and `RoleBinding` for every target namespace where `istioctl` must access Pods.
+Replace `<debug-namespace>` with the namespace where the temporary debug Pod will be created, and `<target-namespace>` with the namespace of the application Pod you want to inspect. Create the Role and RoleBinding resources for every target namespace where `istioctl` must access Pods.
 
-This RBAC is intended for commands that address a Pod directly, for example `<pod-name>.<target-namespace>`. If you use typed resource names such as `deployment/<name>`, grant additional read access to those resource types so `istioctl` can resolve them to Pods.
+This RBAC manifest is intended for commands that address a Pod directly, for example, to a resource like `<pod-name>.<target-namespace>`. If you use typed resource names such as `deployment/<name>`, grant additional read access to those resource types so `istioctl` can resolve them to Pods.
 
 {% alert level="warning" %}
 Creating Pods in system namespaces such as `d8-system` and using system ServiceAccounts such as `deckhouse` usually requires cluster-admin privileges. Use a dedicated ServiceAccount with the minimum required permissions instead.
