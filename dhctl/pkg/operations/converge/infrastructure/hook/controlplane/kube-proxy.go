@@ -86,15 +86,24 @@ func (c *KubeProxyChecker) WithSSHProvider(s libcon.SSHProvider, sett *settings.
 	return c
 }
 
-func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
+func (c *KubeProxyChecker) IsReady(
+	ctx context.Context,
+	nodeName string,
+) (bool, error) {
 	if c.initParams == nil {
-		return false, fmt.Errorf("kube proxy checker: Kubernetes init params are not configured")
+		return false, fmt.Errorf(
+			"kube proxy checker: Kubernetes init params are not configured",
+		)
 	}
 	if c.baseProviderSettings == nil {
-		return false, fmt.Errorf("kube proxy checker: base provider settings are not configured")
+		return false, fmt.Errorf(
+			"kube proxy checker: base provider settings are not configured",
+		)
 	}
 	if c.sshProvider == nil {
-		return false, fmt.Errorf("kube proxy checker: SSH provider is not configured")
+		return false, fmt.Errorf(
+			"kube proxy checker: SSH provider is not configured",
+		)
 	}
 
 	sshClient, err := c.sshProvider.Client(ctx)
@@ -105,7 +114,10 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	if len(c.nodesExternalIPs) > 0 {
 		ip, ok := c.nodesExternalIPs[nodeName]
 		if !ok {
-			return false, fmt.Errorf("no external IP found for node %s", nodeName)
+			return false, fmt.Errorf(
+				"no external IP found for node %s",
+				nodeName,
+			)
 		}
 
 		sshClient.Session().SetAvailableHosts([]session.Host{
@@ -118,7 +130,10 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 
 	kubeCl := kube.NewKubernetesClient(c.baseProviderSettings).
 		WithNodeInterface(
-			ssh.NewNodeInterfaceWrapper(sshClient, c.baseProviderSettings),
+			ssh.NewNodeInterfaceWrapper(
+				sshClient,
+				c.baseProviderSettings,
+			),
 		)
 
 	localInitParams := copyKubernetesInitParams(c.initParams)
@@ -131,25 +146,23 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	}
 
 	if err := kubeCl.InitContext(ctx, params); err != nil {
-		return false, fmt.Errorf("failed to open Kubernetes connection: %w", err)
+		return false, fmt.Errorf(
+			"failed to open Kubernetes connection: %w",
+			err,
+		)
 	}
 
-	defer func() {
-		if !c.stopProxy {
-			return
-		}
+	// Do not stop kubeCl.KubeProxy or sshClient here.
+	// They are owned by the common connection lifecycle.
 
-		if kubeCl.KubeProxy != nil {
-			kubeCl.KubeProxy.StopAll()
-		}
-	}()
-
-	// d8-cluster-uuid
 	cm, err := kubeCl.CoreV1().
 		ConfigMaps("kube-system").
 		Get(ctx, "d8-cluster-uuid", v1.GetOptions{})
 	if err != nil {
-		return false, fmt.Errorf("failed to get cluster UUID ConfigMap: %w", err)
+		return false, fmt.Errorf(
+			"failed to get cluster UUID ConfigMap: %w",
+			err,
+		)
 	}
 
 	c.printNs(ctx, cm)

@@ -77,10 +77,12 @@ func TestKubeProxyCheckerIsReadyValidation(t *testing.T) {
 
 func TestCopyKubernetesInitParams(t *testing.T) {
 	original := &client.KubernetesInitParams{
-		KubeConfig:        "original-kubeconfig",
-		KubeConfigContext: "original-context",
+		KubeConfig:          "original-kubeconfig",
+		KubeConfigContext:   "original-context",
+		KubeConfigInCluster: true,
 		RestConfig: &rest.Config{
-			Host: "https://original-api-server:6443",
+			Host:        "https://original-api-server:6443",
+			BearerToken: "original-token",
 		},
 	}
 
@@ -116,9 +118,19 @@ func TestCopyKubernetesInitParams(t *testing.T) {
 		)
 	}
 
+	if copied.KubeConfigInCluster != original.KubeConfigInCluster {
+		t.Fatalf(
+			"expected copied KubeConfigInCluster %v, got %v",
+			original.KubeConfigInCluster,
+			copied.KubeConfigInCluster,
+		)
+	}
+
 	copied.KubeConfig = "changed-kubeconfig"
 	copied.KubeConfigContext = "changed-context"
+	copied.KubeConfigInCluster = false
 	copied.RestConfig.Host = "http://127.0.0.1:22322"
+	copied.RestConfig.BearerToken = "changed-token"
 
 	if original.KubeConfig != "original-kubeconfig" {
 		t.Fatalf(
@@ -134,11 +146,22 @@ func TestCopyKubernetesInitParams(t *testing.T) {
 		)
 	}
 
+	if !original.KubeConfigInCluster {
+		t.Fatal("original KubeConfigInCluster was modified")
+	}
+
 	if original.RestConfig.Host !=
 		"https://original-api-server:6443" {
 		t.Fatalf(
-			"original RestConfig was modified: got %q",
+			"original RestConfig.Host was modified: got %q",
 			original.RestConfig.Host,
+		)
+	}
+
+	if original.RestConfig.BearerToken != "original-token" {
+		t.Fatalf(
+			"original RestConfig.BearerToken was modified: got %q",
+			original.RestConfig.BearerToken,
 		)
 	}
 }
