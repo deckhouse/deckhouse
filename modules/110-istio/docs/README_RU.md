@@ -392,7 +392,19 @@ Istio работает в режиме [multi-network](https://istio.io/latest/d
 istioctl remote-clusters -i d8-istio
 NAME          SECRET                                     STATUS     ISTIOD
 cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
-```
+   ```shell
+   istioctl remote-clusters -i d8-istio
+   ```
+
+   Пример вывода:
+
+   <!-- markdownlint-disable MD031 -->
+   ```console
+   NAME          SECRET                                     STATUS     ISTIOD
+   cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
+   ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 ## Ambient mesh
 
