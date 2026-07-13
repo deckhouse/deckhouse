@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cert-manager
     rbac.deckhouse.io/aggregate-to-security-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cert-manager.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cert-manager
-  name: d8:manage:permission:module:cert-manager:view
+  name: d8:system-capability:cert-manager:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cert-manager: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль cert-manager: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the cert-manager module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля cert-manager."
 rules:
 - apiGroups:
   - cert-manager.io

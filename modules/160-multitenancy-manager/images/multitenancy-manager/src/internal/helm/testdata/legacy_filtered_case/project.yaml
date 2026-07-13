@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: test
+spec:
+  description: Exercises the post-renderer filter.
+  projectTemplateName: legacy-filtered

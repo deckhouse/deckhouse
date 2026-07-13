@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesCustomResourceConversion:
+  - name: v1alpha1_to_v1alpha2
+    crdName: projecttemplates.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha1
+      toVersion: deckhouse.io/v1alpha2
+  - name: v1alpha2_to_v1alpha1
+    crdName: projecttemplates.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha2
+      toVersion: deckhouse.io/v1alpha1
+EOF
+}
+
+# v1alpha1 -> v1alpha2 is a no-op on the data: every v1alpha1 field (description, parametersSchema,
+# resourcesTemplate) keeps its name and shape in v1alpha2. Such templates carry no structured fields,
+# so the controller keeps rendering them through the legacy resourcesTemplate path.
+function __on_conversion::v1alpha1_to_v1alpha2() {
+  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha1" then
+       .apiVersion = "deckhouse.io/v1alpha2"
+     else . end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of projecttemplates.deckhouse.io failed"}
+EOF
+  fi
+}
+
+# v1alpha2 -> v1alpha1 bumps the apiVersion and backfills the two fields the v1alpha1 schema requires
+# (resourcesTemplate, parametersSchema.openAPIV3Schema) when a structured-only template omits them.
+# The structured-only fields (resources, grantPolicies, podSecurityStandard, ...) are unknown to the
+# v1alpha1 schema and pruned by the apiserver, so they need no explicit removal here.
+function __on_conversion::v1alpha2_to_v1alpha1() {
+  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha2" then
+       .apiVersion = "deckhouse.io/v1alpha1" |
+       .spec = ((.spec // {})
+         | (.resourcesTemplate //= "")
+         | (.parametersSchema //= {"openAPIV3Schema": {}})
+         | (.parametersSchema.openAPIV3Schema //= {}))
+     else . end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of projecttemplates.deckhouse.io failed"}
+EOF
+  fi
+}
+
+hook::run "$@"

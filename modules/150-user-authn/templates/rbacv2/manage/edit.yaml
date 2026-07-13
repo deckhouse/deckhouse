@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: user-authn
     rbac.deckhouse.io/aggregate-to-security-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.user-authn.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-user-authn
-  name: d8:manage:permission:module:user-authn:edit
+  name: d8:system-capability:user-authn:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module user-authn: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль user-authn: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the user-authn module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля user-authn."
 rules:
 - apiGroups:
   - deckhouse.io
