@@ -579,6 +579,7 @@ neighbour-0:
 			f.ValuesSetFromYaml("istio.alliance.ingressGateway.gatewayPodAnnotations", `
 test.deckhouse.io/annotation: test-value
 `)
+			f.ValuesSet("istio.alliance.ingressGateway.loadBalancerClass", "my-lb-class")
 			f.HelmRender()
 		})
 
@@ -616,7 +617,10 @@ test.deckhouse.io/annotation: test-value
 			Expect(ingressgatewayDaemonSet.Field("spec.template.metadata.annotations.test\\.deckhouse\\.io/annotation").String()).To(Equal("test-value"))
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Gateway", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
+			ingressgatewayService := f.KubernetesResource("Service", "d8-istio", "ingressgateway")
+			Expect(ingressgatewayService.Exists()).To(BeTrue())
+			Expect(ingressgatewayService.Field("spec.type").String()).To(Equal("LoadBalancer"))
+			Expect(ingressgatewayService.Field("spec.loadBalancerClass").String()).To(Equal("my-lb-class"))
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Role", "d8-istio", "alliance:ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "alliance:ingressgateway").Exists()).To(BeTrue())
