@@ -30,13 +30,19 @@ func BuildChecksumElement(instanceClass map[string]interface{}, manualRolloutID 
 }
 
 func RenderChecksum(templateContent []byte, blobElement map[string]interface{}) (string, error) {
+	return RenderChecksumWithContext(templateContent, map[string]interface{}{"nodeGroup": blobElement})
+}
+
+// RenderChecksumWithContext renders against a caller-built context. Some
+// templates (e.g. vcd CAPI) read .Values in addition to .nodeGroup.
+func RenderChecksumWithContext(templateContent []byte, ctx map[string]interface{}) (string, error) {
 	t, err := template.New("machine-class.checksum").Funcs(FuncMap()).Parse(string(templateContent))
 	if err != nil {
 		return "", fmt.Errorf("parse checksum template: %w", err)
 	}
 
 	var buf bytes.Buffer
-	if err := t.Execute(&buf, map[string]interface{}{"nodeGroup": blobElement}); err != nil {
+	if err := t.Execute(&buf, ctx); err != nil {
 		return "", fmt.Errorf("render checksum template: %w", err)
 	}
 

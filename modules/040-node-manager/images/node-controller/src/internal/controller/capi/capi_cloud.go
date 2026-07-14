@@ -35,14 +35,25 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-func capiInstanceClassChecksum(cloudType string, blob map[string]interface{}) (string, error) {
+func capiInstanceClassChecksum(cloudType string, cloudProvider, blob map[string]interface{}) (string, error) {
 	checksumTemplate, err := machineclass.ReadChecksumTemplate(
 		machineclass.DefaultTemplateBaseDirs, machineclass.FallbackTemplateBaseDir,
 		cloudType, machineclass.CAPIChecksumSubPath)
 	if err != nil {
 		return "", err
 	}
-	checksum, err := machineclass.RenderChecksum(checksumTemplate, blob)
+	// vcd's checksum reads .Values.nodeManager.internal.cloudProvider.
+	ctx := map[string]interface{}{
+		"nodeGroup": blob,
+		"Values": map[string]interface{}{
+			"nodeManager": map[string]interface{}{
+				"internal": map[string]interface{}{
+					"cloudProvider": cloudProvider,
+				},
+			},
+		},
+	}
+	checksum, err := machineclass.RenderChecksumWithContext(checksumTemplate, ctx)
 	if err != nil {
 		return "", fmt.Errorf("render instance-class checksum: %w", err)
 	}
@@ -232,7 +243,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		return err
 	}
 
-	checksum, err := capiInstanceClassChecksum(cloudType, blob)
+	checksum, err := capiInstanceClassChecksum(cloudType, cloudProvider, blob)
 	if err != nil {
 		return fmt.Errorf("compute instance-class checksum for NodeGroup %s: %w", ng.Name, err)
 	}

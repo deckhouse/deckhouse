@@ -19,6 +19,7 @@ package machineclass
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"maps"
 	"strings"
 	"text/template"
@@ -44,7 +45,17 @@ func FuncMap() template.FuncMap {
 
 		"include":  func(string, any) string { return "not implemented" },
 		"tpl":      func(string, any) any { return "not implemented" },
-		"required": func(string, any) (any, error) { return "not implemented", nil },
+		// required mirrors helm: passes the value through, erroring only when
+		// absent. Templates pipe cloudProvider values through it then read fields.
+		"required": func(warn string, val any) (any, error) {
+			if val == nil {
+				return val, errors.New(warn)
+			}
+			if s, ok := val.(string); ok && s == "" {
+				return val, errors.New(warn)
+			}
+			return val, nil
+		},
 		"lookup": func(string, string, string, string) (map[string]any, error) {
 			return map[string]any{}, nil
 		},
