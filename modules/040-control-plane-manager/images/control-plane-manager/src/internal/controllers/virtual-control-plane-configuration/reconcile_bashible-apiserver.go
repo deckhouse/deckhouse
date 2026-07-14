@@ -52,10 +52,11 @@ import (
 const (
 	bashibleDeckhouseNamespace = "d8-cloud-instance-manager"
 
-	bashibleDeploymentName = "bashible-apiserver"
-	bashibleServiceName    = "bashible-api"
-	bashibleAppLabel       = "bashible-apiserver"
-	bashibleSecurePort     = 4221
+	bashibleDeploymentName    = "bashible-apiserver"
+	bashibleServiceName       = "bashible-api"
+	bashibleAppLabel          = "bashible-apiserver"
+	bashibleSecurePort        = 4221
+	bashibleNestedServicePort = 443
 
 	bashibleKubeconfigSecretName = "bashible-apiserver-kubeconfig"
 	bashibleContextSecretName    = "bashible-apiserver-context"
@@ -609,6 +610,15 @@ func (r *reconciler) reconcileBashibleAPIService(
 		return reconcile.Result{}, fmt.Errorf("nested bashible service: %w", err)
 	}
 
+	// Legacy Endpoints for kube-aggregator (< 1.34)
+	ep := buildNestedBashibleEndpoints(namespace, bashibleAddress)
+	if _, err := controllerutil.CreateOrUpdate(ctx, nested, ep, func() error {
+		applyNestedBashibleEndpoints(ep, namespace, bashibleAddress)
+		return nil
+	}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("nested bashible endpoints: %w", err)
+	}
+
 	es := buildNestedBashibleEndpointSlice(namespace, bashibleAddress)
 	if _, err := controllerutil.CreateOrUpdate(ctx, nested, es, func() error {
 		applyNestedBashibleEndpointSlice(es, namespace, bashibleAddress)
@@ -663,10 +673,30 @@ func buildNestedBashibleService(namespace string) *corev1.Service {
 
 func applyNestedBashibleService(svc *corev1.Service) {
 	svc.Spec.Selector = nil
+	svc.Spec.ClusterIP = corev1.ClusterIPNone
 	svc.Spec.Ports = []corev1.ServicePort{{
 		Name:     "https",
-		Port:     443,
+		Port:     bashibleNestedServicePort,
 		Protocol: corev1.ProtocolTCP,
+	}}
+}
+
+func buildNestedBashibleEndpoints(namespace, address string) *corev1.Endpoints {
+	ep := &corev1.Endpoints{}
+	applyNestedBashibleEndpoints(ep, namespace, address)
+	ep.Name = bashibleServiceName
+	return ep
+}
+
+func applyNestedBashibleEndpoints(ep *corev1.Endpoints, namespace, address string) {
+	ep.Namespace = namespace
+	ep.Subsets = []corev1.EndpointSubset{{
+		Addresses: []corev1.EndpointAddress{{IP: address}},
+		Ports: []corev1.EndpointPort{{
+			Name:     "https",
+			Port:     bashibleNestedServicePort,
+			Protocol: corev1.ProtocolTCP,
+		}},
 	}}
 }
 
@@ -680,7 +710,7 @@ func buildNestedBashibleEndpointSlice(namespace, bashibleAddress string) *discov
 func applyNestedBashibleEndpointSlice(slice *discoveryv1.EndpointSlice, namespace, bashibleAddress string) {
 	portName := "https"
 	protocol := corev1.ProtocolTCP
-	port := int32(bashibleSecurePort)
+	port := int32(bashibleNestedServicePort)
 
 	if slice.Labels == nil {
 		slice.Labels = map[string]string{}

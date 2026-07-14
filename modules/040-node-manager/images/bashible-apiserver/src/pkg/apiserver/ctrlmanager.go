@@ -20,7 +20,6 @@ import (
 	"bashible-apiserver/pkg/runtimeconfig"
 	"fmt"
 
-	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -63,8 +62,4 @@ func NewCtrlManager(cfg runtimeconfig.RuntimeConfig) (ctrl.Manager, error) {
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 	return mgr, err
-}
-
-func ctrlManagerClusterConfig() (*rest.Config, error) {
-	return rest.InClusterConfig()
 }
