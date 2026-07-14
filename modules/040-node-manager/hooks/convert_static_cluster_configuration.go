@@ -83,6 +83,10 @@ func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hoo
 }
 
 func internalNetworkFromStaticConfiguration(data []byte) (any, error) {
+	if len(data) == 0 {
+		return "", nil
+	}
+
 	if err := validation.ValidateData([]string{}, &data); err != nil {
 		if !errors.Is(err, validation.ErrSchemaNotFound) {
 			return "", err
