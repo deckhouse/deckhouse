@@ -142,6 +142,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -301,7 +302,19 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
-
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
       - name: Build and push deckhouse images
         id: build
@@ -490,10 +503,12 @@ jobs:
         with:
           name: build_report_${{ env.WERF_ENV }}
           path: images_tags_werf.json
-
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json || true
+        run: |
+          rm images_tags_werf.json || true
+          rm changed_images.json || true
+          rm images_digests.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -814,6 +829,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -973,7 +989,19 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
-
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
       - name: Build and push deckhouse images
         id: build
@@ -1162,10 +1190,12 @@ jobs:
         with:
           name: build_report_${{ env.WERF_ENV }}
           path: images_tags_werf.json
-
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json || true
+        run: |
+          rm images_tags_werf.json || true
+          rm changed_images.json || true
+          rm images_digests.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -1193,6 +1223,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -1352,7 +1383,19 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
-
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
       - name: Build and push deckhouse images
         id: build
@@ -1541,10 +1584,12 @@ jobs:
         with:
           name: build_report_${{ env.WERF_ENV }}
           path: images_tags_werf.json
-
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json || true
+        run: |
+          rm images_tags_werf.json || true
+          rm changed_images.json || true
+          rm images_digests.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -1572,6 +1617,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -1731,7 +1777,19 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
-
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
       - name: Build and push deckhouse images
         id: build
@@ -1920,10 +1978,12 @@ jobs:
         with:
           name: build_report_${{ env.WERF_ENV }}
           path: images_tags_werf.json
-
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json || true
+        run: |
+          rm images_tags_werf.json || true
+          rm changed_images.json || true
+          rm images_digests.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -1951,6 +2011,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -2110,7 +2171,19 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
-
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
       - name: Build and push deckhouse images
         id: build
@@ -2299,10 +2372,12 @@ jobs:
         with:
           name: build_report_${{ env.WERF_ENV }}
           path: images_tags_werf.json
-
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json || true
+        run: |
+          rm images_tags_werf.json || true
+          rm changed_images.json || true
+          rm images_digests.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -2330,6 +2405,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -2489,7 +2565,19 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
-
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
       - name: Build and push deckhouse images
         id: build
@@ -2678,10 +2766,12 @@ jobs:
         with:
           name: build_report_${{ env.WERF_ENV }}
           path: images_tags_werf.json
-
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json || true
+        run: |
+          rm images_tags_werf.json || true
+          rm changed_images.json || true
+          rm images_digests.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -2709,6 +2799,7 @@ jobs:
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
 
       # </template: docker-config-isolation>
@@ -2868,7 +2959,19 @@ jobs:
               echo "$KEY_LINE" >> ~/.ssh/known_hosts
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
-
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
       - name: Build and push deckhouse images
         id: build
@@ -3056,10 +3159,12 @@ jobs:
         with:
           name: build_report_${{ env.WERF_ENV }}
           path: images_tags_werf.json
-
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json || true
+        run: |
+          rm images_tags_werf.json || true
+          rm changed_images.json || true
+          rm images_digests.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -3101,6 +3206,7 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
 
+
       # <template: read_werf_version_step>
       - name: Read werf version from werf_envs.yml
         id: read_werf_version
@@ -3120,6 +3226,26 @@ jobs:
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
       # </template: read_werf_version_step>
+
+      # <template: werf_install_step>
+      - name: Install werf-dk CLI
+        run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -3198,15 +3324,15 @@ jobs:
 
 
       - name: Run doc web build
-        uses: werf/actions/build@v2
-        with:
-          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
           WERF_ENV: "EE"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build
 
     # </template: web_build_template>
 
@@ -3862,6 +3988,7 @@ jobs:
           ln -s ~/deckhouse-bin-cache bin
       # </template: link_bin_step>
       - name: Running default user validation on ${{env.TAG}}
+        id: scan
         env:
           TAG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
@@ -4307,12 +4434,9 @@ jobs:
       # </template: doc_release_version_template>
       # <template: deploy_doc_template>
       - name: Deploy documentation to production
-        uses: werf/actions/converge@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
-          env: web-production
         env:
+          WERF_ENV: web-production
+          WERF_KUBE_CONFIG_BASE64: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           WERF_REQUIRE_BUILT_IMAGES: "true"
           WERF_SET_DOCS_WATCHER_DOP_URL: "global.dop_url=${{ vars.DOCS_WATCHER_DOP_URL }}"
           WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "global.dop_auth_token=${{ secrets.DOCS_WATCHER_DOP_AUTH_TOKEN }}"
@@ -4330,6 +4454,9 @@ jobs:
           WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
           WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
           WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf converge
       # </template: deploy_doc_template>
 
 
@@ -4454,12 +4581,9 @@ jobs:
       # </template: doc_release_version_template>
       # <template: deploy_doc_template>
       - name: Deploy documentation to stage
-        uses: werf/actions/converge@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-stage
         env:
+          WERF_ENV: web-stage
+          WERF_KUBE_CONFIG_BASE64: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
@@ -4474,6 +4598,9 @@ jobs:
           WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
           WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}"
           WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf converge
       # </template: deploy_doc_template>
 
   list_changed_modules:

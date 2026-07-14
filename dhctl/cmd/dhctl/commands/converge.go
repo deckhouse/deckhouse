@@ -37,6 +37,7 @@ import (
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineConvergeFlags(cmd, &opts.Converge)
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
@@ -76,7 +77,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 					AutoDismissChanges:     false,
 					AutoDismissDestructive: false,
 					AutoApproveSettings: infrastructure.AutoApproveSettings{
-						AutoApprove: false,
+						AutoApprove: opts.Converge.DestructiveApproved,
 					},
 				},
 			},

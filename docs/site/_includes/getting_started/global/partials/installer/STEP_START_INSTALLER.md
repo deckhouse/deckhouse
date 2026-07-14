@@ -56,6 +56,7 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 ```
 {% endcapture %}
 {{ command | markdownify }}
+<p>Open <a href="http://localhost:8080">http://localhost:8080</a>.</p>
 </div>
 <div id="tab-mac-content-trdl" class="tabs__container tabs__container--descr" markdown="1">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
@@ -84,6 +85,14 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 {{ command | markdownify }}
 <p>If you do not want to run <code>. $(trdl use -d d8-installer 1 ea)</code> before each installer usage, add the line <code>source $(trdl use -d d8-installer 1 ea)</code> to your shell RC file.</p>
 </li>
+<li>
+  Run the installer with the <code>d8install -b</code> command.
+  <div markdown="1">
+  {% alert level="warning" %}
+    If the browser does not open automatically, go to <a href="http://localhost:8080">http://localhost:8080</a>.
+  {% endalert %}
+  </div>
+</li>
   </ol>
 </div>
 <div id="tab-mac-content-file" class="tabs__container tabs__container--descr" markdown="1">
@@ -101,6 +110,11 @@ xattr -c d8install
 ```
 {% endcapture %}
 {{ command | markdownify }}
+  <div markdown="1">
+  {% alert level="warning" %}
+    If the browser does not open automatically, go to <a href="http://localhost:8080">http://localhost:8080</a>.
+  {% endalert %}
+  </div>
 </div>
 </div>
   </div>
@@ -135,6 +149,7 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 ```
 {% endcapture %}
 {{ command | markdownify }}
+  <p>Open <a href="http://localhost:8080">http://localhost:8080</a>.</p>
 </div>
 <div id="tab-linux-content-trdl" class="tabs__container tabs__container--descr" markdown="1">
   <p>Starting from version 0.5.0, the installer can be installed on your machine using <a href="https://ru.trdl.dev/">trdl</a>.</p>
@@ -162,6 +177,14 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 {{ command | markdownify }}
 <p>If you do not want to run <code>. $(trdl use -d d8-installer 1 ea)</code> before each installer usage, add the line <code>source $(trdl use -d d8-installer 1 ea)</code> to your shell RC file.</p>
 </li>
+<li>
+  Run the installer with the <code>d8install -b</code> command.
+  <div markdown="1">
+  {% alert level="warning" %}
+    If the browser does not open automatically, go to <a href="http://localhost:8080">http://localhost:8080</a>.
+  {% endalert %}
+  </div>
+</li>
   </ol>
 </div>
 <div id="tab-linux-content-file" class="tabs__container tabs__container--descr" markdown="1">
@@ -174,6 +197,11 @@ chmod +x d8install
 ```
 {% endcapture %}
 {{ command | markdownify }}
+  <div markdown="1">
+  {% alert level="warning" %}
+    If the browser does not open automatically, go to <a href="http://localhost:8080">http://localhost:8080</a>.
+  {% endalert %}
+  </div>
 </div>
 </div>
   </div>
@@ -195,9 +223,9 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
 ```
 {% endcapture %}
 {{ command | markdownify }}
+<p>Open <a href="http://localhost:8080">http://localhost:8080</a>.</p>
   </div>
   </div>
 </li>
-<li>Open <a href="http://localhost:8080">http://localhost:8080</a></li>
 </ol>
 </div>

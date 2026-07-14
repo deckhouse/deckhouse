@@ -106,6 +106,10 @@ entries:
                         en: Access for CI/CD
                         ru: Доступ для CI/CD
                       url: /admin/configuration/access/authorization/ci_cd.html
+                    - title:
+                        en: Resource listing with access-based filtering
+                        ru: Листинг ресурсов с фильтрацией по правам доступа
+                      url: /admin/configuration/access/authorization/filtered-listing.html
             - title:
                 en: Integration with IaaS
                 ru: Интеграция с IaaS
@@ -1310,6 +1314,14 @@ entries:
                 en: Web interface modules
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
+            - title:
+                en: Deckhouse module
+                ru: Модуль deckhouse
+              url: /architecture/deckhouse/deckhouse.html
+            - title:
+                en: Queuing mechanism
+                ru: Механизм очередей
+              url: /architecture/deckhouse/queues.html
             - title:
                 en: Registry module
                 ru: Модуль registry

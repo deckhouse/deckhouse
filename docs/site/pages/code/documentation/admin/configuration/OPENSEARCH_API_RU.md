@@ -30,13 +30,21 @@ weight: 38
 
 Тексты полей `message` в примерах ниже возвращаются API на английском языке.
 
-- `202 Accepted`:
+- `202 Accepted`
 
-  
+```json
+{
+  "message": "OpenSearch indices were reset; reindex jobs were enqueued."
+}
+```
 
-- `400 Bad Request` (например, OpenSearch выключен или сервис вернул ошибку):
+- `400 Bad Request` (например, OpenSearch выключен или сервис вернул ошибку)
 
-  
+```json
+{
+  "message": "OpenSearch is disabled"
+}
+```
 
 ### Пример запроса
 

@@ -162,7 +162,7 @@ The following is an error message example when the requirements are not met:
 
 ## Notes on divergence from upstream GitLab docs
 
-The FE implementation of Deckhosue Code is different from the upstream GitLab `doc/api/search.md`. The differences are as follows:
+The FE implementation of Deckhouse Code is different from the upstream GitLab `doc/api/search.md`. The differences are as follows:
 
 - The `fields` parameter is supported only for `work_items` and `issues` search scopes (not `merge_requests`).
 - The `exclude_forks` parameter is supported only for `work_items` and `issues` search scopes.

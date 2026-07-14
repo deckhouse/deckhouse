@@ -28,13 +28,21 @@ Synchronously recreates OpenSearch index(es) and enqueues background reindex job
 
 ### Responses
 
-- `202 Accepted`:
+- `202 Accepted`
 
-  
+```json
+{
+  "message": "OpenSearch indices were reset; reindex jobs were enqueued."
+}
+```
 
-- `400 Bad Request` (for example, if OpenSearch is disabled or there is a service error):
+- `400 Bad Request` (for example, if OpenSearch is disabled or there is a service error)
 
-  
+```json
+{
+  "message": "OpenSearch is disabled"
+}
+```
 
 ### Request example
 
