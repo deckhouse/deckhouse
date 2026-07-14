@@ -6,6 +6,7 @@ e2e_log() {
 CPM_E2E_BACKUP_FILE="${TMPDIR:-/tmp}/cpm-e2e-moduleconfig-backup.json"
 CPM_E2E_EXISTING_CPOS_FILE="${TMPDIR:-/tmp}/cpm-e2e-existing-cpos.txt"
 CPM_E2E_NEW_CPO_FILE="${TMPDIR:-/tmp}/cpm-e2e-new-cpo.txt"
+CPM_E2E_AUDIT_FLAG_STATE_FILE="${TMPDIR:-/tmp}/cpm-e2e-audit-flag-state.txt"
 
 CPM_E2E_CP_COMPONENTS="${CPM_E2E_CP_COMPONENTS:-kube-apiserver kube-controller-manager kube-scheduler}"
 
@@ -273,6 +274,85 @@ wait_for_new_control_plane_cpos() {
       "$state_dir/new-cpo-${component_label}.txt" \
       "$timeout"
   done
+}
+
+# snapshot_flag_state records whether needle appears in component pod manifests (true|false).
+# Usage: snapshot_flag_state kube-apiserver audit-policy-file /path/to/state.txt
+snapshot_flag_state() {
+  component="$1"
+  needle="$2"
+  state_file="$3"
+  if [ -z "$component" ] || [ -z "$needle" ] || [ -z "$state_file" ]; then
+    e2e_log "snapshot_flag_state: component, needle, and state file path are required"
+    return 1
+  fi
+  if is_flag_in_component "$component" "$needle"; then
+    printf 'true\n' > "$state_file"
+    e2e_log "flag snapshot: '$needle' present in $component"
+  else
+    printf 'false\n' > "$state_file"
+    e2e_log "flag snapshot: '$needle' absent in $component"
+  fi
+}
+
+# assert_flag_state_matches asserts current flag presence matches a snapshot_flag_state file.
+# Usage: assert_flag_state_matches kube-apiserver audit-policy-file /path/to/state.txt
+assert_flag_state_matches() {
+  component="$1"
+  needle="$2"
+  state_file="$3"
+  if [ -z "$component" ] || [ -z "$needle" ] || [ ! -f "$state_file" ]; then
+    e2e_log "assert_flag_state_matches: component, needle, and existing state file are required"
+    return 1
+  fi
+  expected=$(tr -d '[:space:]' < "$state_file")
+  if [ "$expected" = "true" ]; then
+    is_flag_in_component "$component" "$needle"
+    return $?
+  fi
+  if [ "$expected" = "false" ]; then
+    if is_flag_in_component "$component" "$needle"; then
+      e2e_log "expected '$needle' to remain absent in $component"
+      return 1
+    fi
+    e2e_log "'$needle' remains absent in $component"
+    return 0
+  fi
+  e2e_log "assert_flag_state_matches: invalid snapshot value '$expected' in $state_file"
+  return 1
+}
+
+# assert_no_new_component_cpo observes for observe_sec and fails if a new CPO appears.
+# Usage: assert_no_new_component_cpo kube-apiserver /path/to/existing-cpos.txt 120
+assert_no_new_component_cpo() {
+  component_label="$1"
+  existing_file="$2"
+  observe_sec="${3:-120}"
+  discard_file="${TMPDIR:-/tmp}/cpm-e2e-discard-cpo.txt"
+  if [ -z "$component_label" ] || [ -z "$existing_file" ]; then
+    e2e_log "assert_no_new_component_cpo: component label and existing file path are required"
+    return 1
+  fi
+  e2e_log "observing for ${observe_sec}s that no new $component_label ControlPlaneOperation appears"
+  deadline=$(( $(date +%s) + observe_sec ))
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    if _find_new_component_cpo "$component_label" "$existing_file" "$discard_file"; then
+      e2e_log "unexpected new $component_label ControlPlaneOperation detected"
+      kubectl_run get controlplaneoperations -n kube-system \
+        -l "control-plane.deckhouse.io/component=$component_label" -o wide >&2 || true
+      return 1
+    fi
+    sleep 5
+  done
+  e2e_log "no new $component_label ControlPlaneOperation detected during ${observe_sec}s observation"
+  return 0
+}
+
+# remove_moduleconfig_maintenance clears spec.maintenance on control-plane-manager ModuleConfig.
+remove_moduleconfig_maintenance() {
+  e2e_log "removing ModuleConfig spec.maintenance"
+  kubectl_run patch moduleconfig control-plane-manager \
+    --type=json -p '[{"op":"remove","path":"/spec/maintenance"}]' --request-timeout=60s
 }
 
 # apply_or_patch_moduleconfig creates or patches control-plane-manager ModuleConfig from a manifest.

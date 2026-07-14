@@ -30,6 +30,8 @@ spec:
               set -eu
               . ./scripts/functions.sh
               restore_moduleconfig "$CPM_E2E_BACKUP_FILE"
+              sleep 30
+              wait_for_api
             check:
               ($error == null): true
 
@@ -56,27 +58,6 @@ spec:
               wait_for_new_component_cpo kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE" "$CPM_E2E_NEW_CPO_FILE" 300
             check:
               ($error == null): true
-      catch:
-        - description: Collect kube-apiserver ControlPlaneOperations on failure
-          script:
-            content: |
-              . ./scripts/functions.sh
-              kubectl_run get controlplaneoperations -n kube-system \
-                -l control-plane.deckhouse.io/component=kube-apiserver -o wide || true
-            check:
-              ($error == null): true
-        - description: Collect control-plane-manager ModuleConfig on failure
-          script:
-            content: |
-              . ./scripts/functions.sh
-              kubectl_run get moduleconfig control-plane-manager -o yaml || true
-            check:
-              ($error == null): true
-        - description: Collect control-plane-manager pod logs on failure
-          podLogs:
-            namespace: kube-system
-            selector: app=d8-control-plane-manager
-            tail: 200
 
     - name: assert-operation-complete
       try:
@@ -114,19 +95,41 @@ spec:
                   - CertObserve
               status:
                 (conditions[?type == 'Completed' && status == 'True' && reason == 'OperationCompleted'] | length(@) > `0`): true
+      catch:
+        - description: Collect kube-apiserver ControlPlaneOperations on failure
+          script:
+            content: |
+              . ./scripts/functions.sh
+              kubectl_run get controlplaneoperations -n kube-system \
+                -l control-plane.deckhouse.io/component=kube-apiserver -o wide || true
+            check:
+              ($error == null): true
+        - description: Collect control-plane-manager ModuleConfig on failure
+          script:
+            content: |
+              . ./scripts/functions.sh
+              kubectl_run get moduleconfig control-plane-manager -o yaml || true
+            check:
+              ($error == null): true
+        - description: Collect control-plane-manager pod logs on failure
+          podLogs:
+            namespace: kube-system
+            selector: app=d8-control-plane-manager
+            tail: 200
 
     - name: assert-no-audit-policy
       try:
         - description: Assert kube-apiserver pods have no audit-policy-file flag
-          script:
-            timeout: 2m
-            content: |
-              set -eu
-              . ./scripts/functions.sh
-              e2e_log "checking kube-apiserver pods for audit-policy-file flag"
-              if is_flag_in_component kube-apiserver audit-policy-file; then
-                exit 1
-              fi
-              e2e_log "kube-apiserver pods do not contain audit-policy-file"
-            check:
-              ($error == null): true
+          assert:
+            timeout: 1m
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                labels:
+                  component: kube-apiserver
+                  tier: control-plane
+                namespace: kube-system
+              spec:
+                containers:
+                  - (length(command[?starts_with(@, '--audit-policy-file')]) == `0`): true
