@@ -163,7 +163,7 @@ shell:
   # `CARGO_BAZEL_REPIN=true`, which would otherwise force a re-splice on every build and invalidate the prepared
   # state. NB: the proxy-build-deps snapshot must be regenerated under this same setting (see its README).
   - sudo -u cilium bash -c 'printf "\ncommon --repo_env=CARGO_BAZEL_REPIN=1\n" >> .bazelrc'
-  - sudo -u cilium sed -i 's/^\tCARGO_BAZEL_REPIN=true //' Makefile
+  - sudo -u cilium sed -i 's/^\tCARGO_BAZEL_REPIN=true /\t/' Makefile
   #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
