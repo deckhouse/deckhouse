@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-8672d6eafe61e4f890bf57dfe22d2a4475b99af4354ceed6f3f9ae9a9ff2f1ed",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -59,8 +59,302 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T08:25:16.130934Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с некорректной обработкой символьных ссылок в DOCTYPE-узлах при последовательном вызове html.Parse и html.Render (XSS). control-plane-manager линкует golang.org/x/net только для http2/idna/httpguts транзитивно через k8s.io/client-go/rest; golang.org/x/net/html отсутствует в графе сборки (подтверждено go list -deps), Parse/Render не вызываются ни в src/, ни в go_lib/controlplane/.",
+      "timestamp": "2026-07-14T20:43:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с некорректной обработкой дублирующихся атрибутов при последовательном вызове html.Parse и html.Render (XSS). golang.org/x/net/html отсутствует в графе сборки control-plane-manager (подтверждено go list -deps) — уязвимый путь парсера недостижим.",
+      "timestamp": "2026-07-14T20:43:01Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/idna"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функции ToASCII/ToUnicode пакета golang.org/x/net/idna некорректно принимают Punycode-метки, декодирующиеся в ASCII-only домен, что может привести к обходу авторизации по имени хоста. golang.org/x/net/idna линкуется в control-plane-manager только внутренне через golang.org/x/net/http2 (via k8s.io/client-go/rest) для нормализации хоста при TLS/dial; ни src/, ни go_lib/controlplane/ не выполняют собственных проверок авторизации по хосту — уязвимый паттерн недостижим.",
+      "timestamp": "2026-07-14T20:43:02Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с некорректной обработкой HTML-элементов в foreign content при последовательном вызове html.Parse и html.Render (XSS). golang.org/x/net/html отсутствует в графе сборки control-plane-manager (подтверждено go list -deps).",
+      "timestamp": "2026-07-14T20:43:03Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость (DoS) связана с квадратичной сложностью алгоритма построения дерева при вызове html.Parse над произвольным HTML. golang.org/x/net/html (включая алгоритм построения дерева) отсутствует в графе сборки control-plane-manager.",
+      "timestamp": "2026-07-14T20:43:04Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с некорректной обработкой namespaced-элементов в foreign content при последовательном вызове html.Parse и html.Render (XSS). golang.org/x/net/html отсутствует в графе сборки control-plane-manager (подтверждено go list -deps).",
+      "timestamp": "2026-07-14T20:43:05Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/http2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость приводит к бесконечному циклу в HTTP/2-клиентском Transport, если сервер отвечает SETTINGS_MAX_FRAME_SIZE=0. control-plane-manager использует golang.org/x/net/http2 только как клиентский транспорт транзитивно через k8s.io/client-go/rest, и единственный сетевой пир компонента — локальный kube-apiserver (реконсиляция манифестов, TokenReview/SubjectAccessReview); вызовов к вебхукам, агрегированным API или иным недоверенным серверам нет.",
+      "timestamp": "2026-07-14T20:43:06Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к утечке памяти на SSH-сервере из-за неочищаемых отклонённых каналов. golang.org/x/crypto в go.sum control-plane-manager представлен только устаревшими go.mod-only записями без содержательного хеша (h1:) — модуль реально не скачивается и не компилируется; ssh-импортов в src/ и go_lib/controlplane/ нет.",
+      "timestamp": "2026-07-14T20:43:07Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость позволяет обойти ограничения сертификата на SSH-сервере при использовании PartialSuccessError. golang.org/x/crypto/ssh не компилируется в бинарь control-plane-manager (нет h1-хеша в go.sum, нет ssh-импортов).",
+      "timestamp": "2026-07-14T20:43:08Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к DoS через необработанные размеры параметров RSA/DSA ключей при аутентификации на SSH-сервере. golang.org/x/crypto/ssh не компилируется в бинарь control-plane-manager.",
+      "timestamp": "2026-07-14T20:43:09Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к deadlock на SSH-клиенте при получении несогласованных global-request ответов от вредоносного SSH-сервера. control-plane-manager никогда не вызывает ssh.Dial; golang.org/x/crypto/ssh не компилируется в бинарь.",
+      "timestamp": "2026-07-14T20:43:10Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/agent"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent приводит к потере constraint-ограничений при пересылке SSH-ключей удалённому агенту. golang.org/x/crypto/ssh/agent не линкуется в control-plane-manager; agent.Add/AddedKey не используются.",
+      "timestamp": "2026-07-14T20:43:11Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике SSH-сервера при использовании ssh.CertChecker без настроенных IsUserAuthority/IsHostAuthority. golang.org/x/crypto/ssh (включая CertChecker) не компилируется в бинарь control-plane-manager.",
+      "timestamp": "2026-07-14T20:43:12Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/knownhosts"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/knownhosts приводит к необнаружению отозванных CA SignatureKey при проверке SSH host key. golang.org/x/crypto/ssh/knownhosts не линкуется в control-plane-manager; проверка host key через knownhosts не выполняется.",
+      "timestamp": "2026-07-14T20:43:13Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к обходу проверки source-address на SSH-сервере при использовании non-pubkey callback аутентификации. Серверный SSH-код отсутствует в control-plane-manager — это не SSH-сервер.",
+      "timestamp": "2026-07-14T20:43:14Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике в AES-GCM packet decoder SSH-протокола из-за некорректного приведения типов при обработке специально сформированных данных. control-plane-manager не реализует SSH wire-протокол; golang.org/x/crypto/ssh не компилируется в бинарь.",
+      "timestamp": "2026-07-14T20:43:15Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость позволяет обойти проверку физического касания (User Presence) для FIDO/U2F ключей на SSH-сервере. control-plane-manager не использует golang.org/x/crypto/ssh и не реализует FIDO/U2F-аутентификацию.",
+      "timestamp": "2026-07-14T20:43:16Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/agent"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к тому, что in-memory keyring из agent.NewKeyring() не применяет ограничение ConfirmBeforeUse. golang.org/x/crypto/ssh/agent не входит в граф сборки control-plane-manager.",
+      "timestamp": "2026-07-14T20:43:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к бесконечному циклу при записи более 4GB данных в один SSH-канал за один вызов Write (переполнение целочисленного счётчика). control-plane-manager не открывает SSH-каналы (ни как клиент, ни как сервер).",
+      "timestamp": "2026-07-14T20:43:18Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике при приведении некорректных байт протокола к типу ed25519.PrivateKey. control-plane-manager не разбирает SSH-ключевой материал в проводном формате; golang.org/x/crypto/ssh не компилируется в бинарь.",
+      "timestamp": "2026-07-14T20:43:19Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys/windows"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с целочисленным переполнением в функции NewNTUnicodeString пакета golang.org/x/sys/windows и защищена build-тегом GOOS=windows. control-plane-manager собирается с явным GOOS=linux GOARCH=amd64 (werf.inc.yaml); go list -deps подтверждает, что скомпилирован только golang.org/x/sys/unix, golang.org/x/sys/windows отсутствует.",
+      "timestamp": "2026-07-14T20:43:20Z"
     }
   ],
   "timestamp": "2025-10-28T18:45:30Z",
-  "last_updated": "2026-04-10T08:25:16Z"
+  "last_updated": "2026-07-14T20:43:20Z"
 }

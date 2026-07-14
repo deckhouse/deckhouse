@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 5,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -129,8 +129,288 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T08:26:57.044194Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость связана с некорректной обработкой символьных ссылок в DOCTYPE-узлах при последовательном вызове html.Parse и html.Render (XSS). kube-apiserver обращается к golang.org/x/net/html только через прокси-подресурс pod/service/node (apimachinery pkg/util/proxy/transport.go), используя исключительно потоковый html.NewTokenizer/Token() и никогда не вызывая Parse/ParseFragment*/Render — уязвимая комбинация Parse+Render не задействована.",
+      "timestamp": "2026-07-14T20:42:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость связана с некорректной обработкой дублирующихся атрибутов при последовательном вызове html.Parse и html.Render (XSS). kube-apiserver использует golang.org/x/net/html только через потоковый Tokenizer в прокси-подресурсе (apimachinery), не вызывая Parse/Render — уязвимая комбинация не задействована.",
+      "timestamp": "2026-07-14T20:42:01Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/idna"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Функции ToASCII/ToUnicode пакета golang.org/x/net/idna некорректно принимают Punycode-метки, декодирующиеся в ASCII-only домен, что может привести к обходу авторизации по имени хоста. kube-apiserver реализует golang.org/x/net/idna только через httpguts.PunycodeHostPort — однонаправленный кодировщик Unicode→ASCII для исходящих Host-заголовков/dial-адресов при вызове вебхуков, а не как схема «авторизация по ASCII, действие по Unicode», требуемая для эксплуатации.",
+      "timestamp": "2026-07-14T20:42:02Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость связана с некорректной обработкой HTML-элементов в foreign content при последовательном вызове html.Parse и html.Render (XSS). kube-apiserver использует golang.org/x/net/html только через потоковый Tokenizer в прокси-подресурсе, не вызывая Parse/Render — уязвимая комбинация не задействована.",
+      "timestamp": "2026-07-14T20:42:03Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость (DoS) связана с квадратичной сложностью алгоритма построения дерева при вызове html.Parse над произвольным HTML. kube-apiserver использует golang.org/x/net/html только через потоковый Tokenizer в прокси-подресурсе и никогда не вызывает Parse/ParseFragment* — уязвимый путь построения дерева не задействован.",
+      "timestamp": "2026-07-14T20:42:04Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость связана с некорректной обработкой namespaced-элементов в foreign content при последовательном вызове html.Parse и html.Render (XSS). kube-apiserver использует golang.org/x/net/html только через потоковый Tokenizer в прокси-подресурсе, не вызывая Parse/Render — уязвимая комбинация не задействована.",
+      "timestamp": "2026-07-14T20:42:05Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к утечке памяти на SSH-сервере из-за неочищаемых отклонённых каналов. golang.org/x/crypto/ssh в дереве исходников Kubernetes используется только тестовым фреймворком test/e2e/framework/ssh (собирается в отдельный бинарь e2e.test) и не входит в граф сборки kube-apiserver; SSH-туннелирование apiserver↔node было удалено до версии 1.24.",
+      "timestamp": "2026-07-14T20:42:06Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость позволяет обойти ограничения сертификата на SSH-сервере при использовании PartialSuccessError с непустыми Permissions. golang.org/x/crypto/ssh не входит в граф сборки kube-apiserver — присутствует в дереве Kubernetes только для тестового бинаря e2e.test.",
+      "timestamp": "2026-07-14T20:42:07Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к DoS через необработанные размеры параметров RSA/DSA ключей при аутентификации на SSH-сервере. golang.org/x/crypto/ssh не входит в граф сборки kube-apiserver — присутствует в дереве Kubernetes только для тестового бинаря e2e.test.",
+      "timestamp": "2026-07-14T20:42:08Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к deadlock на SSH-клиенте при получении несогласованных global-request ответов от вредоносного SSH-сервера. kube-apiserver никогда не вызывает ssh.Dial; golang.org/x/crypto/ssh присутствует в дереве Kubernetes только для тестового бинаря e2e.test.",
+      "timestamp": "2026-07-14T20:42:09Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/agent"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent приводит к потере constraint-ограничений при пересылке SSH-ключей удалённому агенту. kube-apiserver не использует ssh/agent и не выполняет пересылку SSH-ключей.",
+      "timestamp": "2026-07-14T20:42:10Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике SSH-сервера при использовании ssh.CertChecker без настроенных IsUserAuthority/IsHostAuthority. kube-apiserver никогда не создаёт ssh.CertChecker или ssh.Server; golang.org/x/crypto/ssh присутствует в дереве Kubernetes только для тестового бинаря e2e.test.",
+      "timestamp": "2026-07-14T20:42:11Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/knownhosts"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/knownhosts приводит к необнаружению отозванных CA SignatureKey при проверке SSH host key. kube-apiserver не выполняет SSH-клиентскую проверку host key через knownhosts.",
+      "timestamp": "2026-07-14T20:42:12Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к обходу проверки source-address на SSH-сервере при использовании non-pubkey callback аутентификации. kube-apiserver никогда не запускает ssh.Server; golang.org/x/crypto/ssh присутствует в дереве Kubernetes только для тестового бинаря e2e.test.",
+      "timestamp": "2026-07-14T20:42:13Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике в AES-GCM packet decoder SSH-протокола из-за некорректного приведения типов при обработке специально сформированных данных. kube-apiserver никогда не устанавливает SSH-соединения (ни клиентом, ни сервером).",
+      "timestamp": "2026-07-14T20:42:14Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость позволяет обойти проверку физического касания (User Presence) для FIDO/U2F ключей на SSH-сервере. kube-apiserver никогда не запускает ssh.Server и не обрабатывает FIDO/U2F-аутентификацию.",
+      "timestamp": "2026-07-14T20:42:15Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/agent"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к тому, что in-memory keyring из agent.NewKeyring() не применяет ограничение ConfirmBeforeUse. kube-apiserver не использует golang.org/x/crypto/ssh/agent.",
+      "timestamp": "2026-07-14T20:42:16Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к бесконечному циклу при записи более 4GB данных в один SSH-канал за один вызов Write (переполнение целочисленного счётчика). kube-apiserver никогда не открывает SSH-каналы.",
+      "timestamp": "2026-07-14T20:42:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике при приведении некорректных байт протокола к типу ed25519.PrivateKey. kube-apiserver никогда не разбирает SSH-ключевой материал по проводному протоколу.",
+      "timestamp": "2026-07-14T20:42:18Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys/windows"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с целочисленным переполнением в функции NewNTUnicodeString пакета golang.org/x/sys/windows и защищена build-тегом GOOS=windows. kube-apiserver собирается и запускается исключительно на Linux — уязвимый код не компилируется в бинарь.",
+      "timestamp": "2026-07-14T20:42:19Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-04-10T08:26:57Z"
+  "last_updated": "2026-07-14T20:42:19Z"
 }
