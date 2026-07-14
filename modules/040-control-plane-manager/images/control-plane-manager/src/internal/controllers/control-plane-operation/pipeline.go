@@ -74,6 +74,11 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 			}
 			return result, err
 		}
+		// A step may drive the whole operation to a terminal state (e.g. Abandoned).
+		// executeStep already persisted it; stop the pipeline without completing.
+		if state.IsTerminal() {
+			return result, nil
+		}
 		if result.RequeueAfter > 0 {
 			return result, nil
 		}
@@ -107,6 +112,12 @@ func (r *Reconciler) executeStep(ctx context.Context, state *controlplanev1alpha
 				stepLogger.Warn("failed to flush status on requeue", log.Err(patchErr))
 			}
 			result = reconcile.Result{RequeueAfter: res.RequeueAfter}
+		case res.Outcome == OutcomeAbandoned:
+			state.MarkOperationAbandoned(res.Message)
+			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
+				stepLogger.Warn("failed to flush status on abandon", log.Err(patchErr))
+			}
+			result = reconcile.Result{}
 		default:
 			state.MarkStepCompletedWithMessage(name, res.Message)
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {

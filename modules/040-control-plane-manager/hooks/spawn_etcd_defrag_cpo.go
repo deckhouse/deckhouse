@@ -90,6 +90,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          filterDefragStateCM,
 		},
+		{
+			Name:       "etcd_pods_defrag",
+			ApiVersion: "v1",
+			Kind:       "Pod",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{defragStateCMNamespace},
+				},
+			},
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"component": "etcd",
+					"tier":      "control-plane",
+				},
+			},
+			ExecuteHookOnEvents: ptr.To(false),
+			FilterFunc:          filterDefragEtcdPod,
+		},
 	},
 }, handleSpawnEtcdDefragCPO)
 
@@ -106,6 +124,24 @@ func filterDefragStateCM(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		return nil, fmt.Errorf("parse defrag state ConfigMap: %w", err)
 	}
 	return cm.Data[defragLastSlotKey], nil
+}
+
+// filterDefragEtcdPod returns the node name of a Ready etcd pod, or "" otherwise.
+// Only Ready pods matter for the defrag precondition, so the readiness check lives here
+// and the snapshot carries just the node names to defragment.
+func filterDefragEtcdPod(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var pod corev1.Pod
+	if err := sdk.FromUnstructured(obj, &pod); err != nil {
+		return nil, fmt.Errorf("parse etcd pod: %w", err)
+	}
+
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return pod.Spec.NodeName, nil
+		}
+	}
+
+	return "", nil
 }
 
 func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error {
@@ -192,12 +228,34 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		return nil
 	}
 
+	// Only defragment nodes where etcd is actually deployed and Ready. Otherwise the CPO
+	// would hang in the DefragEtcd/WaitPodReady steps waiting for a pod that does not exist,
+	// occupying the single global etcd operation slot and blocking etcd join on new nodes.
+	etcdReadyNodes := make(map[string]struct{})
+	for nodeName, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("etcd_pods_defrag")) {
+		if err != nil {
+			return fmt.Errorf("iterate etcd_pods_defrag: %w", err)
+		}
+		if nodeName != "" {
+			etcdReadyNodes[nodeName] = struct{}{}
+		}
+	}
+
 	input.Logger.Info("etcd defrag: spawning CPOs", "nodes", nodeNames, "slot", nextSlot.Format(time.RFC3339))
 
+	var skipped []string
 	for _, nodeName := range nodeNames {
+		if _, ok := etcdReadyNodes[nodeName]; !ok {
+			skipped = append(skipped, nodeName)
+			continue
+		}
 		name := etcdDefragCPOName(nextSlot, nodeName)
 		input.PatchCollector.CreateIfNotExists(buildDefragCPO(name, nodeName, nextSlot, cpnUIDs[nodeName]))
 		input.Logger.Info("etcd defrag: CPO created", "name", name, "node", nodeName)
+	}
+
+	if len(skipped) > 0 {
+		input.Logger.Info("etcd defrag: skipping nodes without a ready etcd pod", "nodes", skipped)
 	}
 
 	stateData := map[string]string{

@@ -56,6 +56,10 @@ const (
 	OutcomeCompleted StepOutcome = iota
 	// OutcomePending: the step is not finished; pipeline RequeueAfter and preserves the in-progress condition with the given Message.
 	OutcomePending
+	// OutcomeAbandoned: the step decided the whole operation is no longer applicable
+	// (e.g. periodic maintenance whose precondition can't be met). The pipeline marks the
+	// operation Abandoned (a terminal state) and stops, releasing any approval slot it held.
+	OutcomeAbandoned
 )
 
 type StepResult struct {

@@ -40,6 +40,14 @@ const (
 
 	etcdDefragTimeout       = 2 * time.Minute
 	etcdDefragStatusTimeout = 10 * time.Second
+
+	// etcdDefragWaitPodDeadline bounds how long the DefragEtcd step waits for the local
+	// etcd pod to appear and become Ready. Defrag is periodic maintenance: if etcd is not
+	// present on this node (e.g. the node was just added and etcd has not been deployed yet),
+	// waiting forever would keep the operation approved and occupy the single global etcd slot,
+	// deadlocking etcd join on other nodes. Past the deadline we abandon the operation so the
+	// slot is released; the next scheduled defrag run will retry once etcd is up.
+	etcdDefragWaitPodDeadline = 2 * time.Minute
 )
 
 // defragEtcdIfNeeded runs defragmentation if the fragmented ratio exceeds etcdDefragFragRatioThreshold.
@@ -122,22 +130,14 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 	}, pod); err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("etcd pod not found, will retry before defragmentation", slog.String("pod", podName))
-			return StepResult{
-				Outcome:      OutcomePending,
-				Message:      "waiting for etcd pod to be ready before defragmentation",
-				RequeueAfter: requeueWaitPod,
-			}, nil
+			return waitEtcdPodResult(state.Raw(), podName, "not present"), nil
 		}
 		return StepResult{}, fmt.Errorf("get pod %s: %w", podName, err)
 	}
 
 	if !isPodReady(pod) {
 		logger.Info("etcd pod not ready, will retry before defragmentation", slog.String("pod", podName))
-		return StepResult{
-			Outcome:      OutcomePending,
-			Message:      "waiting for etcd pod to be ready before defragmentation",
-			RequeueAfter: requeueWaitPod,
-		}, nil
+		return waitEtcdPodResult(state.Raw(), podName, "not ready"), nil
 	}
 
 	defragged, err := defragEtcdIfNeeded(ctx, constants.KubernetesPkiPath, r.node.KubeconfigDir, logger)
@@ -149,4 +149,37 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 		return StepResult{Outcome: OutcomeCompleted, Message: "defragmented"}, nil
 	}
 	return StepResult{Outcome: OutcomeCompleted, Message: "skipped: fragmentation below threshold"}, nil
+}
+
+// waitEtcdPodResult returns a Pending result while the deadline has not elapsed, and an
+// Abandoned result once the etcd pod has been unavailable for longer than
+// etcdDefragWaitPodDeadline. Abandoning releases the global etcd operation slot so it can
+// never be held indefinitely by a defrag on a node without a running etcd pod.
+func waitEtcdPodResult(op *controlplanev1alpha1.ControlPlaneOperation, podName, reason string) StepResult {
+	if operationElapsed(op, time.Now()) > etcdDefragWaitPodDeadline {
+		return StepResult{
+			Outcome: OutcomeAbandoned,
+			Message: fmt.Sprintf("etcd pod %s %s after %s; skipping periodic defragmentation", podName, reason, etcdDefragWaitPodDeadline),
+		}
+	}
+	return StepResult{
+		Outcome:      OutcomePending,
+		Message:      "waiting for etcd pod to be ready before defragmentation",
+		RequeueAfter: requeueWaitPod,
+	}
+}
+
+// operationElapsed reports how long ago the operation started executing, based on the
+// operation-started-at annotation set by the reconciler. Returns 0 if the annotation is
+// missing or unparseable, which keeps the step in its retry loop rather than abandoning early.
+func operationElapsed(op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) time.Duration {
+	started := op.Annotations[constants.OperationStartedAtAnnotationKey]
+	if started == "" {
+		return 0
+	}
+	startedAt, err := time.Parse(time.RFC3339Nano, started)
+	if err != nil {
+		return 0
+	}
+	return now.Sub(startedAt)
 }
