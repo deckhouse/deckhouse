@@ -220,7 +220,10 @@ func (r *reconciler) reconcileBashibleCRDs(ctx context.Context, nestedClient cli
 
 		err := nestedClient.Get(ctx, key, current)
 		if apierrors.IsNotFound(err) {
-			return reconcile.Result{}, nestedClient.Create(ctx, obj)
+			if err := nestedClient.Create(ctx, obj); err != nil {
+				return reconcile.Result{}, fmt.Errorf("create CRD: %w", err)
+			}
+			continue
 		}
 		if err != nil {
 			return reconcile.Result{}, err
