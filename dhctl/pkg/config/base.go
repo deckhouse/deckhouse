@@ -683,6 +683,19 @@ var inTreePreparatorProviders = map[string]struct{}{
 	"vcd":    {},
 }
 
+// ProviderBundledInCandi reports whether the provider ships its schemas in the
+// image's candi (an in-tree provider). External providers (e.g. DVP) are not
+// baked and arrive as OCI bundles downloaded at runtime instead.
+func ProviderBundledInCandi(provider string, globalOptions *options.GlobalOptions) bool {
+	candiDir := options.DefaultCandiDir
+	if globalOptions != nil && globalOptions.CandiDir != "" {
+		candiDir = globalOptions.CandiDir
+	}
+	schemaPath := filepath.Join(candiDir, "cloud-providers", strings.ToLower(provider), "openapi", "cluster_configuration.yaml")
+	_, err := os.Stat(schemaPath)
+	return err == nil
+}
+
 // providerCandiPresent reports whether the provider's schemas — and, for
 // external providers, the validator binary — are already on disk, so the
 // terraform-manager image download can be skipped.

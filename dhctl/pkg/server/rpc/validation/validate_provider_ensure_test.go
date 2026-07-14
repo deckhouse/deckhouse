@@ -77,9 +77,10 @@ kind: DVPClusterConfiguration
 layout: Standard
 `
 	resp, err := s.ValidateProviderSpecificClusterConfig(context.Background(), &pb.ValidateProviderSpecificClusterConfigRequest{
-		Config:        providerSection,
-		ClusterConfig: `{"clusterType":"Cloud","cloud":{"provider":"DVP"}}`,
-		Opts:          &pb.ValidateOptions{CommanderMode: true},
+		Config:         providerSection,
+		ClusterConfig:  `{"clusterType":"Cloud","cloud":{"provider":"DVP"}}`,
+		RegistryConfig: registryMCDoc,
+		Opts:           &pb.ValidateOptions{CommanderMode: true},
 	})
 	require.NoError(t, err)
 	require.Empty(t, resp.Err, "DVP config must validate once the bundle schemas are loaded")
@@ -108,11 +109,51 @@ layout: Standard
 unknownField: boom
 `
 	resp, err := s.ValidateProviderSpecificClusterConfig(context.Background(), &pb.ValidateProviderSpecificClusterConfigRequest{
-		Config:        providerSection,
-		ClusterConfig: `{"clusterType":"Cloud","cloud":{"provider":"DVP"}}`,
-		Opts:          &pb.ValidateOptions{CommanderMode: true},
+		Config:         providerSection,
+		ClusterConfig:  `{"clusterType":"Cloud","cloud":{"provider":"DVP"}}`,
+		RegistryConfig: registryMCDoc,
+		Opts:           &pb.ValidateOptions{CommanderMode: true},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, resp.Err, "schema violation must surface via the Err channel")
 	require.Contains(t, resp.Err, "unknownField")
+}
+
+// registryMCDoc carries registry access for the bundle delivery in tests.
+const registryMCDoc = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test
+        username: u
+        password: p
+        scheme: HTTPS
+  version: 1
+`
+
+func TestValidateProviderSpecificClusterConfig_ExternalWithoutRegistrySkipped(t *testing.T) {
+	// External provider, bundle not delivered, no registry_config: there is
+	// nothing to validate with, so the check is skipped instead of failing.
+	globalOptions := &options.GlobalOptions{
+		CandiDir:    t.TempDir(),
+		ModulesDir:  t.TempDir(),
+		DownloadDir: t.TempDir(),
+	}
+
+	s := New(config.NewSchemaStore(nil), globalOptions)
+
+	resp, err := s.ValidateProviderSpecificClusterConfig(context.Background(), &pb.ValidateProviderSpecificClusterConfigRequest{
+		Config:        "apiVersion: deckhouse.io/v1\nkind: DVPClusterConfiguration\nlayout: Standard\n",
+		ClusterConfig: `{"clusterType":"Cloud","cloud":{"provider":"DVP"}}`,
+		Opts:          &pb.ValidateOptions{CommanderMode: true},
+	})
+	require.NoError(t, err)
+	require.Empty(t, resp.Err, "external provider without registry access must be skipped, not failed")
 }

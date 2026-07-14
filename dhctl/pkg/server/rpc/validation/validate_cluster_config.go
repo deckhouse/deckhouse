@@ -17,6 +17,7 @@ package validation
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -65,14 +66,23 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 		return nil, status.Errorf(codes.Internal, "unmarshalling cluster Config: %s", err)
 	}
 
-	// The provider name comes from the cluster config argument; registry
-	// access for the bundle download comes from the registry_config section.
-	if err := s.ensureProviderBundle(ctx, clusterConfig.Cloud.Provider, request.RegistryConfig); err != nil {
-		errResponse, err = errorToResponse(err)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "%s", err)
+	// In-tree providers ship their schemas in the image's candi and are always
+	// validated. An external provider needs its OCI bundle delivered first,
+	// which requires registry access from registry_config:
+	//   - registry_config present -> deliver the bundle, then validate;
+	//   - registry_config absent  -> nothing to validate with, skip.
+	provider := clusterConfig.Cloud.Provider
+	if provider != "" && !config.ProviderBundledInCandi(provider, s.globalOptions) {
+		if strings.TrimSpace(request.RegistryConfig) == "" {
+			return &pb.ValidateProviderSpecificClusterConfigResponse{}, nil
 		}
-		return &pb.ValidateProviderSpecificClusterConfigResponse{Err: errResponse}, nil
+		if err := s.ensureProviderBundle(ctx, provider, request.RegistryConfig); err != nil {
+			errResponse, err = errorToResponse(err)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "%s", err)
+			}
+			return &pb.ValidateProviderSpecificClusterConfigResponse{Err: errResponse}, nil
+		}
 	}
 
 	err = config.ValidateProviderSpecificClusterConfiguration(
