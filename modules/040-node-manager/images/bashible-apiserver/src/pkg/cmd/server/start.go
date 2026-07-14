@@ -160,7 +160,7 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		serverConfig.ReadyzChecks = append(serverConfig.ReadyzChecks, deployHealthChecker)
 	}
 
-	ctrlManager, err := apiserver.NewCtrlManager()
+	ctrlManager, err := apiserver.NewCtrlManager(runtimeConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error creating ctr manager: %w", err)
 	}

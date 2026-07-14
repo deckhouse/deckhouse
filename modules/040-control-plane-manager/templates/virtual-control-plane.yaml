@@ -1,6 +1,7 @@
 {{- if .Values.controlPlaneManager.internal.hasVirtualControlPlane }}
 {{- $vm := .Files.Get "candi/version_map.yml" | fromYaml }}
 {{- $dig := .Values.global.modulesImages.digests.controlPlaneManager }}
+{{- $nmDig := .Values.global.modulesImages.digests.nodeManager }}
 {{- $reg := printf "%s%s" .Values.global.modulesImages.registry.address .Values.global.modulesImages.registry.path }}
 {{- $versioned := dict }}
 {{- range $ver, $_ := $vm.k8s }}
@@ -30,8 +31,19 @@
     "tomlMerge"  (get $rp "tomlMerge01")
     "rppGet"     (get $rp "rppGet") }}
 {{- /* TODO: mirror kas-network-proxy/proxy-server like kine. */ -}}
-{{- $fixed := dict "kine" (printf "%s@%s" $reg (get $dig "kine")) "konnectivityServer" "registry.k8s.io/kas-network-proxy/proxy-server:v0.30.3" "konnectivityAgent" "registry.k8s.io/kas-network-proxy/proxy-agent:v0.30.3" "cilium" "quay.io/cilium/cilium:v1.19.3" "ciliumOperator" "quay.io/cilium/operator-generic:v1.19.3" }}
-{{- $imagesTable := dict "versioned" $versioned "fixed" $fixed "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed) }}
+{{- $fixed := dict 
+  "kine" (printf "%s@%s" $reg (get $dig "kine")) 
+  "konnectivityServer" "registry.k8s.io/kas-network-proxy/proxy-server:v0.30.3"
+  "konnectivityAgent" "registry.k8s.io/kas-network-proxy/proxy-agent:v0.30.3"
+  "cilium" "quay.io/cilium/cilium:v1.19.3"
+  "ciliumOperator" "quay.io/cilium/operator-generic:v1.19.3"
+  "bashibleApiserver" (printf "%s@%s" $reg (get $nmDig "bashibleApiserver"))
+}}
+{{- $imagesTable := dict 
+  "versioned" $versioned 
+  "fixed" $fixed 
+  "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed) 
+}}
 ---
 apiVersion: v1
 kind: Secret
