@@ -47,6 +47,7 @@ func (c *virtualConfigurator) configureOptions(opts *controllerruntime.Options) 
 			DisableFor: []client.Object{
 				&corev1.Namespace{},
 				&corev1.Secret{},
+				&corev1.ConfigMap{},
 				&corev1.Service{},
 				&corev1.Pod{},
 				&appsv1.StatefulSet{},
