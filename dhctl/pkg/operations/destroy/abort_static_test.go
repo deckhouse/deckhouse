@@ -15,9 +15,10 @@
 package destroy
 
 import (
-	"context"
+	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"os"
 	"path"
@@ -31,26 +32,25 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var rootTmpDirStaticAbort = path.Join(os.TempDir(), "dhctl-test-static-abort")
 
 func TestStaticAbort(t *testing.T) {
 	defer func() {
-		logger := log.GetDefaultLogger()
+		logger := dhlog.Discard()
 		if err := os.RemoveAll(rootTmpDirStaticAbort); err != nil {
-			logger.LogErrorF("Couldn't remove temp dir '%s': %v\n", rootTmpDirStaticAbort, err)
+			logger.Error(fmt.Sprintf("Couldn't remove temp dir '%s': %v\n", rootTmpDirStaticAbort, err))
 			return
 		}
-		logger.LogInfoF("Tmp dir '%s' removed\n", rootTmpDirStaticAbort)
+		logger.Info(fmt.Sprintf("Tmp dir '%s' removed\n", rootTmpDirStaticAbort))
 	}()
 
 	host := session.Host{
@@ -87,7 +87,7 @@ func TestStaticAbort(t *testing.T) {
 	for _, tst := range tests {
 		t.Run(tst.name, func(t *testing.T) {
 			ts := testCreateAbortStaticProviderTest(t, tst)
-			ctx := context.TODO()
+			ctx := t.Context()
 
 			destroyer, err := GetAbortDestroyer(ctx, ts.abortParams)
 			require.NoError(t, err, "GetAbortDestroyer should return destroyer")
@@ -129,12 +129,7 @@ func (ts *testAbortStaticTest) getStateCache() dhctlstate.Cache {
 
 func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestParams) *testAbortStaticTest {
 	require.NotEmpty(t, params.host.Host)
-
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), dc)
+	metaConfig, err := config.ParseConfigFromData(t.Context(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), nil)
 	require.NoError(t, err, "parsing config from data")
 	metaConfig.UUID = uuid.Must(uuid.NewRandom()).String()
 
@@ -142,10 +137,9 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 	tmpDir, err := fs.RandomTmpDirWithNRunes(rootTmpDirStaticAbort, fmt.Sprintf("%d", i), 15)
 	require.NoError(t, err, "create test directory")
 
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
-	logger.LogInfoF("Tmp dir: '%s'\n", tmpDir)
-
-	loggerProvider := log.SimpleLoggerProvider(logger)
+	var logBuf bytes.Buffer
+	logger := dhlog.NewBufferLogger(&logBuf)
+	logger.Info(fmt.Sprintf("Tmp dir: '%s'\n", tmpDir))
 
 	sshProvider := testCreateAbortSSHProvider(params, logger)
 
@@ -158,7 +152,7 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 		MetaConfig:             metaConfig,
 		StateCache:             stateCache,
 		PhasedExecutionContext: pec,
-		LoggerProvider:         loggerProvider,
+		Logger:                 dhlog.Discard(),
 		TmpDir:                 tmpDir,
 		SSHClientProvider:      sshProvider.provider,
 
@@ -173,6 +167,7 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 			stateCache:   stateCache,
 			tmpDir:       tmpDir,
 			logger:       logger,
+			logBuf:       &logBuf,
 			kubeProvider: newKubeClientErrorProvider("kube api does not use in abort"),
 		},
 
@@ -187,7 +182,7 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 
 type testAbortSSHProvider struct {
 	provider *testssh.SSHProvider
-	logger   log.Logger
+	logger   *slog.Logger
 
 	cleanCommandCalled int
 	bastion            testssh.Bastion
@@ -197,10 +192,10 @@ func (t *testAbortSSHProvider) runCommand(bastion testssh.Bastion, msg string) {
 	t.bastion = bastion
 	t.cleanCommandCalled++
 
-	t.logger.LogInfoLn(msg)
+	t.logger.Info(msg)
 }
 
-func testCreateAbortSSHProvider(params testAbortStaticTestParams, logger log.Logger) *testAbortSSHProvider {
+func testCreateAbortSSHProvider(params testAbortStaticTestParams, logger *slog.Logger) *testAbortSSHProvider {
 	result := &testAbortSSHProvider{
 		provider: testCreateDefaultTestSSHProvider(params.host, params.overBastion),
 		logger:   logger,

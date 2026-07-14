@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -24,8 +25,8 @@ type NodeGroupControllerRunner interface {
 	Run(ctx *context.Context) error
 }
 
-func NewNodeGroupControllerRunner(name string, state state.NodeGroupInfrastructureState, excludeNodes map[string]bool, skipChecks bool) NodeGroupControllerRunner {
-	controller := NewNodeGroupController(name, state, excludeNodes)
+func NewNodeGroupControllerRunner(name string, state state.NodeGroupInfrastructureState, excludeNodes map[string]bool, skipChecks bool, globalOptions *options.GlobalOptions) NodeGroupControllerRunner {
+	controller := NewNodeGroupController(name, state, excludeNodes, globalOptions)
 
 	if name == global.MasterNodeGroupName {
 		return NewMasterNodeGroupController(controller, skipChecks)

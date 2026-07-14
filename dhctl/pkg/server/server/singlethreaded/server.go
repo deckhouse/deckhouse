@@ -31,7 +31,6 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
@@ -47,7 +46,6 @@ func Serve(ctx context.Context, params settings.ServerSingleshotParams) error {
 		return err
 	}
 
-	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{}, false)
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
 	log := logger.NewLogger(lvl).With(slog.String("component", "singlethreaded_server"))
@@ -107,13 +105,13 @@ func Serve(ctx context.Context, params settings.ServerSingleshotParams) error {
 
 	// init services
 	dhctlService := dhctl.New(dhctl.ServiceParams{
-		PodName:           podName,
-		PodNamespace:      podNamespace,
-		CacheDir:          cacheDir,
-		SchemaStore:       config.NewSchemaStore(params.DownloadDirConfig),
-		TmpDir:            params.TmpDir,
-		IsDebug:           false,
-		DownloadDirConfig: params.DownloadDirConfig,
+		PodName:       podName,
+		PodNamespace:  podNamespace,
+		CacheDir:      cacheDir,
+		SchemaStore:   config.NewSchemaStore(params.GlobalOptions),
+		TmpDir:        params.TmpDir,
+		IsDebug:       false,
+		GlobalOptions: params.GlobalOptions,
 	})
 
 	// register services

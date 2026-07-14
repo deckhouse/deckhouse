@@ -11,6 +11,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
@@ -48,11 +49,11 @@ func TestRemoveDuplicatesStrings(t *testing.T) {
 
 func TestRemoveDuplicatesStorageProfiles(t *testing.T) {
 	tests := []struct {
-		args []v1alpha1.VCDStorageProfile
-		want []v1alpha1.VCDStorageProfile
+		args []v1.VCDStorageProfile
+		want []v1.VCDStorageProfile
 	}{
 		{
-			args: []v1alpha1.VCDStorageProfile{
+			args: []v1.VCDStorageProfile{
 				{
 					Name:                    "1",
 					IsEnabled:               true,
@@ -74,7 +75,7 @@ func TestRemoveDuplicatesStorageProfiles(t *testing.T) {
 					IsDefaultStorageProfile: false,
 				},
 			},
-			want: []v1alpha1.VCDStorageProfile{
+			want: []v1.VCDStorageProfile{
 				{
 					Name:                    "1",
 					IsEnabled:               true,

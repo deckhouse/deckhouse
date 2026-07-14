@@ -15,7 +15,13 @@ build:
 ---
 # revisions settings
 {{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
-{{- $_ := set . "Editions" $editionsSettings.editions }}
+# convert []map[any]any to []map[string]any
+{{- $editionsToSet := list }}
+{{- range $_, $rawEdition := $editionsSettings.editions }}
+  {{- $editionsToSet = append $editionsToSet ($rawEdition | toYaml | fromYaml) }}
+{{- end }}
+
+{{- $_ := set . "Editions" $editionsToSet }}
 
 # checks redactions list
 {{- if not $.Editions }}
@@ -25,7 +31,7 @@ build:
 {{- $editionsDict := dict }}
 {{- range $_, $edition := $.Editions }}
   {{- if not $edition.name }}
-     {{ fail printf "Editions name is empty" }}
+     {{ fail (printf "Editions name is empty") }}
   {{- end }}
   {{- $_ := set $editionsDict $edition.name "" }}
 {{- end }}
@@ -41,12 +47,8 @@ build:
      {{- $eeEdition = true }}
   {{- end }}
 
-  {{- if eq $edition.name $.Env }}
-    {{- break }}
-  {{- end }}
+  {{- $_ := set $edition "isEE" $eeEdition }}
 {{- end }}
-
-{{- $_ := set . "isEE" $eeEdition }}
 
 ---
 # Files.Get prefix
@@ -93,9 +95,9 @@ build:
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
 ---
-{{ include "dhctl_artifact" (dict "Images" .Images "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env "includeImagesDigests" true) }}
+{{ include "dhctl_artifact" (dict "Images" .Images "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env "includeImagesDigests" true "Editions" .Editions) }}
 ---
-{{ include "dhctl_artifact" (dict "Images" .Images "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env "includeImagesDigests" false) }}
+{{ include "dhctl_artifact" (dict "Images" .Images "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env "includeImagesDigests" false "Editions" .Editions) }}
 ---
 # render images and artifact from .werf
 # WARNING! new images and artifacts should be placed in .werf/werf-YOUR-MAGIC-IMAGES-GROUP.yaml

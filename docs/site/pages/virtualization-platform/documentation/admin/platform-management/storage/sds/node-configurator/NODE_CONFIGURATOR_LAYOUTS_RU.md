@@ -138,12 +138,15 @@ d8 k get lvmvolumegroups.storage.deckhouse.io
 
 В результате будет выведен следующий список:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                      THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE      ALLOCATED SIZE   VG     AGE
 vg-08d3730c-9201-428d-966c-45795cba55a6   0/0         True                    Ready   worker-2   25596Mi   0                main   61s
 vg-b59ff9e1-6ef2-4761-b5d2-6172926d4f4d   0/0         True                    Ready   worker-0   25596Mi   0                main   4m17s
 vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Ready   worker-1   25596Mi   0                main   108s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Полное зеркало»)
 
@@ -286,6 +289,7 @@ d8 k get lvmvolumegroups.storage.deckhouse.io
 
 В результате будет выведен следующий список:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                      THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE      ALLOCATED SIZE   VG            AGE
 vg-08d3730c-9201-428d-966c-45795cba55a6   0/0         True                    Ready   worker-2   25596Mi   0                main-safe     61s
@@ -295,6 +299,8 @@ vg-deccf08a-44d4-45f2-aea9-6232c0eeef91   0/0         True                    Re
 vg-e0f00cab-03b3-49cf-a2f6-595628a2593c   0/0         True                    Ready   worker-0   25596Mi   0                main-unsafe   4m17s
 vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Ready   worker-1   25596Mi   0                main-unsafe   108s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Частичное зеркало»)
 
@@ -465,12 +471,15 @@ d8 k get lvmvolumegroups.storage.deckhouse.io
 
 В результате будет выведен список вида:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                      THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE      ALLOCATED SIZE   VG          AGE
 vg-08d3730c-9201-428d-966c-45795cba55a6   0/0         True                    Ready   worker-2   25596Mi   0                <vg-name>   61s
 vg-b59ff9e1-6ef2-4761-b5d2-6172926d4f4d   0/0         True                    Ready   worker-0   25596Mi   0                <vg-name>   4m17s
 vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Ready   worker-1   25596Mi   0                <vg-name>   108s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 где `<vg-name>` — имя, присвоенное VG на зеркале на предыдущем шаге.
 
@@ -630,6 +639,7 @@ d8 k get lvmvolumegroups.storage.deckhouse.io
 
 В результате будет выведен список вида:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                      THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE      ALLOCATED SIZE   VG                AGE
 vg-08d3730c-9201-428d-966c-45795cba55a6   0/0         True                    Ready   worker-2   25596Mi   0                <vg-name>-safe     61s
@@ -639,6 +649,8 @@ vg-deccf08a-44d4-45f2-aea9-6232c0eeef91   0/0         True                    Re
 vg-e0f00cab-03b3-49cf-a2f6-595628a2593c   0/0         True                    Ready   worker-0   25596Mi   0                <vg-name>-unsafe   4m17s
 vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Ready   worker-1   25596Mi   0                <vg-name>-unsafe   108s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 где `<vg-name>` — префикс имени, присвоенного VG, созданным на предыдущем шаге.
 

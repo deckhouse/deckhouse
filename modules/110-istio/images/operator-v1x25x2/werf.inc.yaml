@@ -9,8 +9,8 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/operator/out/operator
   to: /usr/local/bin/operator
-  owner: 64535
-  group: 64535
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/manifests
@@ -22,13 +22,13 @@ import:
   after: setup
 imageSpec:
   config:
-    user: "64535:64535"
+    user: "1337:1337"
     workingDir: "/"
     entrypoint: ["/usr/local/bin/operator"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/operator
@@ -41,8 +41,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
+  - pm install git binutils
   install:
   - cd /src/operator/
   - echo {{ $istioVersion }} > version
@@ -53,7 +52,7 @@ shell:
   - strip /src/operator/out/main
   - mv /src/operator/out/main /src/operator/out/operator
   - chmod 0700 /src/operator/out/operator
-  - chown 64535:64535 /src/operator/out/operator
+  - chown 1337:1337 /src/operator/out/operator
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -76,5 +75,4 @@ shell:
   install:
   - cd /src/operator && git apply --verbose /patches/001-istio-go-mod.patch
   - cd /src/operator && git apply --verbose /patches/002-istio-operato-cni_status_restrict.patch
-  - cd /src/operator && git apply --verbose /patches/003-change-to-deckhouse-user.patch
 ---

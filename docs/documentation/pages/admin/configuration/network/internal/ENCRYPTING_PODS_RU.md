@@ -20,7 +20,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
 
 Этот идентификатор используется в качестве удостоверяемого имени в TLS-сертификатах.
 
-Настройки можно переопределить на уровне пространств имён (namespace).
+Настройки можно переопределить на уровне неймспейсов (namespace).
 
 ## Пример настройки mTLS
 
@@ -40,7 +40,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    EOF
    ```
 
-1. Создайте пространство имен, добавьте лейблы:
+1. Создайте неймспейс, добавьте лейблы:
 
    ```bash
    d8 k create namespace test-istio-mtls
@@ -96,10 +96,13 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
-   NAME                    READY   STATUS    RESTARTS   AGE   IP             NODE                                        NOMINATED NODE   READINESS GATES
-   webserver-76d6c9b8c-9mdtb   2/2     Running   0          48m   10.111.1.122   test-worker-e36e4712-5948b-sp9t8   <none>           <none>
+   NAME                          READY   STATUS     RESTARTS   AGE   IP              NODE                                      NOMINATED NODE    READINESS GATES
+   webserver-76d6c9b8c-9mdtb     2/2     Running    0          48m   10.111.1.122    test-worker-e36e4712-5948b-sp9t8          <none>            <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Подключитесь к узлу по SSH от root-пользователя и запустите `tcpdump`:
 
@@ -107,7 +110,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    tcpdump -A -v -i any host 10.111.1.122 and port 80
    ```
 
-1. Создайте Deployment client в этом же пространстве имён, чтобы он был участником mesh-сети:
+1. Создайте Deployment client в этом же неймспейсе, чтобы он был участником mesh-сети:
 
    - При использовании образов из публичных registry:
 

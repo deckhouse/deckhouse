@@ -17,12 +17,12 @@ package template
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -33,24 +33,17 @@ func PrepareBootstrap(
 	templateController *Controller,
 	nodeIP string,
 	metaConfig *config.MetaConfig,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBootstrap")
 	defer span.End()
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP)
 	if err != nil {
 		return err
 	}
 
-	_, err = os.Stat(candiDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get downloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-		candiBashibleDir = filepath.Join(candiDir, "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 
 	saveInfo := []saveFromTo{
 		{
@@ -62,16 +55,16 @@ func PrepareBootstrap(
 			},
 		},
 		{
-			from: filepath.Join(candiDir, "cloud-providers", metaConfig.ProviderName, "bashible", "common-steps"),
+			from: filepath.Join(globalOptions.CandiDir, "cloud-providers", metaConfig.ProviderName, "bashible", "common-steps"),
 			to:   bootstrapDir,
 			data: bashibleData,
 		},
 	}
 
-	return log.ProcessCtx(ctx, "default", "Render bootstrap templates", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Render bootstrap templates", func(ctx context.Context) error {
 		for _, info := range saveInfo {
-			log.InfoF("From %q to %q\n", info.from, info.to)
-			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("From %q to %q", info.from, info.to))
+			if err := templateController.RenderAndSaveTemplates(ctx, info.from, info.to, info.data, info.ignorePaths); err != nil {
 				return err
 			}
 		}

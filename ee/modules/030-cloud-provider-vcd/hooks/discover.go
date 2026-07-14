@@ -22,10 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -124,25 +124,24 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/candi/cloud-providers/vcd/openapi", "/deckhouse/ee/modules/030-cloud-provider-vcd/candi/openapi"})
-	if err != nil {
+	if err := validation.ValidateData([]string{"/deckhouse/candi/cloud-providers/vcd/openapi", "/deckhouse/ee/modules/030-cloud-provider-vcd/candi/openapi"}, &discoveryDataJSON); err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	var discoveryData v1alpha1.VCDCloudProviderDiscoveryData
+	var discoveryData cloudDataV1.VCDCloudProviderDiscoveryData
 	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	input.Values.Set("cloudProviderVcd.internal.discoveryData", discoveryData)
+	input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", discoveryData)
 
 	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageProfiles)
 
 	return nil
 }
 
-func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1alpha1.VCDStorageProfile) {
+func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []cloudDataV1.VCDStorageProfile) {
 	volumeTypesMap := make(map[string]string, len(volumeTypes))
 
 	for _, volumeType := range volumeTypes {

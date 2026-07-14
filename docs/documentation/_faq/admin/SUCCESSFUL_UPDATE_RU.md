@@ -5,7 +5,7 @@ subsystems:
 lang: ru
 ---
 
-Если [алерт `DeckhouseUpdating`](../reference/alerts.html#monitoring-deckhouse-deckhouseupdating) перестал отображаться, это означает, что обновление завершено.
+Если [алерт `DeckhouseUpdating`](../reference/alerts.html#deckhouse-deckhouseupdating) перестал отображаться, это означает, что обновление завершено.
 
 Также вы можете проверить состояние релизов DKP в кластере, используя следующую команду:
 
@@ -15,6 +15,7 @@ d8 k get deckhouserelease
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE        TRANSITIONTIME   MESSAGE
 v1.46.8    Superseded   13d
@@ -22,6 +23,8 @@ v1.46.9    Superseded   11d
 v1.47.0    Superseded   4h12m
 v1.47.1    Deployed     4h12m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Статус `Deployed` говорит о том, что произошло переключение на соответствующую версию, но не гарантирует успешное завершение обновления.
 
@@ -33,10 +36,13 @@ d8 k -n d8-system get pods -l app=deckhouse
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   READY  STATUS   RESTARTS  AGE
 deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 - Если под находится в статусе `Running` и в колонке `READY` указано `1/1`, это означает, что обновление завершилось успешно.
 - Если под находится в статусе `Running`, но в колонке `READY` указано `0/1`, это означает, что обновление еще не завершено. Если так продолжается более 20–30 минут, это может говорить о наличии проблем в работе DKP. Необходима диагностика.

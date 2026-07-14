@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -35,13 +34,11 @@ var versionFile = "terraform_versions.yml"
 type pluginsProvider struct {
 	m sync.Mutex
 
-	logger     log.Logger
 	pluginsDir string
 }
 
-func newPluginsProvider(logger log.Logger, pluginsDir string) *pluginsProvider {
+func newPluginsProvider(pluginsDir string) *pluginsProvider {
 	return &pluginsProvider{
-		logger:     logger,
 		pluginsDir: pluginsDir,
 	}
 }
@@ -53,7 +50,7 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	source := fsproviderpath.GetPluginDir(p.pluginsDir, params.Settings, params.Version.Version, params.Version.Arch)
 	_, err := os.Stat(source)
 	if err == nil {
-		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
+		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
 	sectionName := params.Settings.CloudName()
@@ -61,17 +58,27 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	runes[0] = unicode.ToUpper(runes[0])
 	sectionName = "cloudProvider" + string(runes)
 
-	if err = downloadImage(ctx, conf, "terraformManager", sectionName); err != nil {
+	// Fast-path: if the fallback source binary is already present under DownloadRootDir
+	// (e.g. preserved across `wipe-state` or pre-injected for dev iteration), skip the
+	// terraform-manager image download entirely. Saves ~10-15s per bootstrap and lets
+	// us iterate with a custom-patched provider binary without dhctl clobbering it.
+	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
+	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
+	if _, statErr := os.Stat(source); statErr == nil {
+		if err := copyTFVersionFile(conf.DownloadRootDir); err != nil {
+			return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
+		}
+		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
+	}
+
+	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
 		return err
 	}
-	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
-
-	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if err = copyTFVersionFile(conf.DownloadRootDir); err != nil {
 		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 	}
 
-	return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
+	return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 }
 
 func copyTFVersionFile(downloadRootDir string) error {

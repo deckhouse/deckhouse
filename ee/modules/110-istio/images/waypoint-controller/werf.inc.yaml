@@ -1,0 +1,40 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ index $.Images "base/distroless" }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /waypoint-controller
+  to: /waypoint-controller
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/waypoint-controller"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: {{ index $.Images "builder/golang-alpine" }}
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+    to: /src
+    excludePaths:
+      - "**/*.md"
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - "**/*.go"
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/cmd/waypoint-controller
+  - go build -ldflags="-s -w" -o /waypoint-controller
+  - chmod +x /waypoint-controller
+---

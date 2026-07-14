@@ -116,6 +116,9 @@ spec:
         - mountPath: /sbin
           name: sbin
           readOnly: true
+        - mountPath: /sys/class/net
+          name: net
+          readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
         resources:
@@ -141,3 +144,6 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 4Mi
+      - name: net
+        hostPath:
+          path: /sys/class/net

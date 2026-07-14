@@ -66,10 +66,13 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
 
@@ -79,21 +82,27 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready    control-plane,master  ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Ensure the Deckhouse job queue is empty and contains no errors:
 
@@ -166,10 +175,13 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Ensure the Deckhouse job queue is empty and contains no errors:
 

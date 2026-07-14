@@ -1,9 +1,9 @@
 {{- $module := .module }}
 {{- $moduleChannel := .channel }}
 {{- $versionPrev := "" }}
-{{- $moduleChannelsData := (index .ctx.Site.Data.modules.channels $module).channels }}
-{{- $embeddedModulesHistory := .ctx.Site.Data.embedded_modules_list }}
-{{- $channelsInfo := .ctx.Site.Data.channels.info }}
+{{- $moduleChannelsData := (index hugo.Data.modules.channels $module).channels }}
+{{- $embeddedModulesHistory := hugo.Data.embedded_modules_list }}
+{{- $channelsInfo := hugo.Data.channels.info }}
 {{- $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
 {{- $embeddedModuleVersions := slice }}
 

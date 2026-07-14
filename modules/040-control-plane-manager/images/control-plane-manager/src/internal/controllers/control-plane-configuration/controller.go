@@ -157,7 +157,7 @@ func (r *Reconciler) mapSecretToControlPlaneNodes(ctx context.Context, _ client.
 	}
 	reqs := make([]reconcile.Request, 0, len(nodes))
 	for _, node := range nodes {
-		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: node.Name}})
+		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: node.Name, Namespace: constants.KubeSystemNamespace}})
 	}
 	return reqs
 }
@@ -168,7 +168,7 @@ func (r *Reconciler) mapNodeToControlPlaneNode(ctx context.Context, object clien
 	if !ok {
 		return nil
 	}
-	return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: node.Name}}}
+	return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: node.Name, Namespace: constants.KubeSystemNamespace}}}
 }
 
 // getSecret helper function to get secret from kube-system namespace by name.
@@ -278,7 +278,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 // deleteControlPlaneNodeIfExists deletes ControlPlaneNode if it exists immediately.
 func (r *Reconciler) deleteControlPlaneNodeIfExists(ctx context.Context, name string) error {
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
-	err := r.client.Get(ctx, client.ObjectKey{Name: name}, cpn)
+	err := r.client.Get(ctx, client.ObjectKey{Name: name, Namespace: constants.KubeSystemNamespace}, cpn)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -292,7 +292,7 @@ func (r *Reconciler) deleteControlPlaneNodeIfExists(ctx context.Context, name st
 // applyControlPlaneNode applies desired ControlPlaneNode spec to the current ControlPlaneNode using patch.
 func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *controlplanev1alpha1.ControlPlaneNode) error {
 	current := &controlplanev1alpha1.ControlPlaneNode{}
-	key := client.ObjectKey{Name: desired.Name}
+	key := client.ObjectKey{Name: desired.Name, Namespace: constants.KubeSystemNamespace}
 	err := r.client.Get(ctx, key, current)
 	if apierrors.IsNotFound(err) {
 		log.Info("ControlPlaneNode not found, creating", slog.String("node", desired.Name))
@@ -374,7 +374,8 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 
 	return &controlplanev1alpha1.ControlPlaneNode{
 		ObjectMeta: ctrl.ObjectMeta{
-			Name: nodeName,
+			Name:      nodeName,
+			Namespace: constants.KubeSystemNamespace,
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey: nodeName,
 				constants.HeritageLabelKey:             constants.HeritageLabelValue,

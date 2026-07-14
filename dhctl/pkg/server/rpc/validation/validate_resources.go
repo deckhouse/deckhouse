@@ -25,17 +25,17 @@ import (
 )
 
 func (s *Service) ValidateResources(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.ValidateResourcesRequest,
 ) (*pb.ValidateResourcesResponse, error) {
-	var errResponse string
-
-	err := config.ValidateResources(request.Config, optionsFromRequest(request.Opts)...)
-	if err != nil {
-		if errResponse, err = errorToResponse(err); err != nil {
-			return nil, status.Errorf(codes.Internal, "%s", err)
-		}
+	errs := &config.ValidationError{}
+	for _, v := range config.ResourcesPipeline {
+		errs.Merge(v(ctx, request.Config, s.schemaStore, optionsFromRequest(request.Opts)...))
 	}
 
+	errResponse, convErr := errorToResponse(errs.ErrorOrNil())
+	if convErr != nil {
+		return nil, status.Errorf(codes.Internal, "%s", convErr)
+	}
 	return &pb.ValidateResourcesResponse{Err: errResponse}, nil
 }

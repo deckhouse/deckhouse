@@ -1,0 +1,20 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: e2e-worker-100
+spec:
+  cloudInstances:
+    priority: 100
+    classReference:
+      kind: YandexInstanceClass
+      name: e2e-worker-small
+    maxPerZone: 3
+    minPerZone: 0
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    labels:
+      app: e2e-autoscaler-test
+    taints:
+      - key: dedicated
+        value: "worker-100"
+        effect: NoExecute

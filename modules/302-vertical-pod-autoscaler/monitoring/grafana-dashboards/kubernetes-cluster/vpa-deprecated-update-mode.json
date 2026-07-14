@@ -1,0 +1,104 @@
+{
+  "annotations": { "list": [] },
+  "description": "VerticalPodAutoscaler objects that use the deprecated 'Auto' update mode.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "$ds_prometheus" },
+      "description": "VPAs whose spec.updatePolicy.updateMode is the deprecated 'Auto'.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "filterable": true,
+            "inspect": false,
+            "minWidth": 100
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "text", "value": null } ] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [ { "displayName": "Namespace", "desc": false } ]
+      },
+      "pluginVersion": "10.4.19",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "$ds_prometheus" },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max by (namespace, target_kind, target_name, verticalpodautoscaler) (kube_verticalpodautoscaler_spec_updatepolicy_updatemode{update_mode=\"Auto\"} == 1)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "VerticalPodAutoscalers with deprecated updateMode: Auto",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "Value": true },
+            "indexByName": {
+              "namespace": 0,
+              "target_kind": 1,
+              "target_name": 2,
+              "verticalpodautoscaler": 3
+            },
+            "renameByName": {
+              "namespace": "Namespace",
+              "target_kind": "Kind",
+              "target_name": "Workload",
+              "verticalpodautoscaler": "VPA name"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["Autoscaling", "VPA"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "VPA Deprecated Update Mode",
+  "uid": "d8-vpa-deprecated-update-mode",
+  "version": 1,
+  "weekStart": ""
+}

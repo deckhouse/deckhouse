@@ -121,11 +121,14 @@ Example configuring a bond interface:
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
-   NAME                                                          MANAGEDBY   NODE                             TYPE     IFNAME      IFINDEX   STATE   AGE
-   nni-worker-01-bond0                                           Manual      worker-01-b23d3a26-5fb4b-5s9fp   Bond     bond0       76        Up      7m48s
+   NAME                   MANAGEDBY   NODE                                TYPE     IFNAME      IFINDEX   STATE   AGE
+   nni-worker-01-bond0    Manual      worker-01-b23d3a26-5fb4b-5s9fp      Bond     bond0       76        Up      7m48s
    ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Check the status of the desired interface:
 
@@ -360,6 +363,7 @@ d8 k get nni
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                                 MANAGEDBY   NODE                                TYPE     IFNAME      IFINDEX   STATE   AGE
 ...
@@ -368,6 +372,8 @@ right-worker-b23d3a26-5fb4b-h2bkv-nic-fa163eebea7b   Deckhouse   right-worker-b2
 right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b23d3a26-5fb4b-h2bkv   VLAN     ens3.900    683       Up      14h
 ...
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### IPAM: IP address pools for additional networks
 
@@ -540,6 +546,7 @@ d8 k get nni -l network.deckhouse.io/nic-pci-type=PF
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                            MANAGEDBY   NODE           TYPE   IFNAME   IFINDEX   STATE   VF/PF   Binding   Driver      Vendor   AGE
 worker-01-nic-0000:17:00.0      Deckhouse   worker-01     NIC    ens3f0   3         Up      PF      NetDev    ixgbe       Intel    35d
@@ -547,6 +554,8 @@ worker-01-nic-0000:17:00.1      Deckhouse   worker-01     NIC    ens3f1   4     
 worker-02-nic-0000:17:00.0      Deckhouse   worker-02     NIC    ens3f0   3         Up      PF      NetDev    ixgbe       Intel    35d
 worker-02-nic-0000:17:00.1      Deckhouse   worker-02     NIC    ens3f1   4         Up      PF      NetDev    ixgbe       Intel    35d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Label the interfaces that will be used for UnderlayNetwork:
 

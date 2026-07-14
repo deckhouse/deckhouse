@@ -1,0 +1,17 @@
+image: werf-mountpoints
+from: {{ index .Images "builder/scratch" }}
+final: false
+git:
+- add: /tools/mounts/mountdir
+  to: /tools/mounts/mountdir
+  stageDependencies:
+    install:
+      - "**/*"
+- add: /tools/mounts/mountfile
+  to: /tools/mounts/mountfile
+  stageDependencies:
+    install:
+      - "**/*"
+shell:
+  install:
+    - set -e

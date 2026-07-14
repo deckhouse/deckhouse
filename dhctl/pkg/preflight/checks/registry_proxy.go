@@ -93,8 +93,8 @@ func (c RegistryProxyCheck) Run(ctx context.Context) error {
 
 	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, wrapper.Client(), proxyURL, c.LegacyMode)
 	if err != nil {
-		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
-Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
+		return fmt.Errorf(`Cannot set up tunnel to the control-plane host: %w.
+Please check connectivity to the control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
 	}
 	defer tun.Stop()
 
@@ -115,7 +115,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	httpCl := utils.BuildHTTPClientWithLocalhostProxy(proxyURL)
 	resp, err := httpCl.Do(req)
 	if err != nil {
-		return fmt.Errorf(`Container registry API connectivity check was failed with error: %w.
+		return fmt.Errorf(`Container registry API connectivity check failed with error: %w.
 Please check connectivity from the control-plane node to the proxy and from the proxy to the container registry.`, err)
 	}
 
@@ -130,7 +130,7 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
 		return fmt.Errorf(
 			"%w: got %d status code from the container registry API, this is not a valid registry API response.\n"+
-				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured.",
+				"Check that the container registry address is correct and that there are no misconfigured reverse proxies.",
 			ErrRegistryUnreachable,
 			resp.StatusCode,
 		)
@@ -139,7 +139,7 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
 		return fmt.Errorf(
 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
+				"Check that the container registry address is correct and that there are no misconfigured reverse proxies",
 			ErrRegistryUnreachable,
 		)
 	}

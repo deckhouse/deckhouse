@@ -24,6 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,7 +72,8 @@ type moduleManager interface {
 type packageRuntime interface {
 	UpdateApp(repo registry.Remote, inst packageruntime.App)
 	RemoveApp(namespace, name string)
-	Status() *packagestatus.Service
+	GetStatus(name string) packagestatus.Status
+	GetStatusQueue() workqueue.TypedRateLimitingInterface[string]
 	Cleanup(ctx context.Context, preserve []packageruntime.PreservePackage)
 }
 
@@ -98,8 +100,8 @@ func RegisterController(
 		return fmt.Errorf("add preflight: %w", err)
 	}
 
-	r.status = status.NewService(r.client, packageRuntime.Status().GetStatus, r.logger)
-	r.status.Start(context.Background(), packageRuntime.Status().GetCh())
+	r.status = status.NewService(r.client, packageRuntime.GetStatus, r.logger)
+	r.status.Start(context.Background(), packageRuntime.GetStatusQueue())
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).

@@ -1,10 +1,10 @@
 ---
-title: Схемы размещения и настройка Dynamix
+title: Схемы размещения и настройка Basis Dynamix
 permalink: ru/admin/integrations/private/dynamix/layout.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform поддерживает две схемы размещения в облаке Dynamix:
+Deckhouse Kubernetes Platform поддерживает две схемы размещения в облаке Basis Dynamix:
 
 - Standard — схема с использованием только внешней сети;
 - StandardWithInternalNetwork — схема с внутренней (приватной) сетью и DNS-серверами.

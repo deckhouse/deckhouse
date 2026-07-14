@@ -23,9 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -44,19 +43,18 @@ data:
 `
 )
 
-func EditMock(data []byte, _ *directoryconfig.DirectoryConfig, _ EditOptions) ([]byte, error) {
+func EditMock(_ context.Context, data []byte, _ *options.GlobalOptions, _ EditOptions) ([]byte, error) {
 	newData := string(data) + "test: \"25\"\n"
 	return []byte(newData), nil
 }
 
 func TestSecretEdit(t *testing.T) {
-	log.InitLogger("json", false)
 
 	f := client.NewFakeKubernetesClient()
 	retry.InTestEnvironment = true
 
 	_ = yaml.Unmarshal([]byte(stateSecretTestYAML), &secretTest)
-	f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Create(context.TODO(), secretTest, metav1.CreateOptions{})
+	f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Create(t.Context(), secretTest, metav1.CreateOptions{})
 
 	t.Run("Secret editing", func(t *testing.T) {
 		abstractEditing = EditMock
@@ -69,7 +67,7 @@ func TestSecretEdit(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		secretTestEdit, err := f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Get(context.TODO(), secretTest.Name, metav1.GetOptions{})
+		secretTestEdit, err := f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Get(t.Context(), secretTest.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		require.Equal(t, "test", secretTestEdit.Labels["name"])

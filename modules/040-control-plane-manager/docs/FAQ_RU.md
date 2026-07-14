@@ -65,7 +65,7 @@ spec:
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
 {% alert level="warning" %}
-Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
 {% endalert %}
 
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
@@ -136,7 +136,7 @@ spec:
 {% endalert %}
 
 {% alert level="warning" %}
-Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
 {% endalert %}
 
 1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
@@ -350,7 +350,7 @@ spec:
 {% endalert %}
 
 {% alert level="warning" %}
-Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
 {% endalert %}
 
 1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
@@ -518,8 +518,9 @@ done
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
 1. Создайте новый снимок базы etcd на основе текущего локального снимка (`/var/lib/etcd/member/snap/db`):
@@ -561,16 +562,18 @@ done
 
 Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится "read-only". Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
 
-   ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
-   ```
+```shell
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+  etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ \
+  endpoint status -w table --cluster
+```
 
 Если в поле `ERRORS` вы видите подобное сообщение `alarm:NOSPACE`, значит вам нужно предпринять следующие шаги:
 
-1. Найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd, расположенного по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
+1. На **каждом master-узле** (из полученного списка членов кластера etcd) найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
 
 1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
@@ -603,6 +606,7 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 
 Пример вывода (размер БД etcd на узле указывается в колонке `DB SIZE`):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -614,6 +618,8 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 <div id='как-выполнить-дефрагментацию-etcd-узла-в-кластере-с-одним-master-узлом'></div>
 
@@ -656,12 +662,15 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
    etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
    etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
    etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Определите master-узел — лидер. Для этого обратитесь к любому поду etcd и получите список узлов — участников кластера etcd с помощью команды (где `NODE_NAME` — имя master-узла):
 
@@ -675,6 +684,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
    Пример вывода (у лидера в колонке `IS LEADER` будет значение `true`):
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -686,6 +696,8 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Поочередно выполните сжатие базы данных etcd на узлах — участниках кластера etcd. Используйте команду (здесь `NODE_NAME` — имя master-узла):
 
@@ -717,18 +729,16 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
 | Файл | Идентификация | Назначение |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). При включённом модуле [user-authz](/modules/user-authz/) RBAC использует `user-authz:cluster-admin` и дополнительную ClusterRole; при выключенном `user-authz` группа привязана к встроенной роли `cluster-admin`. |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для операций control-plane-manager (обновление kubeconfig, администрирование кластера). Группа привязана к встроенной wildcard-роли `cluster-admin`. |
 | `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (группа `system:masters`) | Аварийный доступ (break-glass). Обходит RBAC полностью. Ограничьте доступ к файлу сценариями восстановления. |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Используется kube-controller-manager. |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Используется kube-scheduler. |
 
 ### Административный доступ на основе RBAC
 
-Начиная с Kubernetes 1.29, kubeadm генерирует `admin.conf` с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления объектов привязки RBAC для `kubeadm:cluster-admins` (или нескольких таких записей).
+`admin.conf` генерируется с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления объектов привязки RBAC для `kubeadm:cluster-admins` (или нескольких таких записей).
 
-Если модуль [user-authz](/modules/user-authz/) **выключен**, Deckhouse привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
-
-Если модуль **user-authz** **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая привязка RBAC добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
+Deckhouse привязывает группу `kubeadm:cluster-admins` к встроенной wildcard-роли `cluster-admin` (как в стандартном кластере Kubernetes без дополнительной настройки RBAC) независимо от того, включён ли модуль [user-authz](/modules/user-authz/). Для полного неограниченного доступа в обход RBAC используйте `super-admin.conf`.
 
 ### Рекомендуемый административный доступ
 
@@ -752,7 +762,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     rootKubeconfigSymlink: false
@@ -786,7 +796,7 @@ d8 k --kubeconfig=/etc/kubernetes/super-admin.conf <команда>
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -832,7 +842,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -851,7 +861,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -896,7 +906,7 @@ d8 k -n kube-system delete secret audit-policy
 
 ## Как ускорить перезапуск подов при потере связи с узлом?
 
-По умолчанию, если узел в течении 40 секунд не сообщает свое состояние, он помечается как недоступный. И еще через 5 минут поды узла начнут перезапускаться на других узлах.  В итоге общее время недоступности приложений составляет около 6 минут.
+По умолчанию, если узел в течении 40 секунд не сообщает свое состояние, он помечается как недоступный. И еще через 5 минут поды узла начнут перезапускаться на других узлах. В итоге общее время недоступности приложений составляет около 6 минут.
 
 В специфических случаях, когда приложение не может быть запущено в нескольких экземплярах, есть способ сократить период их недоступности:
 
@@ -911,7 +921,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
@@ -985,8 +995,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
    Проверьте версию `etcdutl` с помощью команды:
@@ -1022,13 +1033,17 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
+1. Скопируйте или перенесите файл резервной копии etcd [`etcd-backup.snapshot`](#как-сделать-резервную-копию-etcd-вручную) в домашнюю директорию текущего пользователя (root):
+
+   ```shell
+   cp /путь/до/резервной/копии/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
+
 1. Очистите директорию etcd.
 
    ```shell
    rm -rf /var/lib/etcd
    ```
-
-1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
 
 1. Восстановите базу данных etcd.
 
@@ -1040,7 +1055,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-      ```
+   ```
 
    Чтобы убедиться, что etcd запущена, воспользуйтесь командой:
 
@@ -1050,10 +1065,13 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
    4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Перезапустите master-узел.
 
@@ -1114,7 +1132,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
   make release
   build/auger -h
   ```
-  
+
 * Получившийся исполняемый файл `build/auger`, а также `snapshot` из резервной копии etcd нужно загрузить на master-узел, с которого будет выполняться дальнейшие действия.
 
 Данные действия выполняются на master-узле в кластере, на который предварительно был загружен файл `snapshot` и утилита `auger`:
@@ -1129,7 +1147,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    ```shell
    SNAPSHOT=/root/etcd-restore/etcd-backup.snapshot
-   AUGER_BIN=/root/auger 
+   AUGER_BIN=/root/auger
    chmod +x $AUGER_BIN
    ```
 
@@ -1138,7 +1156,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    * Создайте манифест пода. Он будет запускаться именно на текущем master-узле, выбрав его по переменной `$HOSTNAME`, и смонтирует `snapshot` по пути `$SNAPSHOT` для загрузки во временный экземпляр etcd:
 
      ```shell
-     cat <<EOF >etcd.pod.yaml 
+     cat <<EOF >etcd.pod.yaml
      apiVersion: v1
      kind: Pod
      metadata:
@@ -1278,7 +1296,7 @@ spec:
   schedulerName: high-node-utilization
   containers:
   - name: example-pod
-    image: registry.k8s.io/pause:2.0  
+    image: registry.k8s.io/pause:2.0
 ```
 
 #### Этапы планирования подов
@@ -1342,7 +1360,7 @@ Kubelet использует клиентский TLS-сертификат (`/va
 
 ### Время жизни сертификатов
 
-По умолчанию время жизни сертификатов равно 1 году (8760 часов). При необходимости это значение можно изменить с помощью аргумента `--cluster-signing-duration` в манифесте `/etc/kubernetes/manifests/kube-controller-manager.yaml`. Но чтобы kubelet успел установить сертификат до его истечения, рекомендуем устанавливать время жизни сертификатов более, чем 1 час.
+По умолчанию время жизни сертификатов равно 1 году (8760 часов).
 
 {% alert level="warning" %}
 Если истекло время жизни клиентского сертификата, то kubelet не сможет делать запросы к kube-apiserver и не сможет обновить сертификаты. В данном случае узел (Node) будет помечен как `NotReady` и пересоздан.
@@ -1364,22 +1382,21 @@ Kubelet использует клиентский TLS-сертификат (`/va
 
 ## Как вручную обновить сертификаты компонентов управляющего слоя?
 
-Может возникнуть ситуация, когда master-узлы кластера находятся в выключенном состоянии долгое время. За это время может истечь срок действия сертификатов компонентов управляющего слоя. После включения узлов сертификаты не обновятся автоматически, поэтому это необходимо сделать вручную.
+Может возникнуть ситуация, когда master-узлы кластера находятся в выключенном состоянии долгое время. За это время может истечь срок действия сертификатов компонентов управляющего слоя.
 
-Обновление сертификатов компонентов управляющего слоя происходит с помощью утилиты `kubeadm`.
-Чтобы обновить сертификаты, выполните следующие действия на каждом master-узле:
+**Автоматическое обновление (штатная работа)**: `control-plane-manager` отслеживает срок действия сертификатов и автоматически обновляет сертификаты компонентов управляющего слоя, когда до их истечения остаётся менее 30 дней. При работающем кластере ручное вмешательство не требуется.
 
-1. Найдите утилиту `kubeadm` на master-узле и создайте символьную ссылку c помощью следующей команды:
+**Когда узлы возвращаются в онлайн после длительного простоя**: как только master-узлы запустятся и Kubernetes API станет доступен, `control-plane-manager` обнаруживает истёкшие или скоро истекающие сертификаты и автоматически создаёт операции по их обновлению. Чтобы убедиться, что обновление завершено, проверьте, что операции `ControlPlaneOperation` по обновлению сертификатов перешли в фазу `OperationCompleted`:
 
-   ```shell
-   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
-   ```
+```shell
+d8 k get cpo -o wide
+```
 
-2. Обновите сертификаты:
+Также можно проверить поле `CERTIFICATES` объекта `ControlPlaneNode` — оно должно показывать `True` (условие `CertificatesHealthy`):
 
-   ```shell
-   kubeadm certs renew all
-   ```
+```shell
+d8 k get cpn
+```
 
 ## Как защитить чувствительные поля кастомных ресурсов?
 
@@ -1401,7 +1418,7 @@ Kubelet использует клиентский TLS-сертификат (`/va
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      enabled: true
      settings:
        apiserver:
@@ -1426,3 +1443,157 @@ Kubelet использует клиентский TLS-сертификат (`/va
 | Маскировка в журнале аудита | Значения чувствительных полей заменяются на `"******"` во всех событиях аудита, независимо от прав RBAC и уровня аудита. |
 
 Полный пример конфигурации и результатов доступен в разделе [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями).
+
+## Как проверить работу механизма контроля целостности данных, хранимых в etcd?
+
+{% alert level="warning" %}
+Контроль целостности данных, хранимых в etcd, доступен только в редакциях CSE Lite и CSE Pro.
+{% endalert %}
+
+### Проверка формата данных, хранящихся в etcd
+
+Чтобы проверить формат данных, хранящихся в etcd, создайте тестовый объект и запросите его содержимое через `etcdctl`.
+
+Приведённые команды следует выполнять с master-узла кластера.
+
+1. Создайте тестовый объект:
+
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
+
+1. Запросите содержимое секрета через `etcdctl`:
+
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
+
+   Примеры вывода команды:
+
+   - Режим контроля целостности `Enforce` или `Migrate`:
+
+     ```console
+     /registry/secrets/default/test-secret
+     {"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
+     ```
+
+   - Режим контроля целостности `Rollback`:
+
+     ```console
+     /registry/secrets/default/test-secret
+     k8s
+     v1Secret
+     test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
+     kubectl-createUpdatevFieldsV1:,
+     *{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
+     foobarOpaque"
+     ```
+
+   - Включено шифрование секретов ([`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled)), режим контроля целостности `Rollback`:
+
+     ```console
+     /registry/secrets/default/test-secret
+     k8s:enc:aescbc:v1:secretbox: <binary data>
+     ```
+
+### Проверка запрета обработки данных с некорректной подписью
+
+Чтобы проверить механизм запрета обработки данных с некорректной подписью, измените значение поля `signature`.
+
+Приведённые команды следует выполнять с master-узла кластера.
+
+1. Создайте тестовый объект:
+
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
+
+1. Запросите содержимое секрета через `etcdctl`:
+
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
+
+1. Измените поле `signature` в секрете:
+
+   ```bash
+   etcdctl put /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ \
+     '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
+   ```
+
+1. Запросите содержимое секрета:
+
+   ```bash
+   d8 k get secret test-secret
+   ```
+
+   Пример вывода (только в режиме контроля целостности `Enforce`, который разрешает работу только с записями с корректной подписью):
+
+   ```console
+   Error from server (InternalError): Internal error occurred: bad signature, record rejected
+   ```
+
+#### Проверка записи событий в журнал аудита
+
+При обнаружении некорректной или отсутствующей подписи информация об этом записывается в журнал аудита Kubernetes независимо от режима контроля целостности.
+
+Для просмотра записей журнала аудита выполните следующую команду:
+
+```bash
+jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+```
+
+Пример вывода:
+
+```console
+{
+  "kind": "Event",
+  "apiVersion": "audit.k8s.io/v1",
+  "level": "Metadata",
+  "auditID": "57e0ed6c-6ed4-40cd-81a9-13c656220d83",
+  "stage": "ResponseComplete",
+  "requestURI": "/api/v1/namespaces/default/secrets?limit=500",
+  "verb": "list",
+  "user": {
+    "username": "kubernetes-admin",
+    "groups": [
+      "kubeadm:cluster-admins",
+      "system:authenticated"
+    ]
+  },
+  "sourceIPs": [
+    "10.112.0.10"
+  ],
+  "userAgent": "kubectl/v1.31.13 (linux/amd64) kubernetes/0000000",
+  "objectRef": {
+    "resource": "secrets",
+    "namespace": "default",
+    "apiVersion": "v1"
+  },
+  "responseStatus": {
+    "metadata": {},
+    "code": 200
+  },
+  "requestReceivedTimestamp": "2025-10-02T16:21:35.325764Z",
+  "stageTimestamp": "2025-10-02T16:21:35.328644Z",
+  "annotations": {
+    "authorization.k8s.io/decision": "allow",
+    "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"kubeadm:cluster-admins\" of ClusterRole \"cluster-admin\" to Group \"kubeadm:cluster-admins\"",
+    "deckhouse.io/signature": "Absent signature"
+  }
+}
+```

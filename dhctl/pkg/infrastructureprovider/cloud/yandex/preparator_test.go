@@ -15,7 +15,6 @@
 package yandex
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -118,7 +117,7 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 		preparator := NewMetaConfigPreparator(true)
 		require.False(t, preparator.validateWithNATLayout)
 
-		err := preparator.Validate(context.TODO(), cfg)
+		err := preparator.Validate(t.Context(), cfg)
 		require.NoError(t, err)
 	}
 
@@ -134,20 +133,6 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 		`{"internalSubnetCIDR": "127.0.0.1/24"}`,
 		getTestNodeGroupsSpec(t, 1, []string{"1.1.1.1"}),
 	)
-}
-
-func TestSetIncorrectLogDoesNotPanic(t *testing.T) {
-	cfg := getTestCfgForMaster(t, 1, []string{"1.1.1.1"})
-
-	do := func() {
-		preparator := NewMetaConfigPreparator(true)
-
-		preparator.WithLogger(nil)
-
-		_ = preparator.Validate(context.TODO(), cfg)
-	}
-
-	require.NotPanics(t, do)
 }
 
 func getTestCfgForMaster(t *testing.T, replicas int, externalIPS []string) *config.MetaConfig {
@@ -218,7 +203,7 @@ func assertValidation(t *testing.T, validatePrefix bool, cfg *config.MetaConfig,
 
 	require.True(t, preparator.validateWithNATLayout)
 
-	err := preparator.Validate(context.TODO(), cfg)
+	err := preparator.Validate(t.Context(), cfg)
 	if hasError {
 		require.Error(t, err)
 		return

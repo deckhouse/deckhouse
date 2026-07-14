@@ -57,11 +57,7 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
-  WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
-  WERF_TELEMETRY: "1"
-  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   REGISTRY_PATH: "sys/deckhouse-oss"
@@ -105,7 +101,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -183,7 +179,7 @@ jobs:
   # </template: block-until-image-is-not-ready>
   block-until-image-is-not-ready:
     name: Block until the docker image is not ready
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     permissions:
       contents: read
       actions: read
@@ -204,7 +200,7 @@ jobs:
             let branchName;
             let prNum;
 
-            if (context.eventName === 'pull_request') {
+            if (context.eventName === 'pull_request' || context.eventName === 'pull_request_target') {
               branchName = context.payload.pull_request.head.ref;
               prNum = context.payload.pull_request.number;
             } else if (context.eventName === 'workflow_dispatch') {
@@ -250,7 +246,7 @@ jobs:
   # <template: check_e2e_labels_job>
   check_e2e_labels:
     name: Check e2e labels
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     permissions:
       contents: read
       issues: write
@@ -289,7 +285,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'zvirt';
-            const kubernetesDefaultVersion = '1.33';
+            const kubernetesDefaultVersion = '1.34';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -386,9 +382,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -504,20 +500,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -529,27 +528,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -591,7 +602,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -694,7 +705,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -880,9 +891,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -998,20 +1009,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -1023,27 +1037,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -1085,7 +1111,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1188,7 +1214,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1374,9 +1400,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -1492,20 +1518,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -1517,27 +1546,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -1579,7 +1620,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1682,7 +1723,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1868,9 +1909,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -1986,20 +2027,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2011,27 +2055,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -2073,7 +2129,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2176,7 +2232,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2362,9 +2418,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -2480,20 +2536,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2505,27 +2564,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -2567,7 +2638,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2670,7 +2741,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2856,9 +2927,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -2974,20 +3045,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2999,27 +3073,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -3061,7 +3147,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3164,7 +3250,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3350,9 +3436,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -3468,20 +3554,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -3493,27 +3582,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -3555,7 +3656,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3658,7 +3759,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3844,9 +3945,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -3962,20 +4063,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -3987,27 +4091,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -4049,7 +4165,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -4152,7 +4268,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -4338,9 +4454,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -4456,20 +4572,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -4481,27 +4600,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -4543,7 +4674,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -4646,7 +4777,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -4832,9 +4963,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -4950,20 +5081,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -4975,27 +5109,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -5037,7 +5183,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -5140,7 +5286,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -5326,9 +5472,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -5444,20 +5590,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -5469,27 +5618,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -5531,7 +5692,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -5634,7 +5795,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -5820,9 +5981,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -5938,20 +6099,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -5963,27 +6127,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -6025,7 +6201,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -6128,7 +6304,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -6314,9 +6490,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -6432,20 +6608,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -6457,27 +6636,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -6519,7 +6710,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -6622,7 +6813,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -6808,9 +6999,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -6926,20 +7117,23 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
-
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          else
-            # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+          IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+          if [[ -n "${CI_COMMIT_TAG}" ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
           fi
+
+          # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+          # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            # Use dev-registry for branches and Github Container Registry for semver tags.
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -6951,27 +7145,39 @@ jobs:
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              # Semver tags in stage-registry have no edition suffix in the tag name.
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+            else
+              INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            fi
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
           fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
           fi
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
-            git fetch origin ${INITIAL_REF_SLUG}
-            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+              REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+              INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
+              git fetch origin tag ${INITIAL_REF_SLUG}
+              git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            else
+              INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+              git fetch origin ${INITIAL_REF_SLUG}
+              git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            fi
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -7013,7 +7219,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -7116,7 +7322,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}

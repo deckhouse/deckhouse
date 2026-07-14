@@ -48,11 +48,14 @@ sudo d8 k -n d8-ingress-nginx get po -l app=controller
 <p>Wait for the Ingress controller pods to switch to <code>Running</code> state.</p>
 
 {% offtopic title="Example of the output..." %}
+<!-- markdownlint-disable MD031 -->
 ```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 {% endofftopic %}
 </li>
 <li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:

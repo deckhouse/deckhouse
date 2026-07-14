@@ -27,10 +27,10 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
@@ -512,7 +512,7 @@ provider:
 	for _, params := range tests {
 		tst := createTestCheckClusterConfig(t, params)
 		t.Run(tst.testName, func(t *testing.T) {
-			syncStatus, err := tst.checker.checkConfiguration(context.TODO(), tst.kubeCl, tst.commanderMetaConfig)
+			syncStatus, err := tst.checker.checkConfiguration(t.Context(), tst.kubeCl, tst.commanderMetaConfig)
 
 			if tst.isError {
 				require.Error(t, err)
@@ -554,7 +554,6 @@ type testCheckClusterConfig struct {
 	kubeCl              *client.KubernetesClient
 	commanderMetaConfig *config.MetaConfig
 	checker             *Checker
-	logger              *log.InMemoryLogger
 }
 
 func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) *testCheckClusterConfig {
@@ -565,7 +564,6 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	require.NotEmpty(t, p.clusterType, p.testName)
 
 	kubeCl := client.NewFakeKubernetesClient()
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
 
 	commanderMetaConfig := &config.MetaConfig{}
 	commanderMetaConfig.ClusterType = p.clusterType
@@ -584,7 +582,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 		})
 	}
 
-	_, err := config.DoByClusterType(context.TODO(), commanderMetaConfig, &testCheckSpecificClusterFiller{
+	_, err := config.DoByClusterType(t.Context(), commanderMetaConfig, &testCheckSpecificClusterFiller{
 		params: p,
 		t:      t,
 		kubeCl: kubeCl,
@@ -594,17 +592,20 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	commanderUUID, err := uuid.NewUUID()
 	require.NoError(t, err, p.testName)
 
+	opts := options.New()
+	opts.Global.NeedDownload = false
+	options.SetPaths("/", &opts.Global)
+
 	return &testCheckClusterConfig{
 		testCheckClusterConfigBase: p.testCheckClusterConfigBase,
 		commanderMetaConfig:        commanderMetaConfig,
 		kubeCl:                     kubeCl,
-		logger:                     logger,
 		checker: NewChecker(&Params{
-			Logger:        logger,
 			StateCache:    cache.Global(),
 			CommanderMode: true,
 			IsDebug:       false,
 			CommanderUUID: commanderUUID,
+			Options:       opts,
 		}),
 	}
 }
@@ -634,7 +635,7 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -649,7 +650,7 @@ func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(context.TODO(), cm, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), cm, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 

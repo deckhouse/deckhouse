@@ -6,7 +6,8 @@ metadata:
   annotations:
     werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
     werf.io/deploy-dependency-service: state=present,kind=Service,name=capi-webhook-service,namespace=d8-cloud-instance-manager
-    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback    
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-mutating-webhook-configuration
 webhooks:
@@ -156,7 +157,7 @@ webhooks:
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
-        path: /mutate-runtime-cluster-x-k8s-io-v1alpha1-extensionconfig
+        path: /mutate-runtime-cluster-x-k8s-io-v1beta2-extensionconfig
     failurePolicy: Fail
     matchPolicy: Equivalent
     name: default.extensionconfig.runtime.addons.cluster.x-k8s.io
@@ -225,6 +226,7 @@ metadata:
     werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
     werf.io/deploy-dependency-service: state=present,kind=Service,name=capi-webhook-service,namespace=d8-cloud-instance-manager
     werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-validating-webhook-configuration
 webhooks:
@@ -399,7 +401,7 @@ webhooks:
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
-        path: /validate-runtime-cluster-x-k8s-io-v1alpha1-extensionconfig
+        path: /validate-runtime-cluster-x-k8s-io-v1beta2-extensionconfig
     failurePolicy: Fail
     matchPolicy: Equivalent
     name: validation.extensionconfig.runtime.cluster.x-k8s.io

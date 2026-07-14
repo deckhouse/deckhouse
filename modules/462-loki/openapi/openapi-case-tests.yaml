@@ -1,6 +1,0 @@
-positive:
-  values:
-    - internal:
-        effectiveStorageClass: test
-    - internal:
-        effectiveStorageClass: false

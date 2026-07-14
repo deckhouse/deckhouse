@@ -146,6 +146,20 @@ func (v *Validator) Validate(config *v1alpha1.ModuleConfig) ValidationResult {
 	return result
 }
 
+// ExtractLatestSettings runs schema conversion on config and returns the settings in the latest-version form.
+// This is used by the admission webhook to prepare oldSettings for CEL transition-rule evaluation.
+// Returns nil, nil if the config has no version or settings.
+func (v *Validator) ExtractLatestSettings(config *v1alpha1.ModuleConfig) (map[string]interface{}, error) {
+	if config == nil || config.Spec.Version == 0 || config.Spec.Settings == nil {
+		return nil, nil
+	}
+	result := v.validateCR(config)
+	if result.HasError() {
+		return nil, fmt.Errorf("extract settings from old config: %s", result.Error)
+	}
+	return result.Settings, nil
+}
+
 // validateSettings uses module from ModuleManager instance to validate spec.settings.
 // cfgName arg is a kebab-cased name of the ModuleConfig resource.
 // cfgSettings is a content of spec.settings and can be nil if settings field wasn't set.

@@ -304,11 +304,14 @@ To verify that an IP address is assigned to the interface, follow these steps:
 
    Output example:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               TYPE   KIND      NAME    ADDRESS        NETWORK           PHASE       AGE
    ipaddress-auto-1   Auto   Network   mynet   192.168.12.1   192.168.12.0/24   Allocated   4d1h
    ipaddress-auto-2   Auto   Network   mynet   192.168.12.2   192.168.12.0/24   Allocated   4d1h
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Check the pod annotation `network.deckhouse.io/networks-status` (including `ipAddressConfigs` and routes):
 

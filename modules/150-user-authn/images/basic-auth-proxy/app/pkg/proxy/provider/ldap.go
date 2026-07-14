@@ -19,6 +19,7 @@ package provider
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -28,6 +29,16 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// LDAPConfig groups NewLDAP parameters to avoid the boolean-parameter parade.
+type LDAPConfig struct {
+	URL                  string
+	ClientID             string
+	ClientSecret         string
+	Scopes               []string
+	GetUserInfo          bool
+	BasicAuthUnsupported bool
+}
+
 type LDAPProvider struct {
 	httpClient  *http.Client
 	oidc        *oidc.Provider
@@ -36,7 +47,7 @@ type LDAPProvider struct {
 	getUserInfo bool
 }
 
-func NewLDAP(oidcURL, clientID, clientSecret string, getUserInfo, basicAuthUnsupported bool, scopes []string) Provider {
+func NewLDAP(ctx context.Context, cfg LDAPConfig) (Provider, error) {
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -49,40 +60,41 @@ func NewLDAP(oidcURL, clientID, clientSecret string, getUserInfo, basicAuthUnsup
 			IdleConnTimeout:       30 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 		},
 	}
 
-	provider, err := oidc.NewProvider(oidc.ClientContext(context.Background(), httpClient), oidcURL)
+	oidcProvider, err := oidc.NewProvider(oidc.ClientContext(ctx, httpClient), cfg.URL)
 	if err != nil {
-		panic(err) // TODO: handle error
+		return nil, fmt.Errorf("create LDAP OIDC provider %q: %w", cfg.URL, err)
 	}
 
-	config := oauth2.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Endpoint:     provider.Endpoint(),
-		Scopes:       scopes,
+	oauthCfg := oauth2.Config{
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.ClientSecret,
+		Endpoint:     oidcProvider.Endpoint(),
+		Scopes:       cfg.Scopes,
 	}
-
-	if basicAuthUnsupported {
-		config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
+	if cfg.BasicAuthUnsupported {
+		oauthCfg.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 	}
 
 	return &LDAPProvider{
 		logger:      capnslog.NewPackageLogger("basic-auth-proxy", "ldap provider"),
 		httpClient:  httpClient,
-		oidc:        provider,
-		oauth2:      &config,
-		getUserInfo: getUserInfo,
-	}
+		oidc:        oidcProvider,
+		oauth2:      &oauthCfg,
+		getUserInfo: cfg.GetUserInfo,
+	}, nil
 }
 
-func (p *LDAPProvider) ValidateCredentials(login, password string) ([]string, error) {
+func (p *LDAPProvider) ValidateCredentials(ctx context.Context, login, password string) ([]string, error) {
 	p.logger.Info("validate credentials via LDAP (password grant)")
 
 	token, err := p.oauth2.PasswordCredentialsToken(
-		oidc.ClientContext(context.Background(), p.httpClient),
+		oidc.ClientContext(ctx, p.httpClient),
 		login,
 		password,
 	)
@@ -90,26 +102,26 @@ func (p *LDAPProvider) ValidateCredentials(login, password string) ([]string, er
 		return nil, err
 	}
 
-	if p.getUserInfo {
-		p.logger.Info("get user info from Dex for LDAP user")
-
-		info, err := p.oidc.UserInfo(
-			oidc.ClientContext(context.Background(), p.httpClient),
-			oauth2.StaticTokenSource(token),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		claims := struct {
-			Groups []string `json:"groups"`
-		}{}
-		if err = info.Claims(&claims); err != nil {
-			return nil, err
-		}
-
-		return claims.Groups, nil
+	if !p.getUserInfo {
+		return nil, nil
 	}
 
-	return nil, nil
+	p.logger.Info("get user info from Dex for LDAP user")
+
+	info, err := p.oidc.UserInfo(
+		oidc.ClientContext(ctx, p.httpClient),
+		oauth2.StaticTokenSource(token),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	claims := struct {
+		Groups []string `json:"groups"`
+	}{}
+	if err = info.Claims(&claims); err != nil {
+		return nil, err
+	}
+
+	return claims.Groups, nil
 }

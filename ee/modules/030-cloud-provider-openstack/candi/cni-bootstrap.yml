@@ -1,0 +1,47 @@
+# Declares the CNI ModuleConfig (cni-cilium) that dhctl creates during cluster
+# bootstrap when no user-supplied cni-* ModuleConfig is present.
+#
+# Resolution order at bootstrap:
+#   1. Apply `config.default` as the baseline ModuleConfig settings.
+#   2. Walk `config.rules` top-to-bottom. For each rule whose `match` resolves
+#      against `providerClusterConfiguration` and equals one of `match.values`,
+#      merge `settings` over the baseline (overwrite, not deep-merge).
+#   3. Build ModuleConfig `cni-<name>` with the resulting settings.
+#
+# Rules mirror the legacy templates/cni.yaml selection logic for OpenStack:
+#   - VXLAN podNetworkMode  -> Cilium VXLAN tunnel + BPF masquerade.
+#   - DirectRouting / DirectRoutingWithPortSecurityEnabled  -> default (no rule
+#     matches): tunnelMode Disabled + createNodeRoutes true equals the old
+#     "DirectWithNodeRoutes" mode, masqueradeMode Netfilter unchanged.
+#   - Standard / StandardWithNoRouter layouts have no podNetworkMode field and
+#     therefore also fall through to the default.
+schemaVersion: 1
+name: cilium
+config:
+  default:
+    tunnelMode: Disabled
+    createNodeRoutes: true
+    masqueradeMode: Netfilter
+  rules:
+    # Simple layout with podNetworkMode=VXLAN: the pod network is not directly
+    # routable, so Cilium must encapsulate inter-node pod traffic in VXLAN and
+    # masquerade via BPF for performance.
+    - source: providerClusterConfiguration
+      match:
+        jsonPath: ".simple.podNetworkMode"
+        values:
+          - VXLAN
+      settings:
+        tunnelMode: VXLAN
+        masqueradeMode: BPF
+    # SimpleWithInternalNetwork layout with podNetworkMode=VXLAN: same reasoning
+    # as Simple+VXLAN above - the internal network does not provide direct pod
+    # routing in this mode.
+    - source: providerClusterConfiguration
+      match:
+        jsonPath: ".simpleWithInternalNetwork.podNetworkMode"
+        values:
+          - VXLAN
+      settings:
+        tunnelMode: VXLAN
+        masqueradeMode: BPF

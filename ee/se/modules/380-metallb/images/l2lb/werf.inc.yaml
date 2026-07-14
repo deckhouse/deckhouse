@@ -73,7 +73,6 @@ import:
   add: /configs/excludel2.yaml
   to: /etc/metallb/excludel2.yaml
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

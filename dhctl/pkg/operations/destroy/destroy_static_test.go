@@ -15,9 +15,11 @@
 package destroy
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"os"
 	"path"
@@ -44,25 +46,25 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var rootTmpDirStatic = path.Join(os.TempDir(), "dhctl-test-static-destroy")
 
 func TestStaticDestroy(t *testing.T) {
 	defer func() {
-		logger := log.GetDefaultLogger()
+		logger := dhlog.Discard()
 		if err := os.RemoveAll(rootTmpDirStatic); err != nil {
-			logger.LogErrorF("Couldn't remove temp dir '%s': %v\n", rootTmpDirStatic, err)
+			logger.Error(fmt.Sprintf("Couldn't remove temp dir '%s': %v\n", rootTmpDirStatic, err))
 			return
 		}
-		logger.LogInfoF("Tmp dir '%s' removed\n", rootTmpDirStatic)
+		logger.Info(fmt.Sprintf("Tmp dir '%s' removed\n", rootTmpDirStatic))
 	}()
 
 	defaultHostBastion := testssh.Bastion{
@@ -93,7 +95,7 @@ func TestStaticDestroy(t *testing.T) {
 			testCreateNodes(t, tst.kubeCl, hosts)
 			resources := testCreateResourcesForStatic(t, tst.kubeCl)
 
-			err := tst.destroyer.DestroyCluster(context.TODO(), true)
+			err := tst.destroyer.DestroyCluster(t.Context(), true)
 			require.Error(t, err)
 			tst.assertStateCacheIsEmpty(t)
 			// skip deleting
@@ -294,7 +296,7 @@ func TestStaticDestroy(t *testing.T) {
 
 				tst.addCleanCommand(tst.sshProvider, hosts[0], tt.sshOut, tt.sshErr, tst.logger)
 
-				err := tst.destroyer.DestroyCluster(context.TODO(), true)
+				err := tst.destroyer.DestroyCluster(t.Context(), true)
 				assertClusterDestroyError(t, tt.destroyClusterShouldReturnsError, err)
 
 				tst.assertNodeUserDidNotCreate(t)
@@ -1188,7 +1190,7 @@ func TestStaticDestroy(t *testing.T) {
 					}
 				}
 
-				ctx := context.TODO()
+				ctx := t.Context()
 
 				var waiter *testNodeUserWaiter
 				if len(hostsToCreateNodeUser) > 0 {
@@ -1267,10 +1269,8 @@ func (w *testNodeUserWaiter) waitAll() {
 }
 
 func (w *testNodeUserWaiter) goWaitNodeUserAddUserToNodes(ctx context.Context, kubeCl *client.KubernetesClient, hosts []session.Host) {
-	w.wg.Add(1)
 
-	go func() {
-		defer w.wg.Done()
+	w.wg.Go(func() {
 		err := retry.NewSilentLoop("wait node user", 20, 500*time.Millisecond).RunContext(ctx, func() error {
 			_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(ctx, global.ConvergeNodeUserName, metav1.GetOptions{})
 			return err
@@ -1300,7 +1300,7 @@ func (w *testNodeUserWaiter) goWaitNodeUserAddUserToNodes(ctx context.Context, k
 		}
 
 		w.setErr(nil)
-	}()
+	})
 }
 
 type testStaticDestroyTest struct {
@@ -1375,7 +1375,7 @@ func (ts *testStaticDestroyTest) generateAndSaveNodeUserToCache(t *testing.T, pa
 	}
 
 	require.False(t, govalue.IsNil(ts.kubeCl))
-	err = entity.CreateOrUpdateNodeUser(context.TODO(), newFakeKubeClientProvider(ts.kubeCl), ts.nodeUser, retry.NewEmptyParams())
+	err = entity.CreateOrUpdateNodeUser(t.Context(), newFakeKubeClientProvider(ts.kubeCl), ts.nodeUser, retry.NewEmptyParams())
 	require.NoError(t, err, "create or update node user")
 }
 
@@ -1393,7 +1393,7 @@ func (ts *testStaticDestroyTest) assertNodeUserIsNotUpdated(t *testing.T, checkI
 
 	require.False(t, govalue.IsNil(ts.kubeCl))
 	require.False(t, govalue.IsNil(ts.nodeUser))
-	nodeUserUnstruct, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(context.TODO(), ts.nodeUser.GetName(), metav1.GetOptions{})
+	nodeUserUnstruct, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(t.Context(), ts.nodeUser.GetName(), metav1.GetOptions{})
 	require.NoError(t, err, "node user should in kubernetes cluster")
 
 	nodeUser := v1.NodeUser{}
@@ -1553,7 +1553,7 @@ func (ts *testStaticDestroyTest) assertPrivateKeyWritten(t *testing.T, keysCount
 func (ts *testStaticDestroyTest) assertNodeUserCreated(t *testing.T, created bool) {
 	require.False(t, govalue.IsNil(ts.kubeCl))
 
-	_, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(context.TODO(), global.ConvergeNodeUserName, metav1.GetOptions{})
+	_, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(t.Context(), global.ConvergeNodeUserName, metav1.GetOptions{})
 
 	if created {
 		require.NoError(t, err, "node user should created ")
@@ -1625,13 +1625,13 @@ func (ts *testStaticDestroyTest) addDiscoveryIPFileDownload(sshProvider *testssh
 	})
 }
 
-func (ts *testStaticDestroyTest) runCleanCommand(hostIP string, bastion testssh.Bastion, msg string, logger log.Logger) {
+func (ts *testStaticDestroyTest) runCleanCommand(hostIP string, bastion testssh.Bastion, msg string, logger *slog.Logger) {
 	testAddRunToMap(ts.cleanCommandsRanOnHosts, hostIP, struct{}{})
 	testAddRunToMap(ts.cleanCommandsRanOverBastion, hostIP, bastion)
-	logger.LogInfoLn(msg)
+	logger.Info(msg)
 }
 
-func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger log.Logger) {
+func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger *slog.Logger) {
 	sshProvider.AddCommandProvider(forHost.Host, func(bastion testssh.Bastion, scriptPath string, args ...string) *testssh.Command {
 		if !testIsCleanCommand(scriptPath) {
 			return nil
@@ -1655,14 +1655,15 @@ func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvide
 }
 
 func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParams) *testStaticDestroyTest {
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
+	var logBuf bytes.Buffer
+	logger := dhlog.NewBufferLogger(&logBuf)
 
 	stateCache := cache.NewTestCache()
 
 	kubeCl := testCreateFakeKubeClient()
 	kubeClProvider := newFakeKubeClientProvider(kubeCl)
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	clusterUUID := uuid.Must(uuid.NewRandom()).String()
 
@@ -1679,7 +1680,6 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 		commanderMode:   commanderMode,
 		commanderParams: nil,
 		stateCache:      stateCache,
-		logger:          logger,
 		skipResources:   params.skipResources,
 		forceFromCache:  true,
 	}
@@ -1687,10 +1687,8 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	loader, kubeProviderForInfraDestroyer, err := initStateLoader(ctx, loaderParams, kubeClProvider)
 	require.NoError(t, err)
 
-	loggerProvider := log.SimpleLoggerProvider(logger)
 	pipeline := phases.NewDummyDefaultPipelineProviderOpts(
 		phases.WithPipelineName("static destroy"),
-		phases.WithPipelineLoggerProvider(loggerProvider),
 	)()
 
 	phaseActionProvider := phases.NewPhaseActionProviderFromPipeline(pipeline)
@@ -1703,7 +1701,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 
 		State: d8State,
 
-		LoggerProvider:       loggerProvider,
+		Logger:               dhlog.Discard(),
 		KubeProvider:         kubeClProvider,
 		PhasedActionProvider: phaseActionProvider,
 	})
@@ -1714,11 +1712,11 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	tmpDir, err := fs.RandomTmpDirWithNRunes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)
 	require.NoError(t, err)
 
-	logger.LogInfoF("Tmp dir: '%s'\n", tmpDir)
+	logger.Info(fmt.Sprintf("Tmp dir: '%s'\n", tmpDir))
 
 	infraProvider := &infraDestroyerProvider{
 		stateCache:           stateCache,
-		loggerProvider:       loggerProvider,
+		logger:               dhlog.Discard(),
 		kubeProvider:         kubeProviderForInfraDestroyer,
 		phasesActionProvider: phaseActionProvider,
 		commanderMode:        commanderMode,
@@ -1759,6 +1757,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	tst := &testStaticDestroyTest{
 		baseTest: &baseTest{
 			logger:       logger,
+			logBuf:       &logBuf,
 			stateCache:   stateCache,
 			tmpDir:       tmpDir,
 			kubeProvider: kubeProviderForInfraDestroyer,
@@ -1814,11 +1813,11 @@ func testCreateNodes(t *testing.T, kubeCl *client.KubernetesClient, hosts []sess
 			},
 		}
 
-		_, err := kubeCl.CoreV1().Nodes().Create(context.TODO(), &obj, metav1.CreateOptions{})
+		_, err := kubeCl.CoreV1().Nodes().Create(t.Context(), &obj, metav1.CreateOptions{})
 		require.NoError(t, err, host.Name)
 	}
 
-	nodes, err := kubeCl.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	nodes, err := kubeCl.CoreV1().Nodes().List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err, hosts)
 	require.Len(t, nodes.Items, len(hosts))
 	for _, node := range nodes.Items {

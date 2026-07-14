@@ -6,20 +6,19 @@ At this point, you have created a cluster consisting of a **single node** — th
 
 Select one of the two options below to continue installing the cluster:
 
-<div class="tabs">
-        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
-        A cluster of several nodes
-        </a>
-        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
-        A cluster of a single node
-        </a>
-</div>
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id='tab_layout_worker' href="javascript:void(0)" class="tabs__item tabs__item--title active"
+    onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_layout_worker');">
+    A cluster of several nodes
+    </li>
+    <li id='tab_layout_master' href="javascript:void(0)" class="tabs__item tabs__item--title"
+    onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_layout_master');">
+    A cluster of a single node
+    </li>
+  </ul>
 
-<div id="block_layout_master" class="tabs__content_master" style="display: none;">
+<div id="block_layout_master" class="tabs__container tabs__container--descr">
 <p>A single-node cluster may be sufficient, for example, for familiarization purposes.</p>
 <ul>
   <li>
@@ -59,7 +58,7 @@ sudo -i d8 k patch mc global --type merge \
 </ul>
 </div>
 
-<div id="block_layout_worker" class="tabs__content_worker">
+<div id="block_layout_worker" class="tabs__container tabs__container--descr active">
 <p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/products/kubernetes-platform/documentation/latest/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
 
 <ul>
@@ -200,6 +199,7 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 {%- endofftopic %}
 </li>
 </ul>
+</div>
 </div>
 
 <p>Note that it may take some time to get all Deckhouse components up and running after the installation is complete.</p>

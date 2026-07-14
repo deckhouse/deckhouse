@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
@@ -31,11 +32,11 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 )
 
@@ -59,7 +60,7 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap                map[string]interface{}  `json:"-"`
+	VersionMap                map[string]any          `json:"-"`
 	Images                    imagesDigests           `json:"-"`
 	Registry                  registry.Config         `json:"-"`
 	UUID                      string                  `json:"clusterUUID,omitempty"`
@@ -69,6 +70,7 @@ type MetaConfig struct {
 	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
 	DownloadRootDir           string                  `json:"-"`
 	DownloadCacheDir          string                  `json:"-"`
+	ShowProgress              bool                    `json:"-"`
 
 	// VersionFilePath is the absolute path to the deckhouse version file
 	// embedded in the installer image. Required by LoadInstallerVersion and
@@ -76,7 +78,7 @@ type MetaConfig struct {
 	VersionFilePath string `json:"-"`
 }
 
-type imagesDigests map[string]map[string]interface{}
+type imagesDigests map[string]map[string]any
 
 type ClusterMasterEndpoint struct {
 	Address                string `json:"address" yaml:"address"`
@@ -105,27 +107,9 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	return m, nil
 }
 
-var deprecatedClusterConfigFields = []struct {
-	field   string
-	message string
-}{}
-
-func (m *MetaConfig) warnDeprecatedClusterConfigFields() {
-	for _, d := range deprecatedClusterConfigFields {
-		if _, ok := m.ClusterConfig[d.field]; ok {
-			log.InteractiveWarnLn("=================================================================")
-			log.InteractiveWarnLn(fmt.Sprintf("DEPRECATED: %q in ClusterConfiguration is deprecated.", d.field))
-			log.InteractiveWarnLn(d.message)
-			log.InteractiveWarnLn("Support for this field in ClusterConfiguration will be removed in a future release.")
-			log.InteractiveWarnLn("=================================================================")
-		}
-	}
-}
-
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
-		m.warnDeprecatedClusterConfigFields()
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
 		}
@@ -134,7 +118,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		if err := json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
 		}
-		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
+		m.ClusterDNSAddress = getDNSAddress(ctx, serviceSubnet)
 
 		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
@@ -261,13 +245,13 @@ func (m *MetaConfig) GetClusterDomain() string {
 	return m.ClusterDomain
 }
 
-func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
+func (m *MetaConfig) FindTerraNodeGroup(ctx context.Context, nodeGroupName string) []byte {
 	for index, ng := range m.TerraNodeGroupSpecs {
 		if ng.Name == nodeGroupName {
 			var terraNodeGroups []json.RawMessage
 			err := json.Unmarshal(m.ProviderClusterConfig["nodeGroups"], &terraNodeGroups)
 			if err != nil {
-				log.ErrorLn(err)
+				dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 				return nil
 			}
 			return terraNodeGroups[index]
@@ -280,8 +264,8 @@ func (m *MetaConfig) IsStatic() bool {
 	return m.ClusterType == "Static"
 }
 
-func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface{} {
-	static := make(map[string]interface{})
+func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings(ctx context.Context) map[string]any {
+	static := make(map[string]any)
 
 	if len(m.StaticClusterConfig) == 0 {
 		return static
@@ -291,7 +275,7 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface
 	if data, ok := m.StaticClusterConfig["internalNetworkCIDRs"]; ok {
 		err := json.Unmarshal(data, &internalNetworkCIDRs)
 		if err != nil {
-			log.DebugF("unmarshalling internalNetworkCIDRs: %v\n", err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("unmarshalling internalNetworkCIDRs: %v", err))
 			return static
 		}
 	}
@@ -301,19 +285,19 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface
 }
 
 // NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by infrastructure utility
-func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]interface{} {
+func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]any {
 	if terraNodeGroup.NodeTemplate == nil {
-		terraNodeGroup.NodeTemplate = make(map[string]interface{})
+		terraNodeGroup.NodeTemplate = make(map[string]any)
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		"apiVersion": "deckhouse.io/v1",
 		"kind":       "NodeGroup",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name": terraNodeGroup.Name,
 		},
-		"spec": map[string]interface{}{
+		"spec": map[string]any{
 			"nodeType": "CloudPermanent",
-			"disruptions": map[string]interface{}{
+			"disruptions": map[string]any{
 				"approvalMode": "Manual",
 			},
 			"nodeTemplate": terraNodeGroup.NodeTemplate,
@@ -361,10 +345,11 @@ func resolveKubernetesVersion(v string) string {
 	return v
 }
 
-func clusterConfigToMap(raw map[string]json.RawMessage) (map[string]interface{}, error) {
+func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
+	raw := m.ClusterConfig
 	out := make(map[string]interface{}, len(raw))
 	for k, v := range raw {
-		var a interface{}
+		var a any
 		if err := json.Unmarshal(v, &a); err != nil {
 			return nil, fmt.Errorf("unmarshal ClusterConfiguration field %q: %w", k, err)
 		}
@@ -376,44 +361,11 @@ func clusterConfigToMap(raw map[string]json.RawMessage) (map[string]interface{},
 	return out, nil
 }
 
-func (m *MetaConfig) ConfigForControlPlaneTemplates(nodeIP string) (*ControlPlaneTemplateConfig, error) {
-	clusterConfiguration, err := clusterConfigToMap(m.ClusterConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := &ControlPlaneTemplateConfig{
-		RunType:              "ClusterBootstrap",
-		NodeIP:               "$MY_IP", // bashible placeholder, replaced by envsubst
-		NodeName:             "$MY_NODENAME",
-		Registry:             m.Registry.Manifest().KubeadmContext().ToMap(),
-		Images:               m.Images.ConvertToMap(),
-		VersionMap:           m.VersionMap,
-		ClusterConfiguration: clusterConfiguration,
-	}
-
-	if nodeIP != "" {
-		cfg.NodeIP = nodeIP
-	}
-
-	mcSettings, err := m.controlPlaneManagerSettings()
-	if err != nil {
-		return nil, fmt.Errorf("read control-plane-manager moduleConfig: %w", err)
-	}
-	if mcSettings != nil {
-		cfg.Settings = mcSettings
-	} else {
-		cfg.Settings = make(map[string]interface{})
-	}
-
-	return cfg, nil
-}
-
-func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]interface{}, error) {
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
-		var t interface{}
+		var t any
 		err := json.Unmarshal(value, &t)
 		if err != nil {
 			return nil, fmt.Errorf("cluster config unmarshal: %v", err)
@@ -425,19 +377,19 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		data["kubernetesVersion"] = DefaultKubernetesVersion
 	}
 
-	clusterBootstrap := map[string]interface{}{
+	clusterBootstrap := map[string]any{
 		"clusterDomain":     data["clusterDomain"],
 		"clusterDNSAddress": m.ClusterDNSAddress,
 	}
 
 	if nodeIP != "" {
-		clusterBootstrap["cloud"] = map[string]interface{}{"nodeIP": nodeIP}
+		clusterBootstrap["cloud"] = map[string]any{"nodeIP": nodeIP}
 	}
 
-	nodeGroup := map[string]interface{}{
+	nodeGroup := map[string]any{
 		"name":     "master",
 		"nodeType": "CloudPermanent",
-		"cloudInstances": map[string]interface{}{
+		"cloudInstances": map[string]any{
 			"classReference": map[string]string{
 				"name": "master",
 			},
@@ -446,13 +398,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 
 	if m.ClusterType == StaticClusterType {
 		nodeGroup["nodeType"] = "Static"
-		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
+		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings(ctx)
 	}
 
-	configForBashibleBundleTemplate := make(map[string]interface{})
-	for key, value := range m.VersionMap {
-		configForBashibleBundleTemplate[key] = value
-	}
+	configForBashibleBundleTemplate := make(map[string]any)
+	maps.Copy(configForBashibleBundleTemplate, m.VersionMap)
 
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
 
@@ -464,7 +414,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
 	configForBashibleBundleTemplate["clusterBootstrap"] = clusterBootstrap
-	configForBashibleBundleTemplate["proxy"] = make(map[string]interface{})
+	configForBashibleBundleTemplate["proxy"] = make(map[string]any)
 	if data["proxy"] != nil {
 		proxyData, err := m.EnrichProxyData()
 		if err != nil {
@@ -484,6 +434,10 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	}
 	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
 
+	if tag := m.deckhouseImageTag(ctx); tag != "" && registryContext.ImagesBase != "" {
+		configForBashibleBundleTemplate["deckhouseImageRef"] = fmt.Sprintf("%s:%s", registryContext.ImagesBase, tag)
+	}
+
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 	clusterMasterEndpoints := m.clusterMasterEndpointsBashibleContext()
@@ -492,7 +446,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppServerPort")
 	configForBashibleBundleTemplate["clusterMasterRPPBootstrapAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppBootstrapServerPort")
 
-	mingetBytes, err := minget.Bytes()
+	mingetBytes, err := minget.Bytes(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get minget bytes: %w", err)
 	}
@@ -503,7 +457,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 
 // NodeGroupConfig returns values for infrastructure utility to order master node or static node
 func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
-	result := map[string]interface{}{
+	result := map[string]any{
 		"clusterConfiguration":         m.ClusterConfig,
 		"providerClusterConfiguration": m.ProviderClusterConfig,
 		"nodeIndex":                    nodeIndex,
@@ -535,33 +489,25 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 
 	if m.ClusterConfig != nil {
 		config := make(map[string]json.RawMessage, len(m.ClusterConfig))
-		for k, v := range m.ClusterConfig {
-			config[k] = v
-		}
+		maps.Copy(config, m.ClusterConfig)
 		out.ClusterConfig = config
 	}
 
 	if m.InitClusterConfig != nil {
 		config := make(map[string]json.RawMessage, len(m.InitClusterConfig))
-		for k, v := range m.InitClusterConfig {
-			config[k] = v
-		}
+		maps.Copy(config, m.InitClusterConfig)
 		out.InitClusterConfig = config
 	}
 
 	if m.ProviderClusterConfig != nil {
 		config := make(map[string]json.RawMessage, len(m.ProviderClusterConfig))
-		for k, v := range m.ProviderClusterConfig {
-			config[k] = v
-		}
+		maps.Copy(config, m.ProviderClusterConfig)
 		out.ProviderClusterConfig = config
 	}
 
 	if m.StaticClusterConfig != nil {
 		config := make(map[string]json.RawMessage, len(m.StaticClusterConfig))
-		for k, v := range m.StaticClusterConfig {
-			config[k] = v
-		}
+		maps.Copy(config, m.StaticClusterConfig)
 		out.StaticClusterConfig = config
 	}
 
@@ -607,12 +553,12 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	return out
 }
 
-func (m *MetaConfig) clusterMasterEndpointsBashibleContext() []map[string]interface{} {
+func (m *MetaConfig) clusterMasterEndpointsBashibleContext() []map[string]any {
 	clusterMasterEndpoints := m.effectiveClusterMasterEndpoints()
-	endpoints := make([]map[string]interface{}, 0, len(clusterMasterEndpoints))
+	endpoints := make([]map[string]any, 0, len(clusterMasterEndpoints))
 
 	for _, endpoint := range clusterMasterEndpoints {
-		item := map[string]interface{}{
+		item := map[string]any{
 			"address": endpoint.Address,
 		}
 
@@ -632,7 +578,7 @@ func (m *MetaConfig) clusterMasterEndpointsBashibleContext() []map[string]interf
 	return endpoints
 }
 
-func clusterMasterEndpointAddresses(endpoints []map[string]interface{}, portName string) []string {
+func clusterMasterEndpointAddresses(endpoints []map[string]any, portName string) []string {
 	addresses := make([]string, 0, len(endpoints))
 
 	for _, endpoint := range endpoints {
@@ -667,7 +613,7 @@ func (m *MetaConfig) effectiveClusterMasterEndpoints() []ClusterMasterEndpoint {
 }
 
 func (m *MetaConfig) LoadVersionMap(filename string) error {
-	versionMap := make(map[string]interface{})
+	versionMap := make(map[string]any)
 
 	versionMapFile, err := os.ReadFile(filename)
 	if err != nil {
@@ -684,7 +630,7 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	return nil
 }
 
-func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
+func (m *MetaConfig) EnrichProxyData() (map[string]any, error) {
 	type proxy struct {
 		HTTPProxy  string   `json:"httpProxy" yaml:"httpProxy"`
 		HTTPSProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
@@ -722,7 +668,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 
 	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
 
-	ret := make(map[string]interface{})
+	ret := make(map[string]any)
 	if p.HTTPProxy != "" {
 		ret["httpProxy"] = p.HTTPProxy
 	}
@@ -737,12 +683,39 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 func (m *MetaConfig) LoadImagesDigests() error {
 	imagesDigests, err := digests.GetAllDigests()
 	if err != nil {
-		return fmt.Errorf("Cannot get images digests: %w", err)
+		return fmt.Errorf("Cannot get image digests: %w", err)
 	}
 
 	m.Images = imagesDigests
 
 	return nil
+}
+
+// FindModuleConfig
+// if not found returns nil
+func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
+	if len(m.ModuleConfigs) == 0 {
+		return nil
+	}
+
+	for _, moduleConfig := range m.ModuleConfigs {
+		if moduleConfig.Name == module {
+			return moduleConfig
+		}
+	}
+
+	return nil
+}
+
+// deckhouseImageTag returns the deckhouse-controller image tag for the bashible
+// prefetch: semver from the installer's version file, falling back to DevBranch.
+func (m *MetaConfig) deckhouseImageTag(ctx context.Context) string {
+	if m.VersionFilePath != "" {
+		if tag, ok := ReadVersionTagFromInstallerContainer(ctx, m.VersionFilePath, m.DownloadRootDir); ok {
+			return tag
+		}
+	}
+	return m.DeckhouseConfig.DevBranch
 }
 
 func (m *MetaConfig) LoadInstallerVersion() error {
@@ -775,10 +748,10 @@ func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
 	return 0
 }
 
-func getDNSAddress(serviceCIDR string) string {
+func getDNSAddress(ctx context.Context, serviceCIDR string) string {
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
-		log.DebugLn("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		dhlog.FromContext(ctx).DebugContext(ctx, "serviceSubnetCIDR is not a valid CIDR (should be validated with the openapi schema)")
 		return ""
 	}
 
@@ -805,8 +778,8 @@ func getDNSAddress(serviceCIDR string) string {
 	return clusterDNS
 }
 
-func (i *imagesDigests) ConvertToMap() map[string]interface{} {
-	res := make(map[string]interface{})
+func (i *imagesDigests) ConvertToMap() map[string]any {
+	res := make(map[string]any)
 	for k, v := range *i {
 		res[k] = v
 	}

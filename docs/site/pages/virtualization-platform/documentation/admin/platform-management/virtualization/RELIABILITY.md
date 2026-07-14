@@ -33,10 +33,13 @@ The following is an example of migrating a selected virtual machine.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                   PHASE     NODE           IPADDRESS     AGE
    linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    We can see that it is currently running on the `virtlab-pt-1` node.
 
@@ -64,6 +67,7 @@ The following is an example of migrating a selected virtual machine.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                   PHASE       NODE           IPADDRESS     AGE
    linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
@@ -71,6 +75,8 @@ The following is an example of migrating a selected virtual machine.
    linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
    linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. If you need to abort the migration, delete the corresponding `vmop` resource while it is in the `Pending` or `InProgress` phase.
 

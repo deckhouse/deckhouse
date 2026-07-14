@@ -13,6 +13,8 @@
 # limitations under the License.
 
 # exit if unit doesn't exist
+# bashible: parallel-group=light-checks
+
 if ! systemctl list-unit-files firewalld.service >/dev/null 2>&1; then
   exit 0
 fi

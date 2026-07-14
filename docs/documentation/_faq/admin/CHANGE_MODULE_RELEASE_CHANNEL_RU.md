@@ -40,10 +40,13 @@ lang: ru
 
    Пример ответа:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               RELEASE CHANNEL   UPDATE MODE
    my-module-policy   Alpha             AutoPatch
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Свяжите политику обновления с модулем.
 

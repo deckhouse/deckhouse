@@ -16,24 +16,24 @@ name: Run Ci Tests On Changes
 on:
   push:
     paths:
-      - '.github/scripts/js/**'
+      - ".github/scripts/js/**"
 
 jobs:
   test:
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
 
-    - name: Install dependencies
-      run: npm ci
-      working-directory: .github/scripts/js
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .github/scripts/js
 
-    - name: Run Jest tests
-      run: npm test
-      working-directory: .github/scripts/js
+      - name: Run Jest tests
+        run: npm test
+        working-directory: .github/scripts/js

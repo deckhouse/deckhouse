@@ -25,7 +25,14 @@ const (
 	connectTimeout        = 10 * time.Second
 	responseHeaderTimeout = 60 * time.Second
 
-	defaultInstallWorkers  = 4
+	defaultInstallWorkers = 8
+	// Fetch is network-bound (HTTP GET through ssh reverse-tunnel during
+	// bootstrap, or in-cluster registry-packages-proxy later) — runtime.NumCPU
+	// is the wrong cap for it. Master nodes typically have 2 vCPUs, which
+	// throttled bashible step 004 to ~14s on 11 small packages. 16 in-flight
+	// requests saturate the link without overwhelming the proxy.
+	defaultFetchWorkers = 16
+
 	packageInstallAttempts = 10
 
 	scriptExecTimeout     = 10 * time.Minute

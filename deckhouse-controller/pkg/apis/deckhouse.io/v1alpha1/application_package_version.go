@@ -19,10 +19,11 @@ package v1alpha1
 import (
 	"slices"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 )
 
 const (
@@ -69,6 +70,8 @@ var _ runtime.Object = (*ApplicationPackageVersion)(nil)
 // +kubebuilder:printcolumn:name="MetadataLoaded",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].status"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].message"
 // +kubebuilder:printcolumn:name="UsedBy",type=integer,JSONPath=`.status.usedByCount`
+// +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)"
+// +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
 
 // ApplicationPackageVersion represents a version of an application package.
 type ApplicationPackageVersion struct {
@@ -78,9 +81,10 @@ type ApplicationPackageVersion struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Defines the application package version parameters.
 	Spec ApplicationPackageVersionSpec `json:"spec,omitempty"`
 
-	// Status of an ApplicationPackageVersion.
+	// Application package version status.
 	Status ApplicationPackageVersionStatus `json:"status,omitempty"`
 }
 
@@ -88,16 +92,19 @@ type ApplicationPackageVersionSpec struct {
 	// Name of the application package.
 	// +optional
 	// +kubebuilder:validation:Immutable
+	// +crd-enricher:deckhouse:documentation:examples=console
 	PackageName string `json:"packageName,omitempty"`
 
-	// The name of the repository containing the package.
+	// Name of the package repository containing the package.
 	// +optional
 	// +kubebuilder:validation:Immutable
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
 	// Version of the application package.
 	// +optional
 	// +kubebuilder:validation:Immutable
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion,omitempty"`
 }
 
@@ -110,7 +117,7 @@ type ApplicationPackageVersionStatus struct {
 	// +optional
 	PackageSchemas *ApplicationPackageVersionStatusSchemas `json:"packageSchemas,omitempty"`
 
-	// Conditions represent the latest available observations of the package version's state.
+	// Conditions reflecting the latest observations of the package version state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -127,6 +134,17 @@ type ApplicationPackageVersionStatus struct {
 	UsedByCount int `json:"usedByCount,omitempty"`
 }
 
+// PackageSchema is an OpenAPI v3 schema wrapper that preserves all custom x-*
+// extensions (e.g. x-deckhouse-grantable-resource) as typed fields on the
+// embedded OpenAPIV3Schema. The serialised JSON shape is
+// {"openAPIV3Schema": <schema-object>}, identical to
+// apiextensionsv1.CustomResourceValidation but with all Deckhouse extensions
+// retained.
+type PackageSchema struct {
+	// +optional
+	OpenAPIV3Schema *openapi.OpenAPIV3Schema `json:"openAPIV3Schema,omitempty"`
+}
+
 type ApplicationPackageVersionStatusSchemas struct {
 	// SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
 	// settings of the package. Stored as an opaque object because its contents
@@ -137,7 +155,7 @@ type ApplicationPackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Schemaless
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
-	SettingsSchema *apiextensionsv1.CustomResourceValidation `json:"settingsSchema,omitempty"`
+	SettingsSchema *PackageSchema `json:"settingsSchema,omitempty"`
 
 	// ValuesSchema is the OpenAPI v3 schema used to validate the effective
 	// values (defaults merged with settings) passed to the package's hooks and
@@ -148,7 +166,7 @@ type ApplicationPackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Schemaless
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
-	ValuesSchema *apiextensionsv1.CustomResourceValidation `json:"valuesSchema,omitempty"`
+	ValuesSchema *PackageSchema `json:"valuesSchema,omitempty"`
 }
 
 type ApplicationPackageVersionStatusInstance struct {
@@ -166,12 +184,17 @@ type ApplicationPackageVersionStatusMetadata struct {
 	// +optional
 	Description *PackageDescription `json:"description,omitempty"`
 
+	// Parameters of package disable protection.
+	// +optional
+	DisableOptions *PackageDisableOptions `json:"disableOptions,omitempty"`
+
 	// The category this package belongs to.
 	// +optional
 	Category string `json:"category,omitempty"`
 
-	// The development stage of the package (e.g., alpha, beta, stable).
+	// The development stage of the package (e.g., Experimental, Preview, General Availability, Deprecated).
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=[Experimental, Preview, General Availability, Deprecated]
 	Stage string `json:"stage,omitempty"`
 
 	// The system requirements for this package.
@@ -251,18 +274,82 @@ type ApplicationPackageVersionList struct {
 	Items []ApplicationPackageVersion `json:"items"`
 }
 
+// PackageRequirements describes the platform and module dependencies of a package,
+// surfaced as part of the package version status.
 type PackageRequirements struct {
-	// Required Deckhouse version.
+	// Required Deckhouse Kubernetes Platform version.
 	// +optional
-	Deckhouse string `json:"deckhouse,omitempty"`
+	Deckhouse *VersionConstraint `json:"deckhouse,omitempty"`
 
 	// Required Kubernetes version.
 	// +optional
-	Kubernetes string `json:"kubernetes,omitempty"`
+	Kubernetes *VersionConstraint `json:"kubernetes,omitempty"`
 
-	// Required versions of other modules.
+	// Required modules, partitioned into mandatory, conditional, and anyOf dependencies.
 	// +optional
-	Modules map[string]string `json:"modules,omitempty"`
+	Modules *PackageModulesRequirements `json:"modules,omitempty"`
+}
+
+// VersionConstraint wraps a single semver constraint expression (e.g. ">= 1.26").
+type VersionConstraint struct {
+	// Semver constraint expression.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+// PackageModulesRequirements groups module dependencies by how they affect startup.
+type PackageModulesRequirements struct {
+	// Mandatory dependencies — must be present (and satisfy the constraint, if any)
+	// for the package to start.
+	// +optional
+	Mandatory []PackageModuleDependency `json:"mandatory,omitempty"`
+
+	// Conditional dependencies — not required to be present, but if installed must
+	// satisfy the constraint for the package to function correctly. Replaces the
+	// legacy "!optional" suffix from the v1 requirements format.
+	// +optional
+	Conditional []PackageModuleDependency `json:"conditional,omitempty"`
+
+	// AnyOf groups of alternative dependencies — at least one member of each group
+	// must be installed (and satisfy its constraint, if any) for the package to
+	// start. Groups are checker-only and add no edges to the dependency graph.
+	// +optional
+	AnyOf []PackageModuleGroup `json:"anyOf,omitempty"`
+
+	// NoneOf groups of forbidden dependencies — no member of any group may be
+	// installed for the package to start. A member with no constraint is forbidden
+	// at any version; a member with a constraint is forbidden only at versions
+	// matching that constraint. Groups are checker-only and add no edges to the
+	// dependency graph.
+	// +optional
+	NoneOf []PackageModuleGroup `json:"noneOf,omitempty"`
+}
+
+// PackageModuleDependency is a single named module dependency with an optional
+// semver constraint. An empty constraint means "any version".
+type PackageModuleDependency struct {
+	// Module name.
+	Name string `json:"name"`
+
+	// Semver constraint expression.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+// PackageModuleGroup is a group of alternative module dependencies. At least one
+// member must be installed (and satisfy its constraint, if any) for the package
+// to start. The Name is required and surfaces in scheduler diagnostics; the
+// Description is optional human-facing documentation.
+type PackageModuleGroup struct {
+	// Stable identifier used by the scheduler in diagnostics.
+	Name string `json:"name"`
+
+	// Human-readable description of the group's purpose.
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// Alternative module dependencies in this group.
+	Modules []PackageModuleDependency `json:"modules"`
 }
 
 type PackageDescription struct {
@@ -278,13 +365,21 @@ type PackageDescription struct {
 type PackageLicensing struct {
 	// Licensing information for different package editions.
 	// +optional
-	Editions map[string]PackageEdition `json:"editions,omitempty"`
+	Editions map[string]PackageEditionLicense `json:"editions,omitempty"`
 }
 
-type PackageEdition struct {
+// PackageEditionLicense is a single edition's licensing, shared by applications
+// and modules: whether the edition is available and which bundles enable the
+// package by default. Bundle membership is meaningful for modules; applications
+// have no bundles and typically leave EnabledInBundles empty.
+type PackageEditionLicense struct {
 	// Whether this edition is available for use.
 	// +optional
 	Available bool `json:"available,omitempty"`
+
+	// Bundles that enable the module by default in this edition.
+	// +optional
+	EnabledInBundles []string `json:"enabledInBundles,omitempty"`
 }
 
 type PackageChangelog struct {

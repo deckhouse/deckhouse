@@ -26,18 +26,6 @@ kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
-# [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-# [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
-  # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
-  # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
-  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
----
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
@@ -53,6 +41,13 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
+    # [<en>] Settings for accessing the container registry with Deckhouse images.
+    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
+        license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Global Deckhouse settings.
 # [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
@@ -145,8 +140,14 @@ masterNodeGroup:
     # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2404-lts")] | sort_by(.created_at)[-1].id'
     # [<ru>] Возможно, захотите изменить.
     imageID: fd83ica41cade1mj35sr
-    externalIPAddresses:
-    - "Auto"
+    # [<en>] In the `Standard` layout, nodes are created without public IP addresses by default.
+    # [<en>] Uncomment this parameter only if the `dhctl` installer must connect to the master node directly over SSH using a public IP address.
+    # [<en>] If the master node is not directly accessible, run the installation through a bastion host using the `--ssh-bastion-host`, `--ssh-bastion-user`, and, if needed, `--ssh-bastion-port` parameters.
+    # [<ru>] В схеме размещения `Standard` узлы по умолчанию создаются без публичных IP-адресов.
+    # [<ru>] Раскомментируйте этот параметр только если инсталлятору `dhctl` нужно подключаться к master-узлу напрямую по SSH через публичный IP-адрес.
+    # [<ru>] Если master-узел недоступен напрямую, запускайте установку через bastion-хост с параметрами `--ssh-bastion-host`, `--ssh-bastion-user` и, при необходимости, `--ssh-bastion-port`.
+    # externalIPAddresses:
+    # - "Auto"
 # [<en>] This subnet will be split into three equal parts; they will serve as a basis for subnets in three Yandex Cloud zones.
 # [<ru>] Данная подсеть будет разделена на три равных части и использована для создания подсетей в трёх зонах Yandex Cloud.
 nodeNetworkCIDR: "10.241.32.0/20"

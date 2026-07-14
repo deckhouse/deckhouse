@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-prep
 
 
 create_user_and_group() {
@@ -30,7 +31,7 @@ create_user_and_group() {
     fi
 
     if [ -n "$uid" ] || [ -n "$gid" ]; then
-        bb-log-warning "user or group already exists with different id: uid=${uid}, gid=${gid}"
+        bb-log-warning "User or group already exists with a different id: uid=${uid}, gid=${gid}"
         return
     fi
 

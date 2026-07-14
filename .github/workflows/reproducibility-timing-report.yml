@@ -1,0 +1,99 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Build reproducibility rebuild-timing report.
+#
+# Trigger: schedule (Monday and Thursday 10:00 MSK == 07:00 UTC) or workflow_dispatch.
+#
+# All the logic lives in .github/scripts/python/reproducibility_timing_report.py:
+# it collects SCHEDULED reproducibility-check.yml runs from the last 7 days,
+# measures the duration of the successful 'Build FE' rebuild job in each, logs a
+# per-run table and the average rebuild time, and exposes the results via
+# GITHUB_OUTPUT. This workflow only invokes the script and forwards its output:
+# it exposes the job outputs (run_count/avg_seconds/avg_build_time) for downstream
+# jobs and sends the average to Loop via send-report.sh.
+
+name: 'Build reproducibility timing report'
+
+on:
+  # Monday and Thursday 10:00 MSK (UTC+3, no DST) == 07:00 UTC.
+  schedule:
+    - cron: '0 7 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+jobs:
+  timing_report:
+    name: Reproducibility rebuild timing report
+    runs-on: "self-slim"
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    outputs:
+      run_count: ${{ steps.collect.outputs.run_count }}
+      avg_seconds: ${{ steps.collect.outputs.avg_seconds }}
+      avg_build_time: ${{ steps.collect.outputs.avg_build_time }}
+    steps:
+
+    # <template: checkout_step>
+    - name: Checkout sources
+      uses: actions/checkout@v3.5.2
+
+    # </template: checkout_step>
+    # <template: import_secrets>
+    - name: Split repository name
+      id: split
+      env:
+        REPO: ${{ github.repository }}
+      run: |
+        if [ $REPO == "deckhouse/deckhouse" ]; then
+          echo "name=deckhouse" >> $GITHUB_OUTPUT
+        else
+          echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+        fi
+    - name: Import secrets
+      id: secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: https://seguro.flant.com
+        path: github
+        role: "${{ steps.split.outputs.name }}"
+        method: jwt
+        jwtGithubAudience: github-access-aud
+        secrets: |
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+    # </template: import_secrets>
+    - name: Collect scheduled rebuild timings
+      id: collect
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WORKFLOW_FILE: "reproducibility-check.yml"
+        BUILD_JOB_PREFIX: "Build FE"
+        WINDOW_DAYS: "7"
+      run: |
+        python3 .github/scripts/python/reproducibility_timing_report.py
+    - name: Send report to Loop
+      env:
+        LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
+        AVG_BUILD_TIME: ${{ steps.collect.outputs.avg_build_time }}
+      run: |
+        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+        bash ./.github/scripts/send-report.sh --webhook "ci_report" ":passport_control: **Average build time on the same commit is [${AVG_BUILD_TIME}](${WORKFLOW_URL})** :passport_control:"

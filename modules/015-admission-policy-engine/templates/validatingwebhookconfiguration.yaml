@@ -59,6 +59,9 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: d8-admission-policy-engine-config
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=gatekeeper-controller-manager,namespace=d8-admission-policy-engine
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=gatekeeper-webhook-service,namespace=d8-admission-policy-engine
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/system" "yes")) | nindent 2 }}
 webhooks:
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}

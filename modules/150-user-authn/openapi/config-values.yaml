@@ -105,6 +105,7 @@ properties:
           - "Fair"
           - "Good"
           - "Excellent"
+          - "Custom"
         default: "Fair"
         description: |
           Password complexity level.
@@ -116,6 +117,43 @@ properties:
           - `Fair`: 8 characters, 1 uppercase letter (`A`–`Z`), 1 lowercase letter (`a`–`z`), 1 digit.
           - `Good`: 8 characters, 1 uppercase letter (`A`–`Z`), 1 lowercase letter (`a`–`z`), 1 digit, 1 special character (`!@#$%^&*`).
           - `Excellent`: 8 characters, 1 uppercase letter (`A`–`Z`), 1 lowercase letter (`a`–`z`), 1 digit, 1 special character (`!@#$%^&*`), no more than 2 identical characters in a row.
+          - `Custom`: requirements are defined by the `custom` field.
+      custom:
+        type: object
+        description: |
+          Custom password complexity rules.
+
+          Applied only when `complexityLevel` is set to `Custom`. Any combination of the
+          rules below can be enabled independently.
+        properties:
+          minLength:
+            type: integer
+            minimum: 1
+            default: 8
+            description: |
+              Minimum number of characters in a password.
+          specialCharacters:
+            type: boolean
+            default: false
+            description: |
+              If `true`, a password must contain at least one special character
+              (anything that is neither a letter nor a digit).
+          numbers:
+            type: boolean
+            default: false
+            description: |
+              If `true`, a password must contain at least one digit.
+          capitalized:
+            type: boolean
+            default: false
+            description: |
+              If `true`, a password must contain at least one uppercase letter (`A`–`Z`).
+          repeatedChars:
+            type: boolean
+            default: false
+            description: |
+              If `true`, a password must not contain more than 2 identical characters
+              in a row (the same rule the `Excellent` level applies).
       passwordHistoryLimit:
         type: integer
         minimum: 0
@@ -378,3 +416,19 @@ x-deckhouse-validations:
       ||
       duration(self.idTokenTTL) <= duration(self.refreshTokenAbsoluteLifetime)
     message: "user-authn.idTokenTTL must be less than or equal to user-authn.refreshTokenAbsoluteLifetime"
+  - expression: |
+      !has(self.passwordPolicy)
+      ||
+      !has(self.passwordPolicy.complexityLevel)
+      ||
+      self.passwordPolicy.complexityLevel != "Custom"
+      ||
+      has(self.passwordPolicy.custom)
+    message: "user-authn.passwordPolicy.custom is required when passwordPolicy.complexityLevel is Custom"
+  - expression: |
+      !has(self.passwordPolicy)
+      ||
+      !has(self.passwordPolicy.custom)
+      ||
+      (has(self.passwordPolicy.complexityLevel) && self.passwordPolicy.complexityLevel == "Custom")
+    message: "user-authn.passwordPolicy.custom is only allowed when passwordPolicy.complexityLevel is Custom"

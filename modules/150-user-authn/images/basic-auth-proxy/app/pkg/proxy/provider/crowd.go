@@ -18,6 +18,7 @@ package provider
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -28,11 +29,19 @@ import (
 	"time"
 )
 
+// CrowdConfig groups NewCrowd parameters.
+type CrowdConfig struct {
+	APIURL        string
+	Login         string
+	Password      string
+	AllowedGroups []string
+}
+
 type Crowd struct {
 	client *crowdClient
 }
 
-func NewCrowd(apiURL, login, password string, allowedGroups []string) Provider {
+func NewCrowd(cfg CrowdConfig) (Provider, error) {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -45,28 +54,30 @@ func NewCrowd(apiURL, login, password string, allowedGroups []string) Provider {
 			IdleConnTimeout:       30 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 		},
 	}
 
-	groups := make(map[string]struct{})
-	for _, group := range allowedGroups {
+	groups := make(map[string]struct{}, len(cfg.AllowedGroups))
+	for _, group := range cfg.AllowedGroups {
 		groups[group] = struct{}{}
 	}
 
 	return &Crowd{
 		client: &crowdClient{
-			apiURL:        strings.TrimSuffix(apiURL, "/"),
-			login:         login,
-			password:      password,
+			apiURL:        strings.TrimSuffix(cfg.APIURL, "/"),
+			login:         cfg.Login,
+			password:      cfg.Password,
 			allowedGroups: groups,
 			httpClient:    client,
 		},
-	}
+	}, nil
 }
 
-func (p *Crowd) ValidateCredentials(login, password string) ([]string, error) {
-	_, err := p.client.MakeRequest("/session", http.MethodPost, struct {
+func (p *Crowd) ValidateCredentials(ctx context.Context, login, password string) ([]string, error) {
+	_, err := p.client.MakeRequest(ctx, "/session", http.MethodPost, struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}{Username: login, Password: password})
@@ -74,7 +85,7 @@ func (p *Crowd) ValidateCredentials(login, password string) ([]string, error) {
 		return nil, err
 	}
 
-	body, err := p.client.MakeRequest("/user/group/nested?username="+login, http.MethodGet, nil)
+	body, err := p.client.MakeRequest(ctx, "/user/group/nested?username="+login, http.MethodGet, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -96,19 +107,19 @@ type crowdClient struct {
 	httpClient    *http.Client
 }
 
-func (c *crowdClient) MakeRequest(url, method string, jsonPayload interface{}) (string, error) {
+func (c *crowdClient) MakeRequest(ctx context.Context, url, method string, jsonPayload any) (string, error) {
 	var body io.Reader
 	if jsonPayload != nil {
 		jsonData, err := json.Marshal(jsonPayload)
 		if err != nil {
-			return "", fmt.Errorf("crowd request error: %+v", err)
+			return "", fmt.Errorf("crowd request marshal: %w", err)
 		}
 		body = bytes.NewReader(jsonData)
 	}
 
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/rest/usermanagement/1%s", c.apiURL, url), body)
+	req, err := http.NewRequestWithContext(ctx, method, fmt.Sprintf("%s/rest/usermanagement/1%s", c.apiURL, url), body)
 	if err != nil {
-		return "", fmt.Errorf("crowd request error: %+v", err)
+		return "", fmt.Errorf("crowd request build: %w", err)
 	}
 
 	req.SetBasicAuth(c.login, c.password)
@@ -117,17 +128,17 @@ func (c *crowdClient) MakeRequest(url, method string, jsonPayload interface{}) (
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("crowd request error: %+v", err)
+		return "", fmt.Errorf("crowd request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("crowd request error: %v", err)
+		return "", fmt.Errorf("crowd response read: %w", err)
 	}
 
 	if (resp.StatusCode != http.StatusOK) && (resp.StatusCode != http.StatusCreated) {
-		return "", fmt.Errorf("crowd request was not successful: %v %v", resp.StatusCode, string(responseBody))
+		return "", fmt.Errorf("crowd request was not successful: %d %s", resp.StatusCode, string(responseBody))
 	}
 
 	return string(responseBody), nil
@@ -139,12 +150,11 @@ func (c *crowdClient) GetGroups(body string) ([]string, error) {
 			Name string `json:"name"`
 		} `json:"groups"`
 	}
-	var groups []string
-
 	if err := json.Unmarshal([]byte(body), &crowdGroups); err != nil {
-		return groups, err
+		return nil, err
 	}
 
+	groups := make([]string, 0, len(crowdGroups.Groups))
 	for _, value := range crowdGroups.Groups {
 		if len(c.allowedGroups) > 0 {
 			if _, ok := c.allowedGroups[value.Name]; ok {

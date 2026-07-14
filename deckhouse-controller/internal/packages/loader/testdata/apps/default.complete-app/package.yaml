@@ -1,8 +1,34 @@
-name: complete-app
+apiVersion: v1
 type: Application
+name: complete-app
 version: v1.0.0
 descriptions:
   en: Complete test application
 requirements:
-  kubernetes: ">=1.28"
-  deckhouse: ">=1.60"
+  kubernetes:
+    constraint: ">=1.28"
+  deckhouse:
+    constraint: ">=1.60"
+  modules:
+    mandatory:
+      - name: cni-cilium
+        constraint: ">=1.14"
+      - name: registry-packages-proxy
+    conditional:
+      - name: prometheus
+        constraint: ">=2.40"
+    anyOf:
+      - name: cloud-provider
+        description: One of the supported cloud providers must be installed.
+        modules:
+          - name: cloud-provider-gcp
+            constraint: ">=1.5.0"
+          - name: cloud-provider-aws
+            constraint: ">=2.0.0"
+    noneOf:
+      - name: legacy-ingress
+        description: This package conflicts with legacy ingress controllers.
+        modules:
+          - name: nginx-ingress-legacy
+            constraint: "<2.0.0"
+          - name: haproxy-legacy

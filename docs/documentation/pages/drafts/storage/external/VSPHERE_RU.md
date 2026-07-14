@@ -53,10 +53,13 @@ d8 k get module csi-vsphere -w
 
 В результате будет выведена информация о модуле `csi-vsphere`:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME         WEIGHT    STATE     SOURCE     STAGE   STATUS
 csi-vsphere   910      Enabled   Embedded           Ready
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ## Подготовка окружения
 

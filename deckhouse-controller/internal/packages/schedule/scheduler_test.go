@@ -15,12 +15,19 @@
 package schedule_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // globalName is the literal sentinel used by Scheduler internally; it lives
@@ -31,9 +38,10 @@ const globalName = "global"
 // testPackage is a minimal Package implementation used to drive Scheduler
 // behavior from tests; production code uses apps.Application / modules.Module.
 type testPackage struct {
-	name        string
-	version     *semver.Version
-	constraints schedule.Constraints
+	name          string
+	version       *semver.Version
+	constraints   schedule.Constraints
+	enabledScript *script.Descriptor
 }
 
 // GetName returns the package identifier.
@@ -42,8 +50,23 @@ func (p *testPackage) GetName() string { return p.name }
 // GetVersion returns the parsed package version.
 func (p *testPackage) GetVersion() *semver.Version { return p.version }
 
-// GetConstraints returns the package's scheduler constraints.
-func (p *testPackage) GetConstraints() schedule.Constraints { return p.constraints }
+// GetConstraints returns the package's scheduler constraints, defaulting the
+// Floor to an always-Enable rule so cases that don't care about enablement keep
+// the legacy "enabled once loaded" behavior. Cases exercising disablement set
+// their own Floor.
+func (p *testPackage) GetConstraints() schedule.Constraints {
+	if p.constraints.Floor == nil {
+		p.constraints.Floor = rule.Static(rule.Enable)
+	}
+
+	return p.constraints
+}
+
+// GetEnabledScriptDescriptor returns the package's enabled-script descriptor,
+// or nil when the case does not exercise the script rule.
+func (p *testPackage) GetEnabledScriptDescriptor() *script.Descriptor {
+	return p.enabledScript
+}
 
 // mustVersion parses s into a *semver.Version or panics; tests use known-good values.
 func mustVersion(s string) *semver.Version {
@@ -74,6 +97,7 @@ func TestSchedulerSuite(t *testing.T) {
 func (s *SchedulerSuite) SetupTest() {
 	s.versions = make(map[string]*semver.Version)
 	s.sched = schedule.NewScheduler(
+		log.NewNop(),
 		schedule.WithDependencyGetter(func(name string) *semver.Version {
 			return s.versions[name]
 		}),
@@ -155,6 +179,25 @@ func (s *SchedulerSuite) TestAddNodeAndSchedule() {
 	}))
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha")
+}
+
+// TestFloorDisableKeepsNodeOff confirms the package-supplied floor governs
+// enablement: a node whose Floor resolves to Disable is never scheduled, even
+// though no gate vetoes it.
+func (s *SchedulerSuite) TestFloorDisableKeepsNodeOff() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha",
+		"a node with a Disable floor must not be scheduled")
 }
 
 // TestOrderTierGate confirms that canSchedule's order-tier check holds a
@@ -421,4 +464,807 @@ func (s *SchedulerSuite) TestPauseSuppressesScheduling() {
 
 	s.sched.Resume()
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), globalName)
+}
+
+// mustConstraint parses s into a *semver.Constraints or panics; tests use
+// known-good values.
+func mustConstraint(s string) *semver.Constraints {
+	c, err := semver.NewConstraint(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return c
+}
+
+// TestAnyOfSatisfiedMemberEnables covers the happy path: a single AnyOf group
+// with one installed member that meets its constraint enables the consumer.
+func (s *SchedulerSuite) TestAnyOfSatisfiedMemberEnables() {
+	s.activateGlobal()
+
+	s.versions["gcp"] = mustVersion("1.5.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+					"aws": mustConstraint(">=2.0.0"),
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfNoInstalledMemberDisables verifies that an AnyOf group with no
+// installed members keeps the consumer disabled. Consumer is born disabled,
+// so no EventSchedule is emitted in the first place.
+func (s *SchedulerSuite) TestAnyOfNoInstalledMemberDisables() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+					"aws": mustConstraint(">=2.0.0"),
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfInstalledButConstraintFailsDisables proves that the member's
+// constraint is actually checked: a member installed at a version that fails
+// the constraint is not counted as satisfying the group.
+func (s *SchedulerSuite) TestAnyOfInstalledButConstraintFailsDisables() {
+	s.activateGlobal()
+
+	// gcp is installed but below the required floor; group is unmet.
+	s.versions["gcp"] = mustVersion("1.4.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfNilConstraintAcceptsAnyVersion pins the empty-constraint semantics:
+// a member with nil constraint is satisfied as soon as it is installed at any
+// version. Mirrors the DTO contract where an absent constraint string yields
+// a nil *semver.Constraints meaning "any installed version is acceptable".
+func (s *SchedulerSuite) TestAnyOfNilConstraintAcceptsAnyVersion() {
+	s.activateGlobal()
+
+	s.versions["gcp"] = mustVersion("0.0.1")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": nil,
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfMultipleGroupsAllMustPass verifies that AnyOf groups are evaluated
+// independently and ALL groups must pass for the consumer to be enabled.
+// One satisfied group is not enough when a second group has no installed
+// member — the consumer stays disabled.
+func (s *SchedulerSuite) TestAnyOfMultipleGroupsAllMustPass() {
+	s.activateGlobal()
+
+	// First group satisfied via gcp; second group has no installed members.
+	s.versions["gcp"] = mustVersion("1.5.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{
+				{
+					Name: "cloud-provider",
+					Members: map[string]*semver.Constraints{
+						"gcp": mustConstraint(">=1.5.0"),
+					},
+				},
+				{
+					Name: "storage-backend",
+					Members: map[string]*semver.Constraints{
+						"minio": mustConstraint(">=2.0.0"),
+						"s3":    mustConstraint(">=1.0.0"),
+					},
+				},
+			},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	// Installing a member of the second group satisfies all groups; consumer
+	// schedules on the next pass.
+	s.versions["minio"] = mustVersion("2.0.0")
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfDoesNotCreateDependencyEdge is the load-bearing test for the
+// design decision in ENG-7: AnyOf groups must not contribute to the
+// topological graph, so two packages whose AnyOf groups reference each other
+// do not produce a cycle. The same scenario expressed with hard dependencies
+// would be rejected as a *CycleError.
+func (s *SchedulerSuite) TestAnyOfDoesNotCreateDependencyEdge() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "fallback",
+				Members: map[string]*semver.Constraints{
+					"beta": nil,
+				},
+			}},
+		},
+	}))
+
+	// Adding beta whose AnyOf references alpha must NOT trigger a CycleError —
+	// AnyOf members are not predecessors in the topo graph.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "beta",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "fallback",
+				Members: map[string]*semver.Constraints{
+					"alpha": nil,
+				},
+			}},
+		},
+	}))
+}
+
+// TestCheckConstraintsAnyOfRejectsAtAdmission pins the admission-time parity:
+// CheckConstraints (the webhook path) evaluates the AnyOf predicate identically
+// to the persistent node checker chain, returning an error when no member of
+// a group is installed.
+func (s *SchedulerSuite) TestCheckConstraintsAnyOfRejectsAtAdmission() {
+	s.activateGlobal()
+
+	err := s.sched.CheckConstraints("proposed", schedule.Constraints{
+		Order: schedule.FunctionalOrder,
+		AnyOf: []schedule.AnyOfGroup{{
+			Name: "cloud-provider",
+			Members: map[string]*semver.Constraints{
+				"gcp": mustConstraint(">=1.5.0"),
+				"aws": mustConstraint(">=2.0.0"),
+			},
+		}},
+	})
+
+	s.Require().Error(err)
+	s.Contains(err.Error(), "cloud-provider", "failure message must name the unmet group")
+}
+
+// TestAnyOfMemberInstallTriggersReschedule confirms dynamic re-evaluation:
+// a consumer born disabled (no AnyOf member installed) flips to enabled when
+// a member becomes available and the scheduler re-runs.
+func (s *SchedulerSuite) TestAnyOfMemberInstallTriggersReschedule() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	s.versions["gcp"] = mustVersion("1.5.0")
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfNoInstalledMemberEnables covers the happy path: with no forbidden
+// module installed, the noneOf group passes and the consumer schedules.
+func (s *SchedulerSuite) TestNoneOfNoInstalledMemberEnables() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"nginx-ingress-legacy": mustConstraint("<2.0.0"),
+					"haproxy-legacy":       nil,
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfInstalledNilConstraintViolated pins the empty-constraint semantics
+// for noneOf: a nil constraint forbids the module at any installed version.
+// Once the module is installed, the consumer is disabled.
+func (s *SchedulerSuite) TestNoneOfInstalledNilConstraintViolated() {
+	s.activateGlobal()
+
+	// Forbidden module is installed at any version — group violated from birth.
+	s.versions["haproxy-legacy"] = mustVersion("0.0.1")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"haproxy-legacy": nil,
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfInstalledInForbiddenRangeViolated verifies that a constraint
+// narrows the forbidden range and the consumer is disabled only when a
+// matching version is installed.
+func (s *SchedulerSuite) TestNoneOfInstalledInForbiddenRangeViolated() {
+	s.activateGlobal()
+
+	// 1.9.0 matches "<2.0.0" — falls in the forbidden range.
+	s.versions["nginx-ingress-legacy"] = mustVersion("1.9.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"nginx-ingress-legacy": mustConstraint("<2.0.0"),
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfInstalledOutsideForbiddenRangeEnables confirms that a member
+// installed at a version *outside* the forbidden range does not violate the
+// group — the constraint is the forbidden range, not a "must not be present"
+// shortcut.
+func (s *SchedulerSuite) TestNoneOfInstalledOutsideForbiddenRangeEnables() {
+	s.activateGlobal()
+
+	// 2.0.0 is outside the "<2.0.0" forbidden range — group passes.
+	s.versions["nginx-ingress-legacy"] = mustVersion("2.0.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"nginx-ingress-legacy": mustConstraint("<2.0.0"),
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfMultipleGroupsAllMustPass verifies that noneOf groups are
+// evaluated independently and ALL must pass for the consumer to be enabled.
+// A violation in any one group disables the consumer.
+func (s *SchedulerSuite) TestNoneOfMultipleGroupsAllMustPass() {
+	s.activateGlobal()
+
+	// Second group violated via deprecated-storage.
+	s.versions["deprecated-storage"] = mustVersion("1.0.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{
+				{
+					Name: "legacy-ingress",
+					Members: map[string]*semver.Constraints{
+						"nginx-ingress-legacy": mustConstraint("<2.0.0"),
+					},
+				},
+				{
+					Name: "legacy-storage",
+					Members: map[string]*semver.Constraints{
+						"deprecated-storage": nil,
+					},
+				},
+			},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	// Removing the violator from the second group enables the consumer.
+	delete(s.versions, "deprecated-storage")
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfDoesNotCreateDependencyEdge is the load-bearing test for the
+// design property: noneOf groups must not contribute to the topological
+// graph, so two packages whose noneOf groups reference each other do not
+// produce a cycle. Symmetric to TestAnyOfDoesNotCreateDependencyEdge.
+func (s *SchedulerSuite) TestNoneOfDoesNotCreateDependencyEdge() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "conflict",
+				Members: map[string]*semver.Constraints{
+					"beta": nil,
+				},
+			}},
+		},
+	}))
+
+	// Adding beta whose NoneOf references alpha must NOT trigger a CycleError —
+	// noneOf members are not predecessors in the topo graph.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "beta",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "conflict",
+				Members: map[string]*semver.Constraints{
+					"alpha": nil,
+				},
+			}},
+		},
+	}))
+}
+
+// TestCheckConstraintsNoneOfRejectsAtAdmission pins admission-time parity:
+// CheckConstraints (the webhook path) evaluates the noneOf predicate
+// identically to the persistent node checker chain, returning an error
+// naming the violated group when a forbidden module is installed.
+func (s *SchedulerSuite) TestCheckConstraintsNoneOfRejectsAtAdmission() {
+	s.activateGlobal()
+
+	s.versions["haproxy-legacy"] = mustVersion("1.0.0")
+
+	err := s.sched.CheckConstraints("proposed", schedule.Constraints{
+		Order: schedule.FunctionalOrder,
+		NoneOf: []schedule.NoneOfGroup{{
+			Name: "legacy-ingress",
+			Members: map[string]*semver.Constraints{
+				"haproxy-legacy": nil,
+			},
+		}},
+	})
+
+	s.Require().Error(err)
+	s.Contains(err.Error(), "legacy-ingress", "failure message must name the violated group")
+	s.Contains(err.Error(), "haproxy-legacy", "failure message must name the offending member")
+}
+
+// TestNoneOfMemberInstallTriggersDisable confirms dynamic re-evaluation:
+// a consumer is enabled while no forbidden module is installed, then flips
+// to disabled when one becomes available and the scheduler re-runs.
+func (s *SchedulerSuite) TestNoneOfMemberInstallTriggersDisable() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"haproxy-legacy": nil,
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	// Forbidden module appears; consumer must flip enabled→disabled.
+	s.versions["haproxy-legacy"] = mustVersion("1.0.0")
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
+}
+
+// TestRescheduleFansOutToDirectSubscribers verifies that Reschedule reverts the
+// named node AND its direct subscribers to idle — re-emitting EventSchedule for
+// both — while leaving unrelated nodes and second-level subscribers untouched.
+// The cascade is one level deep: a subscriber's own subscribers are not reverted.
+func (s *SchedulerSuite) TestRescheduleFansOutToDirectSubscribers() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "publisher",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.sched.Complete("publisher")
+
+	// Direct subscriber of publisher — must be reverted on Reschedule.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "subscriber",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order:         0,
+			Subscriptions: map[string]struct{}{"publisher": {}},
+		},
+	}))
+	s.sched.Complete("subscriber")
+
+	// Subscribes to subscriber, not publisher — the one-level-deep cascade must
+	// not reach it.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "second-level",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order:         0,
+			Subscriptions: map[string]struct{}{"subscriber": {}},
+		},
+	}))
+	s.sched.Complete("second-level")
+
+	// No subscription relationship at all — must stay active.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "unrelated",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.sched.Complete("unrelated")
+	s.drainEvents()
+
+	s.sched.Reschedule("publisher")
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "publisher", "the rescheduled node must be re-scheduled")
+	s.Contains(scheduled, "subscriber", "a direct subscriber must be reverted and re-scheduled")
+	s.NotContains(scheduled, "second-level", "the cascade must stop at one level — a subscriber's subscribers are untouched")
+	s.NotContains(scheduled, "unrelated", "a node with no subscription must not be rescheduled")
+}
+
+// TestRescheduleOnEnableRevertsEntireGraph verifies the full-graph reschedule
+// path: when a module (Floor = Static(Disable)) flips to enabled, compute()
+// reverts every node to idle, not just the module. A module turning on may
+// install CRDs other packages render against, and those template-level deps are
+// untracked, so the whole graph must re-converge. An already-active, unrelated
+// bystander being re-scheduled is the observable signal of that reconverge.
+func (s *SchedulerSuite) TestRescheduleOnEnableRevertsEntireGraph() {
+	enabledState := s.useDynamicScheduler()
+
+	s.activateGlobal()
+
+	// An always-on bystander, unrelated to the module, driven to active. Its
+	// re-schedule after the module enables proves the whole graph reconverged.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "bystander",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.sched.Complete("bystander")
+
+	// A module that is off (floor disables it) until dynamically enabled.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "dynamic-mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+	s.drainEvents()
+
+	// Flip the module on and run a pass: it enables, triggering a full-graph
+	// reschedule that reverts and re-schedules the bystander too.
+	enabledState["dynamic-mod"] = boolPtr(true)
+	s.sched.Schedule()
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "dynamic-mod", "the newly enabled module must be scheduled")
+	s.Contains(scheduled, "bystander", "reschedule-on-enable must revert and re-schedule the whole graph")
+}
+
+// boolPtr returns a pointer to b, for the tri-state dynamic getter.
+func boolPtr(b bool) *bool { return &b }
+
+// useDynamicScheduler replaces the suite scheduler with one wired to a
+// controllable dynamic getter, backed by the returned map: a *true/*false entry
+// is an explicit enable/disable intent (as the global module would resolve from
+// ModuleConfig and dynamic hooks), an absent entry is "no opinion" (nil). Tests
+// drive enablement by mutating the map before a scheduling pass. The original
+// scheduler is stopped to avoid leaking its event goroutine.
+func (s *SchedulerSuite) useDynamicScheduler() map[string]*bool {
+	enabledState := make(map[string]*bool)
+
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		log.NewNop(),
+		schedule.WithDependencyGetter(func(name string) *semver.Version {
+			return s.versions[name]
+		}),
+		schedule.WithDynamicGetter(func(module string) *bool {
+			return enabledState[module]
+		}),
+	)
+
+	return enabledState
+}
+
+// TestDynamicRuleEnablesOverFloor verifies the dynamic rule's Enable vote turns
+// on a module whose Disable floor would otherwise keep it off.
+func (s *SchedulerSuite) TestDynamicRuleEnablesOverFloor() {
+	enabledState := s.useDynamicScheduler()
+	s.activateGlobal()
+
+	enabledState["mod"] = boolPtr(true)
+	// Order 0 (global tier): enabling a Disable-floored module triggers a
+	// full-graph reschedule, which reverts global to idle; a higher-tier module
+	// would then be held by canSchedule until global re-completes. Same tier keeps
+	// the test focused on rule precedence, not order gating.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"an enable intent must override the module's Disable floor")
+}
+
+// TestDynamicRuleNilDefersToFloor verifies that with no intent the dynamic rule
+// is Undefined and resolution falls through to the floor: a Disable-floored
+// module stays off.
+func (s *SchedulerSuite) TestDynamicRuleNilDefersToFloor() {
+	s.useDynamicScheduler() // getter returns nil for everything
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"no intent must defer to the Disable floor")
+}
+
+// TestDynamicRuleDisableOverridesBundle verifies the dynamic rule outranks the
+// bundle vote: a module the active bundle would enable is still turned off by an
+// explicit disable intent, because the dynamic rule is appended after bundle.
+func (s *SchedulerSuite) TestDynamicRuleDisableOverridesBundle() {
+	enabledState := make(map[string]*bool)
+
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		log.NewNop(),
+		schedule.WithDependencyGetter(func(name string) *semver.Version {
+			return s.versions[name]
+		}),
+		// Bundle enables every module it is asked about.
+		schedule.WithBundleChecker(func(edition.Licensing) bool { return true }),
+		schedule.WithDynamicGetter(func(module string) *bool {
+			return enabledState[module]
+		}),
+	)
+	s.activateGlobal()
+
+	// No intent: the bundle enable stands → module scheduled.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "bundle-on",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0, Floor: rule.Static(rule.Disable)},
+	}))
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "bundle-on",
+		"with no intent, a bundle enable must turn the module on")
+
+	// Explicit disable: overrides the bundle enable → module stays off.
+	enabledState["bundle-off"] = boolPtr(false)
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "bundle-off",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0, Floor: rule.Static(rule.Disable)},
+	}))
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "bundle-off",
+		"a disable intent must override the bundle enable")
+}
+
+// writeEnabledScript writes an executable enabled script with the given /bin/sh
+// body into a per-test temp dir and returns a descriptor pointing at it. The
+// body runs with the MODULE_ENABLED_RESULT / MODULE_ENABLED_REASON environment
+// variables the runner sets.
+func (s *SchedulerSuite) writeEnabledScript(body string) *script.Descriptor {
+	path := filepath.Join(s.T().TempDir(), "enabled")
+	s.Require().NoError(os.WriteFile(path, []byte("#!/bin/sh\n"+body+"\n"), 0o755))
+
+	return &script.Descriptor{
+		Path:     path,
+		Settings: addonutils.Values{},
+		Values:   addonutils.Values{},
+	}
+}
+
+// TestScriptRuleEnablesOverFloor verifies a true enabled-script result is a soft
+// Enable vote that turns on a module whose Disable floor would otherwise keep it
+// off. Order 0 keeps the module in global's tier so the reschedule-on-enable
+// revert does not gate it behind global re-completing (see TestDynamicRuleEnablesOverFloor).
+func (s *SchedulerSuite) TestScriptRuleEnablesOverFloor() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: s.writeEnabledScript("echo true > $MODULE_ENABLED_RESULT"),
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a true enabled-script result must override the module's Disable floor")
+}
+
+// TestScriptRuleFalseForbids verifies a false enabled-script result vetoes the
+// module even when another intent rule would enable it: the dynamic enable is
+// overridden by the script's Forbid (which wins from any position).
+func (s *SchedulerSuite) TestScriptRuleFalseForbids() {
+	enabledState := s.useDynamicScheduler()
+	s.activateGlobal()
+
+	enabledState["mod"] = boolPtr(true) // dynamic intent alone would enable it
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: s.writeEnabledScript("echo false > $MODULE_ENABLED_RESULT"),
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a false enabled-script result must veto the module despite the dynamic enable")
+}
+
+// TestScriptRuleErrorForbids verifies that a script which fails to run vetoes the
+// module (fail-closed), so a broken enabled script never leaves a module running.
+func (s *SchedulerSuite) TestScriptRuleErrorForbids() {
+	enabledState := s.useDynamicScheduler()
+	s.activateGlobal()
+
+	enabledState["mod"] = boolPtr(true)
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: s.writeEnabledScript("exit 1"),
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod",
+		"a failing enabled script must veto the module (fail-closed)")
+}
+
+// TestScriptRuleDisableSurfacesReason verifies that when a module flips off
+// because its enabled script now reports false, the EventDisable carries the
+// script's reason and the DisabledByScript condition reason. The same descriptor
+// path is rewritten between passes to change the verdict.
+func (s *SchedulerSuite) TestScriptRuleDisableSurfacesReason() {
+	s.activateGlobal()
+
+	descriptor := s.writeEnabledScript("echo true > $MODULE_ENABLED_RESULT")
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "mod",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 0,
+			Floor: rule.Static(rule.Disable),
+		},
+		enabledScript: descriptor,
+	}))
+	s.Require().Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "mod")
+
+	// Rewrite the same script to report false with a reason, then reschedule so
+	// the module flips off and emits a disable event.
+	s.Require().NoError(os.WriteFile(descriptor.Path,
+		[]byte("#!/bin/sh\necho false > $MODULE_ENABLED_RESULT\necho 'not today' > $MODULE_ENABLED_REASON\n"),
+		0o755))
+	s.sched.Schedule()
+
+	var disable *schedule.Event
+	for _, e := range s.collectEvents() {
+		if e.Kind == schedule.EventDisable && e.Name == "mod" {
+			event := e
+			disable = &event
+
+			break
+		}
+	}
+
+	s.Require().NotNil(disable, "flipping the script to false must emit an EventDisable")
+	s.Equal("DisabledByScript", disable.Reason)
+	s.Contains(disable.Message, "not today")
 }

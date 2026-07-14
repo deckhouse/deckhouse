@@ -9,16 +9,23 @@ Run the installer on the **personal computer**.
 
 {%- if revision == 'be' or revision == 'se' or revision == 'se-plus' or revision == 'ee' %}
 
-<a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
-   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
-  Linux / macOS
-</a>
-<a id='tab_installer_windows_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }}"
-   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_windows_{{ revision }}');" >
-  Windows
-</a>
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id='tab_installer_linux_{{ revision }}'
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title active"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_installer_linux_{{ revision }}');">
+      Linux / macOS
+    </li>
+    <li id='tab_installer_windows_{{ revision }}'
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_installer_windows_{{ revision }}');">
+      Windows
+    </li>
+  </ul>
 
-<div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
+<div id='block_installer_linux_{{ revision }}' class="tabs__container tabs__container--descr active" markdown="1">
 <!-- Linux or macOS install, BE, SE, SE+, EE -->
 Log in on the **personal computer** to the container image registry:
 ```shell
@@ -39,7 +46,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash
 ```
 </div>
-<div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
+<div id='block_installer_windows_{{ revision }}' class="tabs__container tabs__container--descr" markdown="1">
 <!-- Windows install, BE, SE, SE+, EE -->
 Log in on the **personal computer** to the container image registry by providing the license key as a password:
 ```text
@@ -55,18 +62,26 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
 </div>
+</div>
 {% else %}
 
-<a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
-   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
-  Linux / macOS
-</a>
-<a id='tab_installer_windows_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }}"
-   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_windows_{{ revision }}');" >
-  Windows
-</a>
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id='tab_installer_linux_{{ revision }}'
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title active"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_installer_linux_{{ revision }}');">
+      Linux / macOS
+    </li>
+    <li id='tab_installer_windows_{{ revision }}'
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_installer_windows_{{ revision }}');">
+      Windows
+    </li>
+  </ul>
 
-<div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
+<div id='block_installer_linux_{{ revision }}' class="tabs__container tabs__container--descr active" markdown="1">
 <!-- Linux or macOS install, CE -->
 
 {% alert level="info" %}
@@ -87,7 +102,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 > ```
 {% endif %}
 </div>
-<div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
+<div id='block_installer_windows_{{ revision }}' class="tabs__container tabs__container--descr" markdown="1">
 <!-- Windows install, CE -->
 ```text
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
@@ -102,6 +117,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 > docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" -v "%cd%\dhctl-tmp:/tmp/dhctl" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:stable bash
 > ```
 {% endif %}
+</div>
 </div>
 {% endif %}
 

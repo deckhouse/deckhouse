@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
@@ -319,7 +320,6 @@ masterNodeGroup:
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			err := ValidateClusterSettingsChanges(tt.phase, tt.oldConfig, tt.newConfig, tt.schema, validateOpts...)
 			if tt.errContains == "" {
@@ -332,7 +332,7 @@ masterNodeGroup:
 }
 
 func testSchemaStore(t *testing.T) *SchemaStore {
-	schemaStore := newSchemaStore(nil, []string{"/tmp"})
+	schemaStore := newSchemaStore(&options.New().Global, []string{"/tmp"})
 
 	clusterConfigSchema := []byte(`
 kind: ClusterConfiguration

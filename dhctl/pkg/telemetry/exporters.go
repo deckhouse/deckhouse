@@ -32,8 +32,9 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type exporterType string
@@ -77,7 +78,7 @@ func configureRemoteExporter(ctx context.Context) (sdktrace.SpanExporter, sdkmet
 	return traceExporter, metricExporter, logsExporter, nil
 }
 
-func configureLocalExporter() (sdktrace.SpanExporter, sdkmetric.Exporter, sdklog.Exporter, error) {
+func configureLocalExporter(ctx context.Context) (sdktrace.SpanExporter, sdkmetric.Exporter, sdklog.Exporter, error) {
 	traceFileDir := options.DefaultTmpDir()
 	traceFileName := fmt.Sprintf("%s/trace-%s.jsonl", traceFileDir, time.Now().Format("20060102150405"))
 
@@ -95,7 +96,7 @@ func configureLocalExporter() (sdktrace.SpanExporter, sdkmetric.Exporter, sdklog
 		return nil, nil, nil, fmt.Errorf("failed to initialize trace exporter for %q: %w", traceFileName, err)
 	}
 
-	log.InfoF("Trace file: %s\n", traceFileName)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Trace file: %s", traceFileName))
 
 	return exporters.Trace, exporters.Metric, exporters.Log, nil
 }

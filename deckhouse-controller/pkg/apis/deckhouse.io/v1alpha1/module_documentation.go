@@ -39,8 +39,16 @@ var (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name="result",type="string",JSONPath=".status.result",description="Current render status."
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
 
-// ModuleDocumentation is a Module documentation rendering object.
+// Defines the rendering configuration of the Deckhouse module documentation.
+//
+// **Deckhouse creates ModuleDocumentation resources by itself.**
 type ModuleDocumentation struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -65,35 +73,29 @@ func (md *ModuleDocumentation) GetConditionByAddress(addr string) (ModuleDocumen
 }
 
 type ModuleDocumentationSpec struct {
-	Version  string `json:"version,omitempty"`
-	Path     string `json:"path,omitempty"`
+	// Module version.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
+	Version string `json:"version"`
+	// Path to the module version.
+	Path string `json:"path,omitempty"`
+	// Module version checksum.
 	Checksum string `json:"checksum,omitempty"`
 }
 
 type ModuleDocumentationStatus struct {
 	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
+	// +crd-enricher:raw:x-kubernetes-patch-strategy=retainKeys
 	Conditions   []ModuleDocumentationCondition           `json:"conditions,omitempty" patchStrategy:"retainKeys" patchKey:"address"`
 	RenderResult ModuleDocumentationConditionRenderResult `json:"result,omitempty"`
 }
 
 type ModuleDocumentationCondition struct {
-	// Type is the type of the condition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Type     ModuleDocumentationConditionType `json:"type"`
-	Version  string                           `json:"version"`
-	Checksum string                           `json:"checksum"`
-	// Status is the status of the condition.
-	// Can be True, False, Unknown.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Address string `json:"address"`
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-	// Human-readable message indicating details about last transition.
-	// +optional
-	Message string `json:"message"`
+	Type               ModuleDocumentationConditionType `json:"type,omitempty"`
+	Version            string                           `json:"version,omitempty"`
+	Checksum           string                           `json:"checksum,omitempty"`
+	Address            string                           `json:"address,omitempty"`
+	LastTransitionTime metav1.Time                      `json:"lastTransitionTime,omitempty"`
+	Message            string                           `json:"message,omitempty"`
 }
 type ModuleDocumentationConditionRenderResult string
 

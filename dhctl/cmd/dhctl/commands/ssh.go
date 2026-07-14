@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
@@ -39,7 +39,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -51,7 +51,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 			return fmt.Errorf("SSH credentials not provided")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -88,8 +88,9 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -101,7 +102,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return fmt.Errorf("SSH credentials not provided")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -112,15 +113,15 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return err
 		}
 
-		log.DebugLn("scp: start")
+		l.Debug("scp: start")
 
 		success := false
 		if Direction == "up" {
 			if Data != "" {
-				log.InfoF("upload bytes to '%s' on remote\n", DstPath)
+				l.Info(fmt.Sprintf("upload bytes to '%s' on remote", DstPath))
 				err = sshCl.File().UploadBytes(ctx, []byte(Data), DstPath)
 			} else {
-				log.InfoF("upload local '%s' to '%s' on remote\n", SrcPath, DstPath)
+				l.Info(fmt.Sprintf("upload local '%s' to '%s' on remote", SrcPath, DstPath))
 				err = sshCl.File().Upload(ctx, SrcPath, DstPath)
 			}
 			if err != nil {
@@ -129,15 +130,15 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			success = true
 		} else {
 			if DstPath == "stdout" {
-				log.InfoF("download bytes from remote '%s'\n", SrcPath)
+				l.Info(fmt.Sprintf("download bytes from remote '%s'", SrcPath))
 				data, err := sshCl.File().DownloadBytes(ctx, SrcPath)
 				if err != nil {
 					return err
 				}
-				log.InfoLn(string(data))
+				l.Info(fmt.Sprint(string(data)))
 				success = true
 			} else {
-				log.InfoF("download bytes from remote '%s' to local '%s'\n", SrcPath, DstPath)
+				l.Info(fmt.Sprintf("download bytes from remote '%s' to local '%s'", SrcPath, DstPath))
 				err = sshCl.File().Download(ctx, SrcPath, DstPath)
 				if err != nil {
 					return err
@@ -147,7 +148,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		if !success {
-			log.InfoLn("unrecognized flags")
+			l.Info("unrecognized flags")
 		}
 
 		return nil
@@ -167,8 +168,9 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -180,7 +182,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 			return fmt.Errorf("SSH credentials not provided")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -199,15 +201,14 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		var stdout []byte
 		stdout, err = cmd.Execute(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				return fmt.Errorf("script '%s' error: %w stderr: %s", ScriptPath, err, string(ee.Stderr))
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
+				return fmt.Errorf("script '%s' error: %w\nstderr: %s", ScriptPath, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
 		}
 
-		log.InfoF("stdout: %s\n", strings.Trim(string(stdout), "\n "))
-		log.InfoF("Got %d symbols\n", len(stdout))
+		l.Info(fmt.Sprintf("stdout: %s", strings.Trim(string(stdout), "\n ")))
+		l.Info(fmt.Sprintf("Got %d symbols", len(stdout)))
 
 		return nil
 	})
@@ -229,8 +230,9 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -242,7 +244,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 			return fmt.Errorf("SSH credentials not provided")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -261,14 +263,13 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 
 		stdout, err := cmd.ExecuteBundle(ctx, parentDir, bundleDir)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				return fmt.Errorf("bundle '%s' error: %w\nstderr: %s\n", bundleDir, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 		}
 
-		log.InfoF("Got %d symbols\n", len(stdout))
+		l.Info(fmt.Sprintf("Got %d symbols", len(stdout)))
 
 		return nil
 	})

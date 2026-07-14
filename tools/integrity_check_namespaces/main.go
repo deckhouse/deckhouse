@@ -172,7 +172,7 @@ func parseEnabledModulesConfig(editions editionsFile, edition string) enabledMod
 type editionsFile struct {
 	Editions []struct {
 		Name             string   `yaml:"name,omitempty"`
-		AvailableModules []string `yaml:"AvailableModules,omitempty"`
+		AvailableModules []string `yaml:"availableModules,omitempty"`
 	} `yaml:"editions,omitempty"`
 }
 

@@ -1,13 +1,10 @@
-{{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-    - apt-get install conntrack-tools -y
-  install:
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - pm install conntrack-tools -d /relocate
 
   {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
@@ -26,7 +23,6 @@ import:
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:

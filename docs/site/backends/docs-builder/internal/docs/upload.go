@@ -36,6 +36,18 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 		svc.metrics.HistogramObserve(metrics.DocsBuilderUploadDurationSeconds, dur, map[string]string{"status": status}, nil)
 	}()
 
+	if err := validateModuleName(moduleName); err != nil {
+		status = "fail"
+
+		return fmt.Errorf("validate module name: %w", err)
+	}
+
+	if err := validateChannels(channels); err != nil {
+		status = "fail"
+
+		return fmt.Errorf("validate channels: %w", err)
+	}
+
 	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
 		status = "fail"
@@ -85,6 +97,13 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 					continue
 				}
 				svc.logger.Info("creating file", slog.String("path", path))
+
+				// A tar archive is not guaranteed to carry a directory entry
+				// before each file (e.g. root-level module.yaml/oss.yaml have
+				// none), so ensure the parent directory exists before writing.
+				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					return fmt.Errorf("mkdir %q failed: %w", filepath.Dir(path), err)
+				}
 
 				outFile, err := os.OpenFile(
 					path,
@@ -143,27 +162,78 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
 	}
 
+	checked := func(path string) (string, bool) {
+		if err := ensureWithinBase(svc.baseDir, path); err != nil {
+			svc.logger.Warn("skipping path outside base directory", slog.String("path", path), slog.String("error", err.Error()))
+
+			return "", false
+		}
+
+		return path, true
+	}
+
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
 		// Skip internal documentation directories that should not be published
 		if hasBlockedPrefix(fileName) {
 			return "", false
 		}
-		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
+
+		return checked(filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName))
 	}
 
-	if strings.HasPrefix(fileName, "crds") ||
+	if isAllowedCRDPath(fileName) ||
 		fileName == "openapi" ||
 		fileName == "openapi/conversions" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
-		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
+		return checked(filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName))
 	}
 
 	if fileName == "module.yaml" || fileName == "oss.yaml" {
-		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
+		return checked(filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName))
 	}
 
 	return "", false
+}
+
+// isAllowedCRDPath reports whether the given path under crds/ may be uploaded
+// to Hugo's data directory.
+//
+// Two constraints shape the rule:
+//
+//  1. Hugo loads everything in data/ as structured data and supports only
+//     yaml/yml/json/toml/xml formats. Non-data files (e.g. crds/README.md,
+//     crds/update.sh) fail the whole build with
+//     `unmarshal of format "" is not supported` and the module gets dropped
+//     as "broken".
+//  2. The docs-builder-template renders crds/ as a flat map — one file per
+//     CRD spec (see layouts/_partials/module-resources.html and
+//     openapi/format-crd.html). Subdirectories like crds/native/foo.yaml
+//     would be loaded into a nested map and silently corrupt the CRD section
+//     of the page.
+//
+// So we accept only:
+//   - the crds directory entry itself (needed so MkdirAll can create it);
+//   - direct children of crds/ with a data extension (.yaml/.yml/.json).
+//
+// Everything else (subdirectories and non-data files at any depth) is
+// rejected.
+func isAllowedCRDPath(path string) bool {
+	if path == "crds" {
+		return true
+	}
+
+	rest, ok := strings.CutPrefix(path, "crds/")
+	if !ok || strings.Contains(rest, "/") {
+		return false
+	}
+
+	switch filepath.Ext(rest) {
+	case ".yaml", ".yml", ".json":
+		return true
+	default:
+		return false
+	}
 }
 
 func hasBlockedPrefix(path string) bool {
@@ -193,12 +263,22 @@ func hasBlockedPrefix(path string) bool {
 func (svc *Service) cleanModulesFiles(moduleName string, channels []string) error {
 	for _, channel := range channels {
 		path := filepath.Join(svc.baseDir, contentDir, moduleName, channel)
+
+		if err := ensureWithinBase(svc.baseDir, path); err != nil {
+			return fmt.Errorf("ensure within base: %w", err)
+		}
+
 		err := os.RemoveAll(path)
 		if err != nil {
 			return fmt.Errorf("remove content %s: %w", path, err)
 		}
 
 		path = filepath.Join(svc.baseDir, modulesDir, moduleName, channel)
+
+		if err := ensureWithinBase(svc.baseDir, path); err != nil {
+			return fmt.Errorf("ensure within base: %w", err)
+		}
+
 		err = os.RemoveAll(path)
 		if err != nil {
 			return fmt.Errorf("remove data %s: %w", path, err)

@@ -61,6 +61,13 @@ osDistributions:
             <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
       - version: '9'
         editions: [ce, be, se, se-plus, ee]
+      - version: '10*'
+        editions: [ce, be, se, se-plus, ee]
+        note_content:
+          ru: |
+            В базовом образе <b>CentOS 10</b> не поддерживается ContainerdV2. Для поддержки ContainerdV2, версия ядра должна быть вне диапазонов 6.12.0–6.12.28 и 6.14.0–6.14.6.
+          en: |
+            The base image <b>CentOS 10</b> does not support ContainerdV2. To support ContainerdV2, the kernel version must not fall within the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6.
   debian:
     name: Debian
     url: https://www.debian.org/download
@@ -119,6 +126,8 @@ osDistributions:
       - version: '22.04'
         editions: [ce, be, se, se-plus, ee]
       - version: '24.04'
+        editions: [ce, be, se, se-plus, ee]
+      - version: '26.04'
         editions: [ce, be, se, se-plus, ee]
   'redos':
     name: 'РЕД ОС'

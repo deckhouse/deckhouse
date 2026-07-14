@@ -309,6 +309,7 @@ failSwapOn: true
 {{- if semverCompare ">=1.35" .kubernetesVersion }}
 failCgroupV1: false
 {{- end }}
+seccompDefault: {{ dig "kubelet" "seccompDefault" false .nodeGroup }}
 tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_128_GCM_SHA256"]
 {{- if ne .runType "ClusterBootstrap" }}
 # serverTLSBootstrap flag should be enable after bootstrap of first master.
@@ -321,9 +322,6 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
   RotateKubeletServerCertificate: true
-{{- if eq $topologyManagerEnabled true }}
-  MemoryManager: true
-{{- end }}
 {{- if semverCompare "<=1.32" .kubernetesVersion }}
   InPlacePodVerticalScaling: true
 {{- end }}
@@ -338,6 +336,7 @@ featureGates:
 {{- if semverCompare ">=1.33" .kubernetesVersion }}
 {{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */}}
   DRAPartitionableDevices: true
+  KubeletEnsureSecretPulledImages: true
 {{- end }}
 {{- if semverCompare ">=1.34" .kubernetesVersion }}
 {{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */}}
@@ -348,7 +347,7 @@ featureGates:
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true
 {{- end }}
-fileCheckFrequency: 20s
+fileCheckFrequency: 2s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
 imageGCLowThresholdPercent: 65
@@ -382,7 +381,7 @@ registryBurst: 20
 resolvConf: ${resolvConfPath}
 rotateCertificates: true
 runtimeRequestTimeout: 4m0s
-serializeImagePulls: true
+serializeImagePulls: false
 syncFrequency: 1m0s
 {{- if eq $resourceReservationMode "Auto" }}
 systemReserved:

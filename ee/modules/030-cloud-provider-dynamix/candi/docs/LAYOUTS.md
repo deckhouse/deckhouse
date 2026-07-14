@@ -1,6 +1,6 @@
 ---
-title: "Cloud provider - Dynamix: Layouts"
-description: "Schemes of placement and interaction of resources in Dynamix when working with the Deckhouse cloud provider."
+title: "Cloud provider - Basis Dynamix: Layouts"
+description: "Schemes of placement and interaction of resources in Basis Dynamix when working with the Deckhouse cloud provider."
 ---
 
 ## Standard

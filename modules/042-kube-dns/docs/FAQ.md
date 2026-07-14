@@ -22,7 +22,7 @@ Add a new domain and retain the previous one. To do this, modify the configurati
      name: control-plane-manager
    spec:
      enabled: true
-     version: 1
+     version: 3
      settings:
        apiserver:
          certSANs:
@@ -92,7 +92,7 @@ d8 k delete pods --all-namespaces --all
 
 {% alert level="warning" %}
 
-**Important!** If you use [istio](../../modules/istio/) module, you have to restart all the application pods under istio control after changing `clusterDomain`.
+**Important!** If you use [istio](/modules/istio/) module, you have to restart all the application pods under istio control after changing `clusterDomain`.
 
 {% endalert %}
 

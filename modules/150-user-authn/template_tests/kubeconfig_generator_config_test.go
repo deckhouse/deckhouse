@@ -180,6 +180,7 @@ Multiline
 
 			JustBeforeEach(func() {
 				encodedNames := make([]string, 0)
+				clientEncodedNames := make([]string, 0)
 				for i, a := range apis {
 					hec.ValuesSet(fmt.Sprintf("userAuthn.kubeconfigGenerator.%v.id", i), a.id)
 					hec.ValuesSet(fmt.Sprintf("userAuthn.kubeconfigGenerator.%v.masterCA", i), a.masterCA)
@@ -188,9 +189,13 @@ Multiline
 
 					name := encoding.ToFnvLikeDex(fmt.Sprintf("kubeconfig-generator-%d", i))
 					encodedNames = append(encodedNames, name)
+
+					clientEncodedNames = append(clientEncodedNames,
+						encoding.ToFnvLikeDex(fmt.Sprintf("kubeconfig-%s", a.id)))
 				}
 
 				hec.ValuesSet("userAuthn.internal.kubeconfigEncodedNames", encodedNames)
+				hec.ValuesSet("userAuthn.internal.kubeconfigClientEncodedNames", clientEncodedNames)
 
 				hec.HelmRender()
 			})

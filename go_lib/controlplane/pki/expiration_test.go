@@ -42,41 +42,49 @@ func TestListCertificateExpirations_DefaultInventory(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	expirations, err := ListCertificateExpirations(WithCertificatesDir(dir))
+	report, err := ListCertificateExpirations(WithCertificatesDir(dir))
 	require.NoError(t, err)
-	require.Len(t, expirations, 10)
+	require.Len(t, report.Entries, 10)
 
-	paths := make([]string, 0, len(expirations))
-	for _, expiration := range expirations {
-		paths = append(paths, expiration.Path)
+	paths := make([]string, 0, len(report.Entries))
+	for _, e := range report.Entries {
+		require.NoError(t, e.Err, "entry %q should have no error", e.Name)
+		paths = append(paths, e.Path)
 	}
 
 	assert.True(t, sort.StringsAreSorted(paths))
 	assert.NotContains(t, paths, filepath.Join(dir, "sa.crt"))
 }
 
-func TestListCertificateExpirations_IgnoreReadErrors(t *testing.T) {
+func TestListCertificateExpirations_MissingEntries(t *testing.T) {
 	dir := t.TempDir()
 	caCert, _ := makeTestCACert(t, "kubernetes")
 
 	require.NoError(t, writeCert(dir, string(CACertName), caCert))
 
-	_, err := ListCertificateExpirations(
+	report, err := ListCertificateExpirations(
 		WithCertificatesDir(dir),
 		WithRootCertificates(CACertName, CACertName, EtcdCACertName),
 	)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), filepath.Join(dir, "etcd", "ca.crt"))
+	require.NoError(t, err)
+	require.Len(t, report.Entries, 2)
 
-	expirations, err := ListCertificateExpirations(
-		WithCertificatesDir(dir),
-		WithRootCertificates(CACertName, CACertName, EtcdCACertName),
-		WithIgnoreReadErrors(),
-	)
-	require.Error(t, err)
-	require.Len(t, expirations, 1)
-	assert.Equal(t, string(CACertName), expirations[0].Name)
-	assert.Contains(t, err.Error(), filepath.Join(dir, "etcd", "ca.crt"))
+	byName := make(map[string]ExpirationEntry, len(report.Entries))
+	for _, e := range report.Entries {
+		byName[e.Name] = e
+	}
+
+	caEntry, ok := byName[string(CACertName)]
+	require.True(t, ok)
+	require.NoError(t, caEntry.Err)
+	assert.True(t, caEntry.IsCA)
+
+	etcdCAEntry, ok := byName[string(EtcdCACertName)]
+	require.True(t, ok)
+	var missing *MissingError
+	require.ErrorAs(t, etcdCAEntry.Err, &missing)
+	assert.Equal(t, string(EtcdCACertName), missing.BaseName)
+	assert.Equal(t, filepath.Join(dir, "etcd", "ca.crt"), etcdCAEntry.Path)
 }
 
 func TestGetCertificateExpiration_NormalizesKnownAndUnknownPaths(t *testing.T) {

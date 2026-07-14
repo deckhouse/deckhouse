@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -98,7 +97,7 @@ func TestCidrIntersects(t *testing.T) {
 			cidr1:       "10.0.0.0/8",
 			cidr2:       "10.0.1.0/24",
 			expectError: true,
-			errorMsg:    "CIDRs 10.0.0.0/8 and 10.0.1.0/24 are intersects",
+			errorMsg:    "CIDRs 10.0.0.0/8 and 10.0.1.0/24 intersect",
 		},
 		{
 			cidr1:       "10.0.0.0/8",
@@ -166,8 +165,8 @@ func TestCheckCidrIntersection(t *testing.T) {
 					"serviceSubnetCIDR": []byte(`"10.111.110.0/18"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "are intersects")
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
+				return assert.ErrorContains(t, err, "intersect")
 			},
 		},
 		{
@@ -177,7 +176,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 					"serviceSubnetCIDR": []byte(`"10.0.0.0/8"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "missing podSubnetCIDR field in ClusterConfiguration")
 			},
 		},
@@ -188,7 +187,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 					"podSubnetCIDR": []byte(`"10.0.0.0/8"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
 			},
 		},
@@ -200,7 +199,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 					"serviceSubnetCIDR": []byte(`"10.222.0.0/16"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "invalid CIDR address: invalidCIDR")
 			},
 		},
@@ -212,7 +211,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 					"serviceSubnetCIDR": []byte(`"invalidCIDR"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "invalid CIDR address: invalidCIDR")
 			},
 		},
@@ -220,7 +219,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := CidrIntersectionCheck{MetaConfig: tt.fields.metaConfig}
-			tt.wantErr(t, check.Run(context.Background()), fmt.Sprintf("CheckCidrIntersection()"))
+			tt.wantErr(t, check.Run(t.Context()), fmt.Sprintf("CheckCidrIntersection()"))
 		})
 	}
 }
@@ -268,8 +267,8 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 					"internalNetworkCIDRs": []byte(`["10.0.0.0/8"]`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "are intersects")
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
+				return assert.ErrorContains(t, err, "intersect")
 			},
 		},
 		{
@@ -283,8 +282,8 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 					"internalNetworkCIDRs": []byte(`["10.222.128.0/24"]`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "are intersects")
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
+				return assert.ErrorContains(t, err, "intersect")
 			},
 		},
 		{
@@ -297,7 +296,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 					"internalNetworkCIDRs": []byte(`["10.128.0.0/24"]`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "missing podSubnetCIDR field in ClusterConfiguration")
 			},
 		},
@@ -311,7 +310,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 					"internalNetworkCIDRs": []byte(`["10.128.0.0/24"]`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
 			},
 		},
@@ -326,7 +325,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 					"internalNetworkCIDRs": []byte(`["10.128.0.0/24"]`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "invalid CIDR address: invalidCIDR")
 			},
 		},
@@ -341,7 +340,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 					"internalNetworkCIDRs": []byte(`["10.128.0.0/24"]`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "invalid CIDR address: invalidCIDR")
 			},
 		},
@@ -356,7 +355,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 					"internalNetworkCIDRs": []byte(`["invalidCIDR"]`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "invalid CIDR address: invalidCIDR")
 			},
 		},
@@ -364,7 +363,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := CidrIntersectionStaticCheck{MetaConfig: tt.fields.metaConfig}
-			tt.wantErr(t, check.Run(context.Background()), fmt.Sprintf("CheckCidrIntersectionStatic()"))
+			tt.wantErr(t, check.Run(t.Context()), fmt.Sprintf("CheckCidrIntersectionStatic()"))
 		})
 	}
 }

@@ -7,7 +7,7 @@ lang: en
 
 As soon as a new version appears on the configured release channel:
 
-- The [`DeckhouseReleaseIsWaitingManualApproval`](../reference/alerts.html#monitoring-deckhouse-deckhousereleaseiswaitingmanualapproval) alert will appear if the cluster is in [manual update mode](../admin/configuration/update/configuration.html#manual-update-approval).
+- The [`DeckhouseReleaseIsWaitingManualApproval`](../reference/alerts.html#deckhouse-deckhousereleaseiswaitingmanualapproval) alert will appear if the cluster is in [manual update mode](../admin/configuration/update/configuration.html#manual-update-approval).
 - A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) custom resource will be created.
   To see the list of releases, run `d8 k get deckhousereleases`.
   If the new version is in `Pending` state, it means it hasn’t been installed yet. Possible reasons:

@@ -16,4 +16,4 @@ limitations under the License.
 
 package main
 
-//go:generate go run audit_policy/main.go -output ../modules/040-control-plane-manager/hooks/audit_policy_basic_targets_generated.go
+//go:generate /bin/bash -c "cd .. && go run ./tools/audit_policy/main.go -output-go ./modules/040-control-plane-manager/hooks/audit_policy_basic_targets_generated.go -output-doc-en ./docs/site/pages/virtualization-platform/documentation/admin/platform-management/security/KUBERNETES-API-AUDIT.md -output-doc-ru ./docs/site/pages/virtualization-platform/documentation/admin/platform-management/security/KUBERNETES-API-AUDIT_RU.md -output-doc-en-2 ./docs/documentation/pages/admin/configuration/security/KUBERNETES-API-AUDIT.md -output-doc-ru-2 ./docs/documentation/pages/admin/configuration/security/KUBERNETES-API-AUDIT_RU.md -output-rules-en ./modules/040-control-plane-manager/docs/AUDIT-RULES.md -output-rules-ru ./modules/040-control-plane-manager/docs/AUDIT-RULES_RU.md"

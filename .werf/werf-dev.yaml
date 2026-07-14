@@ -19,6 +19,8 @@ git:
 import:
 {{ include "dev_prebuild_images_imports" (dict "Images" .Images "Env" .Env) }}
 shell:
+  install:
+  - set -e
   setup:
   - |
 {{- range $key := list "default" "managed" "minimal" }}

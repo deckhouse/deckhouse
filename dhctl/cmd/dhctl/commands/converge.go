@@ -15,10 +15,12 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -27,7 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -36,6 +37,7 @@ import (
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineConvergeFlags(cmd, &opts.Converge)
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
@@ -46,26 +48,24 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
+
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
-			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           logger,
 			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -77,15 +77,13 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 					AutoDismissChanges:     false,
 					AutoDismissDestructive: false,
 					AutoApproveSettings: infrastructure.AutoApproveSettings{
-						AutoApprove: false,
+						AutoApprove: opts.Converge.DestructiveApproved,
 					},
 				},
 			},
 			ProviderGetter:     providerGetter,
 			TmpDir:             opts.Global.TmpDir,
-			Logger:             logger,
 			IsDebug:            opts.Global.IsDebug,
-			DirectoryConfig:    opts.DirConfig(),
 			Options:            opts,
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
@@ -96,7 +94,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 		}
 
 		if sshProviderInitializer != nil {
-			if sshProviderInitializer.CheckHosts() {
+			if sshProviderInitializer.CheckHosts(ctx) {
 				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 				if err != nil {
 					return err
@@ -141,29 +139,35 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
+		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
+		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
+		// but in exporter and autoconverger we do not need it
+		// and we reset it here
+		// unfortianally global params parsed in place when we do no have command
+		// that user ran
+		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
+
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
-			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           logger,
 			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -179,12 +183,10 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 					},
 				},
 			},
-			ProviderGetter:  providerGetter,
-			TmpDir:          opts.Global.TmpDir,
-			Logger:          logger,
-			IsDebug:         opts.Global.IsDebug,
-			DirectoryConfig: opts.DirConfig(),
-			Options:         opts,
+			ProviderGetter: providerGetter,
+			TmpDir:         opts.Global.TmpDir,
+			IsDebug:        opts.Global.IsDebug,
+			Options:        opts,
 		})
 
 		return converger.AutoConverge(ctx, opts.AutoConverge.ListenAddress, opts.AutoConverge.ApplyInterval)
@@ -203,29 +205,34 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
+		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
+		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
+		// but in exporter and autoconverger we do not need it
+		// and we reset it here
+		// unfortianally global params parsed in place when we do no have command
+		// that user ran
+		// converge migration also can run as sidecar of auto-converger pod
+		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
 
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
 
-		loggerFor := log.GetDefaultLogger()
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
-			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           loggerFor,
 			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -244,9 +251,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			CheckHasTerraformStateBeforeMigration: opts.Converge.CheckHasTerraformStateBeforeMigrateToTofu,
 			ProviderGetter:                        providersGetter,
 			TmpDir:                                opts.Global.TmpDir,
-			Logger:                                loggerFor,
 			IsDebug:                               opts.Global.IsDebug,
-			DirectoryConfig:                       opts.DirConfig(),
 			Options:                               opts,
 		})
 
@@ -256,7 +261,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		}
 
 		if sshProviderInitializer != nil {
-			if sshProviderInitializer.CheckHosts() {
+			if sshProviderInitializer.CheckHosts(ctx) {
 				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 				if err != nil {
 					return err

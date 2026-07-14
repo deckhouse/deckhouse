@@ -45,6 +45,10 @@ The roles created by the module fall into two categories:
 - [Use roles](#use-roles) — for granting permissions to users (for example, application developers) *within a specific namespace*.
 - [Manage roles](#manage-roles) — for granting administrator permissions.
 
+{% alert level="warning" %}
+Pay attention to the specifics of configuring combined access and shared use of RoleBinding and ClusterAuthorizationRule (CAR) for the same user when multitenancy mode is enabled in the cluster (parameter [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
+{% endalert %}
+
 ## Use roles
 
 {% alert level="warning" %}
@@ -140,8 +144,10 @@ For example, the `networking` subsystem includes the following manage roles, whi
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-A role’s subsystem limits its scope to either all system namespaces (those starting with `d8-` or `kube-`) if using `all`,
-or only those namespaces where modules of the specified subsystem are running (refer to the subsystem composition table for details).
+The scope of a role depends on which subsystem it belongs to:
+
+- The scope of roles from the `all` subsystem is all system namespaces (starting with `d8-` or `kube-`) in the cluster.
+- The scope of roles from other subsystems includes the namespaces in which the subsystem’s modules operate (see the subsystem composition table), as well as all cluster-wide objects of the subsystem’s modules.
 
 ### Role model subsystem composition
 

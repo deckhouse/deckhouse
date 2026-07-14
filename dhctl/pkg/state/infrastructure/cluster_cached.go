@@ -18,12 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -31,16 +30,14 @@ import (
 type KubeTerraStateLoader struct {
 	kubeProvider kubernetes.KubeClientProviderWithCtx
 	stateCache   state.Cache
-	logger       log.Logger
 
 	forceFromCache bool
 }
 
-func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, logger log.Logger) *KubeTerraStateLoader {
+func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache) *KubeTerraStateLoader {
 	return &KubeTerraStateLoader{
 		kubeProvider: kubeProvider,
 		stateCache:   stateCache,
-		logger:       logger,
 
 		forceFromCache: false,
 	}
@@ -50,7 +47,7 @@ func (s *KubeTerraStateLoader) WithForceFromCache(f bool) *KubeTerraStateLoader 
 	return s
 }
 
-func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
+func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, globalOptions *options.GlobalOptions) (*config.MetaConfig, error) {
 	var metaConfig *config.MetaConfig
 	var err error
 
@@ -79,9 +76,9 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, dc *direc
 		ctx,
 		kubeCl,
 		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(s.logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		),
-		dc,
+		globalOptions,
 	)
 	if err != nil {
 		return nil, err

@@ -129,11 +129,14 @@ To connect to a Ceph cluster, follow the step-by-step instructions below. Execut
 
    This will output information about the created [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resources:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME          PHASE     AGE
    ceph-rbd-sc   Created   1h
    ceph-fs-sc    Created   1h
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Verify the created StorageClass:
 
@@ -143,11 +146,14 @@ To connect to a Ceph cluster, follow the step-by-step instructions below. Execut
 
    This will output information about the created StorageClass:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 Ceph cluster connection setup is complete. You can use the created StorageClass to create PersistentVolumeClaim in your applications.
 

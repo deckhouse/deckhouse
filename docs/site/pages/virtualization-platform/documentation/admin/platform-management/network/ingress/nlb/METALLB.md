@@ -113,9 +113,9 @@ This approach means:
      type: LoadBalancer
      loadBalancerClass: ingress # MetalLoadBalancerClass name.
      ports:
-     - port: 8000
-       protocol: TCP
-       targetPort: 80
+       - port: 8000
+         protocol: TCP
+         targetPort: 80
      selector:
        app: nginx
    ```
@@ -138,9 +138,9 @@ spec:
   type: LoadBalancer
   loadBalancerClass: ingress # MetalLoadBalancerClass name.
   ports:
-  - port: 8000
-    protocol: TCP
-    targetPort: 80
+    - port: 8000
+      protocol: TCP
+      targetPort: 80
   selector:
     app: nginx
 ```
@@ -155,10 +155,13 @@ d8 k get svc
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
 nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The obtained `EXTERNAL-IP` can be set as A records for the application domain:
 
@@ -238,21 +241,40 @@ Service IP addresses are announced directly to routers (or top-of-rack switches)
      name: metallb
    spec:
      enabled: true
-     settings:
-       addressPools:
-       - addresses:
-         - 192.168.219.100-192.168.219.200
-         name: mypool
-         protocol: bgp
-       bgpPeers:
-       - hold-time: 3s
-         my-asn: 64600
-         peer-address: 172.18.18.10
-         peer-asn: 64601
-       speaker:
-         nodeSelector:
-           node-role.deckhouse.io/metallb: ""
-     version: 2
+     version: 3
+   ---
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: MetalLoadBalancerPool
+   metadata:
+     name: mypool
+   spec:
+     addresses:
+       - 192.168.219.100-192.168.219.200
+   ---
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: MetalLoadBalancerBGPPeer
+   metadata:
+     name: myrouter
+   spec:
+     peerAddress: 172.18.18.10
+     peerASN: 64601
+     myASN: 64600
+     holdTime: 3s
+   ---
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: MetalLoadBalancerConfiguration
+   metadata:
+     name: defaults
+   spec:
+     mode: BGP
+     nodeSelector:
+       node-role.deckhouse.io/metallb: ""
+     bgp:
+       peerNames:
+         - myrouter
+     advertisements:
+       - poolNames:
+           - mypool
    ```
 
 1. Configure BGP peering on the network equipment.

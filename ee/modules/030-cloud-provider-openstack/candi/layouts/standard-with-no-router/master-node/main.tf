@@ -36,7 +36,7 @@ module "master" {
   additional_tags = local.additional_tags
   image_name = local.image_name
   keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
-  network_port_ids = local.network_security ? list(openstack_networking_port_v2.master_external_with_security[0].id, openstack_networking_port_v2.master_internal_with_security[0].id) : list(openstack_networking_port_v2.master_external_without_security[0].id, openstack_networking_port_v2.master_internal_without_security[0].id)
+  network_port_ids = local.network_security ? tolist([openstack_networking_port_v2.master_external_with_security[0].id, openstack_networking_port_v2.master_internal_with_security[0].id]) : tolist([openstack_networking_port_v2.master_external_without_security[0].id, openstack_networking_port_v2.master_internal_without_security[0].id])
   internal_network_cidr = local.internal_network_cidr
   config_drive = !local.external_network_dhcp
   tags = local.tags

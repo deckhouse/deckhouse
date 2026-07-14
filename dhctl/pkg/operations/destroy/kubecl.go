@@ -17,26 +17,29 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type kubeClientProvider struct {
+	sshProvider  libcon.SSHProvider
 	kubeProvider libcon.KubeProvider
 }
 
-func newKubeClientProvider(kubeProvider libcon.KubeProvider) *kubeClientProvider {
+func newKubeClientProvider(kubeProvider libcon.KubeProvider, sshProvider libcon.SSHProvider) *kubeClientProvider {
 	return &kubeClientProvider{
 		kubeProvider: kubeProvider,
+		sshProvider:  sshProvider,
 	}
 }
 
 func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
 	if p.kubeProvider == nil {
-		return nil, fmt.Errorf("kube provider in nil")
+		return nil, fmt.Errorf("kube provider is nil")
 	}
 	kubeCl, err := p.kubeProvider.Client(ctx)
 	if err != nil {
@@ -45,10 +48,17 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 	return &client.KubernetesClient{KubeClient: kubeCl}, nil
 }
 
-func (p *kubeClientProvider) Cleanup(stopSSH bool) {
-	err := p.kubeProvider.Cleanup(context.Background())
+func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
+	err := p.kubeProvider.Cleanup(ctx)
 	if err != nil {
-		log.WarnF("failed to cleanup kube provider: %v", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to clean up kube provider: %v", err), "\n"))
+	}
+
+	if stopSSH {
+		err := p.sshProvider.Cleanup(ctx)
+		if err != nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to clean up ssh provider: %v", err))
+		}
 	}
 }
 
@@ -65,4 +75,4 @@ func newKubeClientErrorProvider(msg string) *kubeClientErrorProvider {
 func (p *kubeClientErrorProvider) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	return nil, fmt.Errorf("Unable to get kube client: '%s'", p.msg)
 }
-func (p *kubeClientErrorProvider) Cleanup(bool) {}
+func (p *kubeClientErrorProvider) Cleanup(context.Context, bool) {}

@@ -18,26 +18,26 @@ import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
   to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
-  owner: 64535
-  group: 64535
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/gcp_envoy_bootstrap.json
   to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
-  owner: 64535
-  group: 64535
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
   add: /src/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
-  owner: 64535
-  group: 64535
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
   add: /src/proxy/bin/envoy
   to: /usr/local/bin/envoy
-  owner: 64535
-  group: 64535
+  owner: 1337
+  group: 1337
   after: setup
 - from: {{ index $.Images "libs/glibc-v2.41" }}
   add: /lib64/libm.so.6
@@ -70,14 +70,11 @@ import:
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    user: "64535:64535"
-    env:
-      ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
-      ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
+    user: "1337:1337"
+    env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489", "ISTIO_META_ISTIO_VERSION": "{{ $istioVersion }}" }
     workingDir: "/"
     entrypoint: ["/usr/local/bin/pilot-agent"]
 ---
@@ -103,6 +100,18 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
+  - export VERSION={{ $istioVersion }}
+  - export BUILDINFO=$(mktemp)
+  - |
+    cat > "${BUILDINFO}" <<EOF
+    istio.io/istio/pkg/version.buildVersion={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildGitRevision={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildStatus=Clean
+    istio.io/istio/pkg/version.buildTag={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildHub=docker.io/istio
+    istio.io/istio/pkg/version.buildOS=linux
+    istio.io/istio/pkg/version.buildArch=amd64
+    EOF
   - export GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
@@ -111,7 +120,7 @@ shell:
   - strip /src/istio/out/pilot-agent
   #
   - chmod 0555 /src/istio/out/pilot-agent
-  - chown 64535:64535 /src/istio/out/pilot-agent
+  - chown 1337:1337 /src/istio/out/pilot-agent
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
@@ -324,12 +333,7 @@ shell:
   - rm -r /tmp/bazel
 imageSpec:
   config:
-    env:
-      GOROOT: "/usr/local/go"
-      GOPATH: "/go"
-      PATH: "${PATH}:/usr/local/go/bin:/go/bin"
-      GOOS: "linux"
-      GOARCH: "amd64"
+    env: {"GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:/usr/local/go/bin:/go/bin", "GOOS": "linux", "GOARCH": "amd64"}
 ---
 #=====================================================================================================
 ---
@@ -342,22 +346,15 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- url: {{ .SOURCE_REPO }}/llvm/llvm-project.git
-  tag: {{ $llvmRev }}
-  add: /
-  to: /src/llvm
-  excludePaths:
-  - llvm/utils/git
-  - mlir/utils/vscode
-  - third-party/benchmark
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  - git clone --depth 1 --branch {{ $llvmRev }} $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
+  - rm -r /src/llvm/llvm/utils/git
+  - rm -r /src/llvm/mlir/utils/vscode
+  - rm -r /src/llvm/third-party/benchmark
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
   - git apply --verbose /patches/*.patch

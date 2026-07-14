@@ -93,11 +93,7 @@ const labels = {
   'edition/cse': { type: 'edition', edition: 'CSE' },
 
   // Enable operator-trivy to get CIS benchmark report
-  'e2e/use/cis': { type: 'e2e-use', cis: true },
-
-  // security validation for images
-  'security/rootless': { type: 'security', security: 'rootless' },
-  'security/cve': { type: 'security', security: 'cve' }
+  'e2e/use/cis': { type: 'e2e-use', cis: true }
 };
 module.exports.knownLabels = labels;
 

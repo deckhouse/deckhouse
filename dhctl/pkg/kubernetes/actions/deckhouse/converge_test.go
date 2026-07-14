@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -94,7 +93,7 @@ func TestStaticClusterClusterManifestConverge(t *testing.T) {
 	require.NotEqual(t, kubeVersionBefore, kubeVersionAfter)
 
 	paramsBefore := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -103,7 +102,7 @@ internalNetworkCIDRs:
 `),
 	}
 	paramsAfter := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionAfter)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionAfter),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -181,11 +180,11 @@ func TestCloudClusterManifestConverge(t *testing.T) {
 	require.NotEqual(t, kubeVersionBefore, kubeVersionAfter)
 
 	paramsBefore := commander.CommanderModeParams{
-		ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+		ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 		ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 	}
 	paramsAfter := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionAfter)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionAfter),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
@@ -281,10 +280,10 @@ func TestErrorConvergeManifests(t *testing.T) {
 
 	staticClusterConvergeParams := testConvergeManifestsParams{
 		commanderStateBefore: commander.CommanderModeParams{
-			ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+			ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		},
 		commanderStateAfter: commander.CommanderModeParams{
-			ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+			ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		},
 	}
 
@@ -295,11 +294,11 @@ func TestErrorConvergeManifests(t *testing.T) {
 
 	yandexClusterConvergeParams := testConvergeManifestsParams{
 		commanderStateBefore: commander.CommanderModeParams{
-			ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+			ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 			ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 		},
 		commanderStateAfter: commander.CommanderModeParams{
-			ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+			ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 			ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 		},
 	}
@@ -408,7 +407,7 @@ func (tt *testConvergeManifests) assertGeneral(t *testing.T) {
 }
 
 func (tt *testConvergeManifests) assertConfiguration(t *testing.T) {
-	allSecrets, err := tt.kubeCl.CoreV1().Secrets("").List(context.TODO(), metav1.ListOptions{})
+	allSecrets, err := tt.kubeCl.CoreV1().Secrets("").List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)
 	require.Len(t, allSecrets.Items, len(tt.secretsToAssert))
 
@@ -416,7 +415,7 @@ func (tt *testConvergeManifests) assertConfiguration(t *testing.T) {
 		assertSecret(t, tt.kubeCl, secretToAssert)
 	}
 
-	allCms, err := tt.kubeCl.CoreV1().ConfigMaps("").List(context.TODO(), metav1.ListOptions{})
+	allCms, err := tt.kubeCl.CoreV1().ConfigMaps("").List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)
 	require.Len(t, allCms.Items, len(tt.configMapsToAssert))
 
@@ -429,7 +428,7 @@ func (tt *testConvergeManifests) assetAndRun(t *testing.T) {
 	t.Run(fmt.Sprintf("converge %s", tt.testName), func(t *testing.T) {
 		tt.assertGeneral(t)
 
-		tasks, err := getTasksForRunning(context.TODO(), tt.kubeCl, tt.commanderUUID, tt.metaConfig)
+		tasks, err := getTasksForRunning(t.Context(), tt.kubeCl, tt.commanderUUID, tt.metaConfig)
 		require.NoError(t, err)
 
 		tasksNames := make(map[string]struct{}, len(tasks))
@@ -461,7 +460,7 @@ func (tt *testConvergeManifests) assertWithError(t *testing.T) {
 	t.Run(fmt.Sprintf("has error %s", tt.testName), func(t *testing.T) {
 		tt.assertGeneral(t)
 
-		tasks, err := getTasksForRunning(context.TODO(), tt.kubeCl, tt.commanderUUID, tt.metaConfig)
+		tasks, err := getTasksForRunning(t.Context(), tt.kubeCl, tt.commanderUUID, tt.metaConfig)
 		require.Len(t, tasks, 0)
 		require.Error(t, err)
 
@@ -481,7 +480,7 @@ func testCreateConvergeManifestTest(t *testing.T, p testConvergeManifestsParams)
 
 	clusterUUIDStr := clusterUUID.String()
 
-	metaConfigToApply := testCreateMetaConfigForConvergeManifests(t, context.TODO(), p.commanderStateAfter, clusterUUIDStr)
+	metaConfigToApply := testCreateMetaConfigForConvergeManifests(t, t.Context(), p.commanderStateAfter, clusterUUIDStr)
 
 	kubeCl := client.NewFakeKubernetesClient()
 
@@ -494,7 +493,7 @@ func testCreateConvergeManifestTest(t *testing.T, p testConvergeManifestsParams)
 	configMapsToAssert := make([]*corev1.ConfigMap, 0, len(notAffectedCm))
 
 	for _, cm := range notAffectedCm {
-		createdCm, err := kubeCl.CoreV1().ConfigMaps(cm.GetNamespace()).Create(context.TODO(), cm, metav1.CreateOptions{})
+		createdCm, err := kubeCl.CoreV1().ConfigMaps(cm.GetNamespace()).Create(t.Context(), cm, metav1.CreateOptions{})
 		require.NoError(t, err, cm.GetName())
 		assertConfigMap(t, kubeCl, cm)
 
@@ -524,15 +523,11 @@ func testCreateConvergeManifestTest(t *testing.T, p testConvergeManifestsParams)
 
 func testCreateMetaConfigForConvergeManifests(t *testing.T, ctx context.Context, params commander.CommanderModeParams, clusterUUID string) *config.MetaConfig {
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		configData,
 		config.DummyPreparatorProvider(),
-		dc,
+		nil,
 	)
 
 	require.NoError(t, err)
@@ -543,7 +538,7 @@ func testCreateMetaConfigForConvergeManifests(t *testing.T, ctx context.Context,
 }
 
 func testCreateSecret(t *testing.T, kubeCl *client.KubernetesClient, secret *corev1.Secret) {
-	_, err := kubeCl.CoreV1().Secrets(secret.GetNamespace()).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(secret.GetNamespace()).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err, secret.GetName())
 	assertSecret(t, kubeCl, secret)
 }
@@ -554,7 +549,7 @@ func assertSecret(t *testing.T, kubeCl *client.KubernetesClient, secret *corev1.
 	name := secret.GetName()
 	ns := secret.GetNamespace()
 
-	gotSecret, err := kubeCl.CoreV1().Secrets(ns).Get(context.TODO(), secret.GetName(), metav1.GetOptions{})
+	gotSecret, err := kubeCl.CoreV1().Secrets(ns).Get(t.Context(), secret.GetName(), metav1.GetOptions{})
 	require.NoError(t, err, name)
 
 	require.Equal(t, name, gotSecret.GetName(), name)
@@ -573,7 +568,7 @@ func assertConfigMap(t *testing.T, kubeCl *client.KubernetesClient, configMap *c
 	name := configMap.GetName()
 	ns := configMap.GetNamespace()
 
-	gotCm, err := kubeCl.CoreV1().ConfigMaps(ns).Get(context.TODO(), name, metav1.GetOptions{})
+	gotCm, err := kubeCl.CoreV1().ConfigMaps(ns).Get(t.Context(), name, metav1.GetOptions{})
 	require.NoError(t, err, name)
 
 	require.Equal(t, name, gotCm.GetName(), name)

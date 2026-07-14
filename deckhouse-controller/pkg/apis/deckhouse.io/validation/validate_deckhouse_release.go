@@ -44,7 +44,7 @@ func DeckhouseReleaseValidationHandler(
 	client client.Client,
 	metricStorage metricsstorage.Storage,
 	moduleManager deckhouseReleaseModuleManager,
-	exts *extenders.ExtendersStack,
+	exts extenders.IExtendersStack,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		return validateDeckhouseReleaseApproval(ctx, review, obj, client, metricStorage, moduleManager, exts)
@@ -70,7 +70,7 @@ func validateDeckhouseReleaseApproval(
 	client client.Client,
 	metricStorage metricsstorage.Storage,
 	moduleManager deckhouseReleaseModuleManager,
-	exts *extenders.ExtendersStack,
+	exts extenders.IExtendersStack,
 ) (*kwhvalidating.ValidatorResult, error) {
 	dr, ok := obj.(*v1alpha1.DeckhouseRelease)
 	if !ok {

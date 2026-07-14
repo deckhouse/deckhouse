@@ -20,10 +20,27 @@ properties:
       etcdQuotaBackendBytes:
         type: string
         x-examples: [ "123456789" ]
+      resourcesRequests:
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          milliCpuControlPlane:
+            type: integer
+            format: int64
+            minimum: 0
+            x-examples: [1024]
+            default: 0
+          memoryControlPlane:
+            type: integer
+            format: int64
+            minimum: 0
+            x-examples: [536870912]
+            default: 0
       effectiveKubernetesVersion:
         type: string
-        enum: ["1.31", "1.32", "1.33", "1.34", "1.35"]
-        x-examples: ["1.31"]
+        enum: ["1.32", "1.33", "1.34", "1.35", "1.36", "1.31"]
+        x-examples: ["1.32"]
       etcdServers:
         type: array
         items:
@@ -43,6 +60,17 @@ properties:
         type: boolean
         default: false
         x-examples: [false]
+      etcdDefrag:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            x-examples: [true]
+          cronSchedule:
+            type: string
+            x-examples: ["*/3 * * * *"]
       kubeadmClusterAdminsTargetRoleName:
         type: string
         enum: ["cluster-admin", "user-authz:cluster-admin"]

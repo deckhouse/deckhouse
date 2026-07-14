@@ -77,53 +77,56 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
 
 1. Check the current DVCR size:
 
-    ```shell
-    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-    ```
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
 
-    Example output:
+   Example output:
 
-    ```text
-    {"size":"58G","storageClass":"linstor-thick-data-r1"}
-    ```
+   ```json
+   {"size":"58G","storageClass":"linstor-thick-data-r1"}
+   ```
 
 1. Set the new size:
 
-    ```shell
-    d8 k patch mc virtualization \
-      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
-    ```
+   ```shell
+   d8 k patch mc virtualization \
+     --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
+   ```
 
    Example output:
 
-    ```text
+   ```text
    moduleconfig.deckhouse.io/virtualization patched
-    ```
+   ```
 
 1. Verify the size change:
 
-    ```shell
-    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-    ```
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
 
    Example output:
 
-    ```text
-    {"size":"59G","storageClass":"linstor-thick-data-r1"}
+   ```json
+   {"size":"59G","storageClass":"linstor-thick-data-r1"}
    ```
 
 1. Check the current status of the DVCR:
 
-    ```shell
-    d8 k get pvc dvcr -n d8-virtualization
-    ```
+   ```shell
+   d8 k get pvc dvcr -n d8-virtualization
+   ```
 
    Example output:
 
-    ```console
-    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
-    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
-    ```
+   <!-- markdownlint-disable MD031 -->
+   ```console
+   NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
+   dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
+   ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 ## Creating a golden image for Linux
 
@@ -135,16 +138,16 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
    - For RHEL/CentOS:
 
-   ```bash
-   yum install -y qemu-guest-agent
-   ```
+     ```bash
+     yum install -y qemu-guest-agent
+     ```
 
    - For Debian/Ubuntu:
 
-   ```bash
-   apt-get update
-   apt-get install -y qemu-guest-agent
-   ```
+     ```bash
+     apt-get update
+     apt-get install -y qemu-guest-agent
+     ```
 
 1. Enable and start the service:
 
@@ -166,16 +169,16 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
    - For RHEL:
 
-   ```bash
-   nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
-   rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
-   ```
+     ```bash
+     nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
+     rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
+     ```
 
    - For Debian/Ubuntu:
 
-   ```bash
-   rm -f /etc/network/interfaces.d/*
-   ```
+     ```bash
+     rm -f /etc/network/interfaces.d/*
+     ```
 
 1. Clean system identifiers:
 
@@ -201,15 +204,15 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
    - For RHEL:
 
-   ```bash
-   yum clean all
-   ```
+     ```bash
+     yum clean all
+     ```
 
    - For Debian/Ubuntu:
 
-   ```bash
-   apt-get clean
-   ```
+     ```bash
+     apt-get clean
+     ```
 
 1. Clean temporary files:
 
@@ -290,21 +293,21 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
    Alternatively, create a `ClusterVirtualImage` to make the image available at the cluster level for all projects:
 
-    ```bash
-    d8 k apply -f -<<EOF
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: <image-name>
-    spec:
-      dataSource:
-        type: ObjectRef
-        objectRef:
-          kind: VirtualDisk
-          name: <source-disk-name>
-          namespace: <namespace>
-    EOF
-    ```
+   ```bash
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: <image-name>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualDisk
+         name: <source-disk-name>
+         namespace: <namespace>
+   EOF
+   ```
 
 1. Create a VM disk from the created image:
 
@@ -332,39 +335,39 @@ Let's explore how to create a cluster image.
 
 1. Run the following command to create a `ClusterVirtualImage`:
 
-    ```yaml
-    d8 k apply -f - <<EOF
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: ubuntu-24-04
-    spec:
-      # Source for creating the image.
-      dataSource:
-        type: HTTP
-        http:
-          url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
-    EOF
-    ```
+   ```bash
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: ubuntu-24-04
+   spec:
+     # Source for creating the image.
+     dataSource:
+       type: HTTP
+       http:
+         url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+   EOF
+   ```
 
 1. Check the result of creating the `ClusterVirtualImage` with the following command:
 
-    ```shell
-    d8 k get clustervirtualimage ubuntu-24-04
-    ```
+   ```shell
+   d8 k get clustervirtualimage ubuntu-24-04
+   ```
 
-    A shorter version of the command:
+   A shorter version of the command:
 
    ```shell
-    d8 k get cvi ubuntu-24-04
-    ```
+   d8 k get cvi ubuntu-24-04
+   ```
 
-    In the output, you should see information about the `ClusterVirtualImage` resource:
+   In the output, you should see information about the `ClusterVirtualImage` resource:
 
-    ```console
-    NAME           PHASE   CDROM   PROGRESS   AGE
-    ubuntu-24-04   Ready   false   100%       23h
-    ```
+   ```console
+   NAME           PHASE   CDROM   PROGRESS   AGE
+   ubuntu-24-04   Ready   false   100%       23h
+   ```
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
 
@@ -423,46 +426,46 @@ An image stored in a container registry has a specific format. Let’s consider 
 
 1. Download the image locally:
 
-    ```shell
-    curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
-    ```
+   ```shell
+   curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
+   ```
 
 1. Create a `Dockerfile` with the following content:
 
-    ```shell
-    FROM scratch
-    COPY ubuntu2204.img /disk/ubuntu2204.img
-    ```
+   ```shell
+   FROM scratch
+   COPY ubuntu2404.img /disk/ubuntu2404.img
+   ```
 
-1. Build the image and push it to a container registry. In this example, [docker.io](https://www.docker.com/) is used. To perform these steps, you need an account on the service and a properly configured environment:
+1. Build the container image. The example below uses [docker.com](https://www.docker.com/) as the container registry. You need an account on the service and a properly configured environment:
 
-    ```shell
-    docker build -t docker.io/<username>/ubuntu2204:latest
-    ```
+   ```shell
+   docker build -t docker.io/<username>/ubuntu2404:latest
+   ```
 
-    where `username` is the username you specified during registration on docker.io.
+   where `username` is the username you specified during registration on [docker.com](https://www.docker.com/).
 
 1. Push the created image to the container registry:
 
-    ```shell
-    docker push docker.io/<username>/ubuntu2204:latest
-    ```
+   ```shell
+   docker push docker.io/<username>/ubuntu2204:latest
+   ```
 
 1. To use this image, create the following resource:
 
-    ```yaml
-    d8 k apply -f - <<EOF
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: ubuntu-2204
-    spec:
-      dataSource:
-        type: ContainerImage
-        containerImage:
-          image: docker.io/<username>/ubuntu2204:latest
-    EOF
-    ```
+   ```console
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: ubuntu-2404
+   spec:
+     dataSource:
+       type: ContainerImage
+       containerImage:
+         image: docker.io/<username>/ubuntu2404:latest
+   EOF
+   ```
 
 How to create an image from the container registry in the web interface:
 
@@ -477,7 +480,7 @@ How to create an image from the container registry in the web interface:
 
 To upload an image from the command line, first create the resource as shown in the example `ClusterVirtualImage`:
 
-```yaml
+```console
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: ClusterVirtualImage
@@ -499,7 +502,7 @@ d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 
 Example output:
 
-```text
+```json
 {
   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
   "inCluster":"http://10.222.165.239/upload"
@@ -589,5 +592,5 @@ Images eligible for cleanup:
 KIND                   NAMESPACE            NAME
 ClusterVirtualImage                         debian-12
 VirtualDisk            default              debian-10-root
-VirtualImage           default              ubuntu-2204
+VirtualImage           default              ubuntu-2404
 ```

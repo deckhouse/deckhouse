@@ -54,11 +54,14 @@ spec:
 
 Пример отсутствия конфликтов при применении ModulePullOverride:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get modulepulloverrides.deckhouse.io 
 NAME      UPDATED   MESSAGE   ROLLBACK
 example1  10s       Ready     false
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Требования к модулю:
 
@@ -66,51 +69,66 @@ example1  10s       Ready     false
 
   Пример:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME      UPDATED   MESSAGE                ROLLBACK
   example1  10s       The module not found   false
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 * Модуль не должен быть встроенным модулем Deckhouse, иначе сообщение у ModulePullOverride будет *The module is embedded*.
 
   Пример:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME           UPDATED  MESSAGE                  ROLLBACK
   ingress-nginx  10s      The module is embedded   false
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 * Модуль должен быть включен, иначе сообщение у ModulePullOverride будет *The module disabled*.
 
   Пример:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME     UPDATED   MESSAGE               ROLLBACK
   example  7s        The module disabled   false
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 * Модуль должен иметь источник, иначе сообщение у ModulePullOverride будет *The module does not have an active source*.
   
   Пример:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME       UPDATED   MESSAGE                                     ROLLBACK
   example    12s       The module does not have an active source   false
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 * Источник модуля должен существовать, иначе сообщение у ModulePullOverride будет *The source not found*.
 
   Пример:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME       UPDATED   MESSAGE                 ROLLBACK
   example    12s       The source not found    false
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 Чтобы обновить модуль не дожидаясь начала следующего цикла обновления, можно выполнить следующую команду:
 

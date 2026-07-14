@@ -18,14 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/name212/govalue"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 // todo it is ugly solution because we validate some filds in providers only in bootstrap
@@ -41,7 +38,6 @@ type PreflightChecks struct {
 }
 
 type PreparatorProviderParams struct {
-	logger          log.Logger
 	phase           DhctlPhase
 	PreflightChecks PreflightChecks
 }
@@ -58,33 +54,22 @@ func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
 	p.PreflightChecks = checks
 }
 
-func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
-	return PreparatorProviderParams{
-		logger: logger,
-	}
+func NewPreparatorProviderParams() PreparatorProviderParams {
+	return PreparatorProviderParams{}
 }
 
 func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
-	return PreparatorProviderParams{
-		logger: log.NewSilentLogger(),
-	}
+	return PreparatorProviderParams{}
 }
 
-// looger can be nil if nil will use silent logger
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
-	logger := params.logger
-
-	if govalue.IsNil(logger) {
-		logger = log.NewSilentLogger()
-	}
-
 	return func(provider string) config.MetaConfigPreparator {
 		switch provider {
 		// static cluster
 		case "":
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
-			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
+			yandexPreparator := yandex.NewMetaConfigPreparator(true)
 			if params.phase == DhctlPhaseBootstrap {
 				yandexPreparator.EnableValidateWithNATLayout()
 			}
@@ -93,9 +78,9 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
 				PrepareMetaConfig:     true,
 				ValidateClusterPrefix: true,
-			}, logger)
+			})
 		case dvp.ProviderName:
-			prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
+			prep := dvp.NewMetaConfigPreparator()
 			if params.phase != DhctlPhaseBootstrap {
 				return prep
 			}

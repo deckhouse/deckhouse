@@ -13,10 +13,10 @@
   {{ end }}
 */}}
 
-{{- $modulesList := .Site.Data.modules.channels -}}
-{{- $channelsInfo := .Site.Data.channels.info -}}
-{{- $modulesEditions := .Site.Data.modules_all -}}
-{{- $lang := .Site.Language.Lang -}}
+{{- $modulesList := hugo.Data.modules.channels -}}
+{{- $channelsInfo := hugo.Data.channels.info -}}
+{{- $modulesEditions := hugo.Data.modules_all -}}
+{{- $lang := site.Language.Lang -}}
 {{- $modulesData := slice -}}
 
 {{- range $module, $data := $modulesList -}}

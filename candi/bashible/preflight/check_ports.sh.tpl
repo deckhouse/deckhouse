@@ -22,7 +22,7 @@ function check_python() {
         return 0
       fi
     done
-    echo "Python not found, exiting..."
+    echo "Python not found"
     return 1
 }
 
@@ -67,7 +67,7 @@ function check_port() {
     try_connect $1
 
     if [ $? -eq 0 ]; then
-        echo -n "it is already open "; return 1
+        echo -n "port is already open "; return 1
     fi
 
     start_http_server $1 > /dev/null 2>&1 &
@@ -93,7 +93,7 @@ check_python
 echo -n "Checking if kubernetes API port is open (6443) "
 check_port 6443
 if [ $? -ne 0 ]; then
-    echo "Port 6443 is closed, but required for Kubernetes API server to function. Probably control-plane node is protected by firewall rules or another software (like antivirus) and blocks connections."
+    echo "Port 6443 is closed but required for the Kubernetes API server. The control-plane node is likely behind firewall rules or another tool (such as an antivirus) that blocks incoming connections."
     has_error=true
 fi
 echo "SUCCESS"
@@ -101,13 +101,13 @@ echo "SUCCESS"
 echo -n "Checking if Etcd ports are available (2379, 2380) "
 check_port 2379
 if [ $? -ne 0 ]; then
-    echo "Port 2379 is closed, but required for Etcd clients to communicate with it. Probably control-plane node is protected by firewall rules or another software (like antivirus) and blocks connections."
+    echo "Port 2379 is closed but required for etcd client connections. The control-plane node is likely behind firewall rules or another tool (such as an antivirus) that blocks incoming connections."
     has_error=true
 fi
 
 check_port 2380
 if [ $? -ne 0 ]; then
-    echo "Port 2380 is closed, but required for Etcd database server peers communications. Probably control-plane node is protected by firewall rules or another software (like antivirus) and blocks connections."
+    echo "Port 2380 is closed but required for etcd peer communication. The control-plane node is likely behind firewall rules or another tool (such as an antivirus) that blocks incoming connections."
     has_error=true
 fi
 echo "SUCCESS"

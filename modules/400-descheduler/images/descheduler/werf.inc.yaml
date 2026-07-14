@@ -46,16 +46,13 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
 import:
-  - image: {{ .ModuleName }}/build-artifact
-    add: /descheduler
-    to: /descheduler
-    before: setup
-git:
+- image: {{ .ModuleName }}/build-artifact
+  add: /descheduler
+  to: /descheduler
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/descheduler"]
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
-
-

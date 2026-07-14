@@ -19,10 +19,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestVersionBackwardCompatibility(t *testing.T) {
-	newStore := newSchemaStore(nil, []string{"/tmp"})
+	newStore := newSchemaStore(&options.New().Global, []string{"/tmp"})
 
 	schema := []byte(`
 kind: ClusterConfiguration
@@ -47,24 +49,22 @@ apiVersions:
 	err := newStore.upload(schema)
 	require.NoError(t, err)
 
-	oldDoc := []byte(`
+	_, err = newStore.Validate(new([]byte(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
 clusterType: Cloud
-`)
-	newDoc := []byte(`
+`)))
+	assert.NoError(t, err)
+	_, err = newStore.Validate(new([]byte(`
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
-`)
-	_, err = newStore.Validate(&oldDoc)
-	assert.NoError(t, err)
-	_, err = newStore.Validate(&newDoc)
+`)))
 	assert.NoError(t, err)
 }
 
 func TestSchemaPattern(t *testing.T) {
-	newStore := newSchemaStore(nil, []string{"/tmp"})
+	newStore := newSchemaStore(&options.New().Global, []string{"/tmp"})
 
 	schema := []byte(`
 kind: ClusterConfiguration
@@ -87,12 +87,11 @@ apiVersions:
 	err := newStore.upload(schema)
 	require.NoError(t, err)
 
-	errorDoc := []byte(`
+	_, err = newStore.Validate(new([]byte(`
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 jsonObject: "error"
-`)
-	_, err = newStore.Validate(&errorDoc)
+`)))
 	assert.Error(t, err)
 	assert.Equal(t, err.Error(), `Document validation failed:
 ---
@@ -107,18 +106,16 @@ jsonObject: "error"
 
 `)
 
-	okDoc := []byte(`
+	_, err = newStore.Validate(new([]byte(`
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 jsonObject: " {}"
-`)
-
-	_, err = newStore.Validate(&okDoc)
+`)))
 	assert.NoError(t, err)
 }
 
 func TestSchemaStore(t *testing.T) {
-	newStore := newSchemaStore(nil, []string{"/tmp"})
+	newStore := newSchemaStore(&options.New().Global, []string{"/tmp"})
 
 	err := newStore.upload([]byte(`
 kind: TestKind
@@ -197,9 +194,7 @@ one: "1"
 	}
 
 	for _, tc := range tests {
-		content := []byte(tc.content)
-
-		_, err := newStore.Validate(&content)
+		_, err := newStore.Validate(new([]byte(tc.content)))
 		if err != nil && !tc.wantErr {
 			t.Errorf("%s: %v", tc.name, err)
 		}

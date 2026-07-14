@@ -5,8 +5,8 @@ controlPlaneManagerEnabled: true
 deschedulerEnabled: false
 kubeDnsEnabled: true
 kubeProxyEnabled: true
-lokiEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
+monitoringSecurityEnabled: true
 nodeLocalDnsEnabled: true
 nodeManagerEnabled: true
 operatorTrivyEnabled: true

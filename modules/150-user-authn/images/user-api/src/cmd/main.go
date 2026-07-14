@@ -37,6 +37,7 @@ import (
 type Config struct {
 	ListenAddress string
 	DexURL        string
+	IssuerURL     string
 	TLSCertFile   string
 	TLSKeyFile    string
 }
@@ -54,7 +55,8 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().StringVar(&cfg.ListenAddress, "listen", ":8443", "Listen address and port")
-	rootCmd.PersistentFlags().StringVar(&cfg.DexURL, "dex-url", "https://dex.d8-user-authn.svc", "Dex OIDC issuer URL")
+	rootCmd.PersistentFlags().StringVar(&cfg.DexURL, "dex-url", "https://dex.d8-user-authn", "In-cluster Dex address for OIDC discovery (reachable in closed-loop clusters)")
+	rootCmd.PersistentFlags().StringVar(&cfg.IssuerURL, "issuer-url", "", "Public Dex issuer URL advertised in token claims (defaults to --dex-url if empty)")
 	rootCmd.PersistentFlags().StringVar(&cfg.TLSCertFile, "tls-cert-file", "", "TLS certificate file path")
 	rootCmd.PersistentFlags().StringVar(&cfg.TLSKeyFile, "tls-key-file", "", "TLS private key file path")
 
@@ -73,12 +75,13 @@ func run(cfg *Config) error {
 	slog.Info("Starting user-api service",
 		"listen", cfg.ListenAddress,
 		"dex_url", cfg.DexURL,
+		"issuer_url", cfg.IssuerURL,
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	oidcVerifier, err := auth.NewOIDCVerifier(ctx, cfg.DexURL)
+	oidcVerifier, err := auth.NewOIDCVerifier(ctx, cfg.DexURL, cfg.IssuerURL)
 	if err != nil {
 		return fmt.Errorf("failed to create OIDC verifier: %w", err)
 	}

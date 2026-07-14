@@ -1,0 +1,234 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: grantableclusterresourcereferences.multitenancy.deckhouse.io
+spec:
+  group: multitenancy.deckhouse.io
+  names:
+    kind: GrantableClusterResourceReference
+    listKind: GrantableClusterResourceReferenceList
+    plural: grantableclusterresourcereferences
+    shortNames:
+    - gcrr
+    singular: grantableclusterresourcereference
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.grantableClusterResourceName
+      name: Resource
+      type: string
+    - jsonPath: .status.bound
+      name: Bound
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: GrantableClusterResourceReference registers a validation/defaulting
+          path for a granted cluster resource.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of GrantableClusterResourceReference.
+            properties:
+              fieldPaths:
+                description: |-
+                  FieldPaths are the version-scoped locations of the granted name, with per-entry guard and
+                  defaulting. At least one entry is required; provide an unscoped entry as the fallback.
+                items:
+                  description: |-
+                    FieldPath is one version-scoped location of the granted name within the usage object, together with
+                    its guard and defaulting behaviour. The entry whose APIGroups/APIVersions match the request's GVK
+                    wins (a scoped entry beats an unscoped one); an entry with empty scope is the fallback.
+                  properties:
+                    apiGroups:
+                      description: APIGroups restricts this entry to these groups
+                        (empty = any matched group).
+                      items:
+                        type: string
+                      type: array
+                    apiVersions:
+                      description: APIVersions restricts this entry to these versions
+                        (empty = any matched version).
+                      items:
+                        type: string
+                      type: array
+                    defaulting:
+                      default: None
+                      description: 'Defaulting is the defaulting behaviour at this
+                        path: None (validate only), FillEmpty, or Coerce.'
+                      enum:
+                      - None
+                      - FillEmpty
+                      - Coerce
+                      type: string
+                    match:
+                      description: Match guards this entry; it applies only when the
+                        predicate holds on the object.
+                      properties:
+                        equals:
+                          description: Equals matches when the value equals this string.
+                          type: string
+                        fieldPath:
+                          description: FieldPath is the JSONPath to the value tested
+                            by the predicate.
+                          type: string
+                        in:
+                          description: In matches when the value is one of these strings.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - fieldPath
+                      type: object
+                    path:
+                      description: |-
+                        Path is the JSONPath to the granted object's name (a string). May target an annotation, e.g.
+                        $.metadata.annotations['cert-manager.io/cluster-issuer'].
+                      type: string
+                  required:
+                  - path
+                  type: object
+                minItems: 1
+                type: array
+              grantableClusterResourceName:
+                description: GrantableClusterResourceName is the GrantableClusterResourceDefinition
+                  this path validates against.
+                type: string
+              rule:
+                description: Rule matches which usage objects this reference applies
+                  to (groups/versions/resources).
+                properties:
+                  apiGroups:
+                    description: APIGroups are the API groups of the usage object
+                      (e.g. networking.k8s.io, extensions); "*" = any.
+                    items:
+                      type: string
+                    type: array
+                  apiVersions:
+                    description: APIVersions are the versions to match (e.g. v1, v1beta1);
+                      "*" = any.
+                    items:
+                      type: string
+                    type: array
+                  resources:
+                    description: Resources are the plural names of the usage object
+                      (e.g. ingresses).
+                    items:
+                      type: string
+                    type: array
+                required:
+                - apiGroups
+                - apiVersions
+                - resources
+                type: object
+            required:
+            - fieldPaths
+            - grantableClusterResourceName
+            - rule
+            type: object
+          status:
+            description: status defines the observed state of GrantableClusterResourceReference.
+            properties:
+              bound:
+                description: Bound is true when GrantableClusterResourceName resolves
+                  to an existing definition.
+                type: boolean
+              conditions:
+                description: 'Conditions represent the current state of the reference
+                  (notably Bound: Resolved/UnknownResource).'
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                  by the controller.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

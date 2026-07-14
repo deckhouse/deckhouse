@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	toolsWatch "k8s.io/client-go/tools/watch"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -41,16 +42,24 @@ import (
 type Watcher struct {
 	k8sClient                     *kubernetes.Clientset
 	k8sDynamicClient              dynamic.Interface
+	packageRepositoryClient       ctrlclient.Client
 	registrySecretDiscoveryPeriod time.Duration
 	sync.RWMutex
 	registryClientConfigs map[string]*registry.ClientConfig
 	logger                *log.Logger
 }
 
-func NewWatcher(k8sClient *kubernetes.Clientset, k8sDynamicClient dynamic.Interface, registrySecretDiscoveryPeriod time.Duration, logger *log.Logger) *Watcher {
+func NewWatcher(
+	k8sClient *kubernetes.Clientset,
+	k8sDynamicClient dynamic.Interface,
+	packageRepositoryClient ctrlclient.Client,
+	registrySecretDiscoveryPeriod time.Duration,
+	logger *log.Logger,
+) *Watcher {
 	return &Watcher{
 		k8sClient:                     k8sClient,
 		k8sDynamicClient:              k8sDynamicClient,
+		packageRepositoryClient:       packageRepositoryClient,
 		registrySecretDiscoveryPeriod: registrySecretDiscoveryPeriod,
 		registryClientConfigs:         make(map[string]*registry.ClientConfig),
 		logger:                        logger,
@@ -97,7 +106,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 		})
 	}
 
-	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	secretWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch secrets: %v", err)
 		return
@@ -128,7 +137,6 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 
 	switch secretEvent.Type {
 	case watch.Added, watch.Modified:
-
 		var input registrySecretData
 
 		input.FromSecretData(secret.Data)
@@ -138,15 +146,40 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 			return err
 		}
 
+		repoHost := strings.Split(registryConfig.Repository, "/")[0]
+
 		w.Lock()
-		w.logger.Info("added registry config for main repo")
+		w.logger.Info(
+			"added registry config for main repo",
+			slog.String("repo", registryConfig.Repository),
+			slog.String("repo_host", repoHost),
+		)
 		w.registryClientConfigs[registry.DefaultRepository] = registryConfig
+		w.registryClientConfigs[registryConfig.Repository] = registryConfig
+		w.registryClientConfigs[repoHost] = registryConfig
 		w.Unlock()
 
 	case watch.Deleted:
+		var input registrySecretData
+
+		input.FromSecretData(secret.Data)
+
+		registryConfig, err := input.toClientConfig()
+		if err != nil {
+			return err
+		}
+
+		repoHost := strings.Split(registryConfig.Repository, "/")[0]
+
 		w.Lock()
-		w.logger.Info("deleted registry config for main repo")
+		w.logger.Info(
+			"deleted registry config for main repo",
+			slog.String("repo", registryConfig.Repository),
+			slog.String("repo_host", repoHost),
+		)
 		delete(w.registryClientConfigs, registry.DefaultRepository)
+		delete(w.registryClientConfigs, registryConfig.Repository)
+		delete(w.registryClientConfigs, repoHost)
 		w.Unlock()
 	}
 
@@ -159,7 +192,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{})
 	}
 
-	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch module sources: %v", err)
 		return
@@ -193,7 +226,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
 
-	w.logger.Info("event from module source received", slog.String("event", string(moduleSourceEvent.Type)), slog.String("module source", moduleSource.Name))
+	w.logger.Info("event from module source received", slog.String("event", string(moduleSourceEvent.Type)), slog.String("module_source", moduleSource.Name))
 
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:

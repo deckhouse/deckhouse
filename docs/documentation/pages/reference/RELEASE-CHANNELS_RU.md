@@ -39,18 +39,19 @@ Deckhouse использует **пять каналов обновлений**.
 {%- assign channels_sorted_reverse = site.data.releases.channels | sort: "stability" | reverse  %}
 
 <div class="page__container page_releases" markdown="0">
-<div class="releases__menu">
+<div class="tabs-block">
+   <ul class="tabs__container tabs__container--title">
 {%- for channel in channels_sorted_reverse %}
-    <div class="releases__menu-item releases__menu--channel--{{ channel.name }}">
-        <div class="releases__menu-item-header">
-            <div class="releases__menu-item-title releases__menu--channel--{{ channel.name }}">
-                {{- channel.title -}}
-            </div>
-        </div>
-        <div class="releases__menu-item-description">
-            {{ channel.description[page.lang] }}
-        </div>
-    </div>
+      <li class="tabs__item tabs__item--title tabs__item--channel--{{ channel.name }}" data-index="{{ forloop.index }}">{{ channel.title }}</li>
 {%- endfor %}
+   </ul>
+
+   <ul class="tabs__container tabs__container--descr">
+{%- for channel in channels_sorted_reverse %}
+      <li class="tabs__item tabs__item--descr tabs__item--channel--{{ channel.name }}" data-index="{{ forloop.index }}">
+         {{ channel.description[page.lang] }}
+      </li>
+{%- endfor %}
+   </ul>
 </div>
 </div>

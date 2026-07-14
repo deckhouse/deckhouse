@@ -19,7 +19,6 @@ CSI-драйвер `csi-nfs` — это реализация стандарта 
 
 Архитектура CSI-драйвера `csi-nfs` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура CSI-драйвера csi-nfs](../../../images/architecture/storage/c4-l2-csi-driver-nfs.ru.png)
 
 ## Компоненты драйвера
@@ -56,9 +55,11 @@ CSI-драйвер `csi-nfs` состоит из следующих компон
 
       * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
 
-1. **Csi-node** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
+1. **Csi-node** (DaemonSet) — Node Plugin, работающий на узлах кластера с лейблом `storage.deckhouse.io/csi-nfs-node` и отвечающий за локальное монтирование и размонтирование томов.
 
-   > **Внимание.** У плагина есть привилегированный доступ к файловой системе каждого узла. В Linux для этого требуется capability `CAP_SYS_ADMIN`. Это необходимо для выполнения операций монтирования и работы с блочными устройствами.
+   {% alert level="warning" %}
+   У плагина есть привилегированный доступ к файловой системе каждого узла. В Linux для этого требуется capability `CAP_SYS_ADMIN`. Это необходимо для выполнения операций монтирования и работы с блочными устройствами.
+   {% endalert %}
 
    Состоит из следующих контейнеров:
 

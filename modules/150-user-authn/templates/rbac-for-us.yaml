@@ -10,6 +10,7 @@ rules:
   resources:
   - dexauthenticators
   - dexclients
+  - dexproviderchecks
   - dexproviders
   - groups
   - useroperations

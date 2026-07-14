@@ -26,18 +26,13 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
-	// ApplicationConditionTypeProcessed changes only by application controller
-	ApplicationConditionTypeInstalled                    = "Installed"
-	ApplicationConditionTypeReady                        = "Ready"
-	ApplicationConditionReasonReconciled                 = "Reconciled"
-	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
-	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"
-	ApplicationConditionReasonVersionIsDraft             = "VersionIsDraft"
-	ApplicationConditionReasonVersionSpecIsCorrupted     = "VersionSpecIsCorrupted"
-
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
 
 	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
+
+	// ApplicationAnnotationEndpoint marks an Ingress in the application chart
+	// as an application endpoint; its hosts and paths are reflected in status.urls.
+	ApplicationAnnotationEndpoint = "packages.deckhouse.io/application-endpoint"
 )
 
 var (
@@ -62,10 +57,13 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
-// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
-// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message"
+// +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
+// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
+// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
+// +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)."
+// +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)."
 
 // Application represents a namespace-scoped application instance.
 type Application struct {
@@ -75,27 +73,31 @@ type Application struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of an Application.
+	// Defines the application configuration.
 	Spec ApplicationSpec `json:"spec"`
 
-	// Status of an Application.
+	// Application status.
 	Status ApplicationStatus `json:"status,omitempty"`
 }
 
 type ApplicationSpec struct {
 	// Name of the application package to install.
+	// +crd-enricher:deckhouse:documentation:examples=console
 	PackageName string `json:"packageName"`
 
 	// Name of the repository where the package is located.
 	// If not specified, the default repository is used.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
 	// Version of the application package to install.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 
 	// Release channel for the application package.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=stable
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
 	// Configuration settings for the application.
@@ -105,9 +107,23 @@ type ApplicationSpec struct {
 }
 
 type ApplicationStatus struct {
+	// Summary aggregates the high-level user-facing state, message and
+	// resolution hint for the application. The controller always populates it
+	// on reconcile — every application maps to exactly one lifecycle state — so
+	// it is the single source of truth for the UI; clients should not re-derive
+	// these values from the conditions. The pointer leaves it absent only
+	// before the first status computation.
+	// +optional
+	Summary *ApplicationStatusSummary `json:"summary,omitempty"`
+
 	// Information about the currently installed version.
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
+
+	// URLs of application endpoints, collected from Ingress resources of the
+	// application chart annotated with `packages.deckhouse.io/is-application-endpoint`.
+	// +optional
+	URLs []ApplicationStatusURL `json:"urls,omitempty"`
 
 	// Nelm tracking.
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -120,13 +136,48 @@ type ApplicationStatus struct {
 	// +optional
 	LastAppliedConfiguration runtime.RawExtension `json:"lastAppliedConfiguration"`
 
-	// Conditions represent the latest available observations of the application's state.
+	// Conditions reflecting the latest observations of the application state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+}
+
+// ApplicationStatusSummary aggregates the high-level lifecycle state, message
+// and resolution hint for the application. It is consumed by the UI as a single
+// source of truth so that the frontend does not have to re-implement the state
+// machine on top of conditions.
+type ApplicationStatusSummary struct {
+	// State is the high-level lifecycle state observed for the application.
+	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended]
+	State string `json:"state,omitempty"`
+
+	// Message is a human-readable description of the current state.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Tip is a human-readable instruction on how to resolve the current
+	// state. Empty when no action is required.
+	// +optional
+	Tip string `json:"tip,omitempty"`
+}
+
+// ApplicationStatusURL is a single application endpoint built from an Ingress
+// of the application chart.
+type ApplicationStatusURL struct {
+	// URL of the application endpoint.
+	URL string `json:"url"`
+
+	// Description of the endpoint, taken from the value of the
+	// `packages.deckhouse.io/is-application-endpoint` annotation.
+	//
+	// Empty when the annotation value is "true".
+	// +optional
+	Description string `json:"description,omitempty"`
 }
 
 type ApplicationStatusVersion struct {

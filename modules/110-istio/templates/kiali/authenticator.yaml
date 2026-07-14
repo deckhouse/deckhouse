@@ -20,6 +20,7 @@ spec:
     {{- end }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  signOutURL: "/logout"
   sendAuthorizationHeader: true
   {{- with .Values.istio.auth.allowedUserEmails }}
   allowedEmails:

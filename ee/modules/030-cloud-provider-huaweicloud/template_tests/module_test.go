@@ -41,7 +41,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -52,7 +52,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.31.0
+    kubernetesVersion: 1.32.0
     clusterUUID: cluster
 `
 
@@ -266,7 +266,9 @@ var _ = Describe("Module :: cloud-provider-huaweicloud :: helm template ::", fun
 			Expect(caphcDeployment.Exists()).To(BeTrue())
 			Expect(caphcDeployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("caphc-controller-manager"))
 			Expect(caphcDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
-- --leader-elect`))
+- --leader-elect
+- --metrics-bind-address=:8080
+- --metrics-secure=false`))
 			Expect(caphcDeployment.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(`
 - name: HUAWEICLOUD_CLOUD
   valueFrom:

@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -67,11 +67,11 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
@@ -92,15 +92,15 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 			c := input.NewConfirmation()
 
-			approve := c.WithMessage(fmt.Sprintf("Do you want to release lock:\n\n%s", info)).Ask()
+			approve := c.WithMessage(fmt.Sprintf("Do you want to release the lock:\n\n%s", info)).Ask()
 			if !approve {
-				return fmt.Errorf("Don't confirm release lock")
+				return fmt.Errorf("Lock release was not confirmed")
 			}
 
 			return nil
 		}
 
-		cnf := lock.GetLockLeaseConfig("lock-releaser", opts.SSH.User)
+		cnf := lock.GetLockLeaseConfig(ctx, "lock-releaser", opts.SSH.User)
 		return lease.RemoveLease(ctx, kubeCl, cnf, confirm)
 	})
 }

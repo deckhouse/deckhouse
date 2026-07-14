@@ -1,4 +1,4 @@
-{{- $version := "v0.6.1" }}
+{{- $version := "v0.6.2" }}
 {{- $version_common := "v0.8.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -30,7 +30,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src

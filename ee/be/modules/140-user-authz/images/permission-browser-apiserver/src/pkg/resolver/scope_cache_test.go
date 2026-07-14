@@ -164,14 +164,13 @@ func TestRefresh_NilDiscovery(t *testing.T) {
 	assert.True(t, cache.IsNamespaced("", "pods"))
 }
 
-// TestRefresh_SkipsSubresources tests that subresources are not included in the cache
-func TestRefresh_SkipsSubresources(t *testing.T) {
+// TestRefresh_IncludesSubresources tests that subresources participate in RBAC wildcard matching.
+func TestRefresh_IncludesSubresources(t *testing.T) {
 	client := newMockDiscovery(testAPIResources(), nil)
 	cache := NewResourceScopeCache(client)
 
-	// "pods/status" should not be in the cache
-	assert.False(t, cache.IsNamespaced("", "pods/status"),
-		"subresources should not be in the cache")
+	assert.True(t, cache.IsNamespaced("", "pods/status"),
+		"namespaced subresources must be retained for exact RBAC matching")
 }
 
 // TestStartRefreshLoop_StopsOnCancel tests that the refresh loop stops when stopCh is closed
@@ -210,10 +209,10 @@ func TestStartRefreshLoop_BootstrapRefreshesBeforeRegularInterval(t *testing.T) 
 
 	// Ensure we don't wait for refreshInterval (2s) while the cache is empty.
 	cache := &ResourceScopeCache{
-		discoveryClient:    client,
-		refreshInterval:    2 * time.Second,
-		bootstrapInterval:  5 * time.Millisecond,
-		scopeMap:           make(map[string]bool),
+		discoveryClient:   client,
+		refreshInterval:   2 * time.Second,
+		bootstrapInterval: 5 * time.Millisecond,
+		scopeMap:          make(map[string]bool),
 	}
 
 	stopCh := make(chan struct{})

@@ -15,16 +15,17 @@
 package bootstrap
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -51,25 +52,21 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
-
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
 
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
+
+		bootstraper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
-			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			ResetInitialState:      false,
-			DirectoryConfig:        opts.DirConfig(),
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
 			Options:                opts,

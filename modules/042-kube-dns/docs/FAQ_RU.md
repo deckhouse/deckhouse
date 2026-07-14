@@ -21,7 +21,7 @@ search: DNS, domain, домен, clusterdomain
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 3
      enabled: true
      settings:
        apiserver:
@@ -92,7 +92,7 @@ d8 k delete pods --all-namespaces --all
 
 {% alert level="warning" %}
 
-**Важно.** Если вы используете модуль [istio](../../modules/istio/), после смены `clusterDomain` обязательно потребуется рестарт всех прикладных подов под управлением Istio.
+**Важно.** Если вы используете модуль [istio](/modules/istio/), после смены `clusterDomain` обязательно потребуется рестарт всех прикладных подов под управлением Istio.
 
 {% endalert %}
 

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# bashible: parallel-group=light-prep
+
 if [[ -d /etc/apt/apt.conf.d ]]; then
   if [[ -f /etc/apt/apt.conf.d/99timeout ]]; then
     exit 0

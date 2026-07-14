@@ -68,6 +68,12 @@ internal:
     datastoreURL: ds:///vmfs/volumes/hash1/
     path: /my/ds/path/mydsname1
     zones: ["zonea", "zoneb"]
+  - name: mydsname1-gold-policy
+    datastoreType: Datastore
+    datastoreURL: ds:///vmfs/volumes/hash1/
+    path: /my/ds/path/mydsname1
+    storagePolicyName: Gold Policy
+    zones: ["zonea", "zoneb"]
   - name: mydsname2
     datastoreType: Datastore
     datastoreURL: ds:///vmfs/volumes/hash2/
@@ -161,7 +167,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesA)
 			f.HelmRender()
@@ -205,11 +211,16 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 			// user story #3
 			scMydsname1 := f.KubernetesGlobalResource("StorageClass", "mydsname1")
+			scMydsname1GoldPolicy := f.KubernetesGlobalResource("StorageClass", "mydsname1-gold-policy")
 			scMydsname2 := f.KubernetesGlobalResource("StorageClass", "mydsname2")
 
 			Expect(scMydsname1.Exists()).To(BeTrue())
+			Expect(scMydsname1GoldPolicy.Exists()).To(BeTrue())
 			Expect(scMydsname2.Exists()).To(BeTrue())
 
+			Expect(scMydsname1.Field("parameters.DatastoreURL").String()).To(Equal("ds:///vmfs/volumes/hash1/"))
+			Expect(scMydsname1GoldPolicy.Field("parameters.DatastoreURL").String()).To(Equal("ds:///vmfs/volumes/hash1/"))
+			Expect(scMydsname1GoldPolicy.Field("parameters.StoragePolicyName").String()).To(Equal("Gold Policy"))
 			Expect(scMydsname2.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 
 			Expect(cddDeployment.Exists()).To(BeTrue())
@@ -220,7 +231,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesB)
 			f.HelmRender()
@@ -228,7 +239,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("csiVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -244,7 +255,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesB)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)

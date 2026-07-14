@@ -16,20 +16,22 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/name212/govalue"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -66,10 +68,9 @@ type ConvergeExporter struct {
 	GaugeMetrics    map[string]*prometheus.GaugeVec
 	CounterMetrics  map[string]*prometheus.CounterVec
 
-	tmpDir      string
-	downloadDir string
-	logger      log.Logger
-	isDebug     bool
+	tmpDir        string
+	globalOptions *options.GlobalOptions
+	isDebug       bool
 }
 
 var (
@@ -95,13 +96,11 @@ var (
 )
 
 type ExporterParams struct {
-	Address     string
-	Path        string
-	Interval    time.Duration
-	TmpDir      string
-	DownloadDir string
-	Logger      log.Logger
-	IsDebug     bool
+	Address       string
+	Path          string
+	Interval      time.Duration
+	GlobalOptions *options.GlobalOptions
+	IsDebug       bool
 
 	// KubeCl is the in-cluster API client. The caller builds it via
 	// providerinitializer.GetProviders / kubeProvider.Client(ctx) just like
@@ -110,12 +109,7 @@ type ExporterParams struct {
 }
 
 func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
-	logger := params.Logger
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
-	}
-
-	infraContext := infrastructure.NewContext(logger).WithDebug(params.IsDebug)
+	infraContext := infrastructure.NewContext().WithDebug(params.IsDebug)
 	return &ConvergeExporter{
 		MetricsPath:           params.Path,
 		ListenAddress:         params.Address,
@@ -126,9 +120,8 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		OneGaugeMetrics:       make(map[string]prometheus.Gauge),
 		GaugeMetrics:          make(map[string]*prometheus.GaugeVec),
 		CounterMetrics:        make(map[string]*prometheus.CounterVec),
-		tmpDir:                params.TmpDir,
-		downloadDir:           params.DownloadDir,
-		logger:                logger,
+		tmpDir:                params.GlobalOptions.TmpDir,
+		globalOptions:         params.GlobalOptions,
 		isDebug:               params.IsDebug,
 	}
 }
@@ -214,10 +207,10 @@ func (c *ConvergeExporter) registerMetrics() {
 //
 //nolint:gocritic
 func (c *ConvergeExporter) Start(ctx context.Context) {
-	log.InfoLn("Start exporter")
-	log.InfoLn("Address: ", c.ListenAddress)
-	log.InfoLn("Metrics path: ", c.MetricsPath)
-	log.InfoLn("Checks interval: ", c.CheckInterval)
+	dhlog.FromContext(ctx).InfoContext(ctx, "Starting exporter")
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint("Address: ", c.ListenAddress))
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint("Metrics path: ", c.MetricsPath))
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint("Checks interval: ", c.CheckInterval))
 	c.registerMetrics()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -238,7 +231,7 @@ func (c *ConvergeExporter) Start(ctx context.Context) {
 	})
 
 	if err := http.ListenAndServe(c.ListenAddress, nil); err != nil {
-		log.ErrorF("Error starting HTTP server: %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Error starting HTTP server: %v", err))
 		cancel()
 		os.Exit(1)
 	}
@@ -250,10 +243,10 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 		RemoveTombStone: true,
 		TmpDir:          c.tmpDir,
 		DefaultTmpDir:   c.tmpDir, // do not remove root tmp dir
-		LoggerProvider:  log.SimpleLoggerProvider(c.logger),
 	})
 
-	c.recordStatistic(c.getStatistic(ctx, clearTmp))
+	statistic, hasTerraformState := c.getStatistic(ctx, clearTmp)
+	c.recordStatistic(ctx, statistic, hasTerraformState)
 
 	ticker := time.NewTicker(c.CheckInterval)
 	defer ticker.Stop()
@@ -261,9 +254,10 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			c.recordStatistic(c.getStatistic(ctx, clearTmp))
+			statistic, hasTerraformState := c.getStatistic(ctx, clearTmp)
+			c.recordStatistic(ctx, statistic, hasTerraformState)
 		case <-ctx.Done():
-			log.ErrorLn("Stop exporter...")
+			dhlog.FromContext(ctx).ErrorContext(ctx, "Stopping exporter...")
 			return
 		}
 	}
@@ -274,34 +268,33 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 		ctx,
 		c.kubeCl,
 		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(c.logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		),
-		nil,
+		c.globalOptions,
 	)
 	if err != nil {
-		log.ErrorLn(err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 		return nil, false
 	}
 
 	metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, c.kubeCl)
 	if err != nil {
-		log.ErrorLn(err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 		return nil, false
 	}
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           c.tmpDir,
-		DownloadDir:      c.downloadDir,
+		GlobalOptions:    c.globalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           c.logger,
 		IsDebug:          c.isDebug,
 	})
 
 	provider, err := providerGetter(ctx, metaConfig)
 	if err != nil {
-		log.ErrorLn(err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 		return nil, false
 	}
@@ -309,7 +302,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 	defer func() {
 		err := provider.Cleanup()
 		if err != nil {
-			c.logger.LogErrorF("Cannot cleanup provider after getting statistic: %v\n", err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot cleanup provider after getting statistic: %v", err))
 			c.CounterMetrics["errors"].WithLabelValues().Inc()
 		}
 
@@ -318,9 +311,9 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 
 	c.infrastructureContext.SetCloudProviderGetter(providerGetter)
 
-	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{}, true)
+	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{}, true, c.globalOptions)
 	if err != nil {
-		log.ErrorLn(err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 
 		// We still want to return collected statistic in case of error, because the error returned from
@@ -334,7 +327,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 	return statistic, hasTerraformState
 }
 
-func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerraformState bool) {
+func (c *ConvergeExporter) recordStatistic(ctx context.Context, statistic *check.Statistics, hasTerraformState bool) {
 	if statistic == nil {
 		return
 	}
@@ -348,12 +341,12 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 	for _, status := range clusterStatuses {
 		if status == statistic.Cluster.Status {
 			c.GaugeMetrics["cluster_status"].WithLabelValues(status).Set(1)
-			log.InfoF("Cluster status is %s\n", status)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cluster status is %s", status))
 			continue
 		}
 
 		c.GaugeMetrics["cluster_status"].WithLabelValues(status).Set(0)
-		log.InfoF("Cluster status: clean %s status\n", status)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cluster status: clearing %s status", status))
 	}
 
 	newExistedEntities := newPreviouslyExistedEntities()
@@ -363,11 +356,11 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 			if status == node.Status {
 				c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(1)
 				newExistedEntities.AddNode(node.Name, node.Group)
-				log.InfoF("%v/%v: node status is %v\n", node.Group, node.Name, status)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v/%v: node status is %v", node.Group, node.Name, status))
 				continue
 			}
 			c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(0)
-			log.InfoF("%v/%v: clean node status %v\n", node.Group, node.Name, status)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v/%v: clearing node status %v", node.Group, node.Name, status))
 		}
 	}
 
@@ -375,11 +368,11 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 		for _, status := range nodeTemplateStatuses {
 			if status == template.Status {
 				c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(1)
-				log.InfoF("%v: node template status is %v\n", template.Name, status)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v: node template status is %v", template.Name, status))
 				continue
 			}
 			c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(0)
-			log.InfoF("%v: node template clean status %v\n", template.Name, status)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v: clearing node template status %v", template.Name, status))
 		}
 	}
 
@@ -390,7 +383,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 		}
 		for _, status := range nodeStatuses {
 			c.GaugeMetrics["node_status"].WithLabelValues(status, nodeGroup, nodeName).Set(0)
-			log.InfoF("%v/%v: clean missing node status %v\n", nodeGroup, nodeName, status)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v/%v: clearing missing node status %v", nodeGroup, nodeName, status))
 		}
 	}
 

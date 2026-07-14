@@ -11,13 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-prep
 
-if ! systemctl list-unit-files unattended-upgrades.service >/dev/null 2>&1; then
-  exit 0
+# Neutralise unattended-upgrades without waiting on /var/lib/dpkg/lock: config off + mask + async stop. No-op on non-apt or non-systemd systems.
+units="unattended-upgrades.service apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service"
+
+if [ -d /etc/apt/apt.conf.d ]; then
+  bb-sync-file /etc/apt/apt.conf.d/20auto-upgrades - << "EOF"
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Unattended-Upgrade "0";
+EOF
 fi
 
-if systemctl is-enabled --quiet unattended-upgrades ; then
-  systemctl disable --now unattended-upgrades
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl mask --quiet $units >/dev/null 2>&1 || true
+  systemctl stop --no-block $units >/dev/null 2>&1 || true
 fi
-
-bb-apt-remove unattended-upgrades

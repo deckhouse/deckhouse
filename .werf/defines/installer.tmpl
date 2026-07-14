@@ -15,6 +15,10 @@
   - modules/*/openapi/conversions/*.yaml
   - global-hooks/openapi/config-values.yaml
   after: setup
+- image: dev-prebuild
+  add: /deckhouse/deckhouse-controller/crds/module-config.yaml
+  to: /deckhouse/crds/module-config.yaml
+  after: setup
 - image: images-digests
   add: /images_digests.json
   to: /deckhouse/candi/images_digests.json
@@ -224,9 +228,9 @@
 {{- $hasTargetAvailableModules := false -}}
 {{- range $_, $edition := $context.Editions }}
   {{- if eq $context.Env $edition.name }}
-    {{- if $edition.AvailableModules }}
+    {{- if $edition.availableModules }}
       {{- $hasTargetAvailableModules = true }}
-      {{- range $_, $moduleName := $edition.AvailableModules }}
+      {{- range $_, $moduleName := $edition.availableModules }}
         {{- $_ := set $targetAvailableModules $moduleName true }}
       {{- end }}
     {{- end }}
@@ -284,9 +288,9 @@
 {{- $hasTargetAvailableModules := false -}}
 {{- range $_, $edition := $context.Editions }}
   {{- if eq $context.Env $edition.name }}
-    {{- if $edition.AvailableModules }}
+    {{- if $edition.availableModules }}
       {{- $hasTargetAvailableModules = true }}
-      {{- range $_, $moduleName := $edition.AvailableModules }}
+      {{- range $_, $moduleName := $edition.availableModules }}
         {{- $_ := set $targetAvailableModules $moduleName true }}
       {{- end }}
     {{- end }}
@@ -345,6 +349,8 @@
 {{- $rootContext := $context.rootContext -}}
 
 shell:
+  install:
+  - set -e
   setup:
   - |
     ln -fs /dhctl /usr/bin/dhctl

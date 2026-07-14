@@ -1,4 +1,4 @@
-{{- if .Values.certManager.enableCAInjector }}
+{{- if .Values.certManager.internal.enableCAInjector }}
 ---
 apiVersion: v1
 kind: ServiceAccount

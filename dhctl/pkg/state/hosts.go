@@ -16,12 +16,12 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (
@@ -30,7 +30,7 @@ const (
 
 func SaveMasterHostsToCache(ctx context.Context, cache Cache, hosts map[string]string) {
 	if err := cache.SaveStruct(ctx, MasterHostsCacheKey, hosts); err != nil {
-		log.WarnF("Cannot save ssh hosts %v\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot save ssh hosts %v", err))
 	}
 }
 

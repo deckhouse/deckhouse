@@ -24,6 +24,21 @@ groups:
     description:
       en: Deckhouse controller webhook handler
       ru: Вебхук-обработчик контроллера Deckhouse
+  - ports: "4290"
+    protocol: TCP
+    description:
+      en: Node controller webhook handler
+      ru: Вебхук-обработчик node-контроллера
+  - ports: "4291"
+    protocol: TCP
+    description:
+      en: Node controller metrics
+      ru: Метрики node-контроллера
+  - ports: "4292"
+    protocol: TCP
+    description:
+      en: Node controller health probe
+      ru: Health-проба node-контроллера
 
 - group: MastersToNodes
   description:

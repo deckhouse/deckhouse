@@ -7,4 +7,12 @@ force_searchable: true
 
 {% include module-alerts.liquid %}
 
-Модуль не имеет настроек.
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}
+
+{% include module-conversion.liquid %}
+
+{% include module-settings.liquid %}

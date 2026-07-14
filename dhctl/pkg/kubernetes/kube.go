@@ -34,7 +34,7 @@ type LabelSelector struct {
 
 func GetLabelSelector(selectors []LabelSelector) (string, error) {
 	if len(selectors) == 0 {
-		return "", fmt.Errorf("Pass empty label selectors to GetLabelSelector")
+		return "", fmt.Errorf("empty label selectors passed to GetLabelSelector")
 	}
 
 	requirements := make([]labels.Requirement, 0, len(selectors))

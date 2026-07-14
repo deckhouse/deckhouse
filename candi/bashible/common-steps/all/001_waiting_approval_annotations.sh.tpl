@@ -17,7 +17,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   WAITING_APPROVAL_MAX_RETRIES=30
   WAITING_APPROVAL_RETRY_SLEEP_SEC=15
 
-  bb-log-info "Setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node..."
+  bb-log-info "Setting update.node.deckhouse.io/waiting-for-approval= annotation on this node"
   attempt=0
   until
     node_data="$(
@@ -32,18 +32,18 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "${WAITING_APPROVAL_MAX_RETRIES}" ]; then
-      bb-log-error "Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
+      bb-log-error "Failed to set update.node.deckhouse.io/waiting-for-approval= annotation on this node"
       exit 1
     fi
     bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" \
       "--resource-version=$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
       "update.node.deckhouse.io/waiting-for-approval=" "node.deckhouse.io/configuration-checksum-" \
-      || { bb-log-info "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in ${WAITING_APPROVAL_RETRY_SLEEP_SEC}sec..."; sleep "${WAITING_APPROVAL_RETRY_SLEEP_SEC}"; }
+      || { bb-log-info "Failed to set the waiting-for-approval annotation, retrying in ${WAITING_APPROVAL_RETRY_SLEEP_SEC} seconds"; sleep "${WAITING_APPROVAL_RETRY_SLEEP_SEC}"; }
   done
 
-  bb-log-info "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
-  approval_command="d8 k annotate node $(bb-d8-node-name) update.node.deckhouse.io/approved="
-  waiting_approval_message="Steps are waiting for approval to start. Deckhouse is performing a rolling update. If you want to force an update, use: ${approval_command}"
+  bb-log-info "Waiting for update.node.deckhouse.io/approved= annotation on this node"
+  approval_command="kubectl annotate node $(bb-d8-node-name) update.node.deckhouse.io/approved="
+  waiting_approval_message="Steps are waiting for approval to start. Deckhouse is performing a rolling update. To force the update, run: ${approval_command}"
   waiting_approval_status_set="no"
   attempt=0
   until
@@ -57,13 +57,11 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "${WAITING_APPROVAL_MAX_RETRIES}" ]; then
       bb-waiting-approval-timeout "Waiting for approval timed out. ${waiting_approval_message}"
-      bb-log-info "Waiting for approval exceeded retry limit (${WAITING_APPROVAL_MAX_RETRIES}). Continue waiting for approval."
+      bb-log-info "Approval wait exceeded retry limit (${WAITING_APPROVAL_MAX_RETRIES}), still waiting"
       attempt=0
     fi
-    bb-log-info "Steps are waiting for approval to start."
-    bb-log-info "Deckhouse is performing a rolling update. If you want to force an update, use"
-    bb-log-info "${approval_command}"
-    bb-log-info "Retry in ${WAITING_APPROVAL_RETRY_SLEEP_SEC}sec..."
+    bb-log-info "Waiting for approval to start the next steps. Deckhouse is performing a rolling update."
+    bb-log-info "To force the update, run: ${approval_command}"
     sleep "${WAITING_APPROVAL_RETRY_SLEEP_SEC}"
   done
   bb-waiting-approval-not-required

@@ -29,10 +29,13 @@ d8 k get virtualmachineclass
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME               PHASE   AGE
 generic            Ready   6d1h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Обязательно указывайте ресурс VirtualMachineClass в конфигурации виртуальной машины.
 Пример указания класса в спецификации ВМ:
@@ -63,11 +66,14 @@ d8 k get virtualmachineclass
 
 Пример вывода (без класса по умолчанию):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready               1d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Чтобы назначить класс по умолчанию, выполните:
 
@@ -89,11 +95,14 @@ d8 k get vmclass
 
 Пример вывода (с классом по умолчанию):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready   true        1d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 При создании ВМ без указания значения для поля `spec.virtualMachineClassName` в него будет подставлено имя `host-passthrough-custom`.
 

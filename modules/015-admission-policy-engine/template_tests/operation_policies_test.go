@@ -38,7 +38,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 	f := SetupHelmConfig(`
 global:
   discovery:
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
 admissionPolicyEngine:
   podSecurityStandards: {}
   internal:
@@ -198,26 +198,26 @@ admissionPolicyEngine:
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			expectedSelector := constraintSelectorExpectation{
-				namespaces: mustParseYaml("- default"),
+				namespaces:         mustParseYaml("- default"),
 				excludedNamespaces: mustParseYaml("- kube-system"),
-				namespaceSelector: mustParseYaml("matchLabels:\n  operation-policy.deckhouse.io/enabled: \"true\""),
-				labelSelector: mustParseYaml("matchLabels:\n  operation-policy.deckhouse.io/enabled: \"true\""),
+				namespaceSelector:  mustParseYaml("matchLabels:\n  operation-policy.deckhouse.io/enabled: \"true\""),
+				labelSelector:      mustParseYaml("matchLabels:\n  operation-policy.deckhouse.io/enabled: \"true\""),
 			}
 			expectedAction := "warn"
 
 			expectedParameters := map[string]interface{}{
-				"D8AllowedRepos": mustParseYaml("repos:\n  - foo"),
-				"D8RequiredResources": mustParseYaml("limits:\n  - memory\nrequests:\n  - cpu\n  - memory"),
-				"D8DisallowedTags": mustParseYaml("tags:\n  - latest"),
-				"D8RequiredLabels": mustParseYaml("labels:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.agilebank.demo$\""),
-				"D8RequiredAnnotations": mustParseYaml("annotations:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.myapp.demo$\""),
-				"D8RequiredProbes": mustParseYaml("probes:\n  - livenessProbe\n  - readinessProbe"),
-				"D8RevisionHistoryLimit": mustParseYaml("limit: 3"),
-				"D8ImagePullPolicy": mustParseYaml("policy: \"Always\""),
-				"D8PriorityClass": mustParseYaml("priorityClassNames:\n  - foo\n  - bar"),
-				"D8IngressClass": mustParseYaml("ingressClassNames:\n  - ing1\n  - ing2"),
-				"D8StorageClass": mustParseYaml("storageClassNames:\n  - st1\n  - st2"),
-				"D8ReplicaLimits": mustParseYaml("ranges:\n  - minReplicas: 1\n    maxReplicas: 10"),
+				"D8AllowedRepos":          mustParseYaml("repos:\n  - foo"),
+				"D8RequiredResources":     mustParseYaml("limits:\n  - memory\nrequests:\n  - cpu\n  - memory"),
+				"D8DisallowedTags":        mustParseYaml("tags:\n  - latest"),
+				"D8RequiredLabels":        mustParseYaml("labels:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.agilebank.demo$\""),
+				"D8RequiredAnnotations":   mustParseYaml("annotations:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.myapp.demo$\""),
+				"D8RequiredProbes":        mustParseYaml("probes:\n  - livenessProbe\n  - readinessProbe"),
+				"D8RevisionHistoryLimit":  mustParseYaml("limit: 3"),
+				"D8ImagePullPolicy":       mustParseYaml("policy: \"Always\""),
+				"D8PriorityClass":         mustParseYaml("priorityClassNames:\n  - foo\n  - bar"),
+				"D8IngressClass":          mustParseYaml("ingressClassNames:\n  - ing1\n  - ing2"),
+				"D8StorageClass":          mustParseYaml("storageClassNames:\n  - st1\n  - st2"),
+				"D8ReplicaLimits":         mustParseYaml("ranges:\n  - minReplicas: 1\n    maxReplicas: 10"),
 				"D8DisallowedTolerations": mustParseYaml("tolerations:\n  - key: node-role.kubernetes.io/master\n    operator: Exists\n  - key: node-role.kubernetes.io/control-plane\n    operator: Exists"),
 			}
 

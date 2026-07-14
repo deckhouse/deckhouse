@@ -1,7 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -21,11 +21,10 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
- - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
-   add: /manager
-   to: /manager
-   after: install
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
+  add: /manager
+  to: /manager
+  after: install
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

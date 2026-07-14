@@ -139,7 +139,9 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.
 		Name:          packageName,
 		Type:          string(result.PackageType),
 		FoundVersions: result.FoundVersions,
+		NewVersions:   result.NewVersions,
 	})
+	op.Status.Packages.NewVersionsOverall += result.NewVersions
 
 	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(result.Failed))
 	for _, fv := range result.Failed {

@@ -16,7 +16,7 @@
  */
 
 const TIMEOUT_BETWEEN_ATTEMPT = 1000 * 30;
-const MAX_ATTEMPTS = 100;
+const MAX_ATTEMPTS = 300;
 
 module.exports = ({ github, context, core }) => {
   const { sleep } = require('../helpers/utils');

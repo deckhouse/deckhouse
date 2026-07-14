@@ -24,9 +24,9 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 	objectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
@@ -129,11 +129,12 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 	}
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{
+	if err := validation.ValidateData([]string{
 		"/deckhouse/candi/cloud-providers/vsphere/openapi",
 		"/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi",
-	})
-	if err != nil {
+	},
+		&discoveryDataJSON,
+	); err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
@@ -145,14 +146,14 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	input.Values.Set("csiVsphere.internal.providerDiscoveryData", discoveryData)
 
-	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.Datastores); err != nil {
+	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.Datastores, discoveryData.StoragePolicies); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.VsphereDatastore) error {
+func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.VsphereDatastore, storagePolicies []cloudDataV1.VsphereStoragePolicy) error {
 	storageClassStorageDomain := make(map[string]cloudDataV1.VsphereDatastore)
 
 	for _, ds := range zonedDataStores {
@@ -181,16 +182,43 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 		storageClassSnapshots[s.Name] = s
 	}
 
-	storageClasses := make([]storageClass, 0, len(zonedDataStores))
-	for name, domain := range storageClassStorageDomain {
+	lenStorageClasses := len(storageClassStorageDomain)
+	if len(storagePolicies) > 0 {
+		lenStorageClasses *= len(storagePolicies)
+	}
+	storageClasses := make([]storageClass, 0, lenStorageClasses)
+	for name, ds := range storageClassStorageDomain {
+		var excluded bool
+		for _, esc := range classExcludes.Array() {
+			rg := regexp.MustCompile("^(" + esc.String() + ")$")
+			if rg.MatchString(getStorageClassName(ds.Name)) {
+				excluded = true
+				break
+			}
+		}
+		if excluded {
+			continue
+		}
+
 		sc := storageClass{
 			Name:          name,
-			Path:          domain.InventoryPath,
-			Zones:         domain.Zones,
-			DatastoreType: domain.DatastoreType,
-			DatastoreURL:  domain.DatastoreURL,
+			Path:          ds.InventoryPath,
+			Zones:         ds.Zones,
+			DatastoreType: ds.DatastoreType,
+			DatastoreURL:  ds.DatastoreURL,
 		}
 		storageClasses = append(storageClasses, sc)
+
+		for _, sp := range storagePolicies {
+			storageClasses = append(storageClasses, storageClass{
+				Name:              getStorageClassName(fmt.Sprintf("%s-%s", name, sp.Name)),
+				Path:              ds.InventoryPath,
+				Zones:             ds.Zones,
+				DatastoreType:     ds.DatastoreType,
+				DatastoreURL:      ds.DatastoreURL,
+				StoragePolicyName: sp.Name,
+			})
+		}
 	}
 
 	sort.SliceStable(storageClasses, func(i, j int) bool {
@@ -224,9 +252,10 @@ func getStorageClassName(value string) string {
 }
 
 type storageClass struct {
-	Name          string   `json:"name"`
-	Path          string   `json:"path"`
-	Zones         []string `json:"zones"`
-	DatastoreType string   `json:"datastoreType"`
-	DatastoreURL  string   `json:"datastoreURL"`
+	Name              string   `json:"name"`
+	Path              string   `json:"path"`
+	Zones             []string `json:"zones"`
+	DatastoreType     string   `json:"datastoreType"`
+	DatastoreURL      string   `json:"datastoreURL"`
+	StoragePolicyName string   `json:"storagePolicyName,omitempty"`
 }

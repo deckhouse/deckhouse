@@ -15,7 +15,6 @@
 package config
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -57,7 +56,7 @@ spec:
     - "*"
 `
 
-	ngc, err := ParseInternalBootstrapNodeGroupConfiguration(context.Background(), resourcesYAML)
+	ngc, err := ParseInternalBootstrapNodeGroupConfiguration(t.Context(), resourcesYAML)
 	require.NoError(t, err)
 	require.NotNil(t, ngc)
 	require.Equal(t, InternalBootstrapNodeGroupConfigurationName, ngc.Name)
@@ -75,7 +74,7 @@ spec:
   nodeType: CloudEphemeral
 `
 
-	ngc, err := ParseInternalBootstrapNodeGroupConfiguration(context.Background(), resourcesYAML)
+	ngc, err := ParseInternalBootstrapNodeGroupConfiguration(t.Context(), resourcesYAML)
 	require.NoError(t, err)
 	require.Nil(t, ngc)
 }
@@ -94,6 +93,6 @@ spec:
     - "*"
 `
 
-	_, err := ParseInternalBootstrapNodeGroupConfiguration(context.Background(), resourcesYAML)
+	_, err := ParseInternalBootstrapNodeGroupConfiguration(t.Context(), resourcesYAML)
 	require.ErrorContains(t, err, "spec.content is required")
 }

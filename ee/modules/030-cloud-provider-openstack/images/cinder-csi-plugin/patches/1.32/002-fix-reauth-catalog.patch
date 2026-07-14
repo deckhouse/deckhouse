@@ -1,0 +1,29 @@
+diff --git a/pkg/csi/cinder/openstack/openstack.go b/pkg/csi/cinder/openstack/openstack.go
+index fbc386ed..62efe08b 100644
+--- a/pkg/csi/cinder/openstack/openstack.go
++++ b/pkg/csi/cinder/openstack/openstack.go
+@@ -192,6 +192,24 @@ func CreateOpenStackProvider(cloudName string) (IOpenStack, error) {
+ 		return nil, err
+ 	}
+ 
++	// Override the default ReauthFunc set by gophercloud. The default implementation
++	// authenticates a throw-away client and only copies the token back via CopyTokenFrom,
++	// leaving EndpointLocator with a stale service catalog. After long pod lifetimes
++	// this causes re-authentication failures if the catalog has changed.
++	// Instead, re-authenticate the main provider directly so both the token and
++	// EndpointLocator are refreshed.
++	globalForReauth := global
++	provider.ReauthFunc = func(ctx context.Context) error {
++		klog.V(4).Info("cinder-csi: performing full OpenStack re-authentication with catalog refresh")
++		opts := globalForReauth.ToAuthOptions()
++		opts.AllowReauth = false
++		if err := openstack.Authenticate(ctx, provider, opts); err != nil {
++			klog.Errorf("cinder-csi: OpenStack re-authentication failed: %v", err)
++			return err
++		}
++		return nil
++	}
++
+ 	epOpts := gophercloud.EndpointOpts{
+ 		Region:       global.Region,
+ 		Availability: global.EndpointType,

@@ -26,7 +26,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,9 +34,9 @@ import (
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -202,14 +201,15 @@ func TestReconcileBashibleStatus(t *testing.T) {
 		{
 			name:    "bashible ready true produces ready status",
 			machine: mcmMachineWithStatus("ready", mcmv1alpha1.MachineStatus{CurrentStatus: mcmv1alpha1.CurrentStatus{Phase: mcmv1alpha1.MachineRunning}}),
-			instance: instanceWithConditions("ready", deckhousev1alpha2.InstanceSpec{
-				MachineRef: &deckhousev1alpha2.MachineRef{
-					Kind:       "Machine",
-					APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
-					Name:       "ready",
-					Namespace:  machine.MachineNamespace,
-				},
-			}, deckhousev1alpha2.InstancePhaseRunning,
+			instance: instanceWithConditions(
+				"ready", deckhousev1alpha2.InstanceSpec{
+					MachineRef: &deckhousev1alpha2.MachineRef{
+						Kind:       "Machine",
+						APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
+						Name:       "ready",
+						Namespace:  machine.MachineNamespace,
+					},
+				}, deckhousev1alpha2.InstancePhaseRunning,
 				deckhousev1alpha2.InstanceCondition{
 					Type:    deckhousev1alpha2.InstanceConditionTypeBashibleReady,
 					Status:  metav1.ConditionTrue,
@@ -227,14 +227,15 @@ func TestReconcileBashibleStatus(t *testing.T) {
 		{
 			name:    "waiting approval timeout produces waiting approval status",
 			machine: mcmMachineWithStatus("waiting-approval", mcmv1alpha1.MachineStatus{CurrentStatus: mcmv1alpha1.CurrentStatus{Phase: mcmv1alpha1.MachineRunning}}),
-			instance: instanceWithConditions("waiting-approval", deckhousev1alpha2.InstanceSpec{
-				MachineRef: &deckhousev1alpha2.MachineRef{
-					Kind:       "Machine",
-					APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
-					Name:       "waiting-approval",
-					Namespace:  machine.MachineNamespace,
-				},
-			}, deckhousev1alpha2.InstancePhaseRunning,
+			instance: instanceWithConditions(
+				"waiting-approval", deckhousev1alpha2.InstanceSpec{
+					MachineRef: &deckhousev1alpha2.MachineRef{
+						Kind:       "Machine",
+						APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
+						Name:       "waiting-approval",
+						Namespace:  machine.MachineNamespace,
+					},
+				}, deckhousev1alpha2.InstancePhaseRunning,
 				deckhousev1alpha2.InstanceCondition{
 					Type:    deckhousev1alpha2.InstanceConditionTypeBashibleReady,
 					Status:  metav1.ConditionTrue,
@@ -266,14 +267,15 @@ func TestReconcileBashibleStatus(t *testing.T) {
 					LastTransitionTime: metav1.Now(),
 				}},
 			}),
-			instance: instanceWithConditions("machine-priority", deckhousev1alpha2.InstanceSpec{
-				MachineRef: &deckhousev1alpha2.MachineRef{
-					Kind:       "Machine",
-					APIVersion: capiv1beta2.GroupVersion.String(),
-					Name:       "machine-priority",
-					Namespace:  machine.MachineNamespace,
-				},
-			}, deckhousev1alpha2.InstancePhasePending,
+			instance: instanceWithConditions(
+				"machine-priority", deckhousev1alpha2.InstanceSpec{
+					MachineRef: &deckhousev1alpha2.MachineRef{
+						Kind:       "Machine",
+						APIVersion: capiv1beta2.GroupVersion.String(),
+						Name:       "machine-priority",
+						Namespace:  machine.MachineNamespace,
+					},
+				}, deckhousev1alpha2.InstancePhasePending,
 				deckhousev1alpha2.InstanceCondition{
 					Type:    deckhousev1alpha2.InstanceConditionTypeMachineReady,
 					Status:  metav1.ConditionFalse,
@@ -304,14 +306,15 @@ func TestReconcileBashibleStatus(t *testing.T) {
 					LastUpdateTime: metav1.Now(),
 				},
 			}),
-			instance: instanceWithConditions("mcm-message-update", deckhousev1alpha2.InstanceSpec{
-				MachineRef: &deckhousev1alpha2.MachineRef{
-					Kind:       "Machine",
-					APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
-					Name:       "mcm-message-update",
-					Namespace:  machine.MachineNamespace,
-				},
-			}, deckhousev1alpha2.InstancePhaseTerminating,
+			instance: instanceWithConditions(
+				"mcm-message-update", deckhousev1alpha2.InstanceSpec{
+					MachineRef: &deckhousev1alpha2.MachineRef{
+						Kind:       "Machine",
+						APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
+						Name:       "mcm-message-update",
+						Namespace:  machine.MachineNamespace,
+					},
+				}, deckhousev1alpha2.InstancePhaseTerminating,
 				deckhousev1alpha2.InstanceCondition{
 					Type:    deckhousev1alpha2.InstanceConditionTypeMachineReady,
 					Status:  metav1.ConditionFalse,
@@ -404,37 +407,6 @@ func TestReconcileBashibleStatus(t *testing.T) {
 	}
 }
 
-func TestReconcileConflictReturnsError(t *testing.T) {
-	t.Parallel()
-
-	instance := existingInstanceWithFinalizer("conflict-machine-status", deckhousev1alpha2.InstanceSpec{
-		MachineRef: &deckhousev1alpha2.MachineRef{
-			Kind:       "Machine",
-			APIVersion: capiv1beta2.GroupVersion.String(),
-			Name:       "conflict-machine-status",
-			Namespace:  machine.MachineNamespace,
-		},
-	}, deckhousev1alpha2.InstancePhaseUnknown)
-
-	conflictErr := apierrors.NewConflict(
-		schema.GroupResource{Group: deckhousev1alpha2.GroupVersion.Group, Resource: "instances"},
-		instance.Name,
-		fmt.Errorf("simulated conflict"),
-	)
-
-	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
-	controller, _ := newTestInstanceController(t, func(base client.WithWatch) client.Client {
-		return conflictOnInstanceStatusPatchClient{Client: base, err: conflictErr}
-	}, capiMachineWithStatus("conflict-machine-status", capiv1beta2.MachineStatus{
-		Phase: string(capiv1beta2.MachinePhaseRunning),
-	}), instance)
-
-	result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
-	require.Error(t, err)
-	require.True(t, apierrors.IsConflict(err))
-	require.Equal(t, ctrl.Result{}, result)
-}
-
 func TestReconcileDeletingInstanceSyncsMachineStatus(t *testing.T) {
 	t.Parallel()
 
@@ -489,6 +461,27 @@ func TestReconcileDeletingInstanceSyncsMachineStatus(t *testing.T) {
 	require.Equal(t, metav1.ConditionFalse, condition.Status)
 	require.Equal(t, capiv1beta2.MachineDeletingDrainingNodeReason, condition.Reason)
 	require.Equal(t, "cannot evict pod because disruption budget", condition.Message)
+}
+
+func TestReconcileDeletingNodeBackedInstanceRemovesFinalizer(t *testing.T) {
+	t.Parallel()
+
+	now := metav1.Now()
+	instance := existingInstanceWithFinalizer("node-backed-delete", deckhousev1alpha2.InstanceSpec{
+		NodeRef: deckhousev1alpha2.NodeRef{Name: "node-backed-delete"},
+	}, deckhousev1alpha2.InstancePhaseRunning)
+	instance.DeletionTimestamp = &now
+
+	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
+	controller, k8sClient := newTestInstanceController(t, nil, instance)
+
+	result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{RequeueAfter: instanceRequeueInterval}, result)
+
+	persisted := &deckhousev1alpha2.Instance{}
+	err = k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name}, persisted)
+	require.True(t, apierrors.IsNotFound(err), "expected the node-backed instance to be deleted, got err=%v", err)
 }
 
 func TestReconcileCreateFromSource(t *testing.T) {
@@ -717,7 +710,8 @@ func TestReconcileExistingInstanceBindsMachineSource(t *testing.T) {
 		NodeRef:        deckhousev1alpha2.NodeRef{Name: "worker-a"},
 		ClassReference: classReference,
 	}, deckhousev1alpha2.InstancePhaseRunning)
-	controller, k8sClient := newTestInstanceController(t, nil,
+	controller, k8sClient := newTestInstanceController(
+		t, nil,
 		instance,
 		capiMachineWithStatus("worker-a", capiv1beta2.MachineStatus{
 			Phase:   string(capiv1beta2.MachinePhaseRunning),
@@ -740,6 +734,65 @@ func TestReconcileExistingInstanceBindsMachineSource(t *testing.T) {
 		Name:       "worker-a",
 		Namespace:  machine.MachineNamespace,
 	}, persisted.Spec.MachineRef)
+}
+
+func TestReconcileExistingInstanceBindsNodeRefFromMachine(t *testing.T) {
+	t.Parallel()
+
+	capiRef := &deckhousev1alpha2.MachineRef{
+		Kind:       "Machine",
+		APIVersion: capiv1beta2.GroupVersion.String(),
+		Name:       "worker-capi",
+		Namespace:  machine.MachineNamespace,
+	}
+	mcmRef := &deckhousev1alpha2.MachineRef{
+		Kind:       "Machine",
+		APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
+		Name:       "worker-mcm",
+		Namespace:  machine.MachineNamespace,
+	}
+
+	tests := []struct {
+		name        string
+		instance    *deckhousev1alpha2.Instance
+		machine     client.Object
+		wantNodeRef deckhousev1alpha2.NodeRef
+	}{
+		{
+			name: "capi machine reports node ref after instance creation",
+			instance: existingInstanceWithFinalizer("worker-capi", deckhousev1alpha2.InstanceSpec{
+				MachineRef: capiRef,
+			}, deckhousev1alpha2.InstancePhaseRunning),
+			machine:     capiMachine("worker-capi", "worker-capi-node"),
+			wantNodeRef: deckhousev1alpha2.NodeRef{Name: "worker-capi-node"},
+		},
+		{
+			name: "mcm machine reports node ref after instance creation",
+			instance: existingInstanceWithFinalizer("worker-mcm", deckhousev1alpha2.InstanceSpec{
+				MachineRef: mcmRef,
+			}, deckhousev1alpha2.InstancePhaseRunning),
+			machine:     mcmMachine("worker-mcm", "worker-mcm-node"),
+			wantNodeRef: deckhousev1alpha2.NodeRef{Name: "worker-mcm-node"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
+			controller, k8sClient := newTestInstanceController(t, nil, tt.instance, tt.machine)
+
+			result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: tt.instance.Name}})
+			require.NoError(t, err)
+			require.Equal(t, ctrl.Result{RequeueAfter: instanceRequeueInterval}, result)
+
+			persisted := &deckhousev1alpha2.Instance{}
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: tt.instance.Name}, persisted)
+			require.NoError(t, err)
+			require.Equal(t, tt.wantNodeRef, persisted.Spec.NodeRef)
+		})
+	}
 }
 
 func TestReconcileSourceExistence(t *testing.T) {
@@ -1024,31 +1077,4 @@ func (c *switchingMCMGetClient) Get(ctx context.Context, key client.ObjectKey, o
 
 	machineObj.Status = *c.status
 	return nil
-}
-
-type conflictOnInstanceStatusPatchClient struct {
-	client.Client
-	err error
-}
-
-func (c conflictOnInstanceStatusPatchClient) Status() client.SubResourceWriter {
-	return conflictOnStatusWriter{SubResourceWriter: c.Client.Status(), err: c.err}
-}
-
-type conflictOnStatusWriter struct {
-	client.SubResourceWriter
-	err error
-}
-
-func (w conflictOnStatusWriter) Patch(
-	ctx context.Context,
-	obj client.Object,
-	patch client.Patch,
-	opts ...client.SubResourcePatchOption,
-) error {
-	if _, ok := obj.(*deckhousev1alpha2.Instance); ok {
-		return w.err
-	}
-
-	return w.SubResourceWriter.Patch(ctx, obj, patch, opts...)
 }

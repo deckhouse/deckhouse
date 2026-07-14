@@ -1,9 +1,9 @@
 ---
-title: "Cloud provider — Dynamix: configuration"
+title: "Cloud provider — Basis Dynamix: configuration"
 force_searchable: true
 ---
 
-The module is automatically enabled for all cloud clusters deployed in Dynamix.
+The module is automatically enabled for all cloud clusters deployed in Basis Dynamix.
 
 {% include module-alerts.liquid %}
 

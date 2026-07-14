@@ -17,18 +17,18 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
@@ -51,7 +51,7 @@ type infraDestroyer interface {
 }
 
 type metaConfigPopulator interface {
-	PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, globalOptions *options.GlobalOptions) (*config.MetaConfig, error)
 }
 
 type Params struct {
@@ -72,10 +72,9 @@ type Params struct {
 
 	InfrastructureContext *infrastructure.Context
 
-	TmpDir          string
-	LoggerProvider  log.LoggerProvider
-	IsDebug         bool
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	TmpDir  string
+	Logger  *slog.Logger
+	IsDebug bool
 
 	// Options carries the per-operation parsed configuration. RPC handlers
 	// must populate this with a fresh *options.Options to avoid sharing global
@@ -99,7 +98,6 @@ func (p *Params) getStateLoaderParams() *stateLoaderParams {
 		commanderParams: p.CommanderModeParams,
 
 		stateCache: p.StateCache,
-		logger:     log.SafeProvideLogger(p.LoggerProvider),
 
 		skipResources: p.SkipResources,
 		// from passed params always ask about load
@@ -112,7 +110,6 @@ type stateLoaderParams struct {
 	commanderParams *commander.CommanderModeParams
 
 	stateCache dhctlstate.Cache
-	logger     log.Logger
 
 	skipResources  bool
 	forceFromCache bool
@@ -125,7 +122,7 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, params.logger)
+		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
 		}
@@ -137,7 +134,7 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		stateLoaderKubeProvider = newKubeClientErrorProvider("Skip resources flag was provided. State not found in cache")
 	}
 
-	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, params.logger).
+	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache).
 		WithForceFromCache(params.forceFromCache)
 	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
 }
@@ -148,9 +145,9 @@ type ClusterDestroyer struct {
 
 	pipeline phases.DefaultPipeline
 
-	d8Destroyer     *deckhouse.Destroyer
-	infraProvider   *infraDestroyerProvider
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	d8Destroyer   *deckhouse.Destroyer
+	infraProvider *infraDestroyerProvider
+	globalOptions *options.GlobalOptions
 }
 
 // NewClusterDestroyer
@@ -159,8 +156,6 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	if govalue.IsNil(params.StateCache) {
 		return nil, fmt.Errorf("State cache is required")
 	}
-
-	logger := log.SafeProvideLogger(params.LoggerProvider)
 
 	if params.Options != nil && params.Options.Global.ProgressFilePath != "" {
 		params.OnProgressFunc = phases.WriteProgress(params.Options.Global.ProgressFilePath)
@@ -171,13 +166,12 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	pipeline := phases.NewDefaultPipelineWithStateCacheProviderOpts(
 		pec,
 		params.StateCache,
-		phases.WithPipelineLoggerProvider(params.LoggerProvider),
 		phases.WithPipelineName("cluster-destroyer"),
 	)()
 
 	phaseActionProvider := phases.NewDefaultPhaseActionProviderFromPipeline(pipeline)
 
-	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(params.KubeProvider)
+	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(params.KubeProvider, params.SSHProvider)
 
 	terraStateLoader, kubeProvider, err := initStateLoader(ctx, params.getStateLoaderParams(), kubeProvider)
 	if err != nil {
@@ -191,7 +185,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		SkipResources: params.SkipResources,
 		State:         deckhouse.NewState(params.StateCache),
 
-		LoggerProvider:       params.LoggerProvider,
+		Logger:               params.Logger,
 		KubeProvider:         kubeProvider,
 		PhasedActionProvider: phaseActionProvider,
 	})
@@ -199,7 +193,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	infraProvider := &infraDestroyerProvider{
 		stateCache:           params.StateCache,
 		kubeProvider:         kubeProvider,
-		loggerProvider:       params.LoggerProvider,
+		logger:               params.Logger,
 		phasesActionProvider: phaseActionProvider,
 
 		commanderMode: params.CommanderMode,
@@ -212,9 +206,8 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 				controller.ClusterInfraOptions{
 					PhasedExecutionContext: pec,
 					TmpDir:                 params.TmpDir,
-					DownloadDir:            params.Options.Global.DownloadDir,
 					IsDebug:                params.IsDebug,
-					Logger:                 logger,
+					GlobalOptions:          &params.Options.Global,
 				},
 			), nil
 		},
@@ -230,13 +223,15 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 		pipeline: pipeline,
 
-		d8Destroyer:     d8Destroyer,
-		infraProvider:   infraProvider,
-		DirectoryConfig: params.DirectoryConfig,
+		d8Destroyer:   d8Destroyer,
+		infraProvider: infraProvider,
+		globalOptions: &params.Options.Global,
 	}, nil
 }
 
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
+	dhlog.PrintBanner(ctx)
+
 	return d.pipeline.Run(ctx, func(switcher phases.DefaultPipelinePhaseSwitcher) error {
 		return d.destroy(ctx, autoApprove)
 	})
@@ -248,7 +243,7 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 	}
 
 	// populate cluster state in cache
-	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.DirectoryConfig)
+	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.globalOptions)
 	if err != nil {
 		return err
 	}

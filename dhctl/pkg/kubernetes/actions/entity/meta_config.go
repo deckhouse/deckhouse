@@ -17,22 +17,21 @@ package entity
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
 
-func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
+func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, globalOptions *options.GlobalOptions) (*config.MetaConfig, error) {
 	metaConfig, err := config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,
 		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		),
-		dc,
+		globalOptions,
 	)
 	if err != nil {
 		return nil, err

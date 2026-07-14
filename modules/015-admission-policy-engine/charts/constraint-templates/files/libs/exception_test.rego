@@ -23,7 +23,7 @@ test_resolve_spe_from_labels_missing_label if {
 # resolve_spe_for_container resolves by container-specific label
 
 test_resolve_spe_for_container_specific_label if {
-  labels := {"security.deckhouse.io/security-policy-exception/app": "spe"}
+  labels := {"security.deckhouse.io/security-policy-exception.container.app": "spe"}
   container := {"name": "app"}
   namespace := "default"
   result := exception.resolve_spe_for_container(container, labels, namespace) with data.inventory as inventory_spe

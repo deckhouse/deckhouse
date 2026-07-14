@@ -8,6 +8,26 @@ properties:
     properties:
       cniSecretData:
         type: string
+        x-examples:
+        - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lsWllURUZPSW4wPQo="
+      loadBalancer:
+        type: object
+        default: {}
+        properties:
+          disabled:
+            type: boolean
+            default: false
+            description: |
+              Disables the LoadBalancer functionality of the cloud controller manager.
+
+              Set to `true` by the disable-lb ConfigMap hook when the ConfigMap is present,
+              which excludes the `service-lb-controller` from the cloud controller manager.
+
+              > If Services of type `LoadBalancer` have already been created and you disable the LoadBalancer
+              functionality, the cloud controller manager will stop reconciling them. All management of these Services
+              (creating, updating and deleting the underlying load balancers) becomes fully manual.
+            x-examples:
+            - true
       providerClusterConfiguration:
         type: object
         additionalProperties: false
@@ -469,7 +489,7 @@ properties:
                 type: string
                 description: |
                   Control rules for network traffic to and from workloads running in the Project resource.
-                
+
                   * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
                   * `NotRestricted`: Neither network policies nor any additional network restrictions are applied.
 
@@ -480,19 +500,6 @@ properties:
             required:
               - kubeconfigDataBase64
               - namespace
-      discoveryData:
-        type: object
-        default: {}
-        additionalProperties: false
-        properties:
-          loadBalancer:
-            type: object
-            additionalProperties: false
-            description: Parameters for the load balancer.
-            properties:
-              enabled:
-                type: boolean
-                description: Whether the load balancer feature is enabled.
       providerDiscoveryData:
         type: object
         additionalProperties: false

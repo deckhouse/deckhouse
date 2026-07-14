@@ -27,7 +27,6 @@ import (
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -88,7 +87,7 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 				VMResource: tc.vm,
 			})
 
-			changes, err := runner.getPlanDestructiveChanges(context.Background(), "")
+			changes, err := runner.getPlanDestructiveChanges(t.Context(), "")
 			if tc.err != nil {
 				require.EqualError(t, err, tc.err.Error())
 			} else {
@@ -184,7 +183,7 @@ func TestCheckRunnerHandleChanges(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			skip, err := tc.runner.isSkipChanges(context.Background())
+			skip, err := tc.runner.isSkipChanges(t.Context())
 			require.Equal(t, tc.skip, skip)
 			if tc.err != nil {
 				require.Error(t, err)
@@ -241,7 +240,7 @@ func TestRunnerPlan(t *testing.T) {
 				VMResource: tc.vmResource,
 			})
 
-			err := runner.Plan(context.Background(), false, false)
+			err := runner.Plan(t.Context(), false, false)
 			if tc.expectedErrSubstring != "" {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.expectedErrSubstring)
@@ -266,7 +265,6 @@ func mustReadFile(t *testing.T, path string) []byte {
 }
 
 type sleepExecutor struct {
-	logger   log.Logger
 	cancelCh chan struct{}
 }
 
@@ -317,13 +315,7 @@ func (e *sleepExecutor) Show(ctx context.Context, opts ShowOpts) (result []byte,
 }
 
 func (e *sleepExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
-	e.logger.LogWarnLn("Call GetActions on dummy executor")
-
 	return nil, nil
-}
-
-func (e *sleepExecutor) SetExecutorLogger(logger log.Logger) {
-	e.logger = logger
 }
 
 func (e *sleepExecutor) Stop() {
@@ -331,7 +323,7 @@ func (e *sleepExecutor) Stop() {
 }
 
 func TestConcurrentExec(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	exec := sleepExecutor{cancelCh: make(chan struct{})}
 	defer exec.Stop()
@@ -349,7 +341,7 @@ func TestConcurrentExec(t *testing.T) {
 		return exec.Plan(ctx, PlanOpts{})
 	})
 
-	require.Equal(t, "Infrastructure utility have been already executed.", err.Error())
+	require.Equal(t, "Infrastructure utility has already been executed.", err.Error())
 }
 
 var destructivelyChanged = &plan.DestructiveChanges{

@@ -2,15 +2,6 @@
 
 ### Important
 
-- With the `user-authz` module enabled, the permission model for `admin.conf` has been changed.
-  Instead of binding to the built-in `cluster-admin` role, DKP now uses its [managed RBAC model](https://deckhouse.io/modules/control-plane-manager/v1.76/faq.html#rbac-based-admin-access) with more granular permissions.
-  This improves cluster access security. [Emergency access](https://deckhouse.io/modules/control-plane-manager/v1.76/faq.html#break-glass-access) via `super-admin.conf` is still available.
-  **If your cluster uses third-party Kubernetes operators (not part of DKP),
-  make sure to explicitly grant permissions for their CRDs; otherwise, access to those resources will be restricted.**
-
-- The [default version](https://deckhouse.io/modules/ingress-nginx/v1.76/configuration.html#parameters-defaultcontrollerversion) of the Ingress NGINX Controller has been updated from 1.10 to 1.12.
-  Controllers using the default version will be upgraded automatically.
-
 - The [fencing-agent component](https://deckhouse.io/modules/node-manager/v1.76/cr.html#nodegroup-v1-spec-fencing-mode) of the `node-manager` module now uses a gossip-based protocol ([memberlist](https://github.com/hashicorp/memberlist) library)
   for distributed node health monitoring.
   This reduces the risk of false worker node reboots when the control plane is unavailable or the API server is under heavy load.
@@ -692,7 +683,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 
 - The severity level of alerts indicating security policy violations has been raised from 7 to 3.
 
-- The configuration for `Yandex Cloud`, `Zvirt`, and `Dynamix` providers now uses `OpenTofu` instead of `Terraform`. This enables easier provider updates, such as applying fixes for known vulnerabilities (CVEs).
+- The configuration for `Yandex Cloud`, `Zvirt`, and `Basis Dynamix` providers now uses `OpenTofu` instead of `Terraform`. This enables easier provider updates, such as applying fixes for known vulnerabilities (CVEs).
 
 - CVE vulnerabilities have been fixed in the following modules: `chrony`, `descheduler`, `dhctl`, `node-manager`, `registry-packages-proxy`, `falco`, `cni-cilium`, and `vertical-pod-autoscaler`.
 

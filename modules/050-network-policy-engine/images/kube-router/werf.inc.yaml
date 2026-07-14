@@ -60,8 +60,7 @@ import:
   add: /src/kube-router
   to: /opt/bin/kube-router
   before: setup
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/opt/bin/kube-router"]

@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -42,10 +44,8 @@ import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/client"
-	"caps-controller-manager/internal/controller"
 	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/pool"
-	"caps-controller-manager/internal/scope"
 )
 
 const (
@@ -56,6 +56,10 @@ const (
 	RequeueForStaticInstanceCleaning      = 30 * time.Second
 	RequeueForStaticMachineDeleting       = 5 * time.Second
 )
+
+var ErrStaticInstanceCleanupTimedOut = errors.New("timed out waiting for StaticInstance to clean up")
+var ErrStaticMachineBootstrapTimedOut = errors.New("timed out waiting for StaticInstance to bootstrap")
+var ErrStaticMachineAdoptTimedOut = errors.New("timed out waiting for StaticInstance to adopt")
 
 // StaticMachineReconciler reconciles a StaticMachine object
 type StaticMachineReconciler struct {
@@ -87,53 +91,106 @@ type StaticMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
-func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := ctrl.LoggerFrom(ctx).WithValues("staticMachine", req.NamespacedName.String())
-	ctx = ctrl.LoggerInto(ctx, logger)
+//
+//nolint:nonamedreturns
+func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, resErr error) {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Reconciling StaticMachine")
 
-	logger.V(1).Info("Reconciling StaticMachine")
-
-	// Fetch the StaticMachine.
 	staticMachine := &infrav1.StaticMachine{}
 	if err := r.Get(ctx, req.NamespacedName, staticMachine); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-
-		logger.Error(err, "failed to get StaticMachine")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to get StaticMachine: %w", err)
 	}
 
-	machineScope, ok, err := controller.NewMachineScope(ctx, r.Client, r.Config, staticMachine)
+	staticMachinePatchHelper, err := patch.NewHelper(staticMachine, r.Client)
 	if err != nil {
-		logger.Error(err, "failed to create machine scope")
-		return ctrl.Result{}, errors.Wrap(err, "failed to create machine scope")
+		return ctrl.Result{}, fmt.Errorf("failed to create staticMachine patch helper: %w", err)
 	}
-	if !ok {
-		return ctrl.Result{}, nil
-	}
+
 	defer func() {
-		err := machineScope.Close(ctx)
-		if err != nil {
-			logger.Error(err, "failed to close machine scope")
+		if err := patchStaticMachine(ctx, staticMachinePatchHelper, staticMachine); err != nil {
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch staticMachine: %w", err))
 		}
 	}()
 
-	instanceScope, err := r.fetchStaticInstanceByStaticMachineUID(ctx, machineScope)
+	machine, err := util.GetOwnerMachine(ctx, r.Client, staticMachine.ObjectMeta)
 	if err != nil {
-		logger.Error(err, "failed to fetch static instance by static machine uid")
-		return ctrl.Result{}, errors.Wrap(err, "failed to fetch static instance by static machine uid")
+		return ctrl.Result{}, fmt.Errorf("failed to get Machine: %w", err)
+	}
+	if machine == nil {
+		logger.Info("Machine Controller has not yet set OwnerRef. Won't reconcile")
+		return ctrl.Result{}, nil
+	}
+
+	machinePatchHelper, err := patch.NewHelper(machine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create Machine patch helper: %w", err)
+	}
+
+	defer func() {
+		if err := machinePatchHelper.Patch(ctx, machine); err != nil {
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch Machine: %w", err))
+		}
+	}()
+
+	logger = logger.WithValues("machine", machine.Name)
+	ctx = ctrl.LoggerInto(ctx, logger)
+
+	nodeGroupLabel, ok := machine.Labels["node-group"]
+	if !ok {
+		machine.Labels["node-group"] = staticMachine.Labels["node-group"]
+	} else if nodeGroupLabel != staticMachine.Labels["node-group"] {
+		logger.Info("'node-group' label in StaticMachine and Machine are different. Won't reconcile")
+		return ctrl.Result{}, nil
+	}
+
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, staticMachine.ObjectMeta)
+	if err != nil {
+		logger.Info("Machine is missing cluster label or cluster does not exist. Won't reconcile")
+		return ctrl.Result{}, nil
+	}
+
+	instances := &deckhousev1.StaticInstanceList{}
+	uidSelector := fields.OneTermEqualSelector("status.machineRef.uid", string(staticMachine.UID))
+	if err = r.List(
+		ctx,
+		instances,
+		k8sClient.MatchingFieldsSelector{Selector: uidSelector},
+	); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to find StaticInstance by static machine uid %s: %w", string(staticMachine.UID), err)
+	}
+
+	var staticInstance *deckhousev1.StaticInstance
+	if len(instances.Items) != 0 {
+		staticInstance = &instances.Items[0]
+		logger = logger.WithValues("staticInstance", staticInstance.Name)
+		ctx = ctrl.LoggerInto(ctx, logger)
+
+		staticInstancePatchHelper, err := patch.NewHelper(staticInstance, r.Client)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to create StaticInstance patch helper: %w", err)
+		}
+
+		defer func() {
+			if err := patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
+				resErr = errors.Join(resErr, fmt.Errorf("failed to patch StaticInstance: %w", err))
+			}
+		}()
 	}
 
 	// Return early if the object or Cluster is paused
-	if annotations.IsPaused(machineScope.ClusterScope.Cluster, staticMachine) {
-		machineScope.Logger.Info("StaticMachine or linked Cluster is marked as paused. Won't reconcile")
+	if annotations.IsPaused(cluster, staticMachine) {
+		logger.Info("StaticMachine or linked Cluster is marked as paused. Won't reconcile")
 
-		if instanceScope != nil {
-			err := r.setPausedConditionForStaticInstance(ctx, instanceScope, true)
-			if err != nil {
-				machineScope.Logger.Error(err, "cannot set paused annotation for static instance")
+		if staticInstance != nil {
+			// set paused annotation
+			desired := map[string]string{
+				clusterv1.PausedAnnotation: "",
 			}
+			annotations.AddAnnotations(staticInstance, desired)
 		}
 
 		conditions.Set(staticMachine, metav1.Condition{
@@ -143,365 +200,226 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Message:            "StaticMachine is paused",
 			LastTransitionTime: metav1.Now(),
 		})
-
 		return ctrl.Result{}, nil
 	}
 
-	if instanceScope != nil {
-		err := r.setPausedConditionForStaticInstance(ctx, instanceScope, false)
-		if err != nil {
-			machineScope.Logger.Error(err, "cannot remove paused annotation for static instance")
-		}
+	if staticInstance != nil {
+		delete(staticInstance.Annotations, clusterv1.PausedAnnotation)
 	}
 
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-		machineScope.Logger.V(1).Info("Reconciling delete StaticMachine")
-
-		return r.reconcileDelete(ctx, machineScope, instanceScope)
-	}
-
-	result, reconcileErr := r.reconcileNormal(ctx, machineScope, instanceScope)
-	if reconcileErr != nil {
-		machineScope.Logger.Error(reconcileErr, "failed to reconcile StaticMachine")
-	}
-
-	return result, reconcileErr
-}
-
-func (r *StaticMachineReconciler) reconcileNormal(
-	ctx context.Context,
-	machineScope *scope.MachineScope,
-	instanceScope *scope.InstanceScope,
-) (ctrl.Result, error) {
-	// If the StaticMachine is in an error state, return early.
-	if machineScope.HasFailed() {
-		machineScope.Logger.Info("Not reconciling StaticMachine in failed state. See staticMachine.status.failureReason, staticMachine.status.failureMessage, or previously logged error for details")
-
+		logger.Info("Reconciling delete StaticMachine")
+		if staticInstance != nil {
+			return r.cleanup(ctx, machine, staticMachine, staticInstance)
+		}
+		controllerutil.RemoveFinalizer(staticMachine, infrav1.MachineFinalizer)
 		return ctrl.Result{}, nil
 	}
 
-	// If the StaticMachine doesn't have finalizer, add it.
-	if controllerutil.AddFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer) {
-		err := machineScope.Patch(ctx)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to add finalizer")
-		}
+	return r.reconcileNormal(ctx, cluster, machine, staticMachine, staticInstance)
+}
+
+//nolint:nonamedreturns
+func (r *StaticMachineReconciler) reconcileNormal(
+	ctx context.Context,
+	cluster *clusterv1.Cluster,
+	machine *clusterv1.Machine,
+	staticMachine *infrav1.StaticMachine,
+	staticInstance *deckhousev1.StaticInstance,
+) (res ctrl.Result, resErr error) {
+	logger := ctrl.LoggerFrom(ctx)
+	if staticMachine.Status.FailureReason != nil || staticMachine.Status.FailureMessage != nil {
+		logger.Info("StaticMachine has failed, will not reconcile. See StaticMachine status for details.")
+		return ctrl.Result{}, nil
 	}
 
-	if !conditions.IsTrue(machineScope.ClusterScope.Cluster, clusterv1.InfrastructureReadyCondition) {
-		machineScope.Logger.V(1).Info("Cluster infrastructure is not ready yet")
+	// If the StaticMachine is not under finalizer yet, set it now.
+	if controllerutil.AddFinalizer(staticMachine, infrav1.MachineFinalizer) {
+		return ctrl.Result{}, nil
+	}
 
-		conditions.Set(machineScope.StaticMachine, metav1.Condition{
+	if !conditions.IsTrue(cluster, clusterv1.InfrastructureReadyCondition) {
+		logger.Info("Cluster infrastructure is not ready yet, requeuing")
+		conditions.Set(staticMachine, metav1.Condition{
 			Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
 			Reason:             infrav1.StaticMachineWaitingForClusterInfrastructureReason,
 			Status:             metav1.ConditionFalse,
 			Message:            "Cluster infrastructure is not ready yet",
 			LastTransitionTime: metav1.Now(),
 		})
-
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: RequeueForStaticInstancePending}, nil
 	}
 
-	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
-		machineScope.Logger.V(1).Info("Bootstrap Data Secret not available yet")
-
-		conditions.Set(machineScope.StaticMachine, metav1.Condition{
+	if machine.Spec.Bootstrap.DataSecretName == nil {
+		logger.Info("Bootstrap Data Secret not available yet, requeuing")
+		conditions.Set(staticMachine, metav1.Condition{
 			Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
 			Reason:             infrav1.StaticMachineWaitingForBootstrapDataSecretReason,
 			Status:             metav1.ConditionFalse,
 			Message:            "Bootstrap Data Secret not available yet",
 			LastTransitionTime: metav1.Now(),
 		})
+		return ctrl.Result{RequeueAfter: RequeueForStaticInstancePending}, nil
+	}
 
-		return ctrl.Result{}, nil
+	if staticInstance != nil {
+		return r.reconcileStaticInstancePhase(ctx, machine, staticMachine, staticInstance)
 	}
 
 	// If there is not yet a StaticInstance for this StaticMachine,
 	// then pick one from the static instance pool
-	if instanceScope == nil {
-		instanceScope, ok, err := pool.NewStaticInstancePool(r.Client, r.Config, r.Recorder).PickStaticInstance(ctx, machineScope)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to pick StaticInstance")
-		}
-		if !ok {
-			machineScope.Logger.V(1).Info("No pending StaticInstance available, waiting...")
-
-			r.Recorder.SendWarningEvent(machineScope.StaticMachine, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceSelectionFailed", "No available StaticInstance")
-
-			conditions.Set(machineScope.StaticMachine, metav1.Condition{
-				Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
-				Reason:             infrav1.StaticMachineStaticInstancesUnavailableReason,
-				Status:             metav1.ConditionFalse,
-				Message:            "No available StaticInstance",
-				LastTransitionTime: metav1.Now(),
-			})
-
-			return ctrl.Result{RequeueAfter: RequeueForStaticInstancePending}, nil
-		}
-
-		r.Recorder.SendNormalEvent(instanceScope.Instance, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached to StaticMachine %s", machineScope.StaticMachine.Name))
-		r.Recorder.SendNormalEvent(machineScope.StaticMachine, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached StaticInstance %s", instanceScope.Instance.Name))
-
-		_, shouldSkipBootstrap := instanceScope.Instance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
-		if shouldSkipBootstrap {
-			result, err := r.HostClient.AdoptStaticInstance(ctx, instanceScope)
-			if err != nil {
-				instanceScope.Logger.Error(err, "failed to adopt StaticInstance")
-			}
-
-			return result, nil
-		} else {
-			result, err := r.HostClient.Bootstrap(ctx, instanceScope)
-			if err != nil {
-				instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
-			}
-
-			return result, nil
-		}
+	newStaticInstance, err := pool.NewStaticInstancePool(r.Client, r.Config, r.Recorder).PickStaticInstance(ctx, staticMachine)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to pick StaticInstance: %w", err)
+	}
+	if newStaticInstance == nil {
+		logger.Info("No pending StaticInstance available, requeuing")
+		r.Recorder.SendWarningEvent(staticMachine, staticMachine.Labels["node-group"], "StaticInstanceSelectionFailed", "No available StaticInstance")
+		conditions.Set(staticMachine, metav1.Condition{
+			Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
+			Reason:             infrav1.StaticMachineStaticInstancesUnavailableReason,
+			Status:             metav1.ConditionFalse,
+			Message:            "No available StaticInstance",
+			LastTransitionTime: metav1.Now(),
+		})
+		return ctrl.Result{RequeueAfter: RequeueForStaticInstancePending}, nil
 	}
 
-	return r.reconcileStaticInstancePhase(ctx, instanceScope)
-}
+	logger = logger.WithValues("staticInstance", newStaticInstance.Name)
+	ctx = ctrl.LoggerInto(ctx, logger)
 
-func (r *StaticMachineReconciler) setPausedConditionForStaticInstance(ctx context.Context, instanceScope *scope.InstanceScope, isPaused bool) error {
-	if isPaused {
-		desired := map[string]string{
-			clusterv1.PausedAnnotation: "",
-		}
-		annotations.AddAnnotations(instanceScope.Instance, desired)
-	} else {
-		delete(instanceScope.Instance.Annotations, clusterv1.PausedAnnotation)
+	staticInstancePatchHelper, err := patch.NewHelper(newStaticInstance, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create StaticInstance patch helper: %w", err)
 	}
 
-	return instanceScope.Patch(ctx)
-}
-
-func (r *StaticMachineReconciler) reconcileDelete(
-	ctx context.Context,
-	machineScope *scope.MachineScope,
-	instanceScope *scope.InstanceScope,
-) (ctrl.Result, error) {
-	if instanceScope != nil {
-		result, err := r.cleanup(ctx, instanceScope)
-		if err != nil {
-			machineScope.Logger.Error(err, "failed to cleanup StaticInstance")
-			return result, errors.Wrap(err, "failed to cleanup StaticInstance")
+	defer func() {
+		if err := patchStaticInstance(ctx, staticInstancePatchHelper, newStaticInstance); err != nil {
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch StaticInstance: %w", err))
 		}
+	}()
 
-		if !result.IsZero() {
-			return result, nil
-		}
+	r.Recorder.SendNormalEvent(newStaticInstance, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached to StaticMachine %s", staticMachine.Name))
+	r.Recorder.SendNormalEvent(staticMachine, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached StaticInstance %s", newStaticInstance.Name))
+
+	_, shouldSkipBootstrap := newStaticInstance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
+	if shouldSkipBootstrap {
+		return r.HostClient.AdoptStaticInstance(ctx, newStaticInstance, staticMachine, machine)
 	}
 
-	controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
-
-	return ctrl.Result{}, nil
+	return r.HostClient.Bootstrap(ctx, newStaticInstance, staticMachine, machine)
 }
 
-func (r *StaticMachineReconciler) cleanup(
-	ctx context.Context,
-	instanceScope *scope.InstanceScope,
-) (ctrl.Result, error) {
-	instanceScope.Logger.V(1).Info("StaticInstance is cleaning")
-	phase := instanceScope.GetPhase()
+func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv1.Machine, staticMachine *infrav1.StaticMachine, staticInstance *deckhousev1.StaticInstance) (ctrl.Result, error) {
+	phase := staticInstance.GetPhase()
+
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("StaticInstance is cleaning", "phase", phase)
 
 	// Delete flow might observe an inconsistent state where phase is Pending (or empty),
 	// but refs are still set. Normalize it and allow StaticMachine deletion to proceed.
 	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
-		if instanceScope.Instance.Status.MachineRef != nil || instanceScope.Instance.Status.NodeRef != nil || instanceScope.Instance.Status.CurrentStatus != nil {
-			err := instanceScope.ToPending(ctx)
-			if err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to normalize StaticInstance to Pending phase")
-			}
+		if staticInstance.Status.MachineRef != nil || staticInstance.Status.NodeRef != nil || staticInstance.Status.CurrentStatus != nil {
+			staticInstance.ToPending()
 		}
-		return ctrl.Result{}, nil
-	}
-
-	if phase != deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning &&
-		instanceScope.Instance.Status.NodeRef != nil {
-		instanceScope.MachineScope.SetNotReady()
-
-		patchHelper, err := patch.NewHelper(instanceScope.MachineScope.Machine, r.Client)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
-		}
-
-		// Cluster API controller is a raceful service. We must fix bug https://github.com/kubernetes-sigs/cluster-api/issues/7237.
-		if instanceScope.MachineScope.Machine.Status.NodeRef.Name == "" {
-			instanceScope.MachineScope.Machine.Status.NodeRef.Name = instanceScope.Instance.Status.NodeRef.Name
-		}
-
-		if instanceScope.MachineScope.Machine.Annotations == nil {
-			instanceScope.MachineScope.Machine.Annotations = make(map[string]string)
-		}
-
-		if instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] != "true" {
-			instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] = "true"
-		}
-
-		cond := conditions.Get(instanceScope.MachineScope.Machine, clusterv1.DeletingCondition)
-		if cond != nil && cond.Status == metav1.ConditionTrue {
-			err = r.HostClient.Cleanup(ctx, instanceScope)
-			if err != nil {
-				instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
-			}
-
-			delete(instanceScope.MachineScope.Machine.Annotations, clusterv1.PreTerminateDeleteHookAnnotationPrefix)
-		}
-
-		err = patchHelper.Patch(ctx, instanceScope.MachineScope.Machine)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine with NodeRef")
-		}
-
 		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
 	}
 
-	estimated := DefaultStaticInstanceCleanupTimeout - time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+	if phase != deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && staticInstance.Status.NodeRef != nil {
+		staticMachine.Status.Ready = false
+		staticMachine.Status.Initialization.Provisioned = ptr.To(false)
 
-	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && estimated < (10*time.Second) {
-		instanceScope.MachineScope.Fail("DeleteError", errors.New("timed out waiting for StaticInstance to clean up"))
-
-		r.Recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceCleanupTimeoutReached", "Timed out waiting for StaticInstance to clean up")
-
-		err := instanceScope.MachineScope.Patch(ctx)
-		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to set StaticMachine error status")
+		// Cluster API controller is a raceful service. We must fix bug https://github.com/kubernetes-sigs/cluster-api/issues/7237.
+		if machine.Status.NodeRef.Name == "" {
+			machine.Status.NodeRef.Name = staticInstance.Status.NodeRef.Name
 		}
 
-		err = instanceScope.ToPending(ctx)
-		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to set StaticInstance to Pending phase")
+		if machine.Annotations == nil {
+			machine.Annotations = make(map[string]string)
 		}
 
-		instanceScope.Logger.Error(errors.New("timed out waiting for StaticInstance to clean up"), "StaticInstance is cleaning")
+		if machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] != "true" {
+			machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] = "true"
+		}
 
-		return ctrl.Result{}, nil
+		cond := conditions.Get(machine, clusterv1.DeletingCondition)
+		if cond != nil && cond.Status == metav1.ConditionTrue {
+			if err := r.HostClient.Cleanup(ctx, staticInstance, staticMachine, machine); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to cleanup StaticInstance: %w", err)
+			}
+			delete(machine.Annotations, clusterv1.PreTerminateDeleteHookAnnotationPrefix)
+		}
+		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
 	}
 
-	err := r.HostClient.Cleanup(ctx, instanceScope)
+	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning &&
+		time.Since(staticInstance.Status.CurrentStatus.LastUpdateTime.Time) > DefaultStaticInstanceCleanupTimeout {
+		logger.Error(ErrStaticInstanceCleanupTimedOut, "")
+		r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceCleanupTimeoutReached", "Timed out waiting for StaticInstance to clean up")
+
+		staticMachine.Status.FailureReason = ptr.To("DeleteError")
+		staticMachine.Status.FailureMessage = ptr.To(ErrStaticInstanceCleanupTimedOut.Error())
+
+		staticInstance.ToPending()
+		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
+	}
+
+	err := r.HostClient.Cleanup(ctx, staticInstance, staticMachine, machine)
 	if err != nil {
-		instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
+		return ctrl.Result{}, fmt.Errorf("failed to cleanup StaticInstance: %w", err)
 	}
 
 	return ctrl.Result{RequeueAfter: RequeueForStaticInstanceCleaning}, nil
 }
 
-func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
-	ctx context.Context,
-	instanceScope *scope.InstanceScope,
-) (ctrl.Result, error) {
-	switch instanceScope.GetPhase() {
+func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Context,
+	machine *clusterv1.Machine,
+	staticMachine *infrav1.StaticMachine,
+	staticInstance *deckhousev1.StaticInstance) (ctrl.Result, error) {
+	logger := ctrl.LoggerFrom(ctx)
+
+	switch staticInstance.GetPhase() {
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
-		_, shouldSkipBootstrap := instanceScope.Instance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
+		_, shouldSkipBootstrap := staticInstance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
 		if !shouldSkipBootstrap {
+			logger.Info("SkipBootstrapPhaseAnnotation found, won't reconcile")
 			return ctrl.Result{}, nil
 		}
 
-		instanceScope.MachineScope.SetNotReady()
-		instanceScope.Logger.V(1).Info("StaticInstance is adopting")
+		logger.Info("StaticInstance is adopting")
+		staticMachine.Status.Ready = false
+		staticMachine.Status.Initialization.Provisioned = ptr.To(false)
 
-		estimated := DefaultStaticInstanceAdoptTimeout -
-			time.Since(instanceScope.MachineScope.StaticMachine.CreationTimestamp.Time)
-
+		estimated := DefaultStaticInstanceAdoptTimeout - time.Since(staticMachine.CreationTimestamp.Time)
 		if estimated < (10 * time.Second) {
-			instanceScope.MachineScope.Fail("UpdateError",
-				errors.New("timed out waiting for StaticInstance to adopt"))
-
-			r.Recorder.SendWarningEvent(instanceScope.Instance,
-				instanceScope.MachineScope.StaticMachine.Labels["node-group"],
-				"StaticInstanceAdoptTimeoutReached",
-				"Timed out waiting for StaticInstance to adopt")
-
-			err := instanceScope.MachineScope.Patch(ctx)
-			if err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to set StaticMachine error status")
-			}
-
-			return ctrl.Result{}, errors.New("timed out waiting to adopt StaticInstance")
+			staticMachine.Status.FailureReason = ptr.To("UpdateError")
+			staticMachine.Status.FailureMessage = ptr.To(ErrStaticMachineAdoptTimedOut.Error())
+			r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceAdoptTimeoutReached", "Timed out waiting for StaticInstance to adopt")
+			return ctrl.Result{}, ErrStaticMachineAdoptTimedOut
 		}
-
-		result, err := r.HostClient.AdoptStaticInstance(ctx, instanceScope)
-		if err != nil {
-			instanceScope.Logger.Error(err, "failed to adopt StaticInstance")
-		}
-
-		return result, nil
+		return r.HostClient.AdoptStaticInstance(ctx, staticInstance, staticMachine, machine)
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
-		instanceScope.MachineScope.SetNotReady()
-		instanceScope.Logger.V(1).Info("StaticInstance is bootstrapping")
+		logger.Info("StaticInstance is bootstrapping")
 
-		estimated := DefaultStaticInstanceBootstrapTimeout - time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+		staticMachine.Status.Ready = false
+		staticMachine.Status.Initialization.Provisioned = ptr.To(false)
 
-		if estimated < (10 * time.Second) {
-			instanceScope.MachineScope.Fail("CreateError", errors.New("timed out waiting for StaticInstance to bootstrap"))
-
-			r.Recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceBootstrapTimeoutReached", "Timed out waiting for StaticInstance to bootstrap")
-
-			err := instanceScope.MachineScope.Patch(ctx)
-			if err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to set StaticMachine error status")
-			}
-
-			return ctrl.Result{}, errors.New("timed out waiting to bootstrap StaticInstance")
+		if time.Since(staticInstance.Status.CurrentStatus.LastUpdateTime.Time) > DefaultStaticInstanceBootstrapTimeout {
+			staticMachine.Status.FailureReason = ptr.To("CreateError")
+			staticMachine.Status.FailureMessage = ptr.To(ErrStaticMachineBootstrapTimedOut.Error())
+			r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceBootstrapTimeoutReached", "Timed out waiting for StaticInstance to bootstrap")
+			return ctrl.Result{}, ErrStaticMachineBootstrapTimedOut
 		}
-
-		result, err := r.HostClient.Bootstrap(ctx, instanceScope)
-		if err != nil {
-			instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
-		}
-
-		return result, nil
+		return r.HostClient.Bootstrap(ctx, staticInstance, staticMachine, machine)
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
-		instanceScope.MachineScope.SetReady()
-		instanceScope.Logger.V(1).Info("StaticInstance is running")
+		staticMachine.Status.Ready = true
+		staticMachine.Status.Initialization.Provisioned = ptr.To(true)
+		logger.Info("StaticInstance is running")
+		return ctrl.Result{}, nil
+	default:
+		return ctrl.Result{}, fmt.Errorf("unknown StaticInstance state %s", staticInstance.GetPhase())
 	}
-
-	return ctrl.Result{}, nil
-}
-
-func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
-	ctx context.Context,
-	machineScope *scope.MachineScope,
-) (*scope.InstanceScope, error) {
-	instances := &deckhousev1.StaticInstanceList{}
-	uidSelector := fields.OneTermEqualSelector("status.machineRef.uid", string(machineScope.StaticMachine.UID))
-
-	err := r.List(
-		ctx,
-		instances,
-		k8sClient.MatchingFieldsSelector{Selector: uidSelector},
-	)
-	if err != nil {
-		ctrl.LoggerFrom(ctx).Error(err, "failed to list StaticInstances by UID", "staticMachineUID", machineScope.StaticMachine.UID)
-		return nil, errors.Wrapf(err, "failed to find StaticInstance by static machine uid '%s'", machineScope.StaticMachine.UID)
-	}
-
-	if len(instances.Items) == 0 {
-		return nil, nil
-	}
-
-	staticInstance := &instances.Items[0]
-
-	newScope, err := scope.NewScope(r.Client, r.Config, ctrl.LoggerFrom(ctx))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create a scope")
-	}
-
-	instanceScope, err := scope.NewInstanceScope(newScope, staticInstance, ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create an instance scope")
-	}
-
-	instanceScope.AttachMachineScope(machineScope)
-
-	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to load SSHCredentials")
-	}
-
-	return instanceScope, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -520,7 +438,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return []string{string(staticInstance.Status.MachineRef.UID)}
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to setup StaticInstance field 'status.machineRef.uid' indexer")
+		return fmt.Errorf("failed to setup StaticInstance field 'status.machineRef.uid' indexer: %w", err)
 	}
 
 	err = mgr.GetFieldIndexer().IndexField(
@@ -541,7 +459,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return []string{node.Spec.ProviderID}
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to setup Node field 'spec.providerID' indexer")
+		return fmt.Errorf("failed to setup Node field 'spec.providerID' indexer: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -572,7 +490,6 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 			)
 			if err != nil {
 				logger.Error(err, "failed to get StaticMachineList")
-
 				return nil
 			}
 
@@ -620,4 +537,31 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 			},
 		}
 	}
+}
+
+func patchStaticInstance(ctx context.Context, patchHelper *patch.Helper, staticInstance *deckhousev1.StaticInstance, options ...patch.Option) error {
+	// No SetSummary in v1beta2; individual conditions should be updated with conditions.Set() elsewhere.
+	// Patch the object, ignoring conflicts on the conditions owned by this controller.
+	options = append(options,
+		patch.WithOwnedConditions{Conditions: []string{
+			clusterv1.ReadyCondition,
+			infrav1.StaticInstanceAddedToNodeGroupCondition,
+			infrav1.StaticInstanceBootstrapSucceededCondition,
+		}},
+	)
+
+	return patchHelper.Patch(ctx, staticInstance, options...)
+}
+
+func patchStaticMachine(ctx context.Context, patchHelper *patch.Helper, staticMachine *infrav1.StaticMachine, options ...patch.Option) error {
+	// No SetSummary in v1beta2; individual conditions should be updated with conditions.Set() elsewhere.
+	// Patch the object, ignoring conflicts on the conditions owned by this controller.
+	options = append(options,
+		patch.WithOwnedConditions{Conditions: []string{
+			clusterv1.ReadyCondition,
+			infrav1.StaticMachineStaticInstanceReadyCondition,
+		}},
+	)
+
+	return patchHelper.Patch(ctx, staticMachine, options...)
 }

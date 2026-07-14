@@ -23,7 +23,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 // dump is the serialization envelope for the debug endpoint.
@@ -42,6 +44,35 @@ type appDump struct {
 type moduleDump struct {
 	Status status.Status `json:"status"`
 	modules.Info
+}
+
+// globalDump carries the package info and status conditions for the global module.
+type globalDump struct {
+	Status status.Status `json:"status"`
+	global.Info
+}
+
+// DumpGlobal returns a YAML snapshot of the global module's package info.
+//
+// The snapshot mirrors global.Info: instance name, running state, filesystem
+// path, current values, and the names of registered hooks. Returns nil when the
+// global module has not been initialized (r.global is nil), which the debug
+// handler surfaces as an empty body.
+func (r *Runtime) DumpGlobal() []byte {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if r.global == nil {
+		return nil
+	}
+
+	d := globalDump{
+		Status: r.status.GetStatus(r.global.GetName()),
+		Info:   r.global.GetInfo(),
+	}
+
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
 }
 
 // Dump returns a YAML snapshot of all packages and their current state.
@@ -116,7 +147,7 @@ func (r *Runtime) renderManifests(ctx context.Context, name string) (string, err
 
 	if module := r.modules[name]; module != nil {
 		r.mu.Unlock()
-		return r.nelmService.Render(ctx, modulesNamespace, module)
+		return r.nelmService.Render(ctx, app.NamespaceDeckhouse, module)
 	}
 
 	r.mu.Unlock()

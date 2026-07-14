@@ -28,3 +28,4 @@ werf-giterminism.yaml
 /images/
 /templates/
 /template_tests/
+/docs/internal/

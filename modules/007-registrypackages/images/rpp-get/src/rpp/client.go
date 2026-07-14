@@ -109,6 +109,9 @@ func (c *Client) UpdateAuth(endpoints []string, token string) {
 	c.httpClient = newHTTPClient(c.cfg)
 }
 
+// installWorkerCount caps install parallelism at runtime.NumCPU because install
+// is CPU-bound: tar extraction + per-package install scripts (sometimes spawning
+// dpkg/rpm) compete for cores, not for the network.
 func installWorkerCount() int {
 	workers := runtime.NumCPU()
 	if workers < 1 {
@@ -118,13 +121,21 @@ func installWorkerCount() int {
 	return workers
 }
 
+// fetchWorkerCount sizes parallelism for network-bound downloads. Unlike
+// installWorkerCount it deliberately ignores NumCPU — fetching N small tarballs
+// over an HTTP connection (often via an ssh reverse-tunnel during bootstrap)
+// scales with link bandwidth, not with cores.
+func fetchWorkerCount() int {
+	return defaultFetchWorkers
+}
+
 func (c *Client) FetchAll(ctx context.Context, args []string) error {
 	refs, err := c.newPackageRefs(args)
 	if err != nil {
 		return err
 	}
 
-	return c.runAll(ctx, refs, c.fetchPackage)
+	return c.runAll(ctx, refs, fetchWorkerCount(), c.fetchPackage)
 }
 
 func (c *Client) InstallAll(ctx context.Context, args []string) error {
@@ -133,7 +144,7 @@ func (c *Client) InstallAll(ctx context.Context, args []string) error {
 		return err
 	}
 
-	return c.runAll(ctx, refs, c.installPackage)
+	return c.runAll(ctx, refs, installWorkerCount(), c.installPackage)
 }
 
 func (c *Client) InstallMissing(ctx context.Context, statuses []InstallStatus) error {
@@ -151,15 +162,15 @@ func (c *Client) InstallMissing(ctx context.Context, statuses []InstallStatus) e
 		}
 		missing = append(missing, ref)
 	}
-	return c.runAll(ctx, missing, c.installPackage)
+	return c.runAll(ctx, missing, installWorkerCount(), c.installPackage)
 }
 
-func (c *Client) runAll(ctx context.Context, refs []packageRef, action func(context.Context, packageRef) error) error {
+func (c *Client) runAll(ctx context.Context, refs []packageRef, maxWorkers int, action func(context.Context, packageRef) error) error {
 	if len(refs) == 0 {
 		return nil
 	}
 
-	workerCount := min(installWorkerCount(), len(refs))
+	workerCount := min(maxWorkers, len(refs))
 
 	if c.logger != nil {
 		c.logger.Printf("processing %d packages with %d workers", len(refs), workerCount)
@@ -246,8 +257,10 @@ func (c *Client) retry(ctx context.Context, ref packageRef, attempts int, should
 }
 
 func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
+	overallStart := time.Now()
 	c.logf(ref, "starting install for %s", ref.raw)
 
+	t := time.Now()
 	skip, err := c.shouldSkipInstalled(ref)
 	if err != nil {
 		return err
@@ -255,10 +268,13 @@ func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
 	if skip {
 		return c.writeResult(resultSkipped, ref.name)
 	}
+	skipCheckDur := time.Since(t)
 
+	t = time.Now()
 	if err := c.ensureFetchedArchive(ctx, ref); err != nil {
 		return err
 	}
+	fetchDur := time.Since(t)
 
 	workDir, err := c.createWorkDir(ref)
 	if err != nil {
@@ -266,23 +282,35 @@ func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
 	}
 	defer c.cleanupWorkDir(ref, workDir)
 
+	t = time.Now()
 	if err := c.extractArchive(ctx, ref, workDir); err != nil {
 		return err
 	}
+	extractDur := time.Since(t)
 
+	t = time.Now()
 	if err := c.runInstallScript(ctx, ref, workDir); err != nil {
 		return err
 	}
+	scriptDur := time.Since(t)
 
+	t = time.Now()
 	if err := c.storeInstalledPackage(ref, workDir); err != nil {
 		return err
 	}
-
 	if err := c.cleanupFetchedPackage(ref); err != nil {
 		return err
 	}
+	storeDur := time.Since(t)
 
-	c.logf(ref, "install completed")
+	c.logf(ref, "install completed in %s (skipCheck=%s fetch=%s extract=%s script=%s store=%s)",
+		time.Since(overallStart).Truncate(time.Millisecond),
+		skipCheckDur.Truncate(time.Millisecond),
+		fetchDur.Truncate(time.Millisecond),
+		extractDur.Truncate(time.Millisecond),
+		scriptDur.Truncate(time.Millisecond),
+		storeDur.Truncate(time.Millisecond),
+	)
 	return c.writeResult(resultInstalled, ref.name)
 }
 
@@ -303,17 +331,28 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 }
 
 func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
+	start := time.Now()
 	response, err := c.httpClient.Get(ctx, ref.digest)
 	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
+	httpDur := time.Since(start)
 
-	if err := writeResponseBody(ref.archivePath, response.Body); err != nil {
+	bodyStart := time.Now()
+	n, err := writeResponseBody(ref.archivePath, response.Body)
+	if err != nil {
 		return fmt.Errorf("write response body from %s: %w", response.Request.URL.String(), err)
 	}
+	bodyDur := time.Since(bodyStart)
 
-	c.logf(ref, "archive downloaded from %s (%s)", response.Request.URL.Host, formatSize(response.ContentLength))
+	var throughput string
+	if bodyDur > 0 && n > 0 {
+		mbps := float64(n) / 1024.0 / 1024.0 / bodyDur.Seconds()
+		throughput = fmt.Sprintf(", %.2f MB/s", mbps)
+	}
+	c.logf(ref, "archive downloaded from %s: %d bytes, http=%s body=%s%s",
+		response.Request.URL.Host, n, httpDur.Truncate(time.Millisecond), bodyDur.Truncate(time.Millisecond), throughput)
 	return nil
 }
 

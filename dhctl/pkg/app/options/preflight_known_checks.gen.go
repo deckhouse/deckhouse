@@ -2,8 +2,10 @@
 package options
 
 var generatedPreflightChecks = []string{
+	"bastion-availability",
 	"cidr-intersection",
 	"cloud-api-accessibility",
+	"cloud-disk-name-length",
 	"cloud-master-system-requirements",
 	"cloud-prefix",
 	"deckhouse-user",

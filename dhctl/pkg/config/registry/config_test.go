@@ -340,29 +340,25 @@ func TestConfig_DeepCopy(t *testing.T) {
 			{
 				name: "Direct mode",
 				config: func() *Config {
-					c := ConfigBuilder(WithModeDirect())
-					return &c
+					return new(ConfigBuilder(WithModeDirect()))
 				}(),
 			},
 			{
 				name: "Proxy mode",
 				config: func() *Config {
-					c := ConfigBuilder(WithModeProxy())
-					return &c
+					return new(ConfigBuilder(WithModeProxy()))
 				}(),
 			},
 			{
 				name: "Unmanaged mode",
 				config: func() *Config {
-					c := ConfigBuilder(WithModeUnmanaged())
-					return &c
+					return new(ConfigBuilder(WithModeUnmanaged()))
 				}(),
 			},
 			{
 				name: "Local mode",
 				config: func() *Config {
-					c := ConfigBuilder(WithModeLocal())
-					return &c
+					return new(ConfigBuilder(WithModeLocal()))
 				}(),
 			},
 		}

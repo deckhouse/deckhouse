@@ -1,6 +1,6 @@
 {{- if and (eq .Section "search") (eq .Type "search") -}}
-{{- $modulesData := .Site.Data.modules_all -}}
-{{- $currentLang := .Site.Language.Lang -}}
+{{- $modulesData := hugo.Data.modules_all -}}
+{{- $currentLang := site.Language.Lang -}}
 {"documents": [
     {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
     {{- $first := true -}}
@@ -43,7 +43,7 @@
   {{- range $modulesStablestList }}
     {{- $moduleName := index . "name" }}
     {{- $moduleChannel := index . "channel" }}
-    {{- $moduleData := index (index $.Site.Data.modules $moduleName) $moduleChannel }}
+    {{- $moduleData := index (index hugo.Data.modules $moduleName) $moduleChannel }}
     {{- if not $moduleData }}
       {{- continue -}}
     {{- end }}

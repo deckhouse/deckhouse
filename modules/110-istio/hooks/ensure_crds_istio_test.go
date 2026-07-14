@@ -86,4 +86,17 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Field("spec.scope").String()).To(Equal("0.992"))
 		})
 	})
+
+	Context("globalVersion 1.27 installs CRDs from 1.27 directory", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(``)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("Hook must not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
 })

@@ -1,9 +1,8 @@
 # TODO remove after rewrite caps
 {{- define "static_controller_manager_args" }}
-- --leader-elect-lease-duration=3m
-- --leader-elect-renew-deadline=2m50s
+- --leader-elect-lease-duration=1m
+- --leader-elect-renew-deadline=50s
 - --leader-elect-retry-period=5s
-- --sync-period=1m
 {{- end }}
 
 {{- define "static_controller_manager_ports" }}

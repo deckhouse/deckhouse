@@ -25,10 +25,13 @@ d8 k get virtualmachineclass
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME               PHASE   AGE
 generic            Ready   6d1h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Make sure to specify the VirtualMachineClass resource in the virtual machine configuration.
 The following is an example of specifying a class in the VM specification:
@@ -59,11 +62,14 @@ d8 k get virtualmachineclass
 
 Example output (no default class):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready               1d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To assign the default class, run:
 
@@ -85,11 +91,14 @@ d8 k get vmclass
 
 Example output (with default class):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready   true        1d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 When creating a VM without specifying the `spec.virtualMachineClassName` field, it will be set to `host-passthrough-custom`.
 

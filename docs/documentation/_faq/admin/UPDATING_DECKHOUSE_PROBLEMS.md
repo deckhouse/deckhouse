@@ -44,11 +44,14 @@ If the Deckhouse Kubernetes Platform update fails, one or more Deckhouse pods in
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    Type     Reason     Age                      From     Message
    ----     ------     ----                     ----     -------
    Warning  Unhealthy  4m44s (x1918 over 154m)  kubelet  Readiness probe failed: HTTP probe failed with statuscode: 500
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 #### DKP update is stuck in the Release is suspended status
 
@@ -62,6 +65,7 @@ d8 k get deckhousereleases.deckhouse.io
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE        TRANSITIONTIME   MESSAGE
 v1.69.13   Skipped      3h46m
@@ -76,3 +80,5 @@ v1.70.16   Skipped      19d
 v1.70.17   Deployed     160m
 v1.71.3    Suspended    14d              Release is suspended
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

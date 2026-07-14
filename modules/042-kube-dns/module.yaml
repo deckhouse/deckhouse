@@ -3,7 +3,6 @@ stage: General Availability
 critical: true
 weight: 42
 subsystems:
-  - kubernetes
   - networking
 namespace: kube-system
 descriptions:

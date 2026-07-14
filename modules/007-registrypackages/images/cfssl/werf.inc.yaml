@@ -22,7 +22,7 @@ shell:
     - rm -rf /src/cfssl/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
@@ -34,9 +34,6 @@ secrets:
   - id: GOPROXY
     value: "{{ $.GOPROXY }}"
 shell:
-  beforeInstall:
-    {{- include "alpine packages proxy" . | nindent 4 }}
-    - apk add --no-cache make
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export GOOS=linux

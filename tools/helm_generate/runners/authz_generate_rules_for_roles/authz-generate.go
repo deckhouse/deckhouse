@@ -29,15 +29,13 @@ package authzgeneraterulesforroles
 
 import (
 	"bytes"
-	"encoding/json"
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
-	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -50,14 +48,28 @@ import (
 	"tools/helm_generate/helper"
 )
 
-var (
+const (
+	accessLevelAnnotation = "user-authz.deckhouse.io/access-level"
+	moduleAuthzRolesFile  = "user-authz-cluster-roles.yaml"
+
 	userRole           = "User"
 	privilegedUserRole = "PrivilegedUser"
 	editorRole         = "Editor"
 	adminRole          = "Admin"
 	clusterEditorRole  = "ClusterEditor"
 	clusterAdminRole   = "ClusterAdmin"
+)
 
+var moduleRoots = []string{
+	"modules",
+	"ee/modules",
+	"ee/be/modules",
+	"ee/fe/modules",
+	"ee/se/modules",
+	"ee/se-plus/modules",
+}
+
+var (
 	// Predefined order for roles for printed doc
 	orderedRoleNames = []string{
 		userRole,
@@ -76,39 +88,42 @@ var (
 		editorRole:         {userRole, privilegedUserRole},
 		adminRole:          {userRole, privilegedUserRole, editorRole},
 		clusterEditorRole:  {userRole, privilegedUserRole, editorRole},
-		clusterAdminRole:   {userRole, privilegedUserRole, editorRole, adminRole, clusterEditorRole},
+		clusterAdminRole: {
+			userRole,
+			privilegedUserRole,
+			editorRole,
+			adminRole,
+			clusterEditorRole,
+		},
 	}
 )
 
-// readmeTemplateData is data for readme template
+// readmeTemplateData is data for readme template.
+// The placeholder generates only the dynamic part (aliases + per-role rule
+// blocks); static intro text lives in each README outside the placeholder so
+// the EN and RU files contain only their own language (dmt-lint forbids
+// cyrillic in README.md).
 type readmeTemplateData struct {
-	Roles   []role  `json:"roles"`
-	Aliases []alias `json:"aliases"`
-}
-
-// toValues converts readmeTemplateData to values for templates
-// (implements "templateData" interface)
-func (t *readmeTemplateData) toValues() map[string]interface{} {
-	var res map[string]interface{}
-	marshal, _ := json.Marshal(t)
-	_ = json.Unmarshal(marshal, &res)
-	return res
+	Roles   []role
+	Aliases []alias
 }
 
 // role is representation of ClusterRole verbs for readme template
 type role struct {
-	Name            string              `json:"name"`
-	Rules           map[string][]string `json:"rules"`
-	AdditionalRoles []string            `json:"additionalRoles"`
+	Name            string
+	Rules           roleRules
+	AdditionalRoles []string
 }
+
+type roleRules map[string][]string
 
 // alias is representation of commonly used verbs group for readme template
 type alias struct {
-	Name  string   `json:"name"`
-	Verbs []string `json:"verbs"`
+	Name  string
+	Verbs []string
 	// verbsJoined represents "Verbs" joined with comma
 	// (refer to newAlias)
-	verbsJoined string `json:"-"`
+	verbsJoined string
 }
 
 func newAlias(name string, verbs []string) alias {
@@ -151,57 +166,77 @@ func isAliased(verbs string) (string, bool) {
 	return "", false
 }
 
-func run() {
+func run() error {
+	deckhouseRoot, err := helper.DeckhouseRoot()
+	if err != nil {
+		return fmt.Errorf("get deckhouse root: %w", err)
+	}
+
 	// "github.com/deckhouse/deckhouse/testing/library" InitValues() can be used to seed render values.
-	renderContents, err := renderHelmTemplates("../modules/140-user-authz", `{"userAuthz":{"internal":{}},"global":{}}`)
+	renderContents, err := renderHelmTemplates(
+		deckhouseRoot,
+		filepath.Join(deckhouseRoot, "modules/140-user-authz"),
+		`{"userAuthz":{"internal":{}},"global":{}}`,
+	)
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("render user-authz templates: %w", err)
 	}
 
-	clusterRolesMap := getClusterRoles(renderContents, "user-authz/templates/cluster-roles.yaml")
+	clusterRolesMap, err := getClusterRoles(renderContents, "user-authz/templates/cluster-roles.yaml")
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("get user-authz cluster roles: %w", err)
 	}
 
-	// map[<role name>]map[<verb>][]<resource>
-	crVerbResourceMap := make(map[string]map[string][]string, len(neededClusterRoleExcludes))
+	// map[<role name>]map[<resource target>]<verbs>
+	baseRoleRules := make(map[string]roleRuleSet, len(neededClusterRoleExcludes))
 	for name, rules := range clusterRolesMap {
 		if _, f := neededClusterRoleExcludes[name]; !f {
 			continue
 		}
-		crVerbResourceMap[name] = processClusterRoleRules(rules)
+		baseRoleRules[name] = processClusterRoleRules(rules)
+	}
+
+	if err := mergeModuleAuthzRoles(deckhouseRoot, baseRoleRules); err != nil {
+		return fmt.Errorf("collect module authz roles: %w", err)
 	}
 
 	templateData := &readmeTemplateData{
 		Aliases: aliases,
+		Roles:   make([]role, 0, len(orderedRoleNames)),
 	}
 	for _, roleName := range orderedRoleNames {
-		templateData.Roles = append(templateData.Roles, prepareClusterRoleForTemplate(roleName, neededClusterRoleExcludes[roleName], crVerbResourceMap))
+		templateData.Roles = append(
+			templateData.Roles,
+			prepareClusterRoleForTemplate(
+				roleName,
+				neededClusterRoleExcludes[roleName],
+				baseRoleRules,
+			),
+		)
 	}
 
-	readmeContent, err := renderTemplate("helm_generate/runners/authz_generate_rules_for_roles/readme-placeholder.tpl", templateData)
+	readmeContent, err := renderTemplate(
+		filepath.Join(deckhouseRoot, "tools/helm_generate/runners/authz_generate_rules_for_roles/readme-placeholder.tpl"),
+		templateData,
+	)
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("render readme placeholder: %w", err)
 	}
 
 	readmeFiles := []string{
-		"../modules/140-user-authz/docs/README.md",
-		"../modules/140-user-authz/docs/README_RU.md",
+		filepath.Join(deckhouseRoot, "modules/140-user-authz/docs/README.md"),
+		filepath.Join(deckhouseRoot, "modules/140-user-authz/docs/README_RU.md"),
 	}
 	for _, fileName := range readmeFiles {
 		if err := updateReadme(fileName, readmeContent); err != nil {
-			log.Fatalln(err)
+			return fmt.Errorf("update %s: %w", fileName, err)
 		}
 	}
+	return nil
 }
 
 // renderHelmTemplates renders helm template for chart directory "dir" with values "values"
-func renderHelmTemplates(dir, values string) (map[string]string, error) {
-	deckhouseRoot, err := helper.DeckhouseRoot()
-	if err != nil {
-		return nil, err
-	}
-
+func renderHelmTemplates(deckhouseRoot, dir, values string) (map[string]string, error) {
 	helmLibPath := "helm_lib/charts/deckhouse_lib_helm"
 	chartHelmLibPath := filepath.Join(deckhouseRoot, "modules/140-user-authz/charts/helm_lib")
 	if err := os.Remove(chartHelmLibPath); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -214,14 +249,16 @@ func renderHelmTemplates(dir, values string) (map[string]string, error) {
 	}
 
 	defer func() {
-		_ = os.Remove(chartHelmLibPath)
-		helmLibFullPath = filepath.Join("/deckhouse", helmLibPath)
-		_ = os.Symlink(helmLibFullPath, chartHelmLibPath)
+		if err := os.Remove(chartHelmLibPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "warning: restore chart helm_lib symlink: remove %s: %v\n", chartHelmLibPath, err)
+			return
+		}
+		// Restore the in-container symlink so the chart stays valid for Docker-based renders.
+		restoreTarget := filepath.Join("/deckhouse", helmLibPath)
+		if err := os.Symlink(restoreTarget, chartHelmLibPath); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: restore chart helm_lib symlink: %v\n", err)
+		}
 	}()
-
-	if err := os.Chdir(filepath.Join(deckhouseRoot, "tools")); err != nil {
-		return nil, err
-	}
 
 	r := helm.Renderer{}
 	return r.RenderChartFromDir(dir, values)
@@ -229,119 +266,395 @@ func renderHelmTemplates(dir, values string) (map[string]string, error) {
 
 type clusterRole struct {
 	Metadata struct {
-		Name string `yaml:"name"`
+		Name        string            `yaml:"name"`
+		Annotations map[string]string `yaml:"annotations"`
 	} `yaml:"metadata"`
 	Rules []rule `yaml:"rules"`
 }
 
 type rule struct {
-	Verbs     []string `yaml:"verbs"`
-	APIGroups []string `yaml:"apiGroups"`
-	Resources []string `yaml:"resources"`
+	Verbs           []string `yaml:"verbs"`
+	APIGroups       []string `yaml:"apiGroups"`
+	Resources       []string `yaml:"resources"`
+	ResourceNames   []string `yaml:"resourceNames,omitempty"`
+	NonResourceURLs []string `yaml:"nonResourceURLs,omitempty"`
 }
 
 // getClusterRoles retrieves ClusterRole template file "fileName" from helm templates map "templates"
-// and converts ClusterRoles verbs and resources to map
-func getClusterRoles(templates map[string]string, fileName string) map[string][]rule /*map[<role name>][]<role rules>*/ {
-	dec := yaml.NewDecoder(strings.NewReader(templates[fileName]))
+// and converts ClusterRoles verbs and resources to map.
+func getClusterRoles(
+	templates map[string]string,
+	fileName string,
+) (map[string][]rule, error) {
+	body, ok := templates[fileName]
+	if !ok {
+		return nil, fmt.Errorf("rendered template %q not found", fileName)
+	}
+
+	dec := yaml.NewDecoder(strings.NewReader(body))
 	roleMap := make(map[string][]rule)
 	for {
 		var r clusterRole
-		if err := dec.Decode(&r); err != nil || len(r.Rules) < 1 {
+		err := dec.Decode(&r)
+		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return roleMap
+				return roleMap, nil
 			}
+			return nil, fmt.Errorf("yaml decode %s: %w", fileName, err)
+		}
+		if r.Metadata.Name == "" || len(r.Rules) < 1 {
 			continue
 		}
 		roleName := newRoleFromClusterRoleName(r.Metadata.Name)
+		if _, dup := roleMap[roleName]; dup {
+			return nil, fmt.Errorf("duplicate cluster role %q in %s (from ClusterRole %q)", roleName, fileName, r.Metadata.Name)
+		}
 		roleMap[roleName] = r.Rules
 	}
 }
 
-// processClusterRoleRules generates map of verbs with resources lists for rules list
-func processClusterRoleRules(rules []rule) map[string][]string /*map[<verb>][]<resource>*/ {
-	rulesMap := make(map[string][]string)
+type permissionTarget struct {
+	APIGroup       string
+	Resource       string
+	ResourceNames  []string
+	NonResourceURL string
+}
+
+type targetRule struct {
+	target permissionTarget
+	verbs  map[string]struct{}
+}
+
+type roleRuleSet map[string]*targetRule
+
+// key returns a stable identifier for the target. It is called once per rule
+// insertion, so we avoid the intermediate []string + strings.Join allocations
+// by writing directly into a pre-sized strings.Builder (single allocation).
+func (t permissionTarget) key() string {
+	n := len(t.APIGroup) + len(t.Resource) + len(t.NonResourceURL) + 3 // 3 outer "\x01" separators
+	for _, name := range t.ResourceNames {
+		n += len(name)
+	}
+	if len(t.ResourceNames) > 1 {
+		n += len(t.ResourceNames) - 1 // inner "\x00" separators
+	}
+
+	var b strings.Builder
+	b.Grow(n)
+	b.WriteString(t.APIGroup)
+	b.WriteByte('\x01')
+	b.WriteString(t.Resource)
+	b.WriteByte('\x01')
+	for i, name := range t.ResourceNames {
+		if i > 0 {
+			b.WriteByte('\x00')
+		}
+		b.WriteString(name)
+	}
+	b.WriteByte('\x01')
+	b.WriteString(t.NonResourceURL)
+	return b.String()
+}
+
+func (t permissionTarget) displayName() string {
+	if t.NonResourceURL != "" {
+		return "nonResourceURLs/" + t.NonResourceURL
+	}
+
+	name := t.Resource
+	if t.APIGroup != "" {
+		name = t.APIGroup + "/" + t.Resource
+	}
+	if len(t.ResourceNames) > 0 {
+		resourceNames := strings.Join(sortStrings(t.ResourceNames), ", ")
+		name = fmt.Sprintf("%s (resourceNames: %s)", name, resourceNames)
+	}
+	return name
+}
+
+func (rs roleRuleSet) add(target permissionTarget, verbs []string) {
+	rule := rs.ensure(target, len(verbs))
+	for _, verb := range verbs {
+		rule.verbs[verb] = struct{}{}
+	}
+}
+
+func (rs roleRuleSet) ensure(target permissionTarget, verbCount int) *targetRule {
+	target.ResourceNames = sortStrings(target.ResourceNames)
+	key := target.key()
+	if rs[key] == nil {
+		rs[key] = &targetRule{
+			target: target,
+			verbs:  make(map[string]struct{}, verbCount),
+		}
+	}
+	return rs[key]
+}
+
+func mergeRoleRuleSet(dst, src roleRuleSet) {
+	for _, tr := range src {
+		dstRule := dst.ensure(tr.target, len(tr.verbs))
+		for verb := range tr.verbs {
+			dstRule.verbs[verb] = struct{}{}
+		}
+	}
+}
+
+// processClusterRoleRules generates a map of resource targets with verb sets.
+func processClusterRoleRules(rules []rule) roleRuleSet {
+	rulesMap := make(roleRuleSet)
 	for _, r := range rules {
-		verbAlias, resources := processRule(r)
-		rulesMap[verbAlias] = append(rulesMap[verbAlias], resources...)
+		processRule(r, rulesMap)
 	}
 	return rulesMap
 }
 
-// processRule retrieves verbs names and resources list from rule
-func processRule(r rule) (string /*<verbs or verbs alias>*/, []string /*[]<resource>*/) {
-	grSlice := make([]string, 0, len(r.APIGroups)*len(r.Resources))
-	for _, apiGroup := range r.APIGroups {
-		if apiGroup != "" {
-			apiGroup = apiGroup + "/"
-		}
+// processRule retrieves resource targets and verb sets from rule.
+func processRule(r rule, rulesMap roleRuleSet) {
+	for _, url := range r.NonResourceURLs {
+		rulesMap.add(permissionTarget{NonResourceURL: url}, r.Verbs)
+	}
+
+	apiGroups := r.APIGroups
+	if len(apiGroups) == 0 && len(r.Resources) > 0 {
+		apiGroups = []string{""}
+	}
+	for _, apiGroup := range apiGroups {
 		for _, resource := range r.Resources {
-			grSlice = append(grSlice, apiGroup+resource)
+			rulesMap.add(permissionTarget{
+				APIGroup:      apiGroup,
+				Resource:      resource,
+				ResourceNames: r.ResourceNames,
+			}, r.Verbs)
 		}
 	}
-
-	verbsJoined := sliceToString(r.Verbs)
-	if al, f := isAliased(verbsJoined); f {
-		verbsJoined = al
-	}
-
-	return verbsJoined, grSlice
 }
 
-// prepareClusterRoleForTemplate generates template data for ClusterRole
-func prepareClusterRoleForTemplate(roleName string, excls []string, crVerbResourceMap map[string]map[string][]string /*map[<role name>]map[<verb>][]<resource>*/) role {
-	templateRole := role{Name: roleName}
+// verbsKey returns the canonical key for a verb set: either a registered alias
+// name or a sorted, comma-joined list. It sorts the input slice in place; the
+// caller MUST NOT rely on the original ordering after the call.
+func verbsKey(verbs []string) string {
+	slices.Sort(verbs)
+	verbsJoined := strings.Join(verbs, ",")
+	if al, f := isAliased(verbsJoined); f {
+		return al
+	}
+	return verbsJoined
+}
 
-	var excludesMap map[string]map[string]struct{}
-	if len(excls) > 0 {
-		templateRole.AdditionalRoles = excls
-		excludesMap = clusterRoleGenerateExcludes(excls, crVerbResourceMap)
+// prepareClusterRoleForTemplate generates template data for ClusterRole.
+func prepareClusterRoleForTemplate(
+	roleName string,
+	excls []string,
+	baseRoleRules map[string]roleRuleSet,
+) role {
+	templateRole := role{
+		Name: roleName,
 	}
 
-	templateRole.Rules = clusterRoleApplyExcludes(crVerbResourceMap[roleName], excludesMap)
+	excludesMap := make(roleRuleSet)
+	if len(excls) > 0 {
+		templateRole.AdditionalRoles = excls
+		excludesMap = clusterRoleGenerateExcludes(excls, baseRoleRules)
+	}
+
+	templateRole.Rules = clusterRoleApplyExcludes(baseRoleRules[roleName], excludesMap)
 	return templateRole
 }
 
-// clusterRoleGenerateExcludes generates map with verbs and resources for excludes
-func clusterRoleGenerateExcludes(excludeRoleNames []string, rulesMap map[string]map[string][]string /*map[<role name>]map[<verb>][]<resource>*/) map[string]map[string]struct{} /*map[<verb>]map[<resource>]{}*/ {
+// clusterRoleGenerateExcludes generates target/verb exclusions from included roles.
+func clusterRoleGenerateExcludes(
+	excludeRoleNames []string,
+	rulesMap map[string]roleRuleSet,
+) roleRuleSet {
+	excludesMap := make(roleRuleSet)
 	if len(excludeRoleNames) < 1 {
-		return nil
+		return excludesMap
 	}
 
-	excludesMap := make(map[string]map[string]struct{})
 	for _, name := range excludeRoleNames {
-		for verb, resources := range rulesMap[name] {
-			if excludesMap[verb] == nil {
-				excludesMap[verb] = make(map[string]struct{})
-			}
-			for _, resource := range resources {
-				excludesMap[verb][resource] = struct{}{}
-			}
-		}
+		mergeRoleRuleSet(excludesMap, rulesMap[name])
 	}
 	return excludesMap
 }
 
-// clusterRoleApplyExcludes removes from "roleRules" verbs resources already existed in "excludesMap"
-func clusterRoleApplyExcludes(roleRules map[string][]string /*map[<verb>][]<resource>*/, excludesMap map[string]map[string]struct{} /*map[<verb>]map[<resource>]{}*/) map[string][]string /*map[<verb>][]<resource>*/ {
-	resultMap := make(map[string][]string, len(roleRules))
-	for verb, resources := range roleRules {
-		resultResources := make([]string, 0)
-		for _, resource := range resources {
-			if verbMap, f := excludesMap[verb]; f {
-				if _, f := verbMap[resource]; f {
+// clusterRoleApplyExcludes removes verbs from "roleRules" already covered by "excludesMap".
+func clusterRoleApplyExcludes(
+	sourceRules roleRuleSet,
+	excludesMap roleRuleSet,
+) roleRules {
+	resultMap := make(roleRules, len(sourceRules))
+	for key, tr := range sourceRules {
+		var excludedVerbs map[string]struct{}
+		if excludedRule := excludesMap[key]; excludedRule != nil {
+			excludedVerbs = excludedRule.verbs
+		}
+
+		verbs := make([]string, 0, len(tr.verbs))
+		if _, wildcardExcluded := excludedVerbs["*"]; !wildcardExcluded {
+			for verb := range tr.verbs {
+				if _, f := excludedVerbs[verb]; f {
 					continue
 				}
+				verbs = append(verbs, verb)
 			}
-			resultResources = append(resultResources, resource)
 		}
-		if len(resultResources) < 1 {
-			delete(resultMap, verb)
+
+		if len(verbs) < 1 {
 			continue
 		}
-		resultMap[verb] = sortStrings(resultResources)
+		verbKey := verbsKey(verbs)
+		resultMap[verbKey] = append(resultMap[verbKey], tr.target.displayName())
+	}
+	for verb, resources := range resultMap {
+		resultMap[verb] = dedupSorted(resources)
 	}
 	return resultMap
+}
+
+// mergeModuleAuthzRoles adds default module roles annotated with access-level.
+// Hooks bind each annotated ClusterRole to its own level and every senior level,
+// so the generated README must apply the same cumulative module merge.
+func mergeModuleAuthzRoles(deckhouseRoot string, roleRules map[string]roleRuleSet) error {
+	modules, err := findModulesWithAuthzRoles(deckhouseRoot)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range modules {
+		roles, err := renderModuleAuthzRoles(m.path, m.chartName)
+		if err != nil {
+			return fmt.Errorf("render module %q authz roles: %w", m.chartName, err)
+		}
+		for _, cr := range roles {
+			level := cr.Metadata.Annotations[accessLevelAnnotation]
+			levelIndex := slices.Index(orderedRoleNames, level)
+			if levelIndex < 0 {
+				continue
+			}
+			clusterRoleRules := processClusterRoleRules(cr.Rules)
+			for _, roleName := range orderedRoleNames[levelIndex:] {
+				if roleRules[roleName] == nil {
+					roleRules[roleName] = make(roleRuleSet)
+				}
+				mergeRoleRuleSet(roleRules[roleName], clusterRoleRules)
+			}
+		}
+	}
+	return nil
+}
+
+type moduleEntry struct {
+	path      string
+	chartName string
+}
+
+func findModulesWithAuthzRoles(deckhouseRoot string) ([]moduleEntry, error) {
+	var result []moduleEntry
+	for _, root := range moduleRoots {
+		rootPath := filepath.Join(deckhouseRoot, root)
+		entries, err := os.ReadDir(rootPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			return nil, fmt.Errorf("read modules root %s: %w", rootPath, err)
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			modPath := filepath.Join(rootPath, e.Name())
+			moduleAuthzRolesPath := filepath.Join(modPath, "templates", moduleAuthzRolesFile)
+			if _, err := os.Stat(moduleAuthzRolesPath); err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+				return nil, fmt.Errorf("stat module authz roles %s: %w", moduleAuthzRolesPath, err)
+			}
+			chartName, err := readChartName(filepath.Join(modPath, "Chart.yaml"))
+			if err != nil {
+				return nil, fmt.Errorf("read module chart name %s: %w", modPath, err)
+			}
+			result = append(result, moduleEntry{path: modPath, chartName: chartName})
+		}
+	}
+	slices.SortFunc(result, func(a, b moduleEntry) int {
+		return cmp.Compare(a.path, b.path)
+	})
+	return result, nil
+}
+
+func readChartName(chartYaml string) (string, error) {
+	data, err := os.ReadFile(chartYaml)
+	if err != nil {
+		return "", fmt.Errorf("read chart file: %w", err)
+	}
+	var c struct {
+		Name string `yaml:"name"`
+	}
+	if err := yaml.Unmarshal(data, &c); err != nil {
+		return "", fmt.Errorf("unmarshal chart file: %w", err)
+	}
+	if c.Name == "" {
+		return "", fmt.Errorf("empty chart name in %s", chartYaml)
+	}
+	return c.Name, nil
+}
+
+func renderModuleAuthzRoles(modulePath, chartName string) ([]clusterRole, error) {
+	rd, err := helper.NewRenderDir(chartName)
+	if err != nil {
+		return nil, fmt.Errorf("render dir: %w", err)
+	}
+	defer rd.Remove()
+
+	tplPath := filepath.Join(modulePath, "templates", moduleAuthzRolesFile)
+	if err := rd.AddTemplate(moduleAuthzRolesFile, tplPath); err != nil {
+		return nil, fmt.Errorf("add template: %w", err)
+	}
+	rd.AddHelper(filepath.Join(modulePath, "templates"))
+
+	r := helm.Renderer{}
+	contents, err := r.RenderChartFromDir(rd.Path(), "{}")
+	if err != nil {
+		return nil, fmt.Errorf("render: %w", err)
+	}
+
+	for name, body := range contents {
+		if strings.Contains(name, "templates/"+moduleAuthzRolesFile) {
+			roles, err := decodeClusterRoles(body)
+			if err != nil {
+				return nil, fmt.Errorf("decode rendered roles: %w", err)
+			}
+			return roles, nil
+		}
+	}
+	return nil, nil
+}
+
+func decodeClusterRoles(yamlText string) ([]clusterRole, error) {
+	var roles []clusterRole
+	dec := yaml.NewDecoder(strings.NewReader(yamlText))
+	for {
+		var cr clusterRole
+		if err := dec.Decode(&cr); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
+		if cr.Metadata.Name == "" || len(cr.Rules) == 0 {
+			continue
+		}
+		roles = append(roles, cr)
+	}
+	return roles, nil
+}
+
+func dedupSorted(s []string) []string {
+	sorted := sortStrings(s)
+	return slices.Compact(sorted)
 }
 
 // updateReadme opens "fileName" file and replaces it's contents
@@ -353,13 +666,7 @@ func updateReadme(fileName string, content []byte) error {
 		endPlaceholder   = "<!-- end user-authz roles placeholder -->"
 	)
 
-	f, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	fileText, err := io.ReadAll(f)
+	fileText, err := os.ReadFile(fileName)
 	if err != nil {
 		return err
 	}
@@ -369,25 +676,19 @@ func updateReadme(fileName string, content []byte) error {
 		return err
 	}
 
-	if err := os.WriteFile(fileName, []byte(newFileContents), 0644); err != nil {
+	if err := os.WriteFile(fileName, newFileContents, 0o644); err != nil {
 		return err
 	}
 	return nil
 }
 
-// templateData is an interface for rendering templates
-type templateData interface {
-	toValues() map[string]interface{}
-}
-
-// renderTemplate renders template from "templateFile" file with values from templateData interface{}
-func renderTemplate(templateFile string, tempalteData templateData) ([]byte, error) {
+// renderTemplate renders template from "templateFile" file with readme values.
+func renderTemplate(templateFile string, templateData *readmeTemplateData) ([]byte, error) {
 	templateFuncMap := sprig.TxtFuncMap()
 
-	// template function that encodes an item into a Yaml string
-	templateFuncMap["toYaml"] = func(v interface{}) string {
-		output, _ := yaml.Marshal(v)
-		return string(output)
+	templateFuncMap["toYaml"] = func(v any) (string, error) {
+		output, err := yaml.Marshal(v)
+		return string(output), err
 	}
 	tpl, err := template.New(filepath.Base(templateFile)).
 		Funcs(templateFuncMap).
@@ -397,7 +698,7 @@ func renderTemplate(templateFile string, tempalteData templateData) ([]byte, err
 	}
 
 	var res bytes.Buffer
-	if err := tpl.Execute(&res, tempalteData.toValues()); err != nil {
+	if err := tpl.Execute(&res, templateData); err != nil {
 		return nil, err
 	}
 
@@ -406,25 +707,30 @@ func renderTemplate(templateFile string, tempalteData templateData) ([]byte, err
 
 // replacePlaceholder replaces contents in "text" between "startPlaceholder" and "endPlaceholder" with "replaceContent"
 func replacePlaceholder(text, replaceContent []byte, startPlaceholder, endPlaceholder string) ([]byte, error) {
-	// refer to https://github.com/google/re2/wiki/Syntax
-	re, err := regexp.Compile(fmt.Sprintf("(?s)%s(.*?)%s", startPlaceholder, endPlaceholder))
-	if err != nil {
-		return nil, err
-	}
-
-	// Find submatch for first subexpression (refer to re.FindSubmatchIndex doc)
-	subMatchIndexes := re.FindSubmatchIndex(text)
-	if len(subMatchIndexes) < 4 {
+	start := bytes.Index(text, []byte(startPlaceholder))
+	if start < 0 {
 		return nil, fmt.Errorf("didn't find submatch inside placeholder `%s` and `%s`", startPlaceholder, endPlaceholder)
 	}
-	placeholderStart := subMatchIndexes[2] + 1
-	placeHolderEnd := subMatchIndexes[3] - 1
 
-	buf := bytes.NewBuffer(nil)
-	buf.Write(text[:placeholderStart])
-	buf.Write(replaceContent)
-	buf.Write(text[placeHolderEnd:])
-	return buf.Bytes(), nil
+	replaceStart := start + len(startPlaceholder)
+	if replaceStart < len(text) && text[replaceStart] == '\n' {
+		replaceStart++
+	}
+
+	replaceEnd := bytes.Index(text[replaceStart:], []byte(endPlaceholder))
+	if replaceEnd < 0 {
+		return nil, fmt.Errorf("didn't find submatch inside placeholder `%s` and `%s`", startPlaceholder, endPlaceholder)
+	}
+	replaceEnd += replaceStart
+	if replaceEnd > replaceStart && text[replaceEnd-1] == '\n' {
+		replaceEnd--
+	}
+
+	result := make([]byte, 0, len(text)-replaceEnd+replaceStart+len(replaceContent))
+	result = append(result, text[:replaceStart]...)
+	result = append(result, replaceContent...)
+	result = append(result, text[replaceEnd:]...)
+	return result, nil
 }
 
 // newRoleFromClusterRoleName generates user-authz role name from ClusterRole name
@@ -439,8 +745,7 @@ func sliceToString(s []string) string {
 
 // sortStrings return new sorted slice
 func sortStrings(s []string) []string {
-	rs := make([]string, len(s))
-	copy(rs, s)
-	sort.Strings(rs)
+	rs := slices.Clone(s)
+	slices.Sort(rs)
 	return rs
 }

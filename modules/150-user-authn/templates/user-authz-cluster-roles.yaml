@@ -50,6 +50,7 @@ rules:
   resources:
   - users
   - groups
+  - dexproviderchecks
   - dexproviders
   - useroperations
   verbs:

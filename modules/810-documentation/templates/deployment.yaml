@@ -73,6 +73,12 @@ spec:
         env:
           - name: HUGO_ENVIRONMENT
             value: production
+          - name: GOMEMLIMIT
+            value: "1800MiB"
+          - name: HUGO_MEMORYLIMIT
+            value: "1"
+          - name: HUGO_NUMWORKERMULTIPLIER
+            value: "2"
           - name: POD_IP
             valueFrom:
               fieldRef:

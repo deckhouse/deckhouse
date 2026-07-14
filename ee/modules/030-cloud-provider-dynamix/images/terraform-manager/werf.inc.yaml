@@ -12,12 +12,17 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
+  stageDependencies:
+    install:
+    - '**/*'
 import:
   - image: terraform-provider-decort
     add: /terraform-provider-decort
     to: /terraform-manager/terraform-provider-decort
     before: setup
-
+shell:
+  install:
+  - set -e
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -41,7 +46,7 @@ shell:
 ---
 image: terraform-provider-decort
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:

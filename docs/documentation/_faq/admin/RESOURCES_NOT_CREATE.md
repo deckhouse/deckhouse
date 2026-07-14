@@ -15,6 +15,7 @@ If the required resources do not appear after creating an object in the system (
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               ALERT                                           SEVERITY   AGE   LAST RECEIVED   STATUS
    012f602592aa7a91   K8SSchedulerTargetDown                          3          16h   54s             firing
@@ -27,6 +28,8 @@ If the required resources do not appear after creating an object in the system (
    2e34039aa7a3018e   D8NodeIsNotUpdating                             9          12h   47s             firing
    31baf9a70d657275   D8StrongholdClusterNotHealthy                   7          16h   55s             firing
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    For more information about alerts, see the [The list of alerts](/products/kubernetes-platform/documentation/v1/reference/alerts.html) section.
 
@@ -72,6 +75,7 @@ If the required resources do not appear after creating an object in the system (
 
      Example output:
 
+     <!-- markdownlint-disable MD031 -->
      ```console
      LAST SEEN   TYPE      REASON              OBJECT                                          MESSAGE
      11m         Warning   Unhealthy           pod/deckhouse-5886c9bd77-vgdbw                  Readiness probe failed: HTTP probe failed with statuscode: 500
@@ -79,5 +83,7 @@ If the required resources do not appear after creating an object in the system (
      7m20s       Normal    Scheduled           pod/deckhouse-6bc5c4494-fwx6z                   Successfully assigned d8-system/deckhouse-6bc5c4494-fwx6z to sandbox1-master-0
      7m20s       Normal    Pulling             pod/deckhouse-6bc5c4494-fwx6z                   Pulling image "dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:17ac07634e17422df52720264cddec3916ed6985a77782dc8a24fe5352290e6e"
      ```
+     {: .nowrap-default }
+     <!-- markdownlint-enable MD031 -->
 
     When analyzing events, pay special attention to those with the `Warning` type.

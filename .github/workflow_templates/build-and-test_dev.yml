@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" "withChangedImages" true -}!}
 {!{- $ctx := coll.Merge $pullRequestContext . }!}
 
 # on every push to dev branches
@@ -123,16 +123,6 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
-  security_scan_images:
-    name: Security scan images
-    if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
-    runs-on: [self-hosted, large]
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
-
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests
@@ -140,6 +130,14 @@ jobs:
       - git_info
       - pull_request_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
+
+  tests_node_controller:
+    if: ${{ needs.pull_request_info.outputs.changes_node_controller == 'true' }}
+    name: Tests node-controller
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "tests_node_controller_envtest_template" (slice $ctx) | strings.Indent 4 }!}
 
   tests_python_webhooks:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -210,7 +208,7 @@ jobs:
       - go_generate
       - dhctl_tests
       - tests
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Set commit status after e2e run
@@ -225,3 +223,113 @@ jobs:
             const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
 
             await e2eStatus.setInitialStatus({github, context, core});
+
+  # ============================================================================
+  # CVE — Trivy scan on PR images.
+  # TEMPORARILY DISABLED:
+  # Re-enable by set the `if: ${{ needs.changed_images.outputs.changed_count != '0' }}`
+  # guard once the underlying script is fixed. While disabled, the aggregator
+  # below explicitly allows `cve: skipped`, so it does not block PR merges.
+  # ============================================================================
+  test_cve_report_main:
+    name: Trivy scan dev images
+    if: ${{ false }}
+    # External/fork PRs gated by 'status/ok-to-test' via pull_request_info (setFailed → this job is skipped).
+    needs:
+      - pull_request_info
+      - build_fe
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    runs-on: [self-hosted, large]
+    env:
+      WORKDIR: "cve-scan"
+    steps:
+      {!{ tmpl.Exec "checkout_full_step"           $ctx | strings.Indent 6 }!}
+      {!{ tmpl.Exec "link_bin_step"                     | strings.Indent 6 }!}
+      {!{ tmpl.Exec "cve_scan_type_pr"                  | strings.Indent 6 }!}
+      {!{ tmpl.Exec "cve_scan_deckhouse_images"    $ctx | strings.Indent 6 }!}
+      {!{ tmpl.Exec "cve_tests_upload_reports_artifacts"| strings.Indent 6 }!}
+      {!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 6 }!}
+      {!{ tmpl.Exec "cve_tests_set_pr_label"            | strings.Indent 6 }!}
+  # ============================================================================
+  # Rootless — default-user validation on PR images.
+  # ============================================================================
+  security_scan_images:
+    name: Security scan images
+    runs-on: [self-hosted, large]
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    needs:
+      - pull_request_info
+      - build_fe
+    {!{ tmpl.Exec "security_scan_template" (slice $ctx "pr" "with_fail_report") | strings.Indent 4 }!}
+
+  # ============================================================================
+  # Antivirus — Dr.Web and Kaspersky scans on PR images.
+  # ============================================================================
+  {!{ tmpl.Exec "drweb_scan_job" "pr" | strings.Indent 2 }!}
+
+  {!{ tmpl.Exec "kaspersky_scan_job" "pr" | strings.Indent 2 }!}
+
+  {!{ tmpl.Exec "antivirus_notify_failure_job" . | strings.Indent 2 }!}
+
+  # ============================================================================
+  # Aggregator — single required check for branch protection.
+  # Fails if any image scan did not finish with success
+  # (covers blocker failure, scan failure, and skipped due to upstream issues).
+  # Because this workflow is invoked via `uses:` from the build workflow, this
+  # job appears on the PR's Checks tab natively — no extra commit-status
+  # plumbing is required for it to be require-able by branch protection.
+  # ============================================================================
+  security_scan_images_required:
+    name: Security scan images required
+    runs-on: self-slim
+    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    needs:
+      - pull_request_info
+      - test_cve_report_main
+      - security_scan_images
+      - drweb-scan
+      - kaspersky-scan
+    steps:
+      - name: Aggregate scan results
+        run: |
+          declare -A results=(
+            [cve]="${{ needs.test_cve_report_main.result }}"
+            [rootless]="${{ needs.security_scan_images.result }}"
+            [drweb]="${{ needs.drweb-scan.result }}"
+            [kaspersky]="${{ needs.kaspersky-scan.result }}"
+          )
+          # Antivirus jobs intentionally skip in test repositories
+          # (self-hosted antivirus runners are only in the main repo). All
+          # other image scans (changed_images, rootless) are expected to run
+          # in both main and test repos.
+          IS_MAIN_REPO=false
+          if [[ "${{ github.repository }}" == "deckhouse/deckhouse" ]]; then
+            IS_MAIN_REPO=true
+          fi
+
+          failed=0
+          for name in "${!results[@]}"; do
+            r="${results[$name]}"
+            if [[ "$r" == "success" ]]; then
+              echo "✅ $name: $r"
+              continue
+            fi
+            # CVE SCAN is intentionally DISABLED for PR mode.
+            if [[ "$name" == "cve" && "$r" == "skipped" ]]; then
+              echo "ℹ️  $name: $r (temporarily disabled)"
+              continue
+            fi
+            if [[ "$IS_MAIN_REPO" == "false" && ( "$name" == "drweb" || "$name" == "kaspersky" ) && "$r" == "skipped" ]]; then
+              echo "ℹ️  $name: $r (allowed in test repository)"
+              continue
+            fi
+            echo "::error::Scan '$name' result: $r"
+            failed=1
+          done
+          exit $failed

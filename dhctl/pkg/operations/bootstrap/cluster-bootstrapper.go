@@ -17,22 +17,20 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	otattribute "go.opentelemetry.io/otel/attribute"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -41,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
@@ -56,27 +53,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 const (
-	banner = "" +
-		`========================================================================================
- _____             _     _                                ______                _ _____
-(____ \           | |   | |                              / _____)              | (_____)
- _   \ \ ____ ____| |  _| | _   ___  _   _  ___  ____   | /      ____ ____   _ | |  _
-| |   | / _  ) ___) | / ) || \ / _ \| | | |/___)/ _  )  | |     / _  |  _ \ / || | | |
-| |__/ ( (/ ( (___| |< (| | | | |_| | |_| |___ ( (/ /   | \____( ( | | | | ( (_| |_| |_
-|_____/ \____)____)_| \_)_| |_|\___/ \____(___/ \____)   \______)_||_|_| |_|\____(_____)
-========================================================================================`
-
 	bootstrapAbortInvalidCacheMessage = `Create cache %s:
 	Error: %v
-	Probably that Kubernetes cluster was successfully bootstrapped.
-	Use "dhctl destroy" command to delete the cluster.
+	The Kubernetes cluster was probably bootstrapped successfully.
+	Use the "dhctl destroy" command to delete the cluster.
 `
-	bootstrapPhaseBaseInfraNonCloudMessage = `It is impossible to create base-infrastructure for non-cloud Kubernetes cluster.
+	bootstrapPhaseBaseInfraNonCloudMessage = `It is impossible to create base infrastructure for a non-cloud Kubernetes cluster.
 You have to create it manually.
 `
 	bootstrapAbortCheckMessage = `You will be asked for approval multiple times.
@@ -85,7 +71,7 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 	cacheMessage = `Create cache %s:
 	Error: %v
 
-	Probably that Kubernetes cluster was successfully bootstrapped.
+	The Kubernetes cluster was probably bootstrapped successfully.
 	If you want to continue, please delete the cache folder manually.
 `
 )
@@ -107,15 +93,11 @@ type Params struct {
 	CommanderUUID              uuid.UUID
 	InfrastructureContext      *infrastructure.Context
 
-	TmpDir string
-	// todo refact to logger provider
-	Logger  log.Logger
+	TmpDir  string
 	IsDebug bool
 
 	// Options is the per-operation parsed configuration. Required.
 	Options *options.Options
-
-	DirectoryConfig *directoryconfig.DirectoryConfig
 
 	*client.KubernetesInitParams
 }
@@ -124,19 +106,36 @@ type ClusterBootstrapper struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
-	lastState      phases.DhctlState
-	logger         log.Logger
-	loggerProvider dhctllog.LoggerProvider
+	lastState phases.DhctlState
 }
 
-func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
+func (b *ClusterBootstrapper) applyCommanderModeConfig(cfg *config.DeckhouseInstaller) {
+	if b.CommanderMode {
+		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
+		// if b.CommanderUUID == uuid.Nil {
+		//	panic("CommanderUUID required for bootstrap operation in commander mode!")
+		// }
+		cfg.CommanderMode = b.CommanderMode
+		cfg.CommanderUUID = b.CommanderUUID
+	}
+}
+
+func (b *ClusterBootstrapper) commanderModeAction(action func() error, fallback func() error) error {
+	if b.CommanderMode {
+		if action != nil {
+			return action()
+		}
+		return nil
+	}
+	if fallback != nil {
+		return fallback()
+	}
+	return nil
+}
+
+func NewClusterBootstrapper(ctx context.Context, params *Params) *ClusterBootstrapper {
 	if params.Options != nil && params.Options.Global.ProgressFilePath != "" {
 		params.OnProgressFunc = phases.WriteProgress(params.Options.Global.ProgressFilePath)
-	}
-
-	logger := params.Logger
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
 	}
 
 	return &ClusterBootstrapper{
@@ -144,15 +143,13 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		lastState:      params.InitialState,
-		logger:         logger,
-		loggerProvider: log.ExternalLoggerProvider(logger),
+		lastState: params.InitialState,
 	}
 }
 
 func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *config.MetaConfig) (func(), error) {
 	if b.InfrastructureContext == nil {
-		b.logger.LogDebugF("InfrastructureContext is nil. Skip cleanup.\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "InfrastructureContext is nil. Skipping cleanup.")
 		return func() {}, nil
 	}
 
@@ -164,33 +161,49 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 	return func() {
 		err = provider.Cleanup()
 		if err != nil {
-			b.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot clean up provider: %v", err))
 		}
 	}, nil
+}
+
+type bootstrapContext struct {
+	masterAddressesForSSH   map[string]string
+	metaConfig              *config.MetaConfig
+	stateCache              state.Cache
+	configHash              string
+	deckhouseInstallConfig  *config.DeckhouseInstaller
+	bootstrapState          *State
+	nodeIP                  string
+	devicePath              string
+	resourcesTemplateData   map[string]any
+	resourcesToCreateBefore template.Resources
+	resourcesToCreateAfter  template.Resources
+	installDeckhouseResult  *InstallDeckhouseResult
+	cleanup                 func()
+	finishProgress          func()
+	preflightRunner         *preflight.Preflight
 }
 
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap")
 	defer span.End()
 
-	masterAddressesForSSH := make(map[string]string)
-
 	if b.Options.Bootstrap.PostBootstrapScriptPath != "" {
-		log.DebugF("Have post bootstrap script: %s\n", b.Options.Bootstrap.PostBootstrapScriptPath)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found post-bootstrap script: %s", b.Options.Bootstrap.PostBootstrapScriptPath))
 		if err := ValidateScriptFile(ctx, b.Options.Bootstrap.PostBootstrapScriptPath); err != nil {
 			return err
 		}
 	}
 
 	if b.Options.Bootstrap.ResourcesPath != "" {
-		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
+		dhlog.FromContext(ctx).WarnContext(ctx, "--resources flag is deprecated. Please use the --config flag multiple times for logical resource separation")
 		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
 	}
 
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
-		b.loggerProvider(),
+		dhlog.FromContext(ctx),
 		b.Options.Global.ConfigPaths,
 		b.Options.Registry.ImgBundlePath,
 	)
@@ -199,11 +212,62 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 	defer registryStop()
 
-	_, configSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.LoadConfig")
+	bctx := &bootstrapContext{
+		masterAddressesForSSH: make(map[string]string),
+	}
+
+	if err := b.bootstrapLoadConfig(ctx, bctx); err != nil {
+		return err
+	}
+
+	if m := bctx.metaConfig; m != nil {
+		// Cloud context on the bootstrap operation span (one span in both CLI and
+		// gRPC paths), set once the config is loaded.
+		span.SetAttributes(telemetry.CloudSpanAttributes(m.ClusterType, m.OriginalProviderName, m.Layout, m.ClusterPrefix, m.UUID)...)
+	}
+
+	defer func() {
+		if err := b.PhasedExecutionContext.Finalize(ctx, bctx.stateCache); err != nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to finalize phased execution context: %v", err))
+		}
+		if bctx.finishProgress != nil {
+			bctx.finishProgress()
+		}
+		if bctx.cleanup != nil {
+			bctx.cleanup()
+		}
+	}()
+
+	phasesToRun := []func(context.Context, *bootstrapContext) error{
+		b.bootstrapPreflight,
+		b.bootstrapBaseInfra,
+		b.bootstrapPostInfraPreflights,
+		b.bootstrapKubernetes,
+		b.bootstrapDeckhouse,
+		b.bootstrapAdditionalNodes,
+		b.bootstrapCreateResources,
+		b.bootstrapPostBootstrap,
+		b.bootstrapFinalize,
+	}
+
+	for _, p := range phasesToRun {
+		err := p(ctx, bctx)
+		if err != nil {
+			if err.Error() == "stopped" {
+				return nil
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *bootstrapContext) error {
+	ctx, configSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.LoadConfig")
 	defer configSpan.End()
 
 	// first, parse and check cluster config
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	preparatorParams.WithPhaseBootstrap()
 	preparatorParams.WithPreflightChecks(infrastructureprovider.PreflightChecks{
 		DVPValidateKubeAPI: true,
@@ -212,24 +276,48 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
-		b.DirectoryConfig,
+		&b.Options.Global,
 		config.ValidateOptionValidateExtensions(true),
 	)
 	if err != nil {
 		return err
 	}
 
-	log.DebugLn("MetaConfig was loaded")
+	dhlog.FromContext(ctx).DebugContext(ctx, "MetaConfig was loaded")
+
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	printBanner(ctx)
+
+	if interactive {
+		progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
+		bctx.finishProgress = finishProgress
+
+		onUpdateFunc := func(progress phases.Progress) error {
+			// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
+			// stopped and the channel is no longer drained; never block or panic on it.
+			select {
+			case progressCh <- progress:
+			default:
+			}
+			return nil
+		}
+
+		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
+	}
+
+	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
+		return fmt.Errorf("apply cni bootstrap: %w", err)
+	}
 
 	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	// Check if static cluster without ssh-host
-	if metaConfig.IsStatic() && !b.SSHProviderInitializer.CheckHosts() {
+	if metaConfig.IsStatic() && !b.SSHProviderInitializer.CheckHosts(ctx) {
 		if input.IsTerminal() {
 			confirmation := input.NewConfirmation().
 				WithMessage("Do you really want to bootstrap the cluster on the current host?")
 			if !confirmation.Ask() {
-				return fmt.Errorf("Bootstrap cancelled by user")
+				return fmt.Errorf("Bootstrap canceled by user")
 			}
 		} else {
 			return fmt.Errorf("Static cluster bootstrap requires --ssh-host option when not running in terminal. Please use --ssh-host option or pass --connection-config with SSHHost resource to bootstrap the cluster")
@@ -238,13 +326,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
-		DownloadDir:      b.Options.Global.DownloadDir,
+		GlobalOptions:    &b.Options.Global,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           b.logger,
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger).
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter).
 		WithUseTfCache(b.Options.Cache.UseTfCache).
 		WithDebug(b.Options.Global.IsDebug)
 
@@ -256,12 +343,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	stateCache := cache.Global()
-	configHash := state.ConfigHash(b.Options.Global.ConfigPaths)
 
 	if b.Options.Cache.DropCache {
 		stateCache.Clean(ctx)
 		stateCache.Delete(ctx, state.TombstoneKey)
-		log.DebugLn("Cache was dropped")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Cache was dropped")
 	}
 
 	if err := b.PhasedExecutionContext.InitPipeline(ctx, stateCache); err != nil {
@@ -269,26 +355,28 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	b.lastState = nil
-	defer func() {
-		_ = b.PhasedExecutionContext.Finalize(ctx, stateCache)
-	}()
 
-	printBanner()
+	// interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	// printBanner(ctx)
 
-	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
-	if interactive {
-		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Bootstrap cluster", b.logger)
-		if err != nil {
-			return err
-		}
+	// if interactive {
+	// 	progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
+	// 	bctx.finishProgress = finishProgress
 
-		onUpdateFunc := func(progress phases.Progress) error {
-			phasesChan <- progress
-			return nil
-		}
+	// 	onUpdateFunc := func(progress phases.Progress) error {
+	// 		// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
+	// 		// stopped and the channel is no longer drained; never block or panic on it.
+	// 		select {
+	// 		case progressCh <- progress:
+	// 		default:
+	// 		}
+	// 		return nil
+	// 	}
 
-		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
-	}
+	// 	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
+	// }
+
+	configHash := state.ConfigHash(ctx, b.Options.Global.ConfigPaths)
 
 	clusterUUID, err := generateClusterUUID(ctx, stateCache)
 	if err != nil {
@@ -298,19 +386,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	metaConfig.ResourceManagementTimeout = b.Options.Cache.ResourceManagementTimeout
 
-	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
+	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
 	if err != nil {
 		return err
 	}
 
-	if b.CommanderMode {
-		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
-		// if b.CommanderUUID == uuid.Nil {
-		//	panic("CommanderUUID required for bootstrap operation in commander mode!")
-		// }
-		deckhouseInstallConfig.CommanderMode = b.CommanderMode
-		deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
-	}
+	b.applyCommanderModeConfig(deckhouseInstallConfig)
 
 	// During full bootstrap we use the "kubeadm and deckhouse on master nodes" hack
 	deckhouseInstallConfig.KubeadmBootstrap = true
@@ -318,111 +399,148 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	if shouldStop, err := b.PhasedExecutionContext.StartPhase(ctx, phases.BaseInfraPhase, true, stateCache); err != nil {
+	bctx.metaConfig = metaConfig
+	bctx.stateCache = stateCache
+	bctx.configHash = configHash
+	bctx.deckhouseInstallConfig = deckhouseInstallConfig
+	bctx.bootstrapState = bootstrapState
+
+	return nil
+}
+
+func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *bootstrapContext) error {
+	if shouldStop, err := b.PhasedExecutionContext.StartPhase(ctx, phases.PreInfraPreflightsPhase, true, bctx.stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	_, baseInfraSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BaseInfra")
-	defer baseInfraSpan.End()
+	ctx, preflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.PreInfraPreflights")
+	defer preflightSpan.End()
 
-	var nodeIP string
-	var devicePath string
-	var resourcesTemplateData map[string]interface{}
-
-	cleanup, err := b.getCleanupFunc(ctx, metaConfig)
+	cleanup, err := b.getCleanupFunc(ctx, bctx.metaConfig)
 	if err != nil {
 		return err
 	}
-
-	defer cleanup()
+	bctx.cleanup = cleanup
 
 	globalPreflightSuite := suites.NewGlobalSuite(suites.GlobalDeps{
-		MetaConfig:    metaConfig,
-		InstallConfig: deckhouseInstallConfig,
+		MetaConfig:    bctx.metaConfig,
+		InstallConfig: bctx.deckhouseInstallConfig,
 		BuildInfo:     b.Options.BuildInfo,
 	})
 
-	if metaConfig.ClusterType == config.CloudClusterType {
-		_, cloudPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudPreflight")
-		defer cloudPreflightSpan.End()
-
+	if bctx.metaConfig.ClusterType == config.CloudClusterType {
 		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
 
 		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
-			InstallConfig: deckhouseInstallConfig,
-			MetaConfig:    metaConfig,
+			InstallConfig:          bctx.deckhouseInstallConfig,
+			MetaConfig:             bctx.metaConfig,
+			SSHProviderInitializer: b.SSHProviderInitializer,
 		})
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
-			MetaConfig:  metaConfig,
+			MetaConfig:  bctx.metaConfig,
 			SSHProvider: sshProvider,
 			LegacyMode:  b.SSHProviderInitializer.IsLegacyMode(),
 		})
 
 		preflightRunner := preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
-		preflightRunner.UseCache(bootstrapState)
-		preflightRunner.SetCacheSalt(configHash)
+		preflightRunner.UseCache(bctx.bootstrapState)
+		preflightRunner.SetCacheSalt(bctx.configHash)
 		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
+		bctx.preflightRunner = preflightRunner
 		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
 			return err
 		}
+	} else {
+		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
+			SSHProviderInitializer: b.SSHProviderInitializer,
+			MetaConfig:             bctx.metaConfig,
+			LegacyMode:             b.SSHProviderInitializer.IsLegacyMode(),
+			GlobalOpts:             &b.Options.Global,
+		}, ctx)
+		if err != nil {
+			return err
+		}
 
-		cloudPreflightSpan.End()
+		preflightRunner := preflight.New(globalPreflightSuite, staticPreflightSuite)
+		preflightRunner.UseCache(bctx.bootstrapState)
+		preflightRunner.SetCacheSalt(bctx.configHash)
+		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
+		bctx.preflightRunner = preflightRunner
 
-		err = log.ProcessCtx(ctx, "bootstrap", "Cloud infrastructure", func(ctx context.Context) error {
-			_, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudInfra")
+		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *bootstrapContext) error {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.BaseInfraPhase, false, bctx.stateCache, nil); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
+	ctx, baseInfraSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BaseInfra")
+	defer baseInfraSpan.End()
+
+	if bctx.metaConfig.ClusterType == config.CloudClusterType {
+		err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Cloud infrastructure", func(ctx context.Context) error {
+			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudInfra")
 			defer span.End()
 
-			baseRunner, err := b.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
+			baseRunner, err := b.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, bctx.metaConfig, bctx.stateCache)
 			if err != nil {
 				return err
 			}
 
-			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
+			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", &b.Options.Global, infrastructure.GetBaseInfraResult)
 			if err != nil {
 				return err
 			}
 
-			log.DebugLn("Base infrastructure was created")
+			dhlog.FromContext(ctx).DebugContext(ctx, "Base infrastructure was created")
+			b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.BaseInfraSubPhaseBaseInfra)
 
-			var cloudDiscoveryData map[string]interface{}
+			var cloudDiscoveryData map[string]any
 			err = json.Unmarshal(baseOutputs.CloudDiscovery, &cloudDiscoveryData)
 			if err != nil {
 				return err
 			}
 
-			resourcesTemplateData = map[string]interface{}{
+			bctx.resourcesTemplateData = map[string]any{
 				"cloudDiscovery": cloudDiscoveryData,
 			}
 
-			masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-			masterRunner, err := b.Params.InfrastructureContext.GetBootstrapNodeRunner(ctx, metaConfig, stateCache, infrastructure.BootstrapNodeRunnerOptions{
+			masterNodeName := fmt.Sprintf("%s-master-0", bctx.metaConfig.ClusterPrefix)
+			masterRunner, err := b.Params.InfrastructureContext.GetBootstrapNodeRunner(ctx, bctx.metaConfig, bctx.stateCache, infrastructure.BootstrapNodeRunnerOptions{
 				NodeName:        masterNodeName,
 				NodeGroupStep:   infrastructure.MasterNodeStep,
 				NodeGroupName:   "master",
 				NodeIndex:       0,
 				NodeCloudConfig: "",
-				RunnerLogger:    log.GetDefaultLogger(),
 			})
 			if err != nil {
 				return err
 			}
 
-			masterOutputs, err := infrastructure.ApplyPipeline(ctx, masterRunner, masterNodeName, infrastructure.GetMasterNodeResult)
+			masterOutputs, err := infrastructure.ApplyPipeline(ctx, masterRunner, masterNodeName, &b.Options.Global, infrastructure.GetMasterNodeResult)
 			if err != nil {
 				return err
 			}
 
-			log.DebugLn("First control-plane node was created")
+			dhlog.FromContext(ctx).DebugContext(ctx, "First control-plane node was created")
+			b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.BaseInfraSubPhaseFirstMaster)
 
-			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
-			deckhouseInstallConfig.InfrastructureState = baseOutputs.InfrastructureState
+			bctx.deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
+			bctx.deckhouseInstallConfig.InfrastructureState = baseOutputs.InfrastructureState
 
 			// providers should be reinitialized here
 			baseSettings := b.SSHProviderInitializer.GetSettings()
@@ -430,106 +548,102 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 			if baseOutputs.BastionHost != "" {
 				connectionConfig.Config.BastionHost = baseOutputs.BastionHost
-				SaveBastionHostToCache(ctx, baseOutputs.BastionHost)
+				if err := SaveBastionHostToCache(ctx, bctx.stateCache, baseOutputs.BastionHost); err != nil {
+					dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot save bastion host to cache %v", err))
+				}
 			}
 
 			connectionConfig.Hosts = append(connectionConfig.Hosts, sshconfig.Host{Host: masterOutputs.MasterIPForSSH})
 
-			sshProviderInitializer := providerinitializer.NewSSHProviderInitializer(baseSettings, connectionConfig)
-			b.SSHProviderInitializer = sshProviderInitializer
-			b.KubeProvider = sshProviderInitializer.GetKubeProvider(ctx)
+			b.SSHProviderInitializer.Reinitialize(
+				ctx,
+				baseSettings,
+				connectionConfig,
+			)
+			b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
 
-			nodeIP = masterOutputs.NodeInternalIP
-			devicePath = masterOutputs.KubeDataDevicePath
+			bctx.nodeIP = masterOutputs.NodeInternalIP
+			bctx.devicePath = masterOutputs.KubeDataDevicePath
 
-			deckhouseInstallConfig.NodesInfrastructureState = make(map[string][]byte)
-			deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
+			bctx.deckhouseInstallConfig.NodesInfrastructureState = make(map[string][]byte)
+			bctx.deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
 
-			masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
-			state.SaveMasterHostsToCache(ctx, stateCache, masterAddressesForSSH)
+			bctx.masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
+			state.SaveMasterHostsToCache(ctx, bctx.stateCache, bctx.masterAddressesForSSH)
+
+			interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+			if interactive {
+				sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+				sshString := sshClient.Session().String()
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("First master connection string: %s", sshString))
+			}
 			return nil
 		})
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
-		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
+func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, bctx *bootstrapContext) error {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.PostInfraPreflightsPhase, false, bctx.stateCache, nil); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
+	if bctx.metaConfig.ClusterType == config.CloudClusterType {
+		if err := bctx.preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
 	} else {
-		_, staticPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.StaticPreflight")
-		defer staticPreflightSpan.End()
-
-		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
-			SSHProviderInitializer: b.SSHProviderInitializer,
-			MetaConfig:             metaConfig,
-			LegacyMode:             b.SSHProviderInitializer.IsLegacyMode(),
-		}, ctx)
-		if err != nil {
-			return err
-		}
-
-		preflightRunner := preflight.New(globalPreflightSuite, staticPreflightSuite)
-		preflightRunner.UseCache(bootstrapState)
-		preflightRunner.SetCacheSalt(configHash)
-		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
-
-		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
-			return err
-		}
-
-		if err = preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
+		if err := bctx.preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
 
 		var static struct {
 			NodeIP string `json:"nodeIP"`
 		}
-		_ = json.Unmarshal(metaConfig.ClusterConfig["static"], &static)
-		nodeIP = static.NodeIP
+		if err := json.Unmarshal(bctx.metaConfig.ClusterConfig["static"], &static); err != nil {
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Static config is missing: %s", err.Error()))
+		}
+		bctx.nodeIP = static.NodeIP
 
-		if b.SSHProviderInitializer.CheckHosts() {
+		if b.SSHProviderInitializer.CheckHosts(ctx) {
 			connectionConfig := b.SSHProviderInitializer.GetConfig()
 			if connectionConfig.Config.BastionHost != "" {
-				SaveBastionHostToCache(ctx, connectionConfig.Config.BastionHost)
+				if err := SaveBastionHostToCache(ctx, bctx.stateCache, connectionConfig.Config.BastionHost); err != nil {
+					dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot save bastion host to cache %v", err))
+				}
 			}
 
-			state.SaveMasterHostsToCache(ctx, stateCache, map[string]string{
+			state.SaveMasterHostsToCache(ctx, bctx.stateCache, map[string]string{
 				"first-master": connectionConfig.Hosts[0].Host,
 			})
 		}
-
-		staticPreflightSpan.End()
 	}
 
-	// next parse and check resources
-	// do it after bootstrap cloud because resources can be template
-	// and we want to fail immediately if template has errors
-	var resourcesToCreateBeforeDeckhouseBootstrap template.Resources
-	var resourcesToCreateAfterDeckhouseBootstrap template.Resources
-	if metaConfig.ResourcesYAML != "" {
-		parsedResources, err := template.ParseResourcesContent(metaConfig.ResourcesYAML, resourcesTemplateData)
+	if bctx.metaConfig.ResourcesYAML != "" {
+		parsedResources, err := template.ParseResourcesContent(ctx, bctx.metaConfig.ResourcesYAML, bctx.resourcesTemplateData)
 		if err != nil {
 			return err
 		}
 
-		before, after := splitResourcesOnPreAndPostDeckhouseInstall(parsedResources)
+		before, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources)
 
-		resourcesToCreateBeforeDeckhouseBootstrap = before
-		resourcesToCreateAfterDeckhouseBootstrap = after
+		bctx.resourcesToCreateBefore = before
+		bctx.resourcesToCreateAfter = after
 	}
 
-	baseInfraSpan.End()
-
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.RegistryPackagesProxyPhase, false, stateCache, nil); err != nil {
-		return err
-	} else if shouldStop {
-		return nil
-	}
-	_, registryPackagesProxySpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.RegistryPackagesProxy")
-	defer registryPackagesProxySpan.End()
-
-	if b.SSHProviderInitializer.CheckHosts() {
+	if b.SSHProviderInitializer.CheckHosts(ctx) {
 		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
 			return err
@@ -541,19 +655,21 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 
 		if err := WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
-			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+			return fmt.Errorf("failed to wait for SSH connection on master: %w", err)
 		}
 	}
 
-	registryPackagesProxySpan.End()
+	return nil
+}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
+func (b *ClusterBootstrapper) bootstrapKubernetes(ctx context.Context, bctx *bootstrapContext) error {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallKubernetesPhase, false, bctx.stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	_, bashibleBundleSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BashibleBundle")
+	ctx, bashibleBundleSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BashibleBundle")
 	defer bashibleBundleSpan.End()
 
 	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
@@ -562,13 +678,13 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
-		Node:           nodeInterface,
-		NodeIP:         nodeIP,
-		DevicePath:     devicePath,
-		MetaConfig:     metaConfig,
-		CommanderMode:  b.CommanderMode,
-		DirsConfig:     b.DirectoryConfig,
-		LoggerProvider: b.loggerProvider,
+		Node:                   nodeInterface,
+		NodeIP:                 bctx.nodeIP,
+		DevicePath:             bctx.devicePath,
+		MetaConfig:             bctx.metaConfig,
+		CommanderMode:          b.CommanderMode,
+		GlobalOpts:             &b.Options.Global,
+		PhasedExecutionContext: b.PhasedExecutionContext,
 	})
 
 	if err != nil {
@@ -577,13 +693,17 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	bashibleBundleSpan.End()
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallDeckhousePhase, false, stateCache, nil); err != nil {
+	return nil
+}
+
+func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *bootstrapContext) error {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallDeckhousePhase, false, bctx.stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	_, installDeckhouseSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.InstallDeckhouse")
+	ctx, installDeckhouseSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.InstallDeckhouse")
 	defer installDeckhouseSpan.End()
 
 	kubeCl, err := b.KubeProvider.Client(ctx)
@@ -591,48 +711,55 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseConnect)
+	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallDeckhouseSubPhaseConnect)
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
 			return createResources(
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
-				resourcesToCreateBeforeDeckhouseBootstrap,
+				bctx.resourcesToCreateBefore,
 				nil,
 				true,
 				b.Options.Bootstrap.ResourcesTimeout,
 			)
 		},
-		State:            bootstrapState,
+		State:            bctx.bootstrapState,
 		DeckhouseTimeout: b.Options.Bootstrap.DeckhouseTimeout,
 	}
 
-	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, deckhouseInstallConfig, installParams)
+	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, bctx.deckhouseInstallConfig, installParams)
 	if err != nil {
 		return err
 	}
+	bctx.installDeckhouseResult = installDeckhouseResult
 
-	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseInstall)
+	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallDeckhouseSubPhaseInstall)
 
 	err = WaitForFirstMasterNodeBecomeReady(ctx, &client.KubernetesClient{KubeClient: kubeCl})
 	if err != nil {
 		return err
 	}
 
-	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseWait)
+	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallDeckhouseSubPhaseWait)
+	return nil
+}
 
-	installDeckhouseSpan.End()
-
-	if metaConfig.ClusterType == config.CloudClusterType {
-		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallAdditionalMastersAndStaticNodes, true, stateCache, nil); err != nil {
+func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx *bootstrapContext) error {
+	if bctx.metaConfig.ClusterType == config.CloudClusterType {
+		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallAdditionalMastersAndStaticNodes, true, bctx.stateCache, nil); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
 		}
 
-		_, additionalNodesSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodes")
+		ctx, additionalNodesSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodes")
 		defer additionalNodesSpan.End()
+
+		kubeCl, err := b.KubeProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
 
 		localBootstraper := func(action func() error) error {
 			if b.CommanderMode {
@@ -647,13 +774,15 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			).Run(ctx, action)
 		}
 
-		err := localBootstraper(func() error {
+		err = localBootstraper(func() error {
 			return bootstrapAdditionalNodesForCloudCluster(
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
-				metaConfig,
-				masterAddressesForSSH,
+				bctx.metaConfig,
+				bctx.masterAddressesForSSH,
 				b.InfrastructureContext,
+				&b.Options.Global,
+				b.PhasedExecutionContext,
 			)
 		})
 		if err != nil {
@@ -663,21 +792,36 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		additionalNodesSpan.End()
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.CreateResourcesPhase, false, stateCache, nil); err != nil {
+	kubeCl, err := b.KubeProvider.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl})).IsReadyAll(ctx); err != nil {
+		return err
+	}
+	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait)
+
+	return nil
+}
+
+func (b *ClusterBootstrapper) bootstrapCreateResources(ctx context.Context, bctx *bootstrapContext) error {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.CreateResourcesPhase, false, bctx.stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl})).IsReadyAll(ctx); err != nil {
+	kubeCl, err := b.KubeProvider.Client(ctx)
+	if err != nil {
 		return err
 	}
 
 	err = createResources(
 		ctx,
 		&client.KubernetesClient{KubeClient: kubeCl},
-		resourcesToCreateAfterDeckhouseBootstrap,
-		installDeckhouseResult,
+		bctx.resourcesToCreateAfter,
+		bctx.installDeckhouseResult,
 		false,
 		b.Options.Bootstrap.ResourcesTimeout,
 	)
@@ -685,38 +829,48 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.ExecPostBootstrapPhase, false, stateCache, nil); err != nil {
+	return nil
+}
+func (b *ClusterBootstrapper) bootstrapPostBootstrap(ctx context.Context, bctx *bootstrapContext) error {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.ExecPostBootstrapPhase, false, bctx.stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	if b.SSHProviderInitializer.CheckHosts() && b.Options.Bootstrap.PostBootstrapScriptPath != "" {
+	if b.SSHProviderInitializer.CheckHosts(ctx) && b.Options.Bootstrap.PostBootstrapScriptPath != "" {
 		ctx, postBootstrapSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.PostBootstrap")
 		defer postBootstrapSpan.End()
 
-		postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).
+		postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bctx.bootstrapState).
 			WithTimeout(b.Options.Bootstrap.PostBootstrapScriptTimeout)
 
 		if err := postScriptExecutor.Execute(ctx); err != nil {
 			return err
 		}
-
-		postBootstrapSpan.End()
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.FinalizationPhase, false, stateCache, nil); err != nil {
+	return nil
+}
+
+func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *bootstrapContext) error {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.FinalizationPhase, false, bctx.stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	if err := RunPostInstallTasks(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installDeckhouseResult); err != nil {
+	kubeCl, err := b.KubeProvider.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := RunPostInstallTasks(ctx, &client.KubernetesClient{KubeClient: kubeCl}, bctx.installDeckhouseResult); err != nil {
 		return err
 	}
 
 	if !b.DisableBootstrapClearCache {
-		_ = log.ProcessCtx(ctx, "bootstrap", "Clear cache", func(ctx context.Context) error {
+		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Clear cache", func(ctx context.Context) error {
 			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.ClearCache")
 			defer span.End()
 
@@ -727,19 +881,16 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				BastionHostCacheKey,
 				PostBootstrapResultCacheKey,
 			)
-			log.WarnLn(`Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
+			dhlog.FromContext(ctx).WarnContext(ctx, `Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
 
 			return nil
 		})
 	}
 
-	log.Success("Deckhouse cluster was created successfully!\n")
-	if interactive {
-		progressbar.InfoF("%s\n", "Deckhouse cluster was created successfully! Kubernetes Master Node addresses for SSH:")
-	}
+	dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse cluster created successfully!", dhlog.ShowInCompacted())
 
-	if metaConfig.ClusterType == config.CloudClusterType {
-		_ = log.ProcessCtx(ctx, "common", "Kubernetes Master Node addresses for SSH", func(ctx context.Context) error {
+	if bctx.metaConfig.ClusterType == config.CloudClusterType {
+		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Kubernetes Master Node addresses for SSH", func(ctx context.Context) error {
 			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.KubernetesMasterNodeAddressesForSSH")
 			defer span.End()
 
@@ -752,49 +903,35 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			for nodeName, address := range masterAddressesForSSH {
+			for nodeName, address := range bctx.masterAddressesForSSH {
 				fakeSession := sshClient.Session().Copy()
 				fakeSession.SetAvailableHosts([]session.Host{{Host: address, Name: nodeName}})
-				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
-				if interactive {
-					progressbar.InfoF("%s | %s\n", nodeName, fakeSession.String())
-				}
-			}
-
-			// MultiPrinter must render InfoF before exit and ProgressBar must be completed
-			if interactive {
-				progressbar.GetDefaultPb().ProgressBarPrinter.Add(100 - progressbar.GetDefaultPb().ProgressBarPrinter.Current)
-				_, err := progressbar.GetDefaultPb().MultiPrinter.Stop()
-				if err != nil {
-					return err
-				}
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s | %s", nodeName, fakeSession.String()), dhlog.ShowInCompacted())
 			}
 
 			return nil
 		})
 	}
 
-	return b.PhasedExecutionContext.CompletePhaseAndPipeline(ctx, stateCache, nil)
+	return b.PhasedExecutionContext.CompletePhaseAndPipeline(ctx, bctx.stateCache, nil)
 }
 
-// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this method will be unneeded then
 func (b *ClusterBootstrapper) GetLastState() phases.DhctlState {
 	if b.lastState != nil {
 		return b.lastState
-	} else {
-		return b.PhasedExecutionContext.GetLastState()
 	}
+
+	return b.PhasedExecutionContext.GetLastState()
 }
 
-func printBanner() {
-	log.InteractiveInfoLn(banner)
-	log.InteractiveInfoLn("")
+func printBanner(ctx context.Context) {
+	dhlog.PrintBanner(ctx)
 }
 
 func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, error) {
 	var clusterUUID string
 
-	return clusterUUID, log.ProcessCtx(ctx, "bootstrap", "Cluster UUID", func(ctx context.Context) error {
+	return clusterUUID, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Cluster UUID", func(ctx context.Context) error {
 		ok, err := stateCache.InCache(ctx, "uuid")
 		if err != nil {
 			return err
@@ -803,7 +940,7 @@ func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, e
 		if !ok {
 			genClusterUUID, err := uuid.NewRandom()
 			if err != nil {
-				return fmt.Errorf("can't create cluster UUID: %v", err)
+				return fmt.Errorf("can't create cluster UUID: %w", err)
 			}
 
 			clusterUUID = genClusterUUID.String()
@@ -811,14 +948,14 @@ func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, e
 			if err != nil {
 				return err
 			}
-			log.InfoF("Generated cluster UUID: %s\n", clusterUUID)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Generated cluster UUID: %s", clusterUUID))
 		} else {
 			clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 			if err != nil {
 				return err
 			}
 			clusterUUID = string(clusterUUIDBytes)
-			log.InfoF("Cluster UUID from cache: %s\n", clusterUUID)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cluster UUID from cache: %s", clusterUUID))
 		}
 		return nil
 	})
@@ -830,11 +967,13 @@ func bootstrapAdditionalNodesForCloudCluster(
 	metaConfig *config.MetaConfig,
 	masterAddressesForSSH map[string]string,
 	infrastructureContext *infrastructure.Context,
+	globalOptions *options.GlobalOptions,
+	pec phases.DefaultPhasedExecutionContext,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
 
-	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global()); err != nil {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions); err != nil {
 		return err
 	}
 
@@ -844,11 +983,13 @@ func bootstrapAdditionalNodesForCloudCluster(
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
-	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext); err != nil {
+	pec.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
+
+	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions); err != nil {
 		return err
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Waiting for Node Groups are ready", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Waiting for node groups to become ready", func(ctx context.Context) error {
 		ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster.WaitForNodesBecomeReady")
 		defer span.End()
 
@@ -862,23 +1003,25 @@ func bootstrapAdditionalNodesForCloudCluster(
 			return err
 		}
 
+		pec.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes)
+
 		return nil
 	})
 }
 
-func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resources) (template.Resources, template.Resources) {
+func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources) (template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
 	after := make(template.Resources, 0, len(resourcesToCreate))
 
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
 		if annotations == nil || annotations["dhctl.deckhouse.io/bootstrap-resource-place"] != "before-deckhouse" {
-			log.DebugF("Add resource %s - %s to after queue\n", resource.String(), resource.Object.GetName())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to after queue", resource.String(), resource.Object.GetName()))
 			after = append(after, resource)
 			continue
 		}
 
-		log.DebugF("Add resource %s - %s to before queue\n", resource.String(), resource.Object.GetName())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to before queue", resource.String(), resource.Object.GetName()))
 		before = append(before, resource)
 	}
 
@@ -898,7 +1041,11 @@ func createResources(
 
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
-		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
+		dhlog.FromContext(ctx).WarnContext(
+			ctx,
+			"Core module deckhouse has been installed.\n"+
+				"The resources provided by your configuration will now be applied.",
+		)
 
 		tasks = result.ManifestResult.WithResourcesMCTasks
 
@@ -906,7 +1053,7 @@ func createResources(
 
 		if len(resourcesToCreate) == 0 {
 			for _, task := range tasks {
-				return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
+				return retry.NewLoop(task.Title, 300, 1*time.Second).RunContext(ctx, func() error {
 					return task.Do(kubeCl)
 				})
 			}
@@ -921,11 +1068,11 @@ func createResources(
 
 	span.SetAttributes(otattribute.Int("resources_count", len(resourcesToCreate)))
 
-	return log.ProcessCtx(ctx, "bootstrap", "Create Resources", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Resources", func(ctx context.Context) error {
 		var err error
 		checkers := make([]resources.Checker, 0)
 		if !skipChecks {
-			checkers, err = resources.GetCheckers(kubeCl, resourcesToCreate, nil)
+			checkers, err = resources.GetCheckers(ctx, kubeCl, resourcesToCreate, nil)
 			if err != nil {
 				return err
 			}

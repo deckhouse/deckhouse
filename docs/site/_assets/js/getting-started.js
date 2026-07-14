@@ -16,6 +16,10 @@ document.addEventListener("DOMContentLoaded", function() {
   set_license_token_cookie();
 });
 
+// Local dev only: accept any entered token without license.deckhouse.io API check.
+// Set to false before committing.
+const LICENSE_API_CHECK_DISABLED = false;
+
 function config_highlight() {
   let matchMustChange = '!CHANGE_';
   let matchMightChangeEN = /# [Yy]ou might consider changing this\.?/;
@@ -204,14 +208,6 @@ function updateTextInSnippet(snippetSelector = '', replacePattern = '', value = 
   });
 }
 
-function getDockerAuthFromToken(username, password) {
-  return btoa(username + ':' + password);
-}
-
-function getDockerConfigFromToken(registry, username, password) {
-  return btoa('{"auths": { "' + registry + '": { "username": "' + username + '", "password": "' + password + '", "auth": "' + getDockerAuthFromToken(username, password) + '"}}}');
-}
-
 //
 // Removes `disabled` class on target block selector if the item has a value otherwise, adds `disabled` class.
 //
@@ -242,12 +238,19 @@ function toggleDisabled(tab = '', inputDataAttr = '') {
 }
 
 async function getLicenseToken(token = '', revision = '') {
+  const span = $($('#enter-license-key-' + revision).next('span'));
+  const input = $('[license-token-' + revision + ']');
+
   try {
     if (token === '') {
       throw new Error(responseFromLicense[pageLang]['empty_input']);
     }
-    const span = $($('#enter-license-key-' + revision).next('span'));
-    const input = $('[license-token-' + revision + ']');
+
+    if (LICENSE_API_CHECK_DISABLED) {
+      handlerResolveData({}, token, span, input);
+      return;
+    }
+
     const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
     if(response.ok) {
       const data = await response.json();
@@ -264,8 +267,6 @@ async function getLicenseToken(token = '', revision = '') {
       handlerRejectData(token, span, input);
     }
   } catch (e) {
-    const span = $($('#enter-license-key-' + revision).next('span'));
-    const input = $('[license-token-' + revision + ']');
     handlerRejectData(token, span, input, e.message);
   }
 }
@@ -312,23 +313,18 @@ function handlerRejectData(licenseToken, messageElement, inputField, message = n
   inputField.addClass('license-token-input--error');
 }
 
-// Update license token and docker config
+// Update license token in config (spec.settings.registry.unmanaged.license) and docker config
 function update_license_parameters(newtoken = '') {
 
   if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
-    let registry = 'registry.deckhouse.io';
-    if ($.cookie("lang") === "ru") {
-      registry = 'registry.deckhouse.ru'
-    }
-    let username = 'license-token';
-    let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
+    let matchStringLicense = '<YOUR_ACCESS_STRING_IS_HERE>';
     let matchStringDockerLogin = 'echo <LICENSE_TOKEN>';
     let password = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
     let passwordHash = btoa(password);
 
     if (newtoken) {
       if (password) {
-        matchStringClusterConfig = getDockerConfigFromToken(registry, username, password);
+        matchStringLicense = password;
         matchStringDockerLogin = 'base64 -d <<< ' + passwordHash;
       }
       password = newtoken;
@@ -337,10 +333,9 @@ function update_license_parameters(newtoken = '') {
 
     }
 
-    let config = getDockerConfigFromToken(registry, username, password);
     let replacePartStringDockerLogin = 'base64 -d <<< ' + passwordHash;
 
-    update_parameter(config, 'registryDockerCfg', matchStringClusterConfig, null, '[config-yml]');
+    update_parameter(password, 'license', matchStringLicense, null, '[config-yml]');
     update_parameter(replacePartStringDockerLogin, '', matchStringDockerLogin, null, '[docker-run]');
     update_parameter(replacePartStringDockerLogin, '', matchStringDockerLogin, null, '[docker-run-windows]');
     $('.highlight code').filter(function () {

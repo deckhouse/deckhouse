@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-46521c2aa62c064cd1a854f470eef8288baab5bb530a3fcdce78453624e88f57",
-  "author": "Deckhouse \u003ccontact @deckhouse.io\u003e",
-  "version": 2,
+  "@id": "https://openvex.dev/docs/public/vex-7bb761a58a11caa496221e01e7c02e2c7b45e3ba1a30404eb9d12aac0440c6eb",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -31,8 +31,21 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-33726 не эксплуатируема в Deckhouse, поскольку функция Per-Endpoint Routing не используется и не может быть включена пользователем самостоятельно, а именно её активация является обязательным условием для реализации данной уязвимости.",
       "timestamp": "2026-04-02T14:53:20.279471Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41520"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cilium/cilium@v1.17.4"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "Устранено downstream-патчем modules/021-cni-cilium/images/bin-cilium/patches/018-bugtool-remove-sensitive-files.patch (verbatim cherry-pick cilium/cilium@3e26bef96e1ec6ea1b5034fee3f0bc6ddfabcae6, вошёл в релиз v1.17.15). Применяется ко всем бинарям cilium-стека в сборке Deckhouse.",
+      "timestamp": "2026-05-22T14:18:47.138556373Z"
     }
   ],
   "timestamp": "2025-10-14T07:34:04Z",
-  "last_updated": "2026-04-02T14:53:20Z"
+  "last_updated": "2026-05-22T14:20:09Z"
 }

@@ -41,10 +41,6 @@ entries:
                     en: Restoring registry access
                     ru: Восстановление подключения к registry
                   url: /admin/configuration/registry/restore-token.html
-                - title:
-                    en: Switching editions
-                    ru: Переключение редакций
-                  url: /admin/configuration/registry/switching-editions.html
             - title:
                 en: IAM
                 ru: IAM
@@ -110,6 +106,10 @@ entries:
                         en: Access for CI/CD
                         ru: Доступ для CI/CD
                       url: /admin/configuration/access/authorization/ci_cd.html
+                    - title:
+                        en: Resource listing with access-based filtering
+                        ru: Листинг ресурсов с фильтрацией по правам доступа
+                      url: /admin/configuration/access/authorization/filtered-listing.html
             - title:
                 en: Integration with IaaS
                 ru: Интеграция с IaaS
@@ -390,9 +390,29 @@ entries:
                             ru: Интеграция со службами zVirt
                           url: /admin/integrations/virtualization/zvirt/services.html
                 - title:
-                    en: Hybrid cluster
-                    ru: Гибридный кластер
-                  url: /admin/integrations/hybrid/overview.html
+                    en: Hybrid clusters
+                    ru: Гибридные кластеры
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/integrations/hybrid/overview.html
+                    - title:
+                        en: Hybrid cluster with Yandex Cloud
+                        ru: Гибридный кластер с Yandex Cloud
+                      url: /admin/integrations/hybrid/yandex-hybrid.html
+                    - title:
+                        en: Hybrid cluster with VCD
+                        ru: Гибридный кластер с VCD
+                      url: /admin/integrations/hybrid/vcd-hybrid.html
+                    - title:
+                        en: Hybrid cluster with vSphere
+                        ru: Гибридный кластер с vSphere
+                      url: /admin/integrations/hybrid/vsphere-hybrid.html
+                    - title:
+                        en: Hybrid cluster with DVP
+                        ru: Гибридный кластер с DVP
+                      url: /admin/integrations/hybrid/dvp-hybrid.html  
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
@@ -590,9 +610,33 @@ entries:
                         ru: Федерация
                       url: /admin/configuration/network/alliance/federation.html
                 - title:
-                     en: Network policy configuration
-                     ru: Настройка сетевых политик
-                  url: /admin/configuration/network/policy/configuration.html
+                    en: Network policies
+                    ru: Сетевые политики
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/network/policy/configuration.html
+                    - title:
+                        en: Kubernetes NetworkPolicy
+                        ru: Kubernetes NetworkPolicy
+                      url: /admin/configuration/network/policy/kubernetes_networkpolicy.html
+                    - title:
+                        en: CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy
+                        ru: CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy
+                      url: /admin/configuration/network/policy/cilium_networkpolicy.html
+                    - title:
+                        en: Host firewall on nodes
+                        ru: Host firewall на узлах
+                      url: /admin/configuration/network/policy/host_firewall.html
+                    - title:
+                        en: Common policy examples
+                        ru: Типовые примеры политик
+                      url: /admin/configuration/network/policy/examples.html
+                    - title:
+                        en: Diagnostics and observability
+                        ru: Диагностика и наблюдаемость политик
+                      url: /admin/configuration/network/policy/troubleshooting.html
                 - title:
                     en: SDN
                     ru: SDN
@@ -754,16 +798,20 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/security/
                 - title:
-                    en: Security events
-                    ru: События безопасности
+                    en: Audit and security events
+                    ru: Аудит и события безопасности
                   folders:
+                    - title:
+                        en: Security events
+                        ru: События безопасности
+                      url: /admin/configuration/security/events/security-events.html
                     - title:
                         en: Kubernetes API event audit
                         ru: Аудит событий API Kubernetes
                       url: /admin/configuration/security/events/kubernetes-api-audit.html
                     - title:
-                        en: Security event audit
-                        ru: Аудит событий безопасности
+                        en: Runtime audit
+                        ru: Рантайм-аудит
                       url: /admin/configuration/security/events/runtime-audit.html
                 - title:
                     en: Security policies
@@ -861,6 +909,22 @@ entries:
                 en: Assigning namespace labels
                 ru: Назначение лейблов пространствам имён
               url: /admin/configuration/label-assignment.html
+            - title:
+                en: Marketplace
+                ru: Marketplace
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/marketplace/
+                - title:
+                    en: Package repositories
+                    ru: Репозитории пакетов
+                  url: /admin/configuration/marketplace/package-repository.html
+                - title:
+                    en: Scanning
+                    ru: Сканирование
+                  url: /admin/configuration/marketplace/scanning.html
         - title:
             en: Platform update
             ru: Обновление платформы
@@ -881,6 +945,10 @@ entries:
                 en: Updating Kubernetes and versioning
                 ru: Обновление Kubernetes и управление версиями
               url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+            - title:
+                en: Switching editions
+                ru: Переключение редакций
+              url: /admin/configuration/update/switching-editions.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
@@ -1000,6 +1068,10 @@ entries:
                 en: Using TLS certificates
                 ru: Использование TLS-сертификатов
               url: /user/security/tls.html
+            - title:
+                en: Pod and container security settings
+                ru: Параметры безопасности подов и контейнеров
+              url: /user/security/pod-settings.html
         - title:
             en: Interfaces
             ru: Интерфейсы
@@ -1071,6 +1143,22 @@ entries:
                 en: Configuring application monitoring
                 ru: Настройка мониторинга приложений
               url: /user/monitoring/app.html
+        - title:
+            en: Marketplace
+            ru: Marketplace
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/marketplace/
+            - title:
+                en: Installing and managing applications
+                ru: Установка и управление приложениями
+              url: /user/marketplace/applications.html
+            - title:
+                en: Troubleshooting
+                ru: Диагностика
+              url: /user/marketplace/troubleshooting.html
         - title:
             en: Logging settings
             ru: Настройки логирования
@@ -1171,6 +1259,30 @@ entries:
                 ru: Разработка и отладка
               url: /architecture/module-development/development/
         - title:
+            en: Marketplace
+            ru: Marketplace
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/marketplace/
+            - title:
+                en: Concepts
+                ru: Концепции
+              url: /architecture/marketplace/concepts.html
+            - title:
+                en: Application development
+                ru: Разработка приложений
+              url: /architecture/marketplace/application-development.html
+            - title:
+                en: Nelm annotations
+                ru: Аннотации Nelm
+              url: /architecture/marketplace/nelm-annotations.html
+            - title:
+                en: Hooks
+                ru: Хуки
+              url: /architecture/marketplace/hooks.html
+        - title:
             en: Disaster resilience
             ru: Катастрофоустойчивость
           folders:
@@ -1203,9 +1315,33 @@ entries:
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
             - title:
+                en: Deckhouse module
+                ru: Модуль deckhouse
+              url: /architecture/deckhouse/deckhouse.html
+            - title:
+                en: Queuing mechanism
+                ru: Механизм очередей
+              url: /architecture/deckhouse/queues.html
+            - title:
+                en: Registry module
+                ru: Модуль registry
+              url: /architecture/deckhouse/registry.html
+            - title:
                 en: Direct mode of registry module
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
+        - title:
+            en: Delivery subsystem
+            ru: Подсистема Delivery
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/delivery/
+            - title:
+                en: Operator-argo module
+                ru: Модуль operator-argo
+              url: /architecture/delivery/operator-argo.html
         - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
@@ -1327,17 +1463,13 @@ entries:
                 ru: Инфраструктурные компоненты
               folders:
                 - title:
+                    en: Chrony module
+                    ru: Модуль chrony
+                  url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
-                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
-                - title:
-                    en: CSI driver
-                    ru: CSI-драйвер
-                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
-                - title:
-                    en: CSI driver (VMware vSphere)
-                    ru: CSI-драйвер (VMware vSphere)
-                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
+                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html                
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1371,9 +1503,13 @@ entries:
                 ru: Контроль целостности
               url: /architecture/security/integrity-control.html
             - title:
-                en: Security events audit
-                ru: Аудит событий безопасности
+                en: Runtime audit
+                ru: Рантайм-аудит
               url: /architecture/security/runtime-audit.html
+            - title:
+                en: Security events
+                ru: События безопасности
+              url: /architecture/security/security-events.html
             - title:
                 en: Admission-policy-engine module
                 ru: Модуль admission-policy-engine
@@ -1382,6 +1518,10 @@ entries:
                 en: Cert-manager module
                 ru: Модуль cert-manager
               url: /architecture/security/cert-manager.html
+            - title:
+                en: Runtime-audit-engine module
+                ru: Модуль runtime-audit-engine
+              url: /architecture/security/runtime-audit-engine.html
         - title:
             en: Network subsystem
             ru: Подсистема Network
@@ -1398,6 +1538,10 @@ entries:
                 en: Metallb module
                 ru: Модуль metallb
               url: /architecture/network/metallb.html
+            - title:
+                en: DNS modules
+                ru: Модули управления DNS
+              url: /architecture/network/dns-modules.html
             - title:
                 en: Cluster-level Istio architecture
                 ru: Архитектура Istio на уровне кластера
@@ -1436,20 +1580,76 @@ entries:
               url: /architecture/storage/sds-node-configurator.html
             - title:
                 en: Storage system modules
-                ru: Модули системы хранения
+                ru: Модули систем хранения
               folders:
+                - title:
+                    en: Csi-ceph module
+                    ru: Модуль csi-ceph
+                  url: /architecture/storage/external/csi-ceph.html
+                - title:
+                    en: Csi-hpe module
+                    ru: Модуль csi-hpe
+                  url: /architecture/storage/external/csi-hpe.html
+                - title:
+                    en: Csi-huawei module
+                    ru: Модуль csi-huawei
+                  url: /architecture/storage/external/csi-huawei.html
+                - title:
+                    en: Csi-netapp module
+                    ru: Модуль csi-netapp
+                  url: /architecture/storage/external/csi-netapp.html
                 - title:
                     en: Csi-nfs module
                     ru: Модуль csi-nfs
                   url: /architecture/storage/external/csi-nfs.html
+                - title:
+                    en: Csi-s3 module
+                    ru: Модуль csi-s3
+                  url: /architecture/storage/external/csi-s3.html
+                - title:
+                    en: Csi-scsi-generic module
+                    ru: Модуль csi-scsi-generic
+                  url: /architecture/storage/external/csi-scsi-generic.html
+                - title:
+                    en: Csi-vsphere module
+                    ru: Модуль csi-vsphere
+                  url: /architecture/storage/external/csi-vsphere.html
+                - title:
+                    en: Csi-yadro-tatlin-unified module
+                    ru: Модуль csi-yadro-tatlin-unified
+                  url: /architecture/storage/external/csi-yadro-tatlin-unified.html
             - title:
                 en: CSI drivers
                 ru: CSI-драйверы
               folders:
                 - title:
+                    en: Standard CSI driver
+                    ru: CSI-драйвер (типовой)
+                  url: /architecture/storage/csi-drivers/csi-driver.html
+                - title:
+                    en: Ceph RBD CSI driver
+                    ru: CSI-драйвер Ceph RBD
+                  url: /architecture/storage/csi-drivers/csi-driver-ceph-rbd.html
+                - title:
+                    en: Huawei CSI driver
+                    ru: CSI-драйвер Huawei
+                  url: /architecture/storage/csi-drivers/csi-driver-huawei.html
+                - title:
                     en: NFS CSI driver
                     ru: CSI-драйвер NFS
                   url: /architecture/storage/csi-drivers/csi-driver-nfs.html
+                - title:
+                    en: S3 CSI driver
+                    ru: CSI-драйвер S3
+                  url: /architecture/storage/csi-drivers/csi-driver-s3.html
+                - title:
+                    en: SCSI Generic CSI driver
+                    ru: CSI-драйвер SCSI Generic
+                  url: /architecture/storage/csi-drivers/csi-driver-scsi-generic.html
+                - title:
+                    en: VMware vSphere CSI driver
+                    ru: CSI-драйвер VMware vSphere
+                  url: /architecture/storage/csi-drivers/csi-driver-vsphere.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
@@ -1463,6 +1663,14 @@ entries:
                 ru: Мониторинг
               url: /architecture/observability/monitoring.html
             - title:
+                en: Prometheus module
+                ru: Модуль prometheus
+              url: /architecture/observability/prometheus.html
+            - title:
+                en: Observability module
+                ru: Модуль observability
+              url: /architecture/observability/observability.html                
+            - title:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging.html
@@ -1475,9 +1683,25 @@ entries:
                 ru: Обзор
               url: /architecture/virtualization/
             - title:
+                en: Virtualization API
+                ru: Virtualization API
+              url: /architecture/virtualization/api.html
+            - title:
+                en: Virtualization core
+                ru: Ядро виртуализации
+              url: /architecture/virtualization/core.html              
+            - title:
+                en: Deckhouse Virtualization Container Registry (DVCR)
+                ru: Deckhouse Virtualization Container Registry (DVCR)
+              url: /architecture/virtualization/dvcr.html
+            - title:
                 en: Containerized Data Importer (CDI)
                 ru: Containerized Data Importer (CDI)
               url: /architecture/virtualization/cdi.html
+            - title:
+                en: Auxiliary components
+                ru: Вспомогательные компоненты
+              url: /architecture/virtualization/auxiliary.html             
     - title:
         en: Reference
         ru: Справка
@@ -1506,6 +1730,10 @@ entries:
             en: Revision comparison
             ru: Сравнение редакций
           url: /reference/revision-comparison.html
+        - title:
+            en: Container registry structure
+            ru: Структура хранилища образов контейнеров
+          url: /reference/container-registry-structure.html
         - title:
             en: Network interaction
             ru: Сетевое взаимодействие

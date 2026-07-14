@@ -96,6 +96,7 @@ func (r *InstanceController) Reconcile(ctx context.Context, req ctrl.Request) (c
 		r.reconcileDeletion,
 		nonTerminalStep(r.instanceSvc.EnsureInstanceFinalizer),
 		nonTerminalStep(r.reconcileMachineRef),
+		nonTerminalStep(r.reconcileNodeRef),
 		r.reconcileSourceExistence,
 		nonTerminalStep(r.instanceSvc.ReconcileBashibleHeartbeat),
 		nonTerminalStep(r.instanceSvc.ReconcileBashibleStatus),
@@ -218,6 +219,37 @@ func (r *InstanceController) reconcileMachineRef(ctx context.Context, instance *
 	return nil
 }
 
+func (r *InstanceController) reconcileNodeRef(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+	if instance.Spec.NodeRef.Name != "" {
+		return nil
+	}
+
+	ref := instance.Spec.MachineRef
+	if ref == nil || ref.Name == "" {
+		return nil
+	}
+
+	machineObj, err := r.machineFactory.NewMachineFromRef(ctx, r.Client, ref)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	nodeName := machineObj.GetNodeName()
+	if nodeName == "" {
+		return nil
+	}
+
+	if err := r.patchInstanceNodeRef(ctx, instance, nodeName); err != nil {
+		return err
+	}
+
+	log.FromContext(ctx).Info("instance node ref self-healed", "instance", instance.Name, "node", nodeName)
+	return nil
+}
+
 func (r *InstanceController) reconcileMachineStatus(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
 	ref := instance.Spec.MachineRef
 	if ref == nil || ref.Name == "" {
@@ -286,6 +318,17 @@ func (r *InstanceController) createInstanceFromMachine(ctx context.Context, m ma
 
 	if err := instancecommon.EnsureInstanceExists(ctx, r.Client, m.GetName(), spec); err != nil {
 		return fmt.Errorf("ensure instance for machine %q: %w", m.GetName(), err)
+	}
+
+	return nil
+}
+
+func (r *InstanceController) patchInstanceNodeRef(ctx context.Context, instance *deckhousev1alpha2.Instance, nodeName string) error {
+	patch := client.MergeFrom(instance.DeepCopy())
+	instance.Spec.NodeRef = deckhousev1alpha2.NodeRef{Name: nodeName}
+
+	if err := r.Client.Patch(ctx, instance, patch); err != nil {
+		return fmt.Errorf("patch instance %q node ref: %w", instance.Name, err)
 	}
 
 	return nil

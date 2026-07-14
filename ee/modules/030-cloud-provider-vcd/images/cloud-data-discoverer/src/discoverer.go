@@ -19,6 +19,7 @@ import (
 	"github.com/vmware/go-vcloud-director/v2/types/v56"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -132,13 +133,14 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 }
 
 func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	discoveryData := &v1alpha1.VCDCloudProviderDiscoveryData{}
+	discoveryData := &cloudDataV1.VCDCloudProviderDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
-		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		err := json.Unmarshal(cloudProviderDiscoveryData, discoveryData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
 		}
 	}
+	discoveryData.SetDefaults()
 
 	vcdClient, err := d.config.client()
 	if err != nil {
@@ -180,7 +182,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	networks = removeDuplicatesStrings(networks)
 	discoveryData.InternalNetworks = networks
 
-	storageProfiles := make([]v1alpha1.VCDStorageProfile, 0)
+	storageProfiles := make([]cloudDataV1.VCDStorageProfile, 0)
 	st, err := d.getStorageProfiles(vcdClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get storage profiles: %v", err)
@@ -213,7 +215,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover loadbalancer: %v", err)
 	}
-	discoveryData.LoadBalancer = &v1alpha1.VCDLoadBalancer{
+	discoveryData.LoadBalancer = &cloudDataV1.VCDLoadBalancer{
 		Enabled: lbInfo.Enabled,
 	}
 
@@ -266,7 +268,7 @@ func (d *Discoverer) getInternalNetworks(vcdClient *govcd.VCDClient) ([]string, 
 	return networks, nil
 }
 
-func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]v1alpha1.VCDStorageProfile, error) {
+func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]cloudDataV1.VCDStorageProfile, error) {
 	results, err := vcdClient.QueryWithNotEncodedParams(nil, map[string]string{
 		"type": types.QtOrgVdcStorageProfile,
 	})
@@ -278,13 +280,13 @@ func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]v1alpha1.
 		return nil, nil
 	}
 
-	profiles := make([]v1alpha1.VCDStorageProfile, 0, len(results.Results.OrgVdcStorageProfileRecord))
+	profiles := make([]cloudDataV1.VCDStorageProfile, 0, len(results.Results.OrgVdcStorageProfileRecord))
 
 	for _, p := range results.Results.OrgVdcStorageProfileRecord {
 		if p.Name == "" {
 			continue
 		}
-		profiles = append(profiles, v1alpha1.VCDStorageProfile{
+		profiles = append(profiles, cloudDataV1.VCDStorageProfile{
 			Name:                    p.Name,
 			IsEnabled:               p.IsEnabled,
 			IsDefaultStorageProfile: p.IsDefaultStorageProfile,
@@ -363,12 +365,12 @@ func removeDuplicatesStrings(list []string) []string {
 }
 
 // removeDupluicatesStorageProfiles removes duplicates from slice and sort it
-func removeDuplicatesStorageProfiles(list []v1alpha1.VCDStorageProfile) []v1alpha1.VCDStorageProfile {
+func removeDuplicatesStorageProfiles(list []cloudDataV1.VCDStorageProfile) []cloudDataV1.VCDStorageProfile {
 	if len(list) == 0 {
 		return nil
 	}
 
-	uniqueMap := make(map[string]v1alpha1.VCDStorageProfile, len(list))
+	uniqueMap := make(map[string]cloudDataV1.VCDStorageProfile, len(list))
 	for _, elem := range list {
 		if elem.Name == "" {
 			continue
@@ -376,7 +378,7 @@ func removeDuplicatesStorageProfiles(list []v1alpha1.VCDStorageProfile) []v1alph
 		uniqueMap[elem.Name] = elem
 	}
 
-	uniqueList := make([]v1alpha1.VCDStorageProfile, 0, len(list))
+	uniqueList := make([]cloudDataV1.VCDStorageProfile, 0, len(list))
 	for _, elem := range uniqueMap {
 		uniqueList = append(uniqueList, elem)
 	}

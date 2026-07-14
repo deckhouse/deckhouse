@@ -4,6 +4,9 @@ kind: Service
 metadata:
   name: node-controller-webhook
   namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 spec:
   ports:

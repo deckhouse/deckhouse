@@ -35,15 +35,19 @@ import (
 	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	grantsv1alpha1 "controller/api/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	namespacecontroller "controller/internal/controller/namespace"
 	projectcontroller "controller/internal/controller/project"
 	templatecontroller "controller/internal/controller/template"
+	grantcontrollers "controller/internal/controllers"
 	"controller/internal/helm"
+	"controller/internal/jsonpath"
 	namespacewebhook "controller/internal/webhook/namespace"
 	projectwebhook "controller/internal/webhook/project"
 	templatewebhook "controller/internal/webhook/template"
+	grantwebhooks "controller/internal/webhooks"
 )
 
 var (
@@ -113,6 +117,27 @@ func main() {
 		namespacewebhook.Register(runtimeManager, allowedServiceAccounts)
 	}
 
+	// register cluster resource grants: catalog reconciler, binding-status reconcilers and webhooks.
+	jsonpathFactory := jsonpath.NewWithCache()
+	if err = (&grantcontrollers.ProjectReconciler{
+		Client: runtimeManager.GetClient(),
+		Mapper: runtimeManager.GetRESTMapper(),
+	}).SetupWithManager(runtimeManager); err != nil {
+		panic(err)
+	}
+	if err = (&grantcontrollers.ReferenceReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		panic(err)
+	}
+	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		panic(err)
+	}
+	// Use the direct (uncached) API reader for the admission webhooks: a cache-backed read lazily
+	// starts an informer and blocks on its sync inside the request, which can exceed the webhook
+	// deadline and pile up into a queue lock. A direct reader keeps reads bounded.
+	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
+
 	// start runtime manager
 	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)
@@ -123,6 +148,7 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
+		grantsv1alpha1.AddToScheme,
 		corev1.AddToScheme,
 	}
 
@@ -160,7 +186,10 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		logger.Error(err, "unable to set up health check")
 		return nil, err
 	}
-	if err = runtimeManager.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// Honest readiness: report Ready only once the webhook server is actually serving, instead of an
+	// unconditional Ping. Otherwise the pod is Ready while its webhooks cannot answer yet, and the
+	// apiserver routes admission to a not-yet-serving replica (webhook timeouts on startup/rollout).
+	if err = runtimeManager.AddReadyzCheck("readyz", runtimeManager.GetWebhookServer().StartedChecker()); err != nil {
 		logger.Error(err, "unable to set up ready check")
 		return nil, err
 	}

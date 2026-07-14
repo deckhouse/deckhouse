@@ -58,7 +58,7 @@ DVP supports automatic addition of physical (bare-metal) servers to the cluster 
      spec:
        privateSSHKey: |
          -----BEGIN OPENSSH PRIVATE KEY-----
-         LS0tLS1CRUdJlhrdG...................VZLS0tLS0K
+         ...
          -----END OPENSSH PRIVATE KEY-----
        sshPort: 22
        sudoPassword: password

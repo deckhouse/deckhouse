@@ -1,0 +1,10 @@
+admission-policy-engine:
+  fixes:
+    - summary: Refactor main documentation page
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20048
+ingress-nginx:
+  fixes:
+    - summary: Nginx was updated to 1.30.2.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20171
+      impact: All Ingress-nginx controller pods will be restarted.
+

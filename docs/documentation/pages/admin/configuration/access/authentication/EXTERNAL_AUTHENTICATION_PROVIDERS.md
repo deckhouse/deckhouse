@@ -57,10 +57,13 @@ If the parameter is not specified, no group-based filtering will be applied.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME         STAGE   SOURCE     PHASE       ENABLED   READY
    user-authn           Embedded   Available   True      True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Enable the module via CL:
 

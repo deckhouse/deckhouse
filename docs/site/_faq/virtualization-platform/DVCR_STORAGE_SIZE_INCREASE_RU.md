@@ -51,7 +51,10 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->

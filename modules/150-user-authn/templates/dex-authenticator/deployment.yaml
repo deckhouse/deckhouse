@@ -186,6 +186,7 @@ spec:
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
         - --skip-provider-button
         - --silence-ping-logging
+        - --logging-format=json
         - --session-store-type=redis
         - --redis-connection-url=redis://127.0.0.1/
     {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}

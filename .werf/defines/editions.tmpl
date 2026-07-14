@@ -1,0 +1,29 @@
+# render ee editions as comma separated string
+# . is dict have keys:
+#   Editions - list of editions from editions.yaml
+# do not sort outputs because Editions is list 
+{{- define "ee_editions_list_string" }}
+{{- $context := . }}
+{{- $eeEditions := list }}
+{{- range $_, $edition := $context.Editions }}
+  {{- if hasKey $edition "isEE" }}
+    {{- if $edition.isEE }}
+      {{- $eeEditions = append $eeEditions $edition.name }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- join "," $eeEditions }}
+{{- end }}
+
+# render all editions as comma separated string in order
+# . is dict have keys:
+#   Editions - list of editions from editions.yaml
+# do not sort outputs because Editions is list 
+{{- define "all_editions_list_string_in_order" }}
+{{- $context := . }}
+{{- $allEditions := list }}
+{{- range $_, $edition := $context.Editions }}
+    {{- $allEditions = append $allEditions $edition.name }}
+{{- end }}
+{{- join "," $allEditions }}
+{{- end }}

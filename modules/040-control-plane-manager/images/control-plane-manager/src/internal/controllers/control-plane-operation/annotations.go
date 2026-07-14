@@ -29,6 +29,7 @@ type checksumAnnotations struct {
 	CAChecksum          string
 	CertRenewalID       string
 	KubeconfigRenewalID string
+	SignatureRenewalID  string
 }
 
 func checksumAnnotationsFromSpec(spec controlplanev1alpha1.ControlPlaneOperationSpec) checksumAnnotations {
@@ -57,6 +58,9 @@ func desiredChecksumAnnotations(spec checksumAnnotations) map[string]string {
 	if spec.KubeconfigRenewalID != "" {
 		result[constants.KubeconfigRenewalIDAnnotationKey] = spec.KubeconfigRenewalID
 	}
+	if spec.SignatureRenewalID != "" {
+		result[constants.SignatureRenewalIDAnnotationKey] = spec.SignatureRenewalID
+	}
 
 	return result
 }
@@ -70,7 +74,9 @@ func buildSyncManifestAnnotations(op *controlplanev1alpha1.ControlPlaneOperation
 	if stepWasRenewed(op, controlplanev1alpha1.StepRenewKubeconfigs) {
 		annotations.KubeconfigRenewalID = op.Name
 	}
-
+	if stepWasRenewed(op, controlplanev1alpha1.StepRenewSignature) {
+		annotations.SignatureRenewalID = op.Name
+	}
 	return annotations
 }
 

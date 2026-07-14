@@ -29,7 +29,13 @@ const (
 	Name extenders.ExtenderName = "EditionAvailable"
 )
 
-var _ extenders.Extender = &Extender{}
+type IExtender interface {
+	extenders.Extender
+
+	AddModule(name string, access *moduletypes.ModuleAccessibility)
+}
+
+var _ IExtender = &Extender{}
 
 type Extender struct {
 	edition string

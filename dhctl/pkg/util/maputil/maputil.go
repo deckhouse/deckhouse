@@ -14,6 +14,8 @@
 
 package maputil
 
+import "maps"
+
 func ExcludeKeys(m map[string]string, excludeKeys ...string) map[string]string {
 	excludeKeysSet := make(map[string]struct{})
 	for _, k := range excludeKeys {
@@ -35,17 +37,13 @@ func ExcludeKeys(m map[string]string, excludeKeys ...string) map[string]string {
 
 func Join[K comparable, V any](dst map[K]V, sources ...map[K]V) {
 	for _, src := range sources {
-		for k, v := range src {
-			dst[k] = v
-		}
+		maps.Copy(dst, src)
 	}
 }
 
 func Clone[K comparable, V any](in map[K]V) map[K]V {
 	out := make(map[K]V)
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 

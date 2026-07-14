@@ -23,16 +23,6 @@ clusterDomain: "cluster.local"
 # [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
 defaultCRI: "ContainerdV2"
 ---
-# [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-# [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ce
-  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
----
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.

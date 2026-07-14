@@ -161,6 +161,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
 		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
 			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", customClusterRolesFlat)
@@ -381,8 +382,27 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:bulk-sar-creator").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:self-bulk-sar-creator").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:bulk-sar-creator").Field("rules").String()).
+				To(ContainSubstring("bulksubjectaccessreviews/nonself"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:self-bulk-sar-creator").Field("rules").String()).
+				ToNot(ContainSubstring("bulksubjectaccessreviews/nonself"))
+			selfBulkSARBinding := f.KubernetesGlobalResource(
+				"ClusterRoleBinding",
+				"d8:user-authz:self-bulk-sar-creator:system-authenticated",
+			)
+			Expect(selfBulkSARBinding.Exists()).To(BeTrue())
+			Expect(selfBulkSARBinding.Field("roleRef.name").String()).
+				To(Equal("d8:user-authz:self-bulk-sar-creator"))
+			Expect(selfBulkSARBinding.Field("subjects.0.kind").String()).To(Equal("Group"))
+			Expect(selfBulkSARBinding.Field("subjects.0.name").String()).To(Equal("system:authenticated"))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:permission-browser-apiserver:auth-delegator").Exists()).To(BeTrue())
+		})
+
+		It("Should render permission-browser availability alert", func() {
+			rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver")
+			Expect(rule.Exists()).To(BeTrue())
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzPermissionBrowserUnavailable"))
 		})
 
 		It("Should configure permission-browser-apiserver deployment correctly", func() {
@@ -416,6 +436,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	Context("Namespace access permissions based on edition", func() {
 		Context("EE edition (non-CE)", func() {
 			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 				f.ValuesSet("global.deckhouseEdition", "EE")
 				f.ValuesSet("userAuthz.enableMultiTenancy", true)
 				f.HelmRender()
@@ -468,6 +489,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 		Context("EE edition (non-CE) with MultiTenancy disabled", func() {
 			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 				f.ValuesSet("global.deckhouseEdition", "EE")
 				f.ValuesSet("userAuthz.enableMultiTenancy", false)
 				f.HelmRender()
@@ -488,6 +510,12 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			It("system:authenticated should not get accessiblenamespaces discovery", func() {
 				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated").Exists()).To(BeFalse())
+			})
+
+			It("Should render permission-browser availability alert", func() {
+				rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver")
+				Expect(rule.Exists()).To(BeTrue())
+				Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzPermissionBrowserUnavailable"))
 			})
 		})
 

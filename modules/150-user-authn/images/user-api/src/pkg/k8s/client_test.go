@@ -18,6 +18,7 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"testing"
@@ -108,6 +109,29 @@ func TestPasswordCache(t *testing.T) {
 	}
 }
 
+func TestPasswordCache_StopIsIdempotent(t *testing.T) {
+	scheme := runtime.NewScheme()
+	passwordGVR := schema.GroupVersionResource{
+		Group:    "dex.coreos.com",
+		Version:  "v1",
+		Resource: "passwords",
+	}
+	gvrToListKind := map[schema.GroupVersionResource]string{passwordGVR: "PasswordList"}
+	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
+
+	cache := NewPasswordCache(dynamicClient, testLogger())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := cache.Start(ctx); err != nil {
+		t.Fatalf("Failed to start password cache: %v", err)
+	}
+
+	// Repeated Stop must not panic on closing an already-closed channel.
+	cache.Stop()
+	cache.Stop()
+}
+
 func TestK8sClient_CreatePasswordResetOperation(t *testing.T) {
 	scheme := runtime.NewScheme()
 
@@ -185,7 +209,7 @@ func TestK8sClient_IsLocalUser_CacheNotSynced(t *testing.T) {
 
 	// Don't start the cache, so it's not synced
 	_, err := client.IsLocalUser(context.Background(), "admin")
-	if err != ErrCacheNotSynced {
+	if !errors.Is(err, ErrCacheNotSynced) {
 		t.Errorf("IsLocalUser() error = %v, want %v", err, ErrCacheNotSynced)
 	}
 }

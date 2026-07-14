@@ -5,7 +5,7 @@ memory: 30Mi
 
 {{- $rppGetBootstrapPort := 4282 }}
 
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -105,9 +105,7 @@ spec:
         resources:
           requests:
             ephemeral-storage: 1Gi
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "registry_packages_proxy_resources" . | nindent 12 }}
-          {{- end }}
         volumeMounts:
           - name: cache
             mountPath: /cache
@@ -119,7 +117,7 @@ spec:
           - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
           - "--v=2"
           - "--logtostderr=true"
-          - "--stale-cache-interval=1h30m"
+          - "--stale-cache-interval=5m"
           - "--livez-path=/livez"
         ports:
           - containerPort: 4219
@@ -137,6 +135,11 @@ spec:
             value: |
               excludePaths:
               - /healthz
+              # Package icons are public metadata; no Bearer token or RBAC required.
+              - /v1/packages/*/*/metadata/icon
+              - /v1/packages/*/*/metadata/icon/
+              - /v1/packages/*/*/metadata/icon/*
+              - /v1/packages/*/*/metadata/icon/*/
               upstreams:
               - upstream: http://127.0.0.1:5080/healthz
                 path: /healthz
@@ -160,6 +163,26 @@ spec:
                     resource: deployments
                     subresource: http
                     name: registry-packages-proxy
+              - upstream: http://127.0.0.1:5080/v1/images/
+                path: /v1/images/
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: cli-binary
+                    name: registry-packages-proxy
+              - upstream: http://127.0.0.1:5080/v1/packages/
+                path: /v1/packages/
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: packages
+                    name: registry-packages-proxy
         livenessProbe:
           httpGet:
             path: /livez
@@ -173,9 +196,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
-          {{- end }}
         volumeMounts:
           - name: kube-rbac-proxy-ca
             mountPath: /etc/kube-rbac-proxy

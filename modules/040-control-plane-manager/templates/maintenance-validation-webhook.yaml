@@ -11,12 +11,19 @@ validationObject:
     apiVersions: ["*"]
     operations:  ["UPDATE"]
     resources:   ["controlplanenodes"]
-    scope:       "Cluster"
+    scope:       "Namespaced"
+  namespace:
+    labelSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: kube-system
 context:
   - name: control-plane-operations
     kubernetes:
       apiVersion: control-plane.deckhouse.io/v1alpha1
       kind: ControlPlaneOperation
+      namespace:
+        nameSelector:
+          matchNames: ["kube-system"]
       jqFilter: |-
         {
           "name": .metadata.name,

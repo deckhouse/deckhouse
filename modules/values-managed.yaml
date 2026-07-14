@@ -7,9 +7,7 @@ documentationEnabled: true
 deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
-ingressNginxEnabled: true
 localPathProvisionerEnabled: true
-logShipperEnabled: true
 monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesEnabled: true
@@ -20,6 +18,5 @@ operatorPrometheusEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
-upmeterEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerEnabled: true

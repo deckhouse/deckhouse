@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 13,
+  "version": 14,
   "statements": [
     {
       "vulnerability": {
@@ -213,8 +213,176 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Использование github.com/containerd/containerd ограничено операциями с OCI-образами и манифестами, а не компонентами CRI или runtime, в которых проявляется уязвимость.",
       "timestamp": "2025-11-13T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI local privilege escalation на Windows (путь поиска плагинов C:\\ProgramData\\Docker\\cli-plugins). d8 и подкоманда delivery-kit работают только под Linux; уязвимый код не выполняется.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33747"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/moby/buildkit@v0.13.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/moby/buildkit v0.13.1 поступает транзитивно из werf/delivery-kit (подкоманда d8 delivery-kit) и используется только для сборки OCI-образов; уязвимый функционал не в пути выполнения штатных операций d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33748"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/moby/buildkit@v0.13.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/moby/buildkit v0.13.1 поступает транзитивно из werf/delivery-kit (подкоманда d8 delivery-kit) и используется только для сборки OCI-образов; уязвимый функционал не в пути выполнения штатных операций d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-23831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/sigstore/rekor v1.3.6 поступает транзитивно из werf/delivery-kit (подпись/верификация образов в подкоманде d8 delivery-kit); уязвимый код не в пути выполнения штатных операций d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24117"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/sigstore/rekor v1.3.6 поступает транзитивно из werf/delivery-kit (подпись/верификация образов в подкоманде d8 delivery-kit); уязвимый код не в пути выполнения штатных операций d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24137"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/sigstore/sigstore v1.8.8 поступает транзитивно из werf/delivery-kit (подпись образов в подкоманде d8 delivery-kit); уязвимый код не в пути выполнения штатных операций d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25934"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/go-git/go-git/v5 v5.16.2 поступает транзитивно из werf/delivery-kit для git-операций; уязвимый функционал не используется в штатных операциях d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34165"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/go-git/go-git/v5 v5.16.2 поступает транзитивно из werf/delivery-kit для git-операций; уязвимый функционал не используется в штатных операциях d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33762"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/go-git/go-git/v5 v5.16.2 поступает транзитивно из werf/delivery-kit для git-операций; уязвимый функционал не используется в штатных операциях d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-45570"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "github.com/go-git/go-git/v5 v5.16.2 поступает транзитивно из werf/delivery-kit для git-операций; уязвимый функционал не используется в штатных операциях d8.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. github.com/docker/docker v25.0.6 проявляется только в работе Docker-демона (dockerd), который не входит в состав d8; уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39882"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v0.44.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "DoS через неограниченное чтение тела HTTP-ответа OTLP-метрик-экспортёра (otlpmetrichttp v0.44.0) достижим только от вредоносного коллектора; коллектор задаётся администратором (доверенный), подача вредоносного ответа нарушителем исключена.",
+      "timestamp": "2026-06-15T12:00:00Z"
     }
   ],
   "timestamp": "2026-01-16T12:00:00Z",
-  "last_updated": "2026-01-19T00:00:00Z"
+  "last_updated": "2026-06-15T12:00:00Z"
 }

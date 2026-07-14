@@ -93,6 +93,10 @@ const moduleValues = `
   csiDriver:
     fsGroupPolicy: ReadWriteOnceWithFSType
   internal:
+    capoControllerManagerWebhookCert:
+      ca: myca
+      key: mykey
+      crt: mycrt
     storageClasses:
       - name: fastssd
         type: Fast HDD
@@ -126,6 +130,10 @@ const moduleValues = `
 
 const badModuleValues = `
   internal:
+    capoControllerManagerWebhookCert:
+      ca: myca
+      key: mykey
+      crt: mycrt
     connection:
       authURL: http://my.cloud.lalla/123/
       username: myuser
@@ -275,7 +283,7 @@ func openstackCheck(f *Config, k8sVer string) {
             "mainNetwork": "kube",
             "securityGroups": [
               "aaa",
-              "bbb"
+            "bbb"
             ],
             "sshKeyPairName": "mysshkeypairname"
           },
@@ -309,6 +317,18 @@ func openstackCheck(f *Config, k8sVer string) {
 		providerSpecificBashibleBootstrapSecretData := providerSpecificBashibleBootstrapSecret.Field("data").Map()
 		Expect(len(providerSpecificBashibleBootstrapSecretData) >= 1).To(BeTrue())
 		Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0).To(BeTrue())
+
+		providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
+		Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+		Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("capi"))
+		Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+		providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
+		Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
+		Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
+		Expect(len(providerSpecificCAPISecretData["machine-template.yaml"].String()) > 0).To(BeTrue())
+
+		Expect(providerRegistrationSecret.Field("data.capiClusterKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("OpenStackCluster"))))
+		Expect(providerRegistrationSecret.Field("data.capiMachineTemplateKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("OpenStackMachineTemplate"))))
 
 		// user story #2
 		Expect(cinderCSIDriver.Exists()).To(BeTrue())
@@ -374,6 +394,15 @@ rescan-on-resize = true`
 		Expect(userAuthzUser.Exists()).To(BeTrue())
 		Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 
+		capoDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capo-controller-manager")
+		capoWebhookService := f.KubernetesResource("Service", moduleNamespace, "capo-controller-manager-webhook-service")
+		capoWebhookConfig := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "capo-validating-webhook")
+		Expect(capoDeployment.Exists()).To(BeTrue())
+		Expect(capoWebhookService.Exists()).To(BeTrue())
+		Expect(capoWebhookConfig.Exists()).To(BeTrue())
+		Expect(capoWebhookConfig.Field("webhooks.1.clientConfig.service.namespace").String()).To(Equal(moduleNamespace))
+		Expect(capoDeployment.Field("spec.template.metadata.annotations").Map()["checksum/config"].String()).ToNot(BeEmpty())
+
 		Expect(scFast.Exists()).To(BeTrue())
 		Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
@@ -408,6 +437,19 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Expect(cddDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
 		Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-data-discoverer").Exists()).To(BeFalse())
 	})
+
+	It("must ship CAPI machine template with allowed address pairs support", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
+		Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+
+		machineTemplateSource, err := base64.StdEncoding.DecodeString(providerSpecificCAPISecret.Field("data.machine-template\\.yaml").String())
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(string(machineTemplateSource)).To(ContainSubstring("allowedAddressPairs:"))
+		Expect(string(machineTemplateSource)).To(ContainSubstring(`ipAddress: {{ $.Values.global.discovery.podSubnet | quote }}`))
+		Expect(string(machineTemplateSource)).To(ContainSubstring(`eq $.Values.nodeManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled"`))
+	})
 }
 
 var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func() {
@@ -423,7 +465,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `slowhdd`)
@@ -448,7 +490,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack bad config", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
 			f.HelmRender()
@@ -462,7 +504,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Hybrid Openstack", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.HelmRender()
@@ -475,7 +517,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Unsupported Kubernetes version", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -489,9 +531,29 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
+	Context("Openstack with admission-policy-engine", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSet("global.enabledModules", []string{"vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "admission-policy-engine-crd"})
+			f.HelmRender()
+		})
+
+		It("Should render SecurityPolicyException for CAPO", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			spe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "capo-controller-manager")
+			Expect(spe.Exists()).To(BeTrue())
+
+			capoDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capo-controller-manager")
+			Expect(capoDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("capo-controller-manager"))
+		})
+	})
+
 	Context("Openstack StorageClass topology disabled", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")
@@ -519,7 +581,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Context("all kube versions", func() {
 			Context("ignoreVolumeMicroversion disabled", func() {
 				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 					f.ValuesSet("global.modulesImages", GetModulesImages())
 					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "false")
@@ -535,7 +597,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			Context("ignoreVolumeMicroversion enabled", func() {
 				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 					f.ValuesSet("global.modulesImages", GetModulesImages())
 					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "true")
@@ -622,7 +684,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 		Context("with tenant name", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.HelmRender()
@@ -653,7 +715,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 		Context("with tenant id", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection", `
@@ -693,7 +755,7 @@ region: myreg
 
 		Context("with ca cert", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection.caCert", `
@@ -728,7 +790,7 @@ ca
 
 		Context("vertical-pod-autoscaler module enabled", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]`)
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
@@ -745,7 +807,7 @@ ca
 
 		Context("vertical-pod-autoscaler module disabled", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("global.enabledModules", `[]`)
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
@@ -763,7 +825,7 @@ ca
 
 	Context("Openstack :: admission-policy-engine compatibility", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.enabledModules", []string{
@@ -888,7 +950,7 @@ ca
 
 	Context("Openstack :: bootstrap compatibility", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.clusterIsBootstrapped", false)

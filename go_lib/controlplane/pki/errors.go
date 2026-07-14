@@ -16,7 +16,10 @@ limitations under the License.
 
 package pki
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // CertValidationError is returned by createRootCertIfNotExists when an existing CA
 // certificate does not satisfy the current configuration. The caller should treat
@@ -28,4 +31,47 @@ type CertValidationError struct {
 
 func (e *CertValidationError) Error() string {
 	return fmt.Sprintf("certificate %q are not valid: %s", e.BaseName, e.Reason)
+}
+
+// MissingError is returned when a certificate file does not exist on disk.
+// The caller treats this as a skippable condition.
+type MissingError struct {
+	BaseName string
+}
+
+func (e *MissingError) Error() string {
+	return fmt.Sprintf("certificate %q not found on disk", e.BaseName)
+}
+
+// CAMissingError is returned when the signing CA certificate file is absent.
+// The leaf cannot be re-signed, so renewal is skipped.
+type CAMissingError struct {
+	CAName string
+}
+
+func (e *CAMissingError) Error() string {
+	return fmt.Sprintf("CA %q certificate not found on disk", e.CAName)
+}
+
+// CAExternalError is returned when the CA certificate exists but its private key does not (external CA scenario).
+// Renewal is skipped.
+type CAExternalError struct {
+	CAName string
+}
+
+func (e *CAExternalError) Error() string {
+	return fmt.Sprintf("CA %q private key not found (external CA — renewal skipped)", e.CAName)
+}
+
+// CAExpiredError is returned when the signing CA certificate has already expired.
+// Renewal is skipped: a leaf signed by an expired CA fails chain validation, so re-signing is pointless until the CA is rotated.
+type CAExpiredError struct {
+	CAName    string
+	ExpiredAt time.Time
+}
+
+func (e *CAExpiredError) Error() string {
+	return fmt.Sprintf("CA %q expired at %s — renewing leaf certs against an expired CA is pointless; rotate the CA first",
+		e.CAName, e.ExpiredAt.UTC().Format(time.RFC3339),
+	)
 }

@@ -38,7 +38,7 @@ For instructions on enabling this feature, see [FAQ](faq.html#how-do-i-protect-s
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      enabled: true
      settings:
        apiserver:

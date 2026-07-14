@@ -1,4 +1,5 @@
 .github/                                                         @Nikolay1224 @himax1991
+.gitleaks.toml                                                   @Nikolay1224 @himax1991
 000-common/                                                      @RomanenkoDenys
 **/000-common/images/alt-p11                                     @borg-z @090809
 **/000-common/images/cni-**                                      @apolovov
@@ -36,6 +37,7 @@
 **/007-registrypackages/images/virt-what                         @borg-z @090809
 **/007-registrypackages/images/which                             @borg-z @090809
 **/007-registrypackages/images/yq                                @borg-z @090809
+**/007-registrypackages/images/docker-registry                   @borg-z @090809
 015-admission-policy-engine/                                     @nabokihms @AlwxSin
 021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
@@ -47,6 +49,9 @@
 038-registry/                                                    @nabokihms @vadimartynov
 039-registry-packages-proxy/                                     @borg-z @090809
 040-control-plane-manager/                                       @sprait
+**/040-control-plane-manager/hooks/audit_policy*                           @nabokihms @AlwxSin
+**/040-control-plane-manager/templates/_authentication_configuration.tpl   @nabokihms @AlwxSin
+**/040-control-plane-manager/templates/_authorization_config.tpl           @nabokihms @AlwxSin
 040-node-manager/                                                @borg-z @090809
 **/040-node-manager/images/builder-cuda                          @serg-su
 **/040-node-manager/images/nvidia-container-toolkit              @serg-su
@@ -57,12 +62,18 @@
 **/040-node-manager/images/fencing-agent                         @yalosev @ergoz
 **/040-node-manager/images/cluster-autoscaler                    @yalosev @ergoz
 **/040-node-manager/images/bashible-apiserver                    @borg-z @090809 @sprait
+**/040-node-manager/images/integrity-containerd-configurator     @sprait
+**/040-node-manager/images/integrity-controller                  @sprait
 **/040-node-manager/templates/fencing-agent                      @yalosev @ergoz
 **/040-node-manager/templates/cluster-autoscaler                 @yalosev @ergoz
+**/040-node-manager/templates/integrity-containerd-configurator  @sprait
+**/040-node-manager/templates/integrity-controller               @sprait
 **/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu     @serg-su
 **/040-node-manager/templates/nvidia-gpu                         @serg-su
 **/040-node-manager/hooks/fencing**                              @yalosev @ergoz
+**/040-node-manager/hooks/enable_integrity_controller**          @sprait
 **/040-node-manager/e2e/fencing**                                @yalosev @ergoz
+**/040-node-manager/e2e/cluster-autoscaler                       @yalosev @ergoz
 040-terraform-manager/                                           @borg-z @090809
 **/040-terraform-manager/images                                  @aleksey-su @pabateman
 **/040-terraform-manager/images/base-terraform-manager           @borg-z @090809
@@ -75,9 +86,7 @@
 140-user-authz/                                                  @nabokihms @AlwxSin
 150-user-authn/                                                  @nabokihms @AlwxSin
 160-multitenancy-manager/                                        @nabokihms @AlwxSin
-200-operator-prometheus/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
 300-prometheus/                                                  @vladimirGuryanov @lazovskiy @maksimmadzhuga
-301-prometheus-*/                                                @vladimirGuryanov @lazovskiy @maksimmadzhuga
 302-vertical-pod-autoscaler/                                     @yalosev @ergoz
 303-prometheus-*/                                                @vladimirGuryanov @lazovskiy
 340-extended-monitoring/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
@@ -88,15 +97,12 @@
 402-ingress-nginx/                                               @miklezzzz @apolovov
 450-keepalived/                                                  @AndreyPavlovFlant @apolovov
 450-network-gateway/                                             @AndreyPavlovFlant @apolovov
-460-log-shipper/                                                 @vladimirGuryanov @lazovskiy @maksimmadzhuga
-462-loki/                                                        @vladimirGuryanov @lazovskiy @maksimmadzhuga
 470-chrony/                                                      @borg-z @090809
 491-containerized-data-importer                                  @fl64
 500-basic-auth/                                                  @nabokihms @AlwxSin
 500-openvpn/                                                     @AndreyPavlovFlant @apolovov
 500-cilium-hubble/                                               @AndreyPavlovFlant @apolovov
 500-dashboard/                                                   @shvgn
-500-upmeter/                                                     @vladimirGuryanov @lazovskiy @maksimmadzhuga
 500-okmeter/                                                     @vladimirGuryanov @lazovskiy @maksimmadzhuga
 600-secret-copier/                                               @nabokihms @AlwxSin
 600-namespace-configurator/                                      @nabokihms @AlwxSin
@@ -116,13 +122,17 @@ csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @borg-z @090809
 docs/                                    @z9r5
-docs/documentation/pages/architecture/   @voitenkov
+docs/documentation/pages/architecture/   @xstayer @z9r5
 helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5
+tools/docs/                              @z9r5
+tools/integrity_check_namespaces         @alexey-gavrilov-flant @himax1991
+tools/build_includes/integrity-check-**  @alexey-gavrilov-flant @himax1991
 /pkg/                                    @ldmonster
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
 /release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su @pabateman
 go_lib/registry/                         @nabokihms @vadimartynov
+go_lib/controlplane/                     @sprait @AmazinMax

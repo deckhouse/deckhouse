@@ -1,0 +1,134 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) -}}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+  name: registry-packages-proxy
+  namespace: d8-cloud-instance-manager
+spec:
+  listeners:
+{{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
+    name: registry-packages-proxy
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ include "helm_lib_module_https_secret_name" (list . "registry-packages-proxy-httproute-tls") }}
+        namespace: d8-cloud-instance-manager
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
+    name: registry-packages-proxy-redirect
+    port: 80
+    protocol: HTTP
+{{- else }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
+    name: registry-packages-proxy
+    port: 80
+    protocol: HTTP
+{{- end }}
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ $moduleGateway.name }}
+    namespace: {{ $moduleGateway.namespace }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-cloud-instance-manager
+  annotations:
+    alb.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+    alb.network.deckhouse.io/idle-timeout: "300"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: registry-packages-proxy
+    namespace: d8-cloud-instance-manager
+    sectionName: registry-packages-proxy
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: registry-packages-proxy
+      port: 443
+      weight: 1
+    matches:
+    - path:
+      # Only /v1/images/* (Deckhouse CLI downloads, RBAC-authenticated) is exposed
+      # through the public Ingress. /v1/packages/*/metadata/icon[/<version>] is
+      # intentionally NOT routed here: icons are served anonymously
+      # (kube-rbac-proxy excludePaths) and must stay reachable only from inside
+      # the cluster via the Service (and the master-node hostPort 4219 during
+      # bootstrap), never via the public domain.
+        type: PathPrefix
+        value: /v1/images/
+{{- if (include "helm_lib_module_https_route_tls_enabled" . ) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: registry-packages-proxy-redirect
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: registry-packages-proxy
+    namespace: d8-cloud-instance-manager
+    sectionName: registry-packages-proxy-redirect
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- end }}
+{{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: registry-packages-proxy-httproute-tls
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "registry-packages-proxy-httproute-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "registry-packages-proxy") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
+  issuerRef:
+    name: {{ printf "letsencrypt-gateway-%s" $moduleGateway.name }}
+    kind: ClusterIssuer
+{{- end }}
+{{- end }}

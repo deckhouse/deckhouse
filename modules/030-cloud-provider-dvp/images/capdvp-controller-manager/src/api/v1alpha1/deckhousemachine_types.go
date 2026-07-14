@@ -25,7 +25,8 @@ import (
 const MachineFinalizer = "deckhousemachine.infrastructure.cluster.x-k8s.io"
 
 const (
-	VMReadyCondition clusterv1b2.ConditionType = "VirtualMachineReady"
+	VMReadyCondition                   clusterv1b2.ConditionType = "VirtualMachineReady"
+	DiskStorageClassMigrationCondition clusterv1b2.ConditionType = "DiskStorageClassMigration"
 )
 
 const (
@@ -36,6 +37,10 @@ const (
 
 	WaitingForClusterInfrastructureReason = "WaitingForClusterInfrastructure"
 	WaitingForBootstrapScriptReason       = "WaitingForBootstrapScript"
+
+	DiskMigrationInProgressReason = "DiskMigrationInProgress"
+	DiskMigrationFailedReason     = "DiskMigrationFailed"
+	DiskMigrationCompletedReason  = "DiskMigrationCompleted"
 )
 
 // CPU defines the VM CPU, made of variable number of cores, each getting the Fraction amount of processing time on a physical core.

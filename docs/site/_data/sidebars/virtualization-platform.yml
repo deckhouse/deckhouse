@@ -476,6 +476,10 @@ entries:
                 en: Snapshots
                 ru: Снимки
               url: /virtualization-platform/documentation/user/resource-management/snapshots.html
+            - title:
+                en: USB devices
+                ru: USB-устройства
+              url: /virtualization-platform/documentation/user/resource-management/usb-devices.html
         - title:
             en: Network
             ru: Сеть

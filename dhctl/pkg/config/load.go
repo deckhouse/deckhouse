@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,10 +34,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type SchemaStore struct {
@@ -51,11 +52,13 @@ var once sync.Once
 var store *SchemaStore
 
 type validateOptions struct {
-	omitDocInError     bool
-	commanderMode      bool
-	strictUnmarshal    bool
-	validateExtensions bool
-	requiredSSHHost    bool
+	omitDocInError       bool
+	commanderMode        bool
+	strictUnmarshal      bool
+	validateExtensions   bool
+	requiredSSHHost      bool
+	collectAllErrors     bool
+	skipSchemaValidation bool
 }
 
 type ValidateOption func(o *validateOptions)
@@ -93,40 +96,56 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
-func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *SchemaStore {
-	paths = append([]string{candiDir}, paths...)
-	if _, err := os.Stat(candiDir); err != nil {
-		if dc != nil {
-			paths = append(paths, filepath.Join(dc.DownloadDir, "deckhouse", "candi"))
-		}
+// ValidateOptionCollectAllErrors makes ParseConfigFromData accumulate per-doc
+// errors into a *ValidationError instead of returning on the first one. Off
+// by default — bootstrap CLI keeps its fail-fast semantics. Validators that
+// want multi-error UX enable this.
+func ValidateOptionCollectAllErrors(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.collectAllErrors = v
 	}
+}
+
+// ValidateOptionSkipSchemaValidation makes parseDocument skip schemaStore
+// OpenAPI checks and just categorize a document by its kind. Use it for
+// "intent extraction" passes — domain analyzers (e.g. CNI mismatch) that
+// must read the user's cluster intent without re-running schema checks the
+// schema-validator pass has already done.
+func ValidateOptionSkipSchemaValidation(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.skipSchemaValidation = v
+	}
+}
+
+func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
+	// fallback to default value
+	candiDir := options.DefaultCandiDir
+	if globalOptions != nil && globalOptions.CandiDir != "" {
+		candiDir = globalOptions.CandiDir
+	}
+	paths = append([]string{candiDir}, paths...)
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
-		pathsNoTrimmed := strings.Split(pathsStr, ",")
-		for _, p := range pathsNoTrimmed {
+		pathsNoTrimmed := strings.SplitSeq(pathsStr, ",")
+		for p := range pathsNoTrimmed {
 			paths = append(paths, strings.TrimSpace(p))
 		}
 	}
 
-	return newOnceSchemaStore(dc, paths)
+	return newOnceSchemaStore(globalOptions, paths)
 }
 
-func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
+func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
 		modulesCache:       make(map[string]struct{}),
 	}
-	if _, err := os.Stat(deckhouseDir); err != nil {
-		if dc != nil {
-			deckhouseDir = filepath.Join(dc.DownloadDir, "deckhouse")
-			modulesDir = filepath.Join(deckhouseDir, "modules")
-		}
-	}
-	log.DebugF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
 
 	st.conversionsStore = conversion.NewConversionsStore()
+
+	ctx := context.Background()
 
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
@@ -157,10 +176,18 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 		}
 	}
 
+	// fallback to default
+	modulesDir := options.DefaultModulesDir
+	globalHookModule := options.DefaultGlobalHooksModule
+	if globalOptions != nil && globalOptions.ModulesDir != "" {
+		modulesDir = globalOptions.ModulesDir
+		globalHookModule = globalOptions.GlobalHooksModule
+	}
+
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// autoconverger and state exporter do not contains module dir
-		log.WarnF("Modules dir %s not found\n", modulesDir)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Modules dir %s not found", modulesDir))
 		return st
 	}
 
@@ -169,7 +196,7 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 		stat, err := os.Stat(conversionPath)
 		if err == nil && stat.IsDir() {
 			err := st.conversionsStore.Add(moduleName, conversionPath)
-			log.DebugF("Found conversion for module %s. Latest version: %d\n", moduleName, st.conversionsStore.Get(moduleName).LatestVersion())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found conversion for module %s. Latest version: %d", moduleName, st.conversionsStore.Get(moduleName).LatestVersion()))
 
 			return err
 		}
@@ -203,7 +230,7 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 			st.moduleConfigsCache[moduleName] = schema
 
 		case errors.Is(err, os.ErrNotExist):
-			log.DebugF("Openapi spec not found for module %s\n", moduleName)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Openapi spec not found for module %s", moduleName))
 		default:
 			return err
 		}
@@ -225,7 +252,7 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 		}
 	}
 
-	err = loadConfigValuesSchema(path.Join(globalHooksModule, "openapi", "config-values.yaml"), "global")
+	err = loadConfigValuesSchema(path.Join(globalHookModule, "openapi", "config-values.yaml"), "global")
 	if err != nil {
 		// We don't expect panic here our logger does not support log.Fatal
 		panic(err)
@@ -234,9 +261,9 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 	return st
 }
 
-func newOnceSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
+func newOnceSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(dc, schemasDir)
+		store = newSchemaStore(globalOptions, schemasDir)
 	})
 	return store
 }
@@ -248,6 +275,15 @@ func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
 func (s *SchemaStore) HasSchemaForModuleConfig(name string) bool {
 	_, ok := s.moduleConfigsCache[name]
 	return ok
+}
+
+func (s *SchemaStore) GetModuleConfigSchema(name string) (*spec.Schema, error) {
+	res, ok := s.moduleConfigsCache[name]
+	if !ok {
+		return nil, fmt.Errorf("schema for %s not found", name)
+	}
+
+	return res, nil
 }
 
 func (s *SchemaStore) GetModuleConfigVersion(name string) int {
@@ -294,6 +330,7 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 // if schema not fount then return ErrSchemaNotFound
 // if schema not found for ModuleConfig then return ErrSchemaNotFound also
 func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
+	ctx := context.Background()
 	options := applyOptions(opts...)
 	if !index.IsValid() {
 		return fmt.Errorf(
@@ -312,15 +349,15 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return err
 		}
 		mcName := mc.GetName()
-		log.DebugF("Found module config for validate %s\n", mcName)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found module config to validate %s", mcName))
 		if mc.Spec.Enabled == nil && mcName != "global" {
 			// we need return error because on top level we want filter module configs from modulesources and move into resources
 			// global is special mc without module
-			return fmt.Errorf("Enabled field for module config %s shoud set to true or false", mcName)
+			return fmt.Errorf("Enabled field for module config %s should be set to true or false", mcName)
 		}
 
 		if _, ok := s.modulesCache[mcName]; !ok && mcName != "global" {
-			log.DebugF("Module %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Module %s wasn't found. It is probably a module from modulesources. Skipping it", mc.GetName()))
 			return ErrSchemaNotFound
 		}
 
@@ -331,30 +368,32 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
-			log.DebugF("Schema for module config %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Schema for module config %s wasn't found. It is probably a module from modulesources. Skipping it", mc.GetName()))
 			return fmt.Errorf("Schema for module config %s not found", mcName)
 		}
 
 		if mc.Spec.Version == 0 {
-			return fmt.Errorf("Version field for module config %s shoud set", mcName)
+			return fmt.Errorf("Version field for module config %s should be set", mcName)
 		}
 
 		var err error
 		docForValidate, err = s.applyConversions(mc)
 		if err != nil {
-			return fmt.Errorf("Setting for validation module config failed: %v", err)
+			return fmt.Errorf("Setting up validation for module config failed: %v", err)
 		}
 	} else {
 		schema = s.getV1alpha1CompatibilitySchema(index)
 	}
 
 	if schema == nil {
-		log.DebugF("No schema for index %s. Skip it\n", index.String())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("No schema for index %s. Skipping it", index.String()))
 		// we need return error because on top level we want filter documents without index and move into resources
 		return ErrSchemaNotFound
 	}
 
 	schema = transformer.TransformSchema(schema, &transformer.AdditionalPropertiesTransformer{})
+
+	warnDeprecatedFields(ctx, index, extractMetadataName(*doc), docForValidate, schema)
 
 	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {
@@ -415,7 +454,7 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (bool, error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
-	var blank map[string]interface{}
+	var blank map[string]any
 
 	if options.strictUnmarshal {
 		err := yaml.UnmarshalStrict(*dataObj, &blank)
@@ -450,8 +489,8 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptio
 	return true, nil
 }
 
-func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOption) (bool, error) {
-	schemaStore := NewSchemaStore(nil, paths...)
+func ValidateDiscoveryData(config *[]byte, paths []string, globalOptions *options.GlobalOptions, opts ...ValidateOption) (bool, error) {
+	schemaStore := NewSchemaStore(globalOptions, paths...)
 
 	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {
@@ -470,10 +509,11 @@ func applyOptions(opts ...ValidateOption) validateOptions {
 }
 
 func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
+	ctx := context.Background()
 	conversion := s.conversionsStore.Get(mc.GetName())
-	log.DebugF("Starting conversion for module %s. Latest version: %d\n", mc.GetName(), conversion.LatestVersion())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Starting conversion for module %s. Latest version: %d", mc.GetName(), conversion.LatestVersion()))
 	var err error
-	var conversed map[string]interface{}
+	var conversed map[string]any
 	if mc.Spec.Version < conversion.LatestVersion() {
 		set := &mc.Spec.Settings
 		unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(set)
@@ -484,7 +524,7 @@ func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
 		if err != nil {
 			return []byte{}, fmt.Errorf("error converting to unstructured: %w", err)
 		}
-		log.DebugF("conversion successfully applyed for ModuleConfig %s\n", mc.GetName())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("conversion successfully applied for ModuleConfig %s", mc.GetName()))
 	} else {
 		return yaml.Marshal(mc.Spec.Settings)
 	}

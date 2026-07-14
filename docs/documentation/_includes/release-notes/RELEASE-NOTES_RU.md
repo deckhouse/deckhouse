@@ -2,16 +2,6 @@
 
 ### Обратите внимание
 
-- При включённом модуле `user-authz` изменена модель прав для `admin.conf`:
-  вместо привязки к встроенной роли `cluster-admin` используется [управляемая DKP RBAC-модель](https://deckhouse.ru/modules/control-plane-manager/v1.76/faq.html#административный-доступ-на-основе-rbac) с более точечными правами.
-  Это повышает безопасность доступа к кластеру.
-  При этом сохраняется [аварийный доступ](https://deckhouse.ru/modules/control-plane-manager/v1.76/faq.html#аварийный-доступ-break-glass) через `super-admin.conf`.
-  **Если в кластере используются сторонние Kubernetes-операторы (не из DKP), дополнительно выдайте права на их CRD,
-  иначе доступ к таким ресурсам будет ограничен.**
-
-- [Используемая по умолчанию](https://deckhouse.ru/modules/ingress-nginx/v1.76/configuration.html#parameters-defaultcontrollerversion) версия Ingress NGINX Controller повышена с 1.10 до 1.12.
-  Контроллеры, использующие версию по умолчанию, будут обновлены автоматически.
-
 - [Компонент fencing-agent](https://deckhouse.ru/modules/node-manager/v1.76/cr.html#nodegroup-v1-spec-fencing-mode) модуля `node-manager` переведён на gossip-протокол ([библиотека memberlist](https://github.com/hashicorp/memberlist))
   для распределённого мониторинга состояния узлов.
   Это снижает риск ложных перезагрузок worker-узлов при недоступности control plane или высокой нагрузке на API-сервер.
@@ -357,7 +347,7 @@
 
 - Изменена [стадия жизненного цикла](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.75/architecture/module-development/versioning/#жизненный-цикл-модуля) следующих модулей интеграции с облачными провайдерами:
   - модули [`cloud-provider-dvp`](https://deckhouse.ru/modules/cloud-provider-dvp/) (DVP), [`cloud-provider-vcd`](https://deckhouse.ru/modules/cloud-provider-vcd/) (VMware Cloud Director), [`cloud-provider-huaweicloud`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/) (HuaweiCloud) и [`cloud-provider-zvirt`](https://deckhouse.ru/modules/cloud-provider-zvirt/) (zVirt) теперь в статусе General Availability (был — Experimental);
-  - модуль [`cloud-provider-dynamix`](https://deckhouse.ru/modules/cloud-provider-dynamix/) (провайдер Базис.DynamiX) теперь в статусе Preview (был — Experimental).
+  - модуль [`cloud-provider-dynamix`](https://deckhouse.ru/modules/cloud-provider-dynamix/) (провайдер Basis Dynamix) теперь в статусе Preview (был — Experimental).
 
 - Добавлена поддержка использования swap-памяти для подов.
   Вместо немедленного OOM-kill под может временно использовать swap (при наличии выделенных swap-ресурсов на узле)
@@ -725,7 +715,7 @@
 
 - Уровень критичности (severity) алертов, сигнализирующих о нарушении политик безопасности, повышен с 7 до 3.
 
-- В провайдерах для `Yandex Cloud`, `Zvirt` и `Dynamix` вместо Terraform теперь используется `OpenTofu`. Это позволит приносить изменения в провайдер, например, чтобы устранять известные уязвимости (CVE).
+- В провайдерах для `Yandex Cloud`, `Zvirt` и `Basis Dynamix` вместо Terraform теперь используется `OpenTofu`. Это позволит приносить изменения в провайдер, например, чтобы устранять известные уязвимости (CVE).
 
 - Исправлены CVE-уязвимости в модулях: `chrony`, `descheduler`, `dhctl`, `node-manager`, `registry-packages-proxy`, `falco`, `cni-cilium`, `vertical-pod-autoscaler`.
 
@@ -867,7 +857,7 @@
 - В инсталлятор добавлен параметр `--tf-resource-management-timeout`,
   позволяющий управлять таймаутом создания ресурсов в облаках.
   По умолчанию таймаут составляет 10 минут.
-  Параметр имеет влияние только для следующих облаков: AWS, Azure, GCP, Yandex Cloud, OpenStack, Базис.DynamiX.
+  Параметр имеет влияние только для следующих облаков: AWS, Azure, GCP, Yandex Cloud, OpenStack, Basis Dynamix.
 
 ### Безопасность
 

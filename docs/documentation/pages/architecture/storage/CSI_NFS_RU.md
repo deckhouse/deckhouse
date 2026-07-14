@@ -21,7 +21,6 @@ description: Архитектура модуля csi-nfs в Deckhouse Kubernetes
 
 Архитектура модуля [`csi-nfs`](/modules/csi-nfs/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля csi-nfs](../../../images/architecture/storage/c4-l2-csi-nfs.ru.png)
 
 ## Компоненты модуля
@@ -32,7 +31,7 @@ description: Архитектура модуля csi-nfs в Deckhouse Kubernetes
 
    В создаваемом StorageClass задаются параметры подключения к NFS-серверу, reclaim policy, volume binding mode и другие параметры. Эти параметры затем использует provisioner CSI-драйвера `csi-nfs` при управлении NFS-томами.
 
-   Также controller синхронизирует лейблы на узлах со значением параметра [`spec.workloadNodes.nodeSelector`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) кастомного ресурса NFSStorageClass.
+   Также controller устанавливает лейбл `storage.deckhouse.io/csi-nfs-node` для узлов кластера в соответствии со значением параметра [`spec.workloadNodes.nodeSelector`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) кастомного ресурса NFSStorageClass.
 
    Состоит из следующих контейнеров:
 
@@ -40,6 +39,8 @@ description: Архитектура модуля csi-nfs в Deckhouse Kubernetes
    * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов ModuleConfig, NFSStorageClass и стандартных ресурсов StorageClass.
 
 2. **Сsi-nfs-scheduler-extender** — состоит из одного контейнера и представляет собой расширение (extender) для kube-scheduler. Реализует специфичную для подов логику размещения при использовании NFS-томов. При планировании подов учитываются селекторы узлов, заданные в кастомном ресурсе NFSStorageClass.
+
+   Компонент может отсутствовать если селекторы узлов в кастомном ресурсе NFSStorageClass не заданы.
 
 3. **CSI-драйвер (`csi-nfs`)** — реализация CSI-драйвера для provisioner `nfs.csi.k8s.io` ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). С архитектурой CSI-драйвера `csi-nfs` можно ознакомиться [на странице описания CSI-драйвера](../../storage/csi-drivers/csi-driver-nfs.html).
 

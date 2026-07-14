@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-checks
 
 {{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
@@ -29,15 +30,25 @@ function get_data_device_secret() {
         then
           return 0
         else
-          >&2 echo "failed to get secret $secret from server $server"
+          >&2 echo "Failed to get secret $secret from $server"
         fi
       done
       sleep 10
     done
   else
-    >&2 echo "failed to get secret $secret: can't find bootstrap-token"
+    >&2 echo "Failed to get secret $secret: bootstrap-token is not available"
     return 1
   fi
+}
+
+function resolve_symlink() {
+    local path="$1"
+
+    if [[ -L "$path" ]]; then
+        readlink -f "$path"
+    else
+        echo "$path"
+    fi
 }
 
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
@@ -53,7 +64,7 @@ if [ -f /var/lib/bashible/kubernetes_data_device_path ]; then
 else
   DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname] // empty' | base64 -d)"
   if [ -z "$DATA_DEVICE" ]; then
-    >&2 echo "failed to get data device path"
+    >&2 echo "Failed to read data device path for node $(bb-d8-node-name) from secret"
     exit 1
   fi
 fi
@@ -90,20 +101,39 @@ fi
 #       }
 */}}
 if ! [ -b "$DATA_DEVICE" ]; then
-  >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
+  >&2 echo "Block device $DATA_DEVICE was not found, trying to autodetect an unused disk"
   DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path')
 fi
 
 if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
-  >&2 echo "failed to detect the correct disk: more than one or no matching disks found: $DATA_DEVICE"
+  >&2 echo "Could not autodetect a single unused disk, candidates: $DATA_DEVICE"
   return 1
 fi
 
+# If $DATA_DEVICE points to a symlink, resolve it to the real device path.
+# Otherwise the `mount | grep $DATA_DEVICE` checks below would fail, because `mount`
+# reports the real path. Example:
+# ```bash
+#   ~# ls -l $DATA_DEVICE
+#      lrwxrwxrwx 1 root root 9 Jul  6 11:27 /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_0bfa67a18b15ba86c823528a24dc844d -> ../../sdc
+#   ~# mount | grep $DATA_DEVICE
+#   ~#
+#   ~# DATA_DEVICE=$(resolve_symlink $DATA_DEVICE)
+#   ~# echo $DATA_DEVICE
+#      /dev/sdc
+#   ~# mount | grep $DATA_DEVICE
+#      /dev/sdc on /mnt/kubernetes-data type ext4 (rw,relatime,discard,x-systemd.automount)
+# ```
+DATA_DEVICE="$(resolve_symlink "$DATA_DEVICE")"
+
 mkdir -p /mnt/kubernetes-data
 
-# always format the device to ensure it's clean, because etcd will not join the cluster if the device
-# contains a filesystem with etcd database from a previous installation
-mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
+# Always format the device to ensure it's clean, because etcd will not join the cluster if the device
+# contains a filesystem with etcd database from a previous installation.
+# Idempotency: skip formatting if the device is already mounted (in the next step)
+if ! mount | grep -q $DATA_DEVICE; then
+  mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
+fi
 
 if grep -qv kubernetes-data /etc/fstab; then
   cat >> /etc/fstab << EOF

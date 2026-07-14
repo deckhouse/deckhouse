@@ -22,10 +22,13 @@ If these signs are present, perform the following actions:
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                               CPU(cores)   MEMORY(bytes)
    kube-apiserver-sandbox1-master-0   251m         1476Mi
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Check the metrics in Grafana.
 

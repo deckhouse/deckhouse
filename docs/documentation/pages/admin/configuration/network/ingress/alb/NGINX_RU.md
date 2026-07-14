@@ -324,10 +324,13 @@ d8 k -n d8-ingress-nginx get svc
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
 main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Пример разделения доступа между публичной и административной зонами
 

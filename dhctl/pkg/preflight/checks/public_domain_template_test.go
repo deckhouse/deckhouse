@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"os/exec"
@@ -76,7 +75,7 @@ func TestCheckLocalhostDomain(t *testing.T) {
 			tt.setupMock(mockNode, mockScript)
 
 			check := LocalhostDomainCheck{NodeInterface: mockNode}
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
@@ -121,8 +120,8 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 							Name: "global",
 						},
 						Spec: config.ModuleConfigSpec{
-							Settings: map[string]interface{}{
-								"modules": map[string]interface{}{
+							Settings: map[string]any{
+								"modules": map[string]any{
 									"publicDomainTemplate": "example.com",
 								},
 							},
@@ -143,8 +142,8 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 							Name: "global",
 						},
 						Spec: config.ModuleConfigSpec{
-							Settings: map[string]interface{}{
-								"modules": map[string]interface{}{
+							Settings: map[string]any{
+								"modules": map[string]any{
 									"publicDomainTemplate": "cluster.local",
 								},
 							},
@@ -166,8 +165,8 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 							Name: "global",
 						},
 						Spec: config.ModuleConfigSpec{
-							Settings: map[string]interface{}{
-								"modules": map[string]interface{}{
+							Settings: map[string]any{
+								"modules": map[string]any{
 									"publicDomainTemplate": "test.cluster.local",
 								},
 							},
@@ -185,7 +184,7 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := PublicDomainTemplateCheck{MetaConfig: tt.metaConfig}
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

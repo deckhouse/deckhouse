@@ -6,20 +6,19 @@
 
 Выберите ниже один из двух вариантов, для продолжения установки кластера:
 
-<div class="tabs">
-        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
-        Кластер из нескольких узлов
-        </a>
-        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
-        Кластер из единственного узла
-        </a>
-</div>
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id='tab_layout_worker' href="javascript:void(0)" class="tabs__item tabs__item--title active"
+    onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_layout_worker');">
+    Кластер из нескольких узлов
+    </li>
+    <li id='tab_layout_master' href="javascript:void(0)" class="tabs__item tabs__item--title"
+    onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_layout_master');">
+    Кластер из единственного узла
+    </li>
+  </ul>
 
-<div id="block_layout_master" class="tabs__content_master" style="display: none;">
+<div id="block_layout_master" class="tabs__container tabs__container--descr">
 <p>Кластера, состоящего из единственного узла, может быть достаточно, например, для ознакомительных целей.</p>
 <ul>
   <li>
@@ -59,7 +58,7 @@ sudo -i d8 k patch mc global --type merge \
 </ul>
 </div>
 
-<div id="block_layout_worker" class="tabs__content_worker">
+<div id="block_layout_worker" class="tabs__container tabs__container--descr active">
 <p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/products/kubernetes-platform/documentation/latest/modules/node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
 
 <ul>
@@ -208,6 +207,7 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 {%- endofftopic %}
   </li>
 </ul>
+</div>
 </div>
 
 <p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>

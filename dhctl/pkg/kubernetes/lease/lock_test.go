@@ -15,7 +15,6 @@
 package lease
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -42,13 +41,13 @@ func TestTryRenewNilLease(t *testing.T) {
 			},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 
 		require.NotPanics(t, func() {
 			lease, err := lock.tryRenew(ctx, nil, true)
 			require.Nil(t, lease)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "Lease is nil")
+			require.Contains(t, err.Error(), "lease is nil")
 		})
 	})
 }

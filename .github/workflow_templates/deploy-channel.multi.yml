@@ -79,7 +79,7 @@ permissions:
 jobs:
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
   check_branch:
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     steps:
       - name: Check if triggered by a tag
         run: |
@@ -90,7 +90,7 @@ jobs:
           fi
   detect_editions:
     name: Detect editions
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     needs: check_branch
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
@@ -133,7 +133,7 @@ Jobs for visual control allowed editions when approving deploy to environments.
     name: Enable {!{$werfEnv}!}
     needs:
       - detect_editions
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     steps:
       - run: ": Enable {!{$werfEnv}!}"
 {!{ end }!}
@@ -455,6 +455,7 @@ stage:
       {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
       {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      {!{ tmpl.Exec "werf_setup_steps" . | strings.Indent 6 }!}
 
       - name: Download artifacts
         uses: {!{ index (ds "actions") "actions/download-artifact" }!}
@@ -463,15 +464,15 @@ stage:
           path: publish-channels
 
       - name: Converge
-        uses: {!{ index (ds "actions") "werf/actions/converge" }!}
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.{!{ $env_properties.kubeconfig }!} }}"
-          env: {!{ $env_properties.werf_env }!}
         env:
+          WERF_ENV: {!{ $env_properties.werf_env }!}
+          WERF_KUBE_CONFIG_BASE64: "${{ secrets.{!{ $env_properties.kubeconfig }!} }}"
           WERF_NAMESPACE: "{!{ $env_properties.werf_namespace }!}"
           WERF_DIR: "publish-channels"
           WERF_DEV: "true"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf converge
       {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
 {!{ end }!}

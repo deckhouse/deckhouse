@@ -24,13 +24,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
-func setupController(mgr ctrl.Manager, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
+func setupController(mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
 	if maxConcurrentReconciles < 1 {
 		maxConcurrentReconciles = 1
 	}
 
 	if v, ok := r.(NeedsClient); ok {
-		v.InjectClient(mgr.GetClient())
+		v.InjectClient(c)
 	}
 	if v, ok := r.(NeedsRecorder); ok {
 		v.InjectRecorder(mgr.GetEventRecorderFor(name))

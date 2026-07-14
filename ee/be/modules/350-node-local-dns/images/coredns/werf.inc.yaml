@@ -6,7 +6,6 @@ import:
   add: /coredns-helper
   to: /coredns-helper
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

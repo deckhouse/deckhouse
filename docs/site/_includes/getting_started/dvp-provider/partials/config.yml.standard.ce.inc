@@ -26,16 +26,6 @@ kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
-# [<en>] Settings for bootstrapping the Deckhouse cluster.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-# [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ce
-  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
----
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/002-deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.

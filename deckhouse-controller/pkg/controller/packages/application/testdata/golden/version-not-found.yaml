@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
-  creationTimestamp: null
   name: test-app
   namespace: foobar
   resourceVersion: "1"
@@ -17,7 +16,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
   name: test

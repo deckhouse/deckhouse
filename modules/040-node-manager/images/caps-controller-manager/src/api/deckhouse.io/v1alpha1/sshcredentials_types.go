@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,9 +35,9 @@ type SSHCredentialsSpec struct {
 	// A sudo password for the user.
 	SudoPassword string `json:"sudoPassword,omitempty"`
 
-	//+kubebuilder:default:=22
-	//+kubebuilder:validation:Minimum=1
-	//+kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default:=22
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
 	// A port to connect to the host via SSH.
 	SSHPort int `json:"sshPort,omitempty"`
 
@@ -45,10 +45,10 @@ type SSHCredentialsSpec struct {
 	SSHExtraArgs string `json:"sshExtraArgs,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:scope=Cluster
-//+kubebuilder:metadata:labels="heritage=deckhouse"
-//+kubebuilder:metadata:labels="module=node-manager"
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="module=node-manager"
 
 // Contains credentials required by Cluster API Provider Static (CAPS) to connect over SSH. CAPS connects to the server (virtual machine) defined in the [StaticInstance](cr.html#staticinstance) custom resource to manage its state.
 //
@@ -60,8 +60,8 @@ type SSHCredentials struct {
 	Spec SSHCredentialsSpec `json:"spec,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:scope=Cluster
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
 // SSHCredentialsList contains a list of SSHCredentials.
 type SSHCredentialsList struct {

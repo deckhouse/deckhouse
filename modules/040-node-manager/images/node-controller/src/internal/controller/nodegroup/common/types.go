@@ -35,5 +35,7 @@ type MachineFailure struct {
 type NodeGroupCRDInfo struct {
 	Name            string
 	Spec            nodegroupfilter.NodeGroupSpec
+	Engine          nodegroupfilter.NodeGroupEngine
+	UseMCM          bool
 	ManualRolloutID string
 }

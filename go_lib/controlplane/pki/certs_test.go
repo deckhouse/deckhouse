@@ -21,6 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 )
 
 func TestCreateRootCertIfNotExists_CreatesNew(t *testing.T) {
@@ -126,6 +128,49 @@ func TestCreateLeafCertIfNotExists_SkipsValid(t *testing.T) {
 	cert2, _, err := readCertAndKey(dir, "apiserver")
 	require.NoError(t, err)
 	assert.Equal(t, cert1.SerialNumber, cert2.SerialNumber)
+}
+
+func TestCreateRootCertIfNotExists_ReusesExistingOnAlgorithmChange(t *testing.T) {
+	dir := t.TempDir()
+	spec := getRootCertSpec(CACertName)
+
+	var rep PKIApplyReport
+	cert1, _, err := createRootCertIfNotExists(makeTestConfig(t, dir, WithEncryptionAlgorithmType(constants.EncryptionAlgorithmRSA2048)), spec, &rep)
+	require.NoError(t, err)
+	assert.Equal(t, PKIActionWrittenCreated, rep.Entries[0].Action)
+
+	// Simulate user changing encryptionAlgorithm in cluster-configuration.
+	// CA must be reused as-is — it is never rotated on algorithm change.
+	rep = PKIApplyReport{}
+	cert2, _, err := createRootCertIfNotExists(makeTestConfig(t, dir, WithEncryptionAlgorithmType(constants.EncryptionAlgorithmECDSAP384)), spec, &rep)
+	require.NoError(t, err, "CA must be reused when encryptionAlgorithm changes")
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionUnchanged, rep.Entries[0].Action)
+	assert.Equal(t, cert1.SerialNumber, cert2.SerialNumber, "CA serial number must not change")
+}
+
+func TestCreateLeafCertIfNotExists_RegeneratesOnAlgorithmChange(t *testing.T) {
+	dir := t.TempDir()
+	caCert, caKey := makeTestCACert(t, "kubernetes")
+	spec := getLeafCertSpec(ApiserverCertName)
+
+	var rep PKIApplyReport
+	err := createLeafCertIfNotExists(makeTestConfig(t, dir, WithEncryptionAlgorithmType(constants.EncryptionAlgorithmRSA2048)), spec, caCert, caKey, &rep)
+	require.NoError(t, err)
+	cert1, _, err := readCertAndKey(dir, "apiserver")
+	require.NoError(t, err)
+
+	// Simulate user changing encryptionAlgorithm in cluster-configuration.
+	// Leaf cert must be regenerated with the new algorithm.
+	rep = PKIApplyReport{}
+	err = createLeafCertIfNotExists(makeTestConfig(t, dir, WithEncryptionAlgorithmType(constants.EncryptionAlgorithmECDSAP384)), spec, caCert, caKey, &rep)
+	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionWrittenRegenerated, rep.Entries[0].Action)
+
+	cert2, _, err := readCertAndKey(dir, "apiserver")
+	require.NoError(t, err)
+	assert.NotEqual(t, cert1.SerialNumber, cert2.SerialNumber, "leaf cert must be regenerated with new algorithm")
 }
 
 func TestCreateLeafCertIfNotExists_RegeneratesInvalid(t *testing.T) {

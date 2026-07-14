@@ -4,32 +4,27 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: foxtrot-kube-unsuitable
   resourceVersion: "999"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/team/foxtrot/modules
     scheme: HTTPS
 status:
-  message: ""
   modules:
   - name: mcplay-kube-unsuitable
     policy: foxtrot-alpha-kube-unsuitable
   - name: parca-kube-unsuitable
     policy: foxtrot-alpha-kube-unsuitable
   modulesCount: 2
-  phase: ""
   syncTime: "2024-05-03T21:05:05Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -62,13 +57,11 @@ status:
     or equal to 1.28.0'
   phase: Pending
   pullDuration: 0s
-  size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
-  creationTimestamp: null
   name: parca-kube-unsuitable
   resourceVersion: "1000"
 properties: {}

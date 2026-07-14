@@ -87,10 +87,13 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 	}
 
 	ops := &controlplanev1alpha1.ControlPlaneOperationList{}
-	if err := r.client.List(ctx, ops, client.MatchingLabels{
-		constants.ControlPlaneNodeNameLabelKey:  r.node.Name,
-		constants.ControlPlaneComponentLabelKey: opComponent.LabelValue(),
-	}); err != nil {
+	if err := r.client.List(ctx, ops,
+		client.InNamespace(constants.KubeSystemNamespace),
+		client.MatchingLabels{
+			constants.ControlPlaneNodeNameLabelKey:  r.node.Name,
+			constants.ControlPlaneComponentLabelKey: opComponent.LabelValue(),
+		},
+	); err != nil {
 		return nil
 	}
 
@@ -98,7 +101,7 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 	for i := range ops.Items {
 		if ops.Items[i].Spec.Approved && !ops.Items[i].IsTerminal() {
 			reqs = append(reqs, reconcile.Request{
-				NamespacedName: types.NamespacedName{Name: ops.Items[i].Name},
+				NamespacedName: types.NamespacedName{Name: ops.Items[i].Name, Namespace: constants.KubeSystemNamespace},
 			})
 		}
 	}
@@ -118,6 +121,16 @@ func isPodCrashLooping(pod *corev1.Pod) bool {
 	return false
 }
 
+// isPodReady returns true if the pod has the Ready condition set to True.
+func isPodReady(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
 // isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
 func isPodReadyWithChecksums(pod *corev1.Pod, expected checksumAnnotations) bool {
 	if pod == nil {
@@ -131,13 +144,7 @@ func isPodReadyWithChecksums(pod *corev1.Pod, expected checksumAnnotations) bool
 		}
 	}
 
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-
-	return false
+	return isPodReady(pod)
 }
 
 func findContainerByName(pod *corev1.Pod, name string) *corev1.Container {

@@ -37,7 +37,11 @@ func (l *LogrAdapter) Info(level int, msg string, args ...any) {
 }
 
 func (l *LogrAdapter) Error(err error, msg string, _ ...any) {
-	l.logger.Error(msg, slog.String("error", err.Error()))
+	if err != nil {
+		l.logger.Error(msg, slog.String("error", err.Error()))
+	} else {
+		l.logger.Error(msg)
+	}
 }
 
 func (l *LogrAdapter) WithValues(args ...any) logr.LogSink {

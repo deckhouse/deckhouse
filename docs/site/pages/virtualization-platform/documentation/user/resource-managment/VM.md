@@ -9,7 +9,7 @@ This guide is intended for users of Deckhouse Virtualization Platform (DVP) and 
 
 ## Quick start on creating a VM
 
-Example of creating a virtual machine with Ubuntu 22.04.
+Example of creating a virtual machine with Ubuntu 24.04.
 
 1. Create a virtual machine image from an external source:
 
@@ -174,6 +174,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%
@@ -184,6 +185,8 @@ Example of creating a virtual machine with Ubuntu 22.04.
    NAME                                                 PHASE     NODE           IPADDRESS     AGE
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   virtlab-pt-2   10.66.10.2    7h46m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Connect to the virtual machine using the console (press `Ctrl+]` to exit the console):
 
@@ -234,7 +237,7 @@ The full description of virtual machine configuration parameters can be found at
 
 ### Creating a virtual machine
 
-Below is an example of a simple virtual machine configuration running Ubuntu OS 22.04. The example uses the initial virtual machine initialization script (cloud-init), which installs the `qemu-guest-agent` guest agent and the `nginx` service, and creates the `cloud` user with the `cloud` password:
+Below is an example of a simple virtual machine configuration running Ubuntu OS 24.04. The example uses the initial virtual machine initialization script (cloud-init), which installs the `qemu-guest-agent` guest agent and the `nginx` service, and creates the `cloud` user with the `cloud` password:
 
 The password in the example was generated using the command `mkpasswd --method=SHA-512 --rounds=4096 -S saltsalt` and you can change it to your own if necessary:
 
@@ -296,10 +299,13 @@ d8 k get vm linux-vm
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     NODE           IPADDRESS     AGE
 linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 After creation, the virtual machine will automatically get an IP address from the range specified in the module settings (`virtualMachineCIDRs` block).
 
@@ -553,7 +559,7 @@ Next, the system automatically determines the topology depending on the specifie
   - 8 sockets are used.
   - Cores are evenly distributed among the sockets.
   - Step change: 8 (the total number of cores must be a multiple of 8).
-  - Valid values: 72, 80, 88, 88, 96, and so on up to 248
+  - Valid values: 72, 80, 88, 96, and so on up to 248.
   - Limitations: minimum 9 cores per socket.
   - Example: If `.spec.cpu.cores` = 80, topology: 8 sockets with 10 cores each.
 
@@ -828,10 +834,13 @@ How will the agent help?
 
   Example output (see `AGENT` column):
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 How to install QEMU Guest Agent:
 
@@ -1095,10 +1104,13 @@ d8 k get vm linux-vm -o wide
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 In the `NEED RESTART` column we see the value `True`, which means that a reboot is required to apply the changes.
 
@@ -1183,6 +1195,48 @@ Limitations:
 - Changing `spec.cpu.cores` without restart is possible only within the hotplug range of the current CPU topology.
 - If the change requires CPU topology reconfiguration, a VM restart is required.
 - When decreasing CPU count within the current topology, CPU distribution across sockets may become uneven.
+
+### Memory hotplug
+
+Memory hotplug lets you increase `spec.memory.size` for a running VM without restart when the change can be applied through live migration. Decreasing memory always requires a VM restart.
+
+This functionality is disabled by default.
+
+To enable this functionality, add `HotplugMemoryWithLiveMigration` to `.spec.settings.featureGates` array in the ModuleConfig `virtualization`:
+
+```yaml
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  settings:
+    featureGates:
+    - HotplugMemoryWithLiveMigration
+```
+
+If the new `spec.memory.size` is greater than the current value and the VM is migratable, the change is applied through live migration. If you need to shrink memory, the VM originally had less than 1 GiB of memory, or the VM cannot be migrated, a VM restart is required. The need for restart is reflected by the `AwaitingRestartToApplyConfiguration` condition.
+
+Guest OS specifics:
+
+- After live migration, newly added memory blocks may require explicit activation inside the guest OS; memory configured at VM creation does not require extra activation.
+- On Linux, added memory can be enabled through sysfs (see device names in `ls /sys/bus/memory/devices/`):
+
+  ```bash
+  echo 1 > /sys/bus/memory/devices/memoryXXX/online
+  ```
+
+- To automatically enable added memory on Linux, configure a `udev` rule. After that, added memory becomes visible in `free` and `lsmem`:
+
+  ```bash
+  cat <<'EOF' > /etc/udev/rules.d/99-hotplug-memory.rules
+  SUBSYSTEM=="memory",ACTION=="add",DEVPATH=="/devices/system/memory/memory[0-9]*", TEST=="state", ATTR{state}!="online", ATTR{state}="online"
+  EOF
+  ```
+
+Limitations:
+
+- Increasing memory without restart is possible only if the VM memory size is at least 1 GiB. If the VM was created with less than 1 GiB, any memory size change requires a restart.
+- In the current module version, the maximum VM memory size is limited to 256 GiB.
 
 ### Placement of VMs by nodes
 
@@ -1470,7 +1524,7 @@ After creation, `VirtualMachineBlockDeviceAttachment` can be in the following st
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block
 
-Check the state of your resource::
+Check the state of your resource:
 
 ```bash
 d8 k get vmbda attach-blank-disk
@@ -1478,10 +1532,13 @@ d8 k get vmbda attach-blank-disk
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              PHASE      VIRTUAL MACHINE NAME   AGE
 attach-blank-disk   Attached   linux-vm              3m7s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Connect to the virtual machine and make sure the disk is connected:
 
@@ -1491,6 +1548,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 sda       8:0    0   10G  0 disk <--- statically mounted linux-vm-root disk
@@ -1500,6 +1558,8 @@ sda       8:0    0   10G  0 disk <--- statically mounted linux-vm-root disk
 sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- dynamically mounted disk blank-disk
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To detach the disk from the virtual machine, delete the previously created resource:
 
@@ -1618,6 +1678,10 @@ Predictable interface order works only on guest OS with systemd (e.g. Ubuntu, De
 ### Organizing interaction with virtual machines
 
 Virtual machines can be accessed directly via their fixed IP addresses. However, this approach has limitations: direct use of IP addresses requires manual management, complicates scaling, and makes the infrastructure less flexible. An alternative is services—a mechanism that abstracts access to VMs by providing logical entry points instead of binding to physical addresses.
+
+{% alert level="info" %}
+If connecting to a VM from a cluster node does not work, check `NetworkPolicy` in the project. Project network policies can restrict access to the VM, including connections from cluster nodes.
+{% endalert %}
 
 Services simplify interaction with both individual VMs and groups of similar VMs. For example, the ClusterIP service type creates a fixed internal address that can be used to access both a single VM and a group of VMs, regardless of their actual IP addresses. This allows other system components to interact with resources through a stable name or IP, automatically directing traffic to the right machines.
 
@@ -1891,10 +1955,13 @@ d8 k get vm
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                   PHASE     NODE           IPADDRESS     AGE
 linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 We can see that it is currently running on the `virtlab-pt-1` node.
 
@@ -1934,6 +2001,7 @@ d8 k get vm -w
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                  PHASE       NODE           IPADDRESS     AGE
 linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
@@ -1941,6 +2009,8 @@ linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   7
 linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 You can interrupt any live migration while it is in the `Pending` or `InProgress` phase by deleting the corresponding VirtualMachineOperations resource.
 
@@ -2141,10 +2211,13 @@ d8 k get vmipl
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             VIRTUALMACHINEIPADDRESS                              STATUS   AGE
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
 
@@ -2162,10 +2235,13 @@ d8 k get vmip
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              ADDRESS       STATUS     VM          AGE
 linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The algorithm for automatically assigning an ip address to a virtual machine is as follows:
 
@@ -2366,12 +2442,15 @@ d8 k get vmmacl
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    VIRTUALMACHINEMACADDRESS                      STATUS   AGE
 mac-5e-e6-19-22-0f-d8   {"name":"vm-01-fz9cr","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-29-89-cf   {"name":"vm-01-99qj6","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    45s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 `VirtualMachineMACAddress` (`vmmac`) is a project-level resource that is responsible for reserving leased MAC addresses and binding them to virtual machines.
 
@@ -2385,12 +2464,15 @@ d8 k get vmmac
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          ADDRESS             STATUS     VM      AGE
 vm-01-5jqxg   5e:e6:19:54:f9:be   Attached   vm-01   5m42s
 vm-01-99qj6   5e:e6:19:29:89:cf   Attached   vm-01   5m42s
 vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 When a network is removed from the VM configuration:
 

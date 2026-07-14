@@ -15,15 +15,9 @@
 package packagerepositoryoperation
 
 import (
-	"bytes"
 	"context"
-	"flag"
 	"fmt"
-	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
-	"reflect"
 	"regexp"
 	"testing"
 
@@ -31,13 +25,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	k8sfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	internalRegistryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
@@ -47,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 	fakeRegistry "github.com/deckhouse/deckhouse/pkg/registry/fake"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
 
 // errorInjectingClient wraps a client.Client and returns errors for Create on specific object names
@@ -149,66 +141,62 @@ func (c *legacyRegistryClient) ListTags(ctx context.Context, opts ...registry.Li
 	return c.Client.ListTags(ctx, opts...)
 }
 
-var (
-	golden     bool
-	mDelimiter *regexp.Regexp
-)
-
-func init() {
-	flag.BoolVar(&golden, "golden", false, "generate golden files")
-	mDelimiter = regexp.MustCompile("(?m)^---$")
-}
-
 func TestControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(ControllerTestSuite))
 }
 
 type ControllerTestSuite struct {
-	suite.Suite
+	reconcilertest.Suite
 
-	kubeClient       client.Client
-	ctr              *reconciler
-	testDataFileName string
+	ctr *reconciler
 }
 
+// timestampNormalizers stabilises the non-deterministic timestamps the reconciler
+// writes so that golden snapshots stay byte-stable across runs.
+var timestampNormalizers = func() []reconcilertest.BytesNormalizer {
+	fields := []string{"startTime", "lastScanTime", "lastChangeTime", "completionTime"}
+	normalizers := make([]reconcilertest.BytesNormalizer, 0, len(fields))
+	for _, field := range fields {
+		re := regexp.MustCompile(field + `: "[^"]*"`)
+		repl := []byte(field + `: "2025-10-31T12:00:00Z"`)
+		normalizers = append(normalizers, func(in []byte) []byte {
+			return re.ReplaceAll(in, repl)
+		})
+	}
+	return normalizers
+}()
+
 func (suite *ControllerTestSuite) SetupSuite() {
-	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+	suite.Init(reconcilertest.Config{
+		StatusSubresources: []client.Object{
+			&v1alpha1.PackageRepositoryOperation{},
+			&v1alpha1.ApplicationPackage{},
+			&v1alpha1.ApplicationPackageVersion{},
+			&v1alpha1.ModulePackage{},
+			&v1alpha1.ModulePackageVersion{},
+			&v1alpha1.PackageRepository{},
+		},
+		SeedStatusSubresources: []client.Object{
+			&v1alpha1.ApplicationPackageVersion{},
+			&v1alpha1.PackageRepository{},
+			&v1alpha1.ModulePackageVersion{},
+		},
+		SnapshotKinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind("PackageRepositoryOperation"),
+			v1alpha1.SchemeGroupVersion.WithKind("Application"),
+			v1alpha1.SchemeGroupVersion.WithKind("ApplicationPackageVersion"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModulePackageVersion"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModulePackage"),
+			v1alpha1.SchemeGroupVersion.WithKind("PackageRepository"),
+		},
+		BytesNormalizers: timestampNormalizers,
+		GoldenMode:       reconcilertest.PerDocument,
+		SeedViaCreate:    true,
+	})
 }
 
 func (suite *ControllerTestSuite) SetupSubTest() {
-	dependency.TestDC.HTTPClient.DoMock.
-		Expect(&http.Request{}).
-		Return(&http.Response{
-			StatusCode: http.StatusOK,
-		}, nil)
-}
-
-func (suite *ControllerTestSuite) TearDownSubTest() {
-	if suite.T().Skipped() {
-		return
-	}
-
-	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	gotB := suite.fetchResults()
-
-	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0o666)
-		require.NoError(suite.T(), err)
-	} else {
-		got := singleDocToManifests(gotB)
-
-		expB, err := os.ReadFile(goldenFile)
-		require.NoError(suite.T(), err)
-		exp := singleDocToManifests(expB)
-		// "there is no authorization data"
-		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
-
-		for i := range got {
-			if assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match") {
-				suite.T().Logf("test data file: %s", goldenFile)
-			}
-		}
-	}
+	reconcilertest.RespondHTTPOK()
 }
 
 type reconcilerOption func(*reconciler)
@@ -220,186 +208,17 @@ func withPackageServiceManager(psm registryService.ServiceManagerInterface[regis
 }
 
 func (suite *ControllerTestSuite) setupController(filename string, options ...reconcilerOption) {
-	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename)
+	suite.Seed(filename)
+
+	suite.ctr = &reconciler{
+		client: suite.Client(),
+		logger: log.NewNop(),
+		dc:     dependency.NewMockedContainer(),
+	}
 
 	for _, opt := range options {
 		opt(suite.ctr)
 	}
-}
-
-func (suite *ControllerTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
-
-	var operationList v1alpha1.PackageRepositoryOperationList
-	err := suite.kubeClient.List(context.TODO(), &operationList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range operationList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var appList v1alpha1.ApplicationList
-	err = suite.kubeClient.List(context.TODO(), &appList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range appList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var apvList v1alpha1.ApplicationPackageVersionList
-	err = suite.kubeClient.List(context.TODO(), &apvList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range apvList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var mpvList v1alpha1.ModulePackageVersionList
-	err = suite.kubeClient.List(context.TODO(), &mpvList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range mpvList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var mpList v1alpha1.ModulePackageList
-	err = suite.kubeClient.List(context.TODO(), &mpList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range mpList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var repoList v1alpha1.PackageRepositoryList
-	err = suite.kubeClient.List(context.TODO(), &repoList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range repoList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	// Normalize timestamps for consistent golden files
-	resultStr := result.String()
-	resultStr = regexp.MustCompile(`startTime: "[^"]*"`).ReplaceAllString(resultStr, `startTime: "2025-10-31T12:00:00Z"`)
-	resultStr = regexp.MustCompile(`syncTime: "[^"]*"`).ReplaceAllString(resultStr, `syncTime: "2025-10-31T12:00:00Z"`)
-	resultStr = regexp.MustCompile(`completionTime: "[^"]*"`).ReplaceAllString(resultStr, `completionTime: "2025-10-31T12:00:00Z"`)
-
-	return []byte(resultStr)
-}
-
-func singleDocToManifests(doc []byte) []string {
-	split := mDelimiter.Split(string(doc), -1)
-
-	result := make([]string, 0, len(split))
-	for i := range split {
-		if split[i] != "" {
-			result = append(result, split[i])
-		}
-	}
-
-	return result
-}
-
-func setupFakeController(t *testing.T, filename string) (*reconciler, client.Client) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, v1alpha1.AddToScheme(scheme))
-
-	kubeClient := k8sfake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects().
-		WithStatusSubresource(&v1alpha1.PackageRepositoryOperation{}).
-		WithStatusSubresource(&v1alpha1.ApplicationPackage{}).
-		WithStatusSubresource(&v1alpha1.ApplicationPackageVersion{}).
-		WithStatusSubresource(&v1alpha1.ModulePackage{}).
-		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}).
-		WithStatusSubresource(&v1alpha1.PackageRepository{}).
-		Build()
-
-	ctr := &reconciler{
-		client: kubeClient,
-		logger: log.NewLogger(log.WithLevel(slog.LevelDebug)), // return nop
-		dc:     dependency.NewMockedContainer(),
-	}
-
-	// Load test data from file
-	testDataPath := filepath.Join("./testdata", filename)
-	if _, err := os.Stat(testDataPath); err == nil {
-		data, err := os.ReadFile(testDataPath)
-		require.NoError(t, err)
-
-		// Parse and create objects
-		manifests := singleDocToManifests(data)
-		for _, manifest := range manifests {
-			if manifest == "" {
-				continue
-			}
-
-			var obj metav1.PartialObjectMetadata
-			err := yaml.Unmarshal([]byte(manifest), &obj)
-			require.NoError(t, err)
-
-			switch obj.Kind {
-			case "PackageRepositoryOperation":
-				var operation v1alpha1.PackageRepositoryOperation
-				err := yaml.Unmarshal([]byte(manifest), &operation)
-				require.NoError(t, err)
-				require.NoError(t, kubeClient.Create(context.TODO(), &operation))
-			case "Application":
-				var app v1alpha1.Application
-				err := yaml.Unmarshal([]byte(manifest), &app)
-				require.NoError(t, err)
-				require.NoError(t, kubeClient.Create(context.TODO(), &app))
-			case "ApplicationPackageVersion":
-				var apv v1alpha1.ApplicationPackageVersion
-				err := yaml.Unmarshal([]byte(manifest), &apv)
-				require.NoError(t, err)
-				savedStatus := apv.Status
-				require.NoError(t, kubeClient.Create(context.TODO(), &apv))
-				if !reflect.DeepEqual(savedStatus, v1alpha1.ApplicationPackageVersionStatus{}) {
-					apv.Status = savedStatus
-					require.NoError(t, kubeClient.Status().Update(context.TODO(), &apv))
-				}
-			case "PackageRepository":
-				var repo v1alpha1.PackageRepository
-				err := yaml.Unmarshal([]byte(manifest), &repo)
-				require.NoError(t, err)
-				savedStatus := repo.Status
-				require.NoError(t, kubeClient.Create(context.TODO(), &repo))
-				if !reflect.DeepEqual(savedStatus, v1alpha1.PackageRepositoryStatus{}) {
-					repo.Status = savedStatus
-					require.NoError(t, kubeClient.Status().Update(context.TODO(), &repo))
-				}
-			case "ModulePackageVersion":
-				var mpv v1alpha1.ModulePackageVersion
-				err := yaml.Unmarshal([]byte(manifest), &mpv)
-				require.NoError(t, err)
-				savedStatus := mpv.Status
-				require.NoError(t, kubeClient.Create(context.TODO(), &mpv))
-				mpv.Status = savedStatus
-				require.NoError(t, kubeClient.Status().Update(context.TODO(), &mpv))
-			case "ModulePackage":
-				var mp v1alpha1.ModulePackage
-				err := yaml.Unmarshal([]byte(manifest), &mp)
-				require.NoError(t, err)
-				require.NoError(t, kubeClient.Create(context.TODO(), &mp))
-			}
-		}
-	}
-
-	return ctr, kubeClient
 }
 
 func (suite *ControllerTestSuite) TestReconcile() {
@@ -532,6 +351,32 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("multi-source module package", func() {
+		// A ModulePackage already exists owned (Controller=false) by the "deckhouse" repo.
+		// A scan operation now runs for a second repo ("deckhouse-clone") that contributes
+		// the same package. The existing ModulePackage must end up with both repositories
+		// as non-controller owners; the new ModulePackageVersion is created with a
+		// Controller=true ownerRef on "deckhouse-clone" (single-source).
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", moduleVersionImage().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("multi-source-module.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-clone-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("failed versions from registry", func() {
 		// Root: "test-package", Versions: v1.0.0, v1.1.0, v1.2.0 (Application type).
 		// k8s-level Create errors injected for v1.1.0 and v1.2.0.
@@ -548,7 +393,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("failed-versions.yaml", withPackageServiceManager(psm))
 
 		errorClient := &errorInjectingClient{
-			Client: suite.kubeClient,
+			Client: suite.Client(),
 			createErrorNames: map[string]error{
 				"deckhouse-test-package-v1.1.0": fmt.Errorf("simulated create error for v1.1.0"),
 				"deckhouse-test-package-v1.2.0": fmt.Errorf("simulated create error for v1.2.0"),
@@ -583,7 +428,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("failed-module-versions.yaml", withPackageServiceManager(psm))
 
 		errorClient := &errorInjectingClient{
-			Client: suite.kubeClient,
+			Client: suite.Client(),
 			createErrorNames: map[string]error{
 				"deckhouse-test-package-v1.1.0": fmt.Errorf("simulated create error for v1.1.0"),
 				"deckhouse-test-package-v1.2.0": fmt.Errorf("simulated create error for v1.2.0"),
@@ -690,6 +535,59 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		psm := createFakePSM(ic)
 
 		suite.setupController("legacy-module-old-registry.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("empty /version tags with legacy /release", func() {
+		// /version path exists but has only non-semver tags (no semver tags to process).
+		// On a full scan this must behave identically to NAME_UNKNOWN: fall back to /release.
+		// /release has semver tags + channel names -> legacy v1alpha1 module processed.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		// Non-semver tags in /version: path reachable, but extractOnlySemverTags returns [].
+		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "stable", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "early-access", fakeRegistry.NewImageBuilder().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("empty-version-tags-legacy-release.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("empty /version tags and no /release", func() {
+		// /version exists with only non-semver tags, /release does not exist at all.
+		// Must emit the same error as the NAME_UNKNOWN+no-/release path:
+		// "package %q has neither /version nor /release path".
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
+		// Intentionally NOT adding any test-package/release image.
+		// Note: the fake registry returns an empty tag list for a missing repo (not NAME_UNKNOWN),
+		// so this exercises the "empty /release tags" branch -> "no semver release tags found".
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("empty-version-tags-no-release.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
@@ -811,7 +709,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 // nolint:unparam
 func (suite *ControllerTestSuite) getPackageRepositoryOperation(name string) *v1alpha1.PackageRepositoryOperation {
 	var operation v1alpha1.PackageRepositoryOperation
-	err := suite.kubeClient.Get(context.TODO(), k8stypes.NamespacedName{Name: name}, &operation)
+	err := suite.Client().Get(context.TODO(), k8stypes.NamespacedName{Name: name}, &operation)
 	require.NoError(suite.T(), err)
 	return &operation
 }

@@ -18,6 +18,7 @@ require (
 )
 
 require (
+	github.com/theory/jsonpath v0.12.0
 	helm.sh/helm/v3 v3.20.2
 	k8s.io/api v0.35.1
 	k8s.io/apimachinery v0.35.1

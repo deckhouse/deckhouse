@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-367613a38d2822c0c8c76f27845a4ccbaa2f0c7c8bac4394ca2b9243ce3b3756",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-29181"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Уязвимость CVE-2026-29181 связана с обработкой входящих HTTP baggage-заголовков пакетом OpenTelemetry. Образ csi-livenessprobe запускает минимальный HTTP-сервер только для health-проверки CSI-драйвера, обращающейся по localhost от kubelet, и не подключает otelhttp-инструментирование к этому handler-у, поэтому baggage-заголовки запросов не извлекаются. Функциональность OpenTelemetry в штатной конфигурации не активируется. Следовательно, уязвимый код разбора baggage-заголовков не достигается и эксплуатация уязвимости в данном контексте невозможна.",
+      "timestamp": "2026-05-28T08:00:00Z"
+    }
+  ],
+  "timestamp": "2026-05-28T08:00:00Z"
+}

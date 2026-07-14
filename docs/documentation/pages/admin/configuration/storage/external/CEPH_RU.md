@@ -47,7 +47,7 @@ Ceph — это масштабируемая распределённая сис
    d8 k get module csi-ceph -w
    ```
 
-1. Убедитесь, что все поды в пространстве имён `d8-csi-ceph` находятся в состоянии `Running` или `Completed` и развёрнуты на всех узлах кластера:
+1. Убедитесь, что все поды в неймспейсе `d8-csi-ceph` находятся в состоянии `Running` или `Completed` и развёрнуты на всех узлах кластера:
 
    ```shell
    d8 k -n d8-csi-ceph get pod -owide -w
@@ -130,11 +130,14 @@ Ceph — это масштабируемая распределённая сис
 
    В результате будет выведена информация о созданных ресурсах [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass):
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME          PHASE     AGE
    ceph-rbd-sc   Created   1h
    ceph-fs-sc    Created   1h
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Проверьте созданный StorageClass:
 
@@ -144,11 +147,14 @@ Ceph — это масштабируемая распределённая сис
 
    В результате будет выведена информация о созданном StorageClass:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 Настройка подключения к Ceph-кластеру завершена. Вы можете использовать созданный StorageClass для создания PersistentVolumeClaim в ваших приложениях.
 

@@ -1,7 +1,7 @@
 {{- $moduleName := .moduleName }}
 {{- if not $moduleName }}{{ return }}{{ end }}
-{{- $moduleData := index site.Data.modules_all $moduleName }}
-{{- $editionsData := site.Data.helpers.editions }}
+{{- $moduleData := index hugo.Data.modules_all $moduleName }}
+{{- $editionsData := hugo.Data.helpers.editions }}
 {{- $lang := .lang }}
 
 {{- $editionsWithoutRestrictions := slice -}}

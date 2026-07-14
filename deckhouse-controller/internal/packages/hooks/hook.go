@@ -46,6 +46,24 @@ type Hook interface {
 	Execute(ctx context.Context, version string, bctx []bctx.BindingContext, packageName string, configValues, values utils.Values, logLabels map[string]string) (*kind.HookResult, error)
 }
 
+// ControllableHook is the minimal hook view the runtime needs to enable bindings
+// and route events: the hook's name and its controller. Both module hooks (Hook)
+// and global hooks (GlobalHook) satisfy it, so tasks shared across them (Enable,
+// hook routing) can depend on this instead of a concrete hook type.
+type ControllableHook interface {
+	GetName() string
+	GetHookController() *controller.HookController
+}
+
+// ToControllable adapts a slice of concrete hooks to the ControllableHook view.
+func ToControllable[H ControllableHook](in []H) []ControllableHook {
+	out := make([]ControllableHook, len(in))
+	for i, h := range in {
+		out[i] = h
+	}
+	return out
+}
+
 // Storage provides thread-safe storage for hooks with multiple access patterns.
 // It maintains two indices:
 //   - byName: Fast lookup by hook name (O(1))

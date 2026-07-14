@@ -17,18 +17,18 @@
 {% else %}
 #### Select the Deckhouse Virtualization Platform revision
 {% endif %}
-<div class="tabs">
+<div class="tabs-block">
+   <ul class="tabs__container tabs__container--title">
     {%- for revision in site.data.getting_started.dvp_data.global.revisions %}
-        <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
+      <li id="tab_layout_{{ revision }}" class="tabs__item tabs__item--title tabs__item--revision--{{ revision }} tabs__btn_revision{% if revision == 'ce' %} active{% endif %}" data-index="{{ forloop.index }}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
-                 toggleDisabled('tab_layout_{{ revision }}', '[license-token-ee]');" >
-        {{ site.data.i18n[revision] }}
-        </a>
+                 toggleDisabled('tab_layout_{{ revision }}', '[license-token-ee]');">{{ site.data.i18n[revision] }}</li>
     {%- endfor %}
-</div>
+   </ul>
 {%- endunless %}
 
+<div class="tabs__container tabs__container--descr">
 {%- for revision in site.data.getting_started.dvp_data.global.revisions %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
 {%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
@@ -80,6 +80,8 @@
 {% endif %}
 
 {% endfor %}
+</div>
+</div>
 
 <script>
 $(document).ready(function() {

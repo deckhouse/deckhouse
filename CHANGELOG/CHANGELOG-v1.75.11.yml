@@ -1,0 +1,9 @@
+common:
+  fixes:
+    - summary: Fixed CVE-2026-40898 in CoreDNS by updating the quic-go dependency.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20768
+ingress-nginx:
+  fixes:
+    - summary: Nginx is updated to 1.30.3.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20786
+      impact: All ingress-nginx pods will be restarted.

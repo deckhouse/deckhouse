@@ -3,14 +3,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.27.0
   resourceVersion: "999"
 spec:
   version: v1.27.0
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -18,14 +16,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.27.1
   resourceVersion: "999"
 spec:
   version: v1.27.1
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -33,14 +29,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.27.2
   resourceVersion: "999"
 spec:
   version: v1.27.2
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -48,14 +42,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.27.3
   resourceVersion: "999"
 spec:
   version: v1.27.3
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -63,14 +55,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.27.4
   resourceVersion: "999"
 spec:
   version: v1.27.4
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -78,13 +68,11 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.28.0
   resourceVersion: "999"
 spec:
   version: v1.28.0
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: null

@@ -49,7 +49,7 @@ test_get_field_default if {
 
 test_get_exception_label_container_specific if {
   labels := {
-    "security.deckhouse.io/security-policy-exception/app": "spe-1",
+    "security.deckhouse.io/security-policy-exception.container.app": "spe-1",
     "security.deckhouse.io/security-policy-exception": "spe-global"
   }
   container := {"name": "app"}

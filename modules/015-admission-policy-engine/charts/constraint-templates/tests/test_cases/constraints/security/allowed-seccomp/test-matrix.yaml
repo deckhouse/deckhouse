@@ -771,7 +771,7 @@ spec:
         merge:
           metadata:
             labels:
-              security.deckhouse.io/security-policy-exception/nginx: allow-unconfined-container
+              security.deckhouse.io/security-policy-exception.container.nginx: allow-unconfined-container
             name: allowed-by-container-exception-unconfined
           spec:
             containers:

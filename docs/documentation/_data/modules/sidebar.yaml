@@ -17,7 +17,7 @@ titles:
     ru: Настройки
   cr.html:
     en: Custom Resources
-    ru: Ресурсы (CRD)
+    ru: Кастомные ресурсы
   oss.html:
     en: Third-party components
     ru: Внешние компоненты

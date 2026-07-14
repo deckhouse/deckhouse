@@ -18,16 +18,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/relay"
 )
 
 const (
@@ -35,27 +40,34 @@ const (
 )
 
 var (
-	alreadyRunDefaultOpts    = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	prepareDefaultOpts       = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	executeBundleDefaultOpts = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(300, 1*time.Second)
+	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(300, 1*time.Second)
+	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(100, 1*time.Second)
+	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(30, 1*time.Second)
 )
 
 type LoopsParams struct {
-	AlreadyRun    retry.Params
-	Prepare       retry.Params
-	ExecuteBundle retry.Params
+	AlreadyRun      retry.Params
+	Prepare         retry.Params
+	ExecuteBundle   retry.Params
+	ReadFileForInfo retry.Params
+}
+
+type NodeInfo struct {
+	NodeName string
+	NodeIP   string
 }
 
 type Runner struct {
-	loggerProvider log.LoggerProvider
-	nodeInterface  libcon.Interface
-	loopsParams    LoopsParams
+	logger        *slog.Logger
+	nodeInterface libcon.Interface
+	loopsParams   LoopsParams
 }
 
-func NewRunner(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *Runner {
+func NewRunner(nodeInterface libcon.Interface, logger *slog.Logger) *Runner {
 	return &Runner{
-		nodeInterface:  nodeInterface,
-		loggerProvider: loggerProvider,
+		nodeInterface: nodeInterface,
+		logger:        logger,
 	}
 }
 
@@ -84,8 +96,8 @@ func (r *Runner) Prepare(ctx context.Context) error {
 func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.AlreadyRun, alreadyRunDefaultOpts...).
 		Clone(
-			retry.WithName("Checking bashible already ran"),
-			retry.WithLogger(r.loggerProvider()),
+			retry.WithName("Checking whether Bashible already ran"),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
 
 	isReady := false
@@ -99,7 +111,7 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 			return err
 		}
 
-		r.loggerProvider().DebugF("cat %s stdout: '%s'; stderr: '%s'\n", endPipelineFileMark, stdout, stderr)
+		r.logger.DebugContext(ctx, fmt.Sprintf("cat %s stdout: '%s'; stderr: '%s'\n", endPipelineFileMark, stdout, stderr))
 
 		isReady = strings.Contains(string(stdout), "OK")
 
@@ -109,9 +121,58 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 	return isReady, err
 }
 
+func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
+	res := NodeInfo{}
+
+	infoFiles := map[string]*string{
+		"/var/lib/bashible/discovered-node-name": &res.NodeName,
+		"/var/lib/bashible/discovered-node-ip":   &res.NodeIP,
+	}
+
+	for fileName, resPointer := range infoFiles {
+		loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ReadFileForInfo, readFileForInfoDefaultOpts...).
+			Clone(
+				retry.WithName("Read info file %s", fileName),
+				retry.WithLogger(dhlog.FromContext(ctx)),
+			)
+
+		err := retry.NewLoopWithParams(loopParams).
+			RunContext(ctx, func() error {
+				f := r.nodeInterface.File()
+				content, err := f.DownloadBytes(ctx, fileName)
+				if err != nil {
+					return err
+				}
+
+				contentStr := strings.TrimSpace(string(content))
+
+				// TODO handle in lib-connection
+				// Sudo-wrapped commands prefix their stdout with the SUDO-SUCCESS marker;
+				// strip everything up to and including the last occurrence so we keep only
+				// the actual file payload. For non-sudo paths the marker is absent and
+				// output stays untouched.
+				if idx := strings.LastIndex(contentStr, "SUDO-SUCCESS"); idx >= 0 {
+					contentStr = contentStr[idx+len("SUDO-SUCCESS"):]
+				}
+
+				*resPointer = contentStr
+				return nil
+			})
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Got node info %+v", res))
+
+	return &res, nil
+}
+
 type ExecuteBundleParams struct {
 	BundleDir     string
 	CommanderMode bool
+	GlobalOpts    *options.GlobalOptions
 }
 
 func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
@@ -121,29 +182,65 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ExecuteBundle, executeBundleDefaultOpts...).
 		Clone(
 			retry.WithName("Execute bundle"),
-			retry.WithLogger(r.loggerProvider()),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
+
+	var relaySpanUpdater = func(trace.Span) {}
+
+	if telemetry.IsEnabled() {
+		stopRelay, updateRelaySpan, err := relay.InitRelay(ctx, relay.RelayParams{
+			TracerName: "bashible",
+			Span:       span,
+			Node:       r.nodeInterface,
+			Logger:     r.logger,
+			GlobalOpts: params.GlobalOpts,
+		})
+		if err != nil {
+			return fmt.Errorf("init OTel relay: %w", err)
+		}
+		defer stopRelay()
+		relaySpanUpdater = updateRelaySpan
+
+		telemetryEnvs := fmt.Sprintf(
+			"DHCTL_TELEMETRY_ENABLED=%t\nOTEL_RELAY_ADDRESS=%s\n",
+			telemetry.IsEnabled(),
+			fmt.Sprintf("http://%s:%s", relay.RelayAddress, relay.RelayPort),
+		)
+		writeTelemetryCmd := r.nodeInterface.Command(fmt.Sprintf("echo -e %q > /var/lib/bashible/telemetry.env", telemetryEnvs))
+		writeTelemetryCmd.Sudo(ctx)
+
+		if err := writeTelemetryCmd.Run(ctx); err != nil {
+			r.logger.ErrorContext(ctx, fmt.Sprintf("failed to write telemetry.env: %v", err))
+		}
+	}
 
 	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
-			logger := r.loggerProvider()
+			logger := r.logger
 
-			logger.DebugF("Stop bashible if need")
+			logger.DebugContext(ctx, "Stopping Bashible if needed")
 
 			if err := r.cleanupPreviousBashibleIfNeed(ctx); err != nil {
 				return err
 			}
 
-			logger.DebugF("Start execute bashible bundle routine")
+			logger.DebugContext(ctx, "Starting Bashible bundle execution routine")
 
-			return r.attemptExecuteBundle(ctx, params)
+			return r.attemptExecuteBundle(ctx, params, relaySpanUpdater)
 		})
 }
 
-func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
+func (r *Runner) attemptExecuteBundle(
+	ctx context.Context,
+	params ExecuteBundleParams,
+	spanUpdater func(trace.Span),
+) error {
 	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.attemptExecuteBundle")
 	defer span.End()
+
+	// we need this, due to not create relay in every attempt, but we need to correct hook data from bashible
+	spanUpdater(span)
 
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
@@ -153,29 +250,26 @@ func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleP
 
 	_, err := bundleCmd.ExecuteBundle(ctx, parentDir, bundleDir)
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
-			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
+			return fmt.Errorf("bundle '%s' error: %w\nstderr: %s", bundleDir, err, string(ee.Stderr))
 		}
 
-		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 	}
 	return nil
 }
 
 func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
-	logger := r.loggerProvider()
-
-	return logger.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
-		logger.DebugF("Gettting bashible pids")
+	return dhlog.RunProcess(ctx, r.logger, "Clean up previous Bashible run if needed", func(context.Context) error {
+		r.logger.DebugContext(ctx, "Getting Bashible PIDs")
 		pids, err := r.getBashiblePIDs(ctx)
 		if err != nil {
 			return err
 		}
 
-		logger.DebugLn("Got bashible pids: %v", pids)
+		r.logger.DebugContext(ctx, fmt.Sprintf("Got Bashible PIDs: %v\n", pids))
 		if len(pids) == 0 {
-			logger.InfoF("Bashible instance not found. Start it!")
+			r.logger.InfoContext(ctx, "Bashible instance not found. Starting it!")
 			return nil
 		}
 
@@ -188,7 +282,7 @@ func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
 }
 
 func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
-	logger := r.loggerProvider()
+	logger := r.logger
 
 	var psStrings []string
 	h := func(l string) {
@@ -204,11 +298,11 @@ func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
 
 	var res []string
 	for _, l := range psStrings {
-		logger.DebugF("ps string: '%s'\n", l)
+		logger.DebugContext(ctx, fmt.Sprintf("ps string: '%s'\n", l))
 
 		parts := strings.SplitN(l, "|", 2)
 		if len(parts) < 2 {
-			logger.DebugLn("Skip ps string without pid")
+			logger.DebugContext(ctx, "Skipping ps line without PID")
 			continue
 		}
 
@@ -217,7 +311,7 @@ func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
 		}
 
 		pid := strings.TrimSpace(parts[1])
-		logger.DebugF("Found bashible PID: %s\n", pid)
+		logger.DebugContext(ctx, fmt.Sprintf("Found bashible PID: %s\n", pid))
 
 		res = append(res, pid)
 	}
@@ -231,14 +325,12 @@ func (r *Runner) killBashible(ctx context.Context, pids []string) error {
 }
 
 func (r *Runner) runCmd(ctx context.Context, cmd libcon.Command, desc string) error {
-	logger := r.loggerProvider()
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
-		var ee *exec.ExitError
 		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
-		if errors.As(err, &ee) {
-			logger.DebugF("'%s' got exit code: %d and stderr %s", desc, ee.ExitCode(), string(ee.Stderr))
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
+			r.logger.DebugContext(ctx, fmt.Sprintf("'%s' got exit code: %d and stderr %s", desc, ee.ExitCode(), string(ee.Stderr)))
 			if ee.ExitCode() == 255 {
 				return err
 			}
@@ -256,7 +348,7 @@ func (r *Runner) unlockBashible(ctx context.Context) error {
 }
 
 func (r *Runner) createDir(ctx context.Context, dir, access string) error {
-	loopParams := r.prepareLoopParams(dir)
+	loopParams := r.prepareLoopParams(ctx, dir)
 
 	bashCmd := withUmask("mkdir -p -m %s %s", access, dir)
 
@@ -271,7 +363,7 @@ func (r *Runner) createDir(ctx context.Context, dir, access string) error {
 }
 
 func (r *Runner) touchFile(ctx context.Context, file string) error {
-	loopParams := r.prepareLoopParams(file)
+	loopParams := r.prepareLoopParams(ctx, file)
 
 	bashCmd := withUmask("touch %s", file)
 
@@ -296,11 +388,11 @@ func (r *Runner) runWithSH(ctx context.Context, bashCmd string) error {
 	return nil
 }
 
-func (r *Runner) prepareLoopParams(target string) retry.Params {
+func (r *Runner) prepareLoopParams(ctx context.Context, target string) retry.Params {
 	return retry.SafeCloneOrNewParams(r.loopsParams.Prepare, prepareDefaultOpts...).
 		Clone(
 			retry.WithName("Prepare %s", target),
-			retry.WithLogger(r.loggerProvider()),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)
 }
 

@@ -4,3 +4,6 @@ global:
     https:
       mode: Disabled
   deckhouseVersion: v1
+istio:
+  ambient:
+    enabled: false

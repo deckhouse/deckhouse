@@ -15,7 +15,6 @@
 package image
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -130,7 +129,7 @@ func TestRegistryConfigFromDockerConfig(t *testing.T) {
 				registry:      "registry.io",
 				scheme:        "HTTPS",
 				wantErr:       true,
-				err:           "docker config doesn't contains registry.io registry credentials",
+				err:           "docker config doesn't contain registry.io registry credentials",
 			},
 			{
 				title: "Invalid auth, failure",
@@ -602,12 +601,13 @@ CRl8TSg922cXTLVt8Q==
 				wantErr:   true,
 				err:       "getting manifest descriptor for",
 			},
+			// should be fixed later
 			{
 				title:     "Wrong CA, failure",
 				directory: testDir,
 				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io", ca: "-----BEGIN CERTIFICATE-----"},
-				// registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4
-				image:   "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
+				// wrong image to not hit cache, this would cause an error in CA first
+				image:   "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206bc",
 				wantErr: true,
 				err:     "invalid cert in CA PEM",
 			},
@@ -646,12 +646,13 @@ CRl8TSg922cXTLVt8Q==
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				ctx := context.Background()
+				ctx := t.Context()
 				if c.prepareFunc != nil {
 					err = c.prepareFunc()
 					require.NoError(t, err)
 				}
-				err := DownloadAndUnpackImage(ctx, c.image, c.directory, filepath.Join(c.directory, "cache"), c.rc)
+
+				err := DownloadAndUnpackImage(ctx, c.image, c.directory, filepath.Join(c.directory, "cache"), c.rc, false)
 				if !c.wantErr {
 					require.NoError(t, err)
 					require.DirExists(t, filepath.Join(c.directory, "cache"))
@@ -674,7 +675,7 @@ func TestRestoreImageFromTarGz(t *testing.T) {
 		os.RemoveAll(testDir)
 	})
 
-	err = DownloadAndUnpackImage(context.Background(), "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"})
+	err = DownloadAndUnpackImage(t.Context(), "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"}, false)
 	require.NoError(t, err)
 	cachePath := filepath.Join(testDir, "sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb")
 	require.FileExists(t, cachePath)
@@ -791,10 +792,10 @@ func TestPullImage(t *testing.T) {
 				}
 				ref, err := name.ParseReference(c.imgRef)
 				require.NoError(t, err)
-				opts, err := getOptsFromRegistryConfig(ref, c.rc)
+				opts, err := getOptsFromRegistryConfig(t.Context(), ref, c.rc)
 				require.NoError(t, err)
 
-				_, err = pullImage(ref, opts, ref.Identifier(), c.destDir, filepath.Join(c.destDir, "cache"))
+				_, err = pullImage(t.Context(), ref, opts, ref.Identifier(), c.destDir, filepath.Join(c.destDir, "cache"), false)
 				if !c.wantErr {
 					require.NoError(t, err)
 				} else {

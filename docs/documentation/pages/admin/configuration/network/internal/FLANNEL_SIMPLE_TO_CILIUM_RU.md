@@ -38,6 +38,7 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                      READY STATUS  RESTARTS    AGE
    agent-5zzfv               2/2   Running 5 (23m ago) 26m
@@ -48,6 +49,8 @@ lang: ru
    safe-agent-updater-qlbrh  3/3   Running 0           26m
    safe-agent-updater-wjjr5  3/3   Running 0           26m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Если поды агента Cilium не переходят в состояние `Ready`:
 

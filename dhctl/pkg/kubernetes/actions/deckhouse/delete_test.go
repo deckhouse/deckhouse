@@ -15,7 +15,6 @@
 package deckhouse
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,11 +24,9 @@ import (
 
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestDeleteMachinesIfResourcesExist(t *testing.T) {
-	log.InitLogger("json", false)
 
 	t.Run("Without sap API registration", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
@@ -78,8 +75,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 }
 
 func TestDeletePods(t *testing.T) {
-	ctx := context.Background()
-	log.InitLogger("json", false)
+	ctx := t.Context()
 
 	t.Run("Without pods", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
@@ -107,7 +103,7 @@ func TestDeletePods(t *testing.T) {
 				}},
 			},
 		}
-		_, err := fakeClient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+		_, err := fakeClient.CoreV1().Pods("default").Create(t.Context(), pod, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		pod2 := &v1.Pod{
@@ -124,7 +120,7 @@ func TestDeletePods(t *testing.T) {
 				}},
 			},
 		}
-		_, err = fakeClient.CoreV1().Pods("default").Create(context.TODO(), pod2, metav1.CreateOptions{})
+		_, err = fakeClient.CoreV1().Pods("default").Create(t.Context(), pod2, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		pod3 := &v1.Pod{
@@ -151,7 +147,7 @@ func TestDeletePods(t *testing.T) {
 				},
 			},
 		}
-		_, err = fakeClient.CoreV1().Pods("default").Create(context.TODO(), pod3, metav1.CreateOptions{})
+		_, err = fakeClient.CoreV1().Pods("default").Create(t.Context(), pod3, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		pod4 := &v1.Pod{
@@ -161,13 +157,13 @@ func TestDeletePods(t *testing.T) {
 			},
 			Spec: v1.PodSpec{},
 		}
-		_, err = fakeClient.CoreV1().Pods("test-ns").Create(context.TODO(), pod4, metav1.CreateOptions{})
+		_, err = fakeClient.CoreV1().Pods("test-ns").Create(t.Context(), pod4, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		err = DeletePods(ctx, fakeClient)
 		require.NoError(t, err)
 
-		pods, err := fakeClient.CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+		pods, err := fakeClient.CoreV1().Pods(metav1.NamespaceAll).List(t.Context(), metav1.ListOptions{})
 		require.NoError(t, err)
 
 		require.Len(t, pods.Items, 2)

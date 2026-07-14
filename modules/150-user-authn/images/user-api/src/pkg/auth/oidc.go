@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -40,6 +41,10 @@ type Claims struct {
 	Username string
 	Email    string
 	Groups   []string
+	// ConnectorID is the Dex connector that issued the token
+	// (federated_claims.connector_id). The built-in local password DB uses
+	// "local"; external providers use their own connector IDs.
+	ConnectorID string
 }
 
 type Verifier interface {
@@ -48,22 +53,19 @@ type Verifier interface {
 }
 
 type OIDCVerifier struct {
-	provider *oidc.Provider
 	verifier *oidc.IDTokenVerifier
 }
 
-func NewOIDCVerifier(ctx context.Context, issuerURL string) (*OIDCVerifier, error) {
-	// Skip TLS verification for Dex connection. This follows the same pattern
-	// as dex-authenticator (--ssl-insecure-skip-verify=true).
-	// The public Dex URL goes through Ingress with a certificate that may use
-	// different CAs depending on the HTTPS mode (CertManager, CustomCertificate, etc).
-	// Since this is internal cluster communication and the URL is resolved via DNS,
-	// skipping verification is acceptable and more robust than trying to handle
-	// all possible CA configurations.
+// NewOIDCVerifier creates a verifier for tokens issued by Dex.
+func NewOIDCVerifier(ctx context.Context, connectURL, issuerURL string) (*OIDCVerifier, error) {
+	// Skip TLS verification: this is in-cluster traffic to the Dex Service,
+	// same pattern as dex-authenticator (--ssl-insecure-skip-verify=true).
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
+			// Never route in-cluster traffic through an egress proxy: a cluster-wide
+			// HTTP(S)_PROXY injected into pods can't reach cluster IPs.
+			Proxy: nil,
 			DialContext: (&net.Dialer{
 				Timeout:   30 * time.Second,
 				KeepAlive: 30 * time.Second,
@@ -77,23 +79,70 @@ func NewOIDCVerifier(ctx context.Context, issuerURL string) (*OIDCVerifier, erro
 	}
 
 	clientCtx := oidc.ClientContext(ctx, httpClient)
-	provider, err := oidc.NewProvider(clientCtx, issuerURL)
+
+	// Tokens carry the public issuer in "iss", so validation pins it. It must
+	// match Dex's configured issuer exactly, including the trailing slash.
+	expectedIssuer := issuerURL
+	if expectedIssuer == "" {
+		expectedIssuer = connectURL
+	}
+
+	// Discovery runs against the in-cluster connectURL; the discovery document
+	// advertises the public issuer, so allow the mismatch.
+	discoveryCtx := clientCtx
+	if expectedIssuer != connectURL {
+		discoveryCtx = oidc.InsecureIssuerURLContext(clientCtx, expectedIssuer)
+	}
+
+	provider, err := oidc.NewProvider(discoveryCtx, connectURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OIDC provider: %w", err)
 	}
 
-	// user-api validates tokens issued by Dex but doesn't have its own
-	// client_id registered in Dex. Tokens are issued to other clients
-	// (e.g., kubeconfig-generator, dex-authenticator) and we only need
-	// to verify the signature and extract user claims.
-	verifier := provider.Verifier(&oidc.Config{
+	// Fetch JWKS from the in-cluster host: the advertised jwks_uri points at the
+	// public URL, which is unreachable in closed-loop clusters.
+	keysURL, err := internalKeysURL(provider, connectURL)
+	if err != nil {
+		return nil, err
+	}
+	keySet := oidc.NewRemoteKeySet(clientCtx, keysURL)
+
+	// SkipClientIDCheck: user-api has no client_id of its own; tokens are issued
+	// to other clients and we only verify signature and extract claims.
+	verifier := oidc.NewVerifier(expectedIssuer, keySet, &oidc.Config{
 		SkipClientIDCheck: true,
 	})
 
 	return &OIDCVerifier{
-		provider: provider,
 		verifier: verifier,
 	}, nil
+}
+
+// internalKeysURL rewrites the advertised jwks_uri scheme/host to the in-cluster
+// connectURL (keeping its path), falling back to Dex's "/keys" path if absent.
+func internalKeysURL(provider *oidc.Provider, connectURL string) (string, error) {
+	conn, err := url.Parse(connectURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid connect URL %q: %w", connectURL, err)
+	}
+
+	fallback := strings.TrimSuffix(connectURL, "/") + "/keys"
+
+	var claims struct {
+		JWKSURL string `json:"jwks_uri"`
+	}
+	if err := provider.Claims(&claims); err != nil || claims.JWKSURL == "" {
+		return fallback, nil
+	}
+
+	jwks, err := url.Parse(claims.JWKSURL)
+	if err != nil {
+		return fallback, nil
+	}
+
+	jwks.Scheme = conn.Scheme
+	jwks.Host = conn.Host
+	return jwks.String(), nil
 }
 
 func (v *OIDCVerifier) ExtractToken(r *http.Request) (string, error) {
@@ -121,6 +170,9 @@ func (v *OIDCVerifier) Verify(ctx context.Context, token string) (*Claims, error
 		Email             string   `json:"email"`
 		Groups            []string `json:"groups"`
 		Name              string   `json:"name"`
+		FederatedClaims   struct {
+			ConnectorID string `json:"connector_id"`
+		} `json:"federated_claims"`
 	}
 
 	if err := idToken.Claims(&claims); err != nil {
@@ -142,8 +194,9 @@ func (v *OIDCVerifier) Verify(ctx context.Context, token string) (*Claims, error
 	}
 
 	return &Claims{
-		Username: username,
-		Email:    claims.Email,
-		Groups:   claims.Groups,
+		Username:    username,
+		Email:       claims.Email,
+		Groups:      claims.Groups,
+		ConnectorID: claims.FederatedClaims.ConnectorID,
 	}, nil
 }

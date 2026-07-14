@@ -1,0 +1,400 @@
+diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+index 505b3a5c326..ca420e58033 100644
+--- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
++++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+@@ -21,6 +21,7 @@ limitations under the License.
+ package nodeshutdown
+ 
+ import (
++	"errors"
+ 	"fmt"
+ 	"os"
+ 	"path/filepath"
+@@ -31,6 +32,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+ 	"k8s.io/client-go/tools/record"
++	nodeutil "k8s.io/component-helpers/node/util"
+ 	"k8s.io/klog/v2"
+ 	"k8s.io/kubernetes/pkg/features"
+ 	kubeletevents "k8s.io/kubernetes/pkg/kubelet/events"
+@@ -311,7 +313,7 @@ func (m *managerImpl) ShutdownStatus() error {
+ 	defer m.nodeShuttingDownMutex.Unlock()
+ 
+ 	if m.nodeShuttingDownNow {
+-		return fmt.Errorf("node is shutting down")
++		return errors.New(nodeutil.NodeShutdownMessage)
+ 	}
+ 	return nil
+ }
+diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_windows.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_windows.go
+index 4c129d499dd..0c32481ee67 100644
+--- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_windows.go
++++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_windows.go
+@@ -21,6 +21,7 @@ limitations under the License.
+ package nodeshutdown
+ 
+ import (
++	"errors"
+ 	"fmt"
+ 	"path/filepath"
+ 	"strings"
+@@ -30,6 +31,7 @@ import (
+ 	v1 "k8s.io/api/core/v1"
+ 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+ 	"k8s.io/client-go/tools/record"
++	nodeutil "k8s.io/component-helpers/node/util"
+ 	"k8s.io/klog/v2"
+ 	"k8s.io/kubernetes/pkg/features"
+ 	kubeletevents "k8s.io/kubernetes/pkg/kubelet/events"
+@@ -233,7 +235,7 @@ func (m *managerImpl) ShutdownStatus() error {
+ 	defer m.nodeShuttingDownMutex.Unlock()
+ 
+ 	if m.nodeShuttingDownNow {
+-		return fmt.Errorf("node is shutting down")
++		return errors.New(nodeutil.NodeShutdownMessage)
+ 	}
+ 	return nil
+ }
+diff --git a/pkg/kubelet/nodestatus/setters_test.go b/pkg/kubelet/nodestatus/setters_test.go
+index c7f441a9dc3..b8d5f711fd8 100644
+--- a/pkg/kubelet/nodestatus/setters_test.go
++++ b/pkg/kubelet/nodestatus/setters_test.go
+@@ -41,6 +41,7 @@ import (
+ 	"k8s.io/component-base/featuregate"
+ 	featuregatetesting "k8s.io/component-base/featuregate/testing"
+ 	"k8s.io/component-base/version"
++	nodeutil "k8s.io/component-helpers/node/util"
+ 	"k8s.io/kubernetes/pkg/features"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm"
+ 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
+@@ -1248,8 +1249,8 @@ func TestReadyCondition(t *testing.T) {
+ 		{
+ 			desc:                      "new, not ready: shutdown active",
+ 			node:                      withCapacity.DeepCopy(),
+-			nodeShutdownManagerErrors: errors.New("node is shutting down"),
+-			expectConditions:          []v1.NodeCondition{*makeReadyCondition(false, "node is shutting down", now, now)},
++			nodeShutdownManagerErrors: errors.New(nodeutil.NodeShutdownMessage),
++			expectConditions:          []v1.NodeCondition{*makeReadyCondition(false, nodeutil.NodeShutdownMessage, now, now)},
+ 		},
+ 		{
+ 			desc:             "new, not ready: runtime and network errors",
+diff --git a/pkg/scheduler/framework/plugins/nodeunschedulable/node_unschedulable.go b/pkg/scheduler/framework/plugins/nodeunschedulable/node_unschedulable.go
+index 345cc73aff1..ae45db02e8f 100644
+--- a/pkg/scheduler/framework/plugins/nodeunschedulable/node_unschedulable.go
++++ b/pkg/scheduler/framework/plugins/nodeunschedulable/node_unschedulable.go
+@@ -22,6 +22,7 @@ import (
+ 	v1 "k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilfeature "k8s.io/apiserver/pkg/util/feature"
++	nodeutil "k8s.io/component-helpers/node/util"
+ 	v1helper "k8s.io/component-helpers/scheduling/corev1"
+ 	"k8s.io/klog/v2"
+ 	fwk "k8s.io/kube-scheduler/framework"
+@@ -49,6 +50,8 @@ const (
+ 	ErrReasonUnknownCondition = "node(s) had unknown conditions"
+ 	// ErrReasonUnschedulable is used for NodeUnschedulable predicate error.
+ 	ErrReasonUnschedulable = "node(s) were unschedulable"
++	// ErrReasonNodeShutdown is used for shutting down Node predicate error.
++	ErrReasonNodeShutdown = "node(s) were shutting down"
+ )
+ 
+ // EventsToRegister returns the possible events that may make a Pod
+@@ -66,7 +69,7 @@ func (pl *NodeUnschedulable) EventsToRegister(_ context.Context) ([]fwk.ClusterE
+ 
+ 	return []fwk.ClusterEventWithHint{
+ 		// When QueueingHint is enabled, we don't use preCheck and we don't need to register UpdateNodeLabel event.
+-		{Event: fwk.ClusterEvent{Resource: fwk.Node, ActionType: fwk.Add | fwk.UpdateNodeTaint}, QueueingHintFn: pl.isSchedulableAfterNodeChange},
++		{Event: fwk.ClusterEvent{Resource: fwk.Node, ActionType: fwk.Add | fwk.UpdateNodeTaint | fwk.UpdateNodeCondition}, QueueingHintFn: pl.isSchedulableAfterNodeChange},
+ 		// When the QueueingHint feature is enabled,
+ 		// the scheduling queue uses Pod/Update Queueing Hint
+ 		// to determine whether a Pod's update makes the Pod schedulable or not.
+@@ -115,9 +118,11 @@ func (pl *NodeUnschedulable) isSchedulableAfterNodeChange(logger klog.Logger, po
+ 
+ 	// We queue this Pod when -
+ 	// 1. the node is updated from unschedulable to schedulable.
+-	// 2. the node is added and is schedulable.
++	// 2. the node is updated from shutting down to not shutting down.
++	// 3. the node is added and is schedulable.
+ 	if (originalNode != nil && originalNode.Spec.Unschedulable && !modifiedNode.Spec.Unschedulable) ||
+-		(originalNode == nil && !modifiedNode.Spec.Unschedulable) {
++		(originalNode != nil && nodeutil.IsNodeInGracefulShutdown(originalNode) && !nodeutil.IsNodeInGracefulShutdown(modifiedNode)) ||
++		(originalNode == nil && !modifiedNode.Spec.Unschedulable && !nodeutil.IsNodeInGracefulShutdown(modifiedNode)) {
+ 		logger.V(5).Info("node was created or updated, pod may be schedulable now", "pod", klog.KObj(pod), "node", klog.KObj(modifiedNode))
+ 		return fwk.Queue, nil
+ 	}
+@@ -141,6 +146,9 @@ func (pl *NodeUnschedulable) SignPod(ctx context.Context, pod *v1.Pod) ([]fwk.Si
+ // Filter invoked at the filter extension point.
+ func (pl *NodeUnschedulable) Filter(ctx context.Context, _ fwk.CycleState, pod *v1.Pod, nodeInfo fwk.NodeInfo) *fwk.Status {
+ 	node := nodeInfo.Node()
++	if nodeutil.IsNodeInGracefulShutdown(node) {
++		return fwk.NewStatus(fwk.UnschedulableAndUnresolvable, ErrReasonNodeShutdown)
++	}
+ 
+ 	if !node.Spec.Unschedulable {
+ 		return nil
+diff --git a/pkg/scheduler/framework/plugins/nodeunschedulable/node_unschedulable_test.go b/pkg/scheduler/framework/plugins/nodeunschedulable/node_unschedulable_test.go
+index 4b39623fe9d..1cec0c6b529 100644
+--- a/pkg/scheduler/framework/plugins/nodeunschedulable/node_unschedulable_test.go
++++ b/pkg/scheduler/framework/plugins/nodeunschedulable/node_unschedulable_test.go
+@@ -22,6 +22,7 @@ import (
+ 	"github.com/google/go-cmp/cmp"
+ 
+ 	v1 "k8s.io/api/core/v1"
++	nodeutil "k8s.io/component-helpers/node/util"
+ 	fwk "k8s.io/kube-scheduler/framework"
+ 	"k8s.io/kubernetes/pkg/scheduler/framework"
+ 	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/feature"
+@@ -73,6 +74,23 @@ func TestNodeUnschedulable(t *testing.T) {
+ 				},
+ 			},
+ 		},
++		{
++			name:       "Does not schedule pod to shutting down node",
++			pod:        st.MakePod().Toleration(v1.TaintNodeNotReady).Obj(),
++			node:       st.MakeNode().Name("node").Condition(v1.NodeReady, v1.ConditionFalse, nodeutil.NodeShutdownMessage, "KubeletNotReady").Obj(),
++			wantStatus: fwk.NewStatus(fwk.UnschedulableAndUnresolvable, ErrReasonNodeShutdown),
++		},
++		{
++			name:       "Does not schedule pod to node with shutdown reason",
++			pod:        &v1.Pod{},
++			node:       st.MakeNode().Name("node").Condition(v1.NodeReady, v1.ConditionFalse, "", nodeutil.NodeShutdownMessage).Obj(),
++			wantStatus: fwk.NewStatus(fwk.UnschedulableAndUnresolvable, ErrReasonNodeShutdown),
++		},
++		{
++			name: "Schedule pod to not ready node without shutdown signal",
++			pod:  &v1.Pod{},
++			node: st.MakeNode().Name("node").Condition(v1.NodeReady, v1.ConditionFalse, "runtime error", "KubeletNotReady").Obj(),
++		},
+ 	}
+ 
+ 	for _, test := range testCases {
+@@ -127,6 +145,17 @@ func TestIsSchedulableAfterNodeChange(t *testing.T) {
+ 			},
+ 			expectedHint: fwk.QueueSkip,
+ 		},
++		{
++			name: "skip-queue-on-shutting-down-node-added",
++			pod:  &v1.Pod{},
++			newObj: st.MakeNode().Name("node").Condition(
++				v1.NodeReady,
++				v1.ConditionFalse,
++				nodeutil.NodeShutdownMessage,
++				"KubeletNotReady",
++			).Obj(),
++			expectedHint: fwk.QueueSkip,
++		},
+ 		{
+ 			name: "queue-on-schedulable-node-added",
+ 			pod:  &v1.Pod{},
+@@ -137,6 +166,40 @@ func TestIsSchedulableAfterNodeChange(t *testing.T) {
+ 			},
+ 			expectedHint: fwk.Queue,
+ 		},
++		{
++			name: "queue-on-shutdown-condition-cleared",
++			pod:  &v1.Pod{},
++			newObj: st.MakeNode().Name("node").Condition(
++				v1.NodeReady,
++				v1.ConditionTrue,
++				"kubelet is posting ready status",
++				"KubeletReady",
++			).Obj(),
++			oldObj: st.MakeNode().Name("node").Condition(
++				v1.NodeReady,
++				v1.ConditionFalse,
++				nodeutil.NodeShutdownMessage,
++				"KubeletNotReady",
++			).Obj(),
++			expectedHint: fwk.Queue,
++		},
++		{
++			name: "skip-queue-on-shutdown-condition-set",
++			pod:  &v1.Pod{},
++			newObj: st.MakeNode().Name("node").Condition(
++				v1.NodeReady,
++				v1.ConditionFalse,
++				nodeutil.NodeShutdownMessage,
++				"KubeletNotReady",
++			).Obj(),
++			oldObj: st.MakeNode().Name("node").Condition(
++				v1.NodeReady,
++				v1.ConditionTrue,
++				"kubelet is posting ready status",
++				"KubeletReady",
++			).Obj(),
++			expectedHint: fwk.QueueSkip,
++		},
+ 		{
+ 			name: "skip-unrelated-change-unschedulable-true",
+ 			pod:  &v1.Pod{},
+diff --git a/pkg/scheduler/scheduler_test.go b/pkg/scheduler/scheduler_test.go
+index 519c6fc71a2..9cb892e5be6 100644
+--- a/pkg/scheduler/scheduler_test.go
++++ b/pkg/scheduler/scheduler_test.go
+@@ -983,7 +983,7 @@ func Test_UnionedGVKs(t *testing.T) {
+ 			plugins: schedulerapi.PluginSet{Enabled: defaults.PluginsV1.MultiPoint.Enabled},
+ 			want: map[fwk.EventResource]fwk.ActionType{
+ 				fwk.Pod:                   fwk.Add | fwk.UpdatePodLabel | fwk.UpdatePodScaleDown | fwk.UpdatePodToleration | fwk.UpdatePodSchedulingGatesEliminated | fwk.Delete,
+-				fwk.Node:                  fwk.Add | fwk.UpdateNodeAllocatable | fwk.UpdateNodeLabel | fwk.UpdateNodeTaint | fwk.Delete,
++				fwk.Node:                  fwk.Add | fwk.UpdateNodeAllocatable | fwk.UpdateNodeLabel | fwk.UpdateNodeTaint | fwk.UpdateNodeCondition | fwk.Delete,
+ 				fwk.CSINode:               fwk.All - fwk.Delete,
+ 				fwk.CSIDriver:             fwk.Update,
+ 				fwk.CSIStorageCapacity:    fwk.All - fwk.Delete,
+@@ -1019,7 +1019,7 @@ func Test_UnionedGVKs(t *testing.T) {
+ 			plugins: schedulerapi.PluginSet{Enabled: defaults.PluginsV1.MultiPoint.Enabled},
+ 			want: map[fwk.EventResource]fwk.ActionType{
+ 				fwk.Pod:                   fwk.Add | fwk.UpdatePodLabel | fwk.UpdatePodGeneratedResourceClaim | fwk.UpdatePodToleration | fwk.UpdatePodSchedulingGatesEliminated | fwk.Delete,
+-				fwk.Node:                  fwk.Add | fwk.UpdateNodeAllocatable | fwk.UpdateNodeLabel | fwk.UpdateNodeTaint | fwk.Delete,
++				fwk.Node:                  fwk.Add | fwk.UpdateNodeAllocatable | fwk.UpdateNodeLabel | fwk.UpdateNodeTaint | fwk.UpdateNodeCondition | fwk.Delete,
+ 				fwk.CSINode:               fwk.All - fwk.Delete,
+ 				fwk.CSIDriver:             fwk.Update,
+ 				fwk.CSIStorageCapacity:    fwk.All - fwk.Delete,
+@@ -1041,7 +1041,7 @@ func Test_UnionedGVKs(t *testing.T) {
+ 				// NodeDeclaredFeatures adds fwk.Update
+ 				fwk.Pod: fwk.Add | fwk.UpdatePodLabel | fwk.UpdatePodGeneratedResourceClaim | fwk.UpdatePodToleration | fwk.UpdatePodSchedulingGatesEliminated | fwk.Delete | fwk.Update,
+ 				// NodeDeclaredFeatures adds fwk.UpdateNodeDeclaredFeature
+-				fwk.Node:                  fwk.Add | fwk.UpdateNodeAllocatable | fwk.UpdateNodeLabel | fwk.UpdateNodeTaint | fwk.Delete | fwk.UpdateNodeDeclaredFeature,
++				fwk.Node:                  fwk.Add | fwk.UpdateNodeAllocatable | fwk.UpdateNodeLabel | fwk.UpdateNodeTaint | fwk.UpdateNodeCondition | fwk.Delete | fwk.UpdateNodeDeclaredFeature,
+ 				fwk.CSINode:               fwk.All - fwk.Delete,
+ 				fwk.CSIDriver:             fwk.Update,
+ 				fwk.CSIStorageCapacity:    fwk.All - fwk.Delete,
+@@ -1063,7 +1063,7 @@ func Test_UnionedGVKs(t *testing.T) {
+ 			plugins: schedulerapi.PluginSet{Enabled: append(defaults.PluginsV1.MultiPoint.Enabled, schedulerapi.Plugin{Name: names.GangScheduling})},
+ 			want: map[fwk.EventResource]fwk.ActionType{
+ 				fwk.Pod:                   fwk.Add | fwk.UpdatePodLabel | fwk.UpdatePodScaleDown | fwk.UpdatePodGeneratedResourceClaim | fwk.UpdatePodToleration | fwk.UpdatePodSchedulingGatesEliminated | fwk.Delete,
+-				fwk.Node:                  fwk.Add | fwk.UpdateNodeAllocatable | fwk.UpdateNodeLabel | fwk.UpdateNodeTaint | fwk.Delete,
++				fwk.Node:                  fwk.Add | fwk.UpdateNodeAllocatable | fwk.UpdateNodeLabel | fwk.UpdateNodeTaint | fwk.UpdateNodeCondition | fwk.Delete,
+ 				fwk.CSINode:               fwk.All - fwk.Delete,
+ 				fwk.CSIDriver:             fwk.Update,
+ 				fwk.CSIStorageCapacity:    fwk.All - fwk.Delete,
+diff --git a/staging/src/k8s.io/component-helpers/node/util/conditions.go b/staging/src/k8s.io/component-helpers/node/util/conditions.go
+index 3ad4dda8911..0be0efe5a45 100644
+--- a/staging/src/k8s.io/component-helpers/node/util/conditions.go
++++ b/staging/src/k8s.io/component-helpers/node/util/conditions.go
+@@ -19,6 +19,7 @@ package util
+ import (
+ 	"context"
+ 	"encoding/json"
++	"strings"
+ 	"time"
+ 
+ 	v1 "k8s.io/api/core/v1"
+@@ -27,6 +28,11 @@ import (
+ 	clientset "k8s.io/client-go/kubernetes"
+ )
+ 
++const (
++	// NodeShutdownMessage is used by kubelet when reporting that graceful node shutdown is active.
++	NodeShutdownMessage = "node is shutting down"
++)
++
+ // GetNodeCondition extracts the provided condition from the given status and returns that.
+ // Returns nil and -1 if the condition is not present, and the index of the located condition.
+ func GetNodeCondition(status *v1.NodeStatus, conditionType v1.NodeConditionType) (int, *v1.NodeCondition) {
+@@ -41,6 +47,18 @@ func GetNodeCondition(status *v1.NodeStatus, conditionType v1.NodeConditionType)
+ 	return -1, nil
+ }
+ 
++// IsNodeInGracefulShutdown returns true when the NodeReady condition reports graceful node shutdown.
++func IsNodeInGracefulShutdown(node *v1.Node) bool {
++	if node == nil {
++		return false
++	}
++	_, condition := GetNodeCondition(&node.Status, v1.NodeReady)
++	if condition == nil || condition.Status != v1.ConditionFalse {
++		return false
++	}
++	return condition.Reason == NodeShutdownMessage || strings.Contains(condition.Message, NodeShutdownMessage)
++}
++
+ // SetNodeCondition updates specific node condition with patch operation.
+ func SetNodeCondition(c clientset.Interface, node types.NodeName, condition v1.NodeCondition) error {
+ 	condition.LastHeartbeatTime = metav1.NewTime(time.Now())
+diff --git a/staging/src/k8s.io/component-helpers/node/util/conditions_test.go b/staging/src/k8s.io/component-helpers/node/util/conditions_test.go
+new file mode 100644
+index 00000000000..086eec5d728
+--- /dev/null
++++ b/staging/src/k8s.io/component-helpers/node/util/conditions_test.go
+@@ -0,0 +1,81 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package util
++
++import (
++	"testing"
++
++	v1 "k8s.io/api/core/v1"
++)
++
++func TestIsNodeInGracefulShutdown(t *testing.T) {
++	testCases := []struct {
++		name string
++		node *v1.Node
++		want bool
++	}{
++		{
++			name: "nil node",
++		},
++		{
++			name: "ready node",
++			node: nodeWithReadyCondition(v1.ConditionTrue, "KubeletReady", "kubelet is posting ready status"),
++		},
++		{
++			name: "not ready without shutdown signal",
++			node: nodeWithReadyCondition(v1.ConditionFalse, "KubeletNotReady", "runtime error"),
++		},
++		{
++			name: "shutdown by message",
++			node: nodeWithReadyCondition(v1.ConditionFalse, "KubeletNotReady", NodeShutdownMessage),
++			want: true,
++		},
++		{
++			name: "shutdown by reason",
++			node: nodeWithReadyCondition(v1.ConditionFalse, NodeShutdownMessage, ""),
++			want: true,
++		},
++		{
++			name: "shutdown message with aggregated errors",
++			node: nodeWithReadyCondition(v1.ConditionFalse, "KubeletNotReady", "[runtime error, "+NodeShutdownMessage+"]"),
++			want: true,
++		},
++	}
++
++	for _, tc := range testCases {
++		t.Run(tc.name, func(t *testing.T) {
++			if got := IsNodeInGracefulShutdown(tc.node); got != tc.want {
++				t.Fatalf("IsNodeInGracefulShutdown() = %v, want %v", got, tc.want)
++			}
++		})
++	}
++}
++
++func nodeWithReadyCondition(status v1.ConditionStatus, reason, message string) *v1.Node {
++	return &v1.Node{
++		Status: v1.NodeStatus{
++			Conditions: []v1.NodeCondition{
++				{
++					Type:    v1.NodeReady,
++					Status:  status,
++					Reason:  reason,
++					Message: message,
++				},
++			},
++		},
++	}
++}

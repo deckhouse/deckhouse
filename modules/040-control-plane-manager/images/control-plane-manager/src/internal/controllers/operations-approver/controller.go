@@ -118,7 +118,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	operations := &controlplanev1alpha1.ControlPlaneOperationList{}
-	if err := r.client.List(ctx, operations, operationsMatchingReadyNodes(nodes)); err != nil {
+	if err := r.client.List(ctx, operations, client.InNamespace(constants.KubeSystemNamespace), operationsMatchingReadyNodes(nodes)); err != nil {
 		return reconcile.Result{}, err
 	}
 	if len(operations.Items) == 0 {

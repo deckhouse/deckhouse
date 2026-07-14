@@ -1,0 +1,69 @@
+candi:
+  fixes:
+    - summary: fix cve node-manager and opentofu.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19942
+cilium-hubble:
+  fixes:
+    - summary: Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20262
+    - summary: Fixed CVE-2026-41520 in hubble-ui-backend
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20361
+cni-cilium:
+  fixes:
+    - summary: Fixed CVE-2026-41520 for cilium-bugtool util
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20067
+cni-flannel:
+  fixes:
+    - summary: Reverted module stage from Deprecated back to General Availability to stop false deprecation
+        alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20306
+common:
+  fixes:
+    - summary: fixed CVE-2026-29181 in the CoreDNS
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20259
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        A module that conditionally depends on another is no longer disabled when an incompatible version
+        of that dependency is enabled; the enable is rejected instead.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20345
+    - summary: fix module config validation for disable warnings
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20545
+docs:
+  features:
+    - summary: Add csi-ceph module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20291
+    - summary: Add Core component (of virtualization module) architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20452
+  fixes:
+    - summary: Add a general description of container registers DKP
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20232
+    - summary: Updated the etcd restore documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20354
+    - summary: Fix CRD version tabs markup and nesting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20448
+documentation:
+  features:
+    - summary: Update editions availability info for stronghold module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20228
+istio:
+  fixes:
+    - summary: Implement graceful metadata secret renewal for multiclusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20207
+network-policy-engine:
+  fixes:
+    - summary: Reverted module stage from Deprecated back to General Availability to stop false deprecation
+        alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20306
+node-manager:
+  fixes:
+    - summary: hook to restore apiVersion on CAPI resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20376
+    - summary: Fix static NodeGroup readiness calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20382
+    - summary: add rbac policies for persistantvolumes to manage from capi-controller-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20658
+tools:
+  fixes:
+    - summary: fix d8 build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20661

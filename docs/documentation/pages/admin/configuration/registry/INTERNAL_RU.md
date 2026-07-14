@@ -65,10 +65,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Убедитесь, что все master-узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`. Для этого используйте следующую команду:
 
@@ -78,21 +81,27 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready    control-plane,master  ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
@@ -165,10 +174,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 

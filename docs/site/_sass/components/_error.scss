@@ -1,0 +1,206 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+.layout-sidebar:has(.section) {
+    display: block;
+}
+
+.docs.section {
+    position: relative;
+    padding: 175px 0 93px 50%;
+    margin-top: 30px;
+
+    @include breakpoints.max-w(xl) {
+        padding: 120px 0 38px 50%;
+    }
+
+    @include breakpoints.max-w(l) {
+        margin: 0;
+        padding: 350px 0 160px;
+    }
+
+    @include breakpoints.max-w(m) {
+        padding: 300px 0 120px;
+    }
+
+    @include breakpoints.max-w(s) {
+        padding: 250px 0 100px;
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 33%;
+        left: 0;
+        bottom: 0;
+        width: 50%;
+        height: 50%;
+        background: url(/images/404.svg) top / contain no-repeat;
+
+        @include breakpoints.max-w(xl) {
+            top: 30%;
+        }
+
+        @include breakpoints.max-w(l) {
+            width: 100%;
+            height: 30%;
+            top: 6%;
+        }
+
+        @include breakpoints.max-w(xs) {
+            top: 10%;
+        }
+    }
+
+    .docs__title {
+        margin-left: 120px;
+        letter-spacing: -0.96px;
+        font-weight: 700;
+        font-size: 48px;
+        color: #222A5D;
+
+        @include breakpoints.max-w(xxl) {
+            margin-left: 70px;
+            font-size: 43px;
+        }
+
+        @include breakpoints.max-w(xl) {
+            margin-left: 40px;
+            font-size: 37px;
+        }
+
+        @include breakpoints.max-w(l) {
+            max-width: 718px;
+            margin: 0 auto;
+            font-size: 42px;
+        }
+
+        @include breakpoints.max-w(m) {
+            font-size: 34px;
+        }
+
+        @include breakpoints.max-w(xs) {
+            font-size: 28px;
+        }
+    }
+
+    .post-content {
+        margin-left: 120px;
+        max-width: 629px;
+
+        @include breakpoints.max-w(xxl) {
+            margin-left: 70px;
+        }
+
+        @include breakpoints.max-w(xl) {
+            margin-left: 40px;
+        }
+
+        @include breakpoints.max-w(l) {
+            max-width: 718px;
+            margin: 0 auto;
+        }
+
+        p {
+            color: #5E6697;
+            font-size: 18px;
+            font-weight: 400;
+            line-height: 28px;
+
+            @include breakpoints.max-w(xs) {
+                font-size: 16px;
+            }
+        }
+
+        .searchV3 {
+            z-index: 50;
+
+            .container {
+                padding: 0;
+
+                input {
+                    display: flex;
+                    padding: 10px 20px;
+                    justify-content: space-between;
+                    font-size: 18px;
+                    line-height: 28px;
+                    align-items: center;
+                    align-self: stretch;
+                    border-radius: 8px;
+                    border: 1px solid #BBC5D5;
+                    background-color: #fff;
+                    background-image: url(/images/search-404.svg);
+                    background-repeat: no-repeat;
+
+                    @include breakpoints.max-w(l) {
+                        padding: 10px;
+                        line-height: 20px;
+                    }
+
+                    @include breakpoints.max-w(xs) {
+                        font-size: 16px;
+                    }
+
+                    &:focus, &:active {
+                        border-color: #4075FF;
+                        background: transparent;
+                    }
+                }
+            }
+        }
+
+        ul {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px 64px;
+
+            @include breakpoints.max-w(xxl) {
+                gap: 20px 14px;
+            }
+
+            @include breakpoints.max-w(l) {
+                gap: 24px 64px;
+            }
+
+            @include breakpoints.max-w(m) {
+                gap: 24px;
+            }
+
+            @include breakpoints.max-w(m) {
+                gap: 16px;
+            }
+
+            li {
+                margin: 0;
+                padding: 0;
+                font-size: 20px;
+                font-weight: 400;
+                line-height: 30px;
+
+                @include breakpoints.max-w(xl) {
+                    font-size: 18px;
+                }
+
+                @include breakpoints.max-w(xs) {
+                    font-size: 16px;
+                }
+
+                a {
+                    color: #0064FF;
+                    text-decoration-line: underline;
+                    text-decoration-skip-ink: none;
+                    text-decoration-color: #0064FF;
+
+                    &:hover {
+                        text-decoration: none;
+                    }
+                }
+
+                &::before {
+                    content: none;
+                }
+            }
+        }
+    }
+}

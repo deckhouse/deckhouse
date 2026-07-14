@@ -7,7 +7,6 @@ memory: 100Mi
 {{- $version := $.Values.istio.internal.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
 {{- $fullVersion := get $versionInfo "fullVersion" }}
-{{- $cniLegacyTmpRunDir := semverCompare "< 1.25.0" $fullVersion }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 
@@ -56,96 +55,47 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:
-        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: istio-cni-node
         k8s-app: istio-cni-node
         sidecar.istio.io/inject: "false"
+        {{- if (semverCompare ">= 1.25.0" $fullVersion) }}
+        istio.io/dataplane-mode: none
+        {{- end }}
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+        sidecar.istio.io/inject: "false"
+        {{- if (semverCompare ">= 1.25.0" $fullVersion) }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "15014"
+        prometheus.io/path: "/metrics"
+        container.apparmor.security.beta.kubernetes.io/install-cni: unconfined
+        {{- end }}
     spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
-      automountServiceAccountToken: true
       {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
       hostNetwork: true
-      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- else }}
+      dnsPolicy: ClusterFirst
       {{- end }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      serviceAccountName: cni
+      terminationGracePeriodSeconds: 5
       containers:
         - name: install-cni
-          args:
-            - --log_output_level=default:info
-            {{- if $cniLegacyTmpRunDir }}
-            # Before Istio 1.25: hostPath mounted under /tmp for readOnlyRootFilesystem + containerd v2.
-            # CNI JSON on the node still lists /var/run/istio-cni/*.sock.
-            - --log-uds-address=/tmp/istio-cni/log.sock
-            {{- if ($.Values.istio.internal.enableAmbientMode) }}
-            - --cni-event-address=/tmp/istio-cni/pluginevent.sock
-            {{- end }}
-            {{- end }}
-          command:
-            - install-cni
-          {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
-          {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
-          {{- else }}
-          securityContext:
-            readOnlyRootFilesystem: true
-            runAsNonRoot: false
-            runAsUser: 0
-            runAsGroup: 0
-          {{- end }}
-          env:
-            {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
-            - name: AMBIENT_ENABLED
-              value: "true"
-            {{- end }}
-            - name: CNI_NETWORK_CONFIG
-              valueFrom:
-                configMapKeyRef:
-                  key: cni_network_config
-                  name: cni-config
-            - name: CNI_NET_DIR
-              value: /etc/cni/net.d
-            - name: CHAINED_CNI_PLUGIN
-              value: "true"
-            - name: REPAIR_ENABLED
-              value: "true"
-            - name: REPAIR_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: spec.nodeName
-            - name: REPAIR_LABEL_PODS
-              value: "true"
-            - name: REPAIR_DELETE_PODS
-              value: "true"
-            - name: REPAIR_RUN_AS_DAEMON
-              value: "true"
-            - name: REPAIR_SIDECAR_ANNOTATION
-              value: sidecar.istio.io/status
-            - name: REPAIR_INIT_CONTAINER_NAME
-              value: istio-validation
-            - name: REPAIR_BROKEN_POD_LABEL_KEY
-              value: cni.istio.io/uninitialized
-            - name: REPAIR_BROKEN_POD_LABEL_VALUE
-              value: "true"
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: spec.nodeName
-            - name: LOG_LEVEL
-              value: debug
           image: {{ include "helm_lib_module_image" (list $ (printf "cni%s" $imageSuffix)) }}
           imagePullPolicy: IfNotPresent
-          livenessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /readyz
-              port: 8000
-              scheme: HTTP
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
+          {{- if (semverCompare ">= 1.25.0" $fullVersion) }}
+          ports:
+            - containerPort: 15014
+              name: metrics
+              protocol: TCP
+          {{- end }}
           readinessProbe:
             failureThreshold: 3
             httpGet:
@@ -155,33 +105,132 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 1
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          {{- if semverCompare "< 1.25.0" $fullVersion }}
+          securityContext:
+            {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+            privileged: true
+            {{- end }}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+          {{- else }}
+          securityContext:
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            capabilities:
+              drop:
+              - ALL
+              add:
+              # CAP_NET_ADMIN is required to allow ipset and route table access
+              - NET_ADMIN
+              # CAP_NET_RAW is required to allow iptables mutation of the `nat` table
+              - NET_RAW
+              # CAP_SYS_PTRACE is required for repair and ambient mode to describe
+              # the pod's network namespace.
+              - SYS_PTRACE
+              # CAP_SYS_ADMIN is required for both ambient and repair, in order to open
+              # network namespaces in `/proc` to obtain descriptors for entering pod network
+              # namespaces. There does not appear to be a more granular capability for this.
+              - SYS_ADMIN
+              # While we run as a 'root' (UID/GID 0), since we drop all capabilities we lose
+              # the typical ability to read/write to folders owned by others.
+              # This can cause problems if the hostPath mounts we use, which we require write access into,
+              # are owned by non-root. DAC_OVERRIDE bypasses these and gives us write access into any folder.
+              - DAC_OVERRIDE
+          {{- end }}
+          command: ["install-cni"]
+          args:
+            - --log_output_level=default:info
+            {{- if semverCompare "< 1.25.0" $fullVersion }}
+            # Before Istio 1.25: hostPath mounted under /tmp for readOnlyRootFilesystem + containerd v2.
+            # CNI JSON on the node still lists /var/run/istio-cni/*.sock.
+            - --log-uds-address=/tmp/istio-cni/log.sock
+            {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+            - --cni-event-address=/tmp/istio-cni/pluginevent.sock
+            {{- end }}
+            {{- end }}
+          envFrom:
+          - configMapRef:
+              name: cni-config
+          env:
+            - name: REPAIR_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: REPAIR_RUN_AS_DAEMON
+              value: "true"
+            - name: REPAIR_SIDECAR_ANNOTATION
+              value: "sidecar.istio.io/status"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+                  divisor: "1"
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.cpu
+                  divisor: "1"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CNI_NETWORK_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  key: cni_network_config
+                  name: cni-config
+          volumeMounts:
+            - mountPath: /host/opt/cni/bin
+              name: cni-bin-dir
+            {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+            - mountPath: /host/proc
+              name: cni-host-procfs
+              readOnly: true
+            {{- end }}
+            - mountPath: /host/etc/cni/net.d
+              name: cni-net-dir
+            - mountPath: {{ ternary "/tmp/istio-cni" "/var/run/istio-cni" (semverCompare "< 1.25.0" $fullVersion) }}
+              name: cni-socket-dir
+            {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+            - mountPath: /host/var/run/netns
+              mountPropagation: HostToContainer
+              name: cni-netns-dir
+            - mountPath: /var/run/ztunnel
+              name: cni-ztunnel-sock-dir
+            {{- end }}
+            {{- if semverCompare "< 1.25.0" $fullVersion }}
+            - mountPath: /run/istio-cni
+              name: cni-socket-dir
+            {{- end }}
+            - mountPath: /tmp
+              name: install-cni-tmp
           resources:
             requests:
               {{- include "istio_cni_resources" . | nindent 14 }}
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          volumeMounts:
-            - mountPath: /host/opt/cni/bin
-              name: cni-bin-dir
-            - mountPath: /host/etc/cni/net.d
-              name: cni-net-dir
-            - mountPath: {{ ternary "/tmp/istio-cni" "/var/run/istio-cni" $cniLegacyTmpRunDir }}
-              name: cni-log-dir
-            {{- if $cniLegacyTmpRunDir }}
-            - mountPath: /run/istio-cni
-              name: cni-log-dir
-            {{- end }}
-            - mountPath: /tmp
-              name: install-cni-tmp
-            {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
-            - mountPath: /host/proc
-              name: cni-host-procfs
-              readOnly: true 
-            - mountPath: /var/run/ztunnel
-              name: cni-ztunnel-sock-dir
-            - mountPath: /host/var/run/netns
-              mountPropagation: Bidirectional
-              name: host-netns
-            {{- end }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -244,33 +293,11 @@ spec:
           {{- end }}
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-      {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
-      dnsPolicy: ClusterFirstWithHostNet
-      {{- else }}
-      dnsPolicy: ClusterFirst
-      {{- end }}
-      restartPolicy: Always
-      serviceAccountName: cni
-      terminationGracePeriodSeconds: 5
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
       volumes:
-        - hostPath:
+        - name: cni-bin-dir
+          hostPath:
             path: /opt/cni/bin
-            type: ""
-          name: cni-bin-dir
-        - hostPath:
-            path: /etc/cni/net.d
-            type: ""
-          name: cni-net-dir
-        - hostPath:
-            path: /var/run/istio-cni
-            type: ""
-          name: cni-log-dir
-        - name: install-cni-tmp
-          emptyDir: {}
         {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
         - name: cni-host-procfs
           hostPath:
@@ -280,9 +307,17 @@ spec:
           hostPath:
             path: /var/run/ztunnel
             type: DirectoryOrCreate
-        - hostPath:
+        {{- end }}
+        - name: cni-net-dir
+          hostPath:
+            path: /etc/cni/net.d
+        - name: cni-socket-dir
+          hostPath:
+            path: /var/run/istio-cni
+        - name: cni-netns-dir
+          hostPath:
             path: /var/run/netns
             type: DirectoryOrCreate
-          name: host-netns
-        {{- end }}
+        - name: install-cni-tmp
+          emptyDir: {}
 {{- end }}

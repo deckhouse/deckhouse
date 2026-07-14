@@ -1031,16 +1031,6 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       command.workflows = ['build-and-test_dev.yml'];
       command.rerunWorkflow = true;
     }
-    if (labelType === 'security') {
-      if (labelInfo.security === 'rootless' && event.action === 'labeled') {
-        command.workflows = ['build-and-test_dev.yml'];
-        command.rerunWorkflow = true;
-      }
-      if (labelInfo.security == 'cve' && event.action === 'labeled') {
-        command.workflows = ['cve-pr.yml'];
-        command.triggerWorkflowDispatch = true;
-      }
-    }
   } finally {
     core.endGroup();
   }

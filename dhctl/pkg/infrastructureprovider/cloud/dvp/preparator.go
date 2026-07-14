@@ -20,35 +20,22 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/name212/govalue"
 	authv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
 type MetaConfigPreparator struct {
 	validateKubeConfig bool
 	validateKubeAPI    bool
-	logger             log.Logger
 }
 
 func NewMetaConfigPreparator() *MetaConfigPreparator {
-	return &MetaConfigPreparator{
-		logger: log.NewSilentLogger(),
-	}
-}
-
-func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparator {
-	if !govalue.IsNil(logger) {
-		p.logger = logger
-	}
-
-	return p
+	return &MetaConfigPreparator{}
 }
 
 func (p *MetaConfigPreparator) EnableValidateKubeConfig(validateKubeAPI bool) *MetaConfigPreparator {

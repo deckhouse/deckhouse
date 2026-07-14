@@ -18,25 +18,21 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-)
-
-var (
-	candiDir         = "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
 )
 
 const (
@@ -47,12 +43,12 @@ const (
 type saveFromTo struct {
 	from        string
 	to          string
-	data        map[string]interface{}
+	data        map[string]any
 	ignorePaths map[string]struct{}
 }
 
-func logTemplatesData(name string, data map[string]interface{}) {
-	dataForLog := make(map[string]interface{})
+func logTemplatesData(ctx context.Context, name string, data map[string]any) {
+	dataForLog := make(map[string]any)
 	for k, v := range data {
 		switch k {
 		case "k8s", "bashible", "images":
@@ -65,7 +61,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 
 	formattedData, _ := yaml.Marshal(dataForLog)
 
-	log.DebugF("Data %s\n%s", name, string(formattedData))
+	dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Data %s\n%s", name, string(formattedData)), "\n"))
 }
 
 func PrepareBundle(
@@ -74,35 +70,28 @@ func PrepareBundle(
 	nodeIP string,
 	devicePath string,
 	metaConfig *config.MetaConfig,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBundle")
 	defer span.End()
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP)
 	if err != nil {
 		return err
 	}
-	logTemplatesData("bashible", bashibleData)
+	logTemplatesData(ctx, "bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
+	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, globalOptions); err != nil {
 		return err
 	}
 
 	if err := prepareNodeGroupConfigurationSteps(ctx, templateController, metaConfig.ResourcesYAML, bashibleData); err != nil {
 		return err
 	}
-
-	_, err = os.Stat(candiBashibleDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
-	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("From %q to %q", bashboosterDir, bashibleDir))
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
@@ -110,19 +99,12 @@ func PrepareBundle(
 func PrepareBashibleBundle(
 	ctx context.Context,
 	templateController *Controller,
-	templateData map[string]interface{},
+	templateData map[string]any,
 	provider string,
 	devicePath string,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
-	_, err := os.Stat(candiBashibleDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 	saveInfo := make([]saveFromTo, 0)
 	saveInfo = append(saveInfo, saveFromTo{
 		from: candiBashibleDir,
@@ -143,27 +125,27 @@ func PrepareBashibleBundle(
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
+			from: filepath.Join(globalOptions.CandiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
 			to:   stepsDir,
 			data: templateData,
 		})
 	}
 
 	for _, info := range saveInfo {
-		log.DebugF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("From %q to %q", info.from, info.to))
+		if err := templateController.RenderAndSaveTemplates(ctx, info.from, info.to, info.data, info.ignorePaths); err != nil {
 			return err
 		}
 	}
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
-	log.DebugF("Create %q\n", firstRunFileFlag)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating %q", firstRunFileFlag))
 	if err := fs.CreateEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
 
 	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
-	log.InfoF("Create %q\n", devicePathFile)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Creating %q", devicePathFile))
 
 	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }
@@ -173,7 +155,7 @@ func PrepareBashibleBundle(
 //
 // controlPlaneEndpoint is the address that will be added to the apiserver
 // certificate SAN list and used in kubeconfigs as the API server URL.
-func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig) error {
+func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, cfg *controlplane.TemplateConfig) error {
 	if templateController == nil {
 		return fmt.Errorf("templateController is nil")
 	}
@@ -184,7 +166,7 @@ func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEn
 // generatePKIArtifacts writes PKI and kubeconfigs for the local
 // control-plane node into artifactsDir. The function is decoupled from the
 // template Controller for testability.
-func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig, artifactsDir string) error {
+func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *controlplane.TemplateConfig, artifactsDir string) error {
 	if nodeName == "" {
 		return fmt.Errorf("nodeName is empty")
 	}
@@ -248,34 +230,15 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	return nil
 }
 
-func PrepareControlPlaneManifests(templateController *Controller, cfg *config.ControlPlaneTemplateConfig, dc *directoryconfig.DirectoryConfig) error {
-	_, err := os.Stat(candiDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-	}
-
+func PrepareControlPlaneManifests(ctx context.Context, templateController *Controller, cfg *controlplane.TemplateConfig, globalOptions *options.GlobalOptions) error {
 	saveInfo := saveFromTo{
-		from: filepath.Join(candiDir, "control-plane"),
+		from: filepath.Join(globalOptions.CandiDir, "control-plane"),
 		to:   filepath.Join(bashibleDir, "control-plane"),
 		data: cfg.ToMap(),
 	}
-	log.InfoF("From %q to %q\n", saveInfo.from, saveInfo.to)
-	if err := templateController.RenderAndSaveTemplates(saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("From %q to %q", saveInfo.from, saveInfo.to))
+	if err := templateController.RenderAndSaveTemplates(ctx, saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
 		return err
 	}
 	return nil
-}
-
-func InitGlobalVars(pwd string) {
-	candiDir = pwd + "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
-	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
-	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
-	checkDeckhouseUserScriptPath = candiBashibleDir + "/preflight/check_deckhouse_user.sh.tpl"
-	preflightScriptDirPath = candiBashibleDir + "/preflight/"
-	killReverseTunnelPath = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
-	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
 }

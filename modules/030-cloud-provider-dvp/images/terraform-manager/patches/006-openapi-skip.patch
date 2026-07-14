@@ -1,0 +1,846 @@
+diff --git a/kubernetes/resource_kubernetes_resource_ready_v1.go b/kubernetes/resource_kubernetes_resource_ready_v1.go
+index defb82d..53ec5d1 100644
+--- a/kubernetes/resource_kubernetes_resource_ready_v1.go
++++ b/kubernetes/resource_kubernetes_resource_ready_v1.go
+@@ -953,7 +953,7 @@ func (r *resourceReadyChecker) wait(ctx context.Context) diag.Diagnostics {
+ 
+ 	r.trace(ctx, "Start waiting with timeout %s", waitTimeoutStr)
+ 
+-	attemptTimeout := 2 * time.Second
++	attemptTimeout := 500 * time.Millisecond
+ 
+ 	var lastDiags diag.Diagnostics
+ 
+diff --git a/main.go b/main.go
+index 9dbb3cf..c1cf01d 100644
+--- a/main.go
++++ b/main.go
+@@ -30,8 +30,29 @@ const (
+ 
+ func main() {
+ 	debugFlag := flag.Bool("debug", false, "Start provider in stand-alone debug mode.")
++	// Deckhouse: -reattach-file lets dhctl run the provider as a long-lived daemon
++	// across many `tofu` invocations. The provider writes the TF_REATTACH_PROVIDERS
++	// JSON (one-line) into the file, then dhctl sets that env on every tofu
++	// subprocess. All tofu calls hit the same gRPC server → no plugin spawn
++	// overhead, and the in-process caches (globalTypeCache, RESTMapper) stay warm.
++	reattachFile := flag.String("reattach-file", "", "Write TF_REATTACH_PROVIDERS JSON to this file (implies -debug).")
+ 	flag.Parse()
+ 
++	if *reattachFile != "" {
++		*debugFlag = true
++	}
++
++	// Deckhouse: optional "process start" marker. tofu suppresses the plugin's
++	// stderr so we side-channel through a file to measure wall-clock gaps
++	// between plugin spawns when debugging reattach behaviour. Off by default
++	// — set KUBE_PROVIDER_TIMING_LOG=/some/path to enable.
++	if logPath := os.Getenv("KUBE_PROVIDER_TIMING_LOG"); logPath != "" {
++		if f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
++			fmt.Fprintf(f, "%s [pid=%d] PROCESS START args=%v\n", time.Now().Format("15:04:05.000"), os.Getpid(), os.Args)
++			f.Close()
++		}
++	}
++
+ 	ctx := context.Background()
+ 
+ 	muxer, err := mux.MuxServer(ctx, Version)
+@@ -49,7 +70,11 @@ func main() {
+ 				fmt.Printf("Error getting reattach config: %s\n", err)
+ 				return
+ 			}
+-			printReattachConfig(reattachConfig)
++			if *reattachFile != "" {
++				writeReattachFile(*reattachFile, reattachConfig)
++			} else {
++				printReattachConfig(reattachConfig)
++			}
+ 		}()
+ 		opts = append(opts, tf5server.WithDebug(ctx, reattachConfigCh, nil))
+ 	}
+@@ -57,6 +82,32 @@ func main() {
+ 	tf5server.Serve(providerName, func() tfprotov5.ProviderServer { return muxer }, opts...)
+ }
+ 
++// writeReattachFile serializes the TF_REATTACH_PROVIDERS JSON for this provider
++// and writes it atomically to path so dhctl can pick it up. We register both the
++// terraform-registry and opentofu-registry addresses; tofu and terraform each
++// look up by their own canonical source, and we want the daemon to be matchable
++// by either.
++func writeReattachFile(path string, config *plugin.ReattachConfig) {
++	rc := convertReattachConfig(config)
++	data, err := json.Marshal(map[string]tfexec.ReattachConfig{
++		"registry.terraform.io/hashicorp/kubernetes": rc,
++		"registry.opentofu.org/hashicorp/kubernetes": rc,
++	})
++	if err != nil {
++		fmt.Printf("Error building reattach JSON: %s\n", err)
++		return
++	}
++	tmp := path + ".tmp"
++	if err := os.WriteFile(tmp, data, 0o600); err != nil {
++		fmt.Printf("Error writing reattach file: %s\n", err)
++		return
++	}
++	if err := os.Rename(tmp, path); err != nil {
++		fmt.Printf("Error renaming reattach file: %s\n", err)
++		return
++	}
++}
++
+ // convertReattachConfig converts plugin.ReattachConfig to tfexec.ReattachConfig
+ func convertReattachConfig(reattachConfig *plugin.ReattachConfig) tfexec.ReattachConfig {
+ 	return tfexec.ReattachConfig{
+diff --git a/manifest/openapi/multi_v3.go b/manifest/openapi/multi_v3.go
+new file mode 100644
+index 0000000..f0f21cc
+--- /dev/null
++++ b/manifest/openapi/multi_v3.go
+@@ -0,0 +1,348 @@
++// Copyright (c) HashiCorp, Inc.
++// SPDX-License-Identifier: MPL-2.0
++
++package openapi
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"os"
++	"sync"
++	"time"
++
++	"github.com/getkin/kin-openapi/openapi3"
++	"github.com/hashicorp/terraform-plugin-go/tftypes"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/client-go/rest"
++)
++
++// MultiV3Foundry is a Foundry that lazily fetches per-group OpenAPI v3 documents
++// from the kube-apiserver. Avoids the ~10 MB monolithic /openapi/v2 fetch by
++// pulling only the groups/versions touched by the plan/apply (typically a few
++// hundred KB each).
++//
++// Endpoints used:
++//   - core: /openapi/v3/api/<version>
++//   - other: /openapi/v3/apis/<group>/<version>
++//
++// Schemas in the v3 doc are keyed by long type ID (e.g. "io.k8s.api.core.v1.Secret").
++// The GVK→ID lookup is built from the `x-kubernetes-group-version-kind` extension.
++// v3CachePathAndTTL returns the on-disk cache file path + TTL for a given GVK.
++// Default dir is /tmp/dhctl/openapi-v3-cache (which is host-mounted in the dev
++// container so all plugin processes share it). Set KUBE_PROVIDER_OPENAPI_V3_CACHE_DIR
++// to "off" / "0" / "false" to disable; TTL via KUBE_PROVIDER_OPENAPI_V3_CACHE_TTL.
++func v3CachePathAndTTL(gvk schema.GroupVersionKind) (path string, ttl time.Duration, enabled bool) {
++	dir := os.Getenv("KUBE_PROVIDER_OPENAPI_V3_CACHE_DIR")
++	switch dir {
++	case "off", "false", "0":
++		return "", 0, false
++	case "":
++		dir = "/tmp/dhctl/openapi-v3-cache"
++	}
++	ttl = time.Hour
++	if v := os.Getenv("KUBE_PROVIDER_OPENAPI_V3_CACHE_TTL"); v != "" {
++		if d, err := time.ParseDuration(v); err == nil && d > 0 {
++			ttl = d
++		}
++	}
++	key := gvk.Group
++	if key == "" {
++		key = "core"
++	}
++	key = key + "-" + gvk.Version + ".json"
++	return key, ttl, true
++}
++
++func readFreshV3Cache(name string, ttl time.Duration) []byte {
++	dir := os.Getenv("KUBE_PROVIDER_OPENAPI_V3_CACHE_DIR")
++	if dir == "" {
++		dir = "/tmp/dhctl/openapi-v3-cache"
++	}
++	full := dir + "/" + name
++	st, err := os.Stat(full)
++	if err != nil || time.Since(st.ModTime()) > ttl {
++		return nil
++	}
++	data, err := os.ReadFile(full)
++	if err != nil {
++		return nil
++	}
++	return data
++}
++
++func writeV3Cache(name string, data []byte) {
++	dir := os.Getenv("KUBE_PROVIDER_OPENAPI_V3_CACHE_DIR")
++	if dir == "" {
++		dir = "/tmp/dhctl/openapi-v3-cache"
++	}
++	if err := os.MkdirAll(dir, 0o700); err != nil {
++		return
++	}
++	full := dir + "/" + name
++	tmp := full + ".tmp"
++	if err := os.WriteFile(tmp, data, 0o600); err != nil {
++		return
++	}
++	_ = os.Rename(tmp, full)
++}
++
++// appendCacheLog writes a single line to KUBE_PROVIDER_CACHE_DEBUG_LOG. tofu
++// suppresses the plugin's os.Stderr, so we side-channel through a file to
++// confirm cache behaviour (pid + foundry pointer disambiguate "same-process
++// repeated hits" vs "fresh process every RPC"). Off by default — set
++// KUBE_PROVIDER_CACHE_DEBUG_LOG=/some/path to enable.
++func appendCacheLog(line string) {
++	path := os.Getenv("KUBE_PROVIDER_CACHE_DEBUG_LOG")
++	if path == "" {
++		return
++	}
++	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
++	if err != nil {
++		return
++	}
++	defer f.Close()
++	_, _ = f.WriteString(line)
++}
++
++// globalTypeCache is shared across MultiV3Foundry instances within the
++// same provider process. tf5server.Serve in terraform-plugin-go creates a
++// fresh ProviderServer on every RPC call, so a per-instance cache resets
++// constantly. Caching at the openapi package level survives the lifetime
++// of one tofu plan/apply process and turns repeat lookups for the same
++// GVK (one plan calls TFTypeFromOpenAPI 6-8 times for the same VirtualDisk
++// across plan/apply/read/datasource) from ~1 s into microseconds.
++var (
++	globalTypeMu    sync.RWMutex
++	globalTypeCache = map[schema.GroupVersionKind]cachedType{}
++)
++
++type cachedType struct {
++	t     tftypes.Type
++	hints map[string]string
++}
++
++type MultiV3Foundry struct {
++	rc rest.Interface
++
++	mu     sync.Mutex
++	groups map[string]*v3Group // key = group/version
++}
++
++type v3Group struct {
++	doc       *openapi3.T
++	gvkIndex  map[schema.GroupVersionKind]string
++	typeCache sync.Map
++	gate      sync.Mutex
++}
++
++// NewMultiV3Foundry returns a Foundry that lazily pulls per-group OpenAPI v3 docs.
++func NewMultiV3Foundry(rc rest.Interface) *MultiV3Foundry {
++	return &MultiV3Foundry{
++		rc:     rc,
++		groups: map[string]*v3Group{},
++	}
++}
++
++func v3PathFor(gvk schema.GroupVersionKind) string {
++	if gvk.Group == "" {
++		return fmt.Sprintf("/openapi/v3/api/%s", gvk.Version)
++	}
++	return fmt.Sprintf("/openapi/v3/apis/%s/%s", gvk.Group, gvk.Version)
++}
++
++func (f *MultiV3Foundry) fetchGroup(ctx context.Context, gvk schema.GroupVersionKind) (*v3Group, error) {
++	path := v3PathFor(gvk)
++	tFetch := time.Now()
++	data, err := f.rc.Verb("GET").Timeout(30 * time.Second).AbsPath(path).DoRaw(ctx)
++	appendCacheLog(fmt.Sprintf("FETCH-V3 path=%s bytes=%d d=%v pid=%d\n", path, len(data), time.Since(tFetch), os.Getpid()))
++	if err != nil {
++		return nil, fmt.Errorf("fetch %s: %w", path, err)
++	}
++	tParse := time.Now()
++	loader := openapi3.NewLoader()
++	doc, err := loader.LoadFromData(data)
++	appendCacheLog(fmt.Sprintf("PARSE-V3 path=%s d=%v pid=%d\n", path, time.Since(tParse), os.Getpid()))
++	if err != nil {
++		return nil, fmt.Errorf("parse %s: %w", path, err)
++	}
++	g := &v3Group{doc: doc, gvkIndex: map[schema.GroupVersionKind]string{}}
++	tIdx := time.Now()
++	if err := g.buildIndex(); err != nil {
++		return nil, fmt.Errorf("index %s: %w", path, err)
++	}
++	appendCacheLog(fmt.Sprintf("INDEX-V3 path=%s d=%v pid=%d\n", path, time.Since(tIdx), os.Getpid()))
++	return g, nil
++}
++
++func (g *v3Group) buildIndex() error {
++	if g.doc == nil {
++		return nil
++	}
++	for id, sref := range g.doc.Components.Schemas {
++		if sref == nil || sref.Value == nil {
++			continue
++		}
++		ex, ok := sref.Value.Extensions["x-kubernetes-group-version-kind"]
++		if !ok {
++			continue
++		}
++		raw, ok := ex.(json.RawMessage)
++		if !ok {
++			// kin-openapi may decode the extension into other concrete types;
++			// fall back to marshalling.
++			raw, _ = json.Marshal(ex)
++		}
++		var gvks []schema.GroupVersionKind
++		if err := json.Unmarshal(raw, &gvks); err != nil {
++			continue
++		}
++		for _, gvk := range gvks {
++			g.gvkIndex[gvk] = id
++		}
++	}
++	return nil
++}
++
++// objectMetaSchemaID is the canonical key under which Kubernetes apiserver exposes
++// the ObjectMeta sub-schema in every per-group OpenAPI v3 doc (as a referenced
++// definition). ObjectMeta itself isn't a top-level resource so it has no
++// `x-kubernetes-group-version-kind` extension — we have to look it up by ID.
++const objectMetaSchemaID = "io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
++
++// GetTypeByGVK implements openapi.Foundry.
++func (f *MultiV3Foundry) GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, map[string]string, error) {
++	// Fast path 1: in-process cache (helps within a single plugin process).
++	globalTypeMu.RLock()
++	hit, ok := globalTypeCache[gvk]
++	cacheSize := len(globalTypeCache)
++	globalTypeMu.RUnlock()
++	if ok {
++		appendCacheLog(fmt.Sprintf("MEM-HIT gvk=%s ptr=%p cache_size=%d pid=%d\n", gvk.String(), f, cacheSize, os.Getpid()))
++		return hit.t, hit.hints, nil
++	}
++
++	// Fast path 2: on-disk cache (helps across plugin processes within a
++	// single tofu plan/apply, and across repeated runs within TTL). We
++	// serialize the fully-resolved tftypes.Type, so a hit avoids both the
++	// HTTP fetch of the v3 doc AND the recursive resolveSchemaRef +
++	// getTypeFromSchema walk.
++	if t, hints, ok := tryLoadTFTypeFromDisk(gvk); ok {
++		appendCacheLog(fmt.Sprintf("DISK-HIT gvk=%s pid=%d\n", gvk.String(), os.Getpid()))
++		globalTypeMu.Lock()
++		globalTypeCache[gvk] = cachedType{t: t, hints: hints}
++		globalTypeMu.Unlock()
++		return t, hints, nil
++	}
++
++	appendCacheLog(fmt.Sprintf("MISS gvk=%s ptr=%p cache_size=%d pid=%d\n", gvk.String(), f, cacheSize, os.Getpid()))
++
++	// Special case: ObjectMeta isn't tagged with `x-kubernetes-group-version-kind`,
++	// it's a referenced sub-schema. Resolve from any already-fetched group, or
++	// fall back to fetching the core v1 doc (always contains the reference).
++	if gvk == ObjectMetaGVK {
++		t, hints, err := f.getTypeByID(objectMetaSchemaID, schema.GroupVersionKind{Version: "v1"})
++		if err == nil {
++			globalTypeMu.Lock()
++			globalTypeCache[gvk] = cachedType{t: t, hints: hints}
++			globalTypeMu.Unlock()
++			saveTFTypeToDisk(gvk, t, hints)
++		}
++		return t, hints, err
++	}
++
++	key := gvk.GroupVersion().String()
++
++	f.mu.Lock()
++	g, ok := f.groups[key]
++	f.mu.Unlock()
++
++	if !ok {
++		fetched, err := f.fetchGroup(context.TODO(), gvk)
++		if err != nil {
++			return nil, nil, err
++		}
++		f.mu.Lock()
++		// Re-check after acquiring the lock (another goroutine may have raced).
++		if existing, exists := f.groups[key]; exists {
++			g = existing
++		} else {
++			f.groups[key] = fetched
++			g = fetched
++		}
++		f.mu.Unlock()
++	}
++
++	g.gate.Lock()
++	defer g.gate.Unlock()
++
++	id, ok := g.gvkIndex[gvk]
++	if !ok {
++		return nil, nil, fmt.Errorf("GVK %v not found in v3 schema for %s", gvk, key)
++	}
++	tRC := time.Now()
++	t, hints, err := resolveAndConvert(g, id)
++	appendCacheLog(fmt.Sprintf("RESOLVE gvk=%s d=%v pid=%d\n", gvk.String(), time.Since(tRC), os.Getpid()))
++	if err == nil {
++		globalTypeMu.Lock()
++		globalTypeCache[gvk] = cachedType{t: t, hints: hints}
++		globalTypeMu.Unlock()
++		tSave := time.Now()
++		saveTFTypeToDisk(gvk, t, hints)
++		appendCacheLog(fmt.Sprintf("DISK-SAVE gvk=%s d=%v pid=%d\n", gvk.String(), time.Since(tSave), os.Getpid()))
++	}
++	return t, hints, err
++}
++
++// getTypeByID looks up a schema by its long ID (e.g. ObjectMeta) across all loaded
++// groups; if none has it yet, fetches `fallback` group to make the reference resolvable.
++func (f *MultiV3Foundry) getTypeByID(id string, fallback schema.GroupVersionKind) (tftypes.Type, map[string]string, error) {
++	f.mu.Lock()
++	for _, g := range f.groups {
++		if _, ok := g.doc.Components.Schemas[id]; ok {
++			f.mu.Unlock()
++			g.gate.Lock()
++			defer g.gate.Unlock()
++			return resolveAndConvert(g, id)
++		}
++	}
++	f.mu.Unlock()
++
++	// No group has it yet — fetch fallback and retry.
++	fetched, err := f.fetchGroup(context.TODO(), fallback)
++	if err != nil {
++		return nil, nil, fmt.Errorf("fetch fallback group for %s: %w", id, err)
++	}
++	key := fallback.GroupVersion().String()
++	f.mu.Lock()
++	if existing, exists := f.groups[key]; exists {
++		fetched = existing
++	} else {
++		f.groups[key] = fetched
++	}
++	f.mu.Unlock()
++
++	fetched.gate.Lock()
++	defer fetched.gate.Unlock()
++	if _, ok := fetched.doc.Components.Schemas[id]; !ok {
++		return nil, nil, fmt.Errorf("schema %q not in fallback group %s either", id, key)
++	}
++	return resolveAndConvert(fetched, id)
++}
++
++func resolveAndConvert(g *v3Group, id string) (tftypes.Type, map[string]string, error) {
++	sref, ok := g.doc.Components.Schemas[id]
++	if !ok {
++		return nil, nil, fmt.Errorf("schema %q not in v3 doc", id)
++	}
++	resolved, err := resolveSchemaRef(sref, g.doc.Components.Schemas)
++	if err != nil {
++		return nil, nil, fmt.Errorf("resolve schema %q: %w", id, err)
++	}
++	hints := map[string]string{}
++	tftype, err := getTypeFromSchema(resolved, 50, &g.typeCache, g.doc.Components.Schemas, tftypes.AttributePath{}, hints)
++	if err != nil {
++		return nil, hints, err
++	}
++	return tftype, hints, nil
++}
+diff --git a/manifest/openapi/type_codec.go b/manifest/openapi/type_codec.go
+new file mode 100644
+index 0000000..7a6564c
+--- /dev/null
++++ b/manifest/openapi/type_codec.go
+@@ -0,0 +1,239 @@
++// Copyright (c) HashiCorp, Inc.
++// SPDX-License-Identifier: MPL-2.0
++
++package openapi
++
++import (
++	"encoding/json"
++	"fmt"
++	"os"
++	"path/filepath"
++	"strings"
++	"time"
++
++	"github.com/hashicorp/terraform-plugin-go/tftypes"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++)
++
++// Disk cache for compiled tftypes.Type. terraform spawns a fresh provider
++// plugin process for each resource type / phase, so the in-process
++// `globalTypeCache` gets reset between them. Persisting the fully-resolved
++// tftypes.Type on disk lets every plugin process within a single bootstrap
++// (and across repeated bootstraps for an hour) reuse what the first one
++// computed — turns the slow recursive `resolveAndConvert` (~1-2 s for
++// VirtualDisk on cold) into a fast file read + decode (~tens of ms).
++//
++// Defaults: dir = /tmp/dhctl/openapi-tftype-cache (host-mounted in dev),
++// TTL = 1h. Override via KUBE_PROVIDER_TFTYPE_CACHE_DIR (= "off" to disable)
++// and KUBE_PROVIDER_TFTYPE_CACHE_TTL.
++
++type cachedEntry struct {
++	Type  json.RawMessage   `json:"t"`
++	Hints map[string]string `json:"h"`
++}
++
++func tftypeCachePath(gvk schema.GroupVersionKind) (path string, ttl time.Duration, enabled bool) {
++	dir := os.Getenv("KUBE_PROVIDER_TFTYPE_CACHE_DIR")
++	switch dir {
++	case "off", "false", "0":
++		return "", 0, false
++	case "":
++		dir = "/tmp/dhctl/openapi-tftype-cache"
++	}
++	ttl = time.Hour
++	if v := os.Getenv("KUBE_PROVIDER_TFTYPE_CACHE_TTL"); v != "" {
++		if d, err := time.ParseDuration(v); err == nil && d > 0 {
++			ttl = d
++		}
++	}
++	g := gvk.Group
++	if g == "" {
++		g = "core"
++	}
++	name := strings.NewReplacer("/", "_", ":", "_").Replace(g) + "_" + gvk.Version + "_" + gvk.Kind + ".json"
++	return filepath.Join(dir, name), ttl, true
++}
++
++func tryLoadTFTypeFromDisk(gvk schema.GroupVersionKind) (tftypes.Type, map[string]string, bool) {
++	path, ttl, ok := tftypeCachePath(gvk)
++	if !ok {
++		return nil, nil, false
++	}
++	st, err := os.Stat(path)
++	if err != nil || time.Since(st.ModTime()) > ttl {
++		return nil, nil, false
++	}
++	data, err := os.ReadFile(path)
++	if err != nil {
++		return nil, nil, false
++	}
++	var entry cachedEntry
++	if err := json.Unmarshal(data, &entry); err != nil {
++		return nil, nil, false
++	}
++	t, err := decodeTFType(entry.Type)
++	if err != nil {
++		return nil, nil, false
++	}
++	return t, entry.Hints, true
++}
++
++func saveTFTypeToDisk(gvk schema.GroupVersionKind, t tftypes.Type, hints map[string]string) {
++	path, _, ok := tftypeCachePath(gvk)
++	if !ok {
++		return
++	}
++	enc, err := encodeTFType(t)
++	if err != nil {
++		return
++	}
++	entry := cachedEntry{Type: enc, Hints: hints}
++	data, err := json.Marshal(entry)
++	if err != nil {
++		return
++	}
++	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
++		return
++	}
++	tmp := path + ".tmp"
++	if err := os.WriteFile(tmp, data, 0o600); err != nil {
++		return
++	}
++	_ = os.Rename(tmp, path)
++}
++
++// encodeTFType serializes a tftypes.Type to JSON. The kinds we encounter coming
++// out of the OpenAPI schema → tftypes conversion: Object (with optional
++// OptionalAttributes), List, Set, Map, Tuple, primitives, DynamicPseudoType.
++func encodeTFType(t tftypes.Type) (json.RawMessage, error) {
++	if t == nil {
++		return json.Marshal(map[string]any{"k": "nil"})
++	}
++	switch v := t.(type) {
++	case tftypes.Object:
++		attrs := map[string]json.RawMessage{}
++		for k, at := range v.AttributeTypes {
++			enc, err := encodeTFType(at)
++			if err != nil {
++				return nil, fmt.Errorf("encode Object attr %q: %w", k, err)
++			}
++			attrs[k] = enc
++		}
++		opt := make([]string, 0, len(v.OptionalAttributes))
++		for k := range v.OptionalAttributes {
++			opt = append(opt, k)
++		}
++		return json.Marshal(map[string]any{"k": "obj", "attrs": attrs, "opt": opt})
++	case tftypes.List:
++		enc, err := encodeTFType(v.ElementType)
++		if err != nil {
++			return nil, fmt.Errorf("encode List elem: %w", err)
++		}
++		return json.Marshal(map[string]any{"k": "list", "e": json.RawMessage(enc)})
++	case tftypes.Set:
++		enc, err := encodeTFType(v.ElementType)
++		if err != nil {
++			return nil, fmt.Errorf("encode Set elem: %w", err)
++		}
++		return json.Marshal(map[string]any{"k": "set", "e": json.RawMessage(enc)})
++	case tftypes.Map:
++		enc, err := encodeTFType(v.ElementType)
++		if err != nil {
++			return nil, fmt.Errorf("encode Map elem: %w", err)
++		}
++		return json.Marshal(map[string]any{"k": "map", "e": json.RawMessage(enc)})
++	case tftypes.Tuple:
++		elems := make([]json.RawMessage, len(v.ElementTypes))
++		for i, et := range v.ElementTypes {
++			enc, err := encodeTFType(et)
++			if err != nil {
++				return nil, fmt.Errorf("encode Tuple[%d]: %w", i, err)
++			}
++			elems[i] = enc
++		}
++		return json.Marshal(map[string]any{"k": "tuple", "elems": elems})
++	}
++	switch {
++	case t.Is(tftypes.String):
++		return json.Marshal(map[string]any{"k": "string"})
++	case t.Is(tftypes.Number):
++		return json.Marshal(map[string]any{"k": "number"})
++	case t.Is(tftypes.Bool):
++		return json.Marshal(map[string]any{"k": "bool"})
++	case t.Is(tftypes.DynamicPseudoType):
++		return json.Marshal(map[string]any{"k": "dyn"})
++	}
++	return nil, fmt.Errorf("encodeTFType: unsupported type %T (%s)", t, t.String())
++}
++
++func decodeTFType(data json.RawMessage) (tftypes.Type, error) {
++	var head struct {
++		K     string                     `json:"k"`
++		Attrs map[string]json.RawMessage `json:"attrs"`
++		Opt   []string                   `json:"opt"`
++		E     json.RawMessage            `json:"e"`
++		Elems []json.RawMessage          `json:"elems"`
++	}
++	if err := json.Unmarshal(data, &head); err != nil {
++		return nil, err
++	}
++	switch head.K {
++	case "nil":
++		return nil, nil
++	case "string":
++		return tftypes.String, nil
++	case "number":
++		return tftypes.Number, nil
++	case "bool":
++		return tftypes.Bool, nil
++	case "dyn":
++		return tftypes.DynamicPseudoType, nil
++	case "list":
++		et, err := decodeTFType(head.E)
++		if err != nil {
++			return nil, fmt.Errorf("decode List elem: %w", err)
++		}
++		return tftypes.List{ElementType: et}, nil
++	case "set":
++		et, err := decodeTFType(head.E)
++		if err != nil {
++			return nil, fmt.Errorf("decode Set elem: %w", err)
++		}
++		return tftypes.Set{ElementType: et}, nil
++	case "map":
++		et, err := decodeTFType(head.E)
++		if err != nil {
++			return nil, fmt.Errorf("decode Map elem: %w", err)
++		}
++		return tftypes.Map{ElementType: et}, nil
++	case "tuple":
++		elems := make([]tftypes.Type, len(head.Elems))
++		for i, e := range head.Elems {
++			et, err := decodeTFType(e)
++			if err != nil {
++				return nil, fmt.Errorf("decode Tuple[%d]: %w", i, err)
++			}
++			elems[i] = et
++		}
++		return tftypes.Tuple{ElementTypes: elems}, nil
++	case "obj":
++		attrs := map[string]tftypes.Type{}
++		for k, v := range head.Attrs {
++			at, err := decodeTFType(v)
++			if err != nil {
++				return nil, fmt.Errorf("decode Object attr %q: %w", k, err)
++			}
++			attrs[k] = at
++		}
++		opt := map[string]struct{}{}
++		for _, k := range head.Opt {
++			opt[k] = struct{}{}
++		}
++		o := tftypes.Object{AttributeTypes: attrs}
++		if len(opt) > 0 {
++			o.OptionalAttributes = opt
++		}
++		return o, nil
++	}
++	return nil, fmt.Errorf("decodeTFType: unknown kind %q", head.K)
++}
+diff --git a/manifest/provider/clients.go b/manifest/provider/clients.go
+index 0924497..9f2fb1a 100644
+--- a/manifest/provider/clients.go
++++ b/manifest/provider/clients.go
+@@ -13,11 +13,13 @@ import (
+ 	"path/filepath"
+ 	"time"
+ 
++	"github.com/hashicorp/terraform-plugin-go/tftypes"
+ 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
+ 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/api/meta"
++	"k8s.io/apimachinery/pkg/runtime/schema"
+ 	"k8s.io/client-go/discovery"
+ 	"k8s.io/client-go/discovery/cached/memory"
+ 	"k8s.io/client-go/dynamic"
+@@ -28,6 +30,77 @@ import (
+ 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+ )
+ 
++// bypassFoundry implements openapi.Foundry by returning a generic Kubernetes object
++// shape — apiVersion/kind as String, metadata as Object with the standard subset, and
++// spec/status as DynamicPseudoType. This satisfies type assertions like t.(tftypes.Object)
++// inside the provider while still skipping the /openapi/v2 fetch (~10 MB transfer,
++// 15-17 s under load against a parent DKP cluster). Acceptable for dhctl bootstrap where
++// manifests are well-known and validated upstream; downstream schema-driven validation
++// is loose by design.
++//
++// Activated via KUBE_PROVIDER_SKIP_OPENAPI=1.
++type bypassFoundry struct{}
++
++func bypassMetadataType() tftypes.Type {
++	mapStr := tftypes.Map{ElementType: tftypes.String}
++	return tftypes.Object{
++		AttributeTypes: map[string]tftypes.Type{
++			"name":              tftypes.String,
++			"generateName":      tftypes.String,
++			"namespace":         tftypes.String,
++			"labels":            mapStr,
++			"annotations":       mapStr,
++			"finalizers":        tftypes.List{ElementType: tftypes.String},
++			"ownerReferences":   tftypes.DynamicPseudoType,
++			"resourceVersion":   tftypes.String,
++			"uid":               tftypes.String,
++			"generation":        tftypes.Number,
++			"creationTimestamp": tftypes.String,
++		},
++	}
++}
++
++func (bypassFoundry) GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, map[string]string, error) {
++	return tftypes.Object{
++		AttributeTypes: map[string]tftypes.Type{
++			"apiVersion": tftypes.String,
++			"kind":       tftypes.String,
++			"metadata":   bypassMetadataType(),
++			"spec":       tftypes.DynamicPseudoType,
++			"status":     tftypes.DynamicPseudoType,
++			"data":       tftypes.DynamicPseudoType,
++			"stringData": tftypes.DynamicPseudoType,
++			"type":       tftypes.String,
++		},
++	}, map[string]string{}, nil
++}
++
++func skipOpenAPI() bool {
++	v := os.Getenv("KUBE_PROVIDER_SKIP_OPENAPI")
++	switch v {
++	case "1", "true", "yes", "on":
++		return true
++	default:
++		return false
++	}
++}
++
++// useV3OpenAPI tells whether to use the lazy per-group /openapi/v3 path.
++// This is the Deckhouse default — the monolithic /openapi/v2 fetch is ~10 MB
++// and takes 12-17 s on populated parent DKP clusters, while per-group v3 docs
++// are ~100 KB each and pulled only when first referenced. Opt out by setting
++// KUBE_PROVIDER_OPENAPI=v2 (e.g. for clusters whose kube-apiserver is older
++// than the v3 GA release in k8s 1.27).
++func useV3OpenAPI() bool {
++	v := os.Getenv("KUBE_PROVIDER_OPENAPI")
++	switch v {
++	case "v2", "V2", "legacy", "monolithic":
++		return false
++	default:
++		return true
++	}
++}
++
+ // keys into the global state storage
+ const (
+ 	OAPIFoundry string = "OPENAPIFOUNDRY"
+@@ -96,6 +169,21 @@ func (ps *RawProviderServer) getOAPIv2Foundry() (openapi.Foundry, error) {
+ 			return nil, fmt.Errorf("failed get OpenAPI spec: %s", err)
+ 		}
+ 
++		// Deckhouse patch: KUBE_PROVIDER_SKIP_OPENAPI bypass — return DynamicPseudoType
++		// foundry without hitting the apiserver at all. Saves 15-17 s per tofu plan.
++		if skipOpenAPI() {
++			return bypassFoundry{}, nil
++		}
++
++		// Deckhouse patch: default to lazy per-group /openapi/v3 fetches
++		// (typically <1 MB per group, fetched only on first reference) instead of
++		// the monolithic ~10 MB /openapi/v2 download. Saves 12-17 s on first
++		// plan for clusters where v3 is supported (kube-apiserver >= 1.27 GA).
++		// Setting KUBE_PROVIDER_OPENAPI=v2 forces the legacy v2 path below.
++		if useV3OpenAPI() {
++			return openapi.NewMultiV3Foundry(rc), nil
++		}
++
+ 		cachePath, ttl, cacheEnabled := openAPICachePathAndTTL(ps.clientConfig)
+ 		if cacheEnabled {
+ 			if data := readFreshOpenAPICache(cachePath, ttl); data != nil {
+diff --git a/manifest/provider/resource.go b/manifest/provider/resource.go
+index 86b5ce2..b342216 100644
+--- a/manifest/provider/resource.go
++++ b/manifest/provider/resource.go
+@@ -90,10 +90,27 @@ func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.G
+ 	if err != nil {
+ 		return nil, hints, fmt.Errorf("cannot get OpenAPI foundry: %s", err)
+ 	}
+-	// check if GVK is from a CRD
+-	crdSchema, err := ps.lookUpGVKinCRDs(ctx, gvk)
+-	if err != nil {
+-		return nil, hints, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
++
++	// Deckhouse patch: when MultiV3Foundry is active, every GVK (native + CRD) is
++	// resolvable via /openapi/v3/apis/<group>/<version>. Skip the CRD list (which
++	// LISTs every CRD in the cluster, ~16 s on a populated parent DKP) and use v3
++	// directly. If v3 doesn't have the GVK we fall back to the original CRD path.
++	if _, isV3 := oapi.(*openapi.MultiV3Foundry); isV3 {
++		v3Type, v3Hints, v3Err := oapi.GetTypeByGVK(gvk)
++		if v3Err == nil {
++			tsch = v3Type
++			hints = v3Hints
++		}
++		// On error: fall through to CRD path (legacy CRDs without structural schema).
++	}
++
++	// check if GVK is from a CRD (skipped when v3 already produced a type)
++	var crdSchema interface{}
++	if tsch == nil {
++		crdSchema, err = ps.lookUpGVKinCRDs(ctx, gvk)
++		if err != nil {
++			return nil, hints, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
++		}
+ 	}
+ 	if crdSchema != nil {
+ 		js, err := json.Marshal(openapi.SchemaToSpec("", crdSchema.(map[string]interface{})))

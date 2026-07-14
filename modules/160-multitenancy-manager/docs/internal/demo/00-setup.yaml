@@ -1,0 +1,46 @@
+# Project + availability policy for the demo. The GrantableClusterResourceDefinition registrations and
+# their GrantableClusterResourceReference paths (storageclasses, clusterissuers, loadbalancerclasses,
+# clusterroles) ship with the module. Object quota is delegated to Kubernetes ResourceQuota.
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: demo
+spec:
+  projectTemplateName: default
+  parameters:
+    administrators:
+      - subject: Group
+        name: demo-admins
+    resourceQuota:
+      requests:
+        cpu: "2"
+        memory: 4Gi
+      limits:
+        cpu: "4"
+        memory: 8Gi
+---
+# Availability: what each project may reference. clusterroles is available by default from its
+# GrantableClusterResourceDefinition (use + user-authz roles), so it is not listed here.
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: demo-grant
+spec:
+  projectSelector:
+    matchLabels:
+      projects.deckhouse.io/project: demo
+  resources:
+    # An allow-list restricts the resource to it (baseline None is inferred); set availabilityDefault
+    # explicitly only to flip the baseline without a list (All to open fully, None to lock down).
+    - resourceName: storageclasses
+      allowed:
+        - local
+      default: local
+    - resourceName: clusterissuers
+      allowed:
+        - selfsigned
+      default: selfsigned
+    - resourceName: loadbalancerclasses
+      allowed:
+        - internal

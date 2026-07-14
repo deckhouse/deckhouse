@@ -17,10 +17,14 @@ limitations under the License.
 package controlplaneoperation
 
 import (
+	"errors"
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -28,60 +32,62 @@ import (
 )
 
 // observeCertExpirationsForStaticPod reads leaf cert and kubeconfig client cert expirations for one static pod component.
-func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, kubeconfigDir string, logger *log.Logger) (controlplanev1alpha1.ObservedComponentState, bool) {
+func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, kubeconfigDir string, logger *log.Logger) (controlplanev1alpha1.ObservedComponentState, bool, error) {
 	if !component.IsStaticPodComponent() {
-		return controlplanev1alpha1.ObservedComponentState{}, false
+		return controlplanev1alpha1.ObservedComponentState{}, false, nil
 	}
 	deps := componentDeps(component)
 
 	certExpiry := make(map[string]metav1.Time)
+	var readErrs []error
 
 	if leafNames := deps.leafCertFiles(); len(leafNames) > 0 {
-		expirations, err := pki.ListCertificateExpirations(
+		report, err := pki.ListCertificateExpirations(
 			pki.WithCertificatesDir(constants.KubernetesPkiPath),
 			pki.WithLeafCertificates(leafNames...),
-			pki.WithIgnoreReadErrors(),
 		)
-		for _, e := range joinedErrors(err) {
-			logger.Warn("cannot read cert expiration", log.Err(e))
+		if err != nil {
+			logger.Warn("cannot list cert expirations", "error", err)
+			readErrs = append(readErrs, err)
 		}
-		for _, exp := range expirations {
-			certExpiry[exp.Name+".crt"] = metav1.NewTime(exp.NotAfter)
+		for _, e := range report.Entries {
+			if e.Err != nil {
+				logger.Warn("cannot read cert expiration", "name", e.Name, "path", e.Path, "error", e.Err)
+				readErrs = append(readErrs, fmt.Errorf("cert %q: %w", e.Name, e.Err))
+				continue
+			}
+			certExpiry[e.Name+".crt"] = metav1.NewTime(e.NotAfter)
 		}
 	}
 
 	if len(deps.KubeconfigFiles) > 0 {
-		expirations, err := kubeconfig.ListClientCertificateExpirations(
+		report := kubeconfig.ListClientCertificateExpirations(
 			kubeconfig.WithKubeconfigDir(kubeconfigDir),
 			kubeconfig.WithFiles(deps.KubeconfigFiles...),
-			kubeconfig.WithIgnoreReadErrors(),
 		)
-		for _, e := range joinedErrors(err) {
-			logger.Warn("cannot read kubeconfig cert expiration", log.Err(e))
-		}
-		for _, exp := range expirations {
-			certExpiry[string(exp.File)] = metav1.NewTime(exp.NotAfter)
+		for _, e := range report.Entries {
+			if e.Err != nil {
+				logger.Warn("cannot read kubeconfig cert expiration", "file", e.File, "path", e.Path, "error", e.Err)
+				readErrs = append(readErrs, fmt.Errorf("kubeconfig %q: %w", e.File, e.Err))
+				continue
+			}
+			certExpiry[string(e.File)] = metav1.NewTime(e.NotAfter)
 		}
 	}
 
-	if len(certExpiry) == 0 {
-		return controlplanev1alpha1.ObservedComponentState{}, true
+	state := controlplanev1alpha1.ObservedComponentState{}
+	if len(certExpiry) > 0 {
+		state.CertificatesExpirationTime = certExpiry
 	}
-	return controlplanev1alpha1.ObservedComponentState{
-		CertificatesExpirationDate: certExpiry,
-	}, true
+	return state, true, errors.Join(readErrs...)
 }
 
-// joinedErrors unwraps an errors.Join result into individual errors. If err is
-// nil it returns nil; if err is a plain (non-joined) error it is returned as a
-// single-element slice.
-func joinedErrors(err error) []error {
-	if err == nil {
-		return nil
+// observeSignatureExpiration reads the active signature keys expiry from disk.
+// Returns an error when the key files are missing or unreadable
+func observeSignatureExpiration(pkiDir string) (metav1.Time, error) {
+	exp, err := signature.ActiveKeyExpiration(pkiDir)
+	if err != nil {
+		return metav1.Time{}, err
 	}
-	type multiErr interface{ Unwrap() []error }
-	if me, ok := err.(multiErr); ok {
-		return me.Unwrap()
-	}
-	return []error{err}
+	return metav1.NewTime(exp), nil
 }

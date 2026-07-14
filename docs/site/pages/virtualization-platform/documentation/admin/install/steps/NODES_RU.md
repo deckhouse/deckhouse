@@ -128,11 +128,14 @@ d8 k get no
 
 {% offtopic title="Пример вывода..." %}
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME            STATUS   ROLES                  AGE    VERSION
 master-0        Ready    control-plane,master   40m    v1.29.10
 dvp-worker-1    Ready    worker                 3m     v1.29.10
 dvp-worker-2    Ready    worker                 3m     v1.29.10
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endofftopic %}

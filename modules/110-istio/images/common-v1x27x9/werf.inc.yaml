@@ -1,0 +1,55 @@
+{{- if ne $.Env "CSE" }}
+---
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-27" $ ) }}
+{{- $kialiVersion := printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-27" $ )) }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/istio/istio.git
+  tag: {{ $istioVersion }}
+  add: /
+  to: /src/istio
+  excludePaths:
+  - samples
+- url: {{ .SOURCE_REPO }}/istio/kiali.git
+  tag: {{ $kialiVersion }}
+  add: /
+  to: /src/kiali
+shell:
+  install:
+  # istio
+  - cd /src/istio/
+  - git apply --verbose /patches/001-istio-gomod_gosum.patch
+  - git apply --verbose /patches/002-istio-multicluster-regenerate-token-timeout.patch
+  # kiali
+  - cd /src/kiali/
+  - git apply --verbose /patches/001-kiali-gomod_gosum.patch
+  - git apply --verbose /patches/002-kiali-logout.patch
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-kiali-frontend-build-artifact
+from: {{ index $.Images "builder/node-alpine-22.16" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/kiali/frontend
+  to: /src/kiali/frontend
+  before: install
+shell:
+  install:
+  - cd /src/kiali/frontend
+  {{- if .DistroPackagesProxy }}
+  - sed -i 's|https://registry.yarnpkg.com|http://{{ $.DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
+  - sed -i 's|https://registry.npmjs.org|http://{{ $.DistroPackagesProxy }}/repository/npmjs|g' yarn.lock
+  {{- end }}
+  - export CYPRESS_INSTALL_BINARY=0
+  - yarn install --frozen-lockfile
+  - KIALI_ENV=production yarn run build
+  - rm -rf node_modules
+{{- end }}

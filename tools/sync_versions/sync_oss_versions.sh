@@ -154,6 +154,8 @@ check_requirements() {
     exit 1
   fi
 
+  REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
+
   SOURCE_OSS_FILE="${REPO_ROOT}/${SOURCE_MODULE}/oss.yaml"
   TARGET_OSS_FILE="${REPO_ROOT}/${TARGET_MODULE}/oss.yaml"
 
@@ -206,14 +208,15 @@ sync_dependency_versions() {
   fi
 
   if [[ "$versions_count" != "0" ]]; then
-    yq e -i "
-      (.[] | select(.id == \"$TARGET_ID\")).versions = (
-        load(\"$SOURCE_OSS_FILE\")[] |
-        select(.id == \"$SOURCE_ID\") |
-        .versions
-      ) |
+    local tmp
+    tmp="$(mktemp)"
+    yq ea "
+      (select(fileIndex == 1) | .[] | select(.id == \"$SOURCE_ID\") | .versions) as \$v |
+      select(fileIndex == 0) |
+      (.[] | select(.id == \"$TARGET_ID\")).versions = \$v |
       del((.[] | select(.id == \"$TARGET_ID\")).version)
-    " "$TARGET_OSS_FILE"
+    " "$TARGET_OSS_FILE" "$SOURCE_OSS_FILE" > "$tmp"
+    mv "$tmp" "$TARGET_OSS_FILE"
 
     log_info "updated versions for dependency '$TARGET_ID' in '$TARGET_OSS_FILE'"
     return 0

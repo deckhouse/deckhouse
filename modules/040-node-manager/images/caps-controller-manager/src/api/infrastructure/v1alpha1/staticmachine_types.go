@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -77,15 +77,15 @@ type StaticMachineStatus struct {
 	Initialization StaticMachineInitializationStatus `json:"initialization,omitempty,omitzero"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:metadata:labels="heritage=deckhouse"
-//+kubebuilder:metadata:labels="module=node-manager"
-//+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
-//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta2=v1alpha1"
-//+kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Machine ready status"
-//+kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="Static instance ID"
-//+kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this StaticMachine"
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="module=node-manager"
+// +kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
+// +kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta2=v1alpha1"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Machine ready status"
+// +kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="Static instance ID"
+// +kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this StaticMachine"
 
 // StaticMachine is the Schema for the Cluster API Provider Static.
 type StaticMachine struct {
@@ -96,7 +96,7 @@ type StaticMachine struct {
 	Status StaticMachineStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // StaticMachineList contains a list of StaticMachine.
 type StaticMachineList struct {

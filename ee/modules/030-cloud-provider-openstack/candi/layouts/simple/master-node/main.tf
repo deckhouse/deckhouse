@@ -91,7 +91,7 @@ resource "openstack_compute_instance_v2" "master" {
   }
 
   dynamic "block_device" {
-    for_each = local.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v3.master[0])
+    for_each = local.root_disk_size == "" ? [] : tolist([openstack_blockstorage_volume_v3.master[0]])
     content {
       uuid = block_device.value["id"]
       boot_index = 0

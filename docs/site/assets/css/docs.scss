@@ -22,14 +22,24 @@
   transition: top .15s ease-in-out;
 
   &:has(div.breadcrumbs__left) {
-    margin: 25px 0;
+    padding: 15px 0;
+    margin: 0;
+
+    @include breakpoints.max-w(l) {
+      padding: 0;
+      margin-top: 24px;
+    }
+
+    @media screen and (width < 480px) {
+      gap: 20px;
+    }
   }
 
   @include breakpoints.min-w(l) {
     position: sticky;
   }
 
-  @include breakpoints.max-w(xs) {
+  @media screen and (width < 480px) {
     flex-direction: column;
     align-items: start;
     margin: 0 0 45px;
@@ -111,13 +121,16 @@
     padding-bottom: 25px;
     gap: 25px;
 
+    @include breakpoints.max-w(xxl) {
+      margin-right: 55px;
+    }
+
     @include breakpoints.max-w(xl) {
       min-width: 250px;
     }
 
     @include breakpoints.max-w(l) {
-      min-width: 297px;
-      margin: 0;
+      margin-right: 0;
     }
 
     @include breakpoints.max-w(s) {
@@ -126,7 +139,7 @@
       gap: 10px;
     }
 
-    @include breakpoints.max-w(xs) {
+    @media screen and (width < 480px) {
       min-width: 100%;
       gap: 25px;
       justify-content: space-between;
@@ -147,33 +160,24 @@
 
   .searchV3 {
     margin-left: auto;
-    width: 297px;
-    min-width: 297px;
-    margin-right: 28px;
+    width: 320px;
+    min-width: 320px;
 
     @include breakpoints.max-w(xl) {
-      width: 250px;
-      min-width: 250px;
+      width: 260px;
+      min-width: 260px;
     }
 
     @include breakpoints.max-w(l) {
-      margin-right: 0;
       z-index: 20;
     }
 
     @include breakpoints.max-w(m) {
-      width: 215px;
-      min-width: 215px;
+      width: 220px;
+      min-width: 220px;
     }
 
-    @include breakpoints.max-w(s) {
-      width: 180px;
-      min-width: 180px;
-      margin-left: 0;
-    }
-
-    @include breakpoints.max-w(xs) {
-      justify-content: space-between;
+    @media screen and (width < 480px) {
       width: 100%;
       min-width: 100%;
     }
@@ -187,6 +191,14 @@
     justify-content: space-between;
     margin: 25px 0 40px;
     background-color: #fff;
+
+    @include breakpoints.max-w(m) {
+      margin-bottom: 25px;
+    }
+
+    &__tile {
+      display: none;
+    }
 }
 
 .breadcrumbs__left {
@@ -194,15 +206,15 @@
     margin-right: 64px;
 
     @include breakpoints.max-w(xxl) {
-      margin-right: 54px;
+      margin-right: 55px;
     }
 
     @include breakpoints.max-w(xl) {
-      width: 250px;
+      margin-right: 7px;
     }
 
-    @media screen and (width < 1100px) {
-      margin-right: 38px;
+    @include breakpoints.max-w(l) {
+      margin-right: 0px;
     }
 
     &--link {
@@ -215,6 +227,14 @@
       border: 1px solid #bbb;
       cursor: pointer;
       text-decoration: none;
+
+      @include breakpoints.max-w(m) {
+        height: 35px;
+      }
+
+      @include breakpoints.max-w(s) {
+        height: 30px;
+      }
     }
 
     &--descr {
@@ -223,6 +243,14 @@
       line-height: 24px;
       letter-spacing: 1%;
       color: #0D69F2;
+
+      @include breakpoints.max-w(m) {
+        font-size: 14px;
+      }
+
+      @include breakpoints.max-w(s) {
+        font-size: 12px;
+      }
     }
 }
 
@@ -550,16 +578,15 @@
   display: flex;
   gap: 64px;
 
-  @media screen and (width < 1500px) {
+  @include breakpoints.max-w(xxl) {
     gap: 54px;
   }
 
   &__tile {
-      @media screen and (width < 1100px) {
-          gap: 35px;
+      @include breakpoints.max-w(l) {
+        flex-direction: column;
+        gap: 15px;
       }
-
-
   }
 }
 
@@ -577,6 +604,18 @@
     width: 250px;
     min-width: 250px;
   }
+
+  &--tile {
+    @include breakpoints.max-w(l) {
+      width: 320px;
+      min-width: 320px;
+    }
+
+    @include breakpoints.max-w(m) {
+      width: 100%;
+      min-width: 100%;
+    }
+  }
 }
 
 .layout-sidebar:has(div.docs) {
@@ -588,15 +627,17 @@
   }
 }
 
-.layout-sidebar__sidebar::after,
-.layout-sidebar__sidebar_right::after {
-  position: absolute;
-  bottom: 0;
-  content: '';
-  display: block;
-  width: 100%;
-  height: 25px;
-  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(255,255,255,1) 65%, rgba(255,255,255,1) 100%);
+@include breakpoints.min-w(l) {
+  .layout-sidebar__sidebar::after,
+  .layout-sidebar__sidebar_right::after {
+    position: absolute;
+    bottom: 0;
+    content: '';
+    display: block;
+    width: 100%;
+    height: 25px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(255,255,255,1) 65%, rgba(255,255,255,1) 100%);
+  }
 }
 
 .sidebar__wrapper-inner {
@@ -686,13 +727,19 @@
     }
 
     .selected__filters {
-      margin-bottom: 28px;
+      &:has(div.selected__filter--container) {
+        margin: 24px 0;
+      }
 
       &--list {
         display: flex;
         align-items: flex-start;
         flex-wrap: wrap;
         gap: 12px;
+
+        @include breakpoints.max-w(s) {
+          gap: 10px;
+        }
 
         .selected__filter--container {
           display: flex;
@@ -710,6 +757,11 @@
           line-height: 24px;
           letter-spacing: 0.3px;
 
+          @include breakpoints.max-w(s) {
+            padding: 4px 8px;
+            font-size: 12px;
+          }
+
           .selected__filter {
             overflow: hidden;
             white-space: nowrap;
@@ -717,8 +769,8 @@
           }
 
           .remove__filter {
-            width: 16px;
-            height: 16px;
+            min-width: 16px;
+            min-height: 16px;
             background-image: url(/images/close-selected-filter.svg);
             background-position: center;
             background-repeat: no-repeat;
@@ -742,6 +794,12 @@
         background-position: center;
         background-repeat: no-repeat;
         cursor: pointer;
+
+        @include breakpoints.max-w(s) {
+          width: 34px;
+          height: 34px;
+          padding: 4px 8px;
+        }
       }
     }
 
@@ -1128,6 +1186,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs ul p, .docs ol p {
     font-size: 14px;
+    line-height: 1.5;
 
     @include breakpoints.max-w(s) {
       font-size: 13px;
@@ -1187,7 +1246,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
   border-radius: 6px;
   position: absolute;
   left: -15px;
-  top: 7px;
+  top: 8px;
 
   @include breakpoints.max-w(xs) {
     width: 5px;
@@ -1213,12 +1272,32 @@ a.comparison-table__module-proprietaryOkmeter::after {
   }
 
   @include breakpoints.max-w(l) {
-    scroll-margin-top: 50px;
+    scroll-margin-top: 45px;
+  }
+
+  @include breakpoints.max-w(xxs) {
+    scroll-margin-top: 65px;
   }
 }
 
 .layout-sidebar__content--tile :target {
   scroll-margin-top: 90px;
+}
+
+.layout-sidebar__content--guides :target {
+  scroll-margin-top: 50px;
+
+  @media (max-width: 1225px) {
+    scroll-margin-top: 65px;
+  }
+
+  @include breakpoints.max-w(l) {
+    scroll-margin-top: 40px;
+  }
+
+  @include breakpoints.max-w(xxs) {
+    scroll-margin-top: 70px;
+  }
 }
 
 .docs ul.resources li::before {
@@ -1310,7 +1389,9 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
+  &:not(.tabs__item) {
     padding-bottom: 0;
+  }
 }
 
 .docs .resources ul li .resources__prop_description + p,
@@ -1427,8 +1508,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs:not(.docs--modules) h4,
 .docs:not(.docs--modules) h5,
 .docs:not(.docs--modules) h6 {
+    position: relative;
     margin-bottom: 30px;
     margin-top: 30px;
+    padding-right: 21px;
 
     @include breakpoints.max-w(l) {
         margin-bottom: 20px;
@@ -1438,6 +1521,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     @include breakpoints.max-w(xs) {
       margin-bottom: 15px;
       margin-top: 15px;
+    }
+
+    a.anchorjs-link {
+      position: absolute;
+      bottom: 7px;
     }
 }
 
@@ -1509,7 +1597,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs h3 {
-  width: max-content;
   max-width: 100%;
   font-size: 21px;
   font-weight: 600;
@@ -1659,6 +1746,22 @@ a.comparison-table__module-proprietaryOkmeter::after {
       @include breakpoints.max-w(xl) {
         padding-right: 50px;
       }
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 36px;
+        background-color: #F6F7F8;
+        border-right: 1px solid #C4CAD4;
+        color: #A7B0BE;
+
+        @include breakpoints.max-w(xl) {
+          width: 35px;
+        }
+      }
     }
 }
 
@@ -1684,22 +1787,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
     @include breakpoints.max-w(xs) {
       font-size: 11px;
-    }
-
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 36px;
-        background-color: #F6F7F8;
-        border-right: 1px solid #C4CAD4;
-        color: #A7B0BE;
-
-        @include breakpoints.max-w(xl) {
-          width: 35px;
-        }
     }
 
     &:has(.language-tree) {
@@ -1806,6 +1893,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
         .table__small {
           box-shadow: none;
+        }
+
+        img {
+          max-width: max-content;
         }
     }
 }
@@ -2010,6 +2101,16 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs img {
     max-width: 100%;
+
+    &.image-scheme {
+      @include breakpoints.min-w(m) {
+        max-width: 80%;
+      }
+
+      @include breakpoints.min-w(l) {
+        max-width: 60%;
+      }
+    }
 }
 
 .docs .clickable-header {
@@ -2023,10 +2124,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-weight: normal;
     line-height: 1;
     padding-left: 0.375em;
-
-    &::after {
-      display: inline-block;
-    }
 }
 
 .docs .btn {
@@ -2195,6 +2292,31 @@ ul .resources__prop_name.deprecated {
 }
 
 .pdf-slider {
+  &__small {
+    .pdf-slider__canvas {
+      @include breakpoints.min-w(m) {
+        width: 80% !important;
+        max-width: 80%;
+        height: 100% !important;
+      }
+
+      @include breakpoints.min-w(l) {
+        width: 70% !important;
+        max-width: 70%;
+      }
+    }
+
+    .pdf-slider__nav {
+      @include breakpoints.min-w(m) {
+        max-width: calc(80% + 2px);
+      }
+      
+      @include breakpoints.min-w(l) {
+        max-width: calc(70% + 2px);
+      }
+    }
+  }
+
   &__canvas {
     border: 1px solid rgba(241, 243, 244, .949);
   }
@@ -2403,7 +2525,7 @@ select#contact-select {
     margin: 0;
     padding: 0;
 
-    @media screen and (width < 1500px) {
+    @include breakpoints.max-w(xxl) {
       font-size: 14px;
     }
 }
@@ -2575,10 +2697,6 @@ select#contact-select {
 .tippy-box {
   min-width: 255px;
 
-  &:has(.tippy-content) {
-      min-width: 0;
-  }
-
   &:has(.icon--copy) {
     min-width: 0;
   }
@@ -2640,6 +2758,14 @@ select#contact-select {
 
     svg {
       transform: rotate(180deg);
+    }
+  }
+
+  &[data-placement^='top'] .tippy-svg-arrow {
+    bottom: -15px;
+
+    svg {
+      transform: rotate(90deg);
     }
   }
 

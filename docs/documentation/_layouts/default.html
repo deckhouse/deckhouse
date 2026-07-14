@@ -7,7 +7,7 @@
   {% else %}
   <meta name="page:versioned" content="true">
   {% endif %}
-  <meta name="page:url:relative" content="./{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}">
+  <meta name="page:url:relative" content="./{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' | regex_replace_once: '/index.html$', '/' }}">
   {%- if page.anchors_disabled == true %}
     <script>
         window.anchors_disabled = true;

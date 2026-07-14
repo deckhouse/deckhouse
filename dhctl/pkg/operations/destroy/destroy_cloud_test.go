@@ -15,12 +15,14 @@
 package destroy
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math/rand"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
@@ -48,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var rootTmpDirCloud = path.Join(os.TempDir(), "dhctl-test-cloud-destroy")
@@ -55,12 +57,12 @@ var rootTmpDirCloud = path.Join(os.TempDir(), "dhctl-test-cloud-destroy")
 func TestCloudDestroy(t *testing.T) {
 	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	defer func() {
-		logger := log.GetDefaultLogger()
+		logger := dhlog.Discard()
 		if err := os.RemoveAll(rootTmpDirCloud); err != nil {
-			logger.LogErrorF("Couldn't remove temp dir '%s': %v\n", rootTmpDirCloud, err)
+			logger.Error(fmt.Sprintf("Couldn't remove temp dir '%s': %v\n", rootTmpDirCloud, err))
 			return
 		}
-		logger.LogInfoF("Tmp dir '%s' removed\n", rootTmpDirCloud)
+		logger.Info(fmt.Sprintf("Tmp dir '%s' removed\n", rootTmpDirCloud))
 	}()
 
 	t.Run("no commander", func(t *testing.T) {
@@ -357,7 +359,7 @@ func TestCloudDestroy(t *testing.T) {
 
 				tt.before(t, tst)
 
-				err := tst.destroyer.DestroyCluster(context.TODO(), true)
+				err := tst.destroyer.DestroyCluster(t.Context(), true)
 				assertClusterDestroyError(t, tt.destroyClusterShouldReturnsError, err)
 
 				tst.assertStateCache(t, tt.stateCacheShouldEmpty)
@@ -551,7 +553,7 @@ func TestCloudDestroy(t *testing.T) {
 
 				tt.before(t, tst)
 
-				err := tst.destroyer.DestroyCluster(context.TODO(), true)
+				err := tst.destroyer.DestroyCluster(t.Context(), true)
 				assertClusterDestroyError(t, tt.destroyClusterShouldReturnsError, err)
 
 				tst.assertStateCache(t, tt.stateCacheShouldEmpty)
@@ -660,27 +662,23 @@ func (ts *testCloudDestroyTest) assertConvergeLockSetInCache(t *testing.T, locke
 func (ts *testCloudDestroyTest) assertDestroyLocked(t *testing.T, locked bool) {
 	require.False(t, govalue.IsNil(ts.kubeCl))
 
-	lockConfig := lock.GetLockLeaseConfig("not necessary", "")
-	lockedInCluster, err := lock.IsConvergeLocked(context.TODO(), kubernetes.NewSimpleKubeClientGetter(ts.kubeCl), lockConfig, false)
+	lockConfig := lock.GetLockLeaseConfig(t.Context(), "not necessary", "")
+	lockedInCluster, err := lock.IsConvergeLocked(t.Context(), kubernetes.NewSimpleKubeClientGetter(ts.kubeCl), lockConfig, false)
 	require.NoError(t, err, "is locked should not be error")
 
 	require.Equal(t, locked, lockedInCluster, "should be locked or not")
 }
 
 func (ts *testCloudDestroyTest) assertSkipCheckCommanderUUID(t *testing.T, skip bool) {
-	require.False(t, govalue.IsNil(ts.logger))
+	require.False(t, govalue.IsNil(ts.logBuf))
 
-	match, err := ts.logger.FirstMatch(&log.Match{
-		Prefix: []string{"Check commander UUID skipped"},
-	})
-	require.NoError(t, err)
+	matched := strings.Contains(ts.logBuf.String(), "Check commander UUID skipped")
 
-	assert := require.Empty
 	if skip {
-		assert = require.NotEmpty
+		require.True(t, matched, "should skip commander UUID")
+	} else {
+		require.False(t, matched, "should not skip commander UUID")
 	}
-
-	assert(t, match, "should skip commander UUID or not")
 }
 
 func testCreateResourcesForCloud(t *testing.T, kubeCl *client.KubernetesClient) []testCreatedResource {
@@ -742,7 +740,7 @@ spec:
             node.deckhouse.io/type: CloudEphemeral
         spec: {}
 `)
-	_, err := kubeCl.Dynamic().Resource(sapcloud.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(context.TODO(), md, metav1.CreateOptions{})
+	_, err := kubeCl.Dynamic().Resource(sapcloud.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(t.Context(), md, metav1.CreateOptions{})
 	require.NoError(t, err)
 	createdResources = append(createdResources, testCreatedResource{
 		name: md.GetName(),
@@ -758,14 +756,15 @@ spec:
 }
 
 func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams) *testCloudDestroyTest {
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
+	var logBuf bytes.Buffer
+	logger := dhlog.NewBufferLogger(&logBuf)
 
 	stateCache := cache.NewTestCache()
 
 	kubeCl := testCreateFakeKubeClient()
 	kubeClProvider := newFakeKubeClientProvider(kubeCl)
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	clusterUUID := uuid.Must(uuid.NewRandom()).String()
 
@@ -785,7 +784,7 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		_, err := kubeCl.CoreV1().ConfigMaps(uuidCM.GetNamespace()).Create(ctx, uuidCM, metav1.CreateOptions{})
 		require.NoError(t, err, "commander uuid cm should create")
 		testAddCloudStatesToCache(t, stateCache, clusterUUID)
-		metaConfig, err = commander.ParseMetaConfig(ctx, stateCache, params.commanderModeParams, logger)
+		metaConfig, err = commander.ParseMetaConfig(ctx, stateCache, params.commanderModeParams)
 		require.NoError(t, err)
 	} else {
 		d8SystemNs := corev1.Namespace{
@@ -808,7 +807,6 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		commanderMode:   params.commanderMode,
 		commanderParams: params.commanderModeParams,
 		stateCache:      stateCache,
-		logger:          logger,
 		skipResources:   params.skipResources,
 		forceFromCache:  true,
 	}
@@ -827,10 +825,8 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		kubeProviderForInfraDestroyer = errorKubeProvider
 	}
 
-	loggerProvider := log.SimpleLoggerProvider(logger)
 	pipeline := phases.NewDummyDefaultPipelineProviderOpts(
 		phases.WithPipelineName("cloud destroy"),
-		phases.WithPipelineLoggerProvider(loggerProvider),
 	)()
 
 	phaseActionProvider := phases.NewPhaseActionProviderFromPipeline(pipeline)
@@ -843,7 +839,7 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 
 		State: d8State,
 
-		LoggerProvider:       loggerProvider,
+		Logger:               logger,
 		KubeProvider:         kubeClProvider,
 		PhasedActionProvider: phaseActionProvider,
 	})
@@ -852,11 +848,11 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 	tmpDir, err := fs.RandomTmpDirWithNRunes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)
 	require.NoError(t, err)
 
-	logger.LogInfoF("Tmp dir: '%s'\n", tmpDir)
+	logger.Info(fmt.Sprintf("Tmp dir: '%s'\n", tmpDir))
 
 	infraProvider := &infraDestroyerProvider{
 		stateCache:           stateCache,
-		loggerProvider:       loggerProvider,
+		logger:               logger,
 		kubeProvider:         kubeProviderForInfraDestroyer,
 		phasesActionProvider: phaseActionProvider,
 
@@ -882,6 +878,7 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 	tst := &testCloudDestroyTest{
 		baseTest: &baseTest{
 			logger:       logger,
+			logBuf:       &logBuf,
 			tmpDir:       tmpDir,
 			stateCache:   stateCache,
 			kubeProvider: kubeProviderForInfraDestroyer,

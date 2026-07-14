@@ -64,7 +64,8 @@ func (m *Module) GetModuleExclusiveGroup() *string {
 
 func (m *Module) GetConfirmationDisableReason() (string, bool) {
 	if m.def != nil && m.def.DisableOptions != nil {
-		return m.def.DisableOptions.Message, m.def.DisableOptions.Confirmation
+		// Message is the deprecated fallback, kept for modules not yet migrated to Messages.
+		return m.def.DisableOptions.Message, m.def.DisableOptions.Confirmation //nolint:staticcheck
 	}
 	return "", false
 }

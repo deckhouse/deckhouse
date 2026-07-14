@@ -42,6 +42,12 @@ The following preinstalled image formats are supported:
 - vmdk
 - vdi
 
+{% alert level="info" %}
+When migrating VMs from VMware, see the [migration guide](/products/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp.html).
+Disks from vSphere usually require guest OS preparation (for example, via virt-v2v).
+Importing a VMDK without preparation often causes problems when starting the VM.
+{% endalert %}
+
 Image files can also be compressed with one of the following compression algorithms: gz, xz.
 
 Once a share is created, the image type and size are automatically determined, and this information is reflected in the share status.
@@ -100,10 +106,13 @@ d8 k get vi ubuntu-24-04
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE   CDROM   PROGRESS   AGE
 ubuntu-24-04   Ready   false   100%       23h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 After creation the `VirtualImage` resource can be in the following states (phases):
 
@@ -126,6 +135,7 @@ d8 k get vi ubuntu-24-04 -w
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
 ubuntu-24-04   Provisioning   false              4s
@@ -136,6 +146,8 @@ ubuntu-24-04   Provisioning   false   100.0%     10s
 ubuntu-24-04   Provisioning   false   100.0%     16s
 ubuntu-24-04   Ready          false   100%       18s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The `VirtualImage` resource description provides additional information about the downloaded image:
 
@@ -184,10 +196,13 @@ d8 k get vi ubuntu-24-04-pvc
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
 ubuntu-24-04-pvc  Ready   false   100%       23h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in module settings.
 
@@ -208,49 +223,49 @@ How to create an image and store it in PVC in the web interface:
 
 An image stored in container registry has a certain format. Let's look at an example:
 
-First, download the image locally:
+1. Download the image locally:
 
-```bash
-curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
-```
+   ```bash
+   curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
+   ```
 
-Next, create a `Dockerfile` with the following contents:
+1. Create a `Dockerfile` with the following contents:
 
-```Dockerfile
-FROM scratch
-COPY ubuntu2204.img /disk/ubuntu2204.img
-```
+   ```Dockerfile
+   FROM scratch
+   COPY ubuntu2404.img /disk/ubuntu2404.img
+   ```
 
-Build the image and load it into the container registry. The example below uses docker.io as the container registry. you need to have a service account and a customized environment to run it.
+1. Build the container image. The example below uses [docker.com](https://www.docker.com/) as the container registry. You need an account on the service and a properly configured environment:
 
-```bash
-docker build -t docker.io/<username>/ubuntu2204:latest
-```
+   ```bash
+   docker build -t docker.io/<username>/ubuntu2404:latest
+   ```
 
-where `username` is the username specified when registering with docker.io.
+   where `username` is the username specified when registering with [docker.com](https://www.docker.com/).
 
-Load the created image into the container registry:
+1. Push the created image to the container registry:
 
-```bash
-docker push docker.io/<username>/ubuntu2204:latest
-```
+   ```bash
+   docker push docker.io/<username>/ubuntu2204:latest
+   ```
 
-To use this image, create a resource as an example:
+1. To use this image, create a resource as an example:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: VirtualImage
-metadata:
-  name: ubuntu-2204
-spec:
-  storage: ContainerRegistry
-  dataSource:
-    type: ContainerImage
-    containerImage:
-      image: docker.io/<username>/ubuntu2204:latest
-EOF
-```
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualImage
+   metadata:
+     name: ubuntu-2404
+   spec:
+     storage: ContainerRegistry
+     dataSource:
+       type: ContainerImage
+       containerImage:
+         image: docker.io/<username>/ubuntu2404:latest
+   EOF
+   ```
 
 How to create an image from Container Registry in the web interface:
 
@@ -260,7 +275,7 @@ How to create an image from Container Registry in the web interface:
 - Select "Upload data from container image" from the list.
 - In the form that opens, enter the image name in the "Image Name" field.
 - In the "Storage" field, select `ContainerRegistry`.
-- In the "Image in Container Registry" field, specify `docker.io/<username>/ubuntu2204:latest`.
+- In the "Image in Container Registry" field, specify `docker.io/<username>/ubuntu2404:latest`.
 - Click the "Create" button.
 - The image status is displayed at the top left, under the image name.
 
@@ -318,10 +333,13 @@ d8 k get vi some-image
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to upload an image from the command line in the web interface:
 

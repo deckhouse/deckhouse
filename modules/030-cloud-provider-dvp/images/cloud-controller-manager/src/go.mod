@@ -1,6 +1,6 @@
 module dvp-cloud-controller-manager
 
-go 1.25.8
+go 1.25.10
 
 replace dvp-common => ../../dvp-common
 

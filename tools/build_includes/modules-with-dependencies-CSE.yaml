@@ -63,6 +63,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/039-registry-packages-proxy/hooks
+  to: /deckhouse/modules/039-registry-packages-proxy/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/040-control-plane-manager/hooks
   to: /deckhouse/modules/040-control-plane-manager/hooks
   excludePaths:
@@ -151,56 +159,8 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/300-prometheus/hooks
-  to: /deckhouse/modules/300-prometheus/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/301-prometheus-metrics-adapter/hooks
-  to: /deckhouse/modules/301-prometheus-metrics-adapter/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler/hooks
   to: /deckhouse/modules/302-vertical-pod-autoscaler/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/340-monitoring-custom/hooks
-  to: /deckhouse/modules/340-monitoring-custom/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/340-monitoring-kubernetes/hooks
-  to: /deckhouse/modules/340-monitoring-kubernetes/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/340-monitoring-kubernetes/requirements
-  to: /deckhouse/modules/340-monitoring-kubernetes/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/340-monitoring-ping/hooks
-  to: /deckhouse/modules/340-monitoring-ping/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
@@ -215,56 +175,8 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/402-ingress-nginx/hooks
-  to: /deckhouse/modules/402-ingress-nginx/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/402-ingress-nginx/requirements
-  to: /deckhouse/modules/402-ingress-nginx/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/460-log-shipper/hooks
-  to: /deckhouse/modules/460-log-shipper/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/460-log-shipper/apis
-  to: /deckhouse/modules/460-log-shipper/apis
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/462-loki/hooks
-  to: /deckhouse/modules/462-loki/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/500-cilium-hubble/hooks
   to: /deckhouse/modules/500-cilium-hubble/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/500-upmeter/hooks
-  to: /deckhouse/modules/500-upmeter/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
@@ -319,14 +231,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se/modules/380-metallb/requirements
-  to: /deckhouse/modules/380-metallb/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/hooks/ee
   to: /deckhouse/modules/021-cni-cilium/hooks/ee
   excludePaths:
@@ -358,18 +262,13 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/300-prometheus/hooks/common_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/common_test.go
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller.go
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
   stageDependencies:
     install:
         - '**/*'

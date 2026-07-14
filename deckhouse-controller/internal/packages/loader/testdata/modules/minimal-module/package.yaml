@@ -1,3 +1,4 @@
+apiVersion: v1
+version: v0.1.0
 name: minimal-module
 type: Module
-version: v0.1.0

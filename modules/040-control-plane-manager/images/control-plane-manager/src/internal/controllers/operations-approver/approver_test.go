@@ -209,7 +209,8 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 func newOperation(name, node string, component controlplanev1alpha1.OperationComponent, approved bool) controlplanev1alpha1.ControlPlaneOperation {
 	return controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: constants.KubeSystemNamespace,
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey: node,
 			},

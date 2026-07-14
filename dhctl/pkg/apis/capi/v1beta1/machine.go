@@ -36,6 +36,7 @@ var (
 	MachineGVR           = schema.GroupVersionResource{Group: group, Version: groupVersion, Resource: machinesName}
 
 	listKindsToGVR = apis.ListKindToGVR{
+		"ClusterList":           ClusterGVR,
 		"MachineDeploymentList": MachineDeploymentGVR,
 		"MachineList":           MachineGVR,
 	}
@@ -70,6 +71,6 @@ func ListsGVRs() apis.ListKindToGVR {
 func APIResourcesList() *metav1.APIResourceList {
 	return &metav1.APIResourceList{
 		GroupVersion: GV.String(),
-		APIResources: []metav1.APIResource{MachineAPIResource, MachineDeploymentAPIResource},
+		APIResources: []metav1.APIResource{ClusterAPIResource, MachineAPIResource, MachineDeploymentAPIResource},
 	}
 }

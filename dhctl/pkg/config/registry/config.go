@@ -42,8 +42,8 @@ func errUnsupportedCRI(cri constant.CRIType) error {
 
 func errNonStaticClusterMode(mode constant.ModeType) error {
 	return fmt.Errorf(
-		"bootstrap with registry mode '%s' is supported only in static cluster. "+
-			"Please use one of the supported bootstrap modes for non-static cluster: %v",
+		"bootstrap with registry mode '%s' is supported only in a static cluster. "+
+			"Please use one of the supported bootstrap modes for a non-static cluster: %v",
 		mode,
 		[]constant.ModeType{
 			constant.ModeUnmanaged,

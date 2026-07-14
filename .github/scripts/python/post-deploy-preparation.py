@@ -61,7 +61,7 @@ def collect_released_versions():
 
     github = GhApi(owner='deckhouse', repo='deckhouse', token=GITHUB_TOKEN)
 
-    editions_reference = [ 'BE', 'CE', 'EE', 'FE', 'SE', 'SE-plus', 'CSE' ]
+    editions_reference = [ 'BE', 'CE', 'EE', 'FE', 'SE', 'SE-plus']
     channels = {
         'alpha': None,
         'beta': None,

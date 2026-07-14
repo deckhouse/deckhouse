@@ -14,6 +14,8 @@
 
 package plan
 
+import "slices"
+
 type Action string
 
 const (
@@ -38,9 +40,9 @@ type DestructiveChanges struct {
 }
 
 type ValueChange struct {
-	CurrentValue interface{} `json:"current_value,omitempty"`
-	NextValue    interface{} `json:"next_value,omitempty"`
-	Type         string      `json:"type,omitempty"`
+	CurrentValue any    `json:"current_value,omitempty"`
+	NextValue    any    `json:"next_value,omitempty"`
+	Type         string `json:"type,omitempty"`
 }
 
 type InfrastructurePlan struct {
@@ -56,16 +58,11 @@ type ResourceChange struct {
 
 func (r *ResourceChange) HasAction(findAction Action) bool {
 	act := string(findAction)
-	for _, action := range r.Change.Actions {
-		if action == act {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Change.Actions, act)
 }
 
 type ChangeOp struct {
-	Actions []string               `json:"actions"`
-	Before  map[string]interface{} `json:"before,omitempty"`
-	After   map[string]interface{} `json:"after,omitempty"`
+	Actions []string       `json:"actions"`
+	Before  map[string]any `json:"before,omitempty"`
+	After   map[string]any `json:"after,omitempty"`
 }

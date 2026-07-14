@@ -55,6 +55,7 @@ d8 k get moduleconfigs
 
 {% offtopic title="Пример вывода..." %}
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get moduleconfigs
 NAME            ENABLED   VERSION   AGE     MESSAGE
@@ -64,6 +65,8 @@ global                    1         12h
 prometheus      true      2         12h
 upmeter         false     2         12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endofftopic %}
 

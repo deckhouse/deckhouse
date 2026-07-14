@@ -278,7 +278,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception/nginx: allow-privileged-true-container
+                  security.deckhouse.io/security-policy-exception.container.nginx: allow-privileged-true-container
                 name: allowed-by-container-exception-privileged-true
               spec:
                 containers:

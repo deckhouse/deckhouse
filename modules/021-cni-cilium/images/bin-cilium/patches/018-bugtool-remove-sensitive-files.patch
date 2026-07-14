@@ -1,0 +1,30 @@
+diff --git a/bugtool/cmd/root.go b/bugtool/cmd/root.go
+--- a/bugtool/cmd/root.go
++++ b/bugtool/cmd/root.go
+@@ -287,6 +287,8 @@ func runTool() {
+ 		defer printDisclaimer()
+ 		runAll(commands, cmdDir, k8sPods)
+ 
++		removeSensitiveFiles(cmdDir)
++
+ 		if excludeObjectFiles {
+ 			removeObjectFiles(cmdDir, k8sPods)
+ 		}
+@@ -437,6 +439,17 @@ func removeObjectFiles(cmdDir string, k8sPods []string) {
+ 	}
+ }
+ 
++// removeSensitiveFiles removes sensitive files (e.g. WireGuard private key files) from
++// the copied state directory.
++func removeSensitiveFiles(cmdDir string) {
++	matches, _ := filepath.Glob(filepath.Join(cmdDir, defaults.StateDir, "*.key"))
++	for _, m := range matches {
++		if err := os.Remove(m); err != nil {
++			fmt.Fprintf(os.Stderr, "Failed to remove sensitive file: %s\n", err)
++		}
++	}
++}
++
+ func execCommand(prompt string) ([]byte, error) {
+ 	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
+ 	defer cancel()

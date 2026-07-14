@@ -3,13 +3,13 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-{{- include "image mount points" . }}
 - add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint.sh
   to: /entrypoint.sh
   stageDependencies:
     setup:
     - '**/*'
 import:
+{{- include "image mount points" . }}
 - image: {{ .ModuleName }}/etcd-artifact
   add: /etcdctl
   to: /bin/etcdctl
@@ -21,6 +21,9 @@ import:
   add: /relocate
   to: /
   before: setup
+shell:
+  setup:
+  - set -e
 imageSpec:
   config:
     entrypoint: ["/entrypoint.sh"]

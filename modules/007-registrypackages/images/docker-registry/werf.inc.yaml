@@ -52,7 +52,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -65,8 +65,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make git
+  - pm install make git
   setup:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
   - cd /src/docker_auth/auth_server

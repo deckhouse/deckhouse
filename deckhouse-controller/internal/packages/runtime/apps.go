@@ -24,8 +24,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/deckhouse/module-sdk/pkg/settingscheck"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
@@ -49,23 +47,6 @@ type App struct {
 	Namespace  string
 	Definition apps.Definition
 	Settings   addonutils.Values
-}
-
-// ValidateSettings checks settings against the package's OpenAPI schema.
-// Returns valid if the package is not loaded yet (settings validated on load).
-func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
-	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidateSettings")
-	defer span.End()
-
-	r.mu.Lock()
-	app := r.apps[name]
-	if app == nil {
-		r.mu.Unlock()
-		return settingscheck.Result{Valid: true}, nil
-	}
-	r.mu.Unlock()
-
-	return app.ValidateSettings(ctx, settings)
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -105,7 +86,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	r.status.ClearStatus(name)
+	r.status.NewStatus(name)
 
 	tasks := []queue.Task{
 		taskdeploy.NewAppTask(name, packageName, version, repo, r.appDeployer, r.status, r.logger),
@@ -141,6 +122,8 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.GrantResolver = r.grantResolver
+	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 
 	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {

@@ -1,0 +1,14 @@
+diff --git a/pkg/providers/v1/aws_routes.go b/pkg/providers/v1/aws_routes.go
+index 2fea345..7f2247e 100644
+--- a/pkg/providers/v1/aws_routes.go
++++ b/pkg/providers/v1/aws_routes.go
+@@ -117,7 +117,8 @@ func (c *Cloud) ListRoutes(ctx context.Context, clusterName string) ([]*cloudpro
+ 			if found {
+ 				node, err := c.instanceIDToNodeName(InstanceID(instanceID))
+ 				if err != nil {
+-					return nil, err
++					klog.Errorf("error converting instance ID '%s' to node name: %w", instanceID, err)
++					continue
+ 				}
+ 				route.TargetNode = node
+ 				routes = append(routes, route)

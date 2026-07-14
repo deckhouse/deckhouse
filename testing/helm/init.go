@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	addonvalidation "github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/kube-client/manifest/releaseutil"
 	"github.com/iancoleman/strcase"
 	. "github.com/onsi/ginkgo"
@@ -58,6 +59,50 @@ func (hec *Config) ValuesSet(path string, value interface{}) {
 
 func (hec *Config) ValuesSetFromYaml(path, value string) {
 	hec.values.SetByPathFromYAML(path, []byte(value))
+}
+
+// ApplyOpenAPIDefaults applies OpenAPI schema defaults (config-values.yaml and
+// values.yaml) to the current module root values, mimicking the defaulting that
+// addon-operator performs in production before rendering module Helm templates.
+//
+// It is opt-in: existing tests are unaffected unless they call this method.
+//
+// Defaults are applied to the module root values (e.g. "istio"), because the
+// module OpenAPI schemas are rooted at the bare module values object.
+func (hec *Config) ApplyOpenAPIDefaults() {
+	moduleValuesKey := addonutils.ModuleNameToValuesKey(hec.moduleName)
+
+	// ModuleSchemaStorages is keyed by moduleName (see values_validation.NewValuesValidator).
+	ss := hec.ValuesValidator.ModuleSchemaStorages[hec.moduleName]
+	Expect(ss).ToNot(BeNil(), "module schema storage should exist for module %q", hec.moduleName)
+
+	// Initialize an empty object if the path is absent, for convenience.
+	current := hec.values.Get(moduleValuesKey)
+	if !current.Exists() {
+		hec.values.SetByPathFromJSON(moduleValuesKey, []byte(`{}`))
+		current = hec.values.Get(moduleValuesKey)
+	}
+
+	var obj map[string]interface{}
+	err := json.Unmarshal([]byte(current.Raw), &obj)
+	Expect(err).ToNot(HaveOccurred(), "module root values %q should unmarshal into an object", moduleValuesKey)
+
+	// Apply defaults in the same order as addon-operator production: config schema first, then values schema.
+	addonvalidation.ApplyDefaults(obj, ss.Schemas[addonvalidation.ConfigValuesSchema])
+	addonvalidation.ApplyDefaults(obj, ss.Schemas[addonvalidation.ValuesSchema])
+
+	defaultedJSON, err := json.Marshal(obj)
+	Expect(err).ToNot(HaveOccurred())
+
+	hec.values.SetByPathFromJSON(moduleValuesKey, defaultedJSON)
+}
+
+// ValuesSetFromYamlWithOpenAPIDefaults sets the values at the given path from
+// YAML and then applies OpenAPI schema defaults to the module root values. It is
+// a convenience wrapper around ValuesSetFromYaml + ApplyOpenAPIDefaults.
+func (hec *Config) ValuesSetFromYamlWithOpenAPIDefaults(path, value string) {
+	hec.ValuesSetFromYaml(path, value)
+	hec.ApplyOpenAPIDefaults()
 }
 
 func (hec *Config) KubernetesGlobalResource(kind, name string) object_store.KubeObject {

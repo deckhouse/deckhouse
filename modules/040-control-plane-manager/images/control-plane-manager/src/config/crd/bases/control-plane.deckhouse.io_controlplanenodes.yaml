@@ -14,7 +14,7 @@ spec:
     shortNames:
     - cpn
     singular: controlplanenode
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - description: Etcd ready
@@ -194,12 +194,12 @@ spec:
                   etcd:
                     description: Etcd is the observed state of the etcd component.
                     properties:
-                      certificatesExpirationDate:
+                      certificatesExpirationTime:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+                          CertificatesExpirationTime maps each component certificate file name to its NotAfter timestamp.
                           Populated by the CertObserve step.
                         type: object
                       checksums:
@@ -230,12 +230,12 @@ spec:
                     description: KubeAPIServer is the observed state of the kube-apiserver
                       component.
                     properties:
-                      certificatesExpirationDate:
+                      certificatesExpirationTime:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+                          CertificatesExpirationTime maps each component certificate file name to its NotAfter timestamp.
                           Populated by the CertObserve step.
                         type: object
                       checksums:
@@ -266,12 +266,12 @@ spec:
                     description: KubeControllerManager is the observed state of the
                       kube-controller-manager component.
                     properties:
-                      certificatesExpirationDate:
+                      certificatesExpirationTime:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+                          CertificatesExpirationTime maps each component certificate file name to its NotAfter timestamp.
                           Populated by the CertObserve step.
                         type: object
                       checksums:
@@ -302,12 +302,12 @@ spec:
                     description: KubeScheduler is the observed state of the kube-scheduler
                       component.
                     properties:
-                      certificatesExpirationDate:
+                      certificatesExpirationTime:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+                          CertificatesExpirationTime maps each component certificate file name to its NotAfter timestamp.
                           Populated by the CertObserve step.
                         type: object
                       checksums:

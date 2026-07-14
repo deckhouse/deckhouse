@@ -1,0 +1,19 @@
+---
+{{- if eq $.Values.web.env "web-production" }}
+{{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
+apiVersion: deckhouse.io/v1
+kind: PrometheusRemoteWrite
+metadata:
+  name: docs-telemetry-remote-write
+  labels:
+    app.kubernetes.io/part-of: deckhouse-web-registry-modules-watcher
+spec:
+  customAuthToken: "{{ .Values.global.dop_auth_token }}"
+  url: "{{ .Values.global.dop_url }}"
+  writeRelabelConfigs:
+  - action: keep
+    regex: (d8_telemetry_.*)
+    sourceLabels:
+    - __name__
+{{- end }}
+{{- end }}

@@ -50,11 +50,13 @@ func main() {
 	var cfg config.Config
 	cfg.MustLoad()
 
-	log := logger.NewLogger(cfg.LogLevel)
+	l := logger.NewLogger(cfg.LogLevel)
 
-	err := AppRun(cfg, log)
+	l.Info("Starting fencing-agent")
+
+	err := AppRun(cfg, l)
 	if err != nil {
-		log.Error("failed to run application", sl.Err(err))
+		l.Error("failed to run application", sl.Err(err))
 		os.Exit(1)
 	}
 }
@@ -118,9 +120,7 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 		defer kubeClient.StopInformer()
 
 		softdog := watchdog.New(cfg.Watchdog.Device)
-
 		fallback := usecase.NewFallback(log, kubeClient)
-
 		fencingAgent := usecase.NewHealthMonitor(
 			kubeClient,
 			mblist,
@@ -134,13 +134,13 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 		if err != nil {
 			return fmt.Errorf("failed to start health monitor: %w", err)
 		}
+
 		defer fencingAgent.Stop()
 	} else {
 		log.Info("Notify mode enabled, no fencing will be performed")
 	}
 
 	nodesGetter := usecase.NewGetNodes(mblist)
-
 	grpcSrv := grpc.NewServer(log, eventBus, nodesGetter)
 
 	grpcSrvRunner, err := grpc.NewRunner(cfg.GRPC, log, grpcSrv)

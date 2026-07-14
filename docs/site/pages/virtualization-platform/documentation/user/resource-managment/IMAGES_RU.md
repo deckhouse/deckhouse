@@ -7,7 +7,7 @@ lang: ru
 Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин.
 
 {% alert level="warning" %}
-Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или пространстве имен, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или неймспейсе, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
 {% endalert %}
 
 При подключении к виртуальной машине доступ к образу предоставляется в режиме «только чтение».
@@ -44,6 +44,12 @@ lang: ru
 - raw
 - vmdk
 - vdi
+
+{% alert level="info" %}
+При миграции ВМ из VMware см. [руководство по переносу](/products/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp.html).
+Диски из vSphere обычно требуют предварительной подготовки гостевой ОС (например, через утилиту virt-v2v).
+Прямой импорт VMDK без подготовки часто приводит к проблемам при запуске ВМ.
+{% endalert %}
 
 Также файлы образов могут быть сжаты одним из следующих алгоритмов сжатия: gz, xz.
 
@@ -105,10 +111,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           PHASE   CDROM   PROGRESS   AGE
    ubuntu-24-04   Ready   false   100%       23h
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 После создания ресурс `VirtualImage` может находиться в следующих состояниях (фазах):
 
@@ -133,6 +142,7 @@ d8 k get vi ubuntu-24-04 -w
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
 ubuntu-24-04   Provisioning   false              4s
@@ -143,6 +153,8 @@ ubuntu-24-04   Provisioning   false   100.0%     10s
 ubuntu-24-04   Provisioning   false   100.0%     16s
 ubuntu-24-04   Ready          false   100%       18s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 В описание ресурса `VirtualImage` можно получить дополнительную информацию о скачанном образе:
 
@@ -192,10 +204,13 @@ d8 k get vi ubuntu-24-04-pvc
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
 ubuntu-24-04-pvc  Ready   false   100%       23h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Если параметр `.spec.persistentVolumeClaim.storageClassName` не указан, то будет использован `StorageClass` по умолчанию на уровне кластера, либо для образов, если он указан в настройках модуля.
 
@@ -219,25 +234,25 @@ ubuntu-24-04-pvc  Ready   false   100%       23h
 1. Загрузите образ локально:
 
    ```bash
-   curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
+   curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
    ```
 
 1. Создайте `Dockerfile` со следующим содержимым:
 
    ```Dockerfile
    FROM scratch
-   COPY ubuntu2204.img /disk/ubuntu2204.img
+   COPY ubuntu2404.img /disk/ubuntu2404.img
    ```
 
-1. Соберите образ и загрузите его в container registry. В качестве container registry в примере ниже использован docker.io. Для выполнения необходимо иметь учетную запись сервиса и настроенное окружение.
+1. Соберите образ контейнера. В примере ниже в качестве хранилища образов контейнеров использован [docker.com](https://www.docker.com/). Для выполнения необходимо иметь учётную запись сервиса и настроенное окружение:
 
    ```bash
-   docker build -t docker.io/<username>/ubuntu2204:latest
+   docker build -t docker.io/<username>/ubuntu2404:latest
    ```
 
-   где `username` — имя пользователя, указанное при регистрации в docker.io.
+   где `username` — имя пользователя, указанное при регистрации в [docker.com](https://www.docker.com/).
 
-1. Загрузите созданный образ в container registry:
+1. Загрузите созданный образ в хранилище образов контейнеров:
 
    ```bash
    docker push docker.io/<username>/ubuntu2204:latest
@@ -250,13 +265,13 @@ ubuntu-24-04-pvc  Ready   false   100%       23h
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
    metadata:
-     name: ubuntu-2204
+     name: ubuntu-2404
    spec:
      storage: ContainerRegistry
      dataSource:
        type: ContainerImage
        containerImage:
-         image: docker.io/<username>/ubuntu2204:latest
+         image: docker.io/<username>/ubuntu2404:latest
    EOF
    ```
 
@@ -268,7 +283,7 @@ ubuntu-24-04-pvc  Ready   false   100%       23h
 - Из списка выберите «Загрузить данные из образа контейнера».
 - В открывшейся форме в поле «Имя образа» введите имя образа.
 - В поле «Хранилище» выберите `ContainerRegistry`.
-- В поле «Образ в реестре контейнеров» укажите `docker.io/<username>/ubuntu2204:latest`.
+- В поле «Образ в реестре контейнеров» укажите `docker.io/<username>/ubuntu2404:latest`.
 - Нажмите кнопку «Создать».
 - Статус образа отображается слева вверху, под именем образа.
 
@@ -328,10 +343,13 @@ d8 k get vi some-image
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Как загрузить образ из командной строки в веб-интерфейсе:
 

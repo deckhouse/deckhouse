@@ -10,12 +10,12 @@ locals {
 }
 
 module "security_groups" {
-  source               = "../../../terraform-modules/security-groups"
+  source               = "../security-groups"
   security_group_names = local.security_group_names
 }
 
 module "volume_zone" {
-  source       = "../../../terraform-modules/volume-zone"
+  source       = "../volume-zone"
   compute_zone = element(local.zones, var.nodeIndex)
   region       = var.providerClusterConfiguration.provider.region
 }
@@ -39,7 +39,7 @@ resource "openstack_networking_port_v2" "port" {
   security_group_ids = try(index(local.networks_with_security_disabled, data.openstack_networking_network_v2.network[count.index].name), -1) == -1 ? module.security_groups.security_group_ids : []
 
   dynamic "allowed_address_pairs" {
-    for_each = local.internal_network_security_enabled && local.networks[count.index] == local.network_with_port_security ? list(local.pod_subnet_cidr) : []
+    for_each = local.internal_network_security_enabled && local.networks[count.index] == local.network_with_port_security ? tolist([local.pod_subnet_cidr]) : []
     content {
       ip_address = allowed_address_pairs.value
     }
@@ -87,7 +87,7 @@ resource "openstack_compute_instance_v2" "node" {
   }
 
   dynamic "block_device" {
-    for_each = local.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v3.volume[0])
+    for_each = local.root_disk_size == "" ? [] : tolist([openstack_blockstorage_volume_v3.volume[0]])
     content {
       uuid                  = block_device.value["id"]
       boot_index            = 0

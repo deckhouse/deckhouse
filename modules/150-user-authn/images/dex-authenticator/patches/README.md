@@ -36,3 +36,7 @@ This patch fixes:
 ### 006-return-200-on-success-and-header-on-fail.patch
 
 Oauth2-proxy returns 200 (instead of 202) when the request is authenticated and adds "X-Auth-Request-Result" header on fail.
+
+### 007-add-json-logging.patch
+
+Add json logging.

@@ -22,10 +22,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-type clientProvider func(m *config.MetaConfig, l log.Logger) (cloudClient, error)
+type clientProvider func(m *config.MetaConfig) (cloudClient, error)
 
 type MetaConfigPreparatorParams struct {
 	PrepareMetaConfig     bool
@@ -34,18 +33,12 @@ type MetaConfigPreparatorParams struct {
 
 type MetaConfigPreparator struct {
 	params         MetaConfigPreparatorParams
-	logger         log.Logger
 	clientProvider clientProvider
 }
 
-func NewMetaConfigPreparatorWithoutLogger(params MetaConfigPreparatorParams) *MetaConfigPreparator {
-	return NewMetaConfigPreparator(params, log.GetSilentLogger())
-}
-
-func NewMetaConfigPreparator(params MetaConfigPreparatorParams, logger log.Logger) *MetaConfigPreparator {
+func NewMetaConfigPreparator(params MetaConfigPreparatorParams) *MetaConfigPreparator {
 	return &MetaConfigPreparator{
 		params:         params,
-		logger:         logger,
 		clientProvider: newVcdCloudClient,
 	}
 }
@@ -80,7 +73,7 @@ func (p MetaConfigPreparator) Prepare(ctx context.Context, metaConfig *config.Me
 		return nil
 	}
 
-	client, err := p.clientProvider(metaConfig, p.logger)
+	client, err := p.clientProvider(metaConfig)
 	if err != nil {
 		return fmt.Errorf("Cannot get cloud client: %w", err)
 	}
@@ -90,7 +83,7 @@ func (p MetaConfigPreparator) Prepare(ctx context.Context, metaConfig *config.Me
 		return err
 	}
 
-	return versionConstraintAction(apiVersion, p.logger, func(legacy bool) error {
+	return versionConstraintAction(ctx, apiVersion, func(legacy bool) error {
 		if !legacy {
 			return nil
 		}
