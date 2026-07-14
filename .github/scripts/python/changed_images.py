@@ -65,7 +65,7 @@ NON_MODULE_WERF_IMAGE_PREFIXES = (
     "dev/",
 )
 
-# sidecar-образы. в images_digests.json их нет
+# sidecar-images which not in images_digests.json
 ATTESTATION_ARTIFACT_SUFFIXES = (
     "-vex-artifact",
     "-trivy-ignore-artifact",
@@ -242,7 +242,7 @@ def is_non_module_werf_image(name: str) -> bool:
     return name.startswith(NON_MODULE_WERF_IMAGE_PREFIXES)
 
 
-# helpers: sidecar → parent compact
+# helpers: sidecar to parent compact
 def is_attestation_artifact(name: str) -> bool:
     return any(name.endswith(suffix) for suffix in ATTESTATION_ARTIFACT_SUFFIXES)
 
@@ -284,7 +284,7 @@ def compact_keys_for_parent(
         return []
 
     return list(compact_keys_by_digest.get(parent_digest, []))
-# [ADD] конец helpers
+# end helpers
 
 
 def requires_compact_key(name: str) -> bool:
@@ -322,11 +322,11 @@ def compute_changed(
         werf_image_name = entry.get("WerfImageName") or name
         module, image = split_werf_image_name(werf_image_name)
 
-        # list(...) — можно дописать keys parent'а без мутации кэша
+        # list(...) — can add keys parent 
         compact_keys = list(compact_keys_by_digest.get(digest, []))
-        parent_name = None  # [ADD]
+        parent_name = None 
 
-        # sidecar без своего compact → compact parent'а
+        # sidecar have not compact -> take compact parent
         if not compact_keys and is_attestation_artifact(werf_image_name):
             parent_name = parent_werf_image_name(werf_image_name)
             if parent_name:
