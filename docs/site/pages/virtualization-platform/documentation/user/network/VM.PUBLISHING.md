@@ -263,6 +263,7 @@ To enable authentication through `Dex` for your application, follow these steps:
       # The domain of your application. Requests to this domain will be redirected for authentication through Dex.
       applicationDomain: "app-name.kube.my-domain.com"
       # Whether to send the `Authorization: Bearer` header to the application. Useful with `auth_request` in NGINX.
+      # When sendAuthorizationHeader is true, add Authorization to the application's Ingress auth-response-headers (see below).
       sendAuthorizationHeader: false
       # The name of the Secret with the SSL certificate.
       applicationIngressCertificateSecretName: "ingress-tls"
@@ -297,6 +298,14 @@ To enable authentication through `Dex` for your application, follow these steps:
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
+
+   {% alert level="warning" %}
+   When enabling `sendAuthorizationHeader: true`, add the `Authorization` header to the application's Ingress annotation. By default, it is not passed through:
+
+   ```yaml
+   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+   ```
+   {% endalert %}
 
 ### Configuring CIDR-based restrictions
 

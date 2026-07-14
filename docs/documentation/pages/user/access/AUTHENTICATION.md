@@ -88,6 +88,7 @@ To enable authentication for an application deployed in DKP, follow these steps:
      # Domain name of your application. Requests to this domain will be redirected to Dex for authentication.
      applicationDomain: "app-name.kube.my-domain.com"
      # Whether to send an `Authorization: Bearer` header to the application. Useful with NGINX's auth_request.
+     # When sendAuthorizationHeader is true, add Authorization to the application's Ingress auth-response-headers (see below).
      sendAuthorizationHeader: false
      # Name of the Secret containing the TLS certificate.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -132,6 +133,14 @@ To enable authentication for an application deployed in DKP, follow these steps:
           nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
           nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
         ```
+
+   {% alert level="warning" %}
+   When enabling `sendAuthorizationHeader: true`, add the `Authorization` header to the application's Ingress annotation. By default, it is not passed through:
+
+   ```yaml
+   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+   ```
+   {% endalert %}
 
 ### Authentication for applications with OIDC support
 
