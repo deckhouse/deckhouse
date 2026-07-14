@@ -684,19 +684,19 @@ Create a [robot account](https://goharbor.io/docs/1.10/working-with-projects/pro
 Open the `deckhouse` project and go to the **Robot Accounts** tab. Click **New Robot Account**:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_robot_account_ru.png" alt="Harbor robot accounts...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_account.png" alt="Harbor robot accounts...">
 </div>
 
 Set the account name, optional description, and expiration (days or never expire):
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_create_robot_account_ru.png" alt="Creating a Harbor robot account...">
+<img src="/images/guides/install_to_private_environment/harbor_create_robot_account.png" alt="Creating a Harbor robot account...">
 </div>
 
 For correct operation, grant full access under **Repository**. Adjust other permissions as needed or per your security policy.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_robot_permissions_ru.png" alt="Harbor robot account permissions...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_permissions.png" alt="Harbor robot account permissions...">
 </div>
 
 After creation, Harbor shows the robot account secret (token).
@@ -706,7 +706,7 @@ Save the secret immediately. Harbor will not show it again, and it cannot be ret
 {% endalert %}
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_robot_created_ru.png" alt="Harbor robot account created...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_created.png" alt="Harbor robot account created...">
 </div>
 
 Harbor configuration is now complete! 🎉
