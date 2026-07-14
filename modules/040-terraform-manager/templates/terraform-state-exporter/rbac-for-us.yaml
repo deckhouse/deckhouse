@@ -73,6 +73,34 @@ subjects:
   name: terraform-state-exporter
   namespace: d8-system
 ---
+# In-cluster dhctl lists provider credential Secrets (CloudProviderVars) in
+# the provider namespace only.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:terraform-manager:terraform-state-exporter
+  namespace: d8-cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:terraform-manager:terraform-state-exporter
+  namespace: d8-cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:terraform-manager:terraform-state-exporter
+subjects:
+- kind: ServiceAccount
+  name: terraform-state-exporter
+  namespace: d8-system
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -82,6 +110,15 @@ rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["nodegroups"]
   verbs: ["get", "list", "watch"]
+# In-cluster dhctl parses the provider ModuleConfig (mc-flow, get-by-name)
+# and lists provider InstanceClasses for CloudProviderVars.
+- apiGroups: ["deckhouse.io"]
+  resources: ["moduleconfigs"]
+  resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}"]
+  verbs: ["get"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"]
+  verbs: ["get", "list"]
 - apiGroups: [""]
   resources: ["nodes"]
   verbs: ["get", "list", "watch"]

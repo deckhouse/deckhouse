@@ -89,12 +89,20 @@ func GetDi(ctx context.Context, params *DIParams) (*cloud.ProviderDI, error) {
 		return nil, err
 	}
 
+	// External providers ship no bundled candi/plugins in the image (e.g. the
+	// terraform-manager pods): modules and the terraform plugin are unpacked
+	// under DownloadDir at runtime, and both providers below fall back there.
+	// So when DownloadDir is set, these directories may legitimately be absent.
 	if err := isNotRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
-		return nil, err
+		if params.DownloadDir == "" {
+			return nil, err
+		}
 	}
 
 	if err := isDir(params.PluginsDir, "PluginsDir"); err != nil {
-		return nil, err
+		if params.DownloadDir == "" {
+			return nil, err
+		}
 	}
 
 	return &cloud.ProviderDI{
