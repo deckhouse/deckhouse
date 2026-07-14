@@ -6,9 +6,6 @@
   id: ccm-openstack
   versions:
     - condition:
-        k8s: "1.31"
-      version: v1.31.4
-    - condition:
         k8s: "1.32"
       version: v1.32.1
     - condition:
@@ -31,9 +28,6 @@
   license: Apache License 2.0
   id: csi-openstack
   versions:
-    - condition:
-        k8s: "1.31"
-      version: v1.31.2
     - condition:
         k8s: "1.32"
       version: v1.32.1
