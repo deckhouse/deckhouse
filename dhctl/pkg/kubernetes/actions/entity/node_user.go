@@ -38,6 +38,22 @@ import (
 
 var createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(450, 1*time.Second)
 
+// errNodeUserSaveTransient marks a create/update failure that may succeed on retry (a
+// resource-version conflict, a transient API error, a kube-client provisioning hiccup, or an
+// admission-webhook rejection that depends on another resource's state, e.g. a NodeGroup the
+// NodeUser references still being reconciled), as opposed to a permanent authorization
+// failure that fails identically on every attempt.
+var errNodeUserSaveTransient = fmt.Errorf("save NodeUser: transient error, may succeed on retry")
+
+// wrapNodeUserSaveErr tags err as transient unless it is a permanent authorization failure, so
+// the retry loop can whitelist errNodeUserSaveTransient.
+func wrapNodeUserSaveErr(prefix string, err error) error {
+	if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+		return fmt.Errorf("%s: %w", prefix, err)
+	}
+	return fmt.Errorf("%w: %s: %w", errNodeUserSaveTransient, prefix, err)
+}
+
 func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser, loopParams retry.Params) error {
 	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
 	if err != nil {
@@ -45,20 +61,27 @@ func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeCli
 	}
 
 	loopParams = retry.SafeCloneOrNewParams(loopParams, createUpdateNodeUsersDefaultOpts...).
-		Clone(retry.WithName("Save NodeUser '%s'", nodeUser.GetName()))
+		Clone(
+			retry.WithName("Save NodeUser '%s'", nodeUser.GetName()),
+			retry.WithWhitelist(errNodeUserSaveTransient),
+		)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: %w", errNodeUserSaveTransient, err)
 		}
 
 		if err := createNodeUser(ctx, kubeCl, nodeUserResource); err != nil {
 			if k8errors.IsAlreadyExists(err) {
-				return updateNodeUser(ctx, kubeCl, nodeUserResource)
+				if err := updateNodeUser(ctx, kubeCl, nodeUserResource); err != nil {
+					return wrapNodeUserSaveErr("Failed to update NodeUser", err)
+				}
+
+				return nil
 			}
 
-			return fmt.Errorf("Failed to create NodeUser: %w", err)
+			return wrapNodeUserSaveErr("Failed to create NodeUser", err)
 		}
 
 		return nil
