@@ -23,6 +23,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
@@ -67,6 +68,13 @@ func selectPreparator(ctx context.Context, provider, downloadRootDir string) con
 		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
 			return external.NewBinaryPreparator(binaryPath)
 		}
+		// In-tree providers ship their schemas in the image's candi and need
+		// no external validator: keep the lightweight prefix-only preparator
+		// (mirrors main's default). Only truly external providers (not in
+		// candi) require the downloaded validator binary.
+		if providerBundledInCandi(provider) {
+			return &inTreeDefaultPreparator{}
+		}
 		searched := ""
 		if downloadRootDir != "" {
 			searched = providerdir.ValidatorPath(downloadRootDir, provider)
@@ -92,6 +100,26 @@ func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 
 // missingExternalValidatorPreparator hard-fails Validate and Prepare when an
 // external provider's validator binary is absent from the unpacked OCI bundle.
+// providerBundledInCandi is a var so tests can stub the candi lookup.
+var providerBundledInCandi = func(provider string) bool {
+	return config.ProviderBundledInCandi(provider, nil)
+}
+
+// inTreeDefaultPreparator is the fallback for in-tree providers without a
+// dedicated preparator: validate the cluster prefix, prepare nothing.
+type inTreeDefaultPreparator struct{}
+
+func (p *inTreeDefaultPreparator) Validate(_ context.Context, input config.ProviderInput) error {
+	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
+		return fmt.Errorf("%v for provider %s", err, input.ProviderName)
+	}
+	return nil
+}
+
+func (p *inTreeDefaultPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
+	return proto.PrepareResult{}, nil
+}
+
 type missingExternalValidatorPreparator struct {
 	provider     string
 	searchedPath string
