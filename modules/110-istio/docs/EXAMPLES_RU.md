@@ -318,7 +318,7 @@ spec:
     mode: VPA
 ```
 
-Используйте [`proxyProtocol`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-proxyprotocol), когда вышестоящий L4/TCP-балансировщик передаёт атрибуты клиента через [PROXY-протокол](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt), а не через HTTP-заголовки. При его включении TCP-листенеры шлюза начинают разбирать заголовок PROXY-протокола:
+Используйте [`proxyProtocol`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-proxyprotocol), когда вышестоящий L4/TCP-балансировщик передаёт атрибуты клиента через [PROXY-протокол](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt), а не через HTTP-заголовки. При включении этого параметра шлюз начинает разбирать заголовок PROXY-протокола во входящих TCP-соединениях:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

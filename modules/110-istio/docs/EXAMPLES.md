@@ -317,7 +317,7 @@ spec:
     mode: VPA
 ```
 
-Use [`proxyProtocol`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-proxyprotocol) when an upstream L4/TCP load balancer forwards the client attributes via the [PROXY protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) instead of HTTP headers. Enabling it makes the gateway's TCP listeners parse the PROXY protocol header:
+Use [`proxyProtocol`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-proxyprotocol) when an upstream L4/TCP load balancer forwards the client attributes via the [PROXY protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) instead of HTTP headers. When this parameter is enabled, the gateway starts parsing the PROXY protocol header on incoming TCP connections:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
