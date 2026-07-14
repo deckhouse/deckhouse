@@ -19,17 +19,14 @@ package virtualcontrolplaneconfiguration
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/yaml"
 )
 
 const ciliumOperatorManifestKey = "cilium-operator.yaml.tpl"
@@ -46,6 +43,7 @@ func (r *reconciler) reconcileCiliumOperator(
 	return reconcile.Result{}, nil
 }
 
+// applyParentManifests applies a multi-doc template into the parent cluster, owned by the VCP.
 func (r *reconciler) applyParentManifests(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
@@ -57,43 +55,26 @@ func (r *reconciler) applyParentManifests(
 		return fmt.Errorf("config Secret missing %q", key)
 	}
 
-	for _, doc := range strings.Split(string(raw), "\n---") {
-		doc = strings.TrimSpace(doc)
-		if doc == "" {
-			continue
-		}
+	objects, err := parseManifestDocs(raw, "")
+	if err != nil {
+		return err
+	}
 
-		target := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(doc), target); err != nil {
-			return fmt.Errorf("decode manifest: %w", err)
-		}
-		if len(target.Object) == 0 {
-			continue
-		}
+	for _, target := range objects {
 		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
 			return err
 		}
-
-		current := &unstructured.Unstructured{}
-		current.SetGroupVersionKind(target.GroupVersionKind())
-		err := r.client.Get(ctx, client.ObjectKeyFromObject(target), current)
-		if apierrors.IsNotFound(err) {
-			if err := r.client.Create(ctx, target); err != nil {
-				return fmt.Errorf("create %s %s: %w", target.GetKind(), target.GetName(), err)
-			}
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("get %s %s: %w", target.GetKind(), target.GetName(), err)
-		}
-
-		base := current.DeepCopy()
-		target.SetResourceVersion(current.GetResourceVersion())
-		target.SetUID(current.GetUID())
-		if err := r.client.Patch(ctx, target, client.MergeFrom(base)); err != nil {
-			return fmt.Errorf("patch %s %s: %w", target.GetKind(), target.GetName(), err)
+		if err := applyObject(ctx, r.client, target, patchWholeObject); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+// patchWholeObject patches the full target, carrying over the identity fields required by MergeFrom.
+func patchWholeObject(current, target *unstructured.Unstructured) (client.Object, bool) {
+	target.SetResourceVersion(current.GetResourceVersion())
+	target.SetUID(current.GetUID())
+	return target, true
 }

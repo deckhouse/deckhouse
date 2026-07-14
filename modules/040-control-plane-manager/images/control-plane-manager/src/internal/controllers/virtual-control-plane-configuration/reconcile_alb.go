@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
@@ -31,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/yaml"
 )
 
 const albManifestKey = "alb.yaml.tpl"
@@ -53,77 +51,41 @@ func packagesExposeHost(vcp *controlplanev1alpha1.VirtualControlPlane) string {
 	return exposeHost("packages", vcp)
 }
 
-// reconcileALB applies the per-VCP ALB objects
+// reconcileALB applies the per-VCP ALB objects. Only spec/data are reconciled, leaving anything
+// the ALB module writes back (status, injected labels) untouched.
 func (r *reconciler) reconcileALB(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (reconcile.Result, error) {
-	objects, err := albManifests(configSecret, vcp)
+	raw, ok := configSecret.Data[albManifestKey]
+	if !ok {
+		return reconcile.Result{}, fmt.Errorf("config Secret missing %q", albManifestKey)
+	}
+
+	objects, err := parseManifestDocs(raw, constants.VirtualControlPlaneNamespacePrefix+vcp.Name)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	for _, target := range objects {
-		current := &unstructured.Unstructured{}
-		current.SetGroupVersionKind(target.GroupVersionKind())
-
-		err := r.client.Get(ctx, client.ObjectKeyFromObject(target), current)
-		if apierrors.IsNotFound(err) {
-			if err := r.client.Create(ctx, target); err != nil {
-				return reconcile.Result{}, fmt.Errorf("create %s %s: %w", target.GetKind(), target.GetName(), err)
-			}
-			continue
-		}
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("get %s %s: %w", target.GetKind(), target.GetName(), err)
-		}
-
-		if equality.Semantic.DeepEqual(current.Object["spec"], target.Object["spec"]) &&
-			equality.Semantic.DeepEqual(current.Object["data"], target.Object["data"]) {
-			continue
-		}
-
-		base := current.DeepCopy()
-		if spec, ok := target.Object["spec"]; ok {
-			current.Object["spec"] = spec
-		}
-		if data, ok := target.Object["data"]; ok {
-			current.Object["data"] = data
-		}
-		if err := r.client.Patch(ctx, current, client.MergeFrom(base)); err != nil {
-			return reconcile.Result{}, fmt.Errorf("patch %s %s: %w", target.GetKind(), target.GetName(), err)
+		if err := applyObject(ctx, r.client, target, patchSpecData); err != nil {
+			return reconcile.Result{}, err
 		}
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func albManifests(configSecret *corev1.Secret, vcp *controlplanev1alpha1.VirtualControlPlane) ([]*unstructured.Unstructured, error) {
-	raw, ok := configSecret.Data[albManifestKey]
-	if !ok {
-		return nil, fmt.Errorf("config Secret missing %q", albManifestKey)
+// patchSpecData reconciles only the spec and data fields, skipping the patch when both already match.
+func patchSpecData(current, target *unstructured.Unstructured) (client.Object, bool) {
+	if equality.Semantic.DeepEqual(current.Object["spec"], target.Object["spec"]) &&
+		equality.Semantic.DeepEqual(current.Object["data"], target.Object["data"]) {
+		return nil, false
 	}
-
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
-
-	var objects []*unstructured.Unstructured
-	for _, doc := range strings.Split(string(raw), "\n---") {
-		doc = strings.TrimSpace(doc)
-		if doc == "" {
-			continue
-		}
-
-		obj := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(doc), obj); err != nil {
-			return nil, fmt.Errorf("decode alb manifest: %w", err)
-		}
-		if len(obj.Object) == 0 {
-			continue
-		}
-		if obj.GetNamespace() == "" {
-			obj.SetNamespace(namespace)
-		}
-		objects = append(objects, obj)
+	if spec, ok := target.Object["spec"]; ok {
+		current.Object["spec"] = spec
 	}
-
-	return objects, nil
+	if data, ok := target.Object["data"]; ok {
+		current.Object["data"] = data
+	}
+	return current, true
 }
 
 // albVIP resolves the external ALB address for this VCP: ALBInstance.status.gateway

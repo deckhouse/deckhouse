@@ -19,18 +19,16 @@ package virtualcontrolplaneconfiguration
 import (
 	"context"
 	"fmt"
-	"strings"
+	"maps"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/bootstraptoken"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/yaml"
 )
 
 // tenantAddonManifestKeys are config-Secret template keys applied into the tenant cluster, in order.
@@ -81,61 +79,38 @@ func (r *reconciler) reconcileTenantAddons(ctx context.Context, vcp *controlplan
 }
 
 // applyTenantManifests renders a multi-doc template from the config Secret into the tenant cluster.
-// Objects carry their own (tenant) namespaces
+// Objects carry their own (tenant) namespaces.
 func applyTenantManifests(ctx context.Context, tc client.Client, configSecret *corev1.Secret, key string) error {
 	raw, ok := configSecret.Data[key]
 	if !ok {
 		return fmt.Errorf("config Secret missing %q", key)
 	}
 
-	for _, doc := range strings.Split(string(raw), "\n---") {
-		doc = strings.TrimSpace(doc)
-		if doc == "" {
-			continue
-		}
+	objects, err := parseManifestDocs(raw, "")
+	if err != nil {
+		return err
+	}
 
-		target := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(doc), target); err != nil {
-			return fmt.Errorf("decode manifest: %w", err)
-		}
-		if len(target.Object) == 0 {
-			continue
-		}
-
-		current := &unstructured.Unstructured{}
-		current.SetGroupVersionKind(target.GroupVersionKind())
-		err := tc.Get(ctx, client.ObjectKeyFromObject(target), current)
-		if apierrors.IsNotFound(err) {
-			if err := tc.Create(ctx, target); err != nil {
-				return fmt.Errorf("create %s %s: %w", target.GetKind(), target.GetName(), err)
-			}
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("get %s %s: %w", target.GetKind(), target.GetName(), err)
-		}
-
-		base := current.DeepCopy()
-		applyTenantManifestTarget(current, target)
-		if err := tc.Patch(ctx, current, client.MergeFrom(base)); err != nil {
-			return fmt.Errorf("patch %s %s: %w", target.GetKind(), target.GetName(), err)
+	for _, target := range objects {
+		if err := applyObject(ctx, tc, target, patchTenantObject); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func applyTenantManifestTarget(current, target *unstructured.Unstructured) {
+func patchTenantObject(current, target *unstructured.Unstructured) (client.Object, bool) {
 	current.SetLabels(mergeMetadata(current.GetLabels(), target.GetLabels()))
 	current.SetAnnotations(mergeMetadata(current.GetAnnotations(), target.GetAnnotations()))
 
 	for _, field := range []string{"data", "spec", "rules", "roleRef", "subjects"} {
-		value, ok := target.Object[field]
-		if !ok {
-			continue
+		if value, ok := target.Object[field]; ok {
+			current.Object[field] = value
 		}
-		current.Object[field] = value
 	}
+
+	return current, true
 }
 
 func mergeMetadata(current, target map[string]string) map[string]string {
@@ -143,11 +118,7 @@ func mergeMetadata(current, target map[string]string) map[string]string {
 		return current
 	}
 	out := make(map[string]string, len(current)+len(target))
-	for key, value := range current {
-		out[key] = value
-	}
-	for key, value := range target {
-		out[key] = value
-	}
+	maps.Copy(out, current)
+	maps.Copy(out, target)
 	return out
 }
