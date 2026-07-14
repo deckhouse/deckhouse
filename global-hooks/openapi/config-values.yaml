@@ -49,20 +49,26 @@ properties:
         properties:
           name:
             type: string
+            description: |
+              Name of the Gateway object.
           namespace:
             type: string
+            description: |
+              Namespace of the Gateway object.
         required:
           - name
           - namespace
         description: |
-          Name of the Gateway object from the Gateway API used by modules of the Deckhouse ecosystem.
+          Reference to the Gateway object (from the Gateway API) used by modules of the Deckhouse ecosystem when creating Gateway API resources.
+
+          If not specified, modules use the Gateway automatically discovered in the cluster (if any).
       ingressClass:
         type: string
         default: nginx
         description: |
-          The class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
+          Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem modules when creating Ingress resources.
 
-          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default IngressClass for all modules. If any other Ingress controller name is used, it will not be used by default.
+          Some modules support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
@@ -146,7 +152,17 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+                  The [`cert-manager`](/modules/cert-manager/) module offers the following ClusterIssuer options:
+
+                  - `letsencrypt`
+                  - `letsencrypt-staging`
+                  - `selfsigned`
+                  - `clouddns`
+                  - `cloudflare`
+                  - `digitalocean`
+                  - `route53`
+
+                  You can use your own ClusterIssuer if necessary.
           customCertificate:
             type: object
             additionalProperties: false

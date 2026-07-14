@@ -32,12 +32,21 @@ properties:
     properties:
       gatewayAPIGateway:
         description: |
-          Имя объекта Gateway из Gateway API, используемого для модулей экосистемы Deckhouse.
+          Ссылка на объект Gateway (из Gateway API), используемый модулями экосистемы Deckhouse при создании ресурсов Gateway API.
+
+          Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
+        properties:
+          name:
+            description: |
+              Имя объекта Gateway.
+          namespace:
+            description: |
+              Неймспейс объекта Gateway.
       ingressClass:
         description: |
-          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями экосистемы Deckhouse по умолчанию при создании Ingress-ресурсов.
 
-          Если имя IngressClass задано как `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером, используемым по умолчанию для всех модулей. При использовании любого другого имени Ingress-контроллера, он не будет использоваться по умолчанию.
+          Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имен c ключом `%s` в качестве динамической части строки.
@@ -75,9 +84,19 @@ properties:
             properties:
               clusterIssuerName:
                 description: |
-                  Имя `ClusterIssuer`, используемого модулями Deckhouse.
+                  Имя ClusterIssuer, используемого модулями для получения TLS-сертификатов.
 
-                  В модуле [cert-manager](https://deckhouse.ru/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+                  Модуль [`cert-manager`](/modules/cert-manager/) предоставляет следующие ClusterIssuer:
+
+                  - `letsencrypt`;
+                  - `letsencrypt-staging`;
+                  - `selfsigned`;
+                  - `clouddns`;
+                  - `cloudflare`;
+                  - `digitalocean`;
+                  - `route53`.
+
+                  При необходимости вы можете использовать собственный `ClusterIssuer`.
           customCertificate:
             properties:
               secretName:
