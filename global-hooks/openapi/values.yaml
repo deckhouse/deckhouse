@@ -39,6 +39,16 @@ properties:
       The cluster is considered bootstrapped if configmap d8-system/d8-cluster-is-bootstraped exists or
       cluster has at least one non-master node
     x-examples: [ true ]
+  deckhouseSelfHosted:
+    type: boolean
+    default: true
+    description: |
+      Indicates that Deckhouse runs as a Deployment inside this cluster.
+      Set to false when there is no own Deployment in d8-system (Deckhouse
+      manages this cluster from outside via a kubeconfig). Exposed globally so
+      any module/hook can read it, unlike the module-scoped
+      deckhouse.internal.selfHosted.
+    x-examples: [ true ]
   deckhouseVersion:
     type: string
     x-examples: [ dev ]

@@ -73,29 +73,37 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal deckhouse snapshot: %w", err)
 	}
 
-	if len(deckhouseImages) != 1 {
+	switch len(deckhouseImages) {
+	case 0:
+		// Not self-hosted: deckhouse has no own Deployment in this cluster (it
+		// manages the cluster from outside via a kubeconfig). The self-referential
+		// Deployment is not rendered then (see global.deckhouseSelfHosted), so
+		// there is no image value to compute.
+		input.Logger.Info("deckhouse Deployment not found, skipping image value (not self-hosted)")
+		return nil
+	case 1:
+		image := deckhouseImages[0]
+		imageRepoTag, err := gcr.NewTag(image)
+		if err != nil {
+			return fmt.Errorf("incorrect image: %s", image)
+		}
+		tag := imageRepoTag.TagStr()
+
+		if !input.Values.Get(deckhouseBasePath).Exists() {
+			return fmt.Errorf("registry base path doesn't exist yet")
+		}
+		base := input.Values.Get(deckhouseBasePath).String()
+		desired := fmt.Sprintf("%s:%s", base, tag)
+
+		// Guards a race with bumpDeckhouseDeployment: if the hook re-runs on the
+		// old leader between the Deployment bump and leader handover, a stale
+		// values entry would make Helm roll the Deployment back.
+		if input.Values.Get(deckhouseImagePath).String() != desired {
+			input.Values.Set(deckhouseImagePath, desired)
+		}
+
+		return nil
+	default:
 		return fmt.Errorf("deckhouse was not able to find an image of itself")
 	}
-	image := deckhouseImages[0]
-
-	imageRepoTag, err := gcr.NewTag(image)
-	if err != nil {
-		return fmt.Errorf("incorrect image: %s", image)
-	}
-	tag := imageRepoTag.TagStr()
-
-	if !input.Values.Get(deckhouseBasePath).Exists() {
-		return fmt.Errorf("registry base path doesn't exist yet")
-	}
-	base := input.Values.Get(deckhouseBasePath).String()
-	desired := fmt.Sprintf("%s:%s", base, tag)
-
-	// Guards a race with bumpDeckhouseDeployment: if the hook re-runs on the
-	// old leader between the Deployment bump and leader handover, a stale
-	// values entry would make Helm roll the Deployment back.
-	if input.Values.Get(deckhouseImagePath).String() != desired {
-		input.Values.Set(deckhouseImagePath, desired)
-	}
-
-	return nil
 }
