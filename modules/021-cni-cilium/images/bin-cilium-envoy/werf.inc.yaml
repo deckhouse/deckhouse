@@ -4,7 +4,7 @@
 {{- $ciliumProxyCacheRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-v1" }}
 {{- $ciliumProxyDepsRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-lfs-v1" }}
 #  to force manual creation of fresh build cache
-{{- $buildWithPreparedCacheAndDeps := true }}
+{{- $buildWithPreparedCacheAndDeps := false }}
 #
 ---
 # #####################################################################
@@ -129,20 +129,13 @@ shell:
   # selects the LLVM version from this env var (otherwise it falls back to the newest installed, e.g. 19.1).
   # bazel runs compile actions in a sandbox that does not inherit the shell env, so it must be passed explicitly.
 {{- if $buildWithPreparedCacheAndDeps }}
-  # Offline build of Envoy 1.36's Dynamic Modules Rust SDK (crate_universe / rules_rust). cilium/proxy's
-  # Makefile hardcodes `CARGO_BAZEL_REPIN=true`, which forces the crates_repository rule to re-run, so we can't
-  # use --nofetch (it would abort with "@@dynamic_modules_rust_sdk_crate_index not found, fetching disabled").
-  # We instead satisfy every network access from the prepared deps, offline:
-  #  * --repo_env=CARGO_NET_OFFLINE=true      -> cargo never touches the network during the repin/splice;
-  #  * --repo_env=CARGO_BAZEL_ISOLATED=false  -> rules_rust does NOT force an empty isolated CARGO_HOME, so it
-  #    honours the CARGO_HOME we point at the vendored cargo home (crates.io index + .crate cache + sources);
-  #  * --repo_env=CARGO_HOME=/home/cilium/.cargo -> that vendored cargo home (copied out below, because bazel
-  #    wipes the repo dir when it re-runs the rule);
-  #  * --repository_cache=/tmp/bazel-repo-cache -> the per-crate `http_archive`s (dynamic_modules_rust_sdk_crate_index__*,
-  #    type=tar.gz + known sha256, pulled from static.crates.io) are served from the repo cache we seed below
-  #    from the vendored .crate tarballs (their sha256 matches the http_archive sha256 1:1).
+  # Offline build of Envoy 1.36's Dynamic Modules Rust SDK (crate_universe / rules_rust).
+  # The crate-index repin trigger is pinned to a stable value in .bazelrc (--repo_env=CARGO_BAZEL_REPIN=1,
+  # injected in the setup steps below) and the Makefile's hardcoded `CARGO_BAZEL_REPIN=true` is stripped, so the crates_repository
+  # rule is NOT forced to re-run. The prepared external/ already holds the fully materialized crate index
+  # (rendered repo + per-crate repos + markers) recorded under that same value, so --nofetch reuses it as-is.
   # All other external repos come from the pre-extracted external/, compiled outputs from --disk_cache.
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --repository_cache=/tmp/bazel-repo-cache --repo_env=CARGO_NET_OFFLINE=true --repo_env=CARGO_BAZEL_ISOLATED=false --repo_env=CARGO_HOME=/home/cilium/.cargo --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- else }}
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- end }}
@@ -164,17 +157,20 @@ shell:
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-18.1/lib64/clang/18/include",' bazel/toolchains/BUILD
   - sudo -u cilium sed -i '\#-Wno-deprecated-builtins#a \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/13",' bazel/toolchains/BUILD
   #
+  # Rust crate_universe (Envoy 1.36 Dynamic Modules SDK): make the crate-index repin trigger stable and tracked,
+  # so bazel treats the prepared crate index as up-to-date under --nofetch. (1) pin CARGO_BAZEL_REPIN via .bazelrc
+  # as a repo_env (stable value, recorded in the repo marker); (2) strip the Makefile's hardcoded process-env
+  # `CARGO_BAZEL_REPIN=true`, which would otherwise force a re-splice on every build and invalidate the prepared
+  # state. NB: the proxy-build-deps snapshot must be regenerated under this same setting (see its README).
+  - sudo -u cilium bash -c 'printf "\ncommon --repo_env=CARGO_BAZEL_REPIN=1\n" >> .bazelrc'
+  - sudo -u cilium sed -i 's/^\tCARGO_BAZEL_REPIN=true //' Makefile
+  #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
 {{- if $buildWithPreparedCacheAndDeps }}
+  # Pre-extracted external/ holds every external repo (including the fully materialized crate index and its
+  # markers). With --nofetch and the stable CARGO_BAZEL_REPIN pin above, bazel reuses it without any fetch.
   - sudo -u cilium PATH=${PATH} tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
-  # The crate_universe repin (forced by the Makefile) makes bazel re-materialize the crate index repo, wiping the
-  # vendored .cargo_home that lives inside it. Copy it to a stable CARGO_HOME so the offline splice can use it.
-  - sudo -u cilium PATH=${PATH} cp -a ${BAZEL_OUTPUT_BASE}/external/dynamic_modules_rust_sdk_crate_index/.cargo_home /home/cilium/.cargo
-  # Seed bazel's repository cache from the vendored .crate tarballs so the per-crate http_archives resolve offline
-  # (bazel keys the repo cache by sha256, which equals each .crate's sha256 == the http_archive sha256).
-  - sudo -u cilium PATH=${PATH} mkdir -p /tmp/bazel-repo-cache/content_addressable/sha256
-  - for f in /home/cilium/.cargo/registry/cache/*/*.crate; do sha=$(sha256sum "$f" | awk '{print $1}'); sudo -u cilium mkdir -p /tmp/bazel-repo-cache/content_addressable/sha256/$sha; sudo -u cilium cp "$f" /tmp/bazel-repo-cache/content_addressable/sha256/$sha/file; done
 {{- else }}
   - rm -rf /tmp/bazel-deps
 {{- end }}
