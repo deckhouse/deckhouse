@@ -31,13 +31,13 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type LoopsParams struct {
@@ -545,7 +545,7 @@ var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(75, 1*time.Second)
 
 func (d *Destroyer) destroyMasterLoopParams(host session.Host) retry.Params {
 	return retry.SafeCloneOrNewParams(d.params.Loops.DestroyMaster, getDestroyMastersDefaultOpts...).
-		WithName(fmt.Sprintf("Clear master %s", host.String()))
+		Clone(retry.WithName("Clear master %s", host.String()))
 }
 
 func isSingleMaster(ips []entity.NodeIP) bool {

@@ -124,12 +124,22 @@ func prepareModuleConfig(ctx context.Context, mc *config.ModuleConfig, res *Mani
 	}
 }
 
+// moduleConfigErrIsPermanent reports whether err is a permission failure that will not
+// resolve by retrying, as opposed to a transient API error (including "not found yet"
+// while the ModuleConfig's CRD is still being installed) or a resource-version conflict.
+func moduleConfigErrIsPermanent(err error) bool {
+	return apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) || apierrors.IsInvalid(err)
+}
+
 func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, mcName string, value any, field []string) error {
 	dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("setSettingToModuleConfig for mc %s, field %v, value %v", mcName, field, value), "\n"))
 
 	cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(ctx, mcName, metav1.GetOptions{})
 	if err != nil {
-		return err
+		if moduleConfigErrIsPermanent(err) {
+			return err
+		}
+		return fmt.Errorf("%w: get module config %s: %w", actions.ErrManifestTaskTransient, mcName, err)
 	}
 
 	fieldPath := append([]string{"spec", "settings"}, field...)
@@ -141,7 +151,10 @@ func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClie
 
 	_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(ctx, cm, metav1.UpdateOptions{})
 	if err != nil {
-		return err
+		if moduleConfigErrIsPermanent(err) {
+			return err
+		}
+		return fmt.Errorf("%w: update module config %s: %w", actions.ErrManifestTaskTransient, mcName, err)
 	}
 
 	return nil

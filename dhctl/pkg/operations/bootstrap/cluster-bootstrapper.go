@@ -32,6 +32,7 @@ import (
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -57,7 +58,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 const (
@@ -1114,7 +1114,14 @@ func createResources(
 
 		if len(resourcesToCreate) == 0 {
 			for _, task := range tasks {
-				return retry.NewLoop(task.Title, 300, 1*time.Second).RunContext(ctx, func() error {
+				loopParams := retry.NewEmptyParams(
+					retry.WithName("%s", task.Title),
+					retry.WithAttempts(300),
+					retry.WithWait(1*time.Second),
+					retry.WithWhitelist(actions.ErrManifestTaskTransient),
+				)
+
+				return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 					return task.Do(kubeCl)
 				})
 			}

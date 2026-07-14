@@ -24,16 +24,22 @@ import (
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 const (
 	stateSecretName = "d8-dhctl-converge-state"
 )
+
+// errConvergeStateTransient marks a transport/API-level failure while reading or deleting the
+// converge-state secret, as opposed to a permanent authorization failure or malformed state
+// data that will not resolve by retrying.
+var errConvergeStateTransient = fmt.Errorf("converge state: transient error, may succeed on retry")
 
 type State struct {
 	Phase               phases.OperationPhase   `json:"phase"`
@@ -59,7 +65,14 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = retry.NewLoop("Get converge state from Kubernetes cluster", 25, 1*time.Second).RunContext(ctx.Ctx(), func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Get converge state from Kubernetes cluster"),
+		retry.WithAttempts(25),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errConvergeStateTransient),
+	)
+
+	err = retry.NewLoopWithParams(loopParams).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 
@@ -69,7 +82,11 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 				return nil
 			}
 
-			return fmt.Errorf("failed to get secret: %w", err)
+			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+				return fmt.Errorf("failed to get secret: %w", err)
+			}
+
+			return fmt.Errorf("%w: failed to get secret: %w", errConvergeStateTransient, err)
 		}
 
 		err = json.Unmarshal(convergeStateSecret.Data["state.json"], &state)
@@ -91,7 +108,14 @@ func (s *inSecretStateStore) Delete(ctx *Context) error {
 	if err != nil {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
-	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 25, 1*time.Second).RunContext(ctx.Ctx(), func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Cleanup converge state from Kubernetes cluster"),
+		retry.WithAttempts(25),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errConvergeStateTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 
@@ -101,7 +125,11 @@ func (s *inSecretStateStore) Delete(ctx *Context) error {
 				return nil
 			}
 
-			return fmt.Errorf("failed to delete state secret: %w", err)
+			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+				return fmt.Errorf("failed to delete state secret: %w", err)
+			}
+
+			return fmt.Errorf("%w: failed to delete state secret: %w", errConvergeStateTransient, err)
 		}
 
 		return nil
@@ -148,7 +176,14 @@ func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error 
 		},
 	}
 
-	return retry.NewLoop("Save dhctl converge state", 450, 1*time.Second).
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Save dhctl converge state"),
+		retry.WithAttempts(450),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).
 		RunContext(
 			convergeCtx.Ctx(),
 			func() error {

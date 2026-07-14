@@ -14,7 +14,7 @@
 
 package bootstrap
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+import "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 // Collapse retry waits to zero for the whole test binary. The bootstrap
 // flow runs a couple of "wait until cluster is in this state" loops with

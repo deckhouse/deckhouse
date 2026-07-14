@@ -17,6 +17,7 @@ package registrydata
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strings"
 	"time"
 
@@ -24,9 +25,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var (
@@ -35,16 +37,31 @@ var (
 	registryConfigSecret = "registry-config"
 )
 
+// ErrRegistryDataTransient marks a transport/API-level failure while reading the registry
+// secret, as opposed to a permanent parse failure of the secret's own content (malformed
+// docker config, bad scheme/credentials) that will fail identically on every attempt.
+var ErrRegistryDataTransient = fmt.Errorf("registry data: transient error, may succeed on retry")
+
 func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*image.RegistryConfig, string, error) {
 	conf := &image.RegistryConfig{}
 	var b64dc string
 
-	err := retry.NewLoop("Get registry data from cluster", 225, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Get registry data from cluster"),
+		retry.WithAttempts(225),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(ErrRegistryDataTransient),
+	)
+
+	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		secret, err := kubeCl.CoreV1().
 			Secrets(d8RppSecretNamespace).
 			Get(ctx, d8RppSecretName, metav1.GetOptions{})
 		if err != nil {
-			return err
+			if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+				return err
+			}
+			return fmt.Errorf("%w: %w", ErrRegistryDataTransient, err)
 		}
 
 		if secret.Data[".dockerconfigjson"] != nil {

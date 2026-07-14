@@ -17,6 +17,7 @@ package actions
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"strings"
 
@@ -36,6 +37,27 @@ type ManifestTask struct {
 	PatchFunc  func(ctx context.Context, patchData []byte) error
 }
 
+// ErrManifestTaskTransient marks a create/update/patch failure that may succeed on retry
+// (e.g. a resource-version conflict or a transient API error), as opposed to a permanent
+// authorization or admission-webhook rejection that fails identically on every attempt.
+var ErrManifestTaskTransient = fmt.Errorf("manifest task: transient error, may succeed on retry")
+
+// ErrManifestTaskPermanent lets a CreateFunc/UpdateFunc/PatchFunc wrap its own error to mark
+// it as a deterministic business-rule violation that will never succeed on retry (e.g. a
+// cluster-ownership conflict), even when it isn't a Kubernetes API status error that
+// wrapManifestErr would otherwise recognize as permanent.
+var ErrManifestTaskPermanent = fmt.Errorf("manifest task: permanent error, will not succeed on retry")
+
+// wrapManifestErr tags err as transient unless it is a permanent authorization/validation
+// failure (or explicitly marked via ErrManifestTaskPermanent), so callers can whitelist
+// ErrManifestTaskTransient in their retry loop.
+func wrapManifestErr(prefix string, err error) error {
+	if errors.IsForbidden(err) || errors.IsUnauthorized(err) || errors.IsInvalid(err) || stderrors.Is(err, ErrManifestTaskPermanent) {
+		return fmt.Errorf("%s: %w", prefix, err)
+	}
+	return fmt.Errorf("%w: %s: %w", ErrManifestTaskTransient, prefix, err)
+}
+
 // CreateOrUpdate tries to create resource with the CreateFunc. If resource is already
 // exists, it updates the resource with the UpdateFunc.
 func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
@@ -45,13 +67,13 @@ func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
 	err := task.CreateFunc(ctx, manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("create resource: %v", err)
+			return wrapManifestErr("create resource", err)
 		}
 		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
 			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
-			return fmt.Errorf("update resource: %v", err)
+			return wrapManifestErr("update resource", err)
 		}
 		dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
 	}
@@ -65,13 +87,13 @@ func (task *ManifestTask) CreateOrUpdateSilent(ctx context.Context) error {
 	err := task.CreateFunc(ctx, manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("create resource: %v", err)
+			return wrapManifestErr("create resource", err)
 		}
 		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
 			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
-			return fmt.Errorf("update resource: %v", err)
+			return wrapManifestErr("update resource", err)
 		}
 		dhlog.FromContext(ctx).DebugContext(ctx, "OK!")
 	}
@@ -89,7 +111,7 @@ func (task *ManifestTask) Patch(ctx context.Context) error {
 
 	err = task.PatchFunc(ctx, patchBytes)
 	if err != nil {
-		return fmt.Errorf("Apply patch: %v", err)
+		return wrapManifestErr("Apply patch", err)
 	}
 
 	return nil
@@ -110,14 +132,14 @@ func (task *ManifestTask) PatchOrCreate(ctx context.Context) error {
 	}
 
 	if !errors.IsNotFound(err) {
-		return fmt.Errorf("Apply patch for '%s': %v", task.Name, err)
+		return wrapManifestErr(fmt.Sprintf("Apply patch for '%s'", task.Name), err)
 	}
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s is not found. Trying to create ... ", task.Name))
 	manifest := task.Manifest()
 	err = task.CreateFunc(ctx, manifest)
 	if err != nil {
-		return fmt.Errorf("Create '%s': %v", task.Name, err)
+		return wrapManifestErr(fmt.Sprintf("Create '%s'", task.Name), err)
 	}
 	return nil
 }

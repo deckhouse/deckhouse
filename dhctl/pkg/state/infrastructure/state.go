@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -39,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 const (
@@ -48,6 +48,11 @@ const (
 )
 
 var ErrNoInfrastructureState = errors.New("Infrastructure state was not found in outputs.")
+
+// errInfraStateListTransient marks a transport/API-level failure while listing node
+// infrastructure-state secrets, as opposed to a permanent authorization failure or a
+// malformed secret (missing node-name/node-group label) that will not resolve by retrying.
+var errInfraStateListTransient = errors.New("infrastructure state list: transient error, may succeed on retry")
 
 func GetClusterStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) ([]byte, error) {
 	var st []byte
@@ -107,13 +112,24 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 
 	processName := fmt.Sprintf("Get nodes infrastructure state from Kubernetes cluster for %s", action)
 
-	err = retry.NewLoop(processName, 75, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("%s", processName),
+		retry.WithAttempts(75),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errInfraStateListTransient),
+	)
+
+	err = retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		timeoutCtx, cancel := defaultRequestTimeoutCtx(ctx)
 		defer cancel()
 
 		nodeStateSecrets, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).List(timeoutCtx, listOpts)
 		if err != nil {
-			return err
+			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+				// A permission failure will not resolve by retrying.
+				return err
+			}
+			return fmt.Errorf("%w: %w", errInfraStateListTransient, err)
 		}
 
 		for _, nodeState := range nodeStateSecrets.Items {
@@ -301,8 +317,14 @@ func SaveNodeInfrastructureState(
 			return err
 		},
 	}
-	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 450, 1*time.Second).
-		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Save infrastructure state for Node %q", nodeName),
+		retry.WithAttempts(450),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
 }
 
 func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
@@ -364,19 +386,25 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for master Node %s", nodeName), 450, 1*time.Second).
-		RunContext(
-			ctx,
-			func() error {
-				var allErrs *multierror.Error
-				for _, task := range tasks {
-					if err := task.CreateOrUpdate(ctx); err != nil {
-						allErrs = multierror.Append(allErrs, err)
-					}
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Save infrastructure state for master Node %s", nodeName),
+		retry.WithAttempts(450),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(
+		ctx,
+		func() error {
+			var allErrs *multierror.Error
+			for _, task := range tasks {
+				if err := task.CreateOrUpdate(ctx); err != nil {
+					allErrs = multierror.Append(allErrs, err)
 				}
-				return allErrs.ErrorOrNil()
-			},
-		)
+			}
+			return allErrs.ErrorOrNil()
+		},
+	)
 }
 
 // SaveClusterInfrastructureState persists the terraform pipeline outputs.
@@ -409,7 +437,14 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		},
 	}
 
-	err := retry.NewLoop("Save Cluster infrastructure state", 450, 1*time.Second).
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Save Cluster infrastructure state"),
+		retry.WithAttempts(450),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	err := retry.NewLoopWithParams(loopParams).
 		RunContext(
 			ctx,
 			func() error {

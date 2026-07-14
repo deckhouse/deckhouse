@@ -25,9 +25,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 const (
@@ -39,6 +39,11 @@ const (
 	conditionTypeReady = "Ready"
 )
 
+// errRegistryCheckTransient marks a transport/API-level failure while reading or deleting the
+// registry init/state secrets, as opposed to a permanent parse failure or authorization error
+// that will fail identically on every attempt.
+var errRegistryCheckTransient = fmt.Errorf("registry check: transient error, may succeed on retry")
+
 // WaitForRegistryInitialization waits for the registry to become fully initialized and ready.
 // After successful initialization, the initSecret will be removed.
 // Parameters:
@@ -49,8 +54,17 @@ const (
 // Returns:
 //   - err: error from the operation
 func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
-	return retry.
-		NewLoop("Waiting for Registry to become Ready", 100, 20*time.Second).
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Waiting for Registry to become Ready"),
+		retry.WithAttempts(100),
+		retry.WithWait(20*time.Second),
+		// ErrIsNotReady/ErrNotInitialized are the expected "still becoming ready" conditions;
+		// errRegistryCheckTransient covers transport-level hiccups. Anything else (a malformed
+		// secret, a permission failure) is permanent and should stop the loop immediately.
+		retry.WithWhitelist(ErrIsNotReady, ErrNotInitialized, errRegistryCheckTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			return checkRegistryInitialization(ctx, kubeClient, config)
 		})
@@ -69,25 +83,25 @@ func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClie
 	if !config.LegacyMode {
 		if err := checkInit(ctx, kubeClient); err != nil {
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry init: %v", err))
-			return ErrIsNotReady
+			return err
 		}
 
 		msg, err := checkReady(ctx, kubeClient)
 		if err != nil {
 			if msg != "" {
-				err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
-				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
-				return err
+				wrapped := fmt.Errorf("%w\n%s", err, msg)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", wrapped))
+				return wrapped
 			}
 
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking registry ready: %v", err))
-			return ErrIsNotReady
+			return err
 		}
 	}
 
 	if err := removeInitSecret(ctx, kubeClient); err != nil {
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while removing registry init secret: %v", err))
-		return ErrIsNotReady
+		return err
 	}
 
 	return nil
@@ -176,7 +190,14 @@ func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1
 		Secrets(secretsNamespace).
 		Get(ctx, stateSecretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
+		if apierrors.IsNotFound(err) {
+			// No status reported yet: equivalent to no conditions being ready.
+			return nil, nil
+		}
+		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+			return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
+		}
+		return nil, fmt.Errorf("%w: get secret '%s/%s': %w", errRegistryCheckTransient, secretsNamespace, stateSecretName, err)
 	}
 
 	var conditions []metav1.Condition
@@ -211,7 +232,10 @@ func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (boo
 		if apierrors.IsNotFound(err) {
 			return false, false, nil
 		}
-		return false, false, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
+		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+			return false, false, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
+		}
+		return false, false, fmt.Errorf("%w: get secret '%s/%s': %w", errRegistryCheckTransient, secretsNamespace, initSecretName, err)
 	}
 
 	_, applied := secret.Annotations[initSecretAppliedAnnotation]
@@ -232,7 +256,10 @@ func removeInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
 		Delete(ctx, initSecretName, metav1.DeleteOptions{})
 
 	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("remove secret '%s/%s': %w", secretsNamespace, initSecretName, err)
+		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+			return fmt.Errorf("remove secret '%s/%s': %w", secretsNamespace, initSecretName, err)
+		}
+		return fmt.Errorf("%w: remove secret '%s/%s': %w", errRegistryCheckTransient, secretsNamespace, initSecretName, err)
 	}
 
 	return nil
