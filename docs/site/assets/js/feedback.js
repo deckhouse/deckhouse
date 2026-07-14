@@ -109,24 +109,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             async function sendFeedback(state, reasons = [], comment = '') {
                 try {
-                    const urlParams = new URLSearchParams({
+                    const payload = {
+                        domain: window.location.hostname,
+                        type: 'review-form',
                         user_ip: cookieUserData.cookieUserIp || '',
                         uuid: cookieUserData.cookieUserId,
                         result: state,
                         feedback_url: currentUrl,
-                        feedback_data: JSON.stringify(reasons),
+                        feedback_data: reasons, // array of strings
                         feedback_comment: comment
-                    });
-
-                    // TODO: Убрать хардкод домена после тестов
-                    const url = 'https://test.deckhouse.ru/wp-json/articles-feedback/v1/feedback?' + urlParams.toString();
-
+                    };
+                    
+                    const url = 'https://forms.flant.ru/api/v1/form-submissions/send';
+                    
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json;charset=utf-8',
+                            'Content-Type': 'application/json',
                             Accept: "application/json",
-                        }
+                        },
+                        body: JSON.stringify(payload)
                     });
 
                     if (!response.ok) throw new Error('API Error');
