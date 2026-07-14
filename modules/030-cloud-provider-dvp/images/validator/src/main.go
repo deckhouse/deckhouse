@@ -25,7 +25,6 @@ import (
 func main() {
 	h := proto.Handler{
 		Validate: validate,
-		Prepare:  prepare,
 	}
 	if err := h.Run(context.Background()); err != nil {
 		fmt.Fprintln(os.Stderr, err)

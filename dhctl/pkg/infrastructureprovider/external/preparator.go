@@ -61,29 +61,16 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 	return nil
 }
 
-func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (proto.PrepareResult, error) {
-	stdout, err := p.call(ctx, "prepare", input)
-	if err != nil {
-		return proto.PrepareResult{}, err
-	}
-
-	var resp proto.PrepareResponse
-	if err := json.Unmarshal(stdout, &resp); err != nil {
-		return proto.PrepareResult{}, fmt.Errorf("parse prepare response: %w", err)
-	}
-	if resp.Error != "" {
-		return proto.PrepareResult{}, errors.New(resp.Error)
-	}
-	if resp.Result != nil {
-		return *resp.Result, nil
-	}
+// Prepare is a no-op for external providers: the external protocol has only a
+// validate stage. Provider data collected by dhctl is used as-is, dhctl never
+// asks the binary to mutate it.
+func (p *Preparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
 	return proto.PrepareResult{}, nil
 }
 
 // call encodes input, runs the binary subcommand and returns its stdout.
 // Request/response payloads go to the span and debug log in full — deliberate
-// development-stage telemetry. ValidateRequest and PrepareRequest share the
-// same wire shape, so one request type serves both subcommands.
+// development-stage telemetry.
 func (p *Preparator) call(ctx context.Context, subcommand string, input config.ProviderInput) ([]byte, error) {
 	ctx, span := telemetry.StartSpan(ctx, "external."+subcommand)
 	defer span.End()
@@ -97,7 +84,7 @@ func (p *Preparator) call(ctx context.Context, subcommand string, input config.P
 	if err != nil {
 		return nil, fmt.Errorf("build %s request: %w", subcommand, err)
 	}
-	payload, err := json.Marshal(proto.PrepareRequest{Input: wireInput})
+	payload, err := json.Marshal(proto.ValidateRequest{Input: wireInput})
 	if err != nil {
 		return nil, fmt.Errorf("marshal %s request: %w", subcommand, err)
 	}
@@ -133,7 +120,7 @@ func toWireInput(input config.ProviderInput) (proto.PrepareInput, error) {
 		Layout:                input.Layout,
 		Operation:             input.Operation,
 		ProviderClusterConfig: pcc,
-		Vars:                  input.CloudProviderVars,
+		CloudProviderVars:     input.CloudProviderVars,
 	}, nil
 }
 

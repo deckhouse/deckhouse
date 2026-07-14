@@ -142,14 +142,6 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	span.AddEvent("provider prepared")
 	span.SetAttributes(otattribute.Int("provider.output.providerClusterConfigKeys", len(result.ProviderClusterConfig)))
 
-	if result.Vars != nil {
-		m.CloudProviderVars = result.Vars
-		span.SetAttributes(
-			otattribute.Int("provider.output.nodeGroupsCount", len(result.Vars.NodeGroups)),
-			otattribute.Int("provider.output.instanceClassesCount", len(result.Vars.InstanceClasses)),
-			otattribute.Int("provider.output.secretsCount", len(result.Vars.Secrets)),
-		)
-	}
 	if len(result.ProviderClusterConfig) > 0 && m.ProviderClusterConfig == nil {
 		m.ProviderClusterConfig = make(map[string]json.RawMessage, len(result.ProviderClusterConfig))
 	}

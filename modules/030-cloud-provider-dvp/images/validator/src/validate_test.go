@@ -191,7 +191,7 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 
 			err := validate(context.Background(), proto.PrepareInput{
 				Operation: proto.OperationBootstrap,
-				Vars: &proto.CloudProviderVars{
+				CloudProviderVars: &proto.CloudProviderVars{
 					Settings:        testModuleSettings(),
 					Secrets:         tt.secrets,
 					NodeGroups:      tt.nodeGroups,
@@ -214,7 +214,7 @@ func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 
 	err := validate(context.Background(), proto.PrepareInput{
 		Operation: proto.OperationBootstrap,
-		Vars: &proto.CloudProviderVars{
+		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: testModuleSettings(),
 			NodeGroups: map[string]map[string]any{
 				"master": {
@@ -252,7 +252,7 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 
 	err := validate(context.Background(), proto.PrepareInput{
 		Operation: proto.OperationConverge,
-		Vars: &proto.CloudProviderVars{
+		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
 				"storage":  map[string]any{"disabled": true},
@@ -273,7 +273,7 @@ func TestValidateDestroySkipsValidation(t *testing.T) {
 
 	err := validate(context.Background(), proto.PrepareInput{
 		Operation: proto.OperationDestroy,
-		Vars: &proto.CloudProviderVars{
+		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
 			},
@@ -281,32 +281,5 @@ func TestValidateDestroySkipsValidation(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("validate() error = %v, want nil for destroy", err)
-	}
-}
-
-func TestPrepareKeepsProviderVars(t *testing.T) {
-	t.Parallel()
-
-	vars := &proto.CloudProviderVars{
-		Settings: map[string]any{
-			"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
-		},
-		NodeGroups: map[string]map[string]any{
-			"worker": {
-				"metadata": map[string]any{"name": "worker"},
-				"spec":     map[string]any{"nodeType": "CloudPermanent"},
-			},
-		},
-	}
-
-	result, err := prepare(context.Background(), proto.PrepareInput{Vars: vars})
-	if err != nil {
-		t.Fatalf("prepare() error = %v", err)
-	}
-	if result == nil || result.Vars == nil {
-		t.Fatalf("prepare() returned nil vars")
-	}
-	if _, ok := result.Vars.NodeGroups["worker"]; !ok {
-		t.Fatalf("prepare() expected worker NodeGroup")
 	}
 }

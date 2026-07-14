@@ -22,10 +22,9 @@ import (
 )
 
 // Handler implements the server side of the dhctl external provider protocol.
-// Set Validate and Prepare to your provider logic, then call Run.
+// Set Validate to your provider logic, then call Run.
 type Handler struct {
 	Validate func(ctx context.Context, input PrepareInput) error
-	Prepare  func(ctx context.Context, input PrepareInput) (*PrepareResult, error)
 }
 
 // Run reads the subcommand from os.Args[1], decodes stdin, dispatches to the
@@ -34,11 +33,11 @@ type Handler struct {
 // Decoding errors and unknown subcommands are returned as Go errors — the caller
 // should print them to stderr and exit 1.
 //
-// Business errors (validation failure, prepare failure) are encoded into the
-// response's error field and Run returns nil; the binary exits 0.
+// Business errors (validation failure) are encoded into the response's error
+// field and Run returns nil; the binary exits 0.
 func (h *Handler) Run(ctx context.Context) error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: %s <validate|prepare>", os.Args[0])
+		return fmt.Errorf("usage: %s <validate>", os.Args[0])
 	}
 
 	switch os.Args[1] {
@@ -47,11 +46,6 @@ func (h *Handler) Run(ctx context.Context) error {
 			return fmt.Errorf("validate subcommand is not implemented by this binary")
 		}
 		return h.runValidate(ctx)
-	case "prepare":
-		if h.Prepare == nil {
-			return fmt.Errorf("prepare subcommand is not implemented by this binary")
-		}
-		return h.runPrepare(ctx)
 	default:
 		return fmt.Errorf("unknown subcommand: %s", os.Args[1])
 	}
@@ -66,22 +60,6 @@ func (h *Handler) runValidate(ctx context.Context) error {
 	resp := ValidateResponse{}
 	if err := h.Validate(ctx, req.Input); err != nil {
 		resp.Error = err.Error()
-	}
-	return json.NewEncoder(os.Stdout).Encode(resp)
-}
-
-func (h *Handler) runPrepare(ctx context.Context) error {
-	var req PrepareRequest
-	if err := json.NewDecoder(os.Stdin).Decode(&req); err != nil {
-		return fmt.Errorf("decode prepare request: %w", err)
-	}
-
-	result, err := h.Prepare(ctx, req.Input)
-	resp := PrepareResponse{}
-	if err != nil {
-		resp.Error = err.Error()
-	} else {
-		resp.Result = result
 	}
 	return json.NewEncoder(os.Stdout).Encode(resp)
 }

@@ -41,9 +41,7 @@ func fakePreparatorProvider(p MetaConfigPreparator) MetaConfigPreparatorProvider
 }
 
 func TestPrepareMutationMergeContract(t *testing.T) {
-	vars := &proto.CloudProviderVars{Settings: map[string]interface{}{"zone": "b"}}
 	preparator := &fakeMutatingPreparator{result: proto.PrepareResult{
-		Vars: vars,
 		ProviderClusterConfig: map[string]interface{}{
 			"replaced": map[string]interface{}{"new": true},
 			"added":    "fresh",
@@ -64,7 +62,6 @@ func TestPrepareMutationMergeContract(t *testing.T) {
 	require.JSONEq(t, `{"old":1}`, string(m.ProviderClusterConfig["kept"]), "keys absent from the result must stay untouched")
 	require.JSONEq(t, `{"new":true}`, string(m.ProviderClusterConfig["replaced"]), "returned keys must replace the old value wholesale")
 	require.JSONEq(t, `"fresh"`, string(m.ProviderClusterConfig["added"]))
-	require.Same(t, vars, m.CloudProviderVars, "non-nil Vars must replace CloudProviderVars wholesale")
 }
 
 func TestPrepareMutationRevalidatesAgainstSchema(t *testing.T) {

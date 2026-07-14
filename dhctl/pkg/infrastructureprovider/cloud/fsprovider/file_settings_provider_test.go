@@ -24,7 +24,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
@@ -42,7 +41,7 @@ var tofuProviders = []string{
 	yandex.ProviderName,
 	"dynamix",
 	"zvirt",
-	dvp.ProviderName,
+	"dvp",
 	"vsphere",
 	"huaweicloud",
 	"openstack",

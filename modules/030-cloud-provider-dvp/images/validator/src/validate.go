@@ -44,10 +44,3 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 
 	return dvppreflight.ValidatePreflight(state).ErrorOrNil()
 }
-
-func prepare(_ context.Context, input dhctlproto.PrepareInput) (*dhctlproto.PrepareResult, error) {
-	return &dhctlproto.PrepareResult{
-		Vars:                  input.Vars,
-		ProviderClusterConfig: input.ProviderClusterConfig,
-	}, nil
-}

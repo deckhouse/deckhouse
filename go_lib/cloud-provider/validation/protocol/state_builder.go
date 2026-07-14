@@ -50,23 +50,23 @@ func (b *StateBuilder) Build(input proto.PrepareInput) (*cpval.State, error) {
 		LegacyProviderClusterConfig: input.ProviderClusterConfig,
 	}
 
-	if input.Vars != nil {
-		state.ModuleConfig, err = cpval.DecodeModuleConfigForModule(b.config.ModuleName, input.Vars.Settings)
+	if input.CloudProviderVars != nil {
+		state.ModuleConfig, err = cpval.DecodeModuleConfigForModule(b.config.ModuleName, input.CloudProviderVars.Settings)
 		if err != nil {
 			return nil, err
 		}
 
-		state.CredentialSecrets, err = cpval.DecodeCredentialSecrets(input.Vars.Secrets)
+		state.CredentialSecrets, err = cpval.DecodeCredentialSecrets(input.CloudProviderVars.Secrets)
 		if err != nil {
 			return nil, err
 		}
 
-		state.NodeGroups, err = cpval.DecodeNodeGroups(input.Vars.NodeGroups)
+		state.NodeGroups, err = cpval.DecodeNodeGroups(input.CloudProviderVars.NodeGroups)
 		if err != nil {
 			return nil, err
 		}
 
-		state.InstanceClasses, err = cpval.DecodeInstanceClasses(input.Vars.InstanceClasses)
+		state.InstanceClasses, err = cpval.DecodeInstanceClasses(input.CloudProviderVars.InstanceClasses)
 		if err != nil {
 			return nil, err
 		}

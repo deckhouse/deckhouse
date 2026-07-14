@@ -65,8 +65,8 @@ func TestHandlerRunValidateEncodesSuccess(t *testing.T) {
 					if input.Operation != OperationBootstrap {
 						t.Fatalf("Validate input.Operation = %q, want bootstrap", input.Operation)
 					}
-					if input.Vars == nil || input.Vars.Settings["region"] != "ru-1" {
-						t.Fatalf("Validate input.Vars.Settings = %#v, want region", input.Vars)
+					if input.CloudProviderVars == nil || input.CloudProviderVars.Settings["region"] != "ru-1" {
+						t.Fatalf("Validate input.CloudProviderVars.Settings = %#v, want region", input.CloudProviderVars)
 					}
 					return nil
 				},
@@ -87,78 +87,6 @@ func TestHandlerRunValidateEncodesSuccess(t *testing.T) {
 	}
 }
 
-func TestHandlerRunPrepareEncodesResult(t *testing.T) {
-	stdout, err := runHandlerWithStdio(
-		t,
-		[]string{"validator", "prepare"},
-		`{"input":{"providerName":"dvp","providerClusterConfiguration":{"layout":{"zones":["a"]}},"vars":{"nodeGroups":{"worker":{"metadata":{"name":"worker"}}}}}}`,
-		func() error {
-			handler := Handler{
-				Prepare: func(_ context.Context, input PrepareInput) (*PrepareResult, error) {
-					if input.Vars == nil || input.Vars.NodeGroups["worker"]["metadata"] == nil {
-						t.Fatalf("Prepare input.Vars.NodeGroups = %#v, want worker", input.Vars)
-					}
-					return &PrepareResult{
-						Vars: input.Vars,
-						ProviderClusterConfig: map[string]interface{}{
-							"layout": map[string]interface{}{"zones": []interface{}{"a", "b"}},
-						},
-					}, nil
-				},
-			}
-			return handler.Run(context.Background())
-		},
-	)
-	if err != nil {
-		t.Fatalf("Handler.Run() error = %v", err)
-	}
-
-	var response PrepareResponse
-	if err := json.Unmarshal([]byte(stdout), &response); err != nil {
-		t.Fatalf("unmarshal response: %v", err)
-	}
-	if response.Error != "" {
-		t.Fatalf("PrepareResponse.Error = %q, want empty", response.Error)
-	}
-	if response.Result == nil || response.Result.Vars == nil {
-		t.Fatalf("PrepareResponse.Result = %#v, want vars", response.Result)
-	}
-	zones, ok := response.Result.ProviderClusterConfig["layout"].(map[string]interface{})["zones"].([]interface{})
-	if !ok || len(zones) != 2 || zones[1] != "b" {
-		t.Fatalf("PrepareResponse.Result.ProviderClusterConfig = %#v, want replaced zones", response.Result.ProviderClusterConfig)
-	}
-}
-
-func TestHandlerRunPrepareEncodesBusinessError(t *testing.T) {
-	stdout, err := runHandlerWithStdio(
-		t,
-		[]string{"validator", "prepare"},
-		`{"input":{"providerName":"dvp"}}`,
-		func() error {
-			handler := Handler{
-				Prepare: func(context.Context, PrepareInput) (*PrepareResult, error) {
-					return nil, errors.New("prepare failed")
-				},
-			}
-			return handler.Run(context.Background())
-		},
-	)
-	if err != nil {
-		t.Fatalf("Handler.Run() error = %v", err)
-	}
-
-	var response PrepareResponse
-	if err := json.Unmarshal([]byte(stdout), &response); err != nil {
-		t.Fatalf("unmarshal response: %v", err)
-	}
-	if response.Error != "prepare failed" {
-		t.Fatalf("PrepareResponse.Error = %q, want prepare failed", response.Error)
-	}
-	if response.Result != nil {
-		t.Fatalf("PrepareResponse.Result = %#v, want nil", response.Result)
-	}
-}
-
 func TestHandlerRunRejectsInvalidDispatch(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -169,7 +97,7 @@ func TestHandlerRunRejectsInvalidDispatch(t *testing.T) {
 		{
 			name: "missing subcommand",
 			args: []string{"validator"},
-			want: "usage: validator <validate|prepare>",
+			want: "usage: validator <validate>",
 		},
 		{
 			name: "unknown subcommand",
@@ -180,11 +108,6 @@ func TestHandlerRunRejectsInvalidDispatch(t *testing.T) {
 			name: "validate handler missing",
 			args: []string{"validator", "validate"},
 			want: "validate subcommand is not implemented by this binary",
-		},
-		{
-			name: "prepare handler missing",
-			args: []string{"validator", "prepare"},
-			want: "prepare subcommand is not implemented by this binary",
 		},
 	}
 

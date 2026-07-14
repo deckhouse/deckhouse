@@ -44,7 +44,7 @@ type CloudProviderVars struct {
 	Secrets map[string]map[string]interface{} `json:"secrets,omitempty"`
 }
 
-// PrepareInput is the input payload shared by both validate and prepare calls.
+// PrepareInput is the input payload for the validate call.
 type PrepareInput struct {
 	// ProviderName is the cloud provider identifier (e.g. "dvp", "aws").
 	ProviderName string `json:"providerName"`
@@ -56,16 +56,15 @@ type PrepareInput struct {
 	Operation string `json:"operation,omitempty"`
 	// ProviderClusterConfig holds the parsed providerClusterConfiguration section.
 	ProviderClusterConfig map[string]interface{} `json:"providerClusterConfiguration,omitempty"`
-	// Vars is the structured provider data (node groups, instance classes,
-	// credential secrets, module settings) collected by dhctl. Always
-	// populated on both subcommands.
-	Vars *CloudProviderVars `json:"vars,omitempty"`
+	// CloudProviderVars is the structured provider data (node groups, instance
+	// classes, credential secrets, module settings) collected by dhctl.
+	CloudProviderVars *CloudProviderVars `json:"vars,omitempty"`
 }
 
-// PrepareResult is returned by the prepare subcommand on success.
+// PrepareResult is returned by an in-tree provider's Prepare step (currently
+// only vcd, to inject legacyMode). The external validate-only protocol does not
+// use it.
 type PrepareResult struct {
-	// Vars is the structured provider variables to pass to Terraform/OpenTofu.
-	Vars *CloudProviderVars `json:"vars,omitempty"`
 	// ProviderClusterConfig is the (possibly mutated) providerClusterConfiguration.
 	ProviderClusterConfig map[string]interface{} `json:"providerClusterConfiguration,omitempty"`
 }
@@ -80,17 +79,4 @@ type ValidateRequest struct {
 // validation failed. A crash exits non-zero with no usable stdout.
 type ValidateResponse struct {
 	Error string `json:"error,omitempty"`
-}
-
-// PrepareRequest is the JSON object written to stdin for the prepare subcommand.
-type PrepareRequest struct {
-	Input PrepareInput `json:"input"`
-}
-
-// PrepareResponse is the JSON object written to stdout after prepare. The binary
-// always writes a JSON object and exits 0; a non-empty Error means preparation
-// failed. A crash exits non-zero with no usable stdout.
-type PrepareResponse struct {
-	Result *PrepareResult `json:"result,omitempty"`
-	Error  string         `json:"error,omitempty"`
 }

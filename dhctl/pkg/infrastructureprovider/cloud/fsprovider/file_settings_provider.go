@@ -205,9 +205,9 @@ func loadTerraformVersionFileSettings(ctx context.Context, filename string) (set
 		return nil, fmt.Errorf("plan_rules.yml next to %s requires a single-provider bundle, got %d providers", filename, len(res))
 	}
 
-	// DVP ships as a single-provider bundle: its plan_rules.yml travels next to
-	// terraform_versions.yml (delivered into candi by copyTFVersionFile), so the
-	// rule is loaded here. The main multi-provider candi does not list DVP.
+	// External providers ship as a single-provider bundle: plan_rules.yml travels
+	// next to terraform_versions.yml (delivered into candi by copyTFVersionFile),
+	// so the rule is loaded here. The main multi-provider candi has no plan_rules.
 	if len(res) == 1 {
 		for cloudName, set := range res {
 			simple, ok := set.(*settings.Simple)
@@ -220,8 +220,8 @@ func loadTerraformVersionFileSettings(ctx context.Context, filename string) (set
 					return nil, fmt.Errorf("validate provider %s after plan_rules merge: %w", simple.CloudName(), err)
 				}
 			}
-			if cloudName == "dvp" && simple.VMResourceVal == nil {
-				return nil, fmt.Errorf("provider DVP requires plan_rules.yml with vmResource next to %s", filename)
+			if simple.VMResourceVal == nil {
+				return nil, fmt.Errorf("single-provider bundle %q requires plan_rules.yml with vmResource next to %s", cloudName, filename)
 			}
 		}
 	}

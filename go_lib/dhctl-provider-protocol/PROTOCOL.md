@@ -5,8 +5,8 @@ This document describes the protocol between dhctl and external provider binarie
 ## Overview
 
 An external provider binary is a standalone executable placed in the plugins directory.
-dhctl discovers it by name and invokes it as a subprocess for validation and resource
-preparation steps during bootstrap, converge, and destroy operations.
+dhctl discovers it by name and invokes it as a subprocess for the validation step
+during bootstrap, converge, and destroy operations.
 
 ## Binary location
 
@@ -35,7 +35,6 @@ The binary is invoked with a single subcommand argument:
 
 ```
 validator validate
-validator prepare
 ```
 
 ## Transport
@@ -50,8 +49,8 @@ Every request includes a `version` field with the protocol version string.
 The current version is `"1"`.
 
 A binary **must** reject requests with an unknown version by returning an error
-response (for `validate`/`prepare`) or by exiting non-zero if the request cannot
-be decoded at all.
+response (for `validate`) or by exiting non-zero if the request cannot be
+decoded at all.
 
 ## Subcommand: validate
 
@@ -89,45 +88,6 @@ On validation failure:
 
 **Exit code:** always `0`. Non-zero exit means the binary itself crashed.
 
-## Subcommand: prepare
-
-Transforms provider data and returns structured variables for Terraform/OpenTofu.
-
-**stdin:** same structure as validate.
-
-**stdout:**
-```json
-{
-  "result": {
-    "vars": {
-      "settings": { ... },
-      "nodeGroups": { "worker": { ... } },
-      "instanceClasses": { "worker": { ... } },
-      "secrets": { "credentials": { ... } }
-    },
-    "providerClusterConfiguration": { ... }
-  }
-}
-```
-
-On failure:
-```json
-{"error": "human-readable error message"}
-```
-
-**Exit code:** always `0`.
-
-### Result semantics
-
-- `result.vars`, when non-null, replaces the caller's provider vars wholesale.
-- `result.providerClusterConfiguration` is merged shallowly: every returned
-  top-level key replaces the caller's value for that key wholesale; keys the
-  binary does not return stay untouched. To amend a nested field, return the
-  whole top-level key containing it. There is no key deletion.
-- Mutation is ephemeral: dhctl never writes the mutated configuration back to
-  the cluster and re-runs `prepare` on every operation. `prepare` MUST be
-  idempotent: `prepare(prepare(x)) == prepare(x)`.
-
 ## Input fields
 
 | Field | Type | Description |
@@ -137,7 +97,7 @@ On failure:
 | `clusterPrefix` | string | Prefix for cloud resource names |
 | `layout` | string | Provider layout name |
 | `providerClusterConfiguration` | object | Parsed `providerClusterConfiguration` section |
-| `vars` | object | Structured provider data collected by dhctl (node groups, instance classes, credential secrets, module settings). Always populated on both subcommands — the only channel for provider resources |
+| `vars` | object | Structured provider data collected by dhctl (node groups, instance classes, credential secrets, module settings) — the only channel for provider resources |
 
 ## Exit codes
 
@@ -162,7 +122,6 @@ import (
 func main() {
     h := proto.Handler{
         Validate: myValidate,
-        Prepare:  myPrepare,
     }
     if err := h.Run(context.Background()); err != nil {
         fmt.Fprintln(os.Stderr, err)
@@ -171,14 +130,8 @@ func main() {
 }
 
 func myValidate(ctx context.Context, input proto.PrepareInput) error {
+    // input.CloudProviderVars carries the structured provider data.
     // Return non-nil to signal validation failure.
     return nil
-}
-
-func myPrepare(ctx context.Context, input proto.PrepareInput) (*proto.PrepareResult, error) {
-    // input.Vars carries the structured provider data; transform as needed.
-    return &proto.PrepareResult{
-        Vars: input.Vars,
-    }, nil
 }
 ```
