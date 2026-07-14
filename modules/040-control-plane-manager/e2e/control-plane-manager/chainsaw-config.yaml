@@ -11,7 +11,7 @@ spec:
     cleanup: 5m
     exec: 30s
   execution:
-    failFast: true
+    failFast: false
     parallel: 1            # cluster-scoped resources must run sequentially
   cleanup:
     delayBeforeCleanup: 15s
