@@ -48,11 +48,17 @@ var ErrManifestTaskTransient = fmt.Errorf("manifest task: transient error, may s
 // wrapManifestErr would otherwise recognize as permanent.
 var ErrManifestTaskPermanent = fmt.Errorf("manifest task: permanent error, will not succeed on retry")
 
-// wrapManifestErr tags err as transient unless it is a permanent authorization/validation
-// failure (or explicitly marked via ErrManifestTaskPermanent), so callers can whitelist
+// wrapManifestErr tags err as transient unless it is a permanent authorization failure (or
+// explicitly marked via ErrManifestTaskPermanent), so callers can whitelist
 // ErrManifestTaskTransient in their retry loop.
+//
+// Deliberately NOT included: apierrors.IsInvalid. An admission-webhook rejection often checks
+// cross-resource state (e.g. "has the ModuleSource created earlier in this same batch been
+// reconciled yet?"), not just the manifest's own static content — that's exactly the kind of
+// propagation delay these loops exist to ride out, so treating every Invalid as permanent risks
+// aborting an operation that would have succeeded a few seconds later.
 func wrapManifestErr(prefix string, err error) error {
-	if errors.IsForbidden(err) || errors.IsUnauthorized(err) || errors.IsInvalid(err) || stderrors.Is(err, ErrManifestTaskPermanent) {
+	if errors.IsForbidden(err) || errors.IsUnauthorized(err) || stderrors.Is(err, ErrManifestTaskPermanent) {
 		return fmt.Errorf("%s: %w", prefix, err)
 	}
 	return fmt.Errorf("%w: %s: %w", ErrManifestTaskTransient, prefix, err)

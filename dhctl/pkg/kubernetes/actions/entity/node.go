@@ -183,7 +183,7 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 					Resource(nodeGroupResource).
 					Patch(ctx, doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 				if err != nil {
-					if errors.IsForbidden(err) || errors.IsUnauthorized(err) || errors.IsInvalid(err) {
+					if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
 						return err
 					}
 					return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)
@@ -192,7 +192,7 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 				return nil
 			}
 
-			if errors.IsForbidden(err) || errors.IsUnauthorized(err) || errors.IsInvalid(err) {
+			if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
 				return err
 			}
 			return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)

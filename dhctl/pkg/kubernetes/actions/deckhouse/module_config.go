@@ -125,10 +125,12 @@ func prepareModuleConfig(ctx context.Context, mc *config.ModuleConfig, res *Mani
 }
 
 // moduleConfigErrIsPermanent reports whether err is a permission failure that will not
-// resolve by retrying, as opposed to a transient API error (including "not found yet"
-// while the ModuleConfig's CRD is still being installed) or a resource-version conflict.
+// resolve by retrying, as opposed to a transient API error (including "not found yet" while
+// the ModuleConfig's CRD is still being installed, a resource-version conflict, or an
+// admission-webhook rejection that depends on another just-created resource, e.g. a
+// ModuleSource, being reconciled) which should keep retrying.
 func moduleConfigErrIsPermanent(err error) bool {
-	return apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) || apierrors.IsInvalid(err)
+	return apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err)
 }
 
 func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, mcName string, value any, field []string) error {
