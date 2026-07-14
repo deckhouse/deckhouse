@@ -116,6 +116,26 @@ rules:
   - update
   - patch
   - delete
+# MCM provider MachineClass CRs - generated + applied by capi-machine-deployment controller (SSA)
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - alicloudmachineclasses
+  - awsmachineclasses
+  - azuremachineclasses
+  - gcpmachineclasses
+  - openstackmachineclasses
+  - packetmachineclasses
+  - vspheremachineclasses
+  - yandexmachineclasses
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
 # CAPI Machine and related resources
 - apiGroups:
   - cluster.x-k8s.io
