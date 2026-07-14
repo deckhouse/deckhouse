@@ -122,7 +122,7 @@ Task types:
 | Run       | Runs subtasks when installing Application or Module: `BeforeHelm` -> `helm Upgrade` -> `AfterHelm`    |
 | HookRun   | Runs a hook on event                                                                         |
 | HookSync  | Performs initial synchronization of Kubernetes binding                                                |
-| Disable   | Removes Helm, disables hooks, clears hook queues                                             |
+| Disable   | Runs subtasks when removing Application or Module: `BeforeDeleteHelm` -> `helm uninstall` -> `AfterDeleteHelm`, then disables hooks and clears hook queues |
 | Undeploy  | Removes the package from disk                                                                |
 
 Task execution in one queue does not block task execution in another queue.

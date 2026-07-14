@@ -123,7 +123,7 @@ description: Описание работы очередей контроллер
 | Run       | Выполнение подзадач при установке Application или Module: `BeforeHelm` → `helm Upgrade` → `AfterHelm`     |
 | HookRun   | Запуск хука по событию                                                                     |
 | HookSync  | Начальная синхронизация Kubernetes binding                                                        |
-| Disable   | Удаление Helm, отключение хуков, очистка hook-очереди                                          |
+| Disable   | Выполнение подзадач при удалении Application или Module: `BeforeDeleteHelm` → `helm uninstall` → `AfterDeleteHelm`, затем отключение хуков и очистка hook-очереди                                          |
 | Undeploy  | Удаление пакета с диска                                                                      |
 
 Выполнение задач в одной очереди не блокирует выполнение задач в другой очереди.
