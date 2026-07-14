@@ -1,0 +1,48 @@
+- name: d8.istio.config_analysis
+  rules:
+  - alert: D8IstioConfigAnalysisError
+    expr: |
+      sum by (revision, type, namespace, resource, code) (
+        d8_istio_config_analysis_issue{severity="Error"}
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,type,namespace,resource,code"
+      summary: Istio configuration analysis detected an error-level issue.
+      description: |
+        The Istio configuration analyzer found an error in revision `{{$labels.revision}}`.
+
+        Type: `{{$labels.type}}` (`{{$labels.code}}`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        Check analyzer metrics or run `istioctl analyze -A --revision {{$labels.revision}}` in the debug container.
+  - alert: D8IstioConfigAnalysisWarning
+    expr: |
+      sum by (revision, type, namespace, resource, code) (
+        d8_istio_config_analysis_issue{severity="Warning"}
+      ) > 0
+    for: 1h
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,type,namespace,resource,code"
+      summary: Istio configuration analysis detected a warning-level issue.
+      description: |
+        The Istio configuration analyzer found a warning in revision `{{$labels.revision}}`.
+
+        Type: `{{$labels.type}}` (`{{$labels.code}}`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`

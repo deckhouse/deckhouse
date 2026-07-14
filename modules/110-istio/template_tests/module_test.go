@@ -370,6 +370,19 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			telemetry := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
 			Expect(telemetry.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
 		})
+
+		It("renders istio config analyzer for control plane 1.27", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x27")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x27"))
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x27")
+			Expect(podMonitor.Exists()).To(BeTrue())
+		})
 	})
 
 	Context("There are revisions to install, no federations or multiclusters", func() {

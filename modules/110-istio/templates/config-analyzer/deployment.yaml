@@ -1,0 +1,162 @@
+{{- define "config_analyzer_resources" }}
+cpu: 50m
+memory: 128Mi
+{{- end }}
+
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- if eq $version "1.27" }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: istio-config-analyzer-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-config-analyzer" "istio.io/rev" $revision)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: istio-config-analyzer-{{ $revision }}
+  updatePolicy:
+    updateMode: "InPlaceOrRecreate"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: istio-config-analyzer
+      minAllowed:
+        {{- include "config_analyzer_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 500m
+        memory: 512Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istio-config-analyzer-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-config-analyzer" "istio.io/rev" $revision)) | nindent 2 }}
+automountServiceAccountToken: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istio-config-analyzer-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-config-analyzer" "istio.io/rev" $revision "app.kubernetes.io/version" $fullVersion)) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: istio-config-analyzer
+      istio.io/rev: {{ $revision }}
+  template:
+    metadata:
+      labels:
+        app: istio-config-analyzer
+        istio.io/rev: {{ $revision }}
+        sidecar.istio.io/inject: "false"
+    spec:
+      {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_custom" (list $ 64535 64535) | nindent 6 }}
+      serviceAccountName: istio-config-analyzer-{{ $revision }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: istio-config-analyzer
+        image: {{ include "helm_lib_module_image" (list $ (printf "istioConfigAnalyzer%s" $imageSuffix)) }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "uid" 64535) | nindent 8 }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - "--istio-namespace=d8-{{ $.Chart.Name }}"
+        - "--revision={{ $revision }}"
+        - "--all-namespaces=true"
+        - "--server.interval=5m"
+        - "--analysis.timeout=2m"
+        - "--server.telemetry-address=127.0.0.1:8080"
+        ports:
+        - name: http-metrics
+          containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 15
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "config_analyzer_resources" . | nindent 12 }}
+            {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:8080/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ $.Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: istio-config-analyzer-{{ $revision }}
+        ports:
+        - containerPort: 8443
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+            {{- end }}
+        volumeMounts:
+        - name: kube-rbac-proxy-ca
+          mountPath: /etc/kube-rbac-proxy
+      volumes:
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt
+  {{- end }}
+{{- end }}
