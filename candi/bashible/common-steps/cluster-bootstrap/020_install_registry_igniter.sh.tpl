@@ -83,6 +83,7 @@ bb-set-proxy
 
 # Prepare vars
 discovered_node_ip="$(bb-d8-node-ip)"
+first_discovered_node_ip="${discovered_node_ip%%,*}"
 
 base_path="${REGISTRY_MODULE_IGNITER_DIR}"
 pki_path="${base_path}/pki"
@@ -154,7 +155,7 @@ EOF
 
 client_server_csr_json=$(cat << EOF
 {
-  "hosts": ["127.0.0.1", "localhost", "registry.d8-system.svc", "${discovered_node_ip}"],
+  "hosts": ["127.0.0.1", "localhost", "registry.d8-system.svc", "${first_discovered_node_ip}"],
   "key": {"algo": "rsa", "size": 2048}
 }
 EOF
@@ -252,7 +253,7 @@ storage:
     disable: true
 
 http:
-  addr: "${discovered_node_ip}:5001"
+  addr: "${first_discovered_node_ip}:5001"
   prefix: /
   secret: asecretforbootstrap
   debug:
@@ -283,7 +284,7 @@ proxy:
 
 auth:
   token:
-    realm: https://${discovered_node_ip}:5051/auth
+    realm: https://${first_discovered_node_ip}:5051/auth
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "${pki_path}/token.crt"
@@ -375,7 +376,7 @@ if ! start_and_wait "${log_path}/distribution.log" /opt/deckhouse/bin/ign-regist
     echo "ERROR: registry distribution failed to start, see ${log_path}/distribution.log"
     exit 1
 fi
-if ! liveness_probe "https://${discovered_node_ip}:5001" "${pki_path}/ca.crt"; then
+if ! liveness_probe "https://${first_discovered_node_ip}:5001" "${pki_path}/ca.crt"; then
     echo "ERROR: registry distribution liveness probe failed, see ${log_path}/distribution.log"
     exit 1
 fi

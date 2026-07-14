@@ -45,6 +45,7 @@ bb-set-proxy
 
 # Prepare vars
 discovered_node_ip="$(bb-d8-node-ip)"
+first_discovered_node_ip="${discovered_node_ip%%,*}"
 
 static_pod_tmp_file=$(bb-tmp-file)
 static_pod_dest_path="/etc/kubernetes/manifests"
@@ -128,7 +129,7 @@ storage:
     disable: true
 
 http:
-  addr: "${discovered_node_ip}:5001"
+  addr: "${first_discovered_node_ip}:5001"
   prefix: /
   secret: asecretforbootstrap
   debug:
@@ -159,7 +160,7 @@ proxy:
 
 auth:
   token:
-    realm: https://${discovered_node_ip}:5051/auth
+    realm: https://${first_discovered_node_ip}:5051/auth
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "/pki/token.crt"

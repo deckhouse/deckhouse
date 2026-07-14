@@ -20,28 +20,18 @@ function discover_internal_network_cidrs() {
 
   physical_iface="$(ls -l /sys/class/net/ | grep -vE "virtual|total" | grep "devices" | awk '{print $9}')"
   if [[ "$(wc -l <<< "${physical_iface}")" -eq 1 ]]; then
-    discovered_internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
+    # Derive CIDRs from globally-scoped addresses of the interface. Unlike
+    # `ip route show scope link proto kernel`, this also covers IPv6 subnets
+    # configured via SLAAC/RA (proto ra), which are required for dual-stack.
+    # Temporary (privacy-extension) and deprecated addresses are skipped as
+    # they are not suitable for a stable node IP.
+    discovered_internal_network_cidrs="$(ip -o addr show scope global dev "${physical_iface}" | grep -vwE 'temporary|deprecated' | awk '{print $4}')"
     echo "$discovered_internal_network_cidrs"
   else
     echo "Cannot discover internal network CIDRs: node has more than one interface and StaticClusterConfiguration.internalNetworkCIDRs is not set" >&2
     return 1
   fi
 }
-
-function check_slash32_node_ip() {
-  local inet_lines
-  inet_lines="$(ip -4 -o addr show up scope global | awk '$2 != "lo" {print $4}')"
-  if [[ -z "$inet_lines" || "$(wc -l <<< "${inet_lines}")" -ne 1 ]]; then
-    return 1
-  fi
-
-  local inet_line="${inet_lines}"
-  local addr="${inet_line%/*}"
-  local prefix="${inet_line#*/}"
-
-  [[ "$prefix" == "32" ]] && echo "$addr"
-}
-
 
 # Ensure we have file
 touch /var/lib/bashible/discovered-node-ip
@@ -55,7 +45,7 @@ echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
   {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2> /dev/null)" ; then
-    echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address])[0] // ""' > /var/lib/bashible/discovered-node-ip
+    echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address]) as $ips | (($ips | map(select(test(":") | not)) | .[0]) // null) as $v4 | (($ips | map(select(test(":"))) | .[0]) // null) as $v6 | [$v4, $v6] | map(select(. != null)) | join(",")' > /var/lib/bashible/discovered-node-ip
   else
     bb-log-error "Cannot discover node IP from Node object: Kubernetes API server is unreachable"
     exit 1
@@ -73,44 +63,127 @@ if [[ -z "$internal_network_cidrs" ]]; then
   internal_network_cidrs="$(discover_internal_network_cidrs || true)"
 fi
 
+# Pass CIDR list to Python via environment.
+# Python script discovers node IPs (IPv4 and/or IPv6) that match the given CIDRs.
+# If no CIDRs are provided, it falls back to the DVP-like case: single /32 (IPv4) or /128 (IPv6).
+export internal_network_cidrs
+internal_network_cidrs="${internal_network_cidrs}" python3 - > /var/lib/bashible/discovered-node-ip.tmp << 'PYEOF'
+import ipaddress
+import os
+import subprocess
 
-function is_ip_in_cidr() {
-  ip="$1"
-  IFS="/" read net_address net_prefix <<< "$2"
 
-  IFS=. read -r a b c d <<< "$ip"
-  ip_dec="$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
+def get_system_ips_and_prefixes():
+    ips = []
+    try:
+        output = subprocess.check_output(
+            ['ip', '-o', 'addr', 'show', 'up', 'scope', 'global'],
+            universal_newlines=True,
+        )
+    except Exception:
+        return ips
 
-  IFS=. read -r a b c d <<< "$net_address"
-  net_address_dec="$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
+    for line in output.splitlines():
+        parts = line.split()
+        if len(parts) < 4 or parts[1] == 'lo':
+            continue
+        addr_with_prefix = parts[3]
+        if '/' not in addr_with_prefix:
+            continue
+        ip, prefix = addr_with_prefix.split('/', 1)
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            continue
+        ips.append((ip, prefix))
+    return ips
 
-  netmask=$(((0xFFFFFFFF << (32 - net_prefix)) & 0xFFFFFFFF))
 
-  test $((netmask & ip_dec)) -eq $((netmask & net_address_dec))
-}
+def is_ip_in_cidr(ip_str, cidr_str):
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        net = ipaddress.ip_network(cidr_str, strict=False)
+    except ValueError:
+        return False
+    return ip in net
 
-if grep -q 'Ubuntu' /etc/os-release 2>/dev/null; then
-  ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | select(.ifname != "lo") | .addr_info[] | .local')
+
+def first_system_ip(system_ips, version):
+    for ip, _ in system_ips:
+        try:
+            if ipaddress.ip_address(ip).version == version:
+                return ip
+        except ValueError:
+            continue
+    return None
+
+
+def discover_ip(internal_network_cidrs_str):
+    system_ips = get_system_ips_and_prefixes()
+    matched_v4 = None
+    matched_v6 = None
+
+    if not internal_network_cidrs_str:
+        # DVP-like fallback: a single /32 IPv4 or /128 IPv6 address.
+        for ip, prefix in system_ips:
+            try:
+                version = ipaddress.ip_address(ip).version
+            except ValueError:
+                continue
+            if version == 4 and prefix == '32' and matched_v4 is None:
+                matched_v4 = ip
+            elif version == 6 and prefix == '128' and matched_v6 is None:
+                matched_v6 = ip
+    else:
+        requested_v4 = False
+        requested_v6 = False
+        for cidr in internal_network_cidrs_str.split():
+            try:
+                cidr_version = ipaddress.ip_network(cidr, strict=False).version
+            except ValueError:
+                continue
+            if cidr_version == 4:
+                requested_v4 = True
+            else:
+                requested_v6 = True
+            for ip, _ in system_ips:
+                if not is_ip_in_cidr(ip, cidr):
+                    continue
+                try:
+                    version = ipaddress.ip_address(ip).version
+                except ValueError:
+                    continue
+                if version == 4 and matched_v4 is None:
+                    matched_v4 = ip
+                elif version == 6 and matched_v6 is None:
+                    matched_v6 = ip
+
+        # A family may be requested via internalNetworkCIDRs but no node address
+        # matches the configured subnet, e.g. when a public IPv6 prefix is
+        # rotated by SLAAC/DHCPv6-PD. Fall back to any global-scope address of
+        # that family so the node IP follows the current prefix automatically.
+        if requested_v4 and matched_v4 is None:
+            matched_v4 = first_system_ip(system_ips, 4)
+        if requested_v6 and matched_v6 is None:
+            matched_v6 = first_system_ip(system_ips, 6)
+
+    final_ips = [ip for ip in (matched_v4, matched_v6) if ip]
+    return ",".join(final_ips)
+
+
+if __name__ == '__main__':
+    cidrs = os.environ.get('internal_network_cidrs', '')
+    res = discover_ip(cidrs)
+    if res:
+        print(res)
+PYEOF
+
+if [ -s /var/lib/bashible/discovered-node-ip.tmp ]; then
+  mv /var/lib/bashible/discovered-node-ip.tmp /var/lib/bashible/discovered-node-ip
+  exit 0
 else
-  ip_in_system=$(ip -4 -o addr show up scope global | awk '$2 != "lo" {print $4}' | cut -d/ -f1)
+  rm -f /var/lib/bashible/discovered-node-ip.tmp
+  bb-log-error "Unable to discover node IP: no system address matches internal_network_cidrs='${internal_network_cidrs}'"
+  exit 1
 fi
-
-# DVP like case (with /32 addr)
-if [[ -z "$internal_network_cidrs" ]]; then
-  if slash32_node_ip="$(check_slash32_node_ip)"; then
-    echo "$slash32_node_ip" > /var/lib/bashible/discovered-node-ip
-    exit 0
-  fi
-fi
-
-# Other cases
-for cidr in $internal_network_cidrs; do
-  for ip in $ip_in_system; do
-    if is_ip_in_cidr "$ip" "$cidr"; then
-      echo $ip > /var/lib/bashible/discovered-node-ip
-      exit 0
-    fi
-  done
-done
 {{- end }}
-

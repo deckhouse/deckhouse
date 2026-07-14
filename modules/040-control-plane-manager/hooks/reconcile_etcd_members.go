@@ -79,24 +79,39 @@ func reconcicleEtcdFilterNode(unstructured *unstructured.Unstructured) (go_hook.
 		return nil, err
 	}
 
-	var internalIP, externalIP string
+	// On dual-stack nodes Kubernetes reports both an IPv4 and an IPv6
+	// InternalIP. etcd's static manifests advertise only the primary node IP
+	// (see candi/control-plane/etcd.yaml.tpl), so prefer the IPv4 address and
+	// fall back to whatever single address is available.
+	var internalIPv4, internalIPv6, externalIPv4, externalIPv6 string
 	for _, adr := range node.Status.Addresses {
 		switch adr.Type {
 		case corev1.NodeInternalIP:
-			internalIP = adr.Address
+			if isIPv4(adr.Address) {
+				if internalIPv4 == "" {
+					internalIPv4 = adr.Address
+				}
+			} else if internalIPv6 == "" {
+				internalIPv6 = adr.Address
+			}
 
 		case corev1.NodeExternalIP:
-			externalIP = adr.Address
+			if isIPv4(adr.Address) {
+				if externalIPv4 == "" {
+					externalIPv4 = adr.Address
+				}
+			} else if externalIPv6 == "" {
+				externalIPv6 = adr.Address
+			}
 		}
 	}
-	etcdNode := recicleEtcdNode{
-		Name: node.Name,
-	}
 
-	if internalIP != "" {
-		etcdNode.IP = internalIP
-	} else {
-		etcdNode.IP = externalIP
+	etcdNode := recicleEtcdNode{Name: node.Name}
+	for _, ip := range []string{internalIPv4, internalIPv6, externalIPv4, externalIPv6} {
+		if ip != "" {
+			etcdNode.IP = ip
+			break
+		}
 	}
 
 	return etcdNode, nil
@@ -134,7 +149,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		}
 
 		discoveredEtcdNodesMap[node.Name] = node.IP
-		etcdServersEndpoints = append(etcdServersEndpoints, fmt.Sprintf("https://%s:2379", node.IP))
+		etcdServersEndpoints = append(etcdServersEndpoints, etcdEndpoint(node.IP))
 	}
 
 	// etcd
@@ -159,7 +174,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 			continue
 		}
 		if ip, ok := discoveredEtcdNodesMap[mem.Name]; ok {
-			etcdVotingMembers = append(etcdVotingMembers, fmt.Sprintf("https://%s:2379", ip))
+			etcdVotingMembers = append(etcdVotingMembers, etcdEndpoint(ip))
 		}
 	}
 	input.Values.Set("controlPlaneManager.internal.etcdServers", etcdVotingMembers)

@@ -77,8 +77,21 @@ apiVersions:
       podSubnetCIDR:
         type: string
         x-unsafe: true
+        format: cidr
         description: |
           Address space of the cluster's Pods.
+
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
+      podSubnetCIDRIPv6:
+        type: string
+        x-unsafe: true
+        format: cidr
+        description: |
+          IPv6 address space of the cluster's Pods (for dual-stack clusters).
+
+          When set together with `podSubnetCIDR`, the cluster operates in dual-stack mode: each Pod receives both an IPv4 and an IPv6 address.
+
+          A typical value is a ULA prefix such as `fd00:10:244::/56`.
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       podSubnetNodeCIDRPrefix:
@@ -95,11 +108,34 @@ apiVersions:
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
         default: "24"
+      podSubnetNodeCIDRPrefixIPv6:
+        type: string
+        x-unsafe: true
+        pattern: '^(12[0-8]|1[01][0-9]|[1-9][0-9]|[0-9])$'
+        description: |
+          The prefix size of the IPv6 Pod network allocated to each node (for dual-stack clusters).
+
+          Required only when `podSubnetCIDRIPv6` is set. The difference between this value and the cluster prefix must not exceed 16 bits because kube-controller-manager limits the per-cluster node CIDR allocation table size. Typical value: `"80"` for a `/64` cluster prefix (allows up to 65536 nodes).
+
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       serviceSubnetCIDR:
         type: string
         x-unsafe: true
+        format: cidr
         description: |
           Address space of the cluster's services.
+
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
+      serviceSubnetCIDRIPv6:
+        type: string
+        x-unsafe: true
+        format: cidr
+        description: |
+          IPv6 address space of the cluster's services (for dual-stack clusters).
+
+          When set together with `serviceSubnetCIDR`, Kubernetes services can have both IPv4 and IPv6 ClusterIPs (based on `ipFamilyPolicy`).
+
+          A typical value is a ULA prefix such as `fd00:10:96::/112`.
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       clusterDomain:

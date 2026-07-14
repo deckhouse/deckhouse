@@ -144,7 +144,7 @@ func handleCheckEtcdPeers(_ context.Context, input *go_hook.HookInput, dc depend
 	}
 
 	// connect to etcd cluster
-	clientURL := fmt.Sprintf("https://%s:2379", etcdPodIP)
+	clientURL := etcdEndpoint(etcdPodIP)
 	etcdcli, err := getETCDClient(input, dc, []string{clientURL})
 	if err != nil {
 		return err

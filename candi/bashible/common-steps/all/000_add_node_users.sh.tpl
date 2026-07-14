@@ -68,8 +68,14 @@ function nodeuser_patch() {
         bb-log-info "All API servers failed once, resetting candidate list and retrying"
       fi
       for server in "${AVAILABLE_API_SERVERS[@]}"; do
-        local server_addr=$(echo $server | cut -f1 -d":")
-        until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
+        local server_addr
+        if [[ "$server" == \[*\]:* ]]; then
+          server_addr="${server#[}"
+          server_addr="${server_addr%%]:*}"
+        else
+          server_addr="${server%:*}"
+        fi
+        until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9a-fA-F\.:]+)')"; do
           bb-log-info "Network is not ready for connecting to $server_addr, waiting"
           sleep 1
         done

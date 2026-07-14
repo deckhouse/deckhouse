@@ -15,13 +15,14 @@
 {{- if has (.registry).mode (list "Local") }}
 
 discovered_node_ip="$(bb-d8-node-ip)"
+first_discovered_node_ip="${discovered_node_ip%%,*}"
 syncer_config_path="$(bb-tmp-file)"
 
 bb-sync-file $syncer_config_path - << EOF
 source:
   address: 127.0.0.1:5511
 destination:
-  address: "${discovered_node_ip}:5001"
+  address: "${first_discovered_node_ip}:5001"
   ca: |
     {{ .registry.bootstrap.init.ca.cert | nindent 4 }}
   user:

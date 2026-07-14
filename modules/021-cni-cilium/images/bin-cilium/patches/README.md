@@ -6,7 +6,7 @@ Fix CVE, update go.mod and go.sum.
 
 ## 001-request-ip.patch
 
-Add the oportunity to request specific IP-address using annotation:
+Add the opportunity to request specific IP-address using annotation:
 
     cni.cilium.io/ipAddress: 10.10.10.10
 
@@ -31,7 +31,7 @@ Upstream issue <https://github.com/cilium/cilium/issues/23711>
 
 Added DHCP server for pods (ebpf implementation).
 
-## 006-add-pod-prioroty-management.patch
+## 006-add-pod-priority-management.patch
 
 Added a `network.deckhouse.io/pod-common-ip-priority` label allows you to share a single IP between  several Pods and to switch the actual owner.
 
@@ -59,7 +59,7 @@ Upstream PR <https://github.com/cilium/cilium/pull/40246>.
 
 ## 011-bpf-lb-use-random-lb-algo-for-hostport-serives-fixed.patch
 
-For HostPort pseudo-serivces always use random LB algo. When bpf-lb-algorithm-annotation feature activated - use default LB algo if it incorrectly choosed in service map.
+For HostPort pseudo-services always use random LB algo. When bpf-lb-algorithm-annotation feature activated - use default LB algo if it incorrectly choosed in service map.
 
 ## 012-add-least-conn-lb-algorithm.patch
 
@@ -71,7 +71,7 @@ Ignore error when using IPv4 address for egress gateway other than assigned
 
 ## 014-kernel-verifier-stat.patch
 
-Added kernel verifer statistics in logs and prometeus metric as max bpf program complexity
+Added kernel verifier statistics in logs and Prometheus metric as max bpf program complexity
 
 ## 015-cleanup-conntrack-endpoints.patch
 
