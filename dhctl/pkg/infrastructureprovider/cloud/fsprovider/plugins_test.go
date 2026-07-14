@@ -15,11 +15,17 @@
 package fsprovider
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 )
 
 func TestCopyTFVersionFileCopiesVersionsAndPlanRules(t *testing.T) {
@@ -57,4 +63,33 @@ func TestCopyTFVersionFileMissingVersionsFails(t *testing.T) {
 	require.NoError(t, os.MkdirAll(tfManagerDir, 0o755))
 
 	require.Error(t, copyTFVersionFile(root, tfManagerDir))
+}
+
+func TestDownloadPluginUsesUnpackedBundle(t *testing.T) {
+	root := t.TempDir()
+	bundleTM := filepath.Join(root, "dvp", "terraform-manager")
+	require.NoError(t, os.MkdirAll(bundleTM, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(bundleTM, "terraform-provider-kubernetes"), []byte("#!/bin/sh\n"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(bundleTM, versionFile), []byte("terraform: 1\n"), 0o644))
+
+	set := &settings.Simple{
+		NamespaceVal:         ptr.To("hashicorp"),
+		TypeVal:              ptr.To("kubernetes"),
+		CloudNameVal:         ptr.To("DVP"),
+		DestinationBinaryVal: ptr.To("terraform-provider-kubernetes"),
+		UseOpenTofuVal:       ptr.To(true),
+	}
+
+	p := newPluginsProvider(filepath.Join(root, "no-plugins-dir"))
+	dest := filepath.Join(t.TempDir(), "terraform-provider-kubernetes")
+
+	// The plugin must come from the unpacked provider bundle: no baked plugins
+	// dir, no flat terraform-manager dir and no registry access are available.
+	err := p.DownloadPlugin(context.Background(), cloud.InfrastructurePluginProviderParams{
+		Version:  cloud.Version{Version: "2.38.0", Arch: "linux_amd64"},
+		Settings: set,
+	}, dest, &config.MetaConfig{DownloadRootDir: root})
+	require.NoError(t, err)
+	require.FileExists(t, dest)
+	require.FileExists(t, filepath.Join(root, "deckhouse", "candi", versionFile))
 }

@@ -75,6 +75,19 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
+	// External provider bundle: the plugin ships inside the OCI bundle that
+	// EnsureProviderBundle unpacked under <DownloadRootDir>/<provider>/. Using
+	// it avoids the lazy terraform-manager pull entirely, so converge does not
+	// need registry credentials on the MetaConfig at all.
+	bundleTerraformManagerDir := filepath.Join(conf.DownloadRootDir, cloudName, "terraform-manager")
+	source = filepath.Join(bundleTerraformManagerDir, params.Settings.DestinationBinary())
+	if _, statErr := os.Stat(source); statErr == nil {
+		if err := copyTFVersionFile(conf.DownloadRootDir, bundleTerraformManagerDir); err != nil {
+			return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
+		}
+		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
+	}
+
 	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
 		return err
 	}

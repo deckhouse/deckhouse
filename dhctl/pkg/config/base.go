@@ -947,6 +947,11 @@ func unpackProviderBundle(ctx context.Context, provider, digest string, conf *im
 		if err := downloadProviderBundle(ctx, imgName, digestDir, globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress); err != nil {
 			return fmt.Errorf("download provider bundle %s: %w", imgName, err)
 		}
+		// The image puller leaves the downloaded tarball next to the unpacked
+		// tree. The digest-pinned directory itself is the cache (its presence
+		// short-circuits the download above), so the tarball only duplicates
+		// the bundle on disk — drop it.
+		_ = os.Remove(filepath.Join(digestDir, digest))
 	}
 	return switchProviderSymlink(providerdir.ProviderDir(globalOptions.DownloadDir, provider), digestDir)
 }
