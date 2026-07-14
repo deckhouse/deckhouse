@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-017b2d41d47cbfeb73ee1faf1053fde46572ef52bf2c9efae04f2048e7f76027",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -17,7 +17,92 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в etcdBackup в рамках Deckhouse: etcdctl является CLI-утилитой (gRPC-клиентом), а не сервером. Уязвимость затрагивает исключительно серверную часть gRPC-Go, серверный путь исполнения в etcdctl не задействован.",
       "timestamp": "2026-03-24T10:13:12.35769Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с некорректной обработкой символьных ссылок в DOCTYPE-узлах при последовательном вызове html.Parse и html.Render (XSS). etcdBackup встраивает бинарь etcdctl, собранный из того же дерева исходников etcd (server/client/etcdctl/etcdutl), которое не содержит ни одного импорта golang.org/x/net/html — уязвимый код не компилируется в бинарь.",
+      "timestamp": "2026-07-15T00:35:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с некорректной обработкой дублирующихся атрибутов при последовательном вызове html.Parse и html.Render (XSS). etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/net/html ни в одном компоненте.",
+      "timestamp": "2026-07-15T00:35:01Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/idna"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Функции ToASCII/ToUnicode пакета golang.org/x/net/idna некорректно принимают Punycode-метки, декодирующиеся в ASCII-only домен, что может привести к обходу авторизации по имени хоста. etcdctl (встроенный в etcdBackup) не импортирует golang.org/x/net/idna и не выполняет авторизацию по Punycode-именам хостов.",
+      "timestamp": "2026-07-15T00:35:02Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с некорректной обработкой HTML-элементов в foreign content при последовательном вызове html.Parse и html.Render (XSS). etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/net/html ни в одном компоненте.",
+      "timestamp": "2026-07-15T00:35:03Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость (DoS) связана с квадратичной сложностью алгоритма построения дерева при вызове html.Parse над произвольным HTML. etcdctl (встроенный в etcdBackup) не импортирует golang.org/x/net/html, поэтому уязвимый алгоритм построения дерева никогда не вызывается.",
+      "timestamp": "2026-07-15T00:35:04Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/html"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость связана с некорректной обработкой namespaced-элементов в foreign content при последовательном вызове html.Parse и html.Render (XSS). etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/net/html ни в одном компоненте.",
+      "timestamp": "2026-07-15T00:35:05Z"
     }
   ],
-  "timestamp": "2026-03-24T10:13:12Z"
+  "timestamp": "2026-03-24T10:13:12Z",
+  "last_updated": "2026-07-15T00:35:05Z"
 }
