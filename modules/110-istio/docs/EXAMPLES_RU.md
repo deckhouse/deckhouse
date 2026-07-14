@@ -201,16 +201,19 @@ spec:
 
 ### Istio Ingress Gateway
 
-Пример:
+Кастомный ресурс [IngressIstioController](cr.html#ingressistiocontroller) разворачивает выделенный прокси Istio Ingress Gateway. Каждый экземпляр контроллера получает собственный класс шлюза, и нужный экземпляр выбирается из ресурса Istio `Gateway` по соответствующему лейблу `istio.deckhouse.io/ingress-gateway-class`. Модуль управляет рабочей нагрузкой шлюза и его ресурсом `Service`, тогда как ресурсы `Gateway` и маршрутизации (`VirtualService`) остаются под вашим управлением.
+
+Начните с создания `IngressIstioController`. В примере ниже HTTP и HTTPS публикуются на выбранных frontend-узлах через host-порты:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IngressIstioController
 metadata:
- name: main
+  name: main
 spec:
-  # ingressGatewayClass содержит значение селектора лейблов, используемое при создании ресурса Gateway.
+  # Значение, которое выбирается ресурсами Gateway через лейбл istio.deckhouse.io/ingress-gateway-class.
   ingressGatewayClass: istio-hp
+  # IngressIstioController поддерживает инлеты LoadBalancer, NodePort и HostPort.
   inlet: HostPort
   hostPort:
     httpPort: 80
@@ -225,6 +228,8 @@ spec:
   resourcesRequests:
     mode: VPA
 ```
+
+Обратите внимание, что ресурс Secret с TLS для ingress gateway должен быть создан в пространстве имён `d8-ingress-istio`, а не в пространстве имён приложения — эту деталь легко упустить.
 
 ```yaml
 apiVersion: v1
@@ -288,6 +293,101 @@ spec:
         - destination:
             host: app-svc
 ```
+
+Полный список настроек контроллера — аннотации балансировщика нагрузки, топология сети, планирование и управление ресурсами — приведён в [справочнике по кастомному ресурсу IngressIstioController](cr.html#ingressistiocontroller).
+
+#### Сохранение атрибутов клиента за внешними прокси
+
+Когда шлюз развёрнут за другими прокси или балансировщиками нагрузки (например, за облачным балансировщиком или обратным прокси), настройте [`spec.networkTopology`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology), чтобы шлюз мог корректно извлекать исходные атрибуты клиента, например IP-адрес источника. Подробнее — [в документации Istio о топологии сети шлюза](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/).
+
+Используйте [`numTrustedProxies`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-numtrustedproxies), когда вышестоящие прокси передают IP-адрес клиента в заголовке `X-Forwarded-For`. Укажите количество доверенных прокси, развёрнутых перед шлюзом, чтобы Istio извлекал корректный адрес клиента и заполнял заголовок `X-Envoy-External-Address` для вышестоящих сервисов. Например, если перед шлюзом находятся облачный балансировщик и обратный прокси, укажите значение `2`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+  name: main
+spec:
+  ingressGatewayClass: istio-hp
+  inlet: LoadBalancer
+  networkTopology:
+    numTrustedProxies: 2
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: VPA
+```
+
+Используйте [`proxyProtocol`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-proxyprotocol), когда вышестоящий L4/TCP-балансировщик передаёт атрибуты клиента через [PROXY-протокол](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt), а не через HTTP-заголовки. При включении этого параметра шлюз начинает разбирать заголовок PROXY-протокола во входящих TCP-соединениях:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+  name: main
+spec:
+  ingressGatewayClass: istio-hp
+  inlet: LoadBalancer
+  networkTopology:
+    proxyProtocol: true
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: VPA
+```
+
+{% alert level="info" %}
+`numTrustedProxies` и `proxyProtocol` можно использовать вместе. Если настроены оба параметра и входящий запрос содержит заголовок `X-Forwarded-For`, Istio использует доверенную цепочку `X-Forwarded-For` вместо атрибутов PROXY-протокола.
+{% endalert %}
+
+#### Управление запросами ресурсов шлюза
+
+Используйте [`spec.resourcesRequests`](cr.html#ingressistiocontroller-v1alpha1-spec-resourcesrequests) для управления запросами (requests) CPU и памяти для подов ingress gateway. Доступны два режима:
+
+- `Static` — запросы задаются напрямую и остаются фиксированными:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: IngressIstioController
+  metadata:
+    name: main
+  spec:
+    ingressGatewayClass: istio-hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    resourcesRequests:
+      mode: Static
+      static:
+        cpu: 100m
+        memory: 128Mi
+  ```
+
+- `VPA` — [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) изменяет запросы в заданных пределах `min`/`max`. Начиная с версии DKP 1.75, рекомендуемым режимом VPA является `InPlaceOrRecreate`: он изменяет ресурсы пода «на месте» (in-place), если это поддерживается кластером, и пересоздаёт под в противном случае (устаревший режим `Auto` всегда пересоздаёт под):
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: IngressIstioController
+  metadata:
+    name: main
+  spec:
+    ingressGatewayClass: istio-hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    resourcesRequests:
+      mode: VPA
+      vpa:
+        mode: InPlaceOrRecreate
+        cpu:
+          min: 100m
+          max: 1000m
+        memory:
+          min: 128Mi
+          max: 2000Mi
+  ```
 
 ### Ingress NGINX
 
