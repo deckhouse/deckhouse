@@ -57,7 +57,7 @@ spec:
 
 ## Locality Failover
 
-> При необходимости ознакомьтесь с [основной документацией](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).
+{% alert level="info" %}При необходимости ознакомьтесь с [документацией Istio о Locality Failover](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).{% endalert %}
 
 Istio позволяет настроить приоритетный географический failover между эндпоинтами. Для определения зоны Istio использует лейблы узлов с соответствующей иерархией:
 
@@ -543,7 +543,7 @@ spec:
 ### Разрешить из любого кластера (по mTLS)
 
 {% alert level="warning" %}
-Если есть запрещающие правила, у них будет приоритет. Подробнее можно посмотреть [алгоритм](#алгоритм-принятия-решения).
+Если есть запрещающие правила, у них будет приоритет. Подробнее — в разделе [«Алгоритм принятия решения»](#алгоритм-принятия-решения).
 {% endalert %}
 
 Пример:
@@ -715,7 +715,7 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 ### Отключение ambient mesh
 
 {% alert level="warning" %}
-Перед отключением режима ambient удалите все ресурсы WaypointInstance. При отключенном режиме ambient контроллер waypoint не запускается и не может согласовывать или удалять ресурсы waypoint. Это приводит к появлению orphan-ресурсов, о чём DKP сигнализирует алертом [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled).
+Перед отключением режима ambient удалите все ресурсы WaypointInstance. При отключенном режиме ambient контроллер waypoint не запускается и не может согласовывать или удалять ресурсы waypoint. Это приводит к появлению orphan-ресурсов, о чём Deckhouse Kubernetes Platform (DKP) сигнализирует алертом [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled).
 {% endalert %}
 
 Чтобы отключить режим ambient, выполните следующие шаги:
@@ -940,7 +940,94 @@ spec:
 
 Управляемые модулем `Telemetry` для этого режима будут убраны при следующей синхронизации; снова включится прежний `telemetry.v2`.
 
-## Ограничения режима перенаправления прикладного трафика `CNIPlugin`
+## Диагностика Istio с помощью istioctl из debug-контейнера
+
+В debug-контейнер DKP входят бинарные файлы `istioctl` для поддерживаемых версий Istio. Используйте их, когда нужно проверить конфигурацию Istio, запустить анализаторы или получить конфигурацию Envoy из прикладных подов.
+
+Перед запуском debug-контейнера создайте отдельный ServiceAccount и выдайте ему права, необходимые для команд `istioctl`, которые вы планируете запускать. Например, следующий манифест предоставляет права, необходимые для выполнения команды `istioctl proxy-config` для подов в одном прикладном неймспейсе:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istioctl-debug
+  namespace: <debug-namespace>
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups: [""]
+    resources:
+      - pods/portforward
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+subjects:
+  - kind: ServiceAccount
+    name: istioctl-debug
+    namespace: <debug-namespace>
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istioctl-debug
+```
+
+Замените `<debug-namespace>` на неймспейс, в котором будет создан временный debug-под, а `<target-namespace>` — на неймспейс прикладного пода, который нужно проверить. Создайте ресурсы Role и RoleBinding для каждого целевого неймспейса, где `istioctl` должен получать доступ к подам.
+
+Этот RBAC-манифест рассчитан на команды, которые обращаются к поду напрямую, например, к ресурсу вида `<pod-name>.<target-namespace>`. Если использовать имена типизированных ресурсов, например `deployment/<name>`, выдайте дополнительный доступ на чтение этих типов ресурсов, чтобы `istioctl` смог определить соответствующие поды.
+
+{% alert level="warning" %}
+Создание подов в системных неймспейсах, таких как `d8-system`, и использование системных ServiceAccount, таких как `deckhouse`, обычно требует прав уровня `cluster-admin`. Используйте отдельный ServiceAccount с минимально необходимыми правами.
+{% endalert %}
+
+Запустите временный debug-под со встроенным debug-образом:
+
+```shell
+IMG="$(d8 k -n d8-system get cm debug-container -o jsonpath='{.data.image}')"
+
+d8 k -n <debug-namespace> run istioctl-debug \
+  --rm -it \
+  --restart=Never \
+  --image="$IMG" \
+  --overrides='{"spec":{"serviceAccountName":"istioctl-debug","automountServiceAccountToken":true}}' \
+  -- bash
+```
+
+Выберите минорную версию Istio, которая используется нужным control plane:
+
+```shell
+export ISTIOCTL_VERSION=1.21
+```
+
+Доступные значения: `1.21`, `1.25` и `1.27`. Также можно запустить конкретный бинарный файл напрямую: `istioctl-1.21`, `istioctl-1.25` или `istioctl-1.27`.
+
+Пример:
+
+```shell
+istioctl pc all <pod-name>.<target-namespace>
+```
+
+Для команд `istioctl pc` у целевого пода должен быть добавлен сайдкар `istio-proxy`. Если у целевого пода нет сайдкара, административный порт Envoy `15000` будет недоступен.
+
+{% alert level="warning" %}
+Приведённого выше RBAC-манифеста недостаточно для выполнения команд `istioctl analyze` или `istioctl analyze -A`. Для них нужны дополнительные права на чтение неймспейсов, а также Kubernetes- и Istio-ресурсов, которые проверяют анализаторы. Выдавайте такие права отдельно в соответствии с вашей политикой безопасности.
+{% endalert %}
+
+## Ограничения режима перенаправления прикладного трафика CNIPlugin
 
 В отличие от режима `InitContainer`, настройка перенаправления осуществляется в момент создании пода, а не в момент срабатывания init-контейнера `istio-init`. Это значит, что прикладные init-контейнеры не смогут взаимодействовать с остальными сервисами так как весь трафик будет перенаправлен на обработку в sidecar-контейнер `istio-proxy`, который ещё не запущен. Обходные пути:
 

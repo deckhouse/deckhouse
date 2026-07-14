@@ -57,7 +57,7 @@ Assign a name with the `grpc` prefix or value to the port in the corresponding s
 
 ## Locality Failover
 
-> Read [the main documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if you need.
+{% alert level="info" %}Read the [Istio Locality Failover documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if needed.{% endalert %}
 
 Istio allows you to configure a priority-based locality (geographic location) failover between endpoints. Istio uses node labels with the appropriate hierarchy to define the zone:
 
@@ -541,7 +541,7 @@ spec:
 ### Allow from any cluster (via mTLS)
 
 {% alert level="warning" %}
-The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
+The denying rules (if they exist) have priority over any other rules. For details, refer to [Decision-making algorithm](#decision-making-algorithm).
 {% endalert %}
 
 Example:
@@ -713,7 +713,7 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 ### Disabling ambient mesh
 
 {% alert level="warning" %}
-Before disabling ambient mode, delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by DKP in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
+Before disabling ambient mode, delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by Deckhouse Kubernetes Platform (DKP) in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
 {% endalert %}
 
 To disable the ambient mode, follow these steps:
@@ -938,7 +938,94 @@ spec:
 
 The module-managed `Telemetry` objects for this mode disappear on the next sync; Istio restores the full `telemetry.v2` configuration.
 
-## `CNIPlugin` application traffic redirection mode restrictions
+## Debugging Istio with istioctl from the debug container
+
+The DKP debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
+
+Before starting the debug container, create a dedicated ServiceAccount and grant it the permissions required by the `istioctl` commands you want to run. For example, the following manifest grants permissions that allow running the `istioctl proxy-config` commands for Pods in a single application namespace:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istioctl-debug
+  namespace: <debug-namespace>
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups: [""]
+    resources:
+      - pods/portforward
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+subjects:
+  - kind: ServiceAccount
+    name: istioctl-debug
+    namespace: <debug-namespace>
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istioctl-debug
+```
+
+Replace `<debug-namespace>` with the namespace where the temporary debug Pod will be created, and `<target-namespace>` with the namespace of the application Pod you want to inspect. Create the Role and RoleBinding resources for every target namespace where `istioctl` must access Pods.
+
+This RBAC manifest is intended for commands that address a Pod directly, for example, to a resource like `<pod-name>.<target-namespace>`. If you use typed resource names such as `deployment/<name>`, grant additional read access to those resource types so `istioctl` can resolve them to Pods.
+
+{% alert level="warning" %}
+Creating Pods in system namespaces such as `d8-system` and using system ServiceAccounts such as `deckhouse` usually requires the `cluster-admin` level of privileges. Use a dedicated ServiceAccount with the minimum required permissions instead.
+{% endalert %}
+
+Start a temporary debug Pod with the built-in debug image:
+
+```shell
+IMG="$(d8 k -n d8-system get cm debug-container -o jsonpath='{.data.image}')"
+
+d8 k -n <debug-namespace> run istioctl-debug \
+  --rm -it \
+  --restart=Never \
+  --image="$IMG" \
+  --overrides='{"spec":{"serviceAccountName":"istioctl-debug","automountServiceAccountToken":true}}' \
+  -- bash
+```
+
+Select the minor version of Istio used by the target control plane:
+
+```shell
+export ISTIOCTL_VERSION=1.21
+```
+
+Available values are `1.21`, `1.25`, and `1.27`. You can also run a specific binary directly: `istioctl-1.21`, `istioctl-1.25`, or `istioctl-1.27`.
+
+Example:
+
+```shell
+istioctl pc all <pod-name>.<target-namespace>
+```
+
+The `istioctl pc` commands require a target Pod with an injected `istio-proxy` sidecar. If the target Pod has no sidecar, Envoy admin port `15000` will not be available.
+
+{% alert level="warning" %}
+The RBAC manifest above is not enough to run `istioctl analyze` or `istioctl analyze -A`. These commands require additional read-only access to namespaces and to the Kubernetes and Istio resources covered by the analyzers. Grant such access separately according to your security policy.
+{% endalert %}
+
+## CNIPlugin application traffic redirection mode restrictions
 
 Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
 
