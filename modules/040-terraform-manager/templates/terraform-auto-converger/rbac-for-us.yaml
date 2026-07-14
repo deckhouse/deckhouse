@@ -94,6 +94,12 @@ rules:
   resources: ["moduleconfigs"]
   resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}"]
   verbs: ["get"]
+# The provider module owns its namespace; the converger only checks that it
+# exists before saving discovery data there (see ensureNamespace in dhctl).
+- apiGroups: [""]
+  resources: ["namespaces"]
+  resourceNames: ["d8-cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}"]
+  verbs: ["get"]
 - apiGroups: ["deckhouse.io"]
   resources: ["{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"]
   verbs: ["get", "list"]

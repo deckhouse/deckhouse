@@ -506,6 +506,12 @@ func saveCandiCloudProviderDiscoveryData(ctx context.Context, kubeCl *client.Kub
 func ensureNamespace(ctx context.Context, kubeCl *client.KubernetesClient, name string) error {
 	return retry.NewLoop(fmt.Sprintf("Ensure Namespace %q", name), 45, 10*time.Second).
 		RunContext(ctx, func() error {
+			// Get first: the in-cluster converger is only allowed to read this
+			// namespace (the provider module owns its creation), so a blind
+			// Create would fail with Forbidden even though the namespace exists.
+			if _, err := kubeCl.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{}); err == nil {
+				return nil
+			}
 			ns := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
 			_, err := kubeCl.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 			if err == nil || k8errors.IsAlreadyExists(err) {
