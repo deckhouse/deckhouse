@@ -24,6 +24,10 @@ entries:
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
       - title:
+          en: Maintenance mode
+          ru: Режим обслуживания
+        url: /code/documentation/admin/configuration/maintenance-mode.html
+      - title:
           en: Service account
           ru: Сервисный аккаунт
         url: /code/documentation/admin/service-account.html
