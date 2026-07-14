@@ -809,6 +809,7 @@ func buildNestedBashibleService(namespace string) *corev1.Service {
 
 func applyNestedBashibleService(svc *corev1.Service) {
 	svc.Spec.Selector = nil
+	svc.Spec.ClusterIP = corev1.ClusterIPNone
 	svc.Spec.Ports = []corev1.ServicePort{{
 		Name:     "https",
 		Port:     bashibleNestedServicePort,
