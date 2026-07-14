@@ -619,13 +619,13 @@ func (r *reconciler) reconcileBashibleAPIService(
 		return reconcile.Result{}, fmt.Errorf("nested bashible endpoints: %w", err)
 	}
 
-	es := buildNestedBashibleEndpointSlice(namespace, bashibleAddress)
-	if _, err := controllerutil.CreateOrUpdate(ctx, nested, es, func() error {
-		applyNestedBashibleEndpointSlice(es, namespace, bashibleAddress)
-		return nil
-	}); err != nil {
-		return reconcile.Result{}, fmt.Errorf("nested bashible endpointslice: %w", err)
-	}
+	// es := buildNestedBashibleEndpointSlice(namespace, bashibleAddress)
+	// if _, err := controllerutil.CreateOrUpdate(ctx, nested, es, func() error {
+	// 	applyNestedBashibleEndpointSlice(es, namespace, bashibleAddress)
+	// 	return nil
+	// }); err != nil {
+	// 	return reconcile.Result{}, fmt.Errorf("nested bashible endpointslice: %w", err)
+	// }
 
 	caBundle := tlsSecret.Data["ca.crt"]
 	apiservice := &apiregistrationv1.APIService{
