@@ -72,7 +72,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: istio-config-analyzer
-        image: {{ include "helm_lib_module_image" (list $ (printf "istioConfigAnalyzer%s" $imageSuffix)) }}
+        image: {{ include "helm_lib_module_image" (list $ (printf "configAnalyzer%s" $imageSuffix)) }}
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "uid" 64535) | nindent 8 }}
         imagePullPolicy: IfNotPresent
         args:
