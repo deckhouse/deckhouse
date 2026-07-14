@@ -91,6 +91,42 @@ data:
 `, slot)
 }
 
+// defragEtcdPodYAML renders a static etcd pod running on the given node.
+// ready controls the Ready pod condition used by the Layer 1 precondition.
+func defragEtcdPodYAML(node string, ready bool) string {
+	status := "False"
+	if ready {
+		status = "True"
+	}
+	return fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd-%s
+  namespace: kube-system
+  labels:
+    component: etcd
+    tier: control-plane
+spec:
+  nodeName: %s
+status:
+  phase: Running
+  conditions:
+  - type: Ready
+    status: "%s"
+`, node, node, status)
+}
+
+// defragReadyEtcdPods renders ready etcd pods for all given nodes.
+func defragReadyEtcdPods(nodes ...string) string {
+	out := ""
+	for _, n := range nodes {
+		out += defragEtcdPodYAML(n, true)
+	}
+	return out
+}
+
 const (
 	defragCPN0 = `
 ---
@@ -229,7 +265,9 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("cron fired, 3 master nodes, past slot in ConfigMap", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
-			state := defragCPN0 + defragCPN1 + defragCPN2 + defragStateCMYAML(defragPastSlot)
+			state := defragCPN0 + defragCPN1 + defragCPN2 +
+				defragReadyEtcdPods("master-0", "master-1", "master-2") +
+				defragStateCMYAML(defragPastSlot)
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
@@ -269,7 +307,9 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("cron fired, 2 masters + 1 arbiter node", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
-			state := defragCPN0 + defragCPN1 + defragCPNArbiter + defragStateCMYAML(defragPastSlot)
+			state := defragCPN0 + defragCPN1 + defragCPNArbiter +
+				defragReadyEtcdPods("master-0", "master-1", "arbiter-0") +
+				defragStateCMYAML(defragPastSlot)
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
@@ -277,6 +317,56 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 			Expect(f).To(ExecuteSuccessfully())
 			count, _ := listCPOs(f)
 			Expect(count).To(Equal(3))
+		})
+	})
+
+	Context("cron fired, but a node has no etcd pod yet (scale-up window)", func() {
+		f := newDefragHook(valuesDefragEnabled)
+		BeforeEach(func() {
+			// master-0/master-1 have a ready etcd pod; master-2 was just added and
+			// has a ControlPlaneNode but no etcd pod yet.
+			state := defragCPN0 + defragCPN1 + defragCPN2 +
+				defragReadyEtcdPods("master-0", "master-1") +
+				defragStateCMYAML(defragPastSlot)
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+		It("creates CPOs only for nodes with a ready etcd pod and still advances the slot", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			count, cpos := listCPOs(f)
+			Expect(count).To(Equal(2))
+
+			nodes := make([]string, 0, len(cpos))
+			for _, cpo := range cpos {
+				spec, _ := cpo["spec"].(map[string]interface{})
+				nodes = append(nodes, fmt.Sprintf("%v", spec["nodeName"]))
+			}
+			Expect(nodes).To(ConsistOf("master-0", "master-1"))
+
+			cm := f.KubernetesResource("ConfigMap", "kube-system", defragStateCMName)
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.lastHandledCronSlot").String()).To(Equal(defragTestNow.Truncate(time.Minute).Format(time.RFC3339)))
+		})
+	})
+
+	Context("cron fired, but etcd pod is not Ready", func() {
+		f := newDefragHook(valuesDefragEnabled)
+		BeforeEach(func() {
+			// master-0 ready; master-1 has an etcd pod that is not Ready.
+			state := defragCPN0 + defragCPN1 +
+				defragEtcdPodYAML("master-0", true) +
+				defragEtcdPodYAML("master-1", false) +
+				defragStateCMYAML(defragPastSlot)
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+		It("skips the node whose etcd pod is not Ready", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			count, cpos := listCPOs(f)
+			Expect(count).To(Equal(1))
+			spec, _ := cpos[0]["spec"].(map[string]interface{})
+			Expect(spec["nodeName"]).To(Equal("master-0"))
 		})
 	})
 

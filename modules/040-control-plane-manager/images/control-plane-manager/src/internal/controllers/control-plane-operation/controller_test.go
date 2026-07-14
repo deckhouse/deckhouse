@@ -82,6 +82,10 @@ func newMockCompleteWithMessage(calls *[]execCall, name controlplanev1alpha1.Ste
 	return &mockCommand{name: name, result: StepResult{Outcome: OutcomeCompleted, Message: message}, calls: calls}
 }
 
+func newMockAbandon(calls *[]execCall, name controlplanev1alpha1.StepName, message string) Step {
+	return &mockCommand{name: name, result: StepResult{Outcome: OutcomeAbandoned, Message: message}, calls: calls}
+}
+
 // helpers
 
 const testNodeName = "master-1"
@@ -332,6 +336,31 @@ func (s *ControllerTestSuite) TestReconcileAlreadyFailed() {
 		require.NotNil(s.T(), completedCond)
 		require.Equal(s.T(), metav1.ConditionTrue, completedCond.Status)
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationCompleted, completedCond.Reason)
+	})
+}
+
+func (s *ControllerTestSuite) TestReconcileStepAbandonStopsPipeline() {
+	s.Run("abandon outcome marks operation terminal and skips remaining steps", func() {
+		var calls []execCall
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentEtcd,
+			newMockAbandon(&calls, controlplanev1alpha1.StepDefragEtcd, "etcd pod not present"),
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
+		)
+		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+
+		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
+		require.NoError(s.T(), err)
+		require.Equal(s.T(), reconcile.Result{}, result)
+
+		require.Len(s.T(), calls, 1, "pipeline must stop after the abandoning step")
+		require.Equal(s.T(), controlplanev1alpha1.StepDefragEtcd, calls[0].name)
+
+		got := s.getOp(r, "test-op")
+		completed := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), completed)
+		require.Equal(s.T(), metav1.ConditionFalse, completed.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationAbandoned, completed.Reason)
+		require.True(s.T(), got.IsTerminal(), "abandoned operation must be terminal so it releases the approval slot")
 	})
 }
 
