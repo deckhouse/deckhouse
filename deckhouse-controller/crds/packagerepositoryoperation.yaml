@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: packagerepositoryoperations.deckhouse.io
 spec:
   group: deckhouse.io
@@ -32,13 +32,15 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PackageRepositoryOperation represents an operation to scan/update a package repository.
+        description: PackageRepositoryOperation represents an operation to scan/update
+          a package repository.
         properties:
           apiVersion:
             description: |-
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
+
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)
             type: string
           kind:
@@ -47,8 +49,8 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
 
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
             type: string
           metadata:
             type: object
@@ -58,6 +60,8 @@ spec:
               packageRepositoryName:
                 description: Name of the package repository to operate on.
                 type: string
+                x-doc-examples:
+                - deckhouse
               type:
                 description: Type of operation to perform.
                 enum:
@@ -72,6 +76,8 @@ spec:
                   timeout:
                     description: Timeout for the operation.
                     type: string
+                    x-doc-examples:
+                    - 5m
                 type: object
             required:
             - packageRepositoryName
@@ -91,7 +97,8 @@ spec:
                   the operation is in one of the intermediate phases (`Discover`, `Processing`);
                   when the status is `True`, the operation has finished with reason `Succeeded` or `Failed`.
                 items:
-                  description: Condition describing one aspect of the current operation state.
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -115,13 +122,20 @@ spec:
                       type: integer
                     reason:
                       description: |-
-                        Programmatic identifier for the reason of the condition's last transition.
-                        For the `Completed` condition, the values are: `Discover`, `Processing`,
-                        `Succeeded`, `Failed`.
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
+                      x-doc-examples:
+                      - Discover
+                      - Processing
+                      - Succeeded
+                      - Failed
                     status:
                       description: status of the condition, one of True, False, Unknown.
                       enum:
@@ -130,9 +144,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: |-
-                        Condition type. This resource uses the `Completed` condition,
-                        which reflects whether the operation has reached a terminal phase.
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -166,7 +178,8 @@ spec:
                     items:
                       properties:
                         errors:
-                          description: List of errors encountered while processing this package.
+                          description: List of errors encountered while processing
+                            this package.
                           items:
                             properties:
                               message:
@@ -191,7 +204,7 @@ spec:
                   newVersionsOverall:
                     description: |-
                       Total number of newly found versions across all packages in this operation.
-                      
+
                       A version is counted as new if its ApplicationPackageVersion or
                       ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
                       only) existed with the "not in registry" mark and its image was found in the
@@ -210,7 +223,7 @@ spec:
                         newVersions:
                           description: |-
                             Number of newly found versions during this operation.
-                            
+
                             A version is counted as new if its ApplicationPackageVersion or
                             ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
                             only) existed with the "not in registry" mark and its image was found in the
@@ -238,6 +251,17 @@ spec:
         required:
         - spec
         type: object
+        x-doc-examples:
+        - apiVersion: deckhouse.io/v1alpha1
+          kind: PackageRepositoryOperation
+          metadata:
+            name: example
+          spec:
+            packageRepositoryName: deckhouse
+            type: Update
+            update:
+              fullScan: false
+              timeout: 5m
     served: true
     storage: true
     subresources:

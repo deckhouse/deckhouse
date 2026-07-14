@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -62,6 +63,8 @@ type Scheduler struct {
 	dynamicGetter          dynamic.Getter      // Reports a module's resolved enablement intent (ModuleConfig + dynamic), answered by the global module
 
 	pause atomic.Bool // When true, no state changes are processed
+
+	logger *log.Logger
 }
 
 // Option configures a Scheduler during construction.
@@ -113,10 +116,11 @@ func WithBundleChecker(getter bundle.BundleChecker) Option {
 // NewScheduler creates a Scheduler with an empty dependency graph and a
 // buffered event channel. Use functional options to configure version
 // providers and conditions. Call [Scheduler.Ch] to consume lifecycle events.
-func NewScheduler(opts ...Option) *Scheduler {
+func NewScheduler(logger *log.Logger, opts ...Option) *Scheduler {
 	s := &Scheduler{
 		nodes:   make(map[string]*node),
 		eventCh: make(chan Event, defaultBufferSize),
+		logger:  logger,
 	}
 
 	for _, opt := range opts {

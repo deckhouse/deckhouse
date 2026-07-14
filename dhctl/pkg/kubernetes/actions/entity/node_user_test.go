@@ -15,7 +15,6 @@
 package entity
 
 import (
-	"context"
 	"maps"
 	"testing"
 	"time"
@@ -261,7 +260,7 @@ func TestWaitNodeUserPresentOnNode(t *testing.T) {
 		t.Run(tstParams.name, func(t *testing.T) {
 			tst := testCreateWaiterTest(t, tstParams)
 
-			err := tst.waiter.WaitPresentOnNodes(context.TODO(), tst.params.nodeUser.nodeUser)
+			err := tst.waiter.WaitPresentOnNodes(t.Context(), tst.params.nodeUser.nodeUser)
 
 			if tstParams.hasErr {
 				require.Error(t, err)
@@ -360,7 +359,7 @@ func testCreateWaiterTest(t *testing.T, test testNodeUserWaiterParams) testNodeU
 	require.False(t, govalue.IsNil(test.nodeUser.checker))
 
 	kubeCl := client.NewFakeKubernetesClient()
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	for _, node := range test.nodes {
 		obj := corev1.Node{

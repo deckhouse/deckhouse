@@ -20,7 +20,6 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -38,6 +37,7 @@ import (
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineConvergeFlags(cmd, &opts.Converge)
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
@@ -48,8 +48,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
@@ -78,7 +77,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 					AutoDismissChanges:     false,
 					AutoDismissDestructive: false,
 					AutoApproveSettings: infrastructure.AutoApproveSettings{
-						AutoApprove: false,
+						AutoApprove: opts.Converge.DestructiveApproved,
 					},
 				},
 			},
@@ -145,8 +144,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
@@ -203,8 +201,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 
 		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),

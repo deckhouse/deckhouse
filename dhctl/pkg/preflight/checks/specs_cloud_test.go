@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	_ "embed"
 	"testing"
 
@@ -92,7 +91,7 @@ func TestCloudSystemRequirementsCheck(t *testing.T) {
 				InstallConfig: tt.installConfig,
 			}
 
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			tt.assertionCheck(t, err, "CloudSystemRequirementsCheck.Run()")
 		})

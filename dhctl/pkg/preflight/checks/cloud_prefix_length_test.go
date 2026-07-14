@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -278,7 +277,7 @@ func TestCloudDiskNameLength(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := CloudDiskNameLengthCheck{MetaConfig: tt.metaConfig}
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			if tt.expectError {
 				require.Error(t, err)

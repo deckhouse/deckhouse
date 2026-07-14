@@ -21,7 +21,6 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -49,13 +48,12 @@ func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir st
 
 	cleanuper := callback.NewCallback()
 
-	loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
 	params := settings.ProviderParams{
-		LoggerProvider: loggerProvider,
-		IsDebug:        isDebug,
-		NodeTmpPath:    app.DeckhouseNodeTmpPath,
-		NodeBinPath:    app.DeckhouseNodeBinPath,
-		TmpDir:         tmpDir,
+		Logger:      dhlog.FromContext(ctx),
+		IsDebug:     isDebug,
+		NodeTmpPath: app.DeckhouseNodeTmpPath,
+		NodeBinPath: app.DeckhouseNodeBinPath,
+		TmpDir:      tmpDir,
 	}
 
 	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithConnectionConfig(config))

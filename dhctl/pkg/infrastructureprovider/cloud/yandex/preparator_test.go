@@ -100,7 +100,7 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 		input.Operation = proto.OperationConverge
 		preparator := NewMetaConfigPreparator(true)
 
-		err := preparator.Validate(context.TODO(), input)
+		err := preparator.Validate(t.Context(), input)
 		require.NoError(t, err)
 	}
 
@@ -180,7 +180,7 @@ func assertValidation(t *testing.T, input config.ProviderInput, hasError bool) {
 	input.Operation = proto.OperationBootstrap
 	preparator := NewMetaConfigPreparator(true)
 
-	err := preparator.Validate(context.TODO(), input)
+	err := preparator.Validate(t.Context(), input)
 	if hasError {
 		require.Error(t, err)
 		return

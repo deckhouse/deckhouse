@@ -675,10 +675,6 @@
   },
   "sds-elastic": {
     "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
       "ee"
     ],
     "tags": [
@@ -851,6 +847,8 @@
       "cse-lite",
       "cse-pro"
     ],
+    "external": "true",
+    "path": "/modules/upmeter/",
     "tags": [
       "observability",
       "ssdlc"

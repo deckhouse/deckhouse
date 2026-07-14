@@ -15,7 +15,6 @@
 package validation
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -40,7 +39,7 @@ kubernetesVersion: Automatic
 clusterDomain: cluster.local
 `
 	s := New(config.NewSchemaStore(nil), nil)
-	resp, err := s.ValidateResources(context.Background(), &pb.ValidateResourcesRequest{
+	resp, err := s.ValidateResources(t.Context(), &pb.ValidateResourcesRequest{
 		Config: cfg,
 		Opts:   &pb.ValidateOptions{CommanderMode: true},
 	})
@@ -55,7 +54,7 @@ metadata:
   name: my-secret
 `
 	s := New(config.NewSchemaStore(nil), nil)
-	resp, err := s.ValidateResources(context.Background(), &pb.ValidateResourcesRequest{
+	resp, err := s.ValidateResources(t.Context(), &pb.ValidateResourcesRequest{
 		Config: cfg,
 		Opts:   &pb.ValidateOptions{CommanderMode: true},
 	})
@@ -72,7 +71,7 @@ metadata:
 
 func TestValidateResources_EmptyPayload_NoError(t *testing.T) {
 	s := New(config.NewSchemaStore(nil), nil)
-	resp, err := s.ValidateResources(context.Background(), &pb.ValidateResourcesRequest{
+	resp, err := s.ValidateResources(t.Context(), &pb.ValidateResourcesRequest{
 		Config: "",
 		Opts:   &pb.ValidateOptions{CommanderMode: true},
 	})

@@ -229,15 +229,20 @@ metadata:
   name: {{ $fullname }}
   namespace: {{ $namespace }}
 spec:
-  {{- if $hostNetwork }}
   network:
+    {{- if $additionalPorts }}
+    hostPorts:
+      {{- range $additionalPorts }}
+      - port: {{ .containerPort }}
+        protocol: {{ .protocol | default "TCP" }}
+      {{- end }}
+    {{- end }}
     hostNetwork:
       allowedValue: true
       metadata:
         description: |
           Allow host network access for CAPI infrastructure controller manager.
           The CAPI infrastructure controller manager requires host network access to continue infrastructure reconciliation even if the CNI or pod network is unavailable.
-  {{- end }}
 {{- end }}
 {{- end }}
 

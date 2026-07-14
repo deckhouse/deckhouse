@@ -538,15 +538,26 @@ Hugo:
 data-search-context="{{ T "search_context" }}"
 ```
 
+### OpenAPI Specifications rendering
+
+The `x-doc-` prefix in the parameter names is reserved in the OpenAPI specifications for rendering the documentation. Parameters with this prefix are only used for rendering the documentation and are not mandatory.
+A list of `x-doc-` parameters:
+- `x-doc-deprecated:` (boolean). It is used to indicate that the parameter is deprecated.
+- `x-doc-required:` (boolean). It is used to indicate explicitly on the site if a particular parameter is mandatory or optional.
+- `x-doc-default:` (arbitrary type). The default value to show on the site. It is helpful if you cannot specify the `default` parameter for some reason. The x-doc specification value must be of the same type as the target parameter, and it **cannot contain** markdown elements or arbitrary text (well, it can, but the rendering will be ugly). **Only** the value from the English version of the resource is used.
+- `x-doc-d8Editions` (array of strings). Array of Deckhouse Kubernetes Platform editions the target parameter can be used with. E.g. `["se", "ee"]`. Legacy, and will be deprecated.
+- `x-doc-example` (arbitrary type). Provides an example of the target parameter's value. If specified, it takes precedence over the `example` and `x-examples` parameters. The x-doc-example specification value can contain markdown elements or arbitrary text. **Only** the value from the English version of the resource is used. Use `x-doc-examples` for specifying an array of YAMLs.
+- `x-doc-examples` (arbitrary type). Provides an ARRAY of examples of the target parameter's value. If specified, it takes precedence over the `example` and `x-examples` parameters.
+- `x-doc-search` (string). Comma-separated search keywords. Are used in the search index on the site to search parameters better.
+- `x-doc-skip` (boolean). If true, skip parameter for rendering.
+- `x-doc-map-key-name` (string). Used to specify the name of an additional parameter (object key) when describing `additionalProperties`.
+- `x-doc-pattern-name` (string). Used to specify the name of a pattern inside `patternProperties` object.
+
 ## Markup (external modules documentation)
 
 [Hugo](gohugo.io) SSG is used for rendering.
 
 The documentation content is written in Markdown with some custom shortcodes.
-
-### OpenAPI Specifications rendering
-
-TODO
 
 ### Page parameters (front matter)
 

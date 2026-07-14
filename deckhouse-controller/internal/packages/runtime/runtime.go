@@ -573,6 +573,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	}
 
 	r.scheduler = schedule.NewScheduler(
+		r.logger,
 		schedule.WithDynamicGetter(r.global.IsEnabled),
 		schedule.WithBundleChecker(r.edition.IsEnabled),
 		schedule.WithBootstrapCondition(bootstrapCondition),
@@ -644,8 +645,8 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 		}
 	}
 
-	settings := r.packages.GetPendingSettings(r.global.GetName())
-	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, r.status, r.logger))
+	settings, _ := r.packages.GetPendingSettings(r.global.GetName())
+	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, 0, r.status, r.logger))
 
 	// Enable initializes and syncs the global hooks; its OnStartup step is a no-op
 	// because global has no OnStartup hooks. globalrun then runs BeforeAll, ensures
@@ -687,16 +688,16 @@ func (r *Runtime) schedulePackage(name string) {
 
 	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
-	settings := r.packages.GetPendingSettings(name)
+	settings, settingsVersion := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, settingsVersion, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, settingsVersion, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, r.nelmService, r.status, r.logger), onDone)
 	}
@@ -831,12 +832,12 @@ func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints
 
 // settingsValidatorI validates settings for a loaded runtime package.
 type settingsValidatorI interface {
-	ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error)
+	ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error)
 }
 
-// ValidatePackageSettings checks settings against the package's OpenAPI schema.
-// Returns valid if the package is not loaded yet (settings validated on load).
-func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+// ValidatePackageSettings converts (if needed) and validates settings against the
+// package's OpenAPI schema. Returns valid if the package is not loaded yet.
+func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidatePackageSettings")
 	defer span.End()
 
@@ -856,5 +857,5 @@ func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, sett
 		return settingscheck.Result{Valid: true}, nil
 	}
 
-	return validator.ValidateSettings(ctx, settings)
+	return validator.ValidateSettings(ctx, settingsVersion, settings)
 }

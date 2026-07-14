@@ -47,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -283,6 +284,11 @@ func (a *Application) GetPath() string {
 	return a.path
 }
 
+// GetEnabledScriptDescriptor is a stub that returns nil
+func (a *Application) GetEnabledScriptDescriptor() *script.Descriptor {
+	return nil
+}
+
 // GetHooksQueues returns package queues from all hooks
 func (a *Application) GetHooksQueues() []string {
 	var res []string //nolint:prealloc
@@ -328,7 +334,7 @@ func (a *Application) GetSettingsChecksum() string {
 }
 
 // ValidateSettings validates settings against openAPI and call setting check if exists
-func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+func (a *Application) ValidateSettings(ctx context.Context, _ int, settings addonutils.Values) (settingscheck.Result, error) {
 	if err := a.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
@@ -364,7 +370,7 @@ func (a *Application) GetValues() addonutils.Values {
 // ApplySettings applies settings values to application. Before persisting the
 // user config it resolves per-project grant defaults from
 // AvailableClusterResource and stores them for the grantDefaultsTransformer.
-func (a *Application) ApplySettings(settings addonutils.Values) error {
+func (a *Application) ApplySettings(_ int, settings addonutils.Values) error {
 	if err := a.resolveGrantDefaults(context.Background()); err != nil {
 		return err
 	}

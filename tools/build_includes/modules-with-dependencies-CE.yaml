@@ -247,22 +247,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/340-monitoring-kubernetes/hooks
-  to: /deckhouse/modules/340-monitoring-kubernetes/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/340-monitoring-kubernetes/requirements
-  to: /deckhouse/modules/340-monitoring-kubernetes/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/400-descheduler/hooks
   to: /deckhouse/modules/400-descheduler/hooks
   excludePaths:
@@ -289,14 +273,6 @@
         - '**/*'
 - add: /modules/500-openvpn/hooks
   to: /deckhouse/modules/500-openvpn/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/500-upmeter/hooks
-  to: /deckhouse/modules/500-upmeter/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'

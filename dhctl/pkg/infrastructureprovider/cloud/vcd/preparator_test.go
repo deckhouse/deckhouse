@@ -36,7 +36,7 @@ func newTestPreparator(client cloudClient) *MetaConfigPreparator {
 
 func TestPreparatorWithCurrentAPI(t *testing.T) {
 	preparator := newTestPreparator(testGetCurrentClient())
-	result, err := preparator.Prepare(context.TODO(), config.ProviderInput{})
+	result, err := preparator.Prepare(t.Context(), config.ProviderInput{})
 
 	require.NoError(t, err)
 	require.Nil(t, result.ProviderClusterConfig)
@@ -56,7 +56,7 @@ func TestPreparatorWithLegacyAPI(t *testing.T) {
 	inputWithLegacy := config.ProviderInput{
 		ProviderClusterConfig: map[string]json.RawMessage{"legacyMode": legacyModeRaw},
 	}
-	result, err = preparator.Prepare(context.TODO(), inputWithLegacy)
+	result, err = preparator.Prepare(t.Context(), inputWithLegacy)
 	require.NoError(t, err)
 	require.Nil(t, result.ProviderClusterConfig)
 }
@@ -77,7 +77,7 @@ func TestValidateMetaConfig(t *testing.T) {
 
 	assertPrefix := func(t *testing.T, prefix string, hasError bool) {
 		preparator := newTestPreparator(testGetLegacyClient())
-		err := preparator.Validate(context.TODO(), makeInput(validServer, prefix))
+		err := preparator.Validate(t.Context(), makeInput(validServer, prefix))
 		if hasError {
 			require.Error(t, err)
 		} else {
@@ -90,6 +90,6 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "abc-abc", false)
 
 	preparator := newTestPreparator(testGetLegacyClient())
-	err := preparator.Validate(context.TODO(), makeInput("https://myserver:8080/api/", "test"))
+	err := preparator.Validate(t.Context(), makeInput("https://myserver:8080/api/", "test"))
 	require.Error(t, err)
 }

@@ -208,17 +208,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/340-monitoring-kubernetes
-  to: /deckhouse/modules/340-monitoring-kubernetes
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
   excludePaths:
@@ -243,17 +232,6 @@
         - '**/*'
 - add: /modules/500-cilium-hubble
   to: /deckhouse/modules/500-cilium-hubble
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/500-upmeter
-  to: /deckhouse/modules/500-upmeter
   excludePaths:
     - docs
     - README.md
@@ -309,11 +287,6 @@
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/be/modules/040-node-manager/openapi/values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
   stageDependencies:
     install:
         - '**/*'
@@ -776,8 +749,28 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/containerdintegritypolicies.yaml
+  to: /deckhouse/modules/040-node-manager/crds/containerdintegritypolicies.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/doc-ru-containerdintegritypolicies.yaml
+  to: /deckhouse/modules/040-node-manager/crds/doc-ru-containerdintegritypolicies.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/040-node-manager/crds/mcm.yaml
   to: /deckhouse/modules/040-node-manager/crds/mcm.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
   stageDependencies:
     install:
         - '**/*'
@@ -790,6 +783,28 @@
   to: /deckhouse/modules/040-node-manager/hooks/mig_custom_config_name.go
   stageDependencies:
     install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/templates/integrity-containerd-configurator
+  to: /deckhouse/modules/040-node-manager/templates/integrity-containerd-configurator
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/templates/integrity-controller
+  to: /deckhouse/modules/040-node-manager/templates/integrity-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
         - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/machine-controller-manager
   to: /deckhouse/modules/040-node-manager/templates/machine-controller-manager
@@ -812,6 +827,33 @@
     - crds
   stageDependencies:
     setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/images/integrity-containerd-configurator
+  to: /deckhouse/modules/040-node-manager/images/integrity-containerd-configurator
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/images/integrity-controller
+  to: /deckhouse/modules/040-node-manager/images/integrity-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/openapi/values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+  stageDependencies:
+    install:
         - '**/*'
 - add: /ee/cse/modules/101-cert-manager/openapi/config-values.yaml
   to: /deckhouse/modules/101-cert-manager/openapi/config-values.yaml
@@ -843,15 +885,4 @@
   to: /deckhouse/modules/150-user-authn/openapi/values.yaml
   stageDependencies:
     install:
-        - '**/*'
-- add: /ee/cse/modules/500-upmeter/templates/webui
-  to: /deckhouse/modules/500-upmeter/templates/webui
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
         - '**/*'

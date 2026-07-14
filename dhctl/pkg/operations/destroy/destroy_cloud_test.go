@@ -360,7 +360,7 @@ func TestCloudDestroy(t *testing.T) {
 
 				tt.before(t, tst)
 
-				err := tst.destroyer.DestroyCluster(context.TODO(), true)
+				err := tst.destroyer.DestroyCluster(t.Context(), true)
 				assertClusterDestroyError(t, tt.destroyClusterShouldReturnsError, err)
 
 				tst.assertStateCache(t, tt.stateCacheShouldEmpty)
@@ -555,7 +555,7 @@ func TestCloudDestroy(t *testing.T) {
 
 				tt.before(t, tst)
 
-				err := tst.destroyer.DestroyCluster(context.TODO(), true)
+				err := tst.destroyer.DestroyCluster(t.Context(), true)
 				assertClusterDestroyError(t, tt.destroyClusterShouldReturnsError, err)
 
 				tst.assertStateCache(t, tt.stateCacheShouldEmpty)
@@ -664,8 +664,8 @@ func (ts *testCloudDestroyTest) assertConvergeLockSetInCache(t *testing.T, locke
 func (ts *testCloudDestroyTest) assertDestroyLocked(t *testing.T, locked bool) {
 	require.False(t, govalue.IsNil(ts.kubeCl))
 
-	lockConfig := lock.GetLockLeaseConfig(context.TODO(), "not necessary", "")
-	lockedInCluster, err := lock.IsConvergeLocked(context.TODO(), kubernetes.NewSimpleKubeClientGetter(ts.kubeCl), lockConfig, false)
+	lockConfig := lock.GetLockLeaseConfig(t.Context(), "not necessary", "")
+	lockedInCluster, err := lock.IsConvergeLocked(t.Context(), kubernetes.NewSimpleKubeClientGetter(ts.kubeCl), lockConfig, false)
 	require.NoError(t, err, "is locked should not be error")
 
 	require.Equal(t, locked, lockedInCluster, "should be locked or not")
@@ -742,7 +742,7 @@ spec:
             node.deckhouse.io/type: CloudEphemeral
         spec: {}
 `)
-	_, err := kubeCl.Dynamic().Resource(sapcloud.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(context.TODO(), md, metav1.CreateOptions{})
+	_, err := kubeCl.Dynamic().Resource(sapcloud.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(t.Context(), md, metav1.CreateOptions{})
 	require.NoError(t, err)
 	createdResources = append(createdResources, testCreatedResource{
 		name: md.GetName(),
@@ -766,7 +766,7 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 	kubeCl := testCreateFakeKubeClient()
 	kubeClProvider := newFakeKubeClientProvider(kubeCl)
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	clusterUUID := uuid.Must(uuid.NewRandom()).String()
 

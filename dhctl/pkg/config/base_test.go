@@ -15,7 +15,6 @@
 package config
 
 import (
-	"context"
 	"os"
 	"strings"
 	"testing"
@@ -1116,7 +1115,7 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce`
 
-		docs, err := FetchDocuments(context.Background(), []string{"./mocks/1-Init*.yml"})
+		docs, err := FetchDocuments(t.Context(), []string{"./mocks/1-Init*.yml"})
 		require.NoError(t, err)
 		require.Len(t, docs, 2)
 
@@ -1125,7 +1124,7 @@ deckhouse:
 	})
 
 	t.Run("Parse all yml config paths", func(t *testing.T) {
-		docs, err := FetchDocuments(context.Background(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+		docs, err := FetchDocuments(t.Context(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
 		require.NoError(t, err)
 		require.Len(t, docs, 6)
 		require.Equal(t, "", docs[0])

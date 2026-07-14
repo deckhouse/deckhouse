@@ -54,7 +54,7 @@ func TestSecretEdit(t *testing.T) {
 	retry.InTestEnvironment = true
 
 	_ = yaml.Unmarshal([]byte(stateSecretTestYAML), &secretTest)
-	f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Create(context.TODO(), secretTest, metav1.CreateOptions{})
+	f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Create(t.Context(), secretTest, metav1.CreateOptions{})
 
 	t.Run("Secret editing", func(t *testing.T) {
 		abstractEditing = EditMock
@@ -67,7 +67,7 @@ func TestSecretEdit(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		secretTestEdit, err := f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Get(context.TODO(), secretTest.Name, metav1.GetOptions{})
+		secretTestEdit, err := f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Get(t.Context(), secretTest.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		require.Equal(t, "test", secretTestEdit.Labels["name"])

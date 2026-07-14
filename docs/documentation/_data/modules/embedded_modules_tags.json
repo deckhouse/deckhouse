@@ -156,10 +156,6 @@
     "observability",
     "ssdlc"
   ],
-  "monitoring-kubernetes": [
-    "observability",
-    "ssdlc"
-  ],
   "monitoring-ping": [
     "observability",
     "network",
@@ -240,10 +236,6 @@
     "core",
     "cloud",
     "scaling",
-    "ssdlc"
-  ],
-  "upmeter": [
-    "observability",
     "ssdlc"
   ],
   "user-authn": [

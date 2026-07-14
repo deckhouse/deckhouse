@@ -50,7 +50,7 @@ type OpenstackProviderClusterConfiguration struct {
 		PodNetworkMode               string `json:"podNetworkMode,omitempty" yaml:"podNetworkMode,omitempty"`
 		ExternalNetworkName          string `json:"externalNetworkName,omitempty" yaml:"externalNetworkName,omitempty"`
 		ExternalNetworkDHCP          *bool  `json:"externalNetworkDHCP,omitempty" yaml:"externalNetworkDHCP,omitempty"`
-		MasterWithExternalFloatingIP bool   `json:"masterWithExternalFloatingIP,omitempty" yaml:"masterWithExternalFloatingIP,omitempty"`
+		MasterWithExternalFloatingIP *bool  `json:"masterWithExternalFloatingIP,omitempty" yaml:"masterWithExternalFloatingIP,omitempty"`
 	} `json:"simpleWithInternalNetwork,omitempty" yaml:"simpleWithInternalNetwork,omitempty"`
 
 	NodeGroups []struct {

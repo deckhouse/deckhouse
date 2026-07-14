@@ -50,7 +50,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
-		b.loggerProvider(),
+		dhlog.FromContext(ctx),
 		b.Options.Global.ConfigPaths,
 		b.Options.Registry.ImgBundlePath,
 	)

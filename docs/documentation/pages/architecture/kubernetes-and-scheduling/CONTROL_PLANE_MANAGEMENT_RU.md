@@ -33,6 +33,8 @@ description: Архитектура и функции модуля control-plane
   * приоритизация узлов в зависимости от их состояния (сетевой нагрузки, состояния подсистемы хранения и т. д.);
   * разделение узлов на зоны, и т. п.
 
+* **Периодическая дефрагментация etcd**. В кластерах с тремя и более членами etcd эта функция включена по умолчанию. Подробнее — в [документации модуля `control-plane-manager`](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag).
+
 Подробнее с настройками модуля и примерами его использования можно ознакомиться в [документации модуля `control-plane-manager`](/modules/control-plane-manager/).
 
 ### Архитектура модуля
@@ -46,7 +48,6 @@ description: Архитектура и функции модуля control-plane
 
 Архитектура модуля [`control-plane-manager`](/modules/control-plane-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля control-plane-manager](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.ru.png)
 
 ### Компоненты модуля

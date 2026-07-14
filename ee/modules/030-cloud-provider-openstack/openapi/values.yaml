@@ -8,6 +8,23 @@ properties:
     x-required-for-helm:
       - internalNetworkNames
     properties:
+      capoControllerManagerWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          key:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
       connection:
         type: object
         x-examples:
@@ -47,6 +64,8 @@ properties:
           type: string
       externalNetworkDHCP:
         type: boolean
+      layout:
+        type: string
       zones:
         type: array
         default: []
@@ -80,6 +99,8 @@ properties:
           - "VXLAN"
           - "DirectRouting"
           - "DirectRoutingWithPortSecurityEnabled"
+      apiServerFloatingIP:
+        type: boolean
       loadBalancer:
         type: object
         default: {}

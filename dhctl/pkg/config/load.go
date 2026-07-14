@@ -449,6 +449,8 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 
 	schema = transformer.TransformSchema(schema, &transformer.AdditionalPropertiesTransformer{})
 
+	warnDeprecatedFields(ctx, index, extractMetadataName(*doc), docForValidate, schema)
+
 	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {
 		if options.omitDocInError || options.commanderMode {

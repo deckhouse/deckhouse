@@ -15,7 +15,6 @@
 package template
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -29,7 +28,7 @@ import (
 )
 
 func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.GlobalOptions{})
+	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.GlobalOptions{})
 	require.NoError(t, err)
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
@@ -38,7 +37,7 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	templateController := NewTemplateController("")
 	defer templateController.Close()
 
-	err = PrepareBootstrap(context.TODO(), templateController, "127.0.0.1", metaConfig, &options.GlobalOptions{CandiDir: options.DefaultCandiDir})
+	err = PrepareBootstrap(t.Context(), templateController, "127.0.0.1", metaConfig, &options.GlobalOptions{CandiDir: options.DefaultCandiDir})
 	require.NoError(t, err)
 
 	renderedBootstrap, err := os.ReadFile(filepath.Join(templateController.TmpDir, "bootstrap", "01-bootstrap-prerequisites.sh"))

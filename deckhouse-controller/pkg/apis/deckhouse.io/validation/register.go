@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
@@ -44,7 +45,7 @@ type moduleStorage interface {
 }
 
 type packageManager interface {
-	ValidatePackageSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error)
+	ValidatePackageSettings(ctx context.Context, name string, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error)
 	CheckConstraints(name string, constraints schedule.Constraints) error
 }
 
@@ -72,9 +73,10 @@ func RegisterAdmissionHandlers(
 	schemaStore *config.SchemaStore,
 	settings *helpers.DeckhouseSettingsContainer,
 	exts extenders.IExtendersStack,
+	edition *d8edition.Edition,
 ) {
 	reg.RegisterHandler("/validate/v1/deckhouse-registry-secret", withInvalidReason(RegistrySecretHandler()))
-	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency())))
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency(), edition)))
 	reg.RegisterHandler("/validate/v1alpha1/modules", withInvalidReason(moduleValidationHandler()))
 	reg.RegisterHandler("/validate/v1/configuration-secret", withInvalidReason(clusterConfigurationHandler(mm, cli, schemaStore)))
 	reg.RegisterHandler("/validate/v1/provider-configuration-secret", withInvalidReason(providerConfigurationHandler(schemaStore)))

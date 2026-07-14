@@ -58,7 +58,7 @@ func TestVersionsContentLegacy(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, version, err := versionContentProviderWithClient(context.TODO(), testGetLegacyClient(), set)
+	content, version, err := versionContentProviderWithClient(t.Context(), testGetLegacyClient(), set)
 
 	require.NoError(t, err)
 	require.Equal(t, version, legacyVersion)
@@ -82,7 +82,7 @@ func TestVersionsContentCurrent(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, version, err := versionContentProviderWithClient(context.TODO(), testGetCurrentClient(), set)
+	content, version, err := versionContentProviderWithClient(t.Context(), testGetCurrentClient(), set)
 
 	require.NoError(t, err)
 	require.Equal(t, version, versionsForTest[1])

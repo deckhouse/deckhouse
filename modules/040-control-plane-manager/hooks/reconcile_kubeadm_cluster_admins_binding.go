@@ -173,10 +173,10 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 
 	logger := input.Logger.With(
 		slog.String("name", kubeadmClusterAdminsBindingName),
-		slog.String("desiredRoleRef", desiredRoleName),
-		slog.Bool("userAuthzEnabled", userAuthzEnabled),
-		slog.Bool("clusterBootstrapped", clusterBootstrapped),
-		slog.Bool("userAuthzCRAvailable", userAuthzCRAvailable),
+		slog.String("desired_role_ref", desiredRoleName),
+		slog.Bool("user_authz_enabled", userAuthzEnabled),
+		slog.Bool("cluster_bootstrapped", clusterBootstrapped),
+		slog.Bool("user_authz_cr_available", userAuthzCRAvailable),
 	)
 
 	bindingSnaps, err := sdkobjectpatch.UnmarshalToStruct[kubeadmClusterAdminsBindingState](input.Snapshots, kubeadmClusterAdminsBindingSnapshot)
