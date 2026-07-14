@@ -56,7 +56,13 @@ import:
     add: /src/mimir
     to: /bin/mimir
     after: setup
-git:    
+  - image: tools/coreutils
+    add: /
+    to: /
+    includePaths:
+    - usr/bin/sleep
+    before: setup
+git:
 {{- include "image mount points" . }}    
 imageSpec:
   config:
