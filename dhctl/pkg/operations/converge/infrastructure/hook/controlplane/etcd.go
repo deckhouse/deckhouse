@@ -28,13 +28,9 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-)
-
-func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
 // errEtcdMemberCheckTransient marks a failure to observe etcd membership that may clear up on
@@ -46,7 +42,7 @@ var errEtcdMemberCheckTransient = fmt.Errorf("etcd member check: transient error
 // member yet / still a member), as opposed to a genuine check failure.
 var errEtcdNotExpectedMembership = fmt.Errorf("etcd membership: not yet in the expected state")
 
-func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
+func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
 	attempt := 0
 
 	loopParams := retry.NewEmptyParams(
