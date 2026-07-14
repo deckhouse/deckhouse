@@ -1,3 +1,23 @@
+{{- /*
+Renders capi/<type>/instance-class.checksum over .nodeGroup. Used solely to derive the
+bootstrap secret name (checksum-based), byte-parity with node-controller's capi_cloud.go.
+MachineTemplate/MachineDeployment are rendered by node-controller, so the template itself
+is not emitted here — only its checksum feeds the secret name.
+*/ -}}
+{{- define "capi_node_group_instance_class_checksum" }}
+  {{- $context := index . 0 }}
+  {{- $ng := index . 1 }}
+{{- $tpl_context := dict }}
+{{- $_ := set $tpl_context "Release" $context.Release }}
+{{- $_ := set $tpl_context "Chart" $context.Chart }}
+{{- $_ := set $tpl_context "Files" $context.Files }}
+{{- $_ := set $tpl_context "Capabilities" $context.Capabilities }}
+{{- $_ := set $tpl_context "Template" $context.Template }}
+{{- $_ := set $tpl_context "Values" $context.Values }}
+{{- $_ := set $tpl_context "nodeGroup" $ng }}
+{{- tpl ($context.Files.Get (printf "capi/%s/instance-class.checksum" $context.Values.nodeManager.internal.cloudProvider.type)) $tpl_context }}
+{{- end }}
+
 {{- define "capi_node_group_machine_bootstrap_secret" }}
 {{- $context := index . 0 }}
 {{- $ng := index . 1 }}

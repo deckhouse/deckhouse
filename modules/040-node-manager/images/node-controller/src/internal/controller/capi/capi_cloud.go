@@ -271,7 +271,9 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		}
 
 		templateName := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone+checksum))
-		bootstrapSecretName := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone))
+		// Bootstrap secret name mirrors the MachineTemplate name (checksum-based) to keep
+		// byte-parity with helm's node-group.yaml ($bootstrap_secret_name := $template_name).
+		bootstrapSecretName := templateName
 
 		mtCtx := capiMachineTemplateContext(cloudProvider, blob, zone, templateName, checksum)
 		mt, err := renderCAPIMachineTemplate(cloudType, mtCtx)
