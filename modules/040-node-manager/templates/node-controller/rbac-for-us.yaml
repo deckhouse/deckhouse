@@ -107,12 +107,13 @@ rules:
   - get
   - list
   - watch
-# MCM MachineDeployment - patch replicas + delete on NodeGroup removal (capi-machine-deployment controller)
+# MCM MachineDeployment - create/patch (SSA) + delete on NodeGroup removal (capi-machine-deployment controller)
 - apiGroups:
   - machine.sapcloud.io
   resources:
   - machinedeployments
   verbs:
+  - create
   - update
   - patch
   - delete
