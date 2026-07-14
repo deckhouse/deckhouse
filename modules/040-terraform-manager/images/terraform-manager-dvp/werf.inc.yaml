@@ -1,14 +1,10 @@
 {{- if not (and (index . "HasAvailableModules") (not (hasKey (index . "AvailableModulesDict") "cloud-provider-dvp"))) }}
+# DVP is an external provider: its candi, terraform plugin and validator ship
+# in the cloud-provider-dvp/terraform-manager OCI bundle, which dhctl downloads
+# at runtime (see DHCTL_IMAGES_DIGESTS_FILE in the terraform-manager templates).
+# Nothing provider-specific is baked into this image.
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "kubernetes") }}'
-git:
-  - add: /{{ .ModulePath }}modules/030-cloud-provider-dvp/candi
-    to: /deckhouse/candi/cloud-providers/dvp
-import:
-  - image: cloud-provider-dvp/terraform-manager
-    add: /terraform-manager/terraform-provider-kubernetes
-    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "kubernetes") }}/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
-    before: setup
 
 {{ include "image_spec_for_infrastructure_manager" . }}
 {{- end }}
