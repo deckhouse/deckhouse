@@ -50,8 +50,20 @@ const (
 	VirtualKubeconfigSecretName               = "d8-kubeconfig-virtual"
 	VirtualAdminKubeconfigSecretName          = "d8-admin-kubeconfig-virtual"
 	VirtualControlPlaneNodeOrdinalLabelKey    = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
+	VirtualControlPlaneScopeLabelKey          = "control-plane.deckhouse.io/virtual-control-plane"
+	VirtualJoinScriptSecretName               = "d8-vcp-join-script"
+	VirtualBootstrapTokenGroup                = "system:bootstrappers:d8:vcp"
 	DefaultTenantClusterDomain                = "cluster.virtual"
 	DefaultTenantServiceSubnetCIDR            = "10.96.0.0/12"
+	VirtualExposeDomainSuffix                 = "vcp.local"
+
+	RegistryPackagesProxyPort          int32 = 4219
+	RegistryPackagesProxyBootstrapPort int32 = 4282
+)
+
+var (
+	VirtualBootstrapTokenTTL        = 24 * time.Hour
+	VirtualBootstrapTokenRegenBelow = 6 * time.Hour
 )
 
 const (
