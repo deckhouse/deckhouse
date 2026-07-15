@@ -160,18 +160,30 @@ func (c *Client) GetNodesIP(ctx context.Context) ([]string, error) {
 	return ips, nil
 }
 
-func (c *Client) GetCurrentNodeIP(ctx context.Context) (string, error) {
+func (c *Client) ResolveIdentity(ctx context.Context) (domain.NodeIdentity, error) {
 	node, err := c.client.CoreV1().Nodes().Get(ctx, c.nodeName, v1meta.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", c.nodeName, err)
+		return domain.NodeIdentity{}, fmt.Errorf("failed to get node %s: %w", c.nodeName, err)
 	}
 
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == v1.NodeInternalIP {
-			return addr.Address, nil
+			return domain.NodeIdentity{
+				Name: node.Name,
+				UID:  string(node.UID),
+				IP:   addr.Address,
+			}, nil
 		}
 	}
-	return "", fmt.Errorf("node %s has no InternalIP address", c.nodeName)
+	return domain.NodeIdentity{}, fmt.Errorf("node %s has no InternalIP address", c.nodeName)
+}
+
+func (c *Client) GetCurrentNodeIP(ctx context.Context) (string, error) {
+	identity, err := c.ResolveIdentity(ctx)
+	if err != nil {
+		return "", err
+	}
+	return identity.IP, nil
 }
 
 func (c *Client) IsMaintenanceMode() bool {

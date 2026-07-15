@@ -18,6 +18,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -26,6 +27,7 @@ import (
 	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/adapters/watchdog"
 	"fencing-agent/internal/controllers/grpc"
+	"fencing-agent/internal/domain"
 )
 
 type Config struct {
@@ -33,6 +35,8 @@ type Config struct {
 	HealthProbeBindAddress string `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
 	NodeName               string `env:"NODE_NAME" env-required:"true"`
 	NodeGroup              string `env:"NODE_GROUP" env-required:"true"`
+	ProfileRefName         string `env:"PROFILE_REF_NAME" env-required:"true"`
+	APISocketPath          string `env:"API_SOCKET_PATH" env-default:"/var/run/fencing-agent.sock"`
 	LogLevel               string `env:"LOG_LEVEL" env-default:"info"`
 
 	Watchdog watchdog.Config
@@ -79,12 +83,16 @@ func (c *Config) validateCommon() error {
 		return errors.New("NODE_NAME is empty")
 	}
 
-	if strings.TrimSpace(c.FencingMode) == "" {
-		return errors.New("FENCING_MODE is empty")
+	if !domain.FencingMode(c.FencingMode).IsValid() {
+		return fmt.Errorf("FENCING_MODE=%q is invalid, must be one of %v", c.FencingMode, domain.FencingModes())
 	}
 
 	if strings.TrimSpace(c.NodeGroup) == "" {
 		return errors.New("NODE_GROUP is empty")
+	}
+
+	if !domain.ProfileName(c.ProfileRefName).IsValid() {
+		return fmt.Errorf("PROFILE_REF_NAME=%q is invalid, must be one of %v", c.ProfileRefName, domain.ProfileNames())
 	}
 
 	if strings.TrimSpace(c.LogLevel) == "" {
