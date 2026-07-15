@@ -123,7 +123,13 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy)
+		// Commander sends no registry_config; the external provider bundle
+		// registry is read from the target cluster inside ParseMetaConfig.
+		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("get kube client for provider bundle: %w", err)
+		}
+		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy, kubeCl)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
 		}

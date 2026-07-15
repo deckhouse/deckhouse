@@ -226,7 +226,13 @@ func (c *Context) ReloadMetaConfig() {
 
 func (c *Context) loadMetaConfig() (*config.MetaConfig, error) {
 	if c.CommanderMode() {
-		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, infrastructureprovider.DhctlOperationConverge)
+		// Commander sends no registry_config; the external provider bundle
+		// registry is read from the target cluster inside ParseMetaConfig.
+		kubeClient, err := c.KubeClientCtx(c.Ctx())
+		if err != nil {
+			return nil, fmt.Errorf("Could not get kube client: %w", err)
+		}
+		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, infrastructureprovider.DhctlOperationConverge, kubeClient)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}

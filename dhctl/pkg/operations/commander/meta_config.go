@@ -20,13 +20,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 // ParseMetaConfig parses commander-mode config. operation
 // (infrastructureprovider.DhctlOperation*) reaches the provider preparator,
 // which skips bootstrap-only checks on other operations.
-func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, operation infrastructureprovider.DhctlOperation) (*config.MetaConfig, error) {
+func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, operation infrastructureprovider.DhctlOperation, kubeCl *client.KubernetesClient) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 	if err != nil {
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
@@ -37,6 +38,16 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	}
 
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
+
+	// Commander does not send registry_config, so the external provider bundle
+	// registry is unknown from the request. Read it from the target cluster and
+	// deliver the bundle before parsing; the parse below then finds it on disk
+	// and skips the registry-less download.
+	if kubeCl != nil {
+		if err := config.EnsureExternalProviderBundle(ctx, kubeCl, string(params.ClusterConfigurationData), nil); err != nil {
+			return nil, fmt.Errorf("ensure provider bundle from cluster: %w", err)
+		}
+	}
 
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
 	metaConfig, err := config.ParseConfigFromDataEnsureProvider(

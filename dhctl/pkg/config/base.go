@@ -915,6 +915,41 @@ func EnsureProviderBundle(ctx context.Context, provider string, docs []string, g
 	return ensureProviderBundle(ctx, provider, digest, registryConf, globalOptions)
 }
 
+// EnsureExternalProviderBundle downloads and unpacks the external provider's OCI
+// bundle using the registry read from the target cluster (the deckhouse-registry
+// secret). Commander operations receive no registry_config, so the bundle
+// registry is unknown from the request and the cluster is the only source of
+// truth. In-tree providers and already-delivered bundles are a no-op.
+func EnsureExternalProviderBundle(ctx context.Context, kubeCl *client.KubernetesClient, clusterConfigData string, globalOptions *options.GlobalOptions) error {
+	globalOptions = withDownloadDir(globalOptions)
+
+	provider, err := fetchCloudProvider(input.YAMLSplitRegexp.Split(strings.TrimSpace(clusterConfigData), -1))
+	if err != nil {
+		return err
+	}
+	provider = strings.ToLower(provider)
+	if provider == "" {
+		return nil
+	}
+	if providerCandiPresent(provider, globalOptions) {
+		return loadDeliveredProviderSchemas(provider, globalOptions)
+	}
+
+	digest, err := resolveProviderBundleDigest(provider)
+	if err != nil {
+		return err
+	}
+	if providerBundleReady(provider, digest, globalOptions) {
+		return nil
+	}
+
+	conf, _, err := registrydata.GetRegistryData(ctx, kubeCl)
+	if err != nil {
+		return fmt.Errorf("get registry data from cluster: %w", err)
+	}
+	return ensureProviderBundle(ctx, provider, digest, conf, globalOptions)
+}
+
 func providerBundleReady(provider, digest string, globalOptions *options.GlobalOptions) bool {
 	if !NewSchemaStore(globalOptions).ProviderSchemasLoaded(provider, digest) {
 		return false
