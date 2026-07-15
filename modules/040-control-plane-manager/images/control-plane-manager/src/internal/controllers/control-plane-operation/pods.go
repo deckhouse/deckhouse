@@ -39,34 +39,35 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: podName, Namespace: constants.KubeSystemNamespace}, pod); err != nil {
 		logger.Info("pod not found yet, requeue", slog.String("pod", podName))
-		return StepResult{
-			Outcome:      OutcomePending,
-			Message:      waitPodInitialMessage(op),
-			RequeueAfter: requeueWaitPod,
-		}, nil
+		return waitForPodResult(op, podName, "not present", waitPodInitialMessage(op)), nil
 	}
 
 	if isPodCrashLooping(pod) {
 		logger.Warn("pod is crash looping, will retry", slog.String("pod", podName))
-		return StepResult{
-			Outcome:      OutcomePending,
-			Message:      fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName),
-			RequeueAfter: requeueWaitPod,
-		}, nil
+		return waitForPodResult(op, podName, "crash looping", fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName)), nil
 	}
 
 	expected := checksumAnnotationsFromSpec(op.Spec)
 	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
-		return StepResult{
-			Outcome:      OutcomePending,
-			Message:      fmt.Sprintf("pod %s is not ready with expected checksums, will retry", podName),
-			RequeueAfter: requeueWaitPod,
-		}, nil
+		return waitForPodResult(op, podName, "not ready", fmt.Sprintf("pod %s is not ready with expected checksums, will retry", podName)), nil
 	}
 
 	logger.Info("pod ready with matching checksums", slog.String("pod", podName))
 	return StepResult{Outcome: OutcomeCompleted}, nil
+}
+
+// waitForPodResult returns Pending with pendingMessage, except for etcd-defrag CPOs, which
+// apply the same abandon-after-deadline rule as DefragEtcd — see waitEtcdPodResult.
+func waitForPodResult(op *controlplanev1alpha1.ControlPlaneOperation, podName, reason, pendingMessage string) StepResult {
+	if isEtcdDefragOperation(op) {
+		return waitEtcdPodResult(op, podName, reason)
+	}
+	return StepResult{
+		Outcome:      OutcomePending,
+		Message:      pendingMessage,
+		RequeueAfter: requeueWaitPod,
+	}
 }
 
 // mapPodToOperations finds in-progress CPOs for the component matching this pod.

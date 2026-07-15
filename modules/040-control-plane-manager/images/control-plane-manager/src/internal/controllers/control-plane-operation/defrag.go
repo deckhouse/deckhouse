@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -41,12 +42,9 @@ const (
 	etcdDefragTimeout       = 2 * time.Minute
 	etcdDefragStatusTimeout = 10 * time.Second
 
-	// etcdDefragWaitPodDeadline bounds how long the DefragEtcd step waits for the local
-	// etcd pod to appear and become Ready. Defrag is periodic maintenance: if etcd is not
-	// present on this node (e.g. the node was just added and etcd has not been deployed yet),
-	// waiting forever would keep the operation approved and occupy the single global etcd slot,
-	// deadlocking etcd join on other nodes. Past the deadline we abandon the operation so the
-	// slot is released; the next scheduled defrag run will retry once etcd is up.
+	// etcdDefragWaitPodDeadline bounds how long a defrag CPO waits for the local etcd pod
+	// before abandoning: waiting forever would hold the single global etcd slot and deadlock
+	// etcd join on other nodes. See waitEtcdPodResult.
 	etcdDefragWaitPodDeadline = 2 * time.Minute
 )
 
@@ -151,15 +149,14 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 	return StepResult{Outcome: OutcomeCompleted, Message: "skipped: fragmentation below threshold"}, nil
 }
 
-// waitEtcdPodResult returns a Pending result while the deadline has not elapsed, and an
-// Abandoned result once the etcd pod has been unavailable for longer than
-// etcdDefragWaitPodDeadline. Abandoning releases the global etcd operation slot so it can
-// never be held indefinitely by a defrag on a node without a running etcd pod.
+// waitEtcdPodResult abandons the operation once it has run past etcdDefragWaitPodDeadline,
+// releasing the global etcd slot; otherwise it keeps retrying. Shared by DefragEtcd and
+// WaitPodReady (see waitForPodResult in pods.go).
 func waitEtcdPodResult(op *controlplanev1alpha1.ControlPlaneOperation, podName, reason string) StepResult {
 	if operationElapsed(op, time.Now()) > etcdDefragWaitPodDeadline {
 		return StepResult{
 			Outcome: OutcomeAbandoned,
-			Message: fmt.Sprintf("etcd pod %s %s after %s; skipping periodic defragmentation", podName, reason, etcdDefragWaitPodDeadline),
+			Message: fmt.Sprintf("etcd pod %s %s after %s; abandoning periodic defrag operation", podName, reason, etcdDefragWaitPodDeadline),
 		}
 	}
 	return StepResult{
@@ -169,9 +166,12 @@ func waitEtcdPodResult(op *controlplanev1alpha1.ControlPlaneOperation, podName, 
 	}
 }
 
-// operationElapsed reports how long ago the operation started executing, based on the
-// operation-started-at annotation set by the reconciler. Returns 0 if the annotation is
-// missing or unparseable, which keeps the step in its retry loop rather than abandoning early.
+// isEtcdDefragOperation reports whether op is a periodic etcd-defrag CPO (see buildDefragCPO).
+func isEtcdDefragOperation(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+	return slices.Contains(op.Spec.Steps, controlplanev1alpha1.StepDefragEtcd)
+}
+
+// operationElapsed returns time since op's started-at annotation, or 0 if unset/unparseable.
 func operationElapsed(op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) time.Duration {
 	started := op.Annotations[constants.OperationStartedAtAnnotationKey]
 	if started == "" {

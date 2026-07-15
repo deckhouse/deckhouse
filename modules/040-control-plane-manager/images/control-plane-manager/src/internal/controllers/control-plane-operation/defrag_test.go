@@ -91,4 +91,56 @@ func TestDefragEtcd_WaitPodDeadline(t *testing.T) {
 		require.Equal(t, OutcomeAbandoned, res.Outcome)
 		require.NotEmpty(t, res.Message)
 	})
+
+	// WaitPodReady runs right after DefragEtcd in the same defrag CPO (see buildDefragCPO).
+	// If the pod flips unready or disappears between the two steps, WaitPodReady must apply the
+	// same deadline instead of holding the global etcd slot forever.
+	t.Run("WaitPodReady: pending while within deadline and pod absent", func(t *testing.T) {
+		t.Parallel()
+		r := newReconciler() // no etcd pod in cluster
+		state := newEtcdDefragState(10 * time.Second)
+
+		res, err := r.waitForPod(context.Background(), state, log.NewNop())
+		require.NoError(t, err)
+		require.Equal(t, OutcomePending, res.Outcome)
+		require.Equal(t, requeueWaitPod, res.RequeueAfter)
+	})
+
+	t.Run("WaitPodReady: abandoned after deadline when pod stays absent", func(t *testing.T) {
+		t.Parallel()
+		r := newReconciler() // no etcd pod in cluster
+		state := newEtcdDefragState(etcdDefragWaitPodDeadline + time.Minute)
+
+		res, err := r.waitForPod(context.Background(), state, log.NewNop())
+		require.NoError(t, err)
+		require.Equal(t, OutcomeAbandoned, res.Outcome)
+		require.NotEmpty(t, res.Message)
+	})
+
+	// Non-defrag etcd CPOs (e.g. join, cert renewal) must keep waiting indefinitely: unlike
+	// defrag they don't self-retry on a schedule, so giving up on WaitPodReady would silently
+	// drop the operation instead of surfacing a stuck node to the operator.
+	t.Run("WaitPodReady: non-defrag operation keeps waiting past the defrag deadline", func(t *testing.T) {
+		t.Parallel()
+		r := newReconciler() // no pod in cluster
+		op := &controlplanev1alpha1.ControlPlaneOperation{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "kube-apiserver-renew",
+				Annotations: map[string]string{
+					constants.OperationStartedAtAnnotationKey: time.Now().Add(-(etcdDefragWaitPodDeadline + time.Minute)).UTC().Format(time.RFC3339Nano),
+				},
+			},
+			Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
+				NodeName:  testNodeName,
+				Component: controlplanev1alpha1.OperationComponentKubeAPIServer,
+				Steps:     []controlplanev1alpha1.StepName{controlplanev1alpha1.StepWaitPodReady},
+			},
+		}
+		state := controlplanev1alpha1.NewOperationState(op)
+
+		res, err := r.waitForPod(context.Background(), state, log.NewNop())
+		require.NoError(t, err)
+		require.Equal(t, OutcomePending, res.Outcome)
+		require.Equal(t, requeueWaitPod, res.RequeueAfter)
+	})
 }
