@@ -174,9 +174,9 @@ func Test_RegistryScannerProcess(t *testing.T) {
 	})
 }
 
-// Regression: the telemetry group is expired at the start of every scan, but the
-// image-derived gauges used to be set only on the cache-miss path. On a warm
-// cache (unchanged release digest) the metric was expired and never re-emitted.
+// Regression: the image-derived telemetry gauges are set only on the cache-miss
+// path. They must live outside the scan-start expire group so that on a warm
+// cache (unchanged release digest) the value set by the cold scan survives.
 func Test_TelemetryReemitsOnWarmCache(t *testing.T) {
 	mc := minimock.NewController(t)
 
@@ -205,9 +205,9 @@ func Test_TelemetryReemitsOnWarmCache(t *testing.T) {
 	scanner.processRegistries(context.Background())
 	assert.Equal(t, 1, count(), "metric should be set after the cold scan")
 
-	// Second scan (warm hit): group is expired at scan start; must be re-emitted.
+	// Second scan (warm hit): the cold-scan value must survive the scan-start expire.
 	scanner.processRegistries(context.Background())
-	assert.Equal(t, 1, count(), "metric must be re-emitted after a warm-cache scan")
+	assert.Equal(t, 1, count(), "metric must survive a warm-cache scan")
 }
 
 func assertTasksMatch(t *testing.T, expected, actual []backends.DocumentationTask) {

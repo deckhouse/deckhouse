@@ -23,16 +23,6 @@ type VersionData struct {
 	Checksum       string
 	Version        string
 	TarFile        []byte
-	Telemetry      ModuleTelemetry
 
 	Image v1.Image
-}
-
-// ModuleTelemetry holds per-release-image validation flags derived during
-// scanning. They are cached alongside the release (keyed by its digest) so they
-// can be re-emitted on every scan, including warm-cache hits.
-type ModuleTelemetry struct {
-	NoModuleYaml bool
-	NoModuleSign bool
-	Critical     bool
 }

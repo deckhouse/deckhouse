@@ -173,16 +173,14 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	}
 
 	// Search across all channels by checksum
-	version, tarFile, telemetry := s.cache.GetGetReleaseVersionData(versionData)
+	version, tarFile := s.cache.GetGetReleaseVersionData(versionData)
 	if version != "" {
 		versionData.Version = version
 		versionData.TarFile = tarFile
-		versionData.Telemetry = telemetry
 
-		// Re-emit telemetry: the group is expired at the start of every scan, so
-		// warm-cache hits must still repopulate it from the cached flags.
-		s.emitModuleTelemetry(module, telemetry)
-
+		// Warm cache: the release digest is unchanged, so the telemetry gauges set
+		// on the cold path still hold. They live outside the scan-start expire
+		// group, so nothing wiped them and there is nothing to re-emit.
 		return versionData, nil
 	}
 
@@ -197,9 +195,7 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	}
 
 	// check that the module sign annotation exists
-	if len(manifest.Annotations) == 0 || manifest.Annotations[ImageAnnotationSignature] == "" {
-		versionData.Telemetry.NoModuleSign = true
-	}
+	noModuleSign := len(manifest.Annotations) == 0 || manifest.Annotations[ImageAnnotationSignature] == ""
 
 	// Extract version from image
 	imageMeta, err := getMetadataFromImage(versionData.Image)
@@ -211,11 +207,10 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		slog.String("channel", releaseChannel),
 		slog.Bool("found", imageMeta.ModuleDefinitionFound),
 		slog.Bool("critical", imageMeta.ModuleCritical))
-	versionData.Telemetry.NoModuleYaml = !imageMeta.ModuleDefinitionFound
-	// Track critical modules to identify potential "critical" field misuse
-	versionData.Telemetry.Critical = imageMeta.ModuleCritical
 
-	s.emitModuleTelemetry(module, versionData.Telemetry)
+	// Only reached on a cache miss (new/changed release digest), so recompute and
+	// overwrite the gauges here. Critical tracks potential "critical" field misuse.
+	s.emitModuleTelemetry(module, noModuleSign, !imageMeta.ModuleDefinitionFound, imageMeta.ModuleCritical)
 
 	versionData.Version = imageMeta.Version
 
@@ -229,19 +224,27 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	return versionData, nil
 }
 
-// emitModuleTelemetry (re-)sets the per-module telemetry gauges. It is called on
-// both the cold and warm paths so the group repopulates after every scan-start
-// expire, regardless of cache state.
-func (s *registryscanner) emitModuleTelemetry(module string, t internal.ModuleTelemetry) {
-	if t.NoModuleSign {
-		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
+// emitModuleTelemetry overwrites the per-module telemetry gauges. Unlike the
+// other scanner metrics these are NOT in RegistryScannerTelemetryGroup, so the
+// scan-start ExpireGroupMetrics does not wipe them: the value set on a cache miss
+// persists across warm scans until the release digest changes. We always Set an
+// explicit 0/1 so a resolved condition clears instead of sticking at 1.
+//
+// ponytail: a module dropped from the registry entirely is never re-scanned, so
+// its last gauge value lingers. Add per-module ExpireGroupMetrics keyed off the
+// SyncWithRegistryVersions delete tasks if stale series become a problem.
+func (s *registryscanner) emitModuleTelemetry(module string, noSign, noYaml, critical bool) {
+	labels := map[string]string{"module": module}
+	s.ms.GaugeSet(metrics.RegistryScannerNoModuleSign, boolToFloat(noSign), labels)
+	s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, boolToFloat(noYaml), labels)
+	s.ms.GaugeSet(metrics.RegistryScannerCriticalMetricSet, boolToFloat(critical), labels)
+}
+
+func boolToFloat(b bool) float64 {
+	if b {
+		return 1.0
 	}
-	if t.NoModuleYaml {
-		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
-	}
-	if t.Critical {
-		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerCriticalMetricSet, 1.0, map[string]string{"module": module})
-	}
+	return 0.0
 }
 
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
