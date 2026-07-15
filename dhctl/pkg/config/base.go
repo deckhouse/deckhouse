@@ -632,19 +632,26 @@ func applyRegistryToDeckhouseConfig(metaConfig *MetaConfig, docs []string) error
 }
 
 // withDownloadDir returns globalOptions guaranteed non-nil and with a non-empty
-// DownloadDir (falling back to the default tmp dir). It copies when it must
-// change so the shared server GlobalOptions is never mutated. Both the
-// provider-bundle download and the preparator read DownloadDir, so normalizing
-// it in one place keeps them pointed at the same location.
+// DownloadDir and DownloadCacheDir (falling back to the default tmp dir and its
+// "cache" subdir). It copies when it must change so the shared server
+// GlobalOptions is never mutated. The provider-bundle download reads both dirs
+// (the cache dir feeds the image puller's mkdir), so normalizing them in one
+// place keeps every caller pointed at the same location.
 func withDownloadDir(globalOptions *options.GlobalOptions) *options.GlobalOptions {
 	if globalOptions == nil {
-		return &options.GlobalOptions{DownloadDir: options.DefaultTmpDir()}
+		dir := options.DefaultTmpDir()
+		return &options.GlobalOptions{DownloadDir: dir, DownloadCacheDir: filepath.Join(dir, "cache")}
 	}
-	if globalOptions.DownloadDir != "" {
+	if globalOptions.DownloadDir != "" && globalOptions.DownloadCacheDir != "" {
 		return globalOptions
 	}
 	cp := *globalOptions
-	cp.DownloadDir = options.DefaultTmpDir()
+	if cp.DownloadDir == "" {
+		cp.DownloadDir = options.DefaultTmpDir()
+	}
+	if cp.DownloadCacheDir == "" {
+		cp.DownloadCacheDir = filepath.Join(cp.DownloadDir, "cache")
+	}
 	return &cp
 }
 
