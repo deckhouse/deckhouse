@@ -13,7 +13,7 @@
   {%- capture alert_content %}
 {{ site.data.i18n.features['module_lifecycle_stage'][page.lang] }}: <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ site.data.i18n.features[stage_long][page.lang] }}'>{{ stage }}</span>
   {%- if hasRequirements and site.data.i18n.features['requirements_for_alert'][page.lang] %}
-  <br>{{ site.data.i18n.features['requirements_for_alert'][page.lang] | replace: "%s", moduleName }}
+  <br>{{ site.data.i18n.features['requirements_for_alert'][page.lang] }}
   {%- endif %}
   {% endcapture %}
   {%- if stage == "Experimental" or stage == "Preview" %}
