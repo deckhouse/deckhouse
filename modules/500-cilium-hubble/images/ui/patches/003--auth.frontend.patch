@@ -1,6 +1,6 @@
 diff --git a/src/api/auth-user-info.ts b/src/api/auth-user-info.ts
 new file mode 100644
-index 00000000..3512bb45
+index 0000000..3512bb4
 --- /dev/null
 +++ b/src/api/auth-user-info.ts
 @@ -0,0 +1,42 @@
@@ -47,7 +47,7 @@ index 00000000..3512bb45
 +  }
 +}
 diff --git a/src/api/customprotocol/control-stream.ts b/src/api/customprotocol/control-stream.ts
-index 411b24b1..e46c9dc4 100644
+index 411b24b..e46c9dc 100644
 --- a/src/api/customprotocol/control-stream.ts
 +++ b/src/api/customprotocol/control-stream.ts
 @@ -54,7 +54,8 @@ export class ControlStream extends Stream<Handlers> {
@@ -70,7 +70,7 @@ index 411b24b1..e46c9dc4 100644
    }
  
 diff --git a/src/components/ServiceMapApp/WelcomeScreen.scss b/src/components/ServiceMapApp/WelcomeScreen.scss
-index 492af190..8557a957 100644
+index 492af19..8557a95 100644
 --- a/src/components/ServiceMapApp/WelcomeScreen.scss
 +++ b/src/components/ServiceMapApp/WelcomeScreen.scss
 @@ -64,3 +64,24 @@
@@ -99,7 +99,7 @@ index 492af190..8557a957 100644
 +  color: #5c7080;
 +}
 diff --git a/src/components/ServiceMapApp/WelcomeScreen.tsx b/src/components/ServiceMapApp/WelcomeScreen.tsx
-index 29f58ff9..95ef86b7 100644
+index 29f58ff..95ef86b 100644
 --- a/src/components/ServiceMapApp/WelcomeScreen.tsx
 +++ b/src/components/ServiceMapApp/WelcomeScreen.tsx
 @@ -1,4 +1,4 @@
@@ -178,7 +178,7 @@ index 29f58ff9..95ef86b7 100644
        </div>
      </div>
 diff --git a/src/components/ServiceMapApp/index.tsx b/src/components/ServiceMapApp/index.tsx
-index 2ecc11a3..119eea8f 100644
+index 2ecc11a..119eea8 100644
 --- a/src/components/ServiceMapApp/index.tsx
 +++ b/src/components/ServiceMapApp/index.tsx
 @@ -176,6 +176,7 @@ export const ServiceMapApp = observer(function ServiceMapApp() {
@@ -190,7 +190,7 @@ index 2ecc11a3..119eea8f 100644
        </div>
      );
 diff --git a/src/components/TopBar/index.tsx b/src/components/TopBar/index.tsx
-index 3079cc3d..49903efd 100644
+index 3079cc3..49903ef 100644
 --- a/src/components/TopBar/index.tsx
 +++ b/src/components/TopBar/index.tsx
 @@ -1,5 +1,9 @@
@@ -269,7 +269,7 @@ index 3079cc3d..49903efd 100644
      </div>
    );
 diff --git a/src/components/TopBar/styles.scss b/src/components/TopBar/styles.scss
-index f33cf0df..dba519cb 100644
+index f33cf0d..dba519c 100644
 --- a/src/components/TopBar/styles.scss
 +++ b/src/components/TopBar/styles.scss
 @@ -43,6 +43,41 @@
@@ -315,7 +315,7 @@ index f33cf0df..dba519cb 100644
      display: flex;
      flex-wrap: nowrap;
 diff --git a/src/data-layer/controls.ts b/src/data-layer/controls.ts
-index fc5d7830..a20054f5 100644
+index fc5d783..a20054f 100644
 --- a/src/data-layer/controls.ts
 +++ b/src/data-layer/controls.ts
 @@ -58,6 +58,7 @@ export class Controls extends EventEmitter<Handlers> {
@@ -327,7 +327,7 @@ index fc5d7830..a20054f5 100644
            const { namespace: nsDescriptor } = nsChange;
            this.store.applyNamespaceChange(nsDescriptor);
 diff --git a/src/data-layer/data-layer.ts b/src/data-layer/data-layer.ts
-index b0fe448b..6f9da7a4 100644
+index b0fe448..6f9da7a 100644
 --- a/src/data-layer/data-layer.ts
 +++ b/src/data-layer/data-layer.ts
 @@ -54,12 +54,13 @@ export class DataLayer extends EventEmitter<Handlers> {
@@ -358,7 +358,7 @@ index b0fe448b..6f9da7a4 100644
        store: this.store,
 diff --git a/src/router/LogoutRedirect.tsx b/src/router/LogoutRedirect.tsx
 new file mode 100644
-index 00000000..b0984015
+index 0000000..b098401
 --- /dev/null
 +++ b/src/router/LogoutRedirect.tsx
 @@ -0,0 +1,58 @@
@@ -421,7 +421,7 @@ index 00000000..b0984015
 +  );
 +}
 diff --git a/src/router/Routes.tsx b/src/router/Routes.tsx
-index 891f6fff..3a0ba98e 100644
+index f21ac61..00f6e73 100644
 --- a/src/router/Routes.tsx
 +++ b/src/router/Routes.tsx
 @@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
@@ -429,22 +429,22 @@ index 891f6fff..3a0ba98e 100644
  
  import { Router, ApplicationPath } from './router';
 +import { LogoutRedirect } from './LogoutRedirect';
+ import { extractPathname } from './utils';
  
  export type Props = {
-   router: Router;
-@@ -20,6 +21,10 @@ export const Routes = function Routes(props: Props) {
-           path: ApplicationPath.ServiceMap,
-           element: <ServiceMapApp />,
-         },
-+        {
-+          path: 'logout',
-+          element: <LogoutRedirect />,
-+        },
-       ],
-     },
-   ]);
+@@ -22,6 +23,10 @@ export const Routes = function Routes(props: Props) {
+             path: ApplicationPath.ServiceMap,
+             element: <ServiceMapApp />,
+           },
++          {
++            path: 'logout',
++            element: <LogoutRedirect />,
++          },
+         ],
+       },
+     ],
 diff --git a/src/store/stores/namespace.ts b/src/store/stores/namespace.ts
-index 252d522b..6d4e9f27 100644
+index 252d522..6d4e9f2 100644
 --- a/src/store/stores/namespace.ts
 +++ b/src/store/stores/namespace.ts
 @@ -7,12 +7,22 @@ export class NamespaceStore {

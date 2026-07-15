@@ -1,25 +1,5 @@
-diff --git a/backend/go.mod b/backend/go.mod
-index 8a62b3bb..8fc35622 100644
---- a/backend/go.mod
-+++ b/backend/go.mod
-@@ -9,6 +9,7 @@ require (
- 	github.com/julienschmidt/httprouter v1.3.0
- 	github.com/pkg/errors v0.9.1
- 	github.com/sirupsen/logrus v1.9.3
-+	golang.org/x/sync v0.19.0
- 	golang.org/x/sys v0.41.0
- 	google.golang.org/grpc v1.79.3
- 	google.golang.org/protobuf v1.36.10
-@@ -100,7 +101,6 @@ require (
- 	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
- 	golang.org/x/net v0.48.0 // indirect
- 	golang.org/x/oauth2 v0.34.0 // indirect
--	golang.org/x/sync v0.19.0 // indirect
- 	golang.org/x/term v0.38.0 // indirect
- 	golang.org/x/text v0.32.0 // indirect
- 	golang.org/x/time v0.10.0 // indirect
 diff --git a/backend/internal/api_clients/api_clients.go b/backend/internal/api_clients/api_clients.go
-index 776d1d3f..ebd0d67e 100644
+index 776d1d3..ebd0d67 100644
 --- a/backend/internal/api_clients/api_clients.go
 +++ b/backend/internal/api_clients/api_clients.go
 @@ -3,6 +3,9 @@ package api_clients
@@ -40,12 +20,12 @@ index 776d1d3f..ebd0d67e 100644
 +	K8sServiceClientset() kubernetes.Interface
  }
 diff --git a/backend/internal/api_clients/api_clients_prod.go b/backend/internal/api_clients/api_clients_prod.go
-index 1a6242af..8a9ef6d0 100644
+index 843c843..4d12892 100644
 --- a/backend/internal/api_clients/api_clients_prod.go
 +++ b/backend/internal/api_clients/api_clients_prod.go
 @@ -6,6 +6,7 @@ import (
+ 
  	"github.com/pkg/errors"
- 	"github.com/sirupsen/logrus"
  	"k8s.io/client-go/kubernetes"
 +	"k8s.io/client-go/rest"
  
@@ -53,12 +33,12 @@ index 1a6242af..8a9ef6d0 100644
  
 @@ -19,8 +20,9 @@ type APIClients struct {
  	cfg *config.Config
- 	log logrus.FieldLogger
+ 	log *slog.Logger
  
 -	k8s    kubernetes.Interface
 -	cilium *cilium.Clientset
-+	k8sREST *rest.Config
 +	k8s     kubernetes.Interface
++	k8sREST *rest.Config
 +	cilium  *cilium.Clientset
  
  	// TODO: GRPCClient can be refactored to be a generalized connection pool
@@ -91,7 +71,7 @@ index 1a6242af..8a9ef6d0 100644
 +}
 diff --git a/backend/internal/apiserver/api_info.go b/backend/internal/apiserver/api_info.go
 new file mode 100644
-index 00000000..ef86ed40
+index 0000000..3b449c4
 --- /dev/null
 +++ b/backend/internal/apiserver/api_info.go
 @@ -0,0 +1,46 @@
@@ -129,7 +109,7 @@ index 00000000..ef86ed40
 +
 +	username, err := usernameFromJWTBearerToken(token)
 +	if err != nil {
-+		srv.log.WithError(err).Debug("api/info: failed to read username from JWT")
++		srv.log.With("error", err).Debug("api/info: failed to read username from JWT")
 +		http.Error(w, "invalid token", http.StatusUnauthorized)
 +		return
 +	}
@@ -138,15 +118,15 @@ index 00000000..ef86ed40
 +	w.WriteHeader(http.StatusOK)
 +
 +	if err := json.NewEncoder(w).Encode(apiInfoResponse{Username: username}); err != nil {
-+		srv.log.WithError(err).Warn("api/info: failed to write JSON body")
++		srv.log.With("error", err).Warn("api/info: failed to write JSON body")
 +	}
 +}
 diff --git a/backend/internal/apiserver/apiserver.go b/backend/internal/apiserver/apiserver.go
-index d8f30776..5a6085f7 100644
+index 29f028d..921d24c 100644
 --- a/backend/internal/apiserver/apiserver.go
 +++ b/backend/internal/apiserver/apiserver.go
 @@ -12,6 +12,7 @@ import (
- 	"github.com/sirupsen/logrus"
+ 	"github.com/julienschmidt/httprouter"
  
  	"github.com/cilium/hubble-ui/backend/internal/api_clients"
 +	"github.com/cilium/hubble-ui/backend/internal/apiserver/auth"
@@ -176,14 +156,14 @@ index d8f30776..5a6085f7 100644
  	mux := httprouter.New()
 +	if srv.cfg.EnableAuth {
 +		mux.GET(srv.rootRoute+"/info", srv.handleAPIInfo)
-+		srv.log.WithField("path", srv.rootRoute+"/info").Info("registered auth user info endpoint")
++		srv.log.With("path", srv.rootRoute+"/info").Info("registered auth user info endpoint")
 +	}
  	mux.Handler(http.MethodPost, rootRoute, srv.router)
  
  	var handler http.Handler = mux
 diff --git a/backend/internal/apiserver/auth/auth_cache.go b/backend/internal/apiserver/auth/auth_cache.go
 new file mode 100644
-index 00000000..1067ded6
+index 0000000..1067ded
 --- /dev/null
 +++ b/backend/internal/apiserver/auth/auth_cache.go
 @@ -0,0 +1,138 @@
@@ -327,7 +307,7 @@ index 00000000..1067ded6
 +}
 diff --git a/backend/internal/apiserver/auth/namespace_filter.go b/backend/internal/apiserver/auth/namespace_filter.go
 new file mode 100644
-index 00000000..60b370fb
+index 0000000..60b370f
 --- /dev/null
 +++ b/backend/internal/apiserver/auth/namespace_filter.go
 @@ -0,0 +1,72 @@
@@ -405,7 +385,7 @@ index 00000000..60b370fb
 +}
 diff --git a/backend/internal/apiserver/auth_middleware.go b/backend/internal/apiserver/auth_middleware.go
 new file mode 100644
-index 00000000..b54ee01a
+index 0000000..7110b44
 --- /dev/null
 +++ b/backend/internal/apiserver/auth_middleware.go
 @@ -0,0 +1,161 @@
@@ -414,12 +394,12 @@ index 00000000..b54ee01a
 +import (
 +	"context"
 +	"fmt"
++	"log/slog"
 +	"strings"
 +	"time"
 +
 +	cp "github.com/cilium/hubble-ui/backend/internal/customprotocol"
 +	"github.com/cilium/hubble-ui/backend/internal/customprotocol/message"
-+	"github.com/sirupsen/logrus"
 +	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 +	"k8s.io/client-go/kubernetes"
 +
@@ -445,10 +425,10 @@ index 00000000..b54ee01a
 +	}
 +}
 +
-+func (m *authMiddleware) pollLog(ch *cp.Channel) logrus.FieldLogger {
-+	log := m.srv.log.WithField("channelId", ch.Id)
++func (m *authMiddleware) pollLog(ch *cp.Channel) *slog.Logger {
++	log := m.srv.log.With("channelId", ch.Id)
 +	if m.handler != "" {
-+		log = log.WithField("handler", m.handler)
++		log = log.With("handler", m.handler)
 +	}
 +	return log
 +}
@@ -506,12 +486,12 @@ index 00000000..b54ee01a
 +		nsLister := m.srv.clients.K8sServiceClientset()
 +		return ComputeNamespacePodListAllowlist(cctx, nsLister, userClient, log)
 +	}, func(computeErr error) {
-+		log.WithError(computeErr).Warn(
++		log.With("error", computeErr).Warn(
 +			"failed to resolve namespace access; caching empty allowlist for this token until cache TTL",
 +		)
 +	})
 +	if err != nil {
-+		log.WithError(err).Warn("namespace access cache internal error")
++		log.With("error", err).Warn("namespace access cache internal error")
 +		rctx.SetAllowedNamespaces(map[string]struct{}{})
 +		return nil
 +	}
@@ -531,7 +511,7 @@ index 00000000..b54ee01a
 +	ctx context.Context,
 +	namespaceLister kubernetes.Interface,
 +	authClient kubernetes.Interface,
-+	log logrus.FieldLogger,
++	log *slog.Logger,
 +) (map[string]struct{}, error) {
 +	if namespaceLister == nil {
 +		namespaceLister = authClient
@@ -557,7 +537,7 @@ index 00000000..b54ee01a
 +
 +		resp, err := authClient.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
 +		if err != nil {
-+			log.WithError(err).Warnf("SAR failed for namespace %s", ns.Name)
++			log.With("error", err).Warn(fmt.Sprintf("SAR failed for namespace %s", ns.Name))
 +			continue
 +		}
 +
@@ -566,15 +546,15 @@ index 00000000..b54ee01a
 +		}
 +	}
 +
-+	log.WithField("namespacesCount", len(allowed)).Debug("namespace access calculated")
++	log.With("namespacesCount", len(allowed)).Debug("namespace access calculated")
 +
 +	return allowed, nil
 +}
 diff --git a/backend/internal/apiserver/control_stream.go b/backend/internal/apiserver/control_stream.go
-index e86f2fe7..7e483460 100644
+index 00a8cf6..3bb8489 100644
 --- a/backend/internal/apiserver/control_stream.go
 +++ b/backend/internal/apiserver/control_stream.go
-@@ -4,6 +4,7 @@ import (
+@@ -5,6 +5,7 @@ import (
  	"time"
  
  	"github.com/cilium/hubble-ui/backend/internal/api_helpers"
@@ -582,7 +562,7 @@ index e86f2fe7..7e483460 100644
  	"github.com/cilium/hubble-ui/backend/internal/apiserver/notifications"
  	"github.com/cilium/hubble-ui/backend/internal/apiserver/req_context"
  	cp "github.com/cilium/hubble-ui/backend/internal/customprotocol"
-@@ -72,6 +73,12 @@ F:
+@@ -73,6 +74,12 @@ F:
  			nsDebounce.Touch()
  		case <-nsDebounce.Triggered():
  			nss := dataStash.FlushNamespaces()
@@ -593,11 +573,11 @@ index e86f2fe7..7e483460 100644
 +				continue
 +			}
  			nsResponse := responseFromNSEvents(nss)
- 			log.
- 				WithField("response", nsResponse).
+ 			log.Debug("namespaces debounce triggered", "response", nsResponse, "len(nss)", len(nss))
+ 
 diff --git a/backend/internal/apiserver/jwt_username.go b/backend/internal/apiserver/jwt_username.go
 new file mode 100644
-index 00000000..20c311f8
+index 0000000..20c311f
 --- /dev/null
 +++ b/backend/internal/apiserver/jwt_username.go
 @@ -0,0 +1,67 @@
@@ -669,10 +649,10 @@ index 00000000..20c311f8
 +	return nil, fmt.Errorf("jwt: payload base64 decode failed")
 +}
 diff --git a/backend/internal/apiserver/req_context/req_context.go b/backend/internal/apiserver/req_context/req_context.go
-index 50cadf23..2aeb55f9 100644
+index 1474b30..6665a8a 100644
 --- a/backend/internal/apiserver/req_context/req_context.go
 +++ b/backend/internal/apiserver/req_context/req_context.go
-@@ -12,6 +12,8 @@ type Context struct {
+@@ -11,6 +11,8 @@ type Context struct {
  
  	mx  sync.Mutex
  	ctx context.Context
@@ -681,7 +661,7 @@ index 50cadf23..2aeb55f9 100644
  }
  
  func New(ctx context.Context) *Context {
-@@ -30,3 +32,30 @@ func (c *Context) SetLogger(log logrus.FieldLogger) *Context {
+@@ -29,3 +31,30 @@ func (c *Context) SetLogger(log *slog.Logger) *Context {
  	c.Log = log
  	return c
  }
@@ -713,7 +693,7 @@ index 50cadf23..2aeb55f9 100644
 +	c.allowedNamespaces = allowed
 +}
 diff --git a/backend/internal/apiserver/service_map_stream.go b/backend/internal/apiserver/service_map_stream.go
-index 472b9358..7f7c1313 100644
+index e760589..d38f8de 100644
 --- a/backend/internal/apiserver/service_map_stream.go
 +++ b/backend/internal/apiserver/service_map_stream.go
 @@ -6,6 +6,7 @@ import (
@@ -737,10 +717,10 @@ index 472b9358..7f7c1313 100644
  		var links []cache.Result[*link.Link]
  
 diff --git a/backend/internal/apiserver/setup_routes.go b/backend/internal/apiserver/setup_routes.go
-index 0a567302..ebd60ede 100644
+index 664221f..401da6a 100644
 --- a/backend/internal/apiserver/setup_routes.go
 +++ b/backend/internal/apiserver/setup_routes.go
-@@ -38,24 +38,33 @@ func (srv *APIServer) prepareRoutes() error {
+@@ -39,24 +39,33 @@ func (srv *APIServer) prepareRoutes() error {
  
  func (srv *APIServer) setRouteHandlers() error {
  	srv.router.Route("control-stream").
@@ -781,10 +761,10 @@ index 0a567302..ebd60ede 100644
  	handler WrappedRouteHandler,
  	_opts WrappedRouteOptions,
 diff --git a/backend/internal/config/builder.go b/backend/internal/config/builder.go
-index 6e5d96c1..24ce9212 100644
+index c678f6d..93be77d 100644
 --- a/backend/internal/config/builder.go
 +++ b/backend/internal/config/builder.go
-@@ -38,6 +38,10 @@ func (b *ConfigBuilder) Build() (*Config, error) {
+@@ -40,6 +40,10 @@ func (b *ConfigBuilder) Build() (*Config, error) {
  		return nil, err
  	}
  
@@ -815,7 +795,7 @@ index 6e5d96c1..24ce9212 100644
  	e2eMode := b.props.E2ETestModeEnabled()
  	if err := e2eMode.Err(); err != nil {
 diff --git a/backend/internal/config/config.go b/backend/internal/config/config.go
-index af598b05..9f541d6c 100644
+index 5b6d5ae..15445ff 100644
 --- a/backend/internal/config/config.go
 +++ b/backend/internal/config/config.go
 @@ -24,6 +24,9 @@ type Config struct {
@@ -829,10 +809,10 @@ index af598b05..9f541d6c 100644
  	E2ELogFilesBasePath string
  
 diff --git a/backend/internal/config/prop_getters.go b/backend/internal/config/prop_getters.go
-index ed949287..4e597bd9 100644
+index 7d0e055..e1491b1 100644
 --- a/backend/internal/config/prop_getters.go
 +++ b/backend/internal/config/prop_getters.go
-@@ -13,6 +13,7 @@ type PropGetters struct {
+@@ -12,6 +12,7 @@ type PropGetters struct {
  	GopsEnabled              EnvVarGetter[bool]
  	GopsPort                 EnvVarGetter[uint16]
  	CorsEnabled              EnvVarGetter[bool]
@@ -841,19 +821,20 @@ index ed949287..4e597bd9 100644
  	RelayAddr                EnvVarGetter[string]
  	UIServerPort             EnvVarGetter[uint16]
 diff --git a/backend/internal/mock/clients/clients.go b/backend/internal/mock/clients/clients.go
-index 0d69ec33..6082a78f 100644
+index d8812f1..f6fcd68 100644
 --- a/backend/internal/mock/clients/clients.go
 +++ b/backend/internal/mock/clients/clients.go
-@@ -5,6 +5,8 @@ import (
+@@ -5,6 +5,9 @@ import (
+ 	"log/slog"
  	"sync"
  
- 	"github.com/sirupsen/logrus"
 +	"k8s.io/client-go/kubernetes"
 +	"k8s.io/client-go/rest"
- 
++
  	"github.com/cilium/hubble-ui/backend/internal/api_clients"
  	"github.com/cilium/hubble-ui/backend/internal/mock/sources"
-@@ -114,6 +116,14 @@ func (cl *Clients) NSWatcher(ctx context.Context, opts ns_watcher.NSWatcherOptio
+ 	"github.com/cilium/hubble-ui/backend/internal/mock/streams"
+@@ -113,6 +116,14 @@ func (cl *Clients) NSWatcher(ctx context.Context, opts ns_watcher.NSWatcherOptio
  	return nsw, nil
  }
  
@@ -869,10 +850,10 @@ index 0d69ec33..6082a78f 100644
  	if cl.src == nil {
  		return nil
 diff --git a/backend/main.go b/backend/main.go
-index b62c3a4c..e384acfb 100644
+index 113aa73..03b72d0 100644
 --- a/backend/main.go
 +++ b/backend/main.go
-@@ -17,6 +17,7 @@ func main() {
+@@ -16,6 +16,7 @@ func main() {
  		GopsEnabled:              config.BoolOr("GOPS_ENABLED", false),
  		GopsPort:                 config.Uint16Or("GOPS_PORT", 0),
  		CorsEnabled:              config.BoolOr("CORS_ENABLED", false),
