@@ -24,26 +24,17 @@ const (
 	StaticClusterType = "Static"
 )
 
-// providersRequiringProviderClusterConfig is the closed list of cloud providers
-// for which dhctl mandates a <Provider>ClusterConfiguration section. Providers
-// outside this list (notably "dvp") may be configured via ModuleConfig alone.
-var providersRequiringProviderClusterConfig = map[string]struct{}{
-	"yandex":    {},
-	"vcd":       {},
-	"gcp":       {},
-	"aws":       {},
-	"azure":     {},
-	"openstack": {},
-	"vsphere":   {},
-	"zvirt":     {},
-}
-
 // ProviderRequiresClusterConfig reports whether the given cloud provider must
-// have a <Provider>ClusterConfiguration section. For providers outside the
-// whitelist (e.g. "dvp") a ModuleConfig-only configuration is allowed.
+// have a <Provider>ClusterConfiguration section. Derived from the environment
+// instead of a hardcoded provider list, so dhctl needs no knowledge of new
+// providers: a provider whose schemas ship in the image's candi (in-tree)
+// follows the legacy contract, anything else (external OCI-bundle providers,
+// e.g. DVP) may be configured via ModuleConfig alone. The section's content is
+// enforced by the provider's own OpenAPI schema (required: [layout,
+// masterNodeGroup, ...]), and where candi is absent that schema is absent too,
+// so such a section could not have been parsed in the first place.
 func ProviderRequiresClusterConfig(providerName string) bool {
-	_, required := providersRequiringProviderClusterConfig[providerName]
-	return required
+	return ProviderBundledInCandi(providerName, nil)
 }
 
 type SchemaIndex struct {

@@ -350,9 +350,22 @@ func TestErrorConvergeManifests(t *testing.T) {
 		}
 	})
 
-	assertError(t, yandexClusterConvergeParams.CopyWithName("no provider config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
-		createYandexConfigurationSecret(t, tst, params)
+	// ProviderRequiresClusterConfig is derived from the presence of the
+	// provider's candi schemas, which never exist in unit tests (the probe
+	// stats /deckhouse/candi). An empty ProviderClusterConfig is therefore a
+	// ModuleConfig-only provider here: the d8-provider-cluster-configuration
+	// write is skipped, not an error. In real images the in-tree candi is
+	// present and the same case still fails fast.
+	t.Run("no provider config without candi skips the provider secret", func(t *testing.T) {
+		tst := testCreateConvergeManifestTest(t, yandexClusterConvergeParams.CopyWithName("no provider config without candi"))
+		createYandexConfigurationSecret(t, tst, yandexClusterConvergeParams)
 		tst.metaConfig.ProviderClusterConfig = nil
+
+		tasks, err := getTasksForRunning(t.Context(), tst.kubeCl, tst.commanderUUID, tst.metaConfig)
+		require.NoError(t, err)
+		for _, task := range tasks {
+			require.NotEqual(t, `Secret "d8-provider-cluster-configuration"`, task.Name)
+		}
 	})
 
 	assertError(t, yandexClusterConvergeParams.CopyWithName("incorrect provider config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
