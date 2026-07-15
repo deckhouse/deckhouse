@@ -55,7 +55,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <!-- Windows install, BE, SE, SE+, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
 ```text
-docker login -u license-token {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.io{% endif %}
+docker login -u license-token {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.ru{% endif %}
 ```
 
 Запустите контейнер с установщиком:
