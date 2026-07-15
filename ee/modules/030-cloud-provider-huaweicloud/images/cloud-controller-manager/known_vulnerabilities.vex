@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://deckhouse.io/vex/cloud-provider-huaweicloud/cloud-controller-manager/1",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "timestamp": "2026-07-15T00:00:00Z",
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость GO-2026-5932 в пакете golang.org/x/crypto не имеет исправленной версии в upstream. Образ Huawei Cloud cloud-controller-manager собирает бинарный файл cloud controller manager. Уязвимый код (пакет openpgp) не используется этим бинарным файлом — компонент не реализует и не вызывает функциональность OpenPGP-подписей, поэтому эксплуатация недостижима в данном артефакте.",
+      "timestamp": "2026-07-15T00:00:00Z"
+    }
+  ]
+}
