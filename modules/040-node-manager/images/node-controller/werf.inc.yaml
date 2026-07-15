@@ -99,7 +99,7 @@ fromImage: common/src-artifact
 final: false
 git:
 {{- $tplIncludePaths := list "cloud-instance-manager/machine-class.yaml" "cloud-instance-manager/machine-class.checksum" }}
-{{- range $provider := list "aws" "azure" "gcp" "yandex" "dvp" }}
+{{- range $provider := list "aws" "azure" "gcp" "yandex" }}
 - add: /{{ $.ModulePath }}modules/030-cloud-provider-{{ $provider }}
   to: /deckhouse/modules/030-cloud-provider-{{ $provider }}
   includePaths:
@@ -113,7 +113,7 @@ git:
     {{- end }}
 {{- end }}
 {{- if .isEE }}
-{{- range $provider := list "openstack" "dynamix" "vcd" "huaweicloud" }}
+{{- range $provider := list "openstack" }}
 - add: /ee/modules/030-cloud-provider-{{ $provider }}
   to: /deckhouse/ee/modules/030-cloud-provider-{{ $provider }}
   includePaths:
@@ -126,7 +126,7 @@ git:
     - {{ $p }}
     {{- end }}
 {{- end }}
-{{- range $provider := list "vsphere" "zvirt" }}
+{{- range $provider := list "vsphere" }}
 - add: /ee/se-plus/modules/030-cloud-provider-{{ $provider }}
   to: /deckhouse/ee/se-plus/modules/030-cloud-provider-{{ $provider }}
   includePaths:
