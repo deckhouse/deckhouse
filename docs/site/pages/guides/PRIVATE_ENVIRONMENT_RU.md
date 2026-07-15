@@ -1175,7 +1175,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
   * список доменов и IP-адресов, которые **не будут проксироваться** через прокси-сервер (внутренние доменные имена и внутренние IP-адреса всех серверов).
 
 * В ModuleConfig `deckhouse`:
-  * измените значение параметра [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
+  * измените значение параметра [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html);
   * в секции `spec.settings.registry` укажите параметры доступа к приватному хранилищу образов контейнеров (в нашем случае Harbor):
     ```yaml
     # Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
