@@ -124,12 +124,11 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		// }
 
 		// Commander sends no registry_config; the external provider bundle
-		// registry is read from the target cluster inside ParseMetaConfig.
-		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
-		if err != nil {
-			return nil, nil, fmt.Errorf("get kube client for provider bundle: %w", err)
-		}
-		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy, kubeCl)
+		// registry is read from the target cluster inside ParseMetaConfig. The
+		// kube client is fetched lazily, only when a bundle download is needed,
+		// so a destroy served entirely from the local state cache (in-tree
+		// provider) never dials the kube API.
+		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy, kubeProvider.KubeClientCtx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
 		}

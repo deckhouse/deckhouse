@@ -922,12 +922,20 @@ func EnsureProviderBundle(ctx context.Context, provider string, docs []string, g
 	return ensureProviderBundle(ctx, provider, digest, registryConf, globalOptions)
 }
 
+// KubeClientGetter lazily provides a kube client for the target cluster.
+// EnsureExternalProviderBundle calls it only when it must actually download an
+// external provider bundle, so operations that need no download (in-tree
+// providers, an already-delivered bundle, a destroy served entirely from the
+// local state cache) never dial the API.
+type KubeClientGetter func(ctx context.Context) (*client.KubernetesClient, error)
+
 // EnsureExternalProviderBundle downloads and unpacks the external provider's OCI
-// bundle using the registry read from the target cluster (the deckhouse-registry
-// secret). Commander operations receive no registry_config, so the bundle
-// registry is unknown from the request and the cluster is the only source of
-// truth. In-tree providers and already-delivered bundles are a no-op.
-func EnsureExternalProviderBundle(ctx context.Context, kubeCl *client.KubernetesClient, clusterConfigData string, globalOptions *options.GlobalOptions) error {
+// bundle using the registry read from the target cluster (the registry-config /
+// deckhouse-registry secret). Commander operations receive no registry_config,
+// so the bundle registry is unknown from the request and the cluster is the only
+// source of truth. In-tree providers and already-delivered bundles are a no-op
+// and never dial the kube API.
+func EnsureExternalProviderBundle(ctx context.Context, kubeClient KubeClientGetter, clusterConfigData string, globalOptions *options.GlobalOptions) error {
 	globalOptions = withDownloadDir(globalOptions)
 
 	provider, err := fetchCloudProvider(input.YAMLSplitRegexp.Split(strings.TrimSpace(clusterConfigData), -1))
@@ -948,6 +956,13 @@ func EnsureExternalProviderBundle(ctx context.Context, kubeCl *client.Kubernetes
 	}
 	if providerBundleReady(provider, digest, globalOptions) {
 		return nil
+	}
+
+	// Only here — an external provider whose bundle is not yet on disk — do we
+	// actually need the cluster, so dial it now.
+	kubeCl, err := kubeClient(ctx)
+	if err != nil {
+		return fmt.Errorf("get kube client for provider bundle: %w", err)
 	}
 
 	// Prefer the upstream registry from registry-config: on clusters with an

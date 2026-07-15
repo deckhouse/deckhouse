@@ -109,7 +109,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		return nil, cleaner, err
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, infrastructureprovider.DhctlOperationConverge, kubeCl)
+	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, infrastructureprovider.DhctlOperationConverge, c.GetKubeClient)
 	if err != nil {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
