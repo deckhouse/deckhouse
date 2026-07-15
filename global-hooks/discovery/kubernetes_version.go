@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -34,6 +35,8 @@ import (
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -55,8 +58,9 @@ const apiServerNs = "kube-system"
 
 // versionHTTPClient is used to validate that tls certificate DNS name contains kubernetes service cluster ip
 var (
-	versionHTTPClient d8http.Client
-	once              sync.Once
+	versionHTTPClient    d8http.Client
+	versionHTTPClientErr error
+	once                 sync.Once
 )
 
 func apiServerK8sAppLabels() map[string]string {
@@ -183,6 +187,41 @@ func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return service.Spec.ClusterIP, nil
 }
 
+// buildVersionHTTPClient returns a dedicated client for version discovery.
+//
+// A dedicated client is required because cloud providers tend to issue certificates only for
+// cluster IP, yet Deckhouse requests each endpoint separately. Certificate check will fail in this case.
+// The kubernetes service DNS name is used as TLS ServerName so the certificate check passes
+// even when an apiserver endpoint is requested by address.
+//
+// When deckhouse is pointed at another cluster via a kubeconfig
+// (--kube-config/$KUBE_CONFIG, exported as $KUBECONFIG), both the CA and the client
+// credentials (e.g. client certificates) of that cluster come from the kubeconfig:
+// the in-pod serviceaccount token and CA belong to the cluster hosting the pod.
+func buildVersionHTTPClient() (d8http.Client, error) {
+	if kubeconfigPath := os.Getenv("KUBECONFIG"); kubeconfigPath != "" {
+		restCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("load kubeconfig %q: %w", kubeconfigPath, err)
+		}
+		restCfg.TLSClientConfig.ServerName = "kubernetes.default.svc"
+
+		transport, err := rest.TransportFor(restCfg)
+		if err != nil {
+			return nil, fmt.Errorf("build transport for kubeconfig %q: %w", kubeconfigPath, err)
+		}
+
+		return &http.Client{Transport: transport, Timeout: 10 * time.Second}, nil
+	}
+
+	contentCA, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
+	return d8http.NewClient(
+		d8http.WithTLSServerName("kubernetes.default.svc"),
+		d8http.WithAdditionalCACerts([][]byte{contentCA}),
+	), nil
+}
+
 // getKubeVersionForServer
 // we do not use Discovery().ServerVersion() because it returns one version from one api server
 // (probably it is master-node with deckhouse pod)
@@ -195,9 +234,12 @@ func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
-	err = d8http.SetKubeAuthToken(req)
-	if err != nil {
-		return nil, fmt.Errorf("set kube auth token: %w", err)
+	// In kubeconfig mode the client credentials are already part of the
+	// transport; the in-pod serviceaccount token belongs to another cluster.
+	if os.Getenv("KUBECONFIG") == "" {
+		if err := d8http.SetKubeAuthToken(req); err != nil {
+			return nil, fmt.Errorf("set kube auth token: %w", err)
+		}
 	}
 
 	res, err := cl.Do(req)
@@ -311,22 +353,15 @@ func k8sVersions(ctx context.Context, input *go_hook.HookInput) error {
 		return err
 	}
 
-	// Dedicated client for version discovery is required because cloud providers tend to issue certificates only for
-	// cluster IP, yet Deckhouse requests each endpoint separately. Certificate check will fail in this case.
-	//
-	// ServerName option allows Deckhouse to check, that certificate is issued for the kubernetes service dns name
-	// even if it requests apiserver endpoint.
 	once.Do(func() {
 		if versionHTTPClient != nil {
 			return
 		}
-		contentCA, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-
-		versionHTTPClient = d8http.NewClient(
-			d8http.WithTLSServerName("kubernetes.default.svc"),
-			d8http.WithAdditionalCACerts([][]byte{contentCA}),
-		)
+		versionHTTPClient, versionHTTPClientErr = buildVersionHTTPClient()
 	})
+	if versionHTTPClientErr != nil {
+		return versionHTTPClientErr
+	}
 
 	versions := make([]string, 0)
 	var minVer *semver.Version
