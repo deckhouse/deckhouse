@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -30,6 +31,7 @@ import (
 var (
 	d8RppSecretName      = "deckhouse-registry"
 	d8RppSecretNamespace = "d8-system"
+	registryConfigSecret = "registry-config"
 )
 
 func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*image.RegistryConfig, string, error) {
@@ -66,4 +68,45 @@ func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*ima
 	})
 
 	return conf, b64dc, err
+}
+
+// GetUpstreamRegistryData reads the upstream (externally reachable) registry from
+// the d8-system/registry-config secret. On clusters running an in-cluster
+// registry (Direct/Proxy modes) the deckhouse-registry secret points at the
+// in-cluster mirror (registry.d8-system.svc), which an out-of-cluster caller
+// (the commander dhctl-server) cannot resolve; the upstream imagesRepo is the
+// registry it must pull from. found is false when the secret is absent (older
+// clusters without the registry module) or carries no imagesRepo (Local mode),
+// so the caller can fall back to GetRegistryData.
+func GetUpstreamRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*image.RegistryConfig, bool, error) {
+	secret, err := kubeCl.CoreV1().
+		Secrets(d8RppSecretNamespace).
+		Get(ctx, registryConfigSecret, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+
+	imagesRepo := string(secret.Data["imagesRepo"])
+	if imagesRepo == "" {
+		return nil, false, nil
+	}
+
+	scheme := strings.ToUpper(string(secret.Data["scheme"]))
+	if scheme == "" {
+		scheme = "HTTPS"
+	}
+	conf, err := image.NewRegistryConfig(
+		scheme,
+		imagesRepo,
+		string(secret.Data["username"]),
+		string(secret.Data["password"]),
+		string(secret.Data["ca"]),
+	)
+	if err != nil {
+		return nil, false, err
+	}
+	return conf, true, nil
 }

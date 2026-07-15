@@ -943,9 +943,20 @@ func EnsureExternalProviderBundle(ctx context.Context, kubeCl *client.Kubernetes
 		return nil
 	}
 
-	conf, _, err := registrydata.GetRegistryData(ctx, kubeCl)
+	// Prefer the upstream registry from registry-config: on clusters with an
+	// in-cluster registry the deckhouse-registry secret points at the
+	// registry.d8-system.svc mirror, which the out-of-cluster commander
+	// dhctl-server cannot resolve. Fall back to deckhouse-registry for older
+	// clusters that expose the externally reachable registry there directly.
+	conf, found, err := registrydata.GetUpstreamRegistryData(ctx, kubeCl)
 	if err != nil {
-		return fmt.Errorf("get registry data from cluster: %w", err)
+		return fmt.Errorf("get upstream registry data from cluster: %w", err)
+	}
+	if !found {
+		conf, _, err = registrydata.GetRegistryData(ctx, kubeCl)
+		if err != nil {
+			return fmt.Errorf("get registry data from cluster: %w", err)
+		}
 	}
 	return ensureProviderBundle(ctx, provider, digest, conf, globalOptions)
 }
