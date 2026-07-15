@@ -116,7 +116,7 @@ linters:
     paths:
       - go_lib/dependency/k8s/drain
       - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
-      - modules/110-istio/images/config-analyzer-v1x27x9/src # Built inside Istio source tree during image build; not part of the root Go module.
+      - modules/110-istio/images/config-analyzer-.+/src
       - third_party$
       - builtin$
       - examples$
@@ -144,7 +144,7 @@ formatters:
     paths:
       - go_lib/dependency/k8s/drain
       - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
-      - modules/110-istio/images/config-analyzer-v1x27x9/src
+      - modules/110-istio/images/config-analyzer-.+/src
       - third_party$
       - builtin$
       - examples$

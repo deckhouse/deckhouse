@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Built inside the Istio source tree during image build; excluded from the
+// Deckhouse root module typecheck/lint.
+//go:build deckhouse_external
+
 package main
 
 import (
