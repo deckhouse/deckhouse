@@ -108,9 +108,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "vector_reloader_resources" . | nindent 14 }}
-{{- end }}
+            {{- end }}
           env:
           {{- include "vectorEnv" . | nindent 10 }}
           volumeMounts:
@@ -195,9 +195,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
-{{- end }}
+            {{- end }}
       terminationGracePeriodSeconds: 120
       volumes:
       - name: var-log
