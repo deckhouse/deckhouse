@@ -81,6 +81,7 @@ When enabling `sendAuthorizationHeader: true`, add the `Authorization` header to
 ```yaml
 nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
 ```
+
 {% endalert %}
 
 {% alert level="warning" %}

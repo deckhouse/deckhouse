@@ -305,6 +305,7 @@ To enable authentication through `Dex` for your application, follow these steps:
    ```yaml
    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
    ```
+
    {% endalert %}
 
 ### Configuring CIDR-based restrictions

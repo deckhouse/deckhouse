@@ -306,6 +306,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
    ```yaml
    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
    ```
+
    {% endalert %}
 
 ### Настройка ограничений на основе CIDR
