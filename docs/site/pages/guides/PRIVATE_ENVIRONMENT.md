@@ -1135,18 +1135,18 @@ You should see a container named `squid` in the list.
   * Set [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) to `Stable` to use the stable [release channel](../documentation/v1/reference/release-channels.html).
   * In the `spec.settings.registry` section, specify access settings for the private container registry (Harbor in this guide):
     ```yaml
-    # Settings for accessing the container registry with Deckhouse images.
+    # Settings for accessing the container registry with DKP images.
     registry:
       mode: Unmanaged
       unmanaged:
-        # Address of the container registry with Deckhouse images.
+        # Address of the registry.
         imagesRepo: <IMAGES_REPO_URI>
-        # Username for authenticating with the container registry.
+        # Username for authenticating with the registry.
         username: <REGISTRY_USERNAME>
-        # Password for authenticating with the container registry.
+        # Password for authenticating with the registry.
         password: <REGISTRY_PASSWORD>
         scheme: HTTPS
-        # Root CA certificate in PEM format used to verify the container registry server certificate.
+        # Root CA certificate in PEM format used to verify the registry server certificate.
         ca: <REGISTRY_CA>
     ```
 
