@@ -282,7 +282,7 @@ The `/images` directory contains instructions for building module container imag
 There are two ways to define a container image:
 
 1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) — this file contains commands for building images. To build an application from source code, copy it next to the Dockerfile and include it in the image using the `COPY` command.
-2. The `werf.inc.yaml` file, which is the same as the [image definition section in `werf.yaml`](https://werf.io/documentation/v1.2/reference/werf_yaml.html#L33).
+1. The `werf.inc.yaml` file, which is the same as the [image definition section in `werf.yaml`](https://werf.io/documentation/v1.2/reference/werf_yaml.html#L33).
 
 The image name matches the directory name for this module, written in *camelCase* notation starting with a small letter. For example, the directory `/images/echo-server` corresponds to the image name `echoServer`.
 
