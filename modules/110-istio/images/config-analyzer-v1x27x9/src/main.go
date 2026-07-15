@@ -63,7 +63,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.EnableLogWithDefaultScope()
+	if err := log.Configure(log.DefaultOptions()); err != nil {
+		fmt.Fprintf(os.Stderr, "configure logging: %v\n", err)
+		os.Exit(1)
+	}
 
 	exporter := newExporter(istioNamespace, revision, allNamespaces, analysisTimeout)
 	prometheus.MustRegister(exporter)

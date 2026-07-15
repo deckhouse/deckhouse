@@ -34,7 +34,7 @@ import (
 	"istio.io/istio/pkg/log"
 )
 
-const outputThreshold = diag.Info
+var outputThreshold = diag.Info
 
 func runAnalysis(ctx context.Context, istioNamespace, revision string, allNamespaces bool) ([]diag.Message, error) {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
