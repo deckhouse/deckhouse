@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"encoding/base64"
+	"encoding/gob"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -32,6 +33,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
+
+func init() {
+	// MetaConfig.CloudProviderVars (mc-flow / DVP) is gob-encoded by the state
+	// cache (StateCache.SaveStruct on "cluster-config"). Its JSON-decoded maps
+	// carry values stored in interface{}, and gob refuses to encode a concrete
+	// type inside an interface unless that type is registered. A credential
+	// Secret's data is a map[string]string (secretToMap); provider resource
+	// objects nest map[string]interface{} and []interface{}. Register them so
+	// converge/destroy caching does not fail with
+	// "gob: type not registered for interface: map[string]string".
+	gob.Register(map[string]string{})
+	gob.Register(map[string]interface{}{})
+	gob.Register([]interface{}{})
+}
 
 type CloudProviderVars = proto.CloudProviderVars
 
