@@ -11,7 +11,7 @@
   description: Some reference and example networking plugins, maintained by the CNI team.
   license: Apache License 2.0
   id: cni-plugins
-  version: 1.7.1
+  version: 1.9.1
 
 - name: Gops
   link: https://github.com/google/gops

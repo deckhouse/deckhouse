@@ -129,12 +129,6 @@ shell:
   # selects the LLVM version from this env var (otherwise it falls back to the newest installed, e.g. 19.1).
   # bazel runs compile actions in a sandbox that does not inherit the shell env, so it must be passed explicitly.
 {{- if $buildWithPreparedCacheAndDeps }}
-  # Offline build of Envoy 1.36's Dynamic Modules Rust SDK (crate_universe / rules_rust).
-  # The crate-index repin trigger is pinned to a stable value in .bazelrc (--repo_env=CARGO_BAZEL_REPIN=1,
-  # injected in the setup steps below) and the Makefile's hardcoded `CARGO_BAZEL_REPIN=true` is stripped, so the crates_repository
-  # rule is NOT forced to re-run. The prepared external/ already holds the fully materialized crate index
-  # (rendered repo + per-crate repos + markers) recorded under that same value, so --nofetch reuses it as-is.
-  # All other external repos come from the pre-extracted external/, compiled outputs from --disk_cache.
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- else }}
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"

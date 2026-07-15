@@ -68,9 +68,10 @@ shell:
   - cd /src/cilium
   # Security: upstream Cilium v1.17.17 still ships go-jose/v4 v4.1.3, vulnerable to CVE-2026-34986
   # (panic/DoS when decrypting JWE with a key-wrapping alg and empty encrypted_key). Fixed in v4.1.4.
-  # deckhouse previously carried this via the removed 000-go-mod.patch; bump only this module (not the
-  # whole go.mod, to avoid downgrading x/net, x/crypto, etc. which v1.17.17 already has newer).
-  - go get github.com/go-jose/go-jose/v4@v4.1.4
+  # deckhouse previously carried this via the removed 000-go-mod.patch; pin the fixed version directly in
+  # go.mod (surgical require bump, no `go get` MVS side effects that could touch x/net, x/crypto, etc.).
+  - go mod edit -require=github.com/go-jose/go-jose/v4@v4.1.4
+  - go mod download github.com/go-jose/go-jose/v4
   - go mod vendor && go mod verify
   # Remove compile-time interface assertion in checkmate to fix newer Go versions compatibility (testing.TB interface changed).
   # This is safe because checkmate is a transitive test dependency, its *C type is not used in Cilium production code as testing.TB,
