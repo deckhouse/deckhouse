@@ -11,6 +11,9 @@ weight: 45
 Search in Deckhouse Code helps you quickly find the information you need across projects, groups, or the entire instance.
 Search is available for various entities. The results are ranked by relevance and allow you to jump directly to the source object.
 
+When OpenSearch is enabled, Deckhouse Code uses it as the backend for advanced search scopes (issues, merge requests, code, and others).
+For REST API parameters, filters, and response format, see the ["Search API"](search-api.html) reference.
+
 ## Search scopes
 
 |                      | Global | Group | Project |
@@ -93,6 +96,6 @@ Allows searching across all projects and groups within the instance.
 
 ### Additional features
 
-- Search in Deckhouse Code supports autocomplete for projects, groups, and users.
-- If full-text search is enabled, autocomplete also works for commit messages, filenames, code, issues, and merge requests.
+- Search in Deckhouse Code supports query completion for projects, groups, and users.
+- If full-text search is enabled, query completion also works for commit messages, filenames, code, issues, and merge requests.
 - When searching, you can quickly navigate to the required commit via its SHA.
