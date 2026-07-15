@@ -1178,18 +1178,18 @@ Status: Downloaded newer image for ubuntu/squid:latest
   * измените значение параметра [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html);
   * в секции `spec.settings.registry` укажите параметры доступа к приватному хранилищу образов контейнеров (в данном случае Harbor):
     ```yaml
-    # Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    # Настройки для доступа к хранилищу образов контейнеров с образами DKP.
     registry:
       mode: Unmanaged
       unmanaged:
-        # Адрес хранилища образов контейнеров с образами Deckhouse.
+        # Адрес хранилища.
         imagesRepo: <IMAGES_REPO_URI>
-        # Имя пользователя для аутентификации в хранилище образов контейнеров.
+        # Имя пользователя для аутентификации в хранилище.
         username: <REGISTRY_USERNAME>
-        # Пароль для аутентификации в хранилище образов контейнеров.
+        # Пароль для аутентификации в хранилище.
         password: <REGISTRY_PASSWORD>
         scheme: HTTPS
-        # Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
+        # Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища.
         ca: <REGISTRY_CA>
     ```
 
