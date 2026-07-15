@@ -34,7 +34,7 @@ pdpl-user -i 63 <USERNAME>
 <!-- Linux or macOS install, BE, SE, SE+, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry:
 ```shell
-echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.io{% endif %}
+echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.ru{% endif %}
 ```
 
 Запустите контейнер с установщиком:
