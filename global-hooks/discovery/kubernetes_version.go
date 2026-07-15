@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -199,16 +198,16 @@ func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 // credentials (e.g. client certificates) of that cluster come from the kubeconfig:
 // the in-pod serviceaccount token and CA belong to the cluster hosting the pod.
 func buildVersionHTTPClient() (d8http.Client, error) {
-	if kubeconfigPath := os.Getenv("KUBECONFIG"); kubeconfigPath != "" {
-		restCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-		if err != nil {
-			return nil, fmt.Errorf("load kubeconfig %q: %w", kubeconfigPath, err)
-		}
+	restCfg, err := envKubeconfigRESTConfig()
+	if err != nil {
+		return nil, err
+	}
+	if restCfg != nil {
 		restCfg.TLSClientConfig.ServerName = "kubernetes.default.svc"
 
 		transport, err := rest.TransportFor(restCfg)
 		if err != nil {
-			return nil, fmt.Errorf("build transport for kubeconfig %q: %w", kubeconfigPath, err)
+			return nil, fmt.Errorf("build transport for kubeconfig: %w", err)
 		}
 
 		return &http.Client{Transport: transport, Timeout: 10 * time.Second}, nil

@@ -23,6 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -31,6 +32,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverApiserverCA)
 
 const serviceAccountCAPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+// envKubeconfigRESTConfig loads the rest.Config from $KUBECONFIG when deckhouse
+// is pointed at another cluster via a kubeconfig (--kube-config/$KUBE_CONFIG,
+// exported as $KUBECONFIG). Returns (nil, nil) in the usual in-cluster mode.
+func envKubeconfigRESTConfig() (*rest.Config, error) {
+	kubeconfigPath := os.Getenv("KUBECONFIG")
+	if kubeconfigPath == "" {
+		return nil, nil
+	}
+	restCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("load kubeconfig %q: %w", kubeconfigPath, err)
+	}
+	return restCfg, nil
+}
 
 func discoverApiserverCA(_ context.Context, input *go_hook.HookInput) error {
 	ca, err := apiserverCA()
@@ -43,26 +59,25 @@ func discoverApiserverCA(_ context.Context, input *go_hook.HookInput) error {
 }
 
 func apiserverCA() ([]byte, error) {
-	// When deckhouse is pointed at another cluster via a kubeconfig
-	// (--kube-config/$KUBE_CONFIG, exported as $KUBECONFIG), the CA must be
-	// taken from that kubeconfig: the mounted serviceaccount CA belongs to
-	// the cluster hosting the deckhouse pod, not to the managed one.
-	if kubeconfigPath := os.Getenv("KUBECONFIG"); kubeconfigPath != "" {
-		restCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-		if err != nil {
-			return nil, fmt.Errorf("load kubeconfig %q: %w", kubeconfigPath, err)
-		}
+	// When deckhouse is pointed at another cluster via a kubeconfig, the CA
+	// must be taken from that kubeconfig: the mounted serviceaccount CA
+	// belongs to the cluster hosting the deckhouse pod, not to the managed one.
+	restCfg, err := envKubeconfigRESTConfig()
+	if err != nil {
+		return nil, err
+	}
+	if restCfg != nil {
 		if len(restCfg.TLSClientConfig.CAData) > 0 {
 			return restCfg.TLSClientConfig.CAData, nil
 		}
 		if restCfg.TLSClientConfig.CAFile != "" {
 			ca, err := os.ReadFile(restCfg.TLSClientConfig.CAFile)
 			if err != nil {
-				return nil, fmt.Errorf("read ca file from kubeconfig %q: %w", kubeconfigPath, err)
+				return nil, fmt.Errorf("read ca file %q from kubeconfig: %w", restCfg.TLSClientConfig.CAFile, err)
 			}
 			return ca, nil
 		}
-		return nil, fmt.Errorf("kubeconfig %q has no certificate authority", kubeconfigPath)
+		return nil, fmt.Errorf("kubeconfig %q has no certificate authority", os.Getenv("KUBECONFIG"))
 	}
 
 	ca, err := os.ReadFile(serviceAccountCAPath)
