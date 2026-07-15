@@ -1431,6 +1431,38 @@ alerts:
         A peer cluster requests private metadata using a deprecated subdomain.
       severity: "5"
       markupFormat: markdown
+    - name: D8IstioConfigAnalysisError
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ce
+      description: |
+        The Istio configuration analyzer found an error in revision `{{$labels.revision}}`.
+
+        Type: `{{$labels.type}}` (`{{$labels.code}}`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        Check analyzer metrics or run `istioctl analyze -A --revision {{$labels.revision}}` in the debug container.
+      summary: |
+        Istio configuration analysis detected an error-level issue.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioConfigAnalysisWarning
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ce
+      description: |
+        The Istio configuration analyzer found a warning in revision `{{$labels.revision}}`.
+
+        Type: `{{$labels.type}}` (`{{$labels.code}}`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+      summary: |
+        Istio configuration analysis detected a warning-level issue.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
