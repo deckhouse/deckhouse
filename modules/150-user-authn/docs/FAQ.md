@@ -26,7 +26,7 @@ To enable Dex authentication for your application, follow these steps:
      applicationDomain: "app-name.kube.my-domain.com"
      # A parameter that determines whether to send the `Authorization: Bearer` header to the application.
      # This one is useful in combination with auth_request in NGINX.
-     # When sendAuthorizationHeader is true, add Authorization to the application's Ingress auth-response-headers (see below).
+     # If sendAuthorizationHeader is set to true, add the Authorization header to to nginx.ingress.kubernetes.io/auth-response-headers annotation of the application's Ingress.
      sendAuthorizationHeader: false
      # The name of the Secret containing the SSL certificate.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -76,7 +76,7 @@ To enable Dex authentication for your application, follow these steps:
 {% endraw %}
 
 {% alert level="warning" %}
-When enabling `sendAuthorizationHeader: true`, list all headers in the Ingress `auth-response-headers` annotation (by default, `Authorization` is not passed through):
+When setting `sendAuthorizationHeader: true`, list all necessary headers in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation of the Ingress, since the `Authorization` header is not transmitted by default:
 
 ```yaml
 nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization

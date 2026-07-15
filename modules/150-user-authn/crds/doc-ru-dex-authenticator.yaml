@@ -26,11 +26,9 @@ spec:
                   description: |-
                     Флаг, который отвечает за отправку конечному приложению заголовка `Authorization: Bearer`.
 
-                    **Внимание.** Включайте, только если приложение умеет обрабатывать такой заголовок.
-
-                    **Внимание.** При включении `sendAuthorizationHeader: true` в Ingress укажите все заголовки в `auth-response-headers` (по умолчанию `Authorization` не прокидывается):
-
-                    `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization`
+                    > **Внимание.** Включайте, только если приложение может обрабатывать такой заголовок.
+                    >
+                    > При включении `sendAuthorizationHeader: true` в Ingress укажите все необходимые заголовки в аннотации `nginx.ingress.kubernetes.io/auth-response-headers`, поскольку заголовок `Authorization` по умолчанию не передаётся.
                 applicationIngressCertificateSecretName:
                   description: |
                     Имя секрета (Secret) с TLS-сертификатом для домена приложения, который используется в Ingress-ресурсе приложения. Секрет должен обязательно находиться в том же пространстве имен, что и DexAuthenticator.
@@ -208,11 +206,9 @@ spec:
                   description: |-
                     Флаг, который отвечает за отправку конечному приложению заголовка `Authorization: Bearer`.
 
-                    **Внимание.** Включайте, только если приложение умеет обрабатывать такой заголовок.
-
-                    **Внимание.** При включении `sendAuthorizationHeader: true` в Ingress укажите все заголовки в `auth-response-headers` (по умолчанию `Authorization` не прокидывается):
-
-                    `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization`
+                    > **Внимание.** Включайте, только если приложение может обрабатывать такой заголовок.
+                    >
+                    > При включении `sendAuthorizationHeader: true` в Ingress укажите все необходимые заголовки в аннотации `nginx.ingress.kubernetes.io/auth-response-headers`, поскольку заголовок `Authorization` по умолчанию не передаётся.
                 keepUsersLoggedInFor:
                   description: |
                     Отвечает за то, как долго пользовательская сессия будет считаться активной, если пользователь бездействует (указывается с суффиксом `s`, `m` или `h`).

@@ -25,7 +25,7 @@ title: "Модуль user-authn: FAQ"
      # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификации в Dex.
      applicationDomain: "app-name.kube.my-domain.com"
      # Отправлять ли заголовок `Authorization: Bearer` приложению. Полезно в связке с auth_request в NGINX.
-     # При значении sendAuthorizationHeader: true добавьте Authorization в auth-response-headers Ingress приложения (см. ниже).
+     # При значении sendAuthorizationHeader: true добавьте заголовок Authorization в аннотацию nginx.ingress.kubernetes.io/auth-response-headers Ingress приложения.
      sendAuthorizationHeader: false
      # Имя секрета с SSL-сертификатом.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -75,7 +75,7 @@ title: "Модуль user-authn: FAQ"
 {% endraw %}
 
 {% alert level="warning" %}
-При включении `sendAuthorizationHeader: true` в Ingress укажите все заголовки в `auth-response-headers` (по умолчанию `Authorization` не прокидывается):
+При включении `sendAuthorizationHeader: true` в Ingress укажите все необходимые заголовки в аннотации `nginx.ingress.kubernetes.io/auth-response-headers`, поскольку заголовок `Authorization` по умолчанию не передаётся:
 
 ```yaml
 nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
