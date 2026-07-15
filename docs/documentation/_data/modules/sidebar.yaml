@@ -18,6 +18,9 @@ titles:
   cr.html:
     en: Custom Resources
     ru: Кастомные ресурсы
+  istio-cr.html:
+    en: Custom Resources (by istio.io)
+    ru: Кастомные ресурсы (от istio.io)
   oss.html:
     en: Third-party components
     ru: Внешние компоненты
