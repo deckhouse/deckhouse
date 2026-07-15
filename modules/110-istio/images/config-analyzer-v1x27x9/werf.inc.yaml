@@ -57,7 +57,7 @@ shell:
   - export GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - common/scripts/gobuild.sh /src/istio/out/ -tags=disable_pgv /src/istio/tools/istio-config-analyzer/
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=disable_pgv,deckhouse_external /src/istio/tools/istio-config-analyzer/
   - strip /src/istio/out/istio-config-analyzer
   - chmod 0700 /src/istio/out/istio-config-analyzer
   - chown 64535:64535 /src/istio/out/istio-config-analyzer
