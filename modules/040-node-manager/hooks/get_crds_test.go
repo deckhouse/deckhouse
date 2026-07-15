@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -103,6 +104,13 @@ metadata:
   namespace: d8-cloud-instance-manager
 `
 	)
+
+	// Freeze the dynamic 'ics' kind detection. This is a package-level var shared
+	// with set_instance_class_ng_usage; returning equal values keeps that hook from
+	// taking the Disable branch (which would mutate the shared binding to an empty Kind).
+	detectInstanceClassKind = func(_ *go_hook.HookInput, _ *go_hook.HookConfig) (string, string) {
+		return "D8TestInstanceClass", "D8TestInstanceClass"
+	}
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.32.5", "kubernetesVersions":["1.32.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {"static": {"internalNetworkCIDRs":["172.18.200.0/24"]}}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)

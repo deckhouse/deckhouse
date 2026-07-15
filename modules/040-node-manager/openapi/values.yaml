@@ -437,7 +437,11 @@ properties:
                       type: integer
         x-examples:
           - - name: worker
+              instanceClass: # minimum
+                ami: myami
+                instanceType: t2.medium
               nodeType: CloudEphemeral
+              kubernetesVersion: "1.32"
               cri:
                 type: "Containerd"
               cloudInstances:

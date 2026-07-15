@@ -302,76 +302,6 @@ internal:
   machineControllerManagerEnabled: true
 `
 
-const faultyNodeManagerOpenstack = `
-internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
-  capsControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
-  nodeControllerWebhookCert:
-    ca: string
-    key: string
-    crt: string
-  instancePrefix: myprefix
-  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  clusterMasterEndpoints:
-  - address: 10.0.0.1
-    kubeApiPort: 6443
-    rppServerPort: 4219
-    rppBootstrapServerPort: 4282
-  - address: 10.0.0.2
-    kubeApiPort: 6443
-    rppServerPort: 4219
-    rppBootstrapServerPort: 4282
-  - address: 10.0.0.3
-    kubeApiPort: 6443
-    rppServerPort: 4219
-    rppBootstrapServerPort: 4282
-  kubernetesCA: myclusterca
-  cloudProvider:
-    type: openstack
-    machineClassKind: OpenStackMachineClass
-    openstack:
-      podNetworkMode: DirectRoutingWithPortSecurityEnabled
-      connection:
-        authURL: https://mycloud.qqq/3/
-        caCert: mycacert
-        domainName: Default
-        password: pPaAsS
-        region: myreg
-        tenantName: mytname
-        username: myuname
-      instances:
-        securityGroups: [groupa, groupb]
-        sshKeyPairName: mysshkey
-        mainNetwork: shared
-      internalSubnet: "10.0.0.1/24"
-      internalNetworkNames: [mynetwork, mynetwork2]
-      externalNetworkNames: [shared]
-  nodeGroups:
-  - name: worker
-    instanceClass:
-      flavorName: m1.large
-    nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
-    cloudInstances:
-      classReference:
-        kind: OpenStackInstanceClass
-        name: worker
-      maxPerZone: 5
-      minPerZone: 2
-      zones:
-      - zonea
-      - zoneb
-  machineControllerManagerEnabled: true
-`
-
 const nodeManagerOpenstack = `
 internal:
   capiControllerManagerWebhookCert:
@@ -1048,19 +978,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	})
 
 	Context("Openstack", func() {
-		Describe("Openstack faulty config", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+faultyNodeManagerOpenstack)
-				setBashibleAPIServerTLSValues(f)
-				f.HelmRender()
-			})
-
-			It("Test should fail", func() {
-				Expect(f.RenderError).Should(HaveOccurred())
-				Expect(f.RenderError.Error()).ShouldNot(BeEmpty())
-			})
-		})
-
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
 			setBashibleAPIServerTLSValues(f)
@@ -2026,25 +1943,23 @@ internal:
 				}
 
 				type mdParams struct {
-					name                string
-					templateName        string
-					bootstrapSecretName string
+					name         string
+					templateName string
 				}
 
-				// MachineDeployment and VCDMachineTemplate are created by node-controller
-				// (capi.reconcileCloudMDsRendered), not helm. Only the bootstrap Secret
-				// stays in helm.
+				// Only the MachineDeployment is created by node-controller
+				// (capi.reconcileCloudMDsRendered). Helm owns the instance-class checksum:
+				// it renders the bootstrap Secret and the infrastructure VCDMachineTemplate,
+				// both named after the checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeFalse())
 
-					// The bootstrap Secret no longer embeds the instance-class checksum:
-					// its name is {ng}-{sha(clusterUUID+zone)}, independent of the template.
-					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.bootstrapSecretName)
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
 					Expect(secret.Exists()).To(BeTrue())
 
 					vcdTemplate := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", d.templateName)
-					Expect(vcdTemplate.Exists()).To(BeFalse())
+					Expect(vcdTemplate.Exists()).To(BeTrue())
 				}
 				//
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2056,20 +1971,18 @@ internal:
 
 				// zonea
 				assertMachineDeploymentAndItsDeps(f, mdParams{
-					name:                "myprefix-worker-02320933",
-					templateName:        "worker-6656f66e",
-					bootstrapSecretName: "worker-02320933",
+					name:         "myprefix-worker-02320933",
+					templateName: "worker-6656f66e",
 				})
 
 				// zoneb
 				assertMachineDeploymentAndItsDeps(f, mdParams{
-					name:                "myprefix-worker-6bdb5b0d",
-					templateName:        "worker-d30762c9",
-					bootstrapSecretName: "worker-6bdb5b0d",
+					name:         "myprefix-worker-6bdb5b0d",
+					templateName: "worker-d30762c9",
 				})
 
 				vcdTemplateWithCatalog := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", "worker-big-c10b569f")
-				Expect(vcdTemplateWithCatalog.Exists()).To(BeFalse())
+				Expect(vcdTemplateWithCatalog.Exists()).To(BeTrue())
 			})
 		})
 
@@ -2151,25 +2064,23 @@ internal:
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				type mdParams struct {
-					name                string
-					templateName        string
-					bootstrapSecretName string
+					name         string
+					templateName string
 				}
 
-				// MachineDeployment and DeckhouseMachineTemplate are created by
-				// node-controller (capi.reconcileCloudMDsRendered), not helm. Only the
-				// bootstrap Secret stays in helm.
+				// Only the MachineDeployment is created by node-controller
+				// (capi.reconcileCloudMDsRendered). Helm owns the instance-class checksum:
+				// it renders the bootstrap Secret and the infrastructure DeckhouseMachineTemplate,
+				// both named after the checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeFalse())
 
-					// The bootstrap Secret no longer embeds the instance-class checksum:
-					// its name is {ng}-{sha(clusterUUID+zone)}, independent of the template.
-					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.bootstrapSecretName)
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
 					Expect(secret.Exists()).To(BeTrue())
 
 					dvpTemplate := f.KubernetesResource("DeckhouseMachineTemplate", "d8-cloud-instance-manager", d.templateName)
-					Expect(dvpTemplate.Exists()).To(BeFalse())
+					Expect(dvpTemplate.Exists()).To(BeTrue())
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2178,9 +2089,8 @@ internal:
 				assertClusterResources(f, "dvp")
 
 				assertMachineDeploymentAndItsDeps(f, mdParams{
-					name:                "myprefix-worker-8ced91ee",
-					templateName:        "worker-a6381073",
-					bootstrapSecretName: "worker-8ced91ee",
+					name:         "myprefix-worker-8ced91ee",
+					templateName: "worker-a6381073",
 				})
 			})
 		})
