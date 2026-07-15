@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 )
 
@@ -244,4 +245,39 @@ func TestApplyRegistryToDeckhouseConfigKeepsExisting(t *testing.T) {
 	metaConfig.DeckhouseConfig.RegistryDockerCfg = "preset"
 	require.NoError(t, applyRegistryToDeckhouseConfig(metaConfig, []string{ensureRegistryMCDoc}))
 	require.Equal(t, "preset", metaConfig.DeckhouseConfig.RegistryDockerCfg, "must not clobber dockercfg already supplied by configData")
+}
+
+func TestUnpackProviderBundleFailedDownloadLeavesNoDigestDir(t *testing.T) {
+	globalOptions := ensureTestGlobalOptions(t)
+	const digest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, "enspartial", digest)
+
+	fail := true
+	orig := downloadProviderBundle
+	downloadProviderBundle = func(_ context.Context, _, dest, _ string, _ image.RegistryConfig, _ bool) error {
+		if fail {
+			// Mimic the real puller: the destination is created and partially
+			// filled before the download aborts.
+			require.NoError(t, os.MkdirAll(dest, 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, "garbage"), []byte("x"), 0o644))
+			return fmt.Errorf("network reset")
+		}
+		writeTestProviderSchema(t, dest, "EnsPartialConfiguration")
+		return nil
+	}
+	t.Cleanup(func() { downloadProviderBundle = orig })
+
+	conf, err := image.NewRegistryConfig("HTTPS", "r.example.com/test", "", "", "")
+	require.NoError(t, err)
+
+	require.Error(t, unpackProviderBundle(context.Background(), "enspartial", digest, conf, globalOptions))
+	_, statErr := os.Stat(digestDir)
+	require.True(t, os.IsNotExist(statErr), "failed download must not leave a digest dir that poisons the cache")
+	_, statErr = os.Stat(digestDir + ".partial")
+	require.True(t, os.IsNotExist(statErr), "failed download must not leave a partial dir")
+
+	fail = false
+	require.NoError(t, unpackProviderBundle(context.Background(), "enspartial", digest, conf, globalOptions))
+	_, statErr = os.Stat(filepath.Join(digestDir, "openapi"))
+	require.NoError(t, statErr, "retry after failure must deliver the bundle")
 }

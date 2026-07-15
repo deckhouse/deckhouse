@@ -111,7 +111,7 @@ type inTreeDefaultPreparator struct{}
 
 func (p *inTreeDefaultPreparator) Validate(_ context.Context, input config.ProviderInput) error {
 	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
-		return fmt.Errorf("%v for provider %s", err, input.ProviderName)
+		return fmt.Errorf("validate cluster prefix for provider %s: %w", input.ProviderName, err)
 	}
 	return nil
 }

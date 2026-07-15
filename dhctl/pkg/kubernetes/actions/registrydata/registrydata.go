@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -79,9 +80,19 @@ func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*ima
 // clusters without the registry module) or carries no imagesRepo (Local mode),
 // so the caller can fall back to GetRegistryData.
 func GetUpstreamRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*image.RegistryConfig, bool, error) {
-	secret, err := kubeCl.CoreV1().
-		Secrets(d8RppSecretNamespace).
-		Get(ctx, registryConfigSecret, metav1.GetOptions{})
+	var secret *corev1.Secret
+	err := retry.NewLoop("Get upstream registry data from cluster", 225, 1*time.Second).
+		BreakIf(apierrors.IsNotFound).
+		RunContext(ctx, func() error {
+			got, err := kubeCl.CoreV1().
+				Secrets(d8RppSecretNamespace).
+				Get(ctx, registryConfigSecret, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			secret = got
+			return nil
+		})
 	if apierrors.IsNotFound(err) {
 		return nil, false, nil
 	}

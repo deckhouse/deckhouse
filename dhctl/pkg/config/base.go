@@ -573,15 +573,11 @@ func ParseConfigFromDataEnsureProvider(
 		return nil, err
 	}
 
-	// The lazy provider-plugin / terraform-manager image pull needs a cache dir.
+	// The lazy provider-plugin / terraform-manager image pull needs a cache dir;
 	// ParseConfigFromData leaves DownloadCacheDir empty on the commander data
-	// path, so the pull does mkdir("") ("could not create cache directory").
-	// Mirror LoadConfigFromFile's DownloadDir/cache fallback. DownloadRootDir is
-	// already set by ParseConfigFromData via ValidateOptionDownloadRootDir.
+	// path. withDownloadDir above guarantees a non-empty value. DownloadRootDir
+	// is already set by ParseConfigFromData via ValidateOptionDownloadRootDir.
 	metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
-	if metaConfig.DownloadCacheDir == "" {
-		metaConfig.DownloadCacheDir = filepath.Join(globalOptions.DownloadDir, "cache")
-	}
 
 	// Lazy provider-plugin / terraform-manager downloads read registry creds
 	// from DeckhouseConfig. In commander mode those creds arrive in
@@ -1012,14 +1008,29 @@ func unpackProviderBundle(ctx context.Context, provider, digest string, conf *im
 	if _, err := os.Stat(digestDir); err != nil {
 		imgName := conf.GetRegistry() + "@" + digest
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Downloading provider bundle for %s", provider))
-		if err := downloadProviderBundle(ctx, imgName, digestDir, globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress); err != nil {
+		// Download into a temp dir and rename into place on success: the image
+		// puller creates the destination before writing, so a failed or killed
+		// download would otherwise leave a partial digestDir whose bare
+		// existence short-circuits the re-download above (and the tmp cleaner
+		// deliberately keeps bundle dirs), permanently poisoning the cache. An
+		// orphaned .partial dir does not match the cleaner's bundle-dir pattern
+		// and is swept on the next run.
+		partialDir := digestDir + ".partial"
+		if err := os.RemoveAll(partialDir); err != nil {
+			return fmt.Errorf("clean partial provider bundle dir %s: %w", partialDir, err)
+		}
+		if err := downloadProviderBundle(ctx, imgName, partialDir, globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress); err != nil {
+			_ = os.RemoveAll(partialDir)
 			return fmt.Errorf("download provider bundle %s: %w", imgName, err)
 		}
 		// The image puller leaves the downloaded tarball next to the unpacked
 		// tree. The digest-pinned directory itself is the cache (its presence
 		// short-circuits the download above), so the tarball only duplicates
 		// the bundle on disk — drop it.
-		_ = os.Remove(filepath.Join(digestDir, digest))
+		_ = os.Remove(filepath.Join(partialDir, digest))
+		if err := os.Rename(partialDir, digestDir); err != nil {
+			return fmt.Errorf("move provider bundle into place %s: %w", digestDir, err)
+		}
 	}
 	return switchProviderSymlink(providerdir.ProviderDir(globalOptions.DownloadDir, provider), digestDir)
 }
