@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -56,6 +57,10 @@ var _ reconcile.Reconciler = (*reconciler)(nil)
 type reconciler struct {
 	client client.Client
 	scheme *runtime.Scheme
+
+	// tenantClientSets caches per-VCP tenant clients (vcp name -> *tenantClientSet);
+	// entries are invalidated by kubeconfig hash and dropped when the VCP is deleted.
+	tenantClientSets sync.Map
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -63,6 +68,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	vcp, err := r.getVirtualControlPlane(ctx, req.Name)
 	if apierrors.IsNotFound(err) {
+		r.forgetTenantClients(req.Name)
 		return reconcile.Result{}, nil
 	}
 	if err != nil {
@@ -73,29 +79,21 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	albVIP, err := r.albVIP(ctx, vcp)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
+	}
+
+	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp, albVIP)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileALB(ctx, vcp, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	apiserverService, res, err := r.reconcileAPIServerService(ctx, vcp)
-	if err != nil || !res.IsZero() {
-		return res, err
-	}
-
-	pkiSecret, res, err := r.reconcilePKISecret(ctx, vcp, apiserverService)
-	if err != nil || !res.IsZero() {
-		return res, err
-	}
-
-	if res, err := r.reconcileKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
-		return res, err
-	}
-
-	if res, err := r.reconcileAdminKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
-		return res, err
-	}
-
-	if err := r.reconcileStatus(ctx, vcp, apiserverService); err != nil {
-		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
-	}
-
-	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -104,7 +102,42 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if albVIP == "" {
+		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
+	}
+	externalEndpoint := externalAPIEndpointURL(albVIP)
+
+	pkiSecret, res, err := r.reconcilePKISecret(ctx, vcp, apiserverService, albVIP)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileAdminKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret, externalEndpoint); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if err := r.reconcileStatus(ctx, vcp, externalEndpoint); err != nil {
+		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
+	}
+
 	if res, err := r.reconcileControlPlaneNodes(ctx, vcp, pkiSecret, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	joinToken, res, err := r.reconcileTenantAddons(ctx, vcp, configSecret)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileCiliumOperator(ctx, vcp, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -195,6 +228,7 @@ func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *control
 
 func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-apiserver",
@@ -204,6 +238,7 @@ func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) 
 			},
 		},
 		Spec: corev1.ServiceSpec{
+			// Always ClusterIP: external exposure is handled by the per-VCP ALB (TLSRoute backend), not the Service.
 			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
 				"app": "kube-apiserver",
@@ -246,11 +281,31 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 	current.Spec.Ports = target.Spec.Ports
 }
 
-func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (*corev1.Secret, reconcile.Result, error) {
+// externalAPIEndpoint returns the hostname and port joining nodes use to reach the virtual apiserver through the per-VCP ALB.
+func externalAPIEndpoint(vcp *controlplanev1alpha1.VirtualControlPlane) (string, int32) {
+	return apiExposeHost(vcp), 6443
+}
+
+func externalAPIEndpointURL(host string) string {
+	return fmt.Sprintf("https://%s:6443", host)
+}
+
+// apiServerCertExtraSANs returns the stable ALB hostnames that must be in the apiserver serving cert.
+func apiServerCertExtraSANs(vcp *controlplanev1alpha1.VirtualControlPlane) []string {
+	return []string{apiExposeHost(vcp), konnExposeHost(vcp)}
+}
+
+func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service, albVIP string) (*corev1.Secret, reconcile.Result, error) {
 	target := buildTargetPKISecret(vcp)
+
+	extraSANs := apiServerCertExtraSANs(vcp)
+	if albVIP != "" {
+		extraSANs = append(extraSANs, albVIP)
+	}
+
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		data, err := buildTargetPKISecretData(vcp, apiserverService)
+		data, err := buildTargetPKISecretData(vcp, apiserverService, extraSANs, nil)
 		if err != nil {
 			return nil, reconcile.Result{}, fmt.Errorf("generate PKI Secret data: %w", err)
 		}
@@ -266,7 +321,20 @@ func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1
 		return nil, reconcile.Result{}, fmt.Errorf("get PKI Secret: %w", err)
 	}
 
-	return current, reconcile.Result{}, nil
+	data, err := buildTargetPKISecretData(vcp, apiserverService, extraSANs, current.Data)
+	if err != nil {
+		return nil, reconcile.Result{}, fmt.Errorf("generate PKI Secret data: %w", err)
+	}
+	target.Data = data
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+		return current, reconcile.Result{}, nil
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+
+	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
 func buildTargetPKISecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
@@ -285,7 +353,7 @@ func buildTargetPKISecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1
 	}
 }
 
-func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (map[string][]byte, error) {
+func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service, extraSANs []string, seedData map[string][]byte) (map[string][]byte, error) {
 	advertiseAddress := net.ParseIP(apiserverService.Spec.ClusterIP)
 	if advertiseAddress == nil {
 		return nil, fmt.Errorf("invalid apiserver Service ClusterIP: %q", apiserverService.Spec.ClusterIP)
@@ -297,6 +365,12 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 	}
 	defer os.RemoveAll(pkiDir)
 
+	if seedData != nil {
+		if err := writePKIBundleSecretData(pkiDir, seedData); err != nil {
+			return nil, err
+		}
+	}
+
 	nodeName := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 	if _, err := pki.CreatePKIBundle(
 		nodeName,
@@ -304,11 +378,31 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 		advertiseAddress,
 		constants.DefaultTenantServiceSubnetCIDR,
 		pki.WithPKIDir(pkiDir),
+		pki.WithAPIServerCertSANs(extraSANs),
 	); err != nil {
 		return nil, fmt.Errorf("create PKI bundle: %w", err)
 	}
 
 	return readPKIBundleSecretData(pkiDir)
+}
+
+func writePKIBundleSecretData(pkiDir string, data map[string][]byte) error {
+	for flatKey, relPath := range certs.VirtualCertsFileLayout() {
+		content, ok := data[flatKey]
+		if !ok {
+			continue
+		}
+
+		dst := filepath.Join(pkiDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
+			return fmt.Errorf("create PKI dir for %s: %w", relPath, err)
+		}
+		if err := os.WriteFile(dst, content, 0o600); err != nil {
+			return fmt.Errorf("write PKI file %s: %w", relPath, err)
+		}
+	}
+
+	return nil
 }
 
 func readPKIBundleSecretData(pkiDir string) (map[string][]byte, error) {
@@ -332,7 +426,8 @@ func (r *reconciler) reconcileKubeconfigSecret(
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
 ) (reconcile.Result, error) {
-	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualKubeconfigSecretName, componentKubeconfigFiles)
+	endpoint := fmt.Sprintf("https://%s:6443", apiserverService.Spec.ClusterIP)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualKubeconfigSecretName, componentKubeconfigFiles, endpoint)
 }
 
 func (r *reconciler) reconcileAdminKubeconfigSecret(
@@ -340,8 +435,9 @@ func (r *reconciler) reconcileAdminKubeconfigSecret(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
+	endpoint string,
 ) (reconcile.Result, error) {
-	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualAdminKubeconfigSecretName, adminKubeconfigFiles)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualAdminKubeconfigSecretName, adminKubeconfigFiles, endpoint)
 }
 
 func (r *reconciler) reconcileKubeconfigSecretFiles(
@@ -351,28 +447,35 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 	pkiSecret *corev1.Secret,
 	name string,
 	files []kubeconfig.File,
+	endpoint string,
 ) (reconcile.Result, error) {
 	target := buildTargetKubeconfigSecret(vcp, name)
 
-	_, err := r.getSecret(ctx, target.Namespace, target.Name)
-	if apierrors.IsNotFound(err) {
-		data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
-		}
-		target.Data = data
+	data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files, endpoint)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
+	}
+	target.Data = data
 
+	current, err := r.getSecret(ctx, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
 		return reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
 	}
 
-	return reconcile.Result{}, nil
+	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+		return reconcile.Result{}, nil
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+
+	return reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
-func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) error {
-	endpoint := fmt.Sprintf("https://%s:6443", apiserverService.Spec.ClusterIP)
+func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, endpoint string) error {
 	ref := &controlplanev1alpha1.VirtualControlPlaneKubeconfigSecretRef{
 		Namespace: constants.VirtualControlPlaneNamespacePrefix + vcp.Name,
 		Name:      constants.VirtualAdminKubeconfigSecretName,
@@ -410,7 +513,7 @@ var componentKubeconfigFiles = []kubeconfig.File{kubeconfig.ControllerManager, k
 
 var adminKubeconfigFiles = []kubeconfig.File{kubeconfig.SuperAdmin}
 
-func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret, kubeconfigFiles []kubeconfig.File) (map[string][]byte, error) {
+func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret, kubeconfigFiles []kubeconfig.File, endpoint string) (map[string][]byte, error) {
 	clusterIP := apiserverService.Spec.ClusterIP
 	if clusterIP == "" || clusterIP == corev1.ClusterIPNone {
 		return nil, fmt.Errorf("apiserver Service has no ClusterIP")
@@ -432,7 +535,6 @@ func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret
 	}
 	defer os.RemoveAll(outDir)
 
-	endpoint := fmt.Sprintf("https://%s:6443", clusterIP)
 	if _, err := kubeconfig.CreateKubeconfigFiles(kubeconfigFiles,
 		kubeconfig.WithCertificatesDir(caDir),
 		kubeconfig.WithOutDir(outDir),
@@ -473,7 +575,7 @@ func readKubeconfigSecretData(outDir string, kubeconfigFiles []kubeconfig.File) 
 	return data, nil
 }
 
-func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Secret, reconcile.Result, error) {
+func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, albVIP string) (*corev1.Secret, reconcile.Result, error) {
 	global, err := r.getSecret(ctx, constants.KubeSystemNamespace, constants.VirtualControlPlaneConfigSecretName)
 	if apierrors.IsNotFound(err) {
 		return nil, reconcile.Result{RequeueAfter: requeueInterval}, nil
@@ -482,7 +584,16 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 		return nil, reconcile.Result{}, fmt.Errorf("get config Secret: %w", err)
 	}
 
-	data, err := renderManifests(global.Data, vcp)
+	// The apiserver advertises the ALB VIP so the tenant's default/kubernetes endpoint
+	// resolves to an address reachable from worker nodes. Until the LoadBalancer address
+	// is assigned (first bootstrap, before the ALB exists) fall back to the pod IP so the
+	// apiserver still starts; the eastbound endpoint only matters once nodes join.
+	apiAdvertiseAddress := albVIP
+	if apiAdvertiseAddress == "" {
+		apiAdvertiseAddress = "$(POD_IP)"
+	}
+
+	data, err := renderManifests(global.Data, vcp, apiAdvertiseAddress)
 	if err != nil {
 		return nil, reconcile.Result{}, fmt.Errorf("render manifests: %w", err)
 	}
@@ -509,6 +620,21 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 	current.Data = target.Data
 
 	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
+}
+
+func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
+	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.VirtualRenderedConfigSecretName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
 }
 
 func (r *reconciler) reconcileControlPlaneNodes(

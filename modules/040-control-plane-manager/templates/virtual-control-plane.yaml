@@ -13,7 +13,25 @@
         "scheduler"         (printf "%s@%s" $reg (get $dig (printf "kubeScheduler%s" $sfx)))) }}
   {{- end }}
 {{- end }}
-{{- $imagesTable := dict "versioned" $versioned "fixed" (dict "kine" (printf "%s@%s" $reg (get $dig "kine"))) }}
+{{- $rp := .Values.global.modulesImages.digests.registrypackages | default dict }}
+{{- $rpVersioned := dict }}
+{{- range $ver, $meta := $vm.k8s }}
+  {{- $sfx := $ver | toString | replace "." "" }}
+  {{- $kKey := printf "kubelet%s%v" $sfx ($meta.patch | toString) }}
+  {{- $cKey := printf "crictl%s" $sfx }}
+  {{- if hasKey $rp $kKey }}
+    {{- $_ := set $rpVersioned ($ver | toString) (dict
+        "kubelet" (get $rp $kKey)
+        "crictl"  (get $rp $cKey)) }}
+  {{- end }}
+{{- end }}
+{{- $rpFixed := dict
+    "containerd" (get $rp "containerd224")
+    "tomlMerge"  (get $rp "tomlMerge01")
+    "rppGet"     (get $rp "rppGet") }}
+{{- /* TODO: mirror kas-network-proxy/proxy-server like kine. */ -}}
+{{- $fixed := dict "kine" (printf "%s@%s" $reg (get $dig "kine")) "konnectivityServer" "registry.k8s.io/kas-network-proxy/proxy-server:v0.30.3" "konnectivityAgent" "registry.k8s.io/kas-network-proxy/proxy-agent:v0.30.3" "cilium" "quay.io/cilium/cilium:v1.19.3" "ciliumOperator" "quay.io/cilium/operator-generic:v1.19.3" }}
+{{- $imagesTable := dict "versioned" $versioned "fixed" $fixed "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed) }}
 ---
 apiVersion: v1
 kind: Secret
@@ -29,12 +47,19 @@ stringData:
   cluster-domain: {{ .Values.global.clusterConfiguration.clusterDomain | quote }}
   service-subnet-cidr: {{ .Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
   default-kubernetes-version: {{ .Values.controlPlaneManager.internal.effectiveKubernetesVersion | quote }}
+  cluster-uuid: {{ .Values.global.discovery.clusterUUID | default "" | quote }}
+  minget: {{ .Files.Get "candi/bashible/bootstrap/minget" | b64enc | quote }}
+  registry-address: {{ .Values.global.modulesImages.registry.address | quote }}
+  registry-path: {{ .Values.global.modulesImages.registry.path | quote }}
   components: |
     - kube-apiserver
     - kube-controller-manager
     - kube-scheduler
 data:
   {{- range $path, $_ := .Files.Glob "virtual-control-plane-templates/*.yaml.tpl" }}
+  {{ base $path }}: {{ $.Files.Get $path | b64enc }}
+  {{- end }}
+  {{- range $path, $_ := .Files.Glob "virtual-control-plane-templates/*.sh.tpl" }}
   {{ base $path }}: {{ $.Files.Get $path | b64enc }}
   {{- end }}
   images: {{ $imagesTable | toYaml | b64enc }}
@@ -62,13 +87,25 @@ rules:
   resources: ["services"]
   verbs: ["get", "list", "watch", "create", "update", "patch"]
 - apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
   resources: ["events"]
   verbs: ["create", "patch"]
 - apiGroups: ["apps"]
   resources: ["statefulsets"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 - apiGroups: [""]
   resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["nodes"]
   verbs: ["get", "list", "watch"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
@@ -93,6 +130,15 @@ rules:
   verbs: ["get", "update", "patch"]
 - apiGroups: ["managed-services.deckhouse.io"]
   resources: ["postgreses", "postgres"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["network.deckhouse.io"]
+  resources: ["albinstances"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["gateways", "listenersets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["tlsroutes", "tcproutes", "httproutes", "referencegrants"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

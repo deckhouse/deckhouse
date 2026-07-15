@@ -38,12 +38,12 @@ const (
 )
 
 func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (reconcile.Result, error) {
-	target, err := loadDatastoreManifest(configSecret, vcp)
+	target, err := buildTargetPostgres(configSecret, vcp)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	current := newPostgres()
+	current := postgres()
 	err = r.client.Get(ctx, client.ObjectKeyFromObject(target), current)
 	if apierrors.IsNotFound(err) {
 		if err := r.client.Create(ctx, target); err != nil {
@@ -62,14 +62,14 @@ func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1a
 	return reconcile.Result{}, nil
 }
 
-func newPostgres() *unstructured.Unstructured {
+func postgres() *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
 	obj.SetAPIVersion("managed-services.deckhouse.io/v1alpha1")
 	obj.SetKind("Postgres")
 	return obj
 }
 
-func loadDatastoreManifest(configSecret *corev1.Secret, vcp *controlplanev1alpha1.VirtualControlPlane) (*unstructured.Unstructured, error) {
+func buildTargetPostgres(configSecret *corev1.Secret, vcp *controlplanev1alpha1.VirtualControlPlane) (*unstructured.Unstructured, error) {
 	raw, ok := configSecret.Data[datastoreManifestKey]
 	if !ok {
 		return nil, fmt.Errorf("config Secret missing %q", datastoreManifestKey)

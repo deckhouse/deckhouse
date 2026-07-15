@@ -76,12 +76,12 @@ spec:
                 description: Kubernetes API exposure settings.
                 properties:
                   type:
-                    default: ClusterIP
-                    description: Service type used to expose the tenant Kubernetes API.
+                    default: LoadBalancer
+                    description: |-
+                      How the tenant Kubernetes API is published. Only LoadBalancer is supported for
+                      now (the per-VCP ALB uses a LoadBalancer inlet).
                     enum:
-                    - ClusterIP
                     - LoadBalancer
-                    - NodePort
                     type: string
                 type: object
               kubernetesVersion:

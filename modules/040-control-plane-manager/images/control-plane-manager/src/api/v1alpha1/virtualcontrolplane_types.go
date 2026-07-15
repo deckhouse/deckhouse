@@ -24,9 +24,10 @@ type VirtualControlPlaneDatastoreRef struct {
 }
 
 type VirtualControlPlaneExpose struct {
-	// Type is the Service type used to expose the tenant Kubernetes API.
-	// +kubebuilder:validation:Enum=ClusterIP;LoadBalancer;NodePort
-	// +kubebuilder:default=ClusterIP
+	// Type is how the tenant Kubernetes API is published. Only LoadBalancer is supported for now
+	// (the per-VCP ALB uses a LoadBalancer inlet).
+	// +kubebuilder:validation:Enum=LoadBalancer
+	// +kubebuilder:default=LoadBalancer
 	// +optional
 	Type string `json:"type,omitempty"`
 }
