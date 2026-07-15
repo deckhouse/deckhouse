@@ -34,12 +34,8 @@ spec:
                 properties:
                   type:
                     description: |
-                      Тип Service, через который публикуется Kubernetes API тенанта.
-
-                      Возможные значения:
-                      * `ClusterIP` — API доступен внутри управляющего кластера;
-                      * `LoadBalancer` — API публикуется через внешний балансировщик;
-                      * `NodePort` — API публикуется через порт на узлах управляющего кластера.
+                      Как публикуется Kubernetes API тенанта. Пока поддерживается только `LoadBalancer`
+                      (per-VCP ALB использует inlet типа LoadBalancer).
           status:
             description: |
               Наблюдаемое состояние виртуального control plane.

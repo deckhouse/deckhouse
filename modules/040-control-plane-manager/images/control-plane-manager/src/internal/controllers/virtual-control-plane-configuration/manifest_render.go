@@ -23,15 +23,14 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
 
 // imagesTable mirrors the "images" key of the global config Secret produced by the virtual-control-plane.yaml Helm template.
 type imagesTable struct {
-	Versioned map[string]versionedImages `json:"versioned"`
-	Fixed     fixedImages                `json:"fixed"` // independent of the Kubernetes version
+	Versioned        map[string]versionedImages `json:"versioned"`
+	Fixed            fixedImages                `json:"fixed"` // independent of the Kubernetes version
+	RegistryPackages registryPackagesTable      `json:"registrypackages"`
 }
 
 type versionedImages struct {
@@ -41,10 +40,30 @@ type versionedImages struct {
 }
 
 type fixedImages struct {
-	Kine string `json:"kine"`
+	Kine               string `json:"kine"`
+	KonnectivityServer string `json:"konnectivityServer"`
+	KonnectivityAgent  string `json:"konnectivityAgent"`
+	Cilium             string `json:"cilium"`
+	CiliumOperator     string `json:"ciliumOperator"`
 }
 
-func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane) (map[string][]byte, error) {
+type registryPackagesTable struct {
+	Versioned map[string]registryPackagesVersioned `json:"versioned"`
+	Fixed     registryPackagesFixed                `json:"fixed"`
+}
+
+type registryPackagesVersioned struct {
+	Kubelet string `json:"kubelet"`
+	Crictl  string `json:"crictl"`
+}
+
+type registryPackagesFixed struct {
+	Containerd string `json:"containerd"`
+	TomlMerge  string `json:"tomlMerge"`
+	RppGet     string `json:"rppGet"`
+}
+
+func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane, apiAdvertiseAddress string) (map[string][]byte, error) {
 	table, err := parseImagesTable(globalData)
 	if err != nil {
 		return nil, err
@@ -55,14 +74,16 @@ func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.Vir
 		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
 	}
 
-	replacer := buildManifestReplacer(vcp, versioned, table.Fixed)
+	replacer := buildManifestReplacer(vcp, versioned, table.Fixed, apiAdvertiseAddress, string(globalData["cluster-uuid"]))
 
 	rendered := make(map[string][]byte)
 	for key, value := range globalData {
-		if !strings.HasSuffix(key, ".yaml.tpl") {
-			continue
+		switch {
+		case strings.HasSuffix(key, ".yaml.tpl"), strings.HasSuffix(key, ".sh.tpl"):
+			rendered[key] = []byte(replacer.Replace(string(value)))
+		case key == "images", key == "cluster-uuid", key == "minget":
+			rendered[key] = value
 		}
-		rendered[key] = []byte(replacer.Replace(string(value)))
 	}
 
 	return rendered, nil
@@ -82,32 +103,33 @@ func parseImagesTable(globalData map[string][]byte) (imagesTable, error) {
 	return table, nil
 }
 
-func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
-
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.VirtualRenderedConfigSecretName,
-			Namespace: namespace,
-			Labels: map[string]string{
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-	}
-}
-
-func buildManifestReplacer(vcp *controlplanev1alpha1.VirtualControlPlane, versioned versionedImages, fixed fixedImages) *strings.Replacer {
+func buildManifestReplacer(
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	versioned versionedImages,
+	fixed fixedImages,
+	apiAdvertiseAddress string,
+	clusterUUID string,
+) *strings.Replacer {
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
 	return strings.NewReplacer(
+		"${VCP_API_VIP}", apiAdvertiseAddress,
+		"${VCP_CLUSTER_UUID}", clusterUUID,
 		"${IMAGE_KUBE_APISERVER}", versioned.Apiserver,
 		"${IMAGE_KUBE_CONTROLLER_MANAGER}", versioned.ControllerManager,
 		"${IMAGE_KUBE_SCHEDULER}", versioned.Scheduler,
 		"${IMAGE_KINE}", fixed.Kine,
+		"${IMAGE_KONNECTIVITY_SERVER}", fixed.KonnectivityServer,
+		"${IMAGE_KONNECTIVITY_AGENT}", fixed.KonnectivityAgent,
+		"${IMAGE_CILIUM}", fixed.Cilium,
+		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", namespace,
+		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
 		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
 		"${SERVICE_SUBNET_CIDR}", constants.DefaultTenantServiceSubnetCIDR,
+		"${VCP_API_HOST}", apiExposeHost(vcp),
+		"${VCP_KONN_HOST}", konnExposeHost(vcp),
+		"${VCP_PKG_HOST}", packagesExposeHost(vcp),
 	)
 }
