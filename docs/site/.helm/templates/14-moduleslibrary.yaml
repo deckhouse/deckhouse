@@ -24,6 +24,11 @@ spec:
         - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       serviceAccountName: docs-builder
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
       initContainers:
         - name: init
           image: {{ index .Values.werf.image "web-frontend-init" }}
@@ -34,10 +39,6 @@ spec:
               value: "/app/channels-data/channels.conf"
             - name: CHANNELS_YAML_PATH
               value: "/app/channels.yaml"
-          securityContext:
-            runAsNonRoot: true
-            runAsGroup: 65534
-            runAsUser: 65534
           volumeMounts:
             - name: channels-yaml
               mountPath: /app/channels.yaml
@@ -47,6 +48,7 @@ spec:
       containers:
         - name: web
           image: {{ index .Values.werf.image "web-frontend" }}
+          command: ["/usr/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;"]
           {{- include "resources-moduleslibrary-web" . | nindent 10 }}
           ports:
           - containerPort: 8080
@@ -149,6 +151,10 @@ spec:
               name: modules-searchindex-en
             - mountPath: "/mount/public/ru/search"
               name: modules-searchindex-ru
+            - mountPath: "/app/hugo"
+              name: builder-hugo
+            - mountPath: "/tmp"
+              name: builder-tmp
             - mountPath: "/app/hugo-init/data/embedded_modules_list.json"
               name: embedded-modules-history-data
               subPath: embedded_modules_list.json
@@ -170,6 +176,10 @@ spec:
         - name: modules-searchindex-en
           emptyDir: {}
         - name: modules-searchindex-ru
+          emptyDir: {}
+        - name: builder-hugo
+          emptyDir: {}
+        - name: builder-tmp
           emptyDir: {}
         - name: embedded-modules-history-data
           configMap:
