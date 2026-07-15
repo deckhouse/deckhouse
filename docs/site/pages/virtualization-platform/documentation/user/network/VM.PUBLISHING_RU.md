@@ -303,6 +303,11 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
 {% alert level="warning" %}
 При включении `sendAuthorizationHeader: true` в Ingress укажите все необходимые заголовки в аннотации `nginx.ingress.kubernetes.io/auth-response-headers`, поскольку заголовок `Authorization` по умолчанию не передаётся:
 
+```yaml
+nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+```
+
+{% endalert %}
 
 ### Настройка ограничений на основе CIDR
 

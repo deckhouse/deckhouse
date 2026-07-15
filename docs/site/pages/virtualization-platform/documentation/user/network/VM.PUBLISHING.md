@@ -302,6 +302,11 @@ To enable authentication through `Dex` for your application, follow these steps:
 {% alert level="warning" %}
 When setting `sendAuthorizationHeader: true`, list all necessary headers in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation of the Ingress, since the `Authorization` header is not transmitted by default:
 
+```yaml
+nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+```
+
+{% endalert %}
 
 ### Configuring CIDR-based restrictions
 
