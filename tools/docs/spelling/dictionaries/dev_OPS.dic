@@ -1,4 +1,4 @@
-2785
+2787
 1GB
 2GB
 5XX
@@ -78,6 +78,7 @@ CAPI
 CAs
 CCM
 CEF
+CEL
 CEPH
 CI
 CIDR
@@ -1769,6 +1770,7 @@ zoneTagCategory
 Аудиофайлы
 Б
 БД
+Булевый
 ВМ
 Визуализировать
 Гб
