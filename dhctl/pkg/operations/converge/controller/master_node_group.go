@@ -500,7 +500,13 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		return nil
 	}
 
-	return controlplane.NewHookForUpdatePipeline(ctx, sshProvider, nodesToCheck, ctx.CommanderMode()).
+	return controlplane.NewHookForUpdatePipeline(
+		ctx,
+		sshProvider,
+		nodesToCheck,
+		ctx.CommanderMode(),
+		c.skipChecks,
+	).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm).
