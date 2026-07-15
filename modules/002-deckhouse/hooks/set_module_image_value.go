@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -73,22 +74,32 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal deckhouse snapshot: %w", err)
 	}
 
-	if len(deckhouseImages) != 1 {
+	var desired string
+	switch len(deckhouseImages) {
+	case 1:
+		image := deckhouseImages[0]
+		imageRepoTag, err := gcr.NewTag(image)
+		if err != nil {
+			return fmt.Errorf("incorrect image: %s", image)
+		}
+		tag := imageRepoTag.TagStr()
+
+		if !input.Values.Get(deckhouseBasePath).Exists() {
+			return fmt.Errorf("registry base path doesn't exist yet")
+		}
+		base := input.Values.Get(deckhouseBasePath).String()
+		desired = fmt.Sprintf("%s:%s", base, tag)
+	case 0:
+		// Deckhouse is not self-hosted in this cluster (e.g. it runs in a
+		// parent cluster and manages this one via a kubeconfig): there is no
+		// own Deployment to read the image from.
+		// TODO(vcp): temporary hardcode; decide on the real image source for
+		// the not-self-hosted mode.
+		desired = notSelfHostedDeckhouseImage
+		input.Logger.Info("deckhouse Deployment not found, using the hardcoded image", slog.String("image", desired))
+	default:
 		return fmt.Errorf("deckhouse was not able to find an image of itself")
 	}
-	image := deckhouseImages[0]
-
-	imageRepoTag, err := gcr.NewTag(image)
-	if err != nil {
-		return fmt.Errorf("incorrect image: %s", image)
-	}
-	tag := imageRepoTag.TagStr()
-
-	if !input.Values.Get(deckhouseBasePath).Exists() {
-		return fmt.Errorf("registry base path doesn't exist yet")
-	}
-	base := input.Values.Get(deckhouseBasePath).String()
-	desired := fmt.Sprintf("%s:%s", base, tag)
 
 	// Guards a race with bumpDeckhouseDeployment: if the hook re-runs on the
 	// old leader between the Deployment bump and leader handover, a stale
@@ -99,3 +110,8 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 
 	return nil
 }
+
+// notSelfHostedDeckhouseImage is the deckhouse image used when there is no
+// own Deployment to read the image from (not-self-hosted mode).
+// TODO(vcp): temporary hardcode; decide on the real image source.
+const notSelfHostedDeckhouseImage = "dev-registry.deckhouse.io/sys/deckhouse-oss:pr21346"
