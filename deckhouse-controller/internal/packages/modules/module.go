@@ -453,7 +453,7 @@ func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.Controll
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.
-// It creates a binding context with snapshots for BeforeHelm/AfterHelm/AfterDeleteHelm hooks.
+// It creates a binding context with snapshots for BeforeHelm/AfterHelm/BeforeDeleteHelm/AfterDeleteHelm hooks.
 func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error {
 	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "RunHooksByBinding")
 	defer span.End()
@@ -469,7 +469,8 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute m hook
-		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm || binding == addontypes.AfterDeleteHelm {
+		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm ||
+			binding == addontypes.BeforeDeleteHelm || binding == addontypes.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}
