@@ -1177,6 +1177,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
 * В ModuleConfig `deckhouse`:
   * измените значение параметра [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html);
   * в секции `spec.settings.registry` укажите параметры доступа к приватному хранилищу образов контейнеров (в данном случае Harbor):
+
     ```yaml
     # Настройки для доступа к хранилищу образов контейнеров с образами DKP.
     registry:

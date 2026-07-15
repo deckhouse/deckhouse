@@ -1134,6 +1134,7 @@ You should see a container named `squid` in the list.
 * In the `deckhouse` ModuleConfig:
   * Set [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) to `Stable` to use the stable [release channel](../documentation/v1/reference/release-channels.html).
   * In the `spec.settings.registry` section, specify access settings for the private container registry (Harbor in this guide):
+
     ```yaml
     # Settings for accessing the container registry with DKP images.
     registry:
