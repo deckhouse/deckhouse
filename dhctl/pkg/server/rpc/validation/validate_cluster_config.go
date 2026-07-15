@@ -58,43 +58,40 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 	ctx context.Context,
 	request *pb.ValidateProviderSpecificClusterConfigRequest,
 ) (*pb.ValidateProviderSpecificClusterConfigResponse, error) {
-	var errResponse string
-
 	var clusterConfig config.ClusterConfig
-	err := json.Unmarshal([]byte(request.ClusterConfig), &clusterConfig)
-	if err != nil {
+	if err := json.Unmarshal([]byte(request.ClusterConfig), &clusterConfig); err != nil {
 		return nil, status.Errorf(codes.Internal, "unmarshalling cluster Config: %s", err)
 	}
 
 	// In-tree providers ship their schemas in the image's candi and are always
-	// validated. An external provider needs its OCI bundle delivered first,
-	// which requires registry access from registry_config:
-	//   - registry_config present -> deliver the bundle, then validate;
-	//   - registry_config absent  -> nothing to validate with, skip.
+	// validated. An external provider (e.g. DVP) needs its OCI bundle delivered
+	// first, and the only registry access here is registry_config: when it is
+	// absent there is nothing to validate with, so skip — the operation
+	// revalidates after reading the registry from the cluster.
 	provider := clusterConfig.Cloud.Provider
-	if provider != "" && !config.ProviderBundledInCandi(provider, s.globalOptions) {
-		if strings.TrimSpace(request.RegistryConfig) == "" {
-			return &pb.ValidateProviderSpecificClusterConfigResponse{}, nil
-		}
-		if err := s.ensureProviderBundle(ctx, provider, request.RegistryConfig); err != nil {
-			errResponse, err = errorToResponse(err)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "%s", err)
-			}
-			return &pb.ValidateProviderSpecificClusterConfigResponse{Err: errResponse}, nil
-		}
+	needBundle := provider != "" && !config.ProviderBundledInCandi(provider, s.globalOptions)
+
+	if needBundle && strings.TrimSpace(request.RegistryConfig) == "" {
+		return &pb.ValidateProviderSpecificClusterConfigResponse{}, nil
 	}
 
-	err = config.ValidateProviderSpecificClusterConfiguration(
-		request.Config, clusterConfig, s.schemaStore,
-		optionsFromRequest(request.Opts)...,
-	)
+	// A bundle delivery failure is reported the same way as a validation
+	// failure: in the response's Err, not as a transport error.
+	var validationErr error
+	if needBundle {
+		validationErr = s.ensureProviderBundle(ctx, provider, request.RegistryConfig)
+	}
+	if validationErr == nil {
+		validationErr = config.ValidateProviderSpecificClusterConfiguration(
+			request.Config, clusterConfig, s.schemaStore,
+			optionsFromRequest(request.Opts)...,
+		)
+	}
+
+	errResponse, err := errorToResponse(validationErr)
 	if err != nil {
-		if errResponse, err = errorToResponse(err); err != nil {
-			return nil, status.Errorf(codes.Internal, "%s", err)
-		}
+		return nil, status.Errorf(codes.Internal, "%s", err)
 	}
-
 	return &pb.ValidateProviderSpecificClusterConfigResponse{Err: errResponse}, nil
 }
 
