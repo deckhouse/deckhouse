@@ -76,7 +76,7 @@ To enable Dex authentication for your application, follow these steps:
 {% endraw %}
 
 {% alert level="warning" %}
-When enabling `sendAuthorizationHeader: true`, add the `Authorization` header to the application's Ingress annotation. By default, it is not passed through:
+When enabling `sendAuthorizationHeader: true`, list all headers in the Ingress `auth-response-headers` annotation (by default, `Authorization` is not passed through):
 
 ```yaml
 nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization

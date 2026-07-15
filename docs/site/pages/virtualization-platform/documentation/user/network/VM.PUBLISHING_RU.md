@@ -301,7 +301,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
    ```
 
    {% alert level="warning" %}
-   При включении `sendAuthorizationHeader: true` добавьте заголовок `Authorization` в аннотацию Ingress приложения. По умолчанию он не прокидывается:
+   При включении `sendAuthorizationHeader: true` в Ingress укажите все заголовки в `auth-response-headers` (по умолчанию `Authorization` не прокидывается):
 
    ```yaml
    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
