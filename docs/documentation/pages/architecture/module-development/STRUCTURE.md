@@ -118,10 +118,10 @@ This directory contains [*CustomResourceDefinitions*](https://kubernetes.io/docs
 Nested directories in the `/crds` folder are ignored.
 
 To render CRDs from the `/crds` directory in the site documentation or documentation module in the cluster, follow these steps:
-* create a translation file with a structure identical to the original resource file:
+* Create a translation file with a structure identical to the original resource file:
   - in it, keep only the `description` parameters containing the translation text;
   - use the `doc-ru-` prefix in the name: e.g., `/crds/doc-ru-crd.yaml` for `/crds/crd.yaml`.
-* create `/docs/CR.md` and `/docs/CR.ru.md` files.
+* Create `/docs/CR.md` and `/docs/CR.ru.md` files.
 
 ## docs
 
@@ -334,8 +334,8 @@ description:
 #### Conversion tests
 
 You can use the `conversion.TestConvert` function to write conversion tests. It receives the following parameters:
-- path to the source configuration file (i.e., the version before the conversion);
-- path to the resulting configuration file (i.e., the version after the conversion).
+- Path to the source configuration file (i.e., the version before the conversion);
+- Path to the resulting configuration file (i.e., the version after the conversion).
 
 An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/openapi/conversions/conversions_test.go) of a conversion test.
 
@@ -344,8 +344,8 @@ An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/300-promet
 This file is required to validate the module parameters that the user can configure via [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig).
 
 To render the schema in the documentation on the site or in the documentation module in the cluster, create:
-- the `doc-ru-config-values.yaml` file with a structure similar to that of the `config-values.yaml` file. Keep only the translated description parameters in the `doc-ru-config-values.yaml` file;
-- the `/docs/CONFIGURATION.md` and `/docs/CONFIGURATION.ru.md` files to enable rendering of data from the `/openapi/config-values.yaml` and `/openapi/doc-ru-config-values.yaml` files.
+- The `doc-ru-config-values.yaml` file with a structure similar to that of the `config-values.yaml` file. Keep only the translated description parameters in the `doc-ru-config-values.yaml` file;
+- The `/docs/CONFIGURATION.md` and `/docs/CONFIGURATION.ru.md` files to enable rendering of data from the `/openapi/config-values.yaml` and `/openapi/doc-ru-config-values.yaml` files.
 
 An example of a `/openapi/config-values.yaml` schema with a single configurable `nodeSelector` parameter:
 
