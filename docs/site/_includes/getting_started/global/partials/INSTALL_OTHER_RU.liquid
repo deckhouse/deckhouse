@@ -10,10 +10,6 @@ pdpl-user -i 63 <USERNAME>
 ```
 {%- endif %}
 
-{% if page.platform_code == 'bm-private' %}
-Авторизуйтесь на **персональном компьютере** в container image registry, который вы указали на предыдущем этапе.
-{%- endif %}
-
 Запустите установщик на **персональном компьютере**.
 
 {%- if revision == 'be' or revision == 'se' or revision == 'se-plus' or revision == 'ee' %}
@@ -38,7 +34,7 @@ pdpl-user -i 63 <USERNAME>
 <!-- Linux or macOS install, BE, SE, SE+, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry:
 ```shell
-echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
+echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.ru{% endif %}
 ```
 
 Запустите контейнер с установщиком:
@@ -59,7 +55,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <!-- Windows install, BE, SE, SE+, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
 ```text
-docker login -u license-token registry.deckhouse.ru
+docker login -u license-token {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.ru{% endif %}
 ```
 
 Запустите контейнер с установщиком:
