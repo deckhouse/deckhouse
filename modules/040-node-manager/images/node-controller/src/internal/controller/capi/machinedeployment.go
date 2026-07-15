@@ -342,6 +342,40 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 	return cfg.Cloud.Prefix, nil
 }
 
+// readInstanceClassChecksum returns the instance-class checksum owned by helm.
+// Helm renders the infrastructure MachineTemplate with a checksum/instance-class
+// annotation; node-controller reads that annotation rather than recomputing the
+// checksum, so template/secret names stay byte-identical to helm and nodes never roll.
+// An empty string means helm has not rendered the template yet.
+func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, cloudConfig *cloudProviderConfig, ngName string) (string, error) {
+	gv, err := schema.ParseGroupVersion(cloudConfig.capiMachineTemplateAPIVersion)
+	if err != nil {
+		return "", fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
+	}
+
+	templateList := &unstructured.UnstructuredList{}
+	templateList.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   gv.Group,
+		Version: gv.Version,
+		Kind:    cloudConfig.capiMachineTemplateKind + "List",
+	})
+
+	if err := r.APIReader.List(ctx, templateList,
+		client.InNamespace(common.MachineNamespace),
+		client.MatchingLabels{"node-group": ngName},
+	); err != nil {
+		return "", fmt.Errorf("list infrastructure templates for %s: %w", ngName, err)
+	}
+
+	for i := range templateList.Items {
+		annotations := templateList.Items[i].GetAnnotations()
+		if v, ok := annotations["checksum/instance-class"]; ok && v != "" {
+			return v, nil
+		}
+	}
+	return "", nil
+}
+
 func getMinMax(ng *deckhousev1.NodeGroup) (int32, int32) {
 	if ng.Spec.StaticInstances != nil && ng.Spec.StaticInstances.Count != nil {
 		count := *ng.Spec.StaticInstances.Count

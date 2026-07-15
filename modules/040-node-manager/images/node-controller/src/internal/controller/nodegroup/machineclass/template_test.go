@@ -35,14 +35,6 @@ func TestResolveChecksumTemplatePath_FindsRealMCMProvider(t *testing.T) {
 	assert.Equal(t, "machine-class.checksum", filepath.Base(path))
 }
 
-func TestResolveChecksumTemplatePath_FindsRealCAPIProvider(t *testing.T) {
-	path := ResolveChecksumTemplatePath([]string{repoModulesDir}, FallbackTemplateBaseDir, "yandex", CAPIChecksumSubPath)
-
-	_, err := os.Stat(path)
-	require.NoError(t, err, "resolver must point at the real yandex CAPI template")
-	assert.Equal(t, "instance-class.checksum", filepath.Base(path))
-}
-
 func TestReadChecksumTemplate_RendersResolvedProvider(t *testing.T) {
 	content, err := ReadChecksumTemplate([]string{repoModulesDir}, FallbackTemplateBaseDir, "aws", MCMChecksumSubPath)
 	require.NoError(t, err)

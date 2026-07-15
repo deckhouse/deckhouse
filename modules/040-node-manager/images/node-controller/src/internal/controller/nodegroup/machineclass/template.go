@@ -31,14 +31,9 @@ var DefaultTemplateBaseDirs = []string{
 
 const FallbackTemplateBaseDir = "/deckhouse/modules/040-node-manager/cloud-providers"
 
-const (
-	MCMChecksumSubPath  = "cloud-instance-manager/machine-class.checksum"
-	CAPIChecksumSubPath = "capi/instance-class.checksum"
-)
+const MCMChecksumSubPath = "cloud-instance-manager/machine-class.checksum"
 
 const MCMMachineClassSubPath = "cloud-instance-manager/machine-class.yaml"
-
-const CAPIMachineTemplateSubPath = "capi/machine-template.yaml"
 
 func ResolveChecksumTemplatePath(baseDirs []string, fallbackBaseDir, cloudType, subPath string) string {
 	provider := fmt.Sprintf("030-cloud-provider-%s", cloudType)

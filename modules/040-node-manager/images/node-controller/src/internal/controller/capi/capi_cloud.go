@@ -31,69 +31,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
-	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
-	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
-
-func capiInstanceClassChecksum(cloudType string, cloudProvider, blob map[string]interface{}) (string, error) {
-	checksumTemplate, err := machineclass.ReadChecksumTemplate(
-		machineclass.DefaultTemplateBaseDirs, machineclass.FallbackTemplateBaseDir,
-		cloudType, machineclass.CAPIChecksumSubPath)
-	if err != nil {
-		return "", err
-	}
-	// vcd's checksum reads .Values.nodeManager.internal.cloudProvider.
-	ctx := map[string]interface{}{
-		"nodeGroup": blob,
-		"Values": map[string]interface{}{
-			"nodeManager": map[string]interface{}{
-				"internal": map[string]interface{}{
-					"cloudProvider": cloudProvider,
-				},
-			},
-		},
-	}
-	checksum, err := machineclass.RenderChecksumWithContext(checksumTemplate, ctx)
-	if err != nil {
-		return "", fmt.Errorf("render instance-class checksum: %w", err)
-	}
-	return checksum, nil
-}
-
-func capiMachineTemplateContext(cloudProvider, blob map[string]interface{}, zone, templateName, checksum string) map[string]interface{} {
-	return map[string]interface{}{
-		"Chart": map[string]interface{}{"Name": "node-manager"},
-		"Values": map[string]interface{}{
-			"nodeManager": map[string]interface{}{
-				"internal": map[string]interface{}{
-					"cloudProvider": cloudProvider,
-				},
-			},
-		},
-		"nodeGroup":             blob,
-		"zoneName":              zone,
-		"templateName":          templateName,
-		"instanceClassChecksum": checksum,
-	}
-}
-
-func renderCAPIMachineTemplate(cloudType string, renderCtx map[string]interface{}) (*unstructured.Unstructured, error) {
-	tmpl, err := machineclass.ReadChecksumTemplate(
-		machineclass.DefaultTemplateBaseDirs, machineclass.FallbackTemplateBaseDir,
-		cloudType, machineclass.CAPIMachineTemplateSubPath)
-	if err != nil {
-		return nil, err
-	}
-	mtBytes, err := machineclass.RenderMachineClass(tmpl, renderCtx)
-	if err != nil {
-		return nil, fmt.Errorf("render MachineTemplate for cloud type %q: %w", cloudType, err)
-	}
-	obj := map[string]interface{}{}
-	if err := sigsyaml.Unmarshal(mtBytes, &obj); err != nil {
-		return nil, fmt.Errorf("parse rendered MachineTemplate for cloud type %q: %w", cloudType, err)
-	}
-	return &unstructured.Unstructured{Object: obj}, nil
-}
 
 type capiMDInput struct {
 	ng                  *deckhousev1.NodeGroup
@@ -208,29 +146,23 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		return nil
 	}
 
-	cloudProvider, err := r.readCloudProviderTree(ctx)
-	if err != nil {
-		return err
-	}
-	cloudType, _ := cloudProvider["type"].(string)
-
-	rawSpec, err := r.readNodeGroupRawSpec(ctx, ng.Name)
-	if err != nil {
-		return err
-	}
-	ds := &derived_status.Service{Client: r.Client}
-	blob, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
-	if err != nil {
-		return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
-	}
-	if validationErr != "" {
-		logger.V(1).Info("skipping CAPI: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
-		return nil
-	}
-
 	zones := resolveCAPIZones(ng, cloudConfig.zones)
 	if len(zones) == 0 {
 		logger.V(1).Info("skipping CAPI: no zones")
+		return nil
+	}
+
+	// The instance-class checksum is owned by helm: it renders the infrastructure
+	// MachineTemplate (with a checksum/instance-class annotation) and the bootstrap
+	// Secret, both named by that checksum. node-controller reads the annotation instead
+	// of recomputing the checksum, so MachineTemplate/Secret names stay byte-identical to
+	// helm and existing nodes never roll.
+	checksum, err := r.readInstanceClassChecksum(ctx, cloudConfig, ng.Name)
+	if err != nil {
+		return err
+	}
+	if checksum == "" {
+		logger.V(1).Info("skipping CAPI: infrastructure template not found yet, waiting for helm")
 		return nil
 	}
 
@@ -241,11 +173,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	instancePrefix, err := r.readInstancePrefix(ctx)
 	if err != nil {
 		return err
-	}
-
-	checksum, err := capiInstanceClassChecksum(cloudType, cloudProvider, blob)
-	if err != nil {
-		return fmt.Errorf("compute instance-class checksum for NodeGroup %s: %w", ng.Name, err)
 	}
 
 	minReplicas := ng.Spec.CloudInstances.MinPerZone
@@ -274,12 +201,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		// Bootstrap secret name mirrors the MachineTemplate name (checksum-based) to keep
 		// byte-parity with helm's node-group.yaml ($bootstrap_secret_name := $template_name).
 		bootstrapSecretName := templateName
-
-		mtCtx := capiMachineTemplateContext(cloudProvider, blob, zone, templateName, checksum)
-		mt, err := renderCAPIMachineTemplate(cloudType, mtCtx)
-		if err != nil {
-			return fmt.Errorf("render MachineTemplate for NodeGroup %s zone %s: %w", ng.Name, zone, err)
-		}
 
 		md := buildCAPIMachineDeployment(capiMDInput{
 			ng:                  ng,
@@ -312,13 +233,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			return fmt.Errorf("apply provider MachineDeployment spec patch for %s: %w", mdName, err)
 		}
 
-		if err := r.Client.Patch(ctx, mt, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
-			return fmt.Errorf("apply MachineTemplate %s: %w", templateName, err)
-		}
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply CAPI MachineDeployment %s: %w", mdName, err)
 		}
-		logger.Info("applied CAPI MachineTemplate + MachineDeployment", "name", mdName, "zone", zone)
+		logger.Info("applied CAPI MachineDeployment", "name", mdName, "zone", zone)
 	}
 
 	return nil
