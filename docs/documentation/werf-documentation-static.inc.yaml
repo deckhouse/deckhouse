@@ -1,17 +1,10 @@
----
 image: {{ .ModuleName }}/{{ .ImageName }}/static
-from: {{ .Images.BASE_JEKYLL }}
+from: base/jekyll
 final: false
 shell:
   setup:
   - |
-        echo "Ruby: $(ruby --version)"
-        echo "Gem: $(gem --version)"
-        bundle --version
-        jekyll -version
-        yq -V
-        echo "jq: $(jq -V)"
-
+        export PATH=$PATH:/usr/bundle/bin/
         cd /srv/jekyll-data/documentation/
 
         echo '[] Creating modules list...'
@@ -80,20 +73,9 @@ shell:
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
 {{ end }}
-import:
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
-- from: {{ index $.Images "tools/yq" }}
-  add: /usr/bin/yq
-  to: /usr/bin/yq
-  before: setup
 git:
 - add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data
-  owner: jekyll
-  group: jekyll
   includePaths:
 {{ if eq .ModuleName "website-docs" }}
     - site/_includes/head.html

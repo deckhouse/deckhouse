@@ -47,16 +47,12 @@ import:
 {{- end }}
 ---
 image: web-frontend-artifact
-from: {{ .Images.BASE_JEKYLL }}
+from: base/jekyll
 final: false
 shell:
-  install:
-  - |
-        echo "Ruby: $(ruby --version)"
-        echo "Gem: $(gem --version)"
-        bundle --version
   setup:
   - |
+        export PATH=$PATH:/usr/bundle/bin/
         cd /srv/jekyll-data/site/
 
         # "Render OpenAPI schemas for DVP..."
@@ -73,8 +69,6 @@ git:
 # Common files used for building site and documentation (plugins, assets, etc.), plus unversionized products documentation
 - add: /docs/documentation
   to: /srv/jekyll-data/site
-  owner: jekyll
-  group: jekyll
   includePaths:
   - _assets/js/search.js
   - _data/rbac/
@@ -96,8 +90,6 @@ git:
     setup: '**/*'
 - add: /docs/site
   to: /srv/jekyll-data/site
-  owner: jekyll
-  group: jekyll
   excludePaths:
   - '*.md'
   - werf*.yaml
@@ -107,26 +99,19 @@ git:
   - backends
   - Makefile
   stageDependencies:
-    install: ['Gemfile','Gemfile.lock']
     setup: '**/*'
 - add: /global-hooks/openapi
   to: /rawdata/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*config-values.yaml','doc-ru-config-values.yaml']
 - add: /candi/openapi
   to: /rawdata/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
 - add: /deckhouse-controller/crds
   to: /rawdata/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
@@ -214,5 +199,8 @@ import:
   before: setup
 ---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
+---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
 {{- end }}
+---
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-jekyll-base.inc.yaml" .ModulePath)) . }}

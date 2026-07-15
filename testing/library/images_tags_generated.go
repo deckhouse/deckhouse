@@ -8,6 +8,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"gatekeeper":         "imageHash-admissionPolicyEngine-gatekeeper",
 		"ratify":             "imageHash-admissionPolicyEngine-ratify",
 	},
+	"base": map[string]interface{}{
+		"jekyll": "imageHash-base-jekyll",
+	},
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",
 	},
