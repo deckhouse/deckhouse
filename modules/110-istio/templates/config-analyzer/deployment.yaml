@@ -81,20 +81,20 @@ spec:
         - "--all-namespaces=true"
         - "--server.interval=5m"
         - "--analysis.timeout=2m"
-        - "--server.telemetry-address=127.0.0.1:8080"
+        - "--server.telemetry-address=:8080"
         ports:
         - name: http-metrics
           containerPort: 8080
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8080
+            port: http-metrics
           initialDelaySeconds: 10
           periodSeconds: 30
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 8080
+            port: http-metrics
           initialDelaySeconds: 5
           periodSeconds: 15
         resources:
