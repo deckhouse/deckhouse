@@ -2,8 +2,22 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://deckhouse.io/vex/cloud-provider-azure/azuredisk-csi",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость GO-2026-5932 в пакете golang.org/x/crypto не имеет исправленной версии в upstream. Уязвимый код (пакет openpgp) не используется бинарным файлом azurediskplugin — образ azuredisk CSI не реализует и не вызывает функциональность OpenPGP-подписей, поэтому эксплуатация недостижима в данном артефакте.",
+      "timestamp": "2026-07-15T00:00:00Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2025-13281"
