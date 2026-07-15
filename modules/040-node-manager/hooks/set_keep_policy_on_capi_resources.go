@@ -39,10 +39,14 @@ const (
 	helmManagedSelector          = "app.kubernetes.io/managed-by=Helm"
 )
 
-var capiResources = []struct {
+type keepResource struct {
 	Group    string
 	Resource string
-}{
+	// versionPreference is tried in order; empty falls back to storedVersionPreference.
+	versionPreference []string
+}
+
+var capiResources = []keepResource{
 	{Group: "cluster.x-k8s.io", Resource: "clusters"},
 	{Group: "cluster.x-k8s.io", Resource: "machinehealthchecks"},
 	{Group: "cluster.x-k8s.io", Resource: "machinedeployments"},
@@ -55,6 +59,8 @@ var crdGVR = schema.GroupVersionResource{
 }
 
 var storedVersionPreference = []string{"v1beta1", "v1beta2"}
+
+var mcmStoredVersions = []string{"v1alpha1"}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager/set-keep-policy-on-capi-resources",
@@ -76,8 +82,22 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 		},
 	})
 
-	for _, res := range capiResources {
-		version, ok, err := pickStoredVersion(dynClient, res.Group, res.Resource)
+	// MCM MachineDeployment/MachineClass (machine.sapcloud.io/v1alpha1) are no longer
+	// rendered by helm after the get_crds→node-controller migration; keep them from prune.
+	resources := append([]keepResource(nil), capiResources...)
+	if machineClassKind := input.Values.Get("nodeManager.internal.cloudProvider.machineClassKind").String(); machineClassKind != "" {
+		resources = append(resources,
+			keepResource{Group: "machine.sapcloud.io", Resource: "machinedeployments", versionPreference: mcmStoredVersions},
+			keepResource{Group: "machine.sapcloud.io", Resource: strings.ToLower(machineClassKind) + "es", versionPreference: mcmStoredVersions},
+		)
+	}
+
+	for _, res := range resources {
+		preference := res.versionPreference
+		if len(preference) == 0 {
+			preference = storedVersionPreference
+		}
+		version, ok, err := pickStoredVersion(dynClient, res.Group, res.Resource, preference)
 		if err != nil {
 			return fmt.Errorf("resolve stored version for %s: %w", res.Resource, err)
 		}
@@ -125,7 +145,7 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 	return nil
 }
 
-func pickStoredVersion(dynClient dynamic.Interface, group, resource string) (string, bool, error) {
+func pickStoredVersion(dynClient dynamic.Interface, group, resource string, preference []string) (string, bool, error) {
 	crd, err := dynClient.Resource(crdGVR).Get(context.TODO(), resource+"."+group, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -137,7 +157,7 @@ func pickStoredVersion(dynClient dynamic.Interface, group, resource string) (str
 	if err != nil {
 		return "", false, err
 	}
-	for _, want := range storedVersionPreference {
+	for _, want := range preference {
 		for _, have := range stored {
 			if have == want {
 				return want, true, nil
