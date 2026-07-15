@@ -1,0 +1,5 @@
+# NOTE: values cases are in modules/040-node-manager/openapi directory.
+
+positive:
+  configValues:
+    - {}

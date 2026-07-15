@@ -38,10 +38,12 @@ const (
 // packageI abstracts the package operations needed for settings management.
 type packageI interface {
 	GetName() string
-	// ApplySettings updates the package's in-memory configuration.
-	ApplySettings(settings addonutils.Values) error
-	// ValidateSettings checks settings against package-defined constraints.
-	ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error)
+	// ApplySettings converts (if needed) and applies the package's configuration.
+	// settingsVersion is the schema version from ModuleConfig.Spec.Version (0 if unset).
+	ApplySettings(settingsVersion int, settings addonutils.Values) error
+	// ValidateSettings converts (if needed) and validates settings against the
+	// package's OpenAPI schema.
+	ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error)
 	// GetSettings returns the effective settings: user config merged with
 	// config-schema defaults. Same payload exposed to templates as .Application.Settings.
 	GetSettings() addonutils.Values
@@ -54,9 +56,10 @@ type packageI interface {
 // On success, sets ConditionSettingsValid to True.
 // On failure, wraps errors with appropriate status conditions.
 type task struct {
-	pkg         packageI
-	settings    addonutils.Values
-	maintenance nelm.MaintenanceState
+	pkg             packageI
+	settings        addonutils.Values
+	settingsVersion int
+	maintenance     nelm.MaintenanceState
 
 	status *status.Service
 
@@ -64,13 +67,15 @@ type task struct {
 }
 
 // NewTask creates a task that will validate and apply the given settings and maintenance mode.
-func NewTask(pkg packageI, settings addonutils.Values, maintenance nelm.MaintenanceState, status *status.Service, logger *log.Logger) queue.Task {
+// settingsVersion is the schema version from ModuleConfig.Spec.Version (0 if unset).
+func NewTask(pkg packageI, settings addonutils.Values, settingsVersion int, maintenance nelm.MaintenanceState, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
-		pkg:         pkg,
-		settings:    settings,
-		maintenance: maintenance,
-		status:      status,
-		logger:      logger.Named(taskTracer).With(slog.String("name", pkg.GetName())),
+		pkg:             pkg,
+		settings:        settings,
+		settingsVersion: settingsVersion,
+		maintenance:     maintenance,
+		status:          status,
+		logger:          logger.Named(taskTracer).With(slog.String("name", pkg.GetName())),
 	}
 }
 
@@ -99,13 +104,15 @@ func (t *task) Execute(ctx context.Context) error {
 }
 
 // applySettings validates and applies settings to the package.
+// Conversion to the latest schema version (if needed) is handled inside
+// ValidateSettings and ApplySettings by the package itself.
 func (t *task) applySettings(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "applySettings")
 	defer span.End()
 
 	t.logger.Debug("configure package")
 
-	res, err := t.pkg.ValidateSettings(ctx, t.settings)
+	res, err := t.pkg.ValidateSettings(ctx, t.settingsVersion, t.settings)
 	if err != nil {
 		return status.NewError("ValidateFailed", err)
 	}
@@ -114,7 +121,7 @@ func (t *task) applySettings(ctx context.Context) error {
 		return status.NewError("ValidateFailed", errors.New(res.Message))
 	}
 
-	if err = t.pkg.ApplySettings(t.settings); err != nil {
+	if err = t.pkg.ApplySettings(t.settingsVersion, t.settings); err != nil {
 		return status.NewError("ConfigureFailed", err)
 	}
 

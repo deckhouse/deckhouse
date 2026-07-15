@@ -47,9 +47,10 @@ const (
 //	root (ctx/cancel) — created by EventUpdate or EventRemove
 //	└── EventSchedule child — cancelled on enable↔disable transition
 type Package struct {
-	version     string            // package version, cleared on remove
-	settings    addonutils.Values // pending settings, updated by Update, consumed by GetPendingSettings
-	maintenance string            // pending maintenance mode, consumed by GetPendingMaintenance
+	version         string            // package version, cleared on remove
+	settingsVersion int               // schema version of pending settings (from ModuleConfig.Spec.Version)
+	settings        addonutils.Values // pending settings, updated by Update, consumed by GetPendingSettings
+	maintenance     string            // pending maintenance mode, consumed by GetPendingMaintenance
 
 	ctx    context.Context    // root context, cancelled on version change or remove
 	cancel context.CancelFunc // cancels root and all children

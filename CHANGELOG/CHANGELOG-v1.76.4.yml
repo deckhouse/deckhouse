@@ -1,0 +1,58 @@
+candi:
+  fixes:
+    - summary: >-
+        kube-apiserver no longer caches watches for `ManifestCheckpointContentChunk` resources from `state-snapshotter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21223
+      impact: kube-apiserver static pod is reconfigured and restarts on the next control-plane sync.
+ci:
+  fixes:
+    - summary: Fix extract images_digests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21295
+cloud-provider-dvp:
+  features:
+    - summary: Add an option to disable the CCM LoadBalancer functionality via ConfigMap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21296
+deckhouse:
+  fixes:
+    - summary: >-
+        Fix module metadata (`module.yaml`/`oss.yaml`) missing from in-cluster documentation by allowing
+        these files in `IsDocsPath` (sender) and creating parent directories on extraction in the docs-builder
+        (receiver).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21214
+    - summary: >-
+        Fixes an unauthenticated path traversal (CWE-22) in docs-builder by validating moduleName/channels
+        and enforcing base-directory containment before any filesystem operation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21279
+    - summary: Remove documentation networkPolicy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21284
+    - summary: Add log diagnostic command to ModuleIsNotValid alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21287
+    - summary: Use metav1.Duration for ModulePullOverride scanInterval
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21292
+deckhouse-controller:
+  fixes:
+    - summary: Fix deckhouse-controller crash loop and hooks receiving silently empty snapshots
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21255
+    - summary: Fixed showing warnings while errors during kubectl edit.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21288
+    - summary: Fixed ModuleConfig validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21293
+docs:
+  features:
+    - summary: Add operator-argo module architecture section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20318
+    - summary: Add module module architecture section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21280
+  fixes:
+    - summary: Document self-service password reset
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21120
+documentation:
+  fixes:
+    - summary: remove stale fox links
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21267
+user-authn:
+  fixes:
+    - summary: >-
+        Preserve Dex Password fields (notably groups) when resetting password, locking or unlocking a
+        user, so users are no longer locked out after these operations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21235

@@ -45,11 +45,12 @@ const (
 // It carries the user-specified package identity, version constraints, settings, and
 // maintenance mode.
 type App struct {
-	Name        string
-	Namespace   string
-	Definition  apps.Definition
-	Settings    addonutils.Values
-	Maintenance string
+	Name            string
+	Namespace       string
+	Definition      apps.Definition
+	Settings        addonutils.Values
+	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
+	Maintenance     string
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -79,11 +80,11 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	version := app.Definition.Version
 	packageName := app.Definition.Name
 
-	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.Maintenance) {
+	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion, app.Maintenance) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.Settings, app.Maintenance)
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return

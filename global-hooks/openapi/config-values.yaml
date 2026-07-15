@@ -49,22 +49,26 @@ properties:
         properties:
           name:
             type: string
+            description: |
+              Name of the Gateway object.
           namespace:
             type: string
+            description: |
+              Namespace of the Gateway object.
         required:
           - name
           - namespace
         description: |
-          Name of the Gateway object from the Gateway API used by modules of the Deckhouse ecosystem.
+          Reference to the Gateway object (from the Gateway API) used by modules of the Deckhouse ecosystem when creating Gateway API resources.
+
+          If not specified, modules use the Gateway automatically discovered in the cluster (if any).
       ingressClass:
         type: string
         default: nginx
         description: |
-          Class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used by the Deckhouse ecosystem modules.
+          Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem modules when creating Ingress resources.
 
-          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default Ingress controller for all modules.
-
-          If any other IngressClass name is used, a corresponding Ingress controller will not be used by default.
+          Some modules support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
@@ -150,7 +154,7 @@ properties:
                   ClusterIssuer name used by modules to obtain TLS certificates.
 
                   The [`cert-manager`](/modules/cert-manager/) module offers the following ClusterIssuer options:
-                  
+
                   - `letsencrypt`
                   - `letsencrypt-staging`
                   - `selfsigned`
@@ -158,7 +162,7 @@ properties:
                   - `cloudflare`
                   - `digitalocean`
                   - `route53`
-                  
+
                   You can use your own ClusterIssuer if necessary.
           customCertificate:
             type: object
@@ -236,11 +240,9 @@ properties:
         type: string
         default: nginx
         description: |
-          Class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used by the Deckhouse ecosystem applications.
+          Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem applications when creating Ingress resources.
 
-          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default Ingress controller for all applications.
-
-          If any other IngressClass name is used, a corresponding Ingress controller will not be used by default.
+          Some applications support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
@@ -248,7 +250,7 @@ properties:
         pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
           DNS name template with three `%s` keys used as the dynamic parts of the string.
-          
+
           Whenever a DNS is generated:
 
           - First key is replaced with the component name.
@@ -312,7 +314,7 @@ properties:
                   ClusterIssuer name used by applications to obtain TLS certificates.
 
                   The [`cert-manager`](/modules/cert-manager/) module offers the following ClusterIssuer options:
-                  
+
                   - `letsencrypt`
                   - `letsencrypt-staging`
                   - `selfsigned`
@@ -320,7 +322,7 @@ properties:
                   - `cloudflare`
                   - `digitalocean`
                   - `route53`
-                  
+
                   You can use your own ClusterIssuer if necessary.
           customCertificate:
             type: object

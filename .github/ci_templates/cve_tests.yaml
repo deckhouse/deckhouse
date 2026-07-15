@@ -1,36 +1,3 @@
-{!{ define "set_security_scan_requirement_status" }!}
-
-# <template: set_security_scan_requirement_status>
-set_security_scan_requirement_status:
-  name: Set commit status after security scan run
-  runs-on: "self-slim"
-  needs: test_cve_report_main
-  if: ${{ always() }}
-  permissions:
-    contents: read
-    pull-requests: write
-  steps:
-    - name: Install GitHub CLI
-      uses: deckhouse/modules-actions/gh@v15
-    - name: Auth with GitHub CLI
-      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-    - name: Set PR Label
-      env:
-        PR_NUMBER: ${{ github.event.pull_request.number }}
-        GH_REPO: ${{ github.repository }}
-        RESULT: ${{ needs.test_cve_report_main.result }}
-      run: |
-        echo "PR Number: $PR_NUMBER | Result: $RESULT"
-        if [ "$RESULT" == "success" ]; then
-          gh pr edit "$PR_NUMBER" --add-label "security/cve/success" --remove-label "security/cve/failed"
-        elif [ "$RESULT" == "skipped" ]; then
-          gh pr edit "$PR_NUMBER" --remove-label "security/cve/success" --remove-label "security/cve/failed"
-        else
-          gh pr edit "$PR_NUMBER" --add-label "security/cve/failed" --remove-label "security/cve/success"
-        fi
-# </template: set_security_scan_requirement_status>
-{!{- end -}!}
-
 {!{ define "cve_scan_type_weekly" }!}
 - name: Set scan target type
   id: scan_type
@@ -101,7 +68,7 @@ set_security_scan_requirement_status:
 # behaviour and our policy of preferring over-scan to under-scan.
 - name: Announce CVE delta-scan filter
   env:
-    ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+    ONLY_IMAGES: ${{ needs.build_fe.outputs.changed_compact }}
   run: |
     if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
       keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
@@ -113,6 +80,7 @@ set_security_scan_requirement_status:
 {!{- end }!}
 
 - name: Run Deckhouse images CVE tests on "${{ steps.scan_type.outputs.tag }}"
+  id: scan
   uses: deckhouse/modules-actions/cve_scan@main
 {!{- if $withChangedImages }!}
   env:
@@ -121,7 +89,7 @@ set_security_scan_requirement_status:
     # `cve_scan.sh` reads ${ONLY_IMAGES} directly from the environment (see
     # the ONLY_IMAGES_SET block in /home/nikmor/Flant/GitLab/SSDLC-tools/cve-scan/cve_scan.sh).
     # Empty "[]" makes the script fall back to full scan — no extra glue.
-    ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+    ONLY_IMAGES: ${{ needs.build_fe.outputs.changed_compact }}
 {!{- end }!}
   with:
     prod_registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -169,4 +137,31 @@ set_security_scan_requirement_status:
   run: |
     rm -r ${{ env.WORKDIR }}
 # </template: cve_tests_upload_reports_artifacts>
+{!{- end -}!}
+
+
+{!{ define "cve_tests_set_pr_label" }!}
+# <template: cve_tests_set_pr_label>
+- name: Install GitHub CLI
+  if: always()
+  uses: deckhouse/modules-actions/gh@v15
+- name: Auth with GitHub CLI
+  if: always()
+  run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+- name: Set PR Label
+  if: always()
+  env:
+    PR_NUMBER: ${{ github.event.pull_request.number }}
+    GH_REPO: ${{ github.repository }}
+    RESULT: ${{ steps.scan.outcome }}
+  run: |
+    echo "PR Number: $PR_NUMBER | Result: $RESULT"
+    if [ "$RESULT" == "success" ]; then
+      gh pr edit "$PR_NUMBER" --add-label "security/cve/success" --remove-label "security/cve/failed"
+    elif [ "$RESULT" == "skipped" ]; then
+      gh pr edit "$PR_NUMBER" --remove-label "security/cve/success" --remove-label "security/cve/failed"
+    else
+      gh pr edit "$PR_NUMBER" --add-label "security/cve/failed" --remove-label "security/cve/success"
+    fi
+# </template: cve_tests_set_pr_label>
 {!{- end -}!}
