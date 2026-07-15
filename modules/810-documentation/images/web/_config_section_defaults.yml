@@ -1,0 +1,10 @@
+defaults:
+  - scope:
+      path: "pages/includes"
+      type: "pages"
+    values:
+      mode: "ssi"
+      searchable: false
+      sitemap_include: false
+      layout: none
+      relatedLinksMax: 0

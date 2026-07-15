@@ -30,7 +30,7 @@
     {{ content }}
   </div>
 
-     <!--#include virtual="/includes/footer.html" -->
+     <!--#include virtual="{%- if site.mode == 'module' %}/{{ page.lang }}{%- endif %}/includes/footer.html" -->
 {%- if page.sidebar == 'embedded-modules' or site.mode == 'module' %}
 <script type="text/javascript">
   // Fix second level topnav menu for GS and guides sections.

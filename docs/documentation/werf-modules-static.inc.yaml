@@ -1,18 +1,20 @@
 ---
 image: {{ .ModuleName }}/modules-embedded/static-artifact
-from: {{ .Images.BASE_JEKYLL }}
+from: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
 final: false
 shell:
   setup:
   - |
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
-        bundle --version
+        echo "Bundle: $(bundle --version)"
         jekyll -version
         yq -V
         echo "jq: $(jq -V)"
 
         cd /srv/jekyll-data/documentation/
+
+        echo '[] Edition - {{ .Edition }}.'
 
         echo '[] Creating modules list...'
         export MODULES_DIR=/src/modules-metadata
@@ -26,7 +28,7 @@ shell:
         export METADATA_TARGET_FILE=${PWD}/_data/modules/metadata.json
         bash _tools/modules_generate_metadata.sh
 
-        echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
+        echo 'Merging files of modules for different editions...'
         for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
 
         echo '[] Preparing modules structure...'
@@ -87,9 +89,10 @@ shell:
         cat <<'EOD' > /tmp/_config_additional.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 8 }}
         EOD
-        cat <<'EOD' > /srv/jekyll-data/documentation/_data/topnav.yml
-        {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
-        EOD
+        #cat <<'EOD' > /srv/jekyll-data/documentation/_data/topnav.yml
+        # .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8
+        #EOD
+        cp -rf /srv/jekyll-data/documentation_override/* /srv/jekyll-data/documentation
 {{ end }}
         # Creating additional config...
         echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
@@ -111,26 +114,17 @@ shell:
         cd /app/_site/
         find modules_en modules_ru -type d \( -path "*/docs/images" -o -path "*/docs/presentations" \) -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rf "$0" "$lang/modules/$module" ; ' {} \;
         rm -rf modules_en modules_ru
-import:
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
-- from: {{ index $.Images "tools/yq" }}
-  add: /usr/bin/yq
-  to: /usr/bin/yq
-  before: setup
 git:
 - add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data
-  owner: jekyll
-  group: jekyll
   includePaths:
     - site/_includes/head.html
 {{ if eq .ModuleName "documentation" }}
+    - site/_includes/copyright.html
+    - site/_includes/head-site.html
     - site/_includes/header.html
-    - site/_includes/header-mobile.liquid
     - site/_includes/header-menu-fill-items.html
+    - site/_includes/header-mobile.liquid
 {{ end }}
     - documentation
   excludePaths:
@@ -151,8 +145,8 @@ git:
   stageDependencies:
     setup: '**/*'
 {{ if eq .ModuleName "documentation" }}
-- add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
-  to: /srv/jekyll-data/site/_includes/footer.html
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/documentation
+  to: /srv/jekyll-data/documentation_override
   stageDependencies:
     setup:
     - '**/*'
