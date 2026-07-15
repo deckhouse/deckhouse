@@ -43,7 +43,8 @@ podSubnetNodeCIDRPrefix: "24"
 clusterDomain: %q
 clusterDNSAddress: "10.96.0.10"
 clusterUUID: "00000000-0000-0000-0000-000000000000"
-bootstrapTokens: []
+bootstrapTokens:
+  worker: fy6qg9.55qmrwrtxqstc403 
 apiserverEndpoints:
   - %q
 clusterMasterEndpoints:
