@@ -22,49 +22,77 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
-func BuildContextInputYAML(
-	vcp *controlplanev1alpha1.VirtualControlPlane,
-	apiserverService *corev1.Service,
-	pkiSecret *corev1.Secret,
-) (string, error) {
-	endpoint := fmt.Sprintf("https://%s:6443", apiserverService.Spec.ClusterIP)
-	ca := string(pkiSecret.Data["ca.crt"])
+const (
+	vcpPackagesProxyPort          = 443
+	vcpPackagesProxyBootstrapPort = 80
+)
+
+type ContextInputParams struct {
+	VCP          *controlplanev1alpha1.VirtualControlPlane
+	CA           []byte
+	JoinToken    string
+	ClusterUUID  string
+	APIHost      string
+	PackagesHost string
+}
+
+func BuildContextInputYAML(p ContextInputParams) (string, error) {
+	if p.JoinToken == "" {
+		return "", fmt.Errorf("join token is required")
+	}
+
+	clusterUUID := p.ClusterUUID
+	if clusterUUID == "" {
+		clusterUUID = "00000000-0000-0000-0000-000000000000"
+	}
+
+	apiEndpoint := fmt.Sprintf("%s:6443", p.APIHost)
+	ca := string(p.CA)
 
 	input := fmt.Sprintf(`
-deckhouse:
-  channel: "unknown"
-  version: "vcp"
-  edition: "unknown"
-podSubnetNodeCIDRPrefix: "24"
-clusterDomain: %q
-clusterDNSAddress: "10.96.0.10"
-clusterUUID: "00000000-0000-0000-0000-000000000000"
-bootstrapTokens:
-  worker: fy6qg9.55qmrwrtxqstc403 
-apiserverEndpoints:
-  - %q
-clusterMasterEndpoints:
-  - %q
-kubernetesCA: |
-%s
-allowedBundles:
-  - ubuntu-lts
-nodeGroups:
-  - name: worker
-nodeStatusUpdateFrequency: 0
-`,
+	deckhouse:
+	  channel: "unknown"
+	  version: "vcp"
+	  edition: "unknown"
+	podSubnetNodeCIDRPrefix: "24"
+	clusterDomain: %q
+	clusterDNSAddress: "10.96.0.10"
+	clusterUUID: %q
+	bootstrapTokens:
+	  worker: %q
+	apiserverEndpoints:
+	  - %q
+	clusterMasterEndpoints:
+	  - address: %q
+		kubeApiPort: 6443
+		rppServerPort: %d
+		rppBootstrapServerPort: %d
+	  - address: %q
+		kubeApiPort: 6443
+		rppServerPort: %d
+		rppBootstrapServerPort: %d
+	kubernetesCA: |
+	%s
+	allowedBundles:
+	  - ubuntu-lts
+	nodeGroups:
+	  - name: worker
+	nodeStatusUpdateFrequency: 0
+	`,
 		constants.DefaultTenantClusterDomain,
-		endpoint,
-		endpoint,
+		clusterUUID,
+		p.JoinToken,
+		apiEndpoint,
+		p.APIHost, vcpPackagesProxyPort, vcpPackagesProxyBootstrapPort,
+		p.PackagesHost, vcpPackagesProxyPort, vcpPackagesProxyBootstrapPort,
 		indentYAML(ca, 2),
 	)
 
 	return input, nil
 }
+
 func indentYAML(s string, spaces int) string {
 	pad := strings.Repeat(" ", spaces)
 	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")

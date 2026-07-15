@@ -74,9 +74,11 @@ const (
 func (r *reconciler) reconcileBashibleApiserver(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
+	configSecret *corev1.Secret,
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
 	adminSecret *corev1.Secret,
+	joinToken string,
 ) (reconcile.Result, error) {
 	// 1. Parent: Exclusive kubeconfig for bashible-apiserver that provides access to the nested kube-apiserver.
 	if _, res, err := r.reconcileBashibleKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
@@ -100,7 +102,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	}
 
 	// 5. Nested: Context Secret
-	if res, err := r.reconcileBashibleContext(ctx, nestedClient, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleContext(ctx, nestedClient, vcp, pkiSecret, joinToken, configSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -185,7 +187,6 @@ func (r *reconciler) reconcileBashibleRBAC(ctx context.Context, nestedClient cli
 			if err := nestedClient.Create(ctx, obj); err != nil {
 				return reconcile.Result{}, fmt.Errorf("create %s/%s: %w", gvk.Kind, key, err)
 			}
-			continue
 		}
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("get %s/%s: %w", gvk.Kind, key, err)
@@ -238,10 +239,18 @@ func (r *reconciler) reconcileBashibleContext(
 	ctx context.Context,
 	nestedClient client.Client,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
-	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
+	joinToken string,
+	configSecret *corev1.Secret,
 ) (reconcile.Result, error) {
-	contextInputYAML, err := bashibleapiserver.BuildContextInputYAML(vcp, apiserverService, pkiSecret)
+	contextInputYAML, err := bashibleapiserver.BuildContextInputYAML(bashibleapiserver.ContextInputParams{
+		VCP:          vcp,
+		CA:           pkiSecret.Data["ca.crt"],
+		JoinToken:    joinToken,
+		ClusterUUID:  string(configSecret.Data["cluster-uuid"]),
+		APIHost:      apiExposeHost(vcp),
+		PackagesHost: packagesExposeHost(vcp),
+	})
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("build context input: %w", err)
 	}

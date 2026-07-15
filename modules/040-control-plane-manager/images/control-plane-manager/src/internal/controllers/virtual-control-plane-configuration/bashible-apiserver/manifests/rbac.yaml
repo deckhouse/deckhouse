@@ -154,3 +154,28 @@ subjects:
   - kind: User
     name: bashible-apiserver
     apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: bashible:bootstrappers
+rules:
+  - apiGroups: ["bashible.deckhouse.io"]
+    resources: ["bashibles", "nodegroupbundles", "bootstrap"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: bashible:bootstrappers
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: bashible:bootstrappers
+subjects:
+  - kind: Group
+    name: system:bootstrappers:d8:vcp
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
