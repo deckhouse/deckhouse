@@ -462,7 +462,6 @@ def main() -> int:
         json.dump(changed, fp, indent=2)
 
     print(f"Changed final images: {len(changed)}")
-    print(f"BLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLABLA")
     print(f"Changed compact keys: {len(changed_compact)}")
 
     print_changed(changed)
