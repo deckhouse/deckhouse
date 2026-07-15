@@ -23,8 +23,6 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -103,21 +101,6 @@ func parseImagesTable(globalData map[string][]byte) (imagesTable, error) {
 	}
 
 	return table, nil
-}
-
-func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
-
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.VirtualRenderedConfigSecretName,
-			Namespace: namespace,
-			Labels: map[string]string{
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-	}
 }
 
 func buildManifestReplacer(

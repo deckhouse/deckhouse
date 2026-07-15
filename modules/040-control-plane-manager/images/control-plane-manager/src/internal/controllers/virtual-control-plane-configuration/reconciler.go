@@ -622,6 +622,21 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
+func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
+	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.VirtualRenderedConfigSecretName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
+}
+
 func (r *reconciler) reconcileControlPlaneNodes(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
