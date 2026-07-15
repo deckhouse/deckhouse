@@ -41,7 +41,7 @@ func NewStateBuilder(config StateBuilderConfig) *StateBuilder {
 }
 
 // Build decodes dhctl input and applies provider context from the builder configuration.
-func (b *StateBuilder) Build(input proto.PrepareInput) (*cpval.State, error) {
+func (b *StateBuilder) Build(input proto.ValidateInput) (*cpval.State, error) {
 	var err error
 	state := &cpval.State{
 		InstanceClassKind:           b.config.InstanceClassKind,

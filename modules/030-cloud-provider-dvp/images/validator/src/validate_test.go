@@ -189,7 +189,7 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validate(context.Background(), proto.PrepareInput{
+			err := validate(context.Background(), proto.ValidateInput{
 				Operation: proto.OperationBootstrap,
 				CloudProviderVars: &proto.CloudProviderVars{
 					Settings:        testModuleSettings(),
@@ -212,7 +212,7 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.PrepareInput{
+	err := validate(context.Background(), proto.ValidateInput{
 		Operation: proto.OperationBootstrap,
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: testModuleSettings(),
@@ -235,7 +235,7 @@ func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 func TestValidateRejectsInvalidPCCKubeconfigDuringMigration(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.PrepareInput{
+	err := validate(context.Background(), proto.ValidateInput{
 		Operation:             proto.OperationBootstrap,
 		ProviderClusterConfig: testProviderClusterConfig("%%%-not-base64"),
 	})
@@ -250,7 +250,7 @@ func TestValidateRejectsInvalidPCCKubeconfigDuringMigration(t *testing.T) {
 func TestValidateConvergeRunsPreflight(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.PrepareInput{
+	err := validate(context.Background(), proto.ValidateInput{
 		Operation: proto.OperationConverge,
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{
@@ -271,7 +271,7 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 func TestValidateDestroySkipsValidation(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.PrepareInput{
+	err := validate(context.Background(), proto.ValidateInput{
 		Operation: proto.OperationDestroy,
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{

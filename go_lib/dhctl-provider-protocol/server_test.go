@@ -31,7 +31,7 @@ func TestHandlerRunValidateEncodesBusinessError(t *testing.T) {
 		`{"input":{"providerName":"dvp"}}`,
 		func() error {
 			handler := Handler{
-				Validate: func(_ context.Context, input PrepareInput) error {
+				Validate: func(_ context.Context, input ValidateInput) error {
 					if input.ProviderName != "dvp" {
 						t.Fatalf("Validate input.ProviderName = %q, want dvp", input.ProviderName)
 					}
@@ -61,7 +61,7 @@ func TestHandlerRunValidateEncodesSuccess(t *testing.T) {
 		`{"input":{"providerName":"dvp","operation":"bootstrap","vars":{"settings":{"region":"ru-1"}}}}`,
 		func() error {
 			handler := Handler{
-				Validate: func(_ context.Context, input PrepareInput) error {
+				Validate: func(_ context.Context, input ValidateInput) error {
 					if input.Operation != OperationBootstrap {
 						t.Fatalf("Validate input.Operation = %q, want bootstrap", input.Operation)
 					}
@@ -132,7 +132,7 @@ func TestHandlerRunRejectsMalformedJSON(t *testing.T) {
 		[]string{"validator", "validate"},
 		`{`,
 		func() error {
-			handler := Handler{Validate: func(context.Context, PrepareInput) error { return nil }}
+			handler := Handler{Validate: func(context.Context, ValidateInput) error { return nil }}
 			return handler.Run(context.Background())
 		},
 	)

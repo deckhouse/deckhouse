@@ -129,7 +129,7 @@ func main() {
     }
 }
 
-func myValidate(ctx context.Context, input proto.PrepareInput) error {
+func myValidate(ctx context.Context, input proto.ValidateInput) error {
     // input.CloudProviderVars carries the structured provider data.
     // Return non-nil to signal validation failure.
     return nil

@@ -44,8 +44,8 @@ type CloudProviderVars struct {
 	Secrets map[string]map[string]interface{} `json:"secrets,omitempty"`
 }
 
-// PrepareInput is the input payload for the validate call.
-type PrepareInput struct {
+// ValidateInput is the input payload for the validate call.
+type ValidateInput struct {
 	// ProviderName is the cloud provider identifier (e.g. "dvp", "aws").
 	ProviderName string `json:"providerName"`
 	// ClusterPrefix is an optional prefix applied to cloud resource names.
@@ -71,7 +71,7 @@ type PrepareResult struct {
 
 // ValidateRequest is the JSON object written to stdin for the validate subcommand.
 type ValidateRequest struct {
-	Input PrepareInput `json:"input"`
+	Input ValidateInput `json:"input"`
 }
 
 // ValidateResponse is the JSON object written to stdout after validate. The

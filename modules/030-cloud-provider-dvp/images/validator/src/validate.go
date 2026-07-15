@@ -24,7 +24,7 @@ import (
 	dvppreflight "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/preflight"
 )
 
-func validate(_ context.Context, input dhctlproto.PrepareInput) error {
+func validate(_ context.Context, input dhctlproto.ValidateInput) error {
 	if input.Operation == dhctlproto.OperationDestroy {
 		return nil
 	}

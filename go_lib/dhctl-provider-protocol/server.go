@@ -24,7 +24,7 @@ import (
 // Handler implements the server side of the dhctl external provider protocol.
 // Set Validate to your provider logic, then call Run.
 type Handler struct {
-	Validate func(ctx context.Context, input PrepareInput) error
+	Validate func(ctx context.Context, input ValidateInput) error
 }
 
 // Run reads the subcommand from os.Args[1], decodes stdin, dispatches to the

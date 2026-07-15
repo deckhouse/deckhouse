@@ -104,17 +104,17 @@ func (p *Preparator) call(ctx context.Context, subcommand string, input config.P
 
 // toWireInput converts ProviderInput to the wire format; ProviderClusterConfig
 // goes from json.RawMessage to plain values.
-func toWireInput(input config.ProviderInput) (proto.PrepareInput, error) {
+func toWireInput(input config.ProviderInput) (proto.ValidateInput, error) {
 	pcc := make(map[string]interface{}, len(input.ProviderClusterConfig))
 	for k, v := range input.ProviderClusterConfig {
 		var val interface{}
 		if err := json.Unmarshal(v, &val); err != nil {
-			return proto.PrepareInput{}, fmt.Errorf("unmarshal provider cluster config key %q: %w", k, err)
+			return proto.ValidateInput{}, fmt.Errorf("unmarshal provider cluster config key %q: %w", k, err)
 		}
 		pcc[k] = val
 	}
 
-	return proto.PrepareInput{
+	return proto.ValidateInput{
 		ProviderName:          input.ProviderName,
 		ClusterPrefix:         input.ClusterPrefix,
 		Layout:                input.Layout,

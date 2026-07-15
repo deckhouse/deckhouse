@@ -427,7 +427,7 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	require.Equal(t, expectedMingetBytes, mingetBytes)
 }
 
-func TestMetaConfig_DeepCopy_PreservesPrepareInputs(t *testing.T) {
+func TestMetaConfig_DeepCopy_PreservesValidateInputs(t *testing.T) {
 	src := &MetaConfig{
 		DownloadRootDir:  "/tmp/dl",
 		DownloadCacheDir: "/tmp/cache",

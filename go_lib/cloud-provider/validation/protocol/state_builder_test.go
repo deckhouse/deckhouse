@@ -48,7 +48,7 @@ func testProtocolModuleConfigCR(settings map[string]any) map[string]any {
 func TestStateBuilderBuild(t *testing.T) {
 	t.Parallel()
 
-	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		ProviderClusterConfig: map[string]any{
 			"masterNodeGroup": map[string]any{"replicas": 3},
 		},
@@ -114,7 +114,7 @@ func TestStateBuilderBuildDhctlSettingsMap(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
-	state, err := NewStateBuilder(cfg).Build(proto.PrepareInput{
+	state, err := NewStateBuilder(cfg).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{
@@ -139,7 +139,7 @@ func TestStateBuilderBuildWithCompleteResources(t *testing.T) {
 
 	cfg := testStateBuilderConfig()
 
-	state, err := NewStateBuilder(cfg).Build(proto.PrepareInput{
+	state, err := NewStateBuilder(cfg).Build(proto.ValidateInput{
 		ProviderClusterConfig: map[string]any{
 			"masterNodeGroup": map[string]any{"replicas": 3},
 		},
@@ -180,7 +180,7 @@ func TestStateBuilderBuildWithCompleteResources(t *testing.T) {
 func TestStateBuilderBuildEmptyInput(t *testing.T) {
 	t.Parallel()
 
-	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{})
+	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{})
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
@@ -192,7 +192,7 @@ func TestStateBuilderBuildEmptyInput(t *testing.T) {
 func TestStateBuilderBuildModuleConfigDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{
 				"metadata": map[string]any{"name": "cloud-provider-dvp"},
@@ -208,7 +208,7 @@ func TestStateBuilderBuildModuleConfigDecodeError(t *testing.T) {
 func TestStateBuilderBuildCredentialSecretsDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			Secrets: map[string]map[string]any{
 				"broken": {"metadata": "invalid"},
@@ -223,7 +223,7 @@ func TestStateBuilderBuildCredentialSecretsDecodeError(t *testing.T) {
 func TestStateBuilderBuildNodeGroupsDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			NodeGroups: map[string]map[string]any{
 				"broken": {"spec": "invalid"},
@@ -238,7 +238,7 @@ func TestStateBuilderBuildNodeGroupsDecodeError(t *testing.T) {
 func TestStateBuilderBuildInstanceClassesDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			InstanceClasses: map[string]map[string]any{
 				"broken": {"metadata": 123},
@@ -253,7 +253,7 @@ func TestStateBuilderBuildInstanceClassesDecodeError(t *testing.T) {
 func TestStateBuilderBuildModuleConfigMarshalError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{"broken": func() {}},
 		},

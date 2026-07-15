@@ -22,7 +22,7 @@ import (
 )
 
 // ProviderInput is the native input for built-in provider preparators.
-// Unlike proto.PrepareInput, it avoids serialization round-trips:
+// Unlike proto.ValidateInput, it avoids serialization round-trips:
 // ProviderClusterConfig stays as json.RawMessage and CloudProviderVars
 // is already parsed.
 type ProviderInput struct {
