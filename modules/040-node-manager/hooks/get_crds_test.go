@@ -162,6 +162,7 @@ metadata:
 				      "topologyManager": {}
 				    },
 				    "engine": "None",
+				    "manualRolloutID": "",
 				    "name": "proper1"
 				  },
 				  {
@@ -182,6 +183,7 @@ metadata:
 				      "topologyManager": {}
 				    },
 				    "engine": "None",
+				    "manualRolloutID": "",
 				    "name": "proper2"
 				  }
 				]
@@ -199,17 +201,18 @@ metadata:
 		It("Must pass through and overlay static settings for Static nodeType", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			// Static NG carries the internal static overlay and engine None (no staticInstances).
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.name").String()).To(Equal("static1"))
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeType").String()).To(Equal("Static"))
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").String()).To(Equal("None"))
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.static.internalNetworkCIDRs").String()).To(MatchJSON(`["172.18.200.0/24"]`))
-
+			// NodeGroups are listed sorted by name: cp1 (index 0), static1 (index 1).
 			// CloudPermanent NG is a plain passthrough without zones or static overlay.
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.name").String()).To(Equal("cp1"))
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.nodeType").String()).To(Equal("CloudPermanent"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.name").String()).To(Equal("cp1"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeType").String()).To(Equal("CloudPermanent"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").String()).To(Equal("None"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.static").Exists()).To(BeFalse())
+
+			// Static NG carries the internal static overlay and engine None (no staticInstances).
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.name").String()).To(Equal("static1"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.nodeType").String()).To(Equal("Static"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.engine").String()).To(Equal("None"))
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.static").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.static.internalNetworkCIDRs").String()).To(MatchJSON(`["172.18.200.0/24"]`))
 		})
 	})
 
