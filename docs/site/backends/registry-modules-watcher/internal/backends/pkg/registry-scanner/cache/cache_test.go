@@ -35,6 +35,7 @@ func TestCache(t *testing.T) {
 			Version:        "1.0.0",
 			TarFile:        []byte("test"),
 			Checksum:       "checksum",
+			Telemetry:      internal.ModuleTelemetry{NoModuleYaml: true},
 		},
 		{
 			Registry:       "TestReg",
@@ -43,6 +44,7 @@ func TestCache(t *testing.T) {
 			Version:        "1.0.0",
 			TarFile:        []byte("test"),
 			Checksum:       "checksum",
+			Telemetry:      internal.ModuleTelemetry{NoModuleYaml: true},
 		},
 	}
 
@@ -309,9 +311,10 @@ func TestCache(t *testing.T) {
 				Checksum:       "checksum", // Same checksum as alpha/beta
 			}
 
-			version, tarFile := cache.GetGetReleaseVersionData(&newChannelVersion)
+			version, tarFile, telemetry := cache.GetGetReleaseVersionData(&newChannelVersion)
 			assert.Equal(t, "1.0.0", version, "Version should match")
 			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
+			assert.Equal(t, internal.ModuleTelemetry{NoModuleYaml: true}, telemetry, "Telemetry should round-trip through the cache")
 		})
 
 		t.Run("GetVersionDataByChecksum_NotFound", func(t *testing.T) {
@@ -323,7 +326,7 @@ func TestCache(t *testing.T) {
 				Checksum:       "nonexistent",
 			}
 
-			version, tarFile := cache.GetGetReleaseVersionData(&notFoundVersion)
+			version, tarFile, _ := cache.GetGetReleaseVersionData(&notFoundVersion)
 			assert.Empty(t, version, "Version should be empty")
 			assert.Nil(t, tarFile, "TarFile should be nil")
 		})
@@ -337,7 +340,7 @@ func TestCache(t *testing.T) {
 				Checksum:       "checksum",
 			}
 
-			version, tarFile := cache.GetGetReleaseVersionData(&differentModuleVersion)
+			version, tarFile, _ := cache.GetGetReleaseVersionData(&differentModuleVersion)
 			assert.Empty(t, version, "Version should be empty")
 			assert.Nil(t, tarFile, "TarFile should be nil")
 		})

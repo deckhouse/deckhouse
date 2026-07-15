@@ -44,6 +44,7 @@ type moduleData struct {
 type versionData struct {
 	releaseChannels map[string]struct{}
 	tarFile         []byte
+	telemetry       internal.ModuleTelemetry
 }
 
 type Cache struct {
@@ -89,19 +90,19 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 }
 
 // GetGetReleaseVersionData searches for cached version data by checksum across all release channels
-// Returns version, tarFile if found, empty values otherwise
-func (c *Cache) GetGetReleaseVersionData(version *internal.VersionData) (string, []byte) {
+// Returns version, tarFile and telemetry if found, empty values otherwise
+func (c *Cache) GetGetReleaseVersionData(version *internal.VersionData) (string, []byte, internal.ModuleTelemetry) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
 	r, ok := c.val[registryName(version.Registry)]
 	if !ok {
-		return "", nil
+		return "", nil, internal.ModuleTelemetry{}
 	}
 
 	m, ok := r[moduleName(version.ModuleName)]
 	if !ok {
-		return "", nil
+		return "", nil, internal.ModuleTelemetry{}
 	}
 
 	// Search across all release channels for matching checksum
@@ -111,13 +112,13 @@ func (c *Cache) GetGetReleaseVersionData(version *internal.VersionData) (string,
 			for ver, verData := range m.versions {
 				// Check if this version contains the channel with matching checksum
 				if _, hasChannel := verData.releaseChannels[string(channelName)]; hasChannel {
-					return string(ver), verData.tarFile
+					return string(ver), verData.tarFile, verData.telemetry
 				}
 			}
 		}
 	}
 
-	return "", nil
+	return "", nil, internal.ModuleTelemetry{}
 }
 
 // SyncWithRegistryVersions compares cache with registry versions and returns
@@ -322,6 +323,7 @@ func RemapFromVersionData(input []internal.VersionData) map[registryName]map[mod
 			moduleData.versions[version] = versionData{
 				releaseChannels: make(map[string]struct{}),
 				tarFile:         ver.TarFile,
+				telemetry:       ver.Telemetry,
 			}
 		}
 
