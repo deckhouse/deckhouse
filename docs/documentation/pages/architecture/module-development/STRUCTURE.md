@@ -361,7 +361,7 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](../../installing/#advanced-scheduling).</code>
+      [automatically](../../../admin/configuration/#advanced-scheduling).</code>
 ```
 
 An example of the `/openapi/doc-ru-config-values.yaml` file:
@@ -580,7 +580,7 @@ Parameters that can be used in `module.yaml`:
   - `deckhouse` — *String.* Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with.
   - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
   - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
-- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
+- `stage` — *String.* [Module lifecycle stage](../versioning/#definition-of-module-stability). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
 If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [`allowExperimentalModules`](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
 - `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../../reference/api/global.html#parameters-modules) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
@@ -655,6 +655,7 @@ Parameter description:
   - `Minimal`: Minimal set that includes only the current module.
     > Note that basic modules (such as the CNI module) are not included in this set.
     > Without basic modules, Deckhouse can only operate in an already deployed cluster.
+    > For the list of modules that must be enabled manually during installation, see [Things to keep in mind when working with the Minimal module set](../../../admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
 - Sections containing edition names. Define module behavior in specified editions.
   Possible values: `be`, `ce`, `ee`, `se`, `se-plus`.
 

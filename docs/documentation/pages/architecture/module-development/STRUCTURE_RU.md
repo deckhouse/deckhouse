@@ -358,7 +358,7 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](../../installing/#advanced-scheduling).</code>
+      [automatically](../../../admin/configuration/#выделение-узлов-под-определенный-вид-нагрузки).</code>
 ```
 
 Пример файла `/openapi/doc-ru-config-values.yaml` для русскоязычного перевода схемы:
@@ -577,7 +577,7 @@ dependencies:
   - `deckhouse` — *Строка.* Зависимость от [версии Deckhouse Kubernetes Platform](../dependencies/#зависимость-от-версии-deckhouse-kubernetes-platform).
   - `kubernetes` — *Строка.* Зависимость от [версии Kubernetes](../dependencies/#зависимость-от-версии-kubernetes).
   - `modules` — *Объект.* Зависимость от [версий других модулей](../dependencies/#зависимость-от-версии-других-модулей).
-- `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
+- `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#определение-стабильности-модуля). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
 Если `stage` установлен в `Experimental`, модуль нельзя включить по умолчанию. Чтобы разрешить использовать такие модули установите [параметр `allowExperimentalModules`](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) в `true`.
 - `tags` — *Массив строк.* Дополнительные теги модуля. Теги преобразуются в лейблы объекта [Module](../../../reference/api/global.html#parameters-modules) по шаблону `module.deckhouse.io/<TAG>=""`.
 
@@ -652,6 +652,7 @@ accessibility:
   - `Minimal` — минимальный набор, включающий только текущий модуль.
     > Обратите внимание, что в этот набор не входят базовые модули (например, модуль работы с CNI).
     > Без включения базовых модулей Deckhouse может работать только в уже развернутом кластере.
+    > Список модулей, которые нужно включить вручную при установке, приведён в разделе [Особенности работы с набором модулей Minimal](../../../admin/configuration/#особенности-работы-с-набором-модулей-minimal).
 - Блоки с названиями редакций. Позволяют задать поведение модуля в указанных редакциях.
   Возможные значения: `be`, `ce`, `ee`, `se`, `se-plus`.
 
