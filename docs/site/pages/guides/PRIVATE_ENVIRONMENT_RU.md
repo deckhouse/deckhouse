@@ -1173,30 +1173,26 @@ Status: Downloaded newer image for ubuntu/squid:latest
   Здесь указываются следующие параметры:
   * адреса HTTP и HTTPS прокси-сервера;
   * список доменов и IP-адресов, которые **не будут проксироваться** через прокси-сервер (внутренние доменные имена и внутренние IP-адреса всех серверов).
-  
-* В секции `InitConfiguration` добавьте параметры доступа к registry:
 
-  ```yaml
-  deckhouse:
-    # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
-    imagesRepo: harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>
-    # Строка с ключом для доступа к Docker registry в формате Base64.
-    registryDockerCfg: <DOCKER_CFG_BASE64>
-    # Протокол доступа к registry (HTTP или HTTPS).
-    registryScheme: HTTPS
-    # Корневой сертификат, созданный ранее.
-    # Получить его можно командой: `cat harbor/certs/ca.crt`.
-    registryCA: |
-      -----BEGIN CERTIFICATE-----
-      ...
-      -----END CERTIFICATE-----
-  ```
+* В ModuleConfig `deckhouse`:
+  * измените значение параметра [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
+  * в секции `spec.settings.registry` укажите параметры доступа к приватному хранилищу образов контейнеров (в нашем случае Harbor):
+    ```yaml
+    # Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Адрес хранилища образов контейнеров с образами Deckhouse.
+        imagesRepo: <IMAGES_REPO_URI>
+        # Имя пользователя для аутентификации в хранилище образов контейнеров.
+        username: <REGISTRY_USERNAME>
+        # Пароль для аутентификации в хранилище образов контейнеров.
+        password: <REGISTRY_PASSWORD>
+        scheme: HTTPS
+        # Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
+        ca: <REGISTRY_CA>
+    ```
 
-  Здесь `<DOCKER_CFG_BASE64>` — строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
-
-  Например, для доступа к container registry `harbor.example` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (строка `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}` в Base64).
-
-* В параметре [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) ModuleConfig `deckhouse` измените на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
 * В ModuleConfig [global](../documentation/v1/reference/api/global.html) укажите использование самоподписанных сертификатов для компонентов кластера и укажите шаблон доменного имени для системных приложений в параметре `publicDomainTemplate`:
 
   ```yaml
