@@ -162,7 +162,7 @@ func (c *Controller) writeCertSecret(ctx context.Context, crtPEM, keyPEM []byte)
 	return nil
 }
 
-func generateCSR(commonName string, organizations []string) (csrPEM, keyPEM []byte, err error) {
+func generateCSR(commonName string, organizations []string) ([]byte, []byte, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
@@ -175,13 +175,13 @@ func generateCSR(commonName string, organizations []string) (csrPEM, keyPEM []by
 	if err != nil {
 		return nil, nil, err
 	}
-	csrPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der})
+	csrPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der})
 
 	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
 		return nil, nil, err
 	}
-	keyPEM = pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER})
 
 	return csrPEM, keyPEM, nil
 }

@@ -60,7 +60,7 @@ type deckhouseVersionInfo struct {
 	Edition string `json:"edition"`
 }
 
-func (s *Service) readDeckhouseInfo(ctx context.Context) (channel, version, edition string) {
+func (s *Service) readDeckhouseInfo(ctx context.Context) (string, string, string) {
 	cm := &corev1.ConfigMap{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: versionInfoCMNS, Name: versionInfoCMName}, cm); err != nil {
 		return "", "", ""

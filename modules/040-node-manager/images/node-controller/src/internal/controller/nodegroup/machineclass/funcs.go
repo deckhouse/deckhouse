@@ -43,8 +43,8 @@ func FuncMap() template.FuncMap {
 		"fromJson":      fromJSON,
 		"fromJsonArray": fromJSONArray,
 
-		"include":  func(string, any) string { return "not implemented" },
-		"tpl":      func(string, any) any { return "not implemented" },
+		"include": func(string, any) string { return "not implemented" },
+		"tpl":     func(string, any) any { return "not implemented" },
 		// required mirrors helm: passes the value through, erroring only when
 		// absent. Templates pipe cloudProvider values through it then read fields.
 		"required": func(warn string, val any) (any, error) {
