@@ -10,7 +10,7 @@
       <label class="label" for="internalnetworkcidrs" title="internalNetworkCIDRs">
         {% if page.lang == 'ru' %}Подсеть узлов{% else %}Node subnet{% endif %} (<code>internalNetworkCIDRs</code>) <span style="color: red;">*</span>
       </label>
-      <input class="textfield" type="text" id="internalnetworkcidrs" name="internalnetworkcidrs" autocomplete="off" />
+      <input class="textfield" type="text" id="internalnetworkcidrs" name="internalnetworkcidrs" placeholder="10.10.0.0/16" autocomplete="off" />
       <span class="info">{% if page.lang == 'ru' %}Подсеть, в которой находятся узлы вашего будущего кластера. Например, <code>10.10.0.0/16</code>.{% else %}Subnet where your future cluster nodes will be located. For example, <code>10.10.0.0/16</code>.{% endif %}</span>
       <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR (например, <code>10.10.0.0/16</code>).{% else %}Enter a subnet in CIDR notation (e.g. <code>10.10.0.0/16</code>).{% endif %}</span>
       <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
