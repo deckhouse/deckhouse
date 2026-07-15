@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
@@ -41,13 +42,15 @@ const (
 )
 
 // App represents an application instance as received from the Application controller.
-// It carries the user-specified package identity, version constraints, and settings.
+// It carries the user-specified package identity, version constraints, settings, and
+// maintenance mode.
 type App struct {
 	Name            string
 	Namespace       string
 	Definition      apps.Definition
 	Settings        addonutils.Values
 	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
+	Maintenance     string
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -77,11 +80,11 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	version := app.Definition.Version
 	packageName := app.Definition.Name
 
-	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion) {
+	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion, app.Maintenance) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings)
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
@@ -164,6 +167,9 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 
 	name := apps.BuildName(namespace, instance)
 	r.scheduler.RemoveNode(name)
+
+	// A removed application no longer reconciles anything, so drop its maintenance gauge.
+	r.setMaintenanceMetric(name, nelm.Managed)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {

@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
@@ -75,6 +76,10 @@ type Module struct {
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
+
+	// maintenance is the package maintenance mode, set by the Configure task and
+	// read by the Run/nelm layer. Empty (Managed) means reconcile normally.
+	maintenance nelm.MaintenanceState
 
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -361,6 +366,18 @@ func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) 
 // config-schema defaults. Same payload exposed to templates as .Module.Settings.
 func (m *Module) GetSettings() addonutils.Values {
 	return m.values.GetSettings()
+}
+
+// SetMaintenance records the module maintenance mode. Modules do not expose the
+// mode through a CR, so it stays Managed in practice.
+func (m *Module) SetMaintenance(state nelm.MaintenanceState) {
+	m.maintenance = state
+}
+
+// GetMaintenance returns the module maintenance mode. Empty (Managed) means the
+// module reconciles normally.
+func (m *Module) GetMaintenance() nelm.MaintenanceState {
+	return m.maintenance
 }
 
 // GetConstraints returns scheduler checks, their determine if an module should be enabled/disabled

@@ -46,6 +46,12 @@ const (
 
 	// ReleaseLabelPackageChecksum stores the rendered-manifests checksum on the release storage secret.
 	ReleaseLabelPackageChecksum = "packageChecksum"
+
+	// ReleaseLabelMaintenance marks a release whose resources must not be reconciled.
+	// The value is "true" while the package is under maintenance, "false" otherwise.
+	// It doubles as a resource label key (with an empty value) so the deckhouse
+	// admission policy stops guarding those resources against manual edits.
+	ReleaseLabelMaintenance = "maintenance.deckhouse.io/no-resource-reconciliation"
 )
 
 var (
@@ -244,6 +250,31 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 	if res.Release != nil {
 		if checksum, ok := res.Release.StorageLabels[ReleaseLabelPackageChecksum]; ok {
 			return checksum, nil
+		}
+	}
+
+	return "", ErrLabelNotFound
+}
+
+// GetReleaseLabel returns the value of a storage label on the latest release.
+// Returns ErrReleaseNotFound (wrapped) if the release doesn't exist and
+// ErrLabelNotFound if the label is absent.
+func (c *Client) GetReleaseLabel(ctx context.Context, namespace, releaseName, key string) (string, error) {
+	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "GetReleaseLabel")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("release", releaseName))
+	span.SetAttributes(attribute.String("namespace", namespace))
+
+	res, err := c.getRelease(ctx, namespace, releaseName)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", fmt.Errorf("get nelm release '%s': %w", releaseName, err)
+	}
+
+	if res.Release != nil {
+		if value, ok := res.Release.StorageLabels[key]; ok {
+			return value, nil
 		}
 	}
 
