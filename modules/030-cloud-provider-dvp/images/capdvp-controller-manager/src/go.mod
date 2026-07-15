@@ -15,7 +15,7 @@ require (
 	k8s.io/api v0.33.3
 	k8s.io/apimachinery v0.33.3
 	k8s.io/client-go v0.33.3
-	k8s.io/cloud-provider v0.32.1
+	k8s.io/cloud-provider v0.33.3
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	sigs.k8s.io/cluster-api v1.11.2
 	sigs.k8s.io/controller-runtime v0.21.0
