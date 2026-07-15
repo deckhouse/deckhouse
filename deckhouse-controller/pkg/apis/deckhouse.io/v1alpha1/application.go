@@ -114,7 +114,7 @@ type ApplicationSpec struct {
 	//   - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
 	//   - Resource monitoring is disabled, which prevents deleted resources from being restored.
 	//   - All the application's resources are labeled with `maintenance.deckhouse.io/no-resource-reconciliation`.
-	//   - The `ApplicationIsInMaintenanceMode` alert is triggered.
+	//   - The [`ApplicationIsInMaintenanceMode`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationisinmaintenancemode) alert is triggered.
 	// +kubebuilder:validation:Enum=NoResourceReconciliation
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=NoResourceReconciliation
