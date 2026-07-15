@@ -986,6 +986,7 @@ function wait_alerts_resolve() {
   "D8SignatureErrorsDetected" # by default signatures not enabled for etcd keys
   "CertmanagerCertificateChallengeStuck" # This is normal for e2e tests
   "D8NodeLocalDNSKubeforwardRequestLatencyP95High" # Doesn't work with closed clusters
+  "D8CloudProviderDVPMigrationPending" # Ignore migration DVP
   )
 
   # Alerts

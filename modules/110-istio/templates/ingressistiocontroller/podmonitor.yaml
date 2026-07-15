@@ -1,17 +1,19 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
-  {{- if $.Values.istio.internal.applicationNamespacesToMonitor }}
+{{- if .Values.istio.internal.ingressControllers }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: istio-sidecars
+  name: istio-ingress-gateway-controller
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "istio-sidecar")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict
+      "app" "ingress-gateway-controller"
+      "prometheus" "main"
+  )) | nindent 2 }}
 spec:
   jobLabel: app
   podMetricsEndpoints:
-  - scheme: http
-    path: /stats/prometheus
+  - path: /stats/prometheus
     relabelings:
     - action: keep
       regex: istio-proxy
@@ -23,10 +25,8 @@ spec:
       sourceLabels:
       - __address__
       targetLabel: __address__
-    - action: labeldrop
-      regex: endpoint
     - action: replace
-      replacement: istio-sidecars
+      replacement: istio-ingress-gateway-controller
       targetLabel: job
     - action: replace
       replacement: cluster
@@ -34,7 +34,7 @@ spec:
     - action: keep
       regex: "true"
       sourceLabels:
-        - __meta_kubernetes_pod_ready
+      - __meta_kubernetes_pod_ready
     - action: replace
       sourceLabels:
       - __meta_kubernetes_pod_name
@@ -43,12 +43,15 @@ spec:
       sourceLabels:
       - __meta_kubernetes_namespace
       targetLabel: namespace
+    scheme: http
   selector:
     matchExpressions:
-    - key: service.istio.io/canonical-name
-      operator: Exists
+    - key: app
+      operator: In
+      values:
+      - ingress-gateway-controller
   namespaceSelector:
     matchNames:
-    {{- $.Values.istio.internal.applicationNamespacesToMonitor | toYaml | nindent 4 }}
-  {{- end }}
+    - d8-ingress-{{ .Chart.Name }}
+{{- end }}
 {{- end }}
