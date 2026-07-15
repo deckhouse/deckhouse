@@ -43,9 +43,11 @@ shell:
   - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
   - rm -rf /src/deckhouse-cli/.git
 ---
+# Build the bundled d8 CLI on the distroless builder/golang (Go 1.26) to pick up an
+# up-to-date Go standard library and fix the Go stdlib CVEs in the web image.
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/golang-bookworm" }}
+from: {{ index $.Images "builder/golang" }}
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
     add: /app/dist
@@ -72,19 +74,11 @@ secrets:
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   beforeInstall:
-    {{- include "debian packages proxy" . | nindent 4 }}
-    - |
-      apt-get update && apt-get install -y \
-      libbtrfs-dev \
-      apt-utils \
-      libbtrfs-dev \
-      libelf-dev \
-      libssl-dev \
-      libuv1-dev \
-      libzstd-dev \
-      file git gcc dnsutils jq
-    - ln -fs "$(dpkg -L libuv1-dev | grep -F '/libuv_a.a')" /usr/local/lib/libuv.a
-    - find /var/lib/apt/ /var/cache/apt/ -type f -delete
+    # btrfs-progs-devel provides the btrfs headers (ioctl.h, ctree.h, version.h) that the
+    # containers/storage btrfs graphdriver includes when d8 is built with CGO.
+    - pm install git ssh-static make coreutils findutils file jq pkgconf gnu-glibc-devel elfutils-devel openssl-devel libuv-devel zstd-devel btrfs-progs-devel
+    - mkdir -p /usr/local/lib
+    - ln -fs "$(find /usr/lib /usr/lib64 /usr/lib/x86_64-linux-gnu -name 'libuv*.a' 2>/dev/null | head -n1)" /usr/local/lib/libuv.a
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
