@@ -67,9 +67,36 @@ func version() string {
 func propagateKubeconfigEnv(cfg *app.Config) {
 	if cfg.Kube.Config != "" {
 		os.Setenv("KUBECONFIG", cfg.Kube.Config)
+		materializeDefaultKubeconfig(cfg.Kube.Config)
 	}
 	if cfg.Kube.Context != "" {
 		os.Setenv("HELM_KUBECONTEXT", cfg.Kube.Context)
+	}
+}
+
+// materializeDefaultKubeconfig symlinks $HOME/.kube/config to the configured
+// kubeconfig. The nelm action API (helm backend when USE_NELM=true) does not
+// read $KUBECONFIG: with no explicit paths it defaults to $HOME/.kube/config,
+// so without this link nelm falls back to localhost:8080 when running outside
+// the managed cluster. An already existing $HOME/.kube/config is left as is.
+func materializeDefaultKubeconfig(kubeconfigPath string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cannot resolve home dir to link kubeconfig for nelm: %v\n", err)
+		return
+	}
+
+	target := filepath.Join(home, ".kube", "config")
+	if _, err := os.Lstat(target); err == nil {
+		return
+	}
+
+	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot create %s to link kubeconfig for nelm: %v\n", filepath.Dir(target), err)
+		return
+	}
+	if err := os.Symlink(kubeconfigPath, target); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot link kubeconfig for nelm at %s: %v\n", target, err)
 	}
 }
 

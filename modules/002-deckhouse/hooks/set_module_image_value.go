@@ -65,8 +65,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 	const (
-		deckhouseImagePath = "deckhouse.internal.currentReleaseImageName"
-		deckhouseBasePath  = "global.modulesImages.registry.base"
+		deckhouseImagePath      = "deckhouse.internal.currentReleaseImageName"
+		deckhouseBasePath       = "global.modulesImages.registry.base"
+		deckhouseSelfHostedPath = "deckhouse.internal.selfHosted"
 	)
 
 	deckhouseImages, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "deckhouse")
@@ -89,6 +90,7 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 		}
 		base := input.Values.Get(deckhouseBasePath).String()
 		desired = fmt.Sprintf("%s:%s", base, tag)
+		input.Values.Set(deckhouseSelfHostedPath, true)
 	case 0:
 		// Deckhouse is not self-hosted in this cluster (e.g. it runs in a
 		// parent cluster and manages this one via a kubeconfig): there is no
@@ -96,6 +98,7 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 		// TODO(vcp): temporary hardcode; decide on the real image source for
 		// the not-self-hosted mode.
 		desired = notSelfHostedDeckhouseImage
+		input.Values.Set(deckhouseSelfHostedPath, false)
 		input.Logger.Info("deckhouse Deployment not found, using the hardcoded image", slog.String("image", desired))
 	default:
 		return fmt.Errorf("deckhouse was not able to find an image of itself")
