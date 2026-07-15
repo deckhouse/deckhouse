@@ -11,10 +11,10 @@ Not all module folders and files are required. In short, you can use the followi
 - Create a [module.yaml](#moduleyaml) file to describe the module metadata.
 - In the [templates](#templates) folder, place the Helm templates that will be used in the cluster.
 
-If you want the objects created by the module to change their behavior depending on any module parameters, define the necessary parameters [in the specification](#config-valuesyaml) and use them in the templates.
+  If you want the objects created by the module to change their behavior depending on any module parameters, define the necessary parameters [in the specification](#config-valuesyaml) and use them in the templates.
 - In the [images](#images) folder, place instructions for building container images used by the module.
 
-If the templates only use addresses of *external* images, you don`t need to create a folder.
+  If the templates only use addresses of *external* images, you don't need to create a folder.
 - If the module should respond to events or interact with the Kubernetes API, you need to create hooks that should be placed in the [hooks](#hooks) folder.
 - Place the module documentation in the [docs](#docs) folder. If the module documentation is missing, the module will not appear in the list of modules in the documentation web interface in the cluster.
 - If the module has auxiliary Helm charts, place them in the [charts](#charts) folder.
@@ -115,7 +115,7 @@ Deckhouse Kubernetes Platform (DKP) has its own library for working with templat
 
 This directory contains [*CustomResourceDefinitions*](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) used by the module components. CRDs are updated every time the module is started, if there are updates.
 
-Subfolders in the `/crds` folder are ignored.
+Nested directories in the `/crds` folder are ignored.
 
 To render CRDs from the `/crds` directory in the site documentation or documentation module in the cluster, follow these steps:
 * create a translation file with a structure identical to the original resource file:
@@ -129,8 +129,7 @@ To render CRDs from the `/crds` directory in the site documentation or documenta
 The module [lifecycle](../versioning/#module-lifecycle) is specified in [module.yaml](#moduleyaml). The availability of the module in the editions of the Deckhouse Kubernetes Platform is not determined by the module developer.
 {% endalert %}
 
-The `/docs` directory contains the module documentation.
-The following subfolders aren't involved in the documentation building process:
+The `/docs` directory contains the module documentation. The following nested directories aren't involved in the documentation building process:
 
 - `internal`
 - `internals`
@@ -145,7 +144,7 @@ The following files are required for building the documentation:
   - `title` — **(recommended)** The title of the module description page, for example, "Deckhouse web admin console". It is also used in navigation if `linkTitle` parameter is not specified.
   - `menuTitle` — **(recommended)** The name of the module to show in the menu on the left sidebar of the page, e.g., "Deckhouse Admin". If not set, the name of the directory or repository is used, e.g. `deckhouse-admin`.
   - `linkTitle` — **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.
-  - `description` — **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title'. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "The module allows you to fully manage your Kubernetes cluster through a web interface with only mouse skills."
+  - `description` — **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title`. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "The module allows you to fully manage your Kubernetes cluster through a web interface with only mouse skills."
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
@@ -167,7 +166,7 @@ The following files aren't required but have a [predetermined name](https://gith
   
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` – **(recommended)** The title of the page, e.g., `Examples`. It is also used in navigation if there is no `linkTitle`.
-  - `description` – **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title'. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "Examples of storing secrets in a neural network and automatically substituting them into thoughts when communicating."
+  - `description` – **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title`. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "Examples of storing secrets in a neural network and automatically substituting them into thoughts when communicating."
   - `linkTitle` – **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.  
 
   <div markdown="0">
@@ -255,7 +254,7 @@ The following files aren't required but have a [predetermined name](https://gith
   
 All images, PDF files and other media files should be stored in the `/docs` directory or its subdirectories (e.g, `/docs/images/`). All links to files should be relative.
 
-You need a file with the appropriate suffix for each language, e.g. `image1.jpg` and `image1.ru.jpg`. Here's how you can include images in your document:
+You need a file with the appropriate suffix for each language, for example `image1.jpg` and `image1.ru.jpg`. Use the following links:
 - `[image1](image1.jpg)` in an English-language document;
 - `[image1](image1.ru.jpg)` in a Russian-language document.
 
@@ -373,11 +372,11 @@ properties:
       English description. Markdown markup.</code>
 ```
 
-#### x-deckhouse-validations (CEL validations)
+#### Validations with x-deckhouse-validations
 
-When developing a module for the Deckhouse Kubernetes Platform, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using CEL (Common Expression Language).
+When developing a module for the Deckhouse Kubernetes Platform, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using Common Expression Language (`CEL`).
 
-When using CEL validations, keep the following features in mind:
+When using these validation rules, keep the following features in mind:
 
 - Validations can be placed at the root level or inside any property (including inside objects, arrays, and additionalProperties).
 - All parameters at the current level are available in expressions via the `self` variable.
@@ -386,9 +385,9 @@ When using CEL validations, keep the following features in mind:
 - Supported types: scalars, arrays, objects, and maps (`additionalProperties`).
 - If there are multiple validation errors, the user will see all messages from the corresponding rules.
 
-##### Examples of complex rules
+##### Examples of rules
 
-Below are examples of complex validation rules described in CEL:
+Below are examples of complex validation rules described in Common Expression Language (`CEL`):
 
 - Checking whether the parameter value falls within the range:
   
@@ -452,7 +451,7 @@ Below are examples of complex validation rules described in CEL:
 
 Validation of scalar values and arrays has the following features:
 
-- If the property is a scalar (e.g., number or string), then in the CEL expression `self` will be that value.
+- If the property is a scalar (e.g., number or string), then in the `CEL` expression the `self` variable will be that value.
 - If the property is an array, then `self` will be an array, and you can use methods like `.size()`, `.all()`, `.exists()`, etc.
 
 Example for an array:
@@ -508,11 +507,11 @@ properties:
 
 The `/templates` directory contains [Helm templates](https://helm.sh/docs/chart_template_guide/getting_started/).
 
-* Use the path `.Values.<moduleName>` to access module settings in templates, and `.Values.global` for global settings. The module name is converted to *camelCase* notation.
+* Use the path `.Values.<moduleName>` to access module settings in templates, and `.Values.global` for global settings. The module name is converted to `camelCase` notation.
 
 * To facilitate working with templates, use [lib-helm](https://github.com/deckhouse/lib-helm), which is a set of extra functions that make it easier to work with global and module values.
 
-* Accesses to the registry from the ModuleSource resource are available at the `.Values.<moduleName>.registry.dockercfg` path.
+* Accesses to the registry from the ModuleSource resource are available at the `.Values.<moduleName>.registry` path.
 
 * To use these functions to pull image pools in controllers, create a secret and add it to the corresponding parameter: `"imagePullSecrets": [{"name":"registry-creds"}]`.
 
@@ -560,35 +559,46 @@ The file might not be present, but it is recommended to fill it in. Most of the 
 
 Parameters that can be used in `module.yaml`:
 
-- `namespace` — *String.* The namespace where the module components will be deployed.
-- `subsystems` — *Array of strings.* List of subsystems the module belongs to.
-- `accessibility` — *Object.* Module accessibility settings.
-  - `editions` — *Object.* Module operation settings in Deckhouse editions.
-    - `available` — *Boolean.* Defines whether the module is available in a Deckhouse edition.
-    - `enabledInBundles` — *Array of strings.* List of module bundles in which the module should be enabled by default.
-- `descriptions` — *Object.* Arbitrary text description of the module's purpose.
-  - `en` — *String.* Description in English.
-  - `ru` — *String.* Description in Russian.
-- `disable` — *Object.* Parameters related to the behavior when disabling a module.
-  - `confirmation` — *Boolean.* Requires confirmation when disabling the module.
-  - `message` — *String.* Message explaining what will happen when the module is disabled.
+| Parameter | Type | Description |
+|---|---|---|
+| `namespace` | String | Namespace where the module components will be deployed |
+| `subsystems` | Array of strings | List of subsystems the module belongs to |
+| `accessibility` | Object | Module accessibility settings |
+| `accessibility.editions` | Object | Module operation settings in Deckhouse editions |
+| `accessibility.editions.available` | Boolean | Defines whether the module is available in a Deckhouse edition |
+| `accessibility.editions.enabledInBundles` | Array of strings | List of module bundles in which the module should be enabled by default |
+| `descriptions` | Object | Arbitrary text description of the module's purpose |
+| `descriptions.en` | String | Description in English |
+| `descriptions.ru` | String | Description in Russian |
+| `disable` | Object | Parameters related to the behavior when disabling a module |
+| `disable.confirmation` | Boolean | Requires confirmation when disabling the module |
+| `disable.message` | String | Message explaining what will happen when the module is disabled |
 
-  If confirmation is required to disable a module (`confirmation` is set to `true`), then disabling the module is only possible if the corresponding ModuleConfig object has the annotation `modules.deckhouse.io/allow-disabling=true`. If this annotation is not present, Deckhouse will block the disabling attempt and display the warning message from the `message` field.
-- `name` — *String, mandatory parameter.* The name of the module in Kebab Case. For example, `echo-server`.
-- `exclusiveGroup` — *String.* If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions.
-- `requirements` — *Object.* [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
-  - `deckhouse` — *String.* Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with.
-  - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
-  - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
-- `stage` — *String.* [Module lifecycle stage](../versioning/#definition-of-module-stability). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
-If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [`allowExperimentalModules`](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
-- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../../reference/api/global.html#parameters-modules) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
+If confirmation is required to disable a module (`confirmation` is set to `true`), then disabling the module is only possible if the corresponding ModuleConfig object has the annotation `modules.deckhouse.io/allow-disabling=true`. If this annotation is not present, Deckhouse will block the disabling attempt and display the warning message from the `message` field.
 
-  For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will have the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
-- `weight` — *Number.* The weight of the module. Used to determine the startup order among modules — the lower the weight, the earlier the module will start. Default: 900.
+Other `module.yaml` parameters:
 
-  The startup order can also be influenced by the list of [module dependencies](../dependencies/).
-- `critical` — *Boolean.* Marks the module as critical for cluster bootstrapping. These modules (if used in the cluster) are started during the initial boot process, before the cluster is considered fully operational. Other modules (not critical) start only after the cluster is fully ready for operation. Default: `false`.
+| Parameter | Type | Description |
+|---|---|---|
+| `name` | String, mandatory parameter | Name of the module in Kebab Case. For example, `echo-server` |
+| `exclusiveGroup` | String | If several modules share the same value of this parameter, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions |
+| `requirements` | Object | [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module |
+| `requirements.deckhouse` | String | Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with |
+| `requirements.kubernetes` | String | Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with |
+| `requirements.modules` | Object | Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules) |
+| `stage` | String | [Module lifecycle stage](../versioning/#definition-of-module-stability). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated` |
+
+If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [corresponding parameter](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) to `true`.
+
+Additional parameters:
+
+- `tags` — *Array of strings.* Additional module tags. Tags are converted to labels of the [Module](../../../reference/api/global.html#parameters-modules) object using the template `module.deckhouse.io/<TAG>=""`.
+
+  For example, if you specify two tags `test` and `example`, the Module object will get the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/example=""`.
+- `weight` — *Number.* Module weight. Affects the module startup order: modules with a lower `weight` start earlier. Default: `900`.
+
+  The startup order is also affected by [module dependencies](../dependencies/).
+- `critical` — *Boolean.* Marks the module as critical for the initial cluster bootstrap. Such modules (if used in the cluster) start during the initial cluster boot, before the cluster is considered fully ready. Other modules (non-critical) start only after the cluster is fully ready. Default: `false`.
 
 Example of metadata description for the `hello-world` module:
 
@@ -608,15 +618,15 @@ accessibility:
       available: true
       enabledInBundles:
         - Default
-descriptions: 
+descriptions:
   en: "The module to say hello to the world."
   ru: "Модуль, который приветствует мир."
 requirements:
-    deckhouse: ">= 1.61"
-    kubernetes: ">= 1.27"
+  deckhouse: ">= 1.61"
+  kubernetes: ">= 1.27"
 disable:
   confirmation: true
-  message: "Disabling this module will delete all resources, created by the module."
+  message: "Disabling this module will delete all resources created by the module."
 ```
 
 ### Configuring module accessibility in DKP editions
@@ -655,7 +665,7 @@ Parameter description:
   - `Minimal`: Minimal set that includes only the current module.
     > Note that basic modules (such as the CNI module) are not included in this set.
     > Without basic modules, Deckhouse can only operate in an already deployed cluster.
-    > For the list of modules that must be enabled manually during installation, see [Things to keep in mind when working with the Minimal module set](../../../admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
+    > The list of modules that must be enabled manually during installation is given in [Things to keep in mind when working with the Minimal module set](../../../admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
 - Sections containing edition names. Define module behavior in specified editions.
   Possible values: `be`, `ce`, `ee`, `se`, `se-plus`.
 
