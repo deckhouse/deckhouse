@@ -13,7 +13,7 @@ require (
 	golang.org/x/sys v0.39.0
 	google.golang.org/grpc v1.79.3
 	k8s.io/apimachinery v0.33.3
-	k8s.io/cloud-provider v0.32.1
+	k8s.io/cloud-provider v0.33.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 )
