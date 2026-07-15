@@ -79,6 +79,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	pkiSecret *corev1.Secret,
 	adminSecret *corev1.Secret,
 	joinToken string,
+	albVIP string,
 ) (reconcile.Result, error) {
 	// 1. Parent: Exclusive kubeconfig for bashible-apiserver that provides access to the nested kube-apiserver.
 	if _, res, err := r.reconcileBashibleKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
@@ -123,7 +124,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	}
 
 	// 9. Parent: Service
-	service, res, err := r.reconcileBashibleService(ctx, vcp)
+	_, res, err = r.reconcileBashibleService(ctx, vcp)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -134,7 +135,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	}
 
 	// 11. Parent: APIService
-	if res, err := r.reconcileBashibleAPIService(ctx, nestedClient, service, tlsSecret); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleAPIService(ctx, nestedClient, tlsSecret, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -601,11 +602,11 @@ func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane
 func (r *reconciler) reconcileBashibleAPIService(
 	ctx context.Context,
 	nested client.Client,
-	bashibleService *corev1.Service,
 	tlsSecret *corev1.Secret,
+	albVIP string,
 ) (reconcile.Result, error) {
 	namespace := bashibleDeckhouseNamespace
-	bashibleAddress := bashibleService.Spec.ClusterIP
+	bashibleAddress := albVIP
 	if bashibleAddress == "" {
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}

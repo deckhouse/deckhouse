@@ -143,7 +143,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, apiserverService, pkiSecret, adminSecret, joinToken); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, apiserverService, pkiSecret, adminSecret, joinToken, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 
