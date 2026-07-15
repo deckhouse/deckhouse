@@ -39,7 +39,7 @@
       version: v1.34.1
     - condition:
         k8s: "1.35"
-      version: v1.34.1
+      version: v1.35.0
     - condition:
         k8s: "1.36"
       version: v1.36.0
