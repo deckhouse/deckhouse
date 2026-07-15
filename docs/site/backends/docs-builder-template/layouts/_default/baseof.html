@@ -7,16 +7,24 @@
   </head>
   <body>
     <div class="content">
-     {{- "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
-
-     {{- "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
+     {{- if eq site.Params.mode "module" -}}
+       {{- printf "<!--#include virtual=\"/%s/includes/header.html\" -->" $lang | safeHTML }}
+       {{- printf "<!--#include virtual=\"/%s/includes/banner.html\" -->" $lang | safeHTML }}
+     {{- else -}}
+       {{- "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
+       {{- "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
+     {{- end }}
      <div class="container">
        {{- block "main" . }}
        {{- end }}
      </div>
 
      </div>
-     {{- "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+     {{- if eq site.Params.mode "module" -}}
+       {{- printf "<!--#include virtual=\"/%s/includes/footer.html\" -->" $lang | safeHTML }}
+     {{- else -}}
+       {{- "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+     {{- end }}
 
   <script type="text/javascript">
     $(document).ready(function () {

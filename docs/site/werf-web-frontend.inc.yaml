@@ -16,9 +16,11 @@
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: v{{ div .Commit.Date.Unix (mul 60 60 24) }}
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
+  beforeInstall:
+  - pm install jq yq curl
   setup:
   - mkdir -p /data
   - echo "Getting data from the API server..."
@@ -31,30 +33,17 @@ shell:
     jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
   - |
     jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
-import:
-- from: {{ index $.Images "tools/curl" }}
-  add: /usr/bin/curl-static
-  to: /usr/bin/curl
-  before: setup
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
-- from: {{ index $.Images "tools/yq" }}
-  add: /usr/bin/yq
-  to: /usr/bin/yq
-  before: setup
 {{- end }}
 ---
 image: web-frontend-artifact
-from: {{ .Images.BASE_JEKYLL }}
+from: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
 final: false
 shell:
   install:
   - |
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
-        bundle --version
+        echo "Bundle: $(bundle --version)"
   setup:
   - |
         cd /srv/jekyll-data/site/
@@ -73,8 +62,6 @@ git:
 # Common files used for building site and documentation (plugins, assets, etc.), plus unversionized products documentation
 - add: /docs/documentation
   to: /srv/jekyll-data/site
-  owner: jekyll
-  group: jekyll
   includePaths:
   - _assets/js/search.js
   - _data/rbac/
@@ -96,8 +83,6 @@ git:
     setup: '**/*'
 - add: /docs/site
   to: /srv/jekyll-data/site
-  owner: jekyll
-  group: jekyll
   excludePaths:
   - '*.md'
   - werf*.yaml
@@ -111,22 +96,16 @@ git:
     setup: '**/*'
 - add: /global-hooks/openapi
   to: /rawdata/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*config-values.yaml','doc-ru-config-values.yaml']
 - add: /candi/openapi
   to: /rawdata/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
 - add: /deckhouse-controller/crds
   to: /rawdata/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
@@ -147,30 +126,27 @@ import:
     add: /data/copyright.json
     to: /srv/jekyll-data/site/_data/copyright.json
     before: setup
-{{- end }}
-{{- if and (ne $.Env "development") (ne $.Env "local") }}
 ---
 image: web-frontend-init
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
+shell:
+  beforeInstall:
+  - pm install jq yq
 git:
 - add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
   to: /scripts/channels-convert.sh
-import:
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
-- from: {{ index $.Images "tools/yq" }}
-  add: /usr/bin/yq
-  to: /usr/bin/yq
-  before: setup
 {{- end }}
+---
+image: nginx-artifact
+from: {{ index $.Images "builder/distroless" }}
+shell:
+  install: pm install nginx -d /out
 ---
 image: web-frontend
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
 from: {{ index $.Images "builder/alpine" }}
 {{- else }}
-from: {{ index $.Images "base/nginx" }}
+from: {{ index $.Images "base/scratch" }}
 imageSpec:
   config:
     workingDir: "/app"
@@ -215,4 +191,9 @@ import:
 ---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
+{{- else }}
+- image: nginx-artifact
+  add: /out
+  to: /
+  before: setup
 {{- end }}

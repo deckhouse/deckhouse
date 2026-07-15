@@ -22,7 +22,7 @@ configVersion: 1
 
 ---
 image: web-static
-from: {{ .Images.BASE_JEKYLL }}
+from: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
 final: false
 shell:
   install:
@@ -43,8 +43,6 @@ shell:
 git:
 - add: /docs/site
   to: /srv/jekyll-data/site
-  owner: jekyll
-  group: jekyll
   excludePaths:
   - '*.md'
   - werf*.yaml
