@@ -11,7 +11,7 @@ weight: 90
 CodeScoring is a Software Composition Analysis (SCA/OSA) tool for auditing third-party dependencies for vulnerabilities, license risks, and security policy violations.
 
 {% alert level="info" %}
-The CodeScoring integration in Deckhouse Code covers SCA/OSA scenarios: dependency analysis, vulnerability detection, SBOM generation, and policy enforcement.
+The CodeScoring integration in Deckhouse Code covers SCA/OSA scenarios: dependency analysis, vulnerability detection, SBOM generation, and platform-side triage.
 SAST and DAST are not part of this integration.
 {% endalert %}
 
@@ -20,8 +20,8 @@ SAST and DAST are not part of this integration.
 - Dependency analysis (packages, libraries, versions).
 - Vulnerability detection using CVE databases (including FSTEC BDU and Kaspersky OSS feed).
 - SBOM generation in CycloneDX format.
-- Security policy enforcement with blocking or warning CI behavior.
-- Native report output in GitLab Dependency Scanning and Code Quality formats for MR widget display.
+- Native GitLab reports produced in a single run: Dependency Scanning, Code Quality, JUnit, plus SARIF and a CycloneDX SBOM.
+- Triage and policies (severity thresholds, finding suppression) on the CodeScoring platform side.
 
 ## Prerequisites
 
@@ -29,106 +29,84 @@ Before configuring the integration, ensure that:
 
 - A CodeScoring server is deployed (on-prem or SaaS).
 - You have obtained an API token from your CodeScoring user profile.
-- The Johnny agent is available in the CI environment (Docker image or binary).
+- A GitLab Runner with a `docker` executor is available — the scan job runs inside a `debian:bookworm-slim` container.
 
 For server deployment details, refer to the official documentation: [docs.codescoring.ru](https://docs.codescoring.ru/on-premise/).
 
+{% alert level="info" %}
+You do **not** need to install the Johnny agent manually: the scan job downloads it from your CodeScoring server using the API token on every run.
+{% endalert %}
+
 ## Configuring the integration in a project
 
-CodeScoring connection parameters are configured in project settings.
+CodeScoring connection parameters are configured in project (or group) settings.
 
 1. Open the project in Deckhouse Code.
 2. Navigate to **Settings** → **Integrations**.
-3. Find the **CodeScoring** section and click **Configure**.
+3. Find the **CodeScoring** section and open it.
 4. Fill in the connection parameters:
 
 | Parameter | Description |
 |-----------|-------------|
+| **Active** | Toggle to enable the integration for this project |
 | **Server URL** | CodeScoring server address, e.g. `https://codescoring.example.com` |
-| **API token** | Token from your CodeScoring user profile |
-| **Project name** | Project name in CodeScoring (defaults to repository name) |
-| **Scan stage** | CI stage for result association: `build`, `dev`, `stage`, `test`, `prod` (default: `build`) |
-| **Enable integration** | Toggle to activate integration for this project |
+| **API token** | Token from your CodeScoring user profile (stored encrypted, masked) |
+| **CA certificate** | Optional PEM CA certificate — for a CodeScoring server with a self-signed certificate |
+| **Project name** | Project name in CodeScoring (defaults to the repository slug) |
+| **Scan stage** | Stage used to associate results on the platform side (default: `build`) |
 
 5. Click **Save**.
 
-## CI pipeline configuration
+The integration automatically injects the CI variables `FE_SCANS_CODESCORING_URL`, `FE_SCANS_CODESCORING_TOKEN`, `FE_SCANS_CODESCORING_CA_CERT`, `FE_SCANS_CODESCORING_PROJECT`, and `FE_SCANS_CODESCORING_SCAN_STAGE` — you do not set them manually in `.gitlab-ci.yml`.
 
-After configuring the integration, include the CodeScoring template in the project's `.gitlab-ci.yml`.
+## Running the scan (scan-execution policy)
 
-### Including the template
+The scanner is injected into the pipeline through a **scan-execution policy**, not a manual `include`.
 
-```yaml
-include:
-  - project: "deckhouse/code/gitlab-custom"
-    file: ".gitlab/ci/includes/codescoring.gitlab-ci.yml"
+1. In the security policy project, add the `codescoring` action to `policy.yml`:
 
-variables:
-  CODESCORING_ENABLED: "true"
-  CODESCORING_URL: $CODESCORING_URL         # set in CI/CD Variables
-  CODESCORING_TOKEN: $CODESCORING_TOKEN     # set as a masked variable
-  CODESCORING_PROJECT: $CI_PROJECT_NAME
-  CODESCORING_SCAN_STAGE: "build"
-  CODESCORING_POLICY_MODE: "blocking"       # or "warning"
-```
+   ```yaml
+   scan_execution_policy:
+   - name: CodeScoring on every pipeline
+     enabled: true
+     rules:
+     - type: pipeline
+       branches: ["*"]
+     actions:
+     - scan: codescoring
+   ```
 
-Set `CODESCORING_URL` and `CODESCORING_TOKEN` via **Settings → CI/CD → Variables**, marking the token as `Masked`.
+2. Link the policy project to the target project: **Settings** → **Security policy**.
 
-### Pipeline stages
+After that, every pipeline automatically gains a **`codescoring_scan`** job (stage `fe-security-scanner`) that:
 
-The integration adds the following stages:
+- downloads the Johnny agent from the CodeScoring server (by token; with the supplied CA certificate for self-signed servers);
+- scans the working directory and emits native GitLab reports.
 
-| Job | Stage | Description |
-|-----|-------|-------------|
-| `codescoring-sbom` | `.pre` | Generates CycloneDX SBOM. Artifact is passed to downstream jobs |
-| `codescoring-dependency-scan` | `security` | Dependency analysis, outputs GitLab Dependency Scanning Report |
-| `codescoring-code-quality-scan` | `security` | Code quality checks, outputs GitLab Code Quality Report |
-| `codescoring-build-scan` | `security` | Build artifact analysis (optional, requires `CODESCORING_BUILD_PATH`) |
+A manual `include` and manual `CODESCORING_*` variables are **not required** — the integration and the policy provide everything.
 
-Scan jobs run **in parallel** after SBOM generation, reducing overall scan time.
+## Reports and where to view results
 
-## SBOM pre-stage
+A single `codescoring_scan` job produces all reports in one run. Deckhouse Code is based on GitLab FOSS, where some EE widgets are absent, so results are surfaced as follows:
 
-Before scanning, a SBOM (Software Bill of Materials) is automatically generated in CycloneDX format:
+| Report | Where to view |
+|--------|---------------|
+| Tests (JUnit) | pipeline **Tests** tab (native) |
+| Code Quality | **Code Quality** widget in the Merge Request (native) |
+| Dependency Scanning | **CodeScoring** page: `/-/security/codescoring` |
+| SBOM (dependency composition) | **Dependency list** page: `/-/security/dependencies` |
+| Licenses | **License compliance** page: `/-/security/licenses` |
+| SARIF | uploaded as an artifact (no SAST widget in FOSS) |
 
-- SBOM captures the exact dependency composition at build time.
-- A single SBOM is reused by multiple scan jobs.
-- The artifact is available for reuse by other tools.
+{% alert level="info" %}
+The Dependency Scanning, Dependency list, and License compliance pages are a Deckhouse Code FE implementation: in upstream GitLab FOSS the corresponding widgets are EE-only. The pages are currently reached by direct URL (a sidebar menu entry is planned).
+{% endalert %}
 
-If a SBOM artifact already exists from a previous stage, regeneration is skipped.
+## Policies and blocking
 
-## Policy modes
+The `codescoring_scan` job is non-blocking: it always completes successfully and uploads reports (including on failed attempts, via `artifacts:when: always`) without failing the pipeline.
 
-### Blocking mode
-
-The pipeline fails on policy violation (exit code 1):
-
-```yaml
-variables:
-  CODESCORING_POLICY_MODE: "blocking"
-```
-
-Recommended for protected branches and release environments.
-
-### Warning mode
-
-Results are published as warnings without stopping the pipeline:
-
-```yaml
-variables:
-  CODESCORING_POLICY_MODE: "warning"
-```
-
-Recommended for pilot rollouts or feature branches.
-
-## Displaying results in Merge Requests
-
-After scanning, results appear in MR widgets:
-
-- **Security scanning** — detected vulnerabilities with CVE details, severity, and recommendations.
-- **Code Quality** — quality metric violations.
-
-Widgets appear automatically when `gl-dependency-scanning-report.json` and `gl-code-quality-report.json` artifacts are present.
+Policy configuration (40 criteria, severity thresholds, triage) and any blocking decision are handled on the CodeScoring platform side. Hard pipeline blocking on a policy violation is a separate scan-execution-policy setup and is not enabled in the current template.
 
 ## Vulnerability triage
 
@@ -140,14 +118,17 @@ Detected vulnerabilities can be triaged directly in the CodeScoring interface:
 
 Temporary suppression of findings is available by project, technology, package, license, or CVE.
 
+{% alert level="warning" %}
+Currently the CodeScoring agent does not populate `severity` in the Dependency Scanning Report (only in Code Quality), so severity may appear as `unknown` on the CodeScoring page.
+{% endalert %}
+
 ## CodeScoring server deployment
 
-For self-hosted installation, refer to:
+For a self-hosted installation, use the vendor's official documentation:
 
-- [Docker Compose](deployment-docker.html) — single-server deployment.
-- [Kubernetes/Helm](https://docs.codescoring.ru/on-premise/kubernetes/) — production environment.
-
-For system requirements, see [docs.codescoring.ru/on-premise/requirements/](https://docs.codescoring.ru/on-premise/requirements/).
+- [Docker installation](https://docs.codescoring.ru/on-premise/docker/).
+- [Kubernetes/Helm installation](https://docs.codescoring.ru/on-premise/kubernetes/).
+- [System requirements](https://docs.codescoring.ru/on-premise/requirements/).
 
 ## Troubleshooting
 
@@ -155,21 +136,17 @@ For system requirements, see [docs.codescoring.ru/on-premise/requirements/](http
 
 Check:
 
-- `CODESCORING_ENABLED` is set to `"true"`.
-- `CODESCORING_URL` and `CODESCORING_TOKEN` are set and accessible to the runner.
-- The template is included in `.gitlab-ci.yml`.
+- The **CodeScoring** integration is active in project settings (URL and token are set).
+- The policy project is linked to the project and contains `- scan: codescoring`.
+- A `codescoring_scan` job is present in the pipeline and a Runner with a `docker` executor is available.
 
-### Pipeline blocked on policy violation
-
-This is expected behavior in `blocking` mode. To temporarily disable blocking:
-
-- Switch to `CODESCORING_POLICY_MODE: "warning"`, or
-- Resolve the violation through triage in the CodeScoring interface.
-
-### Security widgets not displayed in MR
+### Results do not appear on the CodeScoring / Dependency list / License compliance pages
 
 Check:
 
-- `gl-dependency-scanning-report.json` and `gl-code-quality-report.json` artifacts are created.
-- The `artifacts.reports` section in the job configuration is correct.
-- The job completed (artifacts are collected even on failure with `when: always`).
+- The `codescoring_scan` job completed and uploaded the `gl-dependency-scanning-report.json` and `gl-sbom.cdx.json` artifacts (collected with `when: always`).
+- You are viewing the default branch page (the pages read the latest pipeline's report).
+
+### The Code Quality widget is not displayed in the Merge Request
+
+Verify that the job produced `gl-code-quality-report.json` and that it is declared under `artifacts:reports:codequality`.
