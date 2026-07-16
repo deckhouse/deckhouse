@@ -60,6 +60,13 @@ istio:
       conversions:
         - if has("enableHTTP10") then .dataPlane.enableHTTP10 = .enableHTTP10 | del(.enableHTTP10) else . end
         - if has("proxyConfig") then .dataPlane.proxyConfig = .proxyConfig | del(.proxyConfig) else . end
+log-shipper:
+    - version: 2
+      description:
+        en: Move `.settings.resourcesRequests.static.cpu` and `.settings.resourcesRequests.static.memory` to `.settings.resourcesRequests.static.requests`.
+        ru: Перенесите `.settings.resourcesRequests.static.cpu` и `.settings.resourcesRequests.static.memory` в `.settings.resourcesRequests.static.requests`.
+      conversions:
+        - 'if (.resourcesRequests.static | type) == "object" and ((.resourcesRequests.static | has("cpu")) or (.resourcesRequests.static | has("memory"))) then .resourcesRequests.static = {requests: .resourcesRequests.static} else . end'
 metallb:
     - version: 2
       description:

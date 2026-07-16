@@ -31,8 +31,12 @@ positive:
     - resourcesRequests:
         mode: "Static"
         static:
-          memory: 1.5Gi
-          cpu: 0.2
+          requests:
+            memory: 1.5Gi
+            cpu: 0.2
+          limits:
+            memory: 2Gi
+            cpu: 2
   values:
     - internal: {}
 negative:

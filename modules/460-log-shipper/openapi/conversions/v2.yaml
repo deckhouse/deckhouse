@@ -1,0 +1,6 @@
+version: 2
+conversions:
+  - 'if (.resourcesRequests.static | type) == "object" and ((.resourcesRequests.static | has("cpu")) or (.resourcesRequests.static | has("memory"))) then .resourcesRequests.static = {requests: .resourcesRequests.static} else . end'
+description:
+  ru: "Перенесите `.settings.resourcesRequests.static.cpu` и `.settings.resourcesRequests.static.memory` в `.settings.resourcesRequests.static.requests`."
+  en: "Move `.settings.resourcesRequests.static.cpu` and `.settings.resourcesRequests.static.memory` to `.settings.resourcesRequests.static.requests`."
