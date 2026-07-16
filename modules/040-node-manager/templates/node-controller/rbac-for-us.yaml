@@ -354,6 +354,9 @@ rules:
   - signers
   resourceNames:
   - kubernetes.io/kube-apiserver-client
+  # kubelet-serving: auto-approve kubelet serving-cert CSRs (kubeletcsrapprover
+  # controller, taken over from the kubelet_csr_approver hook).
+  - kubernetes.io/kubelet-serving
   verbs:
   - approve
 ---

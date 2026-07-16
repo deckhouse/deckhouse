@@ -509,6 +509,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 |-----------------|---------|---------------|--------|
 | `node-csi-taint` | `Node` (+watch `CSINode`) | `remove_csi_taints.go` | Remove `node.deckhouse.io/csi-not-bootstrapped` taint once `CSINode.spec.drivers` is non-empty |
 | `node-spot-termination` | `Node` | `handle_spot_instance_deletion.go` | Delete the `Instance` of a drained spot node marked `termination-in-progress` |
+| `node-kubelet-csr-approver` | `CertificateSigningRequest` | `kubelet_csr_approver.go` | Auto-approve validated `kubernetes.io/kubelet-serving` CSRs |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -553,3 +554,32 @@ never removed (orphan risk on real spot reclamation). The controller deletes via
 typed `v1alpha2` client, targeting the served version through the scheme's RESTMapper.
 The migration is parity of the *intended* behavior plus a regression fix.
 RBAC: `nodes` get/list/watch, `deckhouse.io/instances` delete (version-agnostic).
+
+### node-kubelet-csr-approver (`internal/controller/kubeletcsrapprover`)
+
+When a kubelet rotates its serving certificate it submits a CSR signed by
+`kubernetes.io/kubelet-serving` that no built-in approver handles. The controller
+validates and approves it via the `approval` subresource.
+
+```
+CSR changed
+  ├─ status.certificate already set?          → issued, skip
+  ├─ already Approved or Denied?              → skip
+  ├─ request PEM does not parse?              → skip (do not approve)
+  ├─ signer == kubernetes.io/kubelet-serving? → validate (org system:nodes, CN
+  │     system:node: prefix, exact serving usages, IP|DNS SAN, no email/URI SAN,
+  │     username == CN); fails → skip
+  └─ approve (append Approved condition, message "autoapproved by Deckhouse")
+```
+
+**Parity note (approve-on-parse quirk):** the hook approved *any* CSR whose PEM
+parses; only `kubelet-serving` CSRs got the extra validation above. The hook ran
+under the `deckhouse` ServiceAccount (bound to `cluster-admin`), so it could
+approve every signer. The controller preserves this branch logic but runs under
+the scoped node-controller ServiceAccount, whose `signers` `approve` grant is
+limited to `kubernetes.io/kube-apiserver-client` (apiproxycert) and
+`kubernetes.io/kubelet-serving` — so in practice it approves a strictly narrower
+set than the hook, and RBAC blocks approval of any other signer.
+RBAC: `certificatesigningrequests` get/list/watch, `.../approval` update,
+`signers` `approve` on `kubernetes.io/kubelet-serving` (added) and
+`kubernetes.io/kube-apiserver-client` (pre-existing).
