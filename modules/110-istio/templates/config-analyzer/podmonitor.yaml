@@ -1,6 +1,6 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- range $version := .Values.istio.internal.versionsToInstall }}
-    {{- if eq $version "1.27" }}
+    {{- if or (eq $version "1.25") (eq $version "1.27") }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
     {{- $revision := get $versionInfo "revision" }}
     {{- $fullVersion := get $versionInfo "fullVersion" }}
