@@ -91,49 +91,54 @@ func (r *reconciler) reconcileBashibleApiserver(
 		return reconcile.Result{}, fmt.Errorf("build nested client: %w", err)
 	}
 
-	// 3. Nested: RBAC
+	// 3. Nested namespaces required by bashible (context + registry watchers).
+	if res, err := r.reconcileBashibleNestedNamespaces(ctx, nestedClient); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	// 4. Nested: RBAC
 	if res, err := r.reconcileBashibleRBAC(ctx, nestedClient); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 4. Nested: CRDs
+	// 5. Nested: CRDs
 	if res, err := r.reconcileBashibleCRDs(ctx, nestedClient); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 5. Nested: Context Secret
-	if res, err := r.reconcileBashibleContext(ctx, nestedClient, vcp, pkiSecret, joinToken, configSecret); err != nil || !res.IsZero() {
-		return res, err
-	}
-
-	// 6. Nested: Registry Secret
+	// 6. Nested: Registry Secret (must exist before context build — registrySynced gate).
 	if res, err := r.reconcileBashibleRegistrySecret(ctx, nestedClient); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 7. Parent: TLS
+	// 7. Nested: Context Secret
+	if res, err := r.reconcileBashibleContext(ctx, nestedClient, vcp, pkiSecret, joinToken, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	// 8. Parent: TLS
 	tlsSecret, res, err := r.reconcileBashibleTLSSecret(ctx, vcp, pkiSecret)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 8. Parent: Files ConfigMap
+	// 9. Parent: Files ConfigMap
 	if res, err := r.reconcileBashibleFilesConfigMap(ctx, vcp); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 9. Parent: Service
+	// 10. Parent: Service
 	parentService, res, err := r.reconcileBashibleService(ctx, vcp)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 10. Parent: Deployment
+	// 11. Parent: Deployment
 	if res, err := r.reconcileBashibleDeployment(ctx, vcp); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 11. Parent: APIService
+	// 12. Nested: APIService
 	if res, err := r.reconcileBashibleAPIService(ctx, nestedClient, parentService, tlsSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -236,6 +241,34 @@ func (r *reconciler) reconcileBashibleCRDs(ctx context.Context, nestedClient cli
 	return reconcile.Result{}, nil
 }
 
+func (r *reconciler) reconcileBashibleNestedNamespaces(
+	ctx context.Context,
+	nestedClient client.Client,
+) (reconcile.Result, error) {
+	for _, name := range []string{bashibleDeckhouseNamespace, bashibleRegistrySecretNS} {
+		ns := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				Labels: map[string]string{
+					constants.HeritageLabelKey: constants.HeritageLabelValue,
+				},
+			},
+		}
+		current := &corev1.Namespace{}
+		err := nestedClient.Get(ctx, client.ObjectKey{Name: name}, current)
+		if apierrors.IsNotFound(err) {
+			if err := nestedClient.Create(ctx, ns); err != nil && !apierrors.IsAlreadyExists(err) {
+				return reconcile.Result{}, fmt.Errorf("create nested namespace %s: %w", name, err)
+			}
+			continue
+		}
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("get nested namespace %s: %w", name, err)
+		}
+	}
+	return reconcile.Result{}, nil
+}
+
 func (r *reconciler) reconcileBashibleContext(
 	ctx context.Context,
 	nestedClient client.Client,
@@ -265,8 +298,8 @@ func (r *reconciler) reconcileBashibleContext(
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
-		StringData: map[string]string{
-			"input.yaml": contextInputYAML,
+		Data: map[string][]byte{
+			"input.yaml": []byte(contextInputYAML),
 		},
 	}
 
@@ -280,9 +313,15 @@ func (r *reconciler) reconcileBashibleContext(
 		return reconcile.Result{}, err
 	}
 
+	if equality.Semantic.DeepEqual(current.Data, target.Data) &&
+		equality.Semantic.DeepEqual(current.Labels, target.Labels) {
+		return reconcile.Result{}, nil
+	}
+
 	base := current.DeepCopy()
-	current.StringData = target.StringData
+	current.Data = target.Data
 	current.Labels = target.Labels
+	current.StringData = nil
 	return reconcile.Result{}, nestedClient.Patch(ctx, current, client.MergeFrom(base))
 }
 
@@ -292,7 +331,7 @@ func (r *reconciler) reconcileBashibleRegistrySecret(
 ) (reconcile.Result, error) {
 	parentSecret, err := r.getSecret(ctx, bashibleRegistrySecretNS, bashibleRegistrySecretName)
 	if apierrors.IsNotFound(err) {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, fmt.Errorf("parent secret %s/%s not found", bashibleRegistrySecretNS, bashibleRegistrySecretName)
 	}
 	if err != nil {
 		return reconcile.Result{}, err
@@ -315,6 +354,10 @@ func (r *reconciler) reconcileBashibleRegistrySecret(
 	}
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) && current.Type == target.Type {
+		return reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()

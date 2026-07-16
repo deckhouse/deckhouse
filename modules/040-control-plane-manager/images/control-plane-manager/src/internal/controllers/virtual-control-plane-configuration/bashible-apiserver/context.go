@@ -68,6 +68,12 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 	if p.JoinToken == "" {
 		return "", fmt.Errorf("join token is required")
 	}
+	if p.VCP == nil {
+		return "", fmt.Errorf("virtual control plane is required")
+	}
+	if p.VCP.Spec.KubernetesVersion == "" {
+		return "", fmt.Errorf("kubernetes version is required")
+	}
 
 	clusterUUID := p.ClusterUUID
 	if clusterUUID == "" {
@@ -106,8 +112,14 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 		},
 		KubernetesCA:   string(p.CA),
 		AllowedBundles: []string{"ubuntu-lts"},
-		NodeGroups: []map[string]interface{}{
-			{"name": "worker"},
+		NodeGroups: []map[string]any{
+			{
+				"name":              "worker",
+				"kubernetesVersion": p.VCP.Spec.KubernetesVersion,
+				"cri": map[string]any{
+					"type": "Containerd",
+				},
+			},
 		},
 	}
 
