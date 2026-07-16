@@ -59,6 +59,17 @@ rules:
   - patch
   - update
   - watch
+# CSINodes - read to detect a registered CSI driver (spec.drivers) before removing
+# the node.deckhouse.io/csi-not-bootstrapped taint (csitaint controller, taken over
+# from the remove_csi_taints hook).
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - csinodes
+  verbs:
+  - get
+  - list
+  - watch
 # Secrets - read for configuration checksums and cloud provider data
 - apiGroups:
   - ""
