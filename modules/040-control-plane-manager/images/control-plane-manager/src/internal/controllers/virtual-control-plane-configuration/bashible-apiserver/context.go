@@ -31,27 +31,37 @@ const (
 )
 
 type ContextInputParams struct {
-	VCP          *controlplanev1alpha1.VirtualControlPlane
-	CA           []byte
-	JoinToken    string
-	ClusterUUID  string
-	APIHost      string
-	PackagesHost string
+	VCP                 *controlplanev1alpha1.VirtualControlPlane
+	CA                  []byte
+	JoinToken           string
+	ClusterUUID         string
+	APIHost             string
+	PackagesHost        string
+	APIServerProxyCerts ContextAPIServerProxyCerts
 }
 
 type contextInput struct {
-	Deckhouse               contextDeckhouse         `json:"deckhouse" yaml:"deckhouse"`
-	PodSubnetNodeCIDRPrefix string                   `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
-	ClusterDomain           string                   `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress       string                   `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	ClusterUUID             string                   `json:"clusterUUID" yaml:"clusterUUID"`
-	BootstrapTokens         map[string]string        `json:"bootstrapTokens" yaml:"bootstrapTokens"`
-	APIServerEndpoints      []string                 `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	ClusterMasterEndpoints  []contextMasterEndpoint  `json:"clusterMasterEndpoints" yaml:"clusterMasterEndpoints"`
-	KubernetesCA            string                   `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles          []string                 `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups              []map[string]interface{} `json:"nodeGroups" yaml:"nodeGroups"`
+	Deckhouse               contextDeckhouse           `json:"deckhouse" yaml:"deckhouse"`
+	PodSubnetNodeCIDRPrefix string                     `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain           string                     `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress       string                     `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	ClusterUUID             string                     `json:"clusterUUID" yaml:"clusterUUID"`
+	BootstrapTokens         map[string]string          `json:"bootstrapTokens" yaml:"bootstrapTokens"`
+	APIServerEndpoints      []string                   `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	ClusterMasterEndpoints  []contextMasterEndpoint    `json:"clusterMasterEndpoints" yaml:"clusterMasterEndpoints"`
+	APIServerProxyCerts     contextAPIServerProxyCerts `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
+	KubernetesCA            string                     `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles          []string                   `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups              []map[string]interface{}   `json:"nodeGroups" yaml:"nodeGroups"`
 }
+
+type contextAPIServerProxyCerts struct {
+	Crt string `json:"crt" yaml:"crt"`
+	Key string `json:"key" yaml:"key"`
+}
+
+type ContextAPIServerProxyCerts = contextAPIServerProxyCerts
+
 type contextDeckhouse struct {
 	Channel string `json:"channel" yaml:"channel"`
 	Version string `json:"version" yaml:"version"`
@@ -73,6 +83,9 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 	}
 	if p.VCP.Spec.KubernetesVersion == "" {
 		return "", fmt.Errorf("kubernetes version is required")
+	}
+	if p.APIServerProxyCerts.Crt == "" || p.APIServerProxyCerts.Key == "" {
+		return "", fmt.Errorf("apiserverProxyCerts crt and key are required")
 	}
 
 	clusterUUID := p.ClusterUUID
@@ -110,11 +123,13 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 				RPPBootstrapServerPort: vcpPackagesProxyBootstrapPort,
 			},
 		},
-		KubernetesCA:   string(p.CA),
-		AllowedBundles: []string{"ubuntu-lts"},
+		APIServerProxyCerts: p.APIServerProxyCerts,
+		KubernetesCA:        string(p.CA),
+		AllowedBundles:      []string{"ubuntu-lts"},
 		NodeGroups: []map[string]any{
 			{
 				"name":              "worker",
+				"nodeType":          "Static",
 				"kubernetesVersion": p.VCP.Spec.KubernetesVersion,
 				"cri": map[string]any{
 					"type": "Containerd",

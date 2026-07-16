@@ -277,13 +277,29 @@ func (r *reconciler) reconcileBashibleContext(
 	joinToken string,
 	configSecret *corev1.Secret,
 ) (reconcile.Result, error) {
+	current := &corev1.Secret{}
+	key := client.ObjectKey{
+		Name:      bashibleContextSecretName,
+		Namespace: bashibleDeckhouseNamespace,
+	}
+	getErr := nestedClient.Get(ctx, key, current)
+	if getErr != nil && !apierrors.IsNotFound(getErr) {
+		return reconcile.Result{}, getErr
+	}
+
+	proxyCerts, err := resolveBashibleAPIServerProxyCerts(pkiSecret, current)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("resolve apiserverProxyCerts: %w", err)
+	}
+
 	contextInputYAML, err := bashibleapiserver.BuildContextInputYAML(bashibleapiserver.ContextInputParams{
-		VCP:          vcp,
-		CA:           pkiSecret.Data["ca.crt"],
-		JoinToken:    joinToken,
-		ClusterUUID:  string(configSecret.Data["cluster-uuid"]),
-		APIHost:      apiExposeHost(vcp),
-		PackagesHost: packagesExposeHost(vcp),
+		VCP:                 vcp,
+		CA:                  pkiSecret.Data["ca.crt"],
+		JoinToken:           joinToken,
+		ClusterUUID:         string(configSecret.Data["cluster-uuid"]),
+		APIHost:             apiExposeHost(vcp),
+		PackagesHost:        packagesExposeHost(vcp),
+		APIServerProxyCerts: proxyCerts,
 	})
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("build context input: %w", err)
@@ -303,14 +319,8 @@ func (r *reconciler) reconcileBashibleContext(
 		},
 	}
 
-	current := &corev1.Secret{}
-	key := client.ObjectKeyFromObject(target)
-	err = nestedClient.Get(ctx, key, current)
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(getErr) {
 		return reconcile.Result{}, nestedClient.Create(ctx, target)
-	}
-	if err != nil {
-		return reconcile.Result{}, err
 	}
 
 	if equality.Semantic.DeepEqual(current.Data, target.Data) &&
@@ -323,6 +333,59 @@ func (r *reconciler) reconcileBashibleContext(
 	current.Labels = target.Labels
 	current.StringData = nil
 	return reconcile.Result{}, nestedClient.Patch(ctx, current, client.MergeFrom(base))
+}
+
+func resolveBashibleAPIServerProxyCerts(
+	pkiSecret *corev1.Secret,
+	contextSecret *corev1.Secret,
+) (bashibleapiserver.ContextAPIServerProxyCerts, error) {
+	if contextSecret != nil && len(contextSecret.Data["input.yaml"]) > 0 {
+		var existing struct {
+			APIServerProxyCerts bashibleapiserver.ContextAPIServerProxyCerts `yaml:"apiserverProxyCerts"`
+		}
+		if err := yaml.Unmarshal(contextSecret.Data["input.yaml"], &existing); err == nil &&
+			existing.APIServerProxyCerts.Crt != "" && existing.APIServerProxyCerts.Key != "" {
+			return existing.APIServerProxyCerts, nil
+		}
+	}
+
+	return generateBashibleAPIServerProxyCerts(pkiSecret)
+}
+
+func generateBashibleAPIServerProxyCerts(pkiSecret *corev1.Secret) (bashibleapiserver.ContextAPIServerProxyCerts, error) {
+	caCert, err := pkiutil.ParseCertificatePEM(pkiSecret.Data["ca.crt"])
+	if err != nil {
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("parse VCP CA cert: %w", err)
+	}
+	caKey, err := pkiutil.ParsePrivateKeyPEM(pkiSecret.Data["ca.key"])
+	if err != nil {
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("parse VCP CA key: %w", err)
+	}
+
+	cfg := pkiutil.CertConfig{
+		Config: certutil.Config{
+			CommonName:   "kubernetes-api-proxy",
+			Organization: []string{"node-manager:kubernetes-api-proxy"},
+			Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		},
+		NotAfter:            time.Now().AddDate(10, 0, 0),
+		EncryptionAlgorithm: pkiconstants.EncryptionAlgorithmRSA2048,
+	}
+
+	cert, key, err := pkiutil.NewCertAndKey(caCert, caKey, cfg)
+	if err != nil {
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("sign kubernetes-api-proxy client cert: %w", err)
+	}
+
+	keyPEM, err := pkiutil.MarshalPrivateKeyToPEM(key)
+	if err != nil {
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("marshal kubernetes-api-proxy key: %w", err)
+	}
+
+	return bashibleapiserver.ContextAPIServerProxyCerts{
+		Crt: string(pkiutil.EncodeCertificate(cert)),
+		Key: string(keyPEM),
+	}, nil
 }
 
 func (r *reconciler) reconcileBashibleRegistrySecret(
