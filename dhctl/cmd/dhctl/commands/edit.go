@@ -18,11 +18,14 @@ import (
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
@@ -36,7 +39,7 @@ func connectionFlags(parent *kingpin.CmdClause, opts *options.Options) {
 	app.DefineBecomeFlags(parent, &opts.Become)
 }
 
-func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, secret, dataKey string) *kingpin.CmdClause {
+func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, secret, dataKey string, guardMcFlow bool) *kingpin.CmdClause {
 	cmd := parent.Command(name, fmt.Sprintf("Edit %s in the Kubernetes cluster.", name))
 	app.DefineEditorConfigFlags(cmd, &opts.Render)
 	app.DefineSanityFlags(cmd, &opts.Global)
@@ -71,6 +74,20 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 		}
 
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
+
+		if guardMcFlow {
+			if _, err := kubeCl.CoreV1().Secrets("kube-system").Get(ctx, secret, metav1.GetOptions{}); apierrors.IsNotFound(err) {
+				usesMC, mcErr := config.ClusterUsesProviderModuleConfig(ctx, kubeCl)
+				if mcErr != nil {
+					return mcErr
+				}
+				if usesMC {
+					return fmt.Errorf(
+						"this cluster is configured via the cloud-provider ModuleConfig (mc-flow), not the legacy %q Secret; "+
+							"edit the cloud-provider-<name> ModuleConfig, NodeGroups and instance classes instead", secret)
+				}
+			}
+		}
 
 		return operations.SecretEdit(
 			ctx,
@@ -107,6 +124,7 @@ func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause, opts *opti
 		"cluster-configuration",
 		"d8-cluster-configuration",
 		"cluster-configuration.yaml",
+		false,
 	)
 }
 
@@ -117,6 +135,7 @@ func DefineEditProviderClusterConfigurationCommand(parent *kingpin.CmdClause, op
 		"provider-cluster-configuration",
 		"d8-provider-cluster-configuration",
 		"cloud-provider-cluster-configuration.yaml",
+		true,
 	)
 }
 
@@ -127,5 +146,6 @@ func DefineEditStaticClusterConfigurationCommand(parent *kingpin.CmdClause, opts
 		"static-cluster-configuration",
 		"d8-static-cluster-configuration",
 		"static-cluster-configuration.yaml",
+		false,
 	)
 }

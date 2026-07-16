@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +32,56 @@ import (
 )
 
 const legacyProviderClusterConfigSecretName = "d8-provider-cluster-configuration"
+
+// providerNameFromCluster reads the cloud provider name (lowercased) from the
+// cluster's d8-cluster-configuration Secret. Returns "" for a non-cloud
+// cluster.
+func providerNameFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (string, error) {
+	secret, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	var parsed map[string]json.RawMessage
+	if err := yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], &parsed); err != nil {
+		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
+	}
+
+	var clusterType string
+	if err := json.Unmarshal(parsed["clusterType"], &clusterType); err != nil {
+		return "", fmt.Errorf("parse cluster type: %w", err)
+	}
+	if clusterType != CloudClusterType {
+		return "", nil
+	}
+
+	var cloudSpec struct {
+		Provider string `json:"provider"`
+	}
+	if err := json.Unmarshal(parsed["cloud"], &cloudSpec); err != nil {
+		return "", fmt.Errorf("parse cloud provider from cluster config: %w", err)
+	}
+	return strings.ToLower(cloudSpec.Provider), nil
+}
+
+// ClusterUsesProviderModuleConfig reports whether the running cluster is
+// configured through the cloud-provider-<name> ModuleConfig (mc-flow) rather
+// than the legacy d8-provider-cluster-configuration Secret. A non-cloud cluster
+// reports false.
+func ClusterUsesProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient) (bool, error) {
+	provider, err := providerNameFromCluster(ctx, kubeCl)
+	if err != nil {
+		return false, err
+	}
+	if provider == "" {
+		return false, nil
+	}
+	mc, err := loadCloudProviderModuleConfig(ctx, kubeCl, provider, NewSchemaStore(nil))
+	if err != nil {
+		return false, err
+	}
+	return mc != nil, nil
+}
 
 // nilType instantiates ByClusterType[T] for fillers that produce no value,
 // keeping `return nil, err` valid in every branch.
