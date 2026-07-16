@@ -33,8 +33,10 @@ import (
 )
 
 // waitForPod checks if the static pod is ready with the expected checksums annotations.
-// Waits indefinitely: giving up here would let the approver hand the etcd slot to another
-// node's operation while this node's etcd is still down, risking a quorum loss.
+// Waits indefinitely for every component: giving up here would free this node's approval slot
+// for another node's operation while this node's pod is still unhealthy. For etcd that slot is
+// a single global one, so proceeding to a second member's maintenance before the first is
+// confirmed healthy again risks losing quorum.
 func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error) {
 	op := state.Raw()
 	podName := fmt.Sprintf("%s-%s", op.Spec.Component.PodComponentName(), r.node.Name)
