@@ -331,18 +331,11 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
-		It("creates CPOs only for nodes with a ready etcd pod and still advances the slot", func() {
+		It("creates no CPOs this slot and still advances it", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			count, cpos := listCPOs(f)
-			Expect(count).To(Equal(2))
-
-			nodes := make([]string, 0, len(cpos))
-			for _, cpo := range cpos {
-				spec, _ := cpo["spec"].(map[string]interface{})
-				nodes = append(nodes, fmt.Sprintf("%v", spec["nodeName"]))
-			}
-			Expect(nodes).To(ConsistOf("master-0", "master-1"))
+			count, _ := listCPOs(f)
+			Expect(count).To(Equal(0))
 
 			cm := f.KubernetesResource("ConfigMap", "kube-system", defragStateCMName)
 			Expect(cm.Exists()).To(BeTrue())
@@ -350,7 +343,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 		})
 	})
 
-	Context("cron fired, but etcd pod is not Ready", func() {
+	Context("cron fired, but one etcd pod is not Ready", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
 			// master-0 ready; master-1 has an etcd pod that is not Ready.
@@ -361,12 +354,10 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
-		It("skips the node whose etcd pod is not Ready", func() {
+		It("skips the whole slot rather than defragmenting only the ready node", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			count, cpos := listCPOs(f)
-			Expect(count).To(Equal(1))
-			spec, _ := cpos[0]["spec"].(map[string]interface{})
-			Expect(spec["nodeName"]).To(Equal("master-0"))
+			count, _ := listCPOs(f)
+			Expect(count).To(Equal(0))
 		})
 	})
 

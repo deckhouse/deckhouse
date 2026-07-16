@@ -228,9 +228,12 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		return nil
 	}
 
-	// Only defragment nodes where etcd is actually deployed and Ready. Otherwise the CPO
-	// would hang in the DefragEtcd/WaitPodReady steps waiting for a pod that does not exist,
-	// occupying the single global etcd operation slot and blocking etcd join on new nodes.
+	// Defrag is only safe to run when every etcd member is healthy: defragmenting one member
+	// while another is already down (e.g. not deployed yet on a freshly added node) further
+	// reduces the serving quorum. So if even a single etcd node lacks a Ready pod, skip
+	// spawning CPOs for the whole slot rather than only for the unready node — otherwise a
+	// CPO for a healthy node could still hang waiting on the global etcd operation slot behind
+	// one for a pod that does not exist.
 	etcdReadyNodes := make(map[string]struct{})
 	for nodeName, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("etcd_pods_defrag")) {
 		if err != nil {
@@ -241,21 +244,22 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		}
 	}
 
-	input.Logger.Info("etcd defrag: spawning CPOs", "nodes", nodeNames, "slot", nextSlot.Format(time.RFC3339))
-
-	var skipped []string
+	var notReady []string
 	for _, nodeName := range nodeNames {
 		if _, ok := etcdReadyNodes[nodeName]; !ok {
-			skipped = append(skipped, nodeName)
-			continue
+			notReady = append(notReady, nodeName)
 		}
-		name := etcdDefragCPOName(nextSlot, nodeName)
-		input.PatchCollector.CreateIfNotExists(buildDefragCPO(name, nodeName, nextSlot, cpnUIDs[nodeName]))
-		input.Logger.Info("etcd defrag: CPO created", "name", name, "node", nodeName)
 	}
 
-	if len(skipped) > 0 {
-		input.Logger.Info("etcd defrag: skipping nodes without a ready etcd pod", "nodes", skipped)
+	if len(notReady) > 0 {
+		input.Logger.Info("etcd defrag: skipping this slot, not all etcd nodes are ready", "notReady", notReady)
+	} else {
+		input.Logger.Info("etcd defrag: spawning CPOs", "nodes", nodeNames, "slot", nextSlot.Format(time.RFC3339))
+		for _, nodeName := range nodeNames {
+			name := etcdDefragCPOName(nextSlot, nodeName)
+			input.PatchCollector.CreateIfNotExists(buildDefragCPO(name, nodeName, nextSlot, cpnUIDs[nodeName]))
+			input.Logger.Info("etcd defrag: CPO created", "name", name, "node", nodeName)
+		}
 	}
 
 	stateData := map[string]string{
