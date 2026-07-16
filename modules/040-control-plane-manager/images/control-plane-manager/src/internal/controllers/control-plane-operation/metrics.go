@@ -92,12 +92,7 @@ func isOperationInProgressTooLong(op *controlplanev1alpha1.ControlPlaneOperation
 		return false
 	}
 
-	startedAt, ok := operationStartedAt(op)
-	if !ok {
-		return false
-	}
-
-	return now.Sub(startedAt) > operationInProgressTooLongThreshold
+	return operationElapsed(op, now) > operationInProgressTooLongThreshold
 }
 
 func operationStartedAt(op *controlplanev1alpha1.ControlPlaneOperation) (time.Time, bool) {

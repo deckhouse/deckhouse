@@ -74,12 +74,9 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 			}
 			return result, err
 		}
-		// A step may drive the whole operation to a terminal state (e.g. Abandoned).
-		// executeStep already persisted it; stop the pipeline without completing.
-		if state.IsTerminal() {
-			return result, nil
-		}
-		if result.RequeueAfter > 0 {
+		// A step may drive the whole operation to a terminal state (e.g. Abandoned) or ask to
+		// requeue; executeStep already persisted either, so just stop the pipeline here.
+		if state.IsTerminal() || result.RequeueAfter > 0 {
 			return result, nil
 		}
 	}
@@ -115,9 +112,12 @@ func (r *Reconciler) executeStep(ctx context.Context, state *controlplanev1alpha
 		case res.Outcome == OutcomeAbandoned:
 			state.MarkOperationAbandoned(res.Message)
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
-				stepLogger.Warn("failed to flush status on abandon", log.Err(patchErr))
+				// Unlike Pending, Abandoned carries no RequeueAfter to fall back on, so a
+				// swallowed patch error here would leave the operation stuck non-terminal on
+				// the server forever, still holding its approval slot. Propagate the error so
+				// the pipeline treats it like the default case below and retries via backoff.
+				err = fmt.Errorf("persist operation abandon for %s: %w", name, patchErr)
 			}
-			result = reconcile.Result{}
 		default:
 			state.MarkStepCompletedWithMessage(name, res.Message)
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {

@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -36,17 +35,7 @@ func TestDefragEtcd_WaitPodDeadline(t *testing.T) {
 	t.Parallel()
 
 	newReconciler := func(objs ...client.Object) *Reconciler {
-		c := fake.NewClientBuilder().
-			WithScheme(scheme).
-			WithObjects(objs...).
-			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
-			Build()
-		return &Reconciler{
-			client: c,
-			log:    log.NewNop(),
-			node:   NodeIdentity{Name: testNodeName},
-			steps:  defaultSteps(),
-		}
+		return newTestReconciler(nil, objs...)
 	}
 
 	// newEtcdDefragState returns a defrag operation state whose start time is startedAgo in the past.
