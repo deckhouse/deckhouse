@@ -92,7 +92,7 @@ spec:
             successThreshold: 1
             timeoutSeconds: 5
           resources:
-            {{ include "helm_lib_resources_management_pod_resources" (list $.Values.logShipper.resourcesRequests "1024Mi") | nindent 12 }}
+          {{- include "helm_lib_resources_management_pod_resources" (list $.Values.logShipper.resourcesRequests "1024Mi") | nindent 12 }}
           volumeMounts:
           - name: var-log
             mountPath: /var/log/
@@ -100,7 +100,7 @@ spec:
           - name: var-lib
             mountPath: /var/lib
             readOnly: true
-            {{- include "vectorMounts" . | nindent 10 }}
+          {{- include "vectorMounts" . | nindent 10 }}
         - name: vector-reloader
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "vector") }}
@@ -108,9 +108,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "vector_reloader_resources" . | nindent 14 }}
- {{- end }}
+            {{- end }}
           env:
           {{- include "vectorEnv" . | nindent 10 }}
           volumeMounts:
@@ -120,7 +120,7 @@ spec:
             mountPath: /tmp
           - name: reloader-run
             mountPath: /var/run
-            {{- include "vectorMounts" . | nindent 10 }}
+          {{- include "vectorMounts" . | nindent 10 }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -195,9 +195,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
-  {{- end }}
+            {{- end }}
       terminationGracePeriodSeconds: 120
       volumes:
       - name: var-log
