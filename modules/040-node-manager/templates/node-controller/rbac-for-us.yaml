@@ -118,6 +118,18 @@ rules:
   - get
   - list
   - watch
+# MCM MachineSet - read + patch the deployment.kubernetes.io/revision-history annotation
+# to cap its unbounded growth (machinesetrevision controller, taken over from the
+# trim_machine_set_revision_history hook).
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machinesets
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
 # MCM MachineDeployment - create/patch (SSA) + delete on NodeGroup removal (capi-machine-deployment controller)
 - apiGroups:
   - machine.sapcloud.io

@@ -26,6 +26,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/draining"
 	_ "github.com/deckhouse/node-controller/internal/controller/instance"
 	_ "github.com/deckhouse/node-controller/internal/controller/kubeletcsrapprover"
+	_ "github.com/deckhouse/node-controller/internal/controller/machinesetrevision"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodeusercleanup"
