@@ -35,14 +35,6 @@ spec:
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: istio-config-analyzer-{{ $revision }}
-  namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-config-analyzer" "istio.io/rev" $revision)) | nindent 2 }}
-automountServiceAccountToken: true
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

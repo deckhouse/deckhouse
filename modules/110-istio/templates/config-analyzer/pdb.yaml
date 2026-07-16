@@ -1,0 +1,19 @@
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- if or (eq $version "1.25") (eq $version "1.27") }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $revision := get $versionInfo "revision" }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: istio-config-analyzer-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-config-analyzer" "istio.io/rev" $revision)) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: istio-config-analyzer
+      istio.io/rev: {{ $revision }}
+  {{- end }}
+{{- end }}
