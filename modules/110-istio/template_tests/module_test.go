@@ -421,6 +421,42 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
+	Context("Istio config analyzer for control plane 1.21", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.21":
+  revision: "v1x21"
+  fullVersion: "1.21.6"
+  imageSuffix: "V1x21x6"
+  supportsAmbient: false
+  supportsOperator: true
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.21")
+		})
+
+		It("renders istio config analyzer for control plane 1.21", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x21")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x21"))
+			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).To(ContainSubstring("configAnalyzerV1x21x6"))
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x21")
+			Expect(podMonitor.Exists()).To(BeTrue())
+
+			clusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:config-analyzer:v1x21")
+			Expect(clusterRole.Exists()).To(BeTrue())
+		})
+	})
+
 	Context("There are revisions to install, no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
