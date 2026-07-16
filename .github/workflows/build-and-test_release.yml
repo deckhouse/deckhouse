@@ -69,6 +69,7 @@ permissions:
   contents: read
   id-token: write
   pull-requests: read
+  packages: read
 
 jobs:
 
@@ -273,7 +274,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -294,6 +300,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
 
       # </template: import_secrets>
 
@@ -368,8 +377,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -386,11 +395,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -408,7 +417,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -444,8 +453,8 @@ jobs:
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ github.actor }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
@@ -656,7 +665,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -677,6 +691,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
 
       # </template: import_secrets>
 
@@ -751,8 +768,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -769,11 +786,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -791,7 +808,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -827,8 +844,8 @@ jobs:
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ github.actor }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
@@ -1039,7 +1056,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1060,6 +1082,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
 
       # </template: import_secrets>
 
@@ -1134,8 +1159,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -1152,11 +1177,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1174,7 +1199,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1210,8 +1235,8 @@ jobs:
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ github.actor }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
@@ -1410,7 +1435,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1431,6 +1461,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
 
       # </template: import_secrets>
 
@@ -1505,8 +1538,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -1523,11 +1556,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1545,7 +1578,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1581,8 +1614,8 @@ jobs:
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ github.actor }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
@@ -1781,7 +1814,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1802,6 +1840,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
 
       # </template: import_secrets>
 
@@ -1876,8 +1917,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -1894,11 +1935,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1916,7 +1957,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1952,8 +1993,8 @@ jobs:
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ github.actor }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
@@ -2152,7 +2193,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2173,6 +2219,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
 
       # </template: import_secrets>
 
@@ -2247,8 +2296,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -2265,11 +2314,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -2287,7 +2336,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -2323,8 +2372,8 @@ jobs:
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ github.actor }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
@@ -2506,7 +2555,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2

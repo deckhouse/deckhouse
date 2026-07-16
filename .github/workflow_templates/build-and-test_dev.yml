@@ -35,6 +35,7 @@ permissions:
   contents: read
   id-token: write
   pull-requests: read
+  packages: read
 
 jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
