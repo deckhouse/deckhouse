@@ -79,7 +79,6 @@ func (r *reconciler) reconcileBashibleApiserver(
 	pkiSecret *corev1.Secret,
 	adminSecret *corev1.Secret,
 	joinToken string,
-	albVIP string,
 ) (reconcile.Result, error) {
 	// 1. Parent: Exclusive kubeconfig for bashible-apiserver that provides access to the nested kube-apiserver.
 	if _, res, err := r.reconcileBashibleKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
