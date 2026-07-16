@@ -329,11 +329,11 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
 }
 
 // nodeGroupReplicas derives the replica count for a CloudPermanent NodeGroup
-// from spec.cloudInstances.minPerZone. CloudPermanent NGs always set this
-// field; spec.staticInstances.count is kept as a defensive fallback in case
-// the upstream IsCloudPermanentNodeGroup filter is ever relaxed. Returning
-// zero is interpreted by MasterNodeGroupController as "scale to zero", so
-// the caller must explicitly guard the master NG against that outcome.
+// from spec.cloudInstances.minPerZone, which CloudPermanent NGs always set
+// (they are the only kind that reaches here — see IsCloudPermanentNodeGroup).
+// Returning zero is interpreted by MasterNodeGroupController as "scale to
+// zero", so the caller must explicitly guard the master NG against that
+// outcome.
 func nodeGroupReplicas(ngs map[string]map[string]interface{}, name string) int {
 	ng, ok := ngs[name]
 	if !ok {
@@ -341,11 +341,6 @@ func nodeGroupReplicas(ngs map[string]map[string]interface{}, name string) int {
 	}
 	if ci, ok := nestedMap(ng, "spec", "cloudInstances"); ok {
 		if r := toPositiveInt(ci["minPerZone"]); r > 0 {
-			return r
-		}
-	}
-	if si, ok := nestedMap(ng, "spec", "staticInstances"); ok {
-		if r := toPositiveInt(si["count"]); r > 0 {
 			return r
 		}
 	}
@@ -589,10 +584,10 @@ func (m *MetaConfig) IsStatic() bool {
 	return m.ClusterType == "Static"
 }
 
-// FindProviderModuleConfig returns the cloud-provider-<name> ModuleConfig
+// findProviderModuleConfig returns the cloud-provider-<name> ModuleConfig
 // when present, or nil. Used to detect whether the cluster is on the new
 // mc-flow provider format.
-func (m *MetaConfig) FindProviderModuleConfig() *ModuleConfig {
+func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
 	if m == nil || m.ProviderName == "" {
 		return nil
 	}
@@ -602,7 +597,7 @@ func (m *MetaConfig) FindProviderModuleConfig() *ModuleConfig {
 // HasProviderModuleConfig reports whether the cluster carries a
 // cloud-provider-<name> ModuleConfig (the new mc-flow provider format).
 func (m *MetaConfig) HasProviderModuleConfig() bool {
-	return m.FindProviderModuleConfig() != nil
+	return m.findProviderModuleConfig() != nil
 }
 
 // HasLegacyProviderConfig reports whether the cluster carries a non-empty
