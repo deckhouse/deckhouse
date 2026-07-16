@@ -24,10 +24,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
@@ -56,10 +56,7 @@ func (c Client) PatchNode(ctx context.Context, nodeName string, patch map[string
 }
 
 func (c Client) DeleteInstance(ctx context.Context, instanceName string) error {
-	instance := &unstructured.Unstructured{}
-	instance.SetAPIVersion("deckhouse.io/v1alpha1")
-	instance.SetKind("Instance")
-	instance.SetName(instanceName)
+	instance := &deckhousev1alpha2.Instance{ObjectMeta: metav1.ObjectMeta{Name: instanceName}}
 
 	if err := c.Client.Delete(ctx, instance, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
 		if errors.IsNotFound(err) {

@@ -21,6 +21,10 @@ const (
 	NodeGroupLabel = "node.deckhouse.io/group"
 	NodeTypeLabel  = "node.deckhouse.io/type"
 
+	// TerminationInProgressLabel marks a node whose cloud instance is being
+	// terminated (e.g. a reclaimed spot/preemptible VM).
+	TerminationInProgressLabel = "node.deckhouse.io/termination-in-progress"
+
 	// Update annotations
 	ApprovedAnnotation           = "update.node.deckhouse.io/approved"
 	WaitingForApprovalAnnotation = "update.node.deckhouse.io/waiting-for-approval"

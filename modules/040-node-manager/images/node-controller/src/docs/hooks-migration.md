@@ -484,7 +484,7 @@ webhooks:
       service:
         path: /validate-deckhouse-io-v1-nodegroup
 
-  # Policy validation (from validator.go) 
+  # Policy validation (from validator.go)
   - name: nodegroup-policy.deckhouse.io
     rules:
       - apiGroups: ["deckhouse.io"]
@@ -494,3 +494,62 @@ webhooks:
       service:
         path: /validate-nodegroup-policy
 ```
+
+## Part 3: Reconcile Hooks (k8s → k8s controllers)
+
+Besides the conversion/validation webhooks above, several shell-operator Go hooks
+were pure `k8s → k8s` reconcilers (watch objects, patch/delete other objects). These
+move to controller-runtime controllers registered via `register.RegisterController`
+and blank-imported in `internal/register/controllers/controllers.go`. Each keeps the
+same trigger and effect; the reactive watch replaces the hook's converge cadence.
+
+### Migrated controllers
+
+| Controller name | Primary | Replaces hook | Effect |
+|-----------------|---------|---------------|--------|
+| `node-csi-taint` | `Node` (+watch `CSINode`) | `remove_csi_taints.go` | Remove `node.deckhouse.io/csi-not-bootstrapped` taint once `CSINode.spec.drivers` is non-empty |
+| `node-spot-termination` | `Node` | `handle_spot_instance_deletion.go` | Delete the `Instance` of a drained spot node marked `termination-in-progress` |
+
+### node-csi-taint (`internal/controller/csitaint`)
+
+A freshly bootstrapped node carries the `csi-not-bootstrapped` taint (`NoSchedule`)
+until its CSI driver registers, observed via the node's `CSINode` object. A CSINode is
+named after its node, so the secondary watch maps a registration event to the Node of
+the same name.
+
+```
+Node / CSINode changed
+  ├─ Node has no csi-not-bootstrapped taint?  → skip
+  ├─ CSINode not found?                       → still bootstrapping, keep taint
+  ├─ CSINode.spec.drivers empty?              → driver not registered, keep taint
+  └─ driver registered → strip only the csi-not-bootstrapped taint
+```
+
+**Parity note:** the hook's Node binding was passive (`ExecuteHookOnEvents=false`,
+`ExecuteHookOnSynchronization=false`) — it removed the taint only on the `OnBeforeHelm`
+converge or a `CSINode` filter-result change (minutes). The controller watches Node
+reactively (seconds). End state identical; only latency improves.
+RBAC: `nodes` get/list/watch/patch, `storage.k8s.io/csinodes` get/list/watch.
+
+### node-spot-termination (`internal/controller/spottermination`)
+
+A reclaimed spot/preemptible VM is labeled `node.deckhouse.io/termination-in-progress`
+by the provider. Once the node is also drained (`update.node.deckhouse.io/drained`
+annotation), the matching `Instance` CR is deleted so machine-controller-manager tears
+the machine/VM down.
+
+```
+Node changed
+  ├─ label termination-in-progress != "true"? → skip
+  ├─ no drained annotation?                    → skip
+  └─ both present → delete Instance named after the node (NotFound = ok)
+```
+
+**Fix relative to the hook:** the hook hardcoded `DeleteInBackground("deckhouse.io/v1alpha1", "Instance", ...)`.
+Instance graduated to `v1alpha2` (v1alpha1 `served: false` since PR #18795, 2026-05-07),
+so the hook's delete silently failed (`apiVersion 'deckhouse.io/v1alpha1' ... is not
+supported by cluster`) and looped in the shell-operator retry queue — the Instance was
+never removed (orphan risk on real spot reclamation). The controller deletes via the
+typed `v1alpha2` client, targeting the served version through the scheme's RESTMapper.
+The migration is parity of the *intended* behavior plus a regression fix.
+RBAC: `nodes` get/list/watch, `deckhouse.io/instances` delete (version-agnostic).
