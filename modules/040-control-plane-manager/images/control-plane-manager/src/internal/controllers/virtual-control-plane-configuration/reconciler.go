@@ -126,6 +126,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
 	}
 
+	if err := r.ensureKonnectivityCPAgentSecretBootstrap(ctx, vcp, pkiSecret.Data["ca.crt"]); err != nil {
+		return reconcile.Result{}, fmt.Errorf("bootstrap konnectivity-agent-cp secret: %w", err)
+	}
+
 	if res, err := r.reconcileControlPlaneNodes(ctx, vcp, pkiSecret, configSecret); err != nil || !res.IsZero() {
 		return res, err
 	}

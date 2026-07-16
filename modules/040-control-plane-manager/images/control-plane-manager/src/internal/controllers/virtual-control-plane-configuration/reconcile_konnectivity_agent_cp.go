@@ -2,10 +2,11 @@ package virtualcontrolplaneconfiguration
 
 import (
 	"context"
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
 	"fmt"
 	"time"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,66 +16,40 @@ import (
 )
 
 const (
-	konnectivityAgentCPSecretName    = "konnectivity-agent-cp"
-	konnectivityAgentNamespace       = "kube-system"
-	konnectivityAgentSAName          = "konnectivity-agent"
-	konnectivityAudience             = "system:konnectivity-server"
-	konnectivityAgentTokenTTL        = 24 * time.Hour
-	konnectivityAgentTokenRegenBelow = 6 * time.Hour
+	konnectivityAgentCPSecretName       = "konnectivity-agent-cp"
+	konnectivityAgentNamespace          = "kube-system"
+	konnectivityAgentSAName             = "konnectivity-agent"
+	konnectivityAudience                = "system:konnectivity-server"
+	konnectivityAgentTokenTTL           = 24 * time.Hour
+	konnectivityAgentTokenRegenBelow    = 6 * time.Hour
+	konnectivityAgentCPPlaceholderToken = "placeholder"
+	konnectivityAgentCPTokenExpiresAt   = "control-plane.deckhouse.io/token-expires-at"
 )
 
+// reconcileKonnectivityCPAgentSecret upgrades the parent secret with a real nested TokenRequest
+// token once the nested API and konnectivity-agent SA are available.
 func (r *reconciler) reconcileKonnectivityCPAgentSecret(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	pkiSecret *corev1.Secret,
 ) (reconcile.Result, error) {
 	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
-	caPEM := pkiSecret.Data["ca.crt"]
-	if len(caPEM) == 0 {
-		return reconcile.Result{}, fmt.Errorf("pki secret missing ca.crt")
+
+	if err := r.ensureKonnectivityCPAgentSecretBootstrap(ctx, vcp, pkiSecret.Data["ca.crt"]); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	ts, _, err := r.tenantClients(ctx, vcp)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("tenant clients: %w", err)
-	}
-
-	_, err = ts.CoreV1().ServiceAccounts(konnectivityAgentNamespace).Get(ctx, konnectivityAgentSAName, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if err := r.ensureKonnectivitySA(ctx, vcp); err != nil {
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
-	}
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("get nested konnectivity-agent SA: %w", err)
 	}
 
 	token, exp, err := r.ensureKonnectivityCPAgentToken(ctx, vcp)
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	target := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      konnectivityAgentCPSecretName,
-			Namespace: ns,
-			Annotations: map[string]string{
-				"control-plane.deckhouse.io/token-expires-at": exp,
-			},
-			Labels: map[string]string{
-				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
-				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			"token":  []byte(token),
-			"ca.crt": caPEM,
-		},
-	}
-
+	target := r.konnectivityCPAgentSecret(vcp, pkiSecret.Data["ca.crt"], token, exp)
 	current, err := r.getSecret(ctx, ns, konnectivityAgentCPSecretName)
-	if apierrors.IsNotFound(err) {
-		return reconcile.Result{}, r.createSecret(ctx, target)
-	}
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -86,6 +61,77 @@ func (r *reconciler) reconcileKonnectivityCPAgentSecret(
 	return reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
+// ensureKonnectivityCPAgentSecretBootstrap creates the parent secret with ca.crt before the
+// nested apiserver and konnectivity-agent SA exist, so the konnectivity-agent-cp volume can mount.
+func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	caPEM []byte,
+) error {
+	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+
+	current, err := r.getSecret(ctx, ns, konnectivityAgentCPSecretName)
+	if apierrors.IsNotFound(err) {
+		target := r.konnectivityCPAgentSecret(
+			vcp,
+			caPEM,
+			konnectivityAgentCPPlaceholderToken,
+			"",
+		)
+		return r.createSecret(ctx, target)
+	}
+	if err != nil {
+		return err
+	}
+
+	if string(current.Data["ca.crt"]) == string(caPEM) {
+		return nil
+	}
+	base := current.DeepCopy()
+	if current.Data == nil {
+		current.Data = map[string][]byte{}
+	}
+	current.Data["ca.crt"] = caPEM
+	return r.patchSecret(ctx, base, current)
+}
+
+func (r *reconciler) ensureKonnectivitySA(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+) error {
+	ts, _, err := r.tenantClients(ctx, vcp)
+	if err != nil {
+		return err
+	}
+
+	_, err = ts.CoreV1().ServiceAccounts(konnectivityAgentNamespace).Get(
+		ctx, konnectivityAgentSAName, metav1.GetOptions{},
+	)
+	if apierrors.IsNotFound(err) {
+		_, err = ts.CoreV1().ServiceAccounts(konnectivityAgentNamespace).Create(
+			ctx,
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      konnectivityAgentSAName,
+					Namespace: konnectivityAgentNamespace,
+					Labels: map[string]string{
+						constants.HeritageLabelKey: constants.HeritageLabelValue,
+					},
+				},
+			},
+			metav1.CreateOptions{},
+		)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("create nested konnectivity-agent SA: %w", err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get nested konnectivity-agent SA: %w", err)
+	}
+	return nil
+}
+
 func (r *reconciler) ensureKonnectivityCPAgentToken(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
@@ -93,8 +139,9 @@ func (r *reconciler) ensureKonnectivityCPAgentToken(
 	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
 
 	if current, err := r.getSecret(ctx, ns, konnectivityAgentCPSecretName); err == nil {
-		if token := string(current.Data["token"]); token != "" {
-			if expRaw := current.Annotations["control-plane.deckhouse.io/token-expires-at"]; expRaw != "" {
+		token := string(current.Data["token"])
+		if token != "" && token != konnectivityAgentCPPlaceholderToken {
+			if expRaw := current.Annotations[konnectivityAgentCPTokenExpiresAt]; expRaw != "" {
 				if exp, err := time.Parse(time.RFC3339, expRaw); err == nil {
 					if time.Until(exp) > konnectivityAgentTokenRegenBelow {
 						return token, expRaw, nil
@@ -126,4 +173,33 @@ func (r *reconciler) ensureKonnectivityCPAgentToken(
 	}
 
 	return tr.Status.Token, tr.Status.ExpirationTimestamp.UTC().Format(time.RFC3339), nil
+}
+
+func (r *reconciler) konnectivityCPAgentSecret(
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	caPEM []byte,
+	token, exp string,
+) *corev1.Secret {
+	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	annotations := map[string]string{}
+	if exp != "" {
+		annotations[konnectivityAgentCPTokenExpiresAt] = exp
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        konnectivityAgentCPSecretName,
+			Namespace:   ns,
+			Annotations: annotations,
+			Labels: map[string]string{
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"token":  []byte(token),
+			"ca.crt": caPEM,
+		},
+	}
 }
