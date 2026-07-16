@@ -2921,6 +2921,26 @@ alerts:
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8UserAuthzLegacyRBACv2CustomRoleFound
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}` is a custom role or capability created with the legacy experimental RBACv2 scheme (a `custom:*` name with the `rbac.deckhouse.io/kind: manage` or `use` labels or aggregation selectors).
+
+        In DKP 1.78 the role model changes the labels that drive aggregation, and custom roles get **no compatibility aliases** — this role will stop aggregating permissions entirely. Until every such role is migrated, the upgrade to DKP 1.78 is blocked by the `legacyRBACv2CustomRolesCount` release requirement.
+
+        Migrate the role to the new scheme (the `d8:custom:` name prefix, the `rbac.deckhouse.io/kind: custom-role`/`custom-capability` label, and the new aggregation selectors) — see the user-authz module FAQ, section "How do I migrate custom roles to the new scheme in DKP 1.78?".
+
+        List all legacy custom roles:
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | startswith("custom:")) and ((.metadata.labels["rbac.deckhouse.io/kind"] // "" | IN("manage", "use")) or ([.aggregationRule.clusterRoleSelectors[]?.matchLabels["rbac.deckhouse.io/kind"] // ""] | any(IN("manage", "use"))))) | .metadata.name'
+        ```
+      summary: |
+        A custom role of the legacy RBACv2 scheme is present in the cluster.
+      severity: "7"
+      markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
       moduleUrl: 140-user-authz
