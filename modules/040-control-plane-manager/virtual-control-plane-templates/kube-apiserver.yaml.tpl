@@ -51,7 +51,6 @@ spec:
         - --proxy-client-cert-file=/pki/front-proxy-client.crt
         - --proxy-client-key-file=/pki/front-proxy-client.key
         - --service-cluster-ip-range=${SERVICE_SUBNET_CIDR}
-        - --enable-aggregator-routing=true
         - --authorization-mode=Node,RBAC
         - --allow-privileged=true
         - --secure-port=6443
