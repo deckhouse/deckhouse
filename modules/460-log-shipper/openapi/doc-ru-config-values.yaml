@@ -55,9 +55,23 @@ properties:
         description: |
           Настройка управления ресурсами в режиме `Static`.
         properties:
-          cpu:
+          requests:
             description: |
-              Настройка запроса CPU (CPU requests).
-          memory:
+              Настройка запросов ресурсов (requests) для подов.
+            properties:
+              cpu:
+                description: |
+                  Настройка запроса CPU (CPU requests).
+              memory:
+                description: |
+                  Настройка запроса памяти (memory requests).
+          limits:
             description: |
-              Настройка запроса памяти (memory requests).
+              Настройка ограничений CPU и памяти (limits).
+            properties:
+              cpu:
+                description: |
+                  Настройка ограничения CPU (CPU limits).
+              memory:
+                description: |
+                  Настройка ограничения памяти (memory limits).

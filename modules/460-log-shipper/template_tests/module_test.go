@@ -46,8 +46,9 @@ internal:
 resourcesRequests:
   mode: Static
   static:
-    cpu: 5m
-    memory: 4Mi
+    requests:
+      cpu: 5m
+      memory: 4Mi
   vpa:
     cpu:
       max: 500m
@@ -64,7 +65,12 @@ resourcesRequests:
 
 			testD := hec.KubernetesResource("DaemonSet", "d8-log-shipper", "log-shipper-agent")
 			Expect(testD.Exists()).To(BeTrue())
-			Expect(testD.Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchYAML(`ephemeral-storage: 1024Mi`))
+			Expect(testD.Field("spec.template.spec.containers.0.resources").String()).To(MatchYAML(`
+requests:
+  cpu: 5m
+  memory: 4Mi
+  ephemeral-storage: 1024Mi
+`))
 
 			manVPA := hec.KubernetesResource("VerticalPodAutoscaler", "d8-log-shipper", "log-shipper-agent")
 			Expect(manVPA.Exists()).To(BeTrue())
@@ -82,8 +88,9 @@ internal:
 resourcesRequests:
   mode: VPA
   static:
-    cpu: 5m
-    memory: 4Mi
+    requests:
+      cpu: 5m
+      memory: 4Mi
   vpa:
     cpu:
       max: 500m

@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   debug:
@@ -62,8 +63,12 @@ properties:
           max: 4096
     - mode: Static
       static:
-        cpu: "55m"
-        memory: "256Ki"
+        requests:
+          cpu: "55m"
+          memory: "256Mi"
+        limits:
+          cpu: 2
+          memory: "2Gi"
     oneOf:
       - properties:
           mode:
@@ -146,24 +151,43 @@ properties:
         type: object
         description: |
           Resource request management options for the `Static` mode.
-        required:
-          - cpu
-          - memory
         default: {}
         properties:
-          cpu:
-            oneOf:
-              - type: string
-                pattern: "^[0-9]+m?$"
-              - type: number
+          requests:
+            type: object
             description: |
-              Configuring CPU requests.
-            default: "50m"
-          memory:
-            oneOf:
-              - type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-              - type: number
+              Resource requests settings for pods.
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+                description: |
+                  Configuring CPU requests.
+              memory:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                description: |
+                  Configuring memory requests.
+          limits:
+            type: object
             description: |
-              Configuring memory requests.
-            default: "64Mi"
+              Configuring CPU and memory limits.
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+                description: |
+                  Configuring CPU limits.
+              memory:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                description: |
+                  Configuring memory limits.
