@@ -1,15 +1,17 @@
-{{- range $version := .Values.istio.internal.versionsToInstall }}
-  {{- if or (eq $version "1.25") (eq $version "1.27") }}
-  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- $revision := get $versionInfo "revision" }}
+{{- if or (.Values.istio.internal.versionsToInstall | has "1.25") (.Values.istio.internal.versionsToInstall | has "1.27") }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: istio-config-analyzer-{{ $revision }}
-  namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-config-analyzer" "istio.io/rev" $revision)) | nindent 2 }}
+  name: istio-config-analyzer
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "istio-config-analyzer")) | nindent 2 }}
 automountServiceAccountToken: true
+{{- end }}
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- if or (eq $version "1.25") (eq $version "1.27") }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -178,7 +180,7 @@ roleRef:
   name: d8:istio:config-analyzer:{{ $revision }}
 subjects:
 - kind: ServiceAccount
-  name: istio-config-analyzer-{{ $revision }}
+  name: istio-config-analyzer
   namespace: d8-{{ $.Chart.Name }}
   {{- end }}
 {{- end }}
