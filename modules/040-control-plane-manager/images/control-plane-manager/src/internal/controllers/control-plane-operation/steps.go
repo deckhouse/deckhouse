@@ -56,7 +56,7 @@ const (
 	OutcomeCompleted StepOutcome = iota
 	// OutcomePending: the step is not finished; pipeline RequeueAfter and preserves the in-progress condition with the given Message.
 	OutcomePending
-	// OutcomeAbandoned: the operation is no longer applicable; pipeline marks it terminal and stops.
+	// OutcomeAbandoned: the step decided the operation can't continue; pipeline marks it terminal and stops.
 	OutcomeAbandoned
 )
 

@@ -109,6 +109,9 @@ func (r *Reconciler) executeStep(ctx context.Context, state *controlplanev1alpha
 			}
 			result = reconcile.Result{RequeueAfter: res.RequeueAfter}
 		case res.Outcome == OutcomeAbandoned:
+			// Unlike the Pending/Completed cases, there's no separate step-condition call here:
+			// MarkOperationAbandoned marks both the current in-progress step (CPOReasonStepAbandoned)
+			// and the operation itself (CPOReasonOperationAbandoned) in one call.
 			state.MarkOperationAbandoned(res.Message)
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
 				// Unlike Pending, Abandoned carries no RequeueAfter to fall back on, so a
