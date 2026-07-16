@@ -304,3 +304,6 @@ index c400792e82c..76ab1c940b9 100644
  sigs.k8s.io/kustomize/kustomize/v5 v5.8.1 h1:Pgsg5psubpVEy7Nf6S89PARg5VmmWUC1l9dC6Dl4PG0=
  sigs.k8s.io/kustomize/kustomize/v5 v5.8.1/go.mod h1:0vFa5pQ/elNEQMyiAJuGku9rhAMzz7u9+61hRqFKiwY=
  sigs.k8s.io/kustomize/kyaml v0.21.1 h1:IVlbmhC076nf6foyL6Taw4BkrLuEsXUXNpsE+ScX7fI=
+
+
+
