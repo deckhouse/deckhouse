@@ -113,7 +113,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Docker CLI local privilege escalation на Windows (путь поиска плагинов C:\\ProgramData\\Docker\\cli-plugins). d8 и подкоманда delivery-kit работают только под Linux; уязвимый код не выполняется.",
+      "impact_statement": "Docker CLI local privilege escalation на Windows (путь поиска плагинов C:\\ProgramData\\Docker\\cli-plugins). Исполняемые файлы версии для Windows не используются, уязвимый код не выполняется.",
       "timestamp": "2026-07-15T09:01:37.550612Z"
     },
     {
