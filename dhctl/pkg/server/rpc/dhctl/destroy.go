@@ -284,7 +284,6 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-			[]byte(p.request.RegistryConfig),
 		),
 		TmpDir:       s.params.TmpDir,
 		Logger:       dhlog.FromContext(ctx),

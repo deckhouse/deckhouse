@@ -390,7 +390,6 @@ func TestCloudDestroy(t *testing.T) {
 			tst.commanderModeParams = commander.NewCommanderModeParams(
 				[]byte(cloudClusterGenericConfigYAML),
 				[]byte(providerConfigYAML),
-				nil,
 			)
 
 			commanderUUID := uuid.Must(uuid.NewRandom())

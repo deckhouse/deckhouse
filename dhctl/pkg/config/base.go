@@ -554,14 +554,13 @@ deckhouse: {}
 func ParseConfigFromDataEnsureProvider(
 	ctx context.Context,
 	configData string,
-	registryConfig string,
 	preparatorProvider MetaConfigPreparatorProvider,
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
 	globalOptions = withDownloadDir(globalOptions)
 
-	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(input.CombineYAMLs(configData, registryConfig)), -1)
+	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
 	if err := EnsureProviderBundle(ctx, "", docs, globalOptions); err != nil {
 		return nil, err
 	}
@@ -580,11 +579,10 @@ func ParseConfigFromDataEnsureProvider(
 	metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
 
 	// Lazy provider-plugin / terraform-manager downloads read registry creds
-	// from DeckhouseConfig. In commander mode those creds arrive in
-	// registryConfig (a separate doc), not in configData, so copy them onto
-	// DeckhouseConfig here; otherwise the cold-pod download decodes an empty
-	// dockercfg ("unmarshaling dockerconfig JSON: unexpected end of JSON
-	// input"). Mirrors parseConfigFromCluster.
+	// from DeckhouseConfig. When configData itself carries an InitConfiguration
+	// or a deckhouse ModuleConfig (CLI paths), copy them onto DeckhouseConfig so
+	// the cold-pod download has credentials; commander operations resolve the
+	// registry from the target cluster instead. No-op when the docs hold none.
 	if err := applyRegistryToDeckhouseConfig(metaConfig, docs); err != nil {
 		return nil, err
 	}

@@ -242,7 +242,6 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-			[]byte(p.request.RegistryConfig),
 		),
 		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter).
 			WithUseTfCache(opts.Cache.UseTfCache).

@@ -17,13 +17,9 @@ package commander
 type CommanderModeParams struct {
 	ClusterConfigurationData         []byte
 	ProviderClusterConfigurationData []byte
-	// RegistryConfigurationData carries registry access only (an InitConfiguration
-	// and/or a deckhouse ModuleConfig document) so the external provider bundle
-	// can be downloaded on a cold pod. Optional; not validated as cluster config.
-	RegistryConfigurationData []byte
 }
 
-func NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData, registryConfigurationData []byte) *CommanderModeParams {
+func NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData []byte) *CommanderModeParams {
 	if clusterConfigurationData == nil {
 		panic("cluster configuration param required")
 	}
@@ -33,6 +29,5 @@ func NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurati
 	return &CommanderModeParams{
 		ClusterConfigurationData:         clusterConfigurationData,
 		ProviderClusterConfigurationData: providerClusterConfigurationData,
-		RegistryConfigurationData:        registryConfigurationData,
 	}
 }

@@ -389,7 +389,6 @@ func (i *Attacher) check(
 			CommanderModeParams: commander.NewCommanderModeParams(
 				[]byte(scanResult.ClusterConfiguration),
 				[]byte(scanResult.ProviderSpecificClusterConfiguration),
-				nil,
 			),
 			InfrastructureContext: i.Params.InfrastructureContext,
 			TmpDir:                i.Params.TmpDir,

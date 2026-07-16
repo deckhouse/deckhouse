@@ -36,10 +36,9 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: uuid is empty")
 	}
 
-	// Commander does not send registry_config, so the external provider bundle
-	// registry is unknown from the request. Read it from the target cluster and
-	// deliver the bundle before parsing; the parse below then finds it on disk
-	// and skips the registry-less download.
+	// Commander does not send registry access in the request; read it from the
+	// target cluster and deliver the external provider bundle before parsing, so
+	// the parse below finds it on disk and skips the registry-less download.
 	if kubeClient != nil {
 		if err := config.EnsureExternalProviderBundle(ctx, kubeClient, string(params.ClusterConfigurationData), nil); err != nil {
 			return nil, fmt.Errorf("ensure provider bundle from cluster: %w", err)
@@ -50,7 +49,6 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	metaConfig, err := config.ParseConfigFromDataEnsureProvider(
 		ctx,
 		configData,
-		string(params.RegistryConfigurationData),
 		infrastructureprovider.MetaConfigPreparatorProvider(),
 		nil,
 		config.ValidateOptionCommanderMode(true),

@@ -197,7 +197,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				return err
 			}
 			destroyParams.CommanderMode = true
-			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData, nil)
+			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData)
 		}
 
 		destroyParams.Logger = dhlog.FromContext(ctx)
