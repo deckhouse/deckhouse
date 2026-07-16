@@ -23,6 +23,10 @@ spec:
   {{- $moduleGateway := dict }}
   {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
   {{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") (or .Values.prometheus.internal.grafana.enabled (has "console" .Values.global.enabledModules)) }}
+  {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+  {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
+    {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}
+  {{- end }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -38,7 +42,7 @@ spec:
     - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
   issuerRef:
-    name: {{ printf "letsencrypt-gateway-%s" $moduleGateway.name }}
+    name: {{ $issuerName }}
     kind: ClusterIssuer
   {{- end }}
 {{- end }}
