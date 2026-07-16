@@ -229,10 +229,6 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 // scan-start ExpireGroupMetrics does not wipe them: the value set on a cache miss
 // persists across warm scans until the release digest changes. We always Set an
 // explicit 0/1 so a resolved condition clears instead of sticking at 1.
-//
-// ponytail: a module dropped from the registry entirely is never re-scanned, so
-// its last gauge value lingers. Add per-module ExpireGroupMetrics keyed off the
-// SyncWithRegistryVersions delete tasks if stale series become a problem.
 func (s *registryscanner) emitModuleTelemetry(module string, noSign, noYaml, critical bool) {
 	labels := map[string]string{"module": module}
 	s.ms.GaugeSet(metrics.RegistryScannerNoModuleSign, boolToFloat(noSign), labels)
