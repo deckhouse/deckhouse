@@ -194,3 +194,4 @@ spec:
       - name: konnectivity-agent-cp
         secret:
           secretName: konnectivity-agent-cp
+          optional: true
