@@ -72,9 +72,14 @@ masterNodeGroup:
         size: 8Gi
   replicas: 3
 provider:
+  ingressPorts:
+  - 22
   kubeconfigDataBase64: YXBpVmV=
   namespace: cloud-provider01
+  networkPolicy: Isolated
 sshPublicKey: ssh-rsa AAAAB3N
+additionalVMLabels:
+  network-access: bastion
 region: ru-msk-1
 zones:
 - default

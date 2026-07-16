@@ -43,6 +43,12 @@ spec:
       {{- if .nodeGroup.instanceClass.virtualMachine.bootloader }}
       bootloader: {{ .nodeGroup.instanceClass.virtualMachine.bootloader | quote }}
       {{- end }}
+      {{- with .Values.nodeManager.internal.cloudProvider.dvp.additionalVMLabels }}
+      additionalVMLabels:
+        {{- range $k, $v := . }}
+        {{ $k }}: {{ $v | quote }}
+        {{- end }}
+      {{- end }}
       bootDiskImageRef:
         {{- if .nodeGroup.instanceClass.rootDisk.image.kind }}
         kind: {{ .nodeGroup.instanceClass.rootDisk.image.kind | quote }}
