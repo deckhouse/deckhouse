@@ -106,6 +106,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: DHCTL_IMAGES_DIGESTS_FILE
+          value: /images-digests/images_digests.json
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         livenessProbe:
           httpGet:
@@ -121,6 +123,9 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /images-digests
+            name: images-digests
+            readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -174,4 +179,7 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: images-digests
+          configMap:
+            name: terraform-manager-images-digests
 {{- end }}

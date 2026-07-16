@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -389,6 +390,7 @@ func TestCloudDestroy(t *testing.T) {
 			tst.commanderModeParams = commander.NewCommanderModeParams(
 				[]byte(cloudClusterGenericConfigYAML),
 				[]byte(providerConfigYAML),
+				nil,
 			)
 
 			commanderUUID := uuid.Must(uuid.NewRandom())
@@ -784,7 +786,7 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		_, err := kubeCl.CoreV1().ConfigMaps(uuidCM.GetNamespace()).Create(ctx, uuidCM, metav1.CreateOptions{})
 		require.NoError(t, err, "commander uuid cm should create")
 		testAddCloudStatesToCache(t, stateCache, clusterUUID)
-		metaConfig, err = commander.ParseMetaConfig(ctx, stateCache, params.commanderModeParams)
+		metaConfig, err = commander.ParseMetaConfig(ctx, stateCache, params.commanderModeParams, infrastructureprovider.DhctlOperationDestroy, nil)
 		require.NoError(t, err)
 	} else {
 		d8SystemNs := corev1.Namespace{
@@ -799,7 +801,11 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		testCreateClusterConfigSecret(t, kubeCl, cloudClusterGenericConfigYAML)
 		testCreateProviderClusterConfigSecret(t, kubeCl, providerConfigYAML)
 		testCreateClusterUUIDCM(t, kubeCl, clusterUUID)
-		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil)
+		// Cloud-cluster parseConfigFromCluster fetches d8-system/
+		// deckhouse-registry unconditionally; seed it so the retry-loop
+		// doesn't trip the 600 s go-test timeout.
+		testCreateDeckhouseRegistrySecret(t, kubeCl)
+		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil, "")
 		require.NoError(t, err)
 	}
 

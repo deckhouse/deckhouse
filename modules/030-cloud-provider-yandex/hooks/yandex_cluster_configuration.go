@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -27,11 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-func preparatorProvider(_ string) config.MetaConfigPreparator {
-	// prefix does not provide here
-	return yandex.NewMetaConfigPreparator(false)
-}
-
+// Prefix validation is disabled: the hook reads PCC from the cluster, where
+// the prefix is already known to be valid (was validated on bootstrap).
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
 	if !secretFound {
 		return fmt.Errorf("kube-system/d8-provider-cluster-configuration secret not found")
@@ -40,4 +38,6 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
-}, cluster_configuration.NewConfig(preparatorProvider))
+}, cluster_configuration.NewConfig(func(_ context.Context, _, _ string) config.MetaConfigPreparator {
+	return yandex.NewMetaConfigPreparator(false)
+}))
