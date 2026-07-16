@@ -81,10 +81,8 @@ func TestDefragEtcd_WaitPodDeadline(t *testing.T) {
 		require.NotEmpty(t, res.Message)
 	})
 
-	// WaitPodReady runs right after DefragEtcd in the same defrag CPO (see buildDefragCPO), and
-	// must keep waiting indefinitely even well past etcdDefragWaitPodDeadline: abandoning it
-	// would free the global etcd slot for another node's defrag while this node's etcd is still
-	// down, risking a quorum loss.
+	// Unlike DefragEtcd, WaitPodReady must keep waiting indefinitely even past the deadline
+	// (see pods.go) — a quorum-safety decision, not an oversight.
 	t.Run("WaitPodReady: keeps waiting past the DefragEtcd deadline", func(t *testing.T) {
 		t.Parallel()
 		r := newReconciler() // no etcd pod in cluster

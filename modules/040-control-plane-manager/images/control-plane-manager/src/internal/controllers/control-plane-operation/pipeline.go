@@ -109,15 +109,11 @@ func (r *Reconciler) executeStep(ctx context.Context, state *controlplanev1alpha
 			}
 			result = reconcile.Result{RequeueAfter: res.RequeueAfter}
 		case res.Outcome == OutcomeAbandoned:
-			// Unlike the Pending/Completed cases, there's no separate step-condition call here:
-			// MarkOperationAbandoned marks both the current in-progress step (CPOReasonStepAbandoned)
-			// and the operation itself (CPOReasonOperationAbandoned) in one call.
+			// An Abandoned step outcome abandons the whole operation.
 			state.MarkOperationAbandoned(res.Message)
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
-				// Unlike Pending, Abandoned carries no RequeueAfter to fall back on, so a
-				// swallowed patch error here would leave the operation stuck non-terminal on
-				// the server forever, still holding its approval slot. Propagate the error so
-				// the pipeline treats it like the default case below and retries via backoff.
+				// No RequeueAfter to fall back on, so a swallowed error here would strand the
+				// operation non-terminal, holding its slot forever. Propagate it instead.
 				err = fmt.Errorf("persist operation abandon for %s: %w", name, patchErr)
 			}
 		default:

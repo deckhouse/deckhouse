@@ -127,8 +127,6 @@ func filterDefragStateCM(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 // filterDefragEtcdPod returns the node name of a Ready etcd pod, or "" otherwise.
-// Only Ready pods matter for the defrag precondition, so the readiness check lives here
-// and the snapshot carries just the node names to defragment.
 func filterDefragEtcdPod(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var pod corev1.Pod
 	if err := sdk.FromUnstructured(obj, &pod); err != nil {
@@ -228,12 +226,9 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		return nil
 	}
 
-	// Defrag is only safe to run when every etcd member is healthy: defragmenting one member
-	// while another is already down (e.g. not deployed yet on a freshly added node) further
-	// reduces the serving quorum. So if even a single etcd node lacks a Ready pod, skip
-	// spawning CPOs for the whole slot rather than only for the unready node — otherwise a
-	// CPO for a healthy node could still hang waiting on the global etcd operation slot behind
-	// one for a pod that does not exist.
+	// Defrag is only safe when every etcd member is healthy: defragmenting one member while
+	// another is down further reduces quorum. So if any etcd node lacks a Ready pod, skip
+	// spawning CPOs for the whole slot, not just for that node.
 	etcdReadyNodes := make(map[string]struct{})
 	for nodeName, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("etcd_pods_defrag")) {
 		if err != nil {

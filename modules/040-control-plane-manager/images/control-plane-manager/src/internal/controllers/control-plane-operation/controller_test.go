@@ -376,9 +376,8 @@ func (s *ControllerTestSuite) TestReconcileStepAbandonPatchFailureIsRetried() {
 			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
 
-		// Only the patch that actually persists the Abandoned condition must fail — earlier
-		// status patches (initial conditions, in-progress markers) must go through normally,
-		// otherwise this test would fail for the wrong reason.
+		// Only the patch persisting the Abandoned condition must fail; earlier ones must go
+		// through, otherwise this test fails for the wrong reason.
 		patchStatusErr := errors.New("injected status patch failure")
 		c := fake.NewClientBuilder().
 			WithScheme(scheme).

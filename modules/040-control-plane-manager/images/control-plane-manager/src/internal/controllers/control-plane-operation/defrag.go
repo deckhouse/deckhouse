@@ -41,9 +41,8 @@ const (
 	etcdDefragTimeout       = 2 * time.Minute
 	etcdDefragStatusTimeout = 10 * time.Second
 
-	// etcdDefragWaitPodDeadline bounds how long a defrag CPO waits for the local etcd pod
-	// before abandoning: waiting forever would hold the single global etcd slot and deadlock
-	// etcd join on other nodes. See waitEtcdPodResult.
+	// etcdDefragWaitPodDeadline bounds how long DefragEtcd waits for the local pod before
+	// abandoning, instead of holding the global etcd slot forever. See waitEtcdPodResult.
 	etcdDefragWaitPodDeadline = 10 * time.Minute
 )
 
@@ -148,11 +147,9 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 	return StepResult{Outcome: OutcomeCompleted, Message: "skipped: fragmentation below threshold"}, nil
 }
 
-// waitEtcdPodResult abandons the operation once it has run past etcdDefragWaitPodDeadline,
-// releasing the global etcd slot; otherwise it keeps retrying. Only guards DefragEtcd's wait
-// for the pod to appear before defrag even starts — WaitPodReady still waits indefinitely
-// afterwards, since giving up there could free the slot for another node's defrag while this
-// node's etcd is still down, risking a quorum loss.
+// waitEtcdPodResult abandons the operation past etcdDefragWaitPodDeadline, releasing the
+// global etcd slot; otherwise it keeps retrying. Only guards DefragEtcd's wait for the pod to
+// appear before defrag starts — WaitPodReady still waits indefinitely afterwards (see pods.go).
 func waitEtcdPodResult(op *controlplanev1alpha1.ControlPlaneOperation, podName, reason string) StepResult {
 	if operationElapsed(op, time.Now()) > etcdDefragWaitPodDeadline {
 		return StepResult{
