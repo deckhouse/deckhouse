@@ -118,6 +118,15 @@ func operationStartedAt(op *controlplanev1alpha1.ControlPlaneOperation) (time.Ti
 	return startedAt, true
 }
 
+// operationElapsed returns time since op's started-at annotation, or 0 if unset/unparseable.
+func operationElapsed(op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) time.Duration {
+	startedAt, ok := operationStartedAt(op)
+	if !ok {
+		return 0
+	}
+	return now.Sub(startedAt)
+}
+
 func (m *metrics) deleteOperationExecutionMetrics(operation string) {
 	if m == nil || operation == "" {
 		return

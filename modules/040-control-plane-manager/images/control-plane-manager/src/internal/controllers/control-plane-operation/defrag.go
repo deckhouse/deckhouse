@@ -166,16 +166,3 @@ func waitEtcdPodResult(op *controlplanev1alpha1.ControlPlaneOperation, podName, 
 		RequeueAfter: requeueWaitPod,
 	}
 }
-
-// operationElapsed returns time since op's started-at annotation, or 0 if unset/unparseable.
-func operationElapsed(op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) time.Duration {
-	started := op.Annotations[constants.OperationStartedAtAnnotationKey]
-	if started == "" {
-		return 0
-	}
-	startedAt, err := time.Parse(time.RFC3339Nano, started)
-	if err != nil {
-		return 0
-	}
-	return now.Sub(startedAt)
-}
