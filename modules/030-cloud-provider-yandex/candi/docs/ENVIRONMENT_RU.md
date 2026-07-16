@@ -60,22 +60,11 @@ description: "Настройка Yandex Cloud для работы облачно
 ## Интеграция с Yandex Cloud
 
 {% alert level="warning" %}
-Начиная с версии DKP 1.76, в Yandex Cloud CNI `cilium` используется по умолчанию для новых кластеров.
+Начиная с DKP 1.77, для новых кластеров в Yandex Cloud по умолчанию используется CNI `cilium`. В существующих кластерах текущая конфигурация CNI сохраняется.
 
-При использовании CentOS 8 необходимо явно включить модуль `cni-simple-bridge` в файле `config.yml`.
+Для новых кластеров на всех узлах требуется ядро Linux версии 5.8 или новее. Также убедитесь, что правила межсетевого экрана разрешают межузловой UDP-трафик, необходимый для работы Cilium VXLAN.
 
-{% offtopic title="Пример конфигурации CNI для CentOS 8 в Yandex Cloud..." %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-simple-bridge
-spec:
-  enabled: true
-```
-
-{% endofftopic %}
+Подробнее в разделах [«Требования к установке»](/products/kubernetes-platform/documentation/v1/installing/), [«Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html) и [документации модуля `cni-cilium`](/modules/cni-cilium/).
 {% endalert %}
 
 ### Настройка групп безопасности
@@ -87,6 +76,8 @@ spec:
 {% endalert %}
 
 Ниже приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста, ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+
+Если в кластере используется `cilium` в режиме VXLAN, убедитесь, что группы безопасности разрешают межузловой UDP-трафик на портах, необходимых Cilium. Подробнее см. [раздел «Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
 

@@ -8,11 +8,19 @@ description: "Настройка GCP для работы облачного пр
 Чтобы Deckhouse Kubernetes Platform могла управлять ресурсами, в Google Cloud необходимо создать service account. Далее представлена краткая последовательность действий по созданию service account. Если вам необходима более подробная инструкция, вы можете найти ее [в документации провайдера](https://cloud.google.com/iam/docs/service-accounts).
 
 {% alert level="warning" %}
-**Внимание!** Созданный `service account key` невозможно восстановить, только удалить и создать новый.
+Созданный `service account key` невозможно восстановить, только удалить и создать новый.
 {% endalert %}
 
 {% alert level="warning" %}
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
+{% endalert %}
+
+{% alert level="warning" %}
+Начиная с DKP 1.77, для новых кластеров в GCP по умолчанию используется CNI `cilium`. В существующих кластерах текущая конфигурация CNI сохраняется.
+
+Для новых кластеров на всех узлах требуется ядро Linux версии 5.8 или новее. Также убедитесь, что правила межсетевого экрана разрешают межузловой UDP-трафик, необходимый для работы Cilium VXLAN.
+
+Подробнее в разделах [«Требования к установке»](/products/kubernetes-platform/documentation/v1/installing/), [«Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html) и [документации модуля `cni-cilium`](/modules/cni-cilium/).
 {% endalert %}
 
 ## Настройка через Google Cloud Console
