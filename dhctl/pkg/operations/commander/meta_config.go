@@ -36,8 +36,6 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: uuid is empty")
 	}
 
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
-
 	// Commander does not send registry_config, so the external provider bundle
 	// registry is unknown from the request. Read it from the target cluster and
 	// deliver the bundle before parsing; the parse below then finds it on disk
@@ -53,7 +51,7 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		ctx,
 		configData,
 		string(params.RegistryConfigurationData),
-		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		infrastructureprovider.MetaConfigPreparatorProvider(),
 		nil,
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),

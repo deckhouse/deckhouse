@@ -44,11 +44,10 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 	defer registryStop()
 
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		infrastructureprovider.MetaConfigPreparatorProvider(),
 		&b.Options.Global,
 		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationBootstrap),
 	)

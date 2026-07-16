@@ -41,9 +41,7 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 		var err error
 		var metaConfig *config.MetaConfig
 
-		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		)
+		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider()
 
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
 		// https://github.com/flant/kingpin/pull/1

@@ -16,18 +16,12 @@ package infrastructureprovider
 
 import (
 	"context"
-	"fmt"
-	"os"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 )
 
 type DhctlOperation = string
@@ -38,104 +32,24 @@ const (
 	DhctlOperationDestroy   DhctlOperation = proto.OperationDestroy
 )
 
-type PreparatorProviderParams struct {
-}
-
-func NewPreparatorProviderParams() PreparatorProviderParams {
-	return PreparatorProviderParams{}
-}
-
-func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
-	return PreparatorProviderParams{}
-}
-
-func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
+// MetaConfigPreparatorProvider selects the per-provider preparator. Only the
+// two in-tree providers that need one carry a dedicated implementation: vcd
+// (Prepare injects legacyMode for old VCD APIs) and yandex (Validate checks the
+// cluster prefix, NAT-instance layout and external-IP counts). Every other
+// provider — including external ones like DVP, whose configuration is validated
+// by the cloud-provider admission webhook and its OpenAPI schema — needs no
+// dhctl-side preparator and gets a no-op.
+func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
 	return selectPreparator
 }
 
 func selectPreparator(ctx context.Context, provider, downloadRootDir string) config.MetaConfigPreparator {
 	switch provider {
-	case "":
-		// static cluster
-		return config.DummyPreparatorProvider()(ctx, "", "")
 	case yandex.ProviderName:
-		// Top-level dhctl path (bootstrap/converge/check): validate cluster
-		// prefix. The hook-side caller passes false.
 		return yandex.NewMetaConfigPreparator(true)
 	case vcd.ProviderName:
 		return vcd.NewMetaConfigPreparator()
 	default:
-		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
-			return external.NewBinaryPreparator(binaryPath)
-		}
-		// In-tree providers ship their schemas in the image's candi and need
-		// no external validator: keep the lightweight prefix-only preparator
-		// (mirrors main's default). Only truly external providers (not in
-		// candi) require the downloaded validator binary.
-		if providerBundledInCandi(provider) {
-			return &inTreeDefaultPreparator{}
-		}
-		searched := ""
-		if downloadRootDir != "" {
-			searched = providerdir.ValidatorPath(downloadRootDir, provider)
-		}
-		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("external validator for provider %q not found at %q", provider, searched))
-		return &missingExternalValidatorPreparator{provider: provider, searchedPath: searched}
+		return config.DummyPreparatorProvider()(ctx, provider, downloadRootDir)
 	}
-}
-
-func findExternalPreparatorBinary(pluginsDir, providerName string) string {
-	if pluginsDir == "" {
-		return ""
-	}
-	path := providerdir.ValidatorPath(pluginsDir, providerName)
-	info, err := os.Stat(path)
-	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
-		// A non-executable file is not a usable validator; treat it as missing
-		// so the caller surfaces the proper missing-validator diagnostic.
-		return ""
-	}
-	return path
-}
-
-// missingExternalValidatorPreparator hard-fails Validate and Prepare when an
-// external provider's validator binary is absent from the unpacked OCI bundle.
-// providerBundledInCandi is a var so tests can stub the candi lookup.
-var providerBundledInCandi = func(provider string) bool {
-	return config.ProviderBundledInCandi(provider, nil)
-}
-
-// inTreeDefaultPreparator is the fallback for in-tree providers without a
-// dedicated preparator: validate the cluster prefix, prepare nothing.
-type inTreeDefaultPreparator struct{}
-
-func (p *inTreeDefaultPreparator) Validate(_ context.Context, input config.ProviderInput) error {
-	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
-		return fmt.Errorf("validate cluster prefix for provider %s: %w", input.ProviderName, err)
-	}
-	return nil
-}
-
-func (p *inTreeDefaultPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
-	return proto.PrepareResult{}, nil
-}
-
-type missingExternalValidatorPreparator struct {
-	provider     string
-	searchedPath string
-}
-
-func (p *missingExternalValidatorPreparator) err() error {
-	if p.searchedPath == "" {
-		return fmt.Errorf("external validator for provider %q not found: provider plugins directory was not configured", p.provider)
-	}
-	return fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", p.provider, p.searchedPath)
-}
-
-func (p *missingExternalValidatorPreparator) Validate(_ context.Context, _ config.ProviderInput) error {
-	return p.err()
-}
-
-func (p *missingExternalValidatorPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
-	return proto.PrepareResult{}, p.err()
 }

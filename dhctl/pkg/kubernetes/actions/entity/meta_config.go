@@ -25,11 +25,10 @@ import (
 )
 
 func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, globalOptions *options.GlobalOptions, operation string) (*config.MetaConfig, error) {
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	metaConfig, err := config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		infrastructureprovider.MetaConfigPreparatorProvider(),
 		globalOptions,
 		operation,
 	)

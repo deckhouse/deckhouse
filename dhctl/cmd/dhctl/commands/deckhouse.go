@@ -115,9 +115,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		metaConfig, err := config.ParseConfig(
 			ctx,
 			opts.Global.ConfigPaths,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(),
-			),
+			infrastructureprovider.MetaConfigPreparatorProvider(),
 			&opts.Global,
 		)
 		if err != nil {

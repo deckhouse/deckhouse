@@ -44,9 +44,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		),
+		infrastructureprovider.MetaConfigPreparatorProvider(),
 		&b.Options.Global,
 	)
 	if err != nil {

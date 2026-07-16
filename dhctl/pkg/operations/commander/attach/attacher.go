@@ -211,11 +211,10 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		}
 		kubeClient = &client.KubernetesClient{KubeClient: kubeCl}
 
-		preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 		metaConfig, err = config.ParseConfigInCluster(
 			ctx,
 			kubeClient,
-			infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+			infrastructureprovider.MetaConfigPreparatorProvider(),
 			nil,
 			infrastructureprovider.DhctlOperationConverge,
 		)

@@ -62,9 +62,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		),
+		infrastructureprovider.MetaConfigPreparatorProvider(),
 		&b.Options.Global,
 	)
 	if err != nil {
