@@ -188,6 +188,7 @@ func (r *reconciler) reconcileBashibleRBAC(ctx context.Context, nestedClient cli
 			if err := nestedClient.Create(ctx, obj); err != nil {
 				return reconcile.Result{}, fmt.Errorf("create %s/%s: %w", gvk.Kind, key, err)
 			}
+			continue
 		}
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("get %s/%s: %w", gvk.Kind, key, err)
