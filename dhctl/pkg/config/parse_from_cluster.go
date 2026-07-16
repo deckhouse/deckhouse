@@ -152,7 +152,7 @@ func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.Kubernete
 // moduleConfigFromUnstructured deserialises a ModuleConfig fetched from the
 // cluster and validates it against its registered schema, so a kubectl-patched
 // invalid ModuleConfig fails fast here instead of as a confusing downstream
-// preparator error. A module without a registered schema is accepted.
+// validation error. A module without a registered schema is accepted.
 func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	raw, err := json.Marshal(obj.Object)
 	if err != nil {

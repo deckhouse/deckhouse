@@ -29,17 +29,17 @@ import (
 
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
-type MetaConfigPreparator struct {
+type MetaConfigValidator struct {
 	validatePrefix bool
 }
 
-func NewMetaConfigPreparator(validatePrefix bool) *MetaConfigPreparator {
-	return &MetaConfigPreparator{
+func NewMetaConfigValidator(validatePrefix bool) *MetaConfigValidator {
+	return &MetaConfigValidator{
 		validatePrefix: validatePrefix,
 	}
 }
 
-func (p *MetaConfigPreparator) Validate(ctx context.Context, input config.ProviderInput) error {
+func (p *MetaConfigValidator) Validate(ctx context.Context, input config.ProviderInput) error {
 	if p.validatePrefix && !prefixRegex.MatchString(input.ClusterPrefix) {
 		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", input.ClusterPrefix, ProviderName, prefixRegex.String())
 	}
@@ -55,11 +55,7 @@ func (p *MetaConfigPreparator) Validate(ctx context.Context, input config.Provid
 	return p.validateWithNATInstanceLayout(ctx, input)
 }
 
-func (p *MetaConfigPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
-	return proto.PrepareResult{}, nil
-}
-
-func (p *MetaConfigPreparator) validateMasterNodeGroup(input config.ProviderInput) error {
+func (p *MetaConfigValidator) validateMasterNodeGroup(input config.ProviderInput) error {
 	raw, ok := input.ProviderClusterConfig["masterNodeGroup"]
 	if !ok {
 		return fmt.Errorf("Unable to unmarshal master node group from provider cluster configuration: key not found")
@@ -78,7 +74,7 @@ func (p *MetaConfigPreparator) validateMasterNodeGroup(input config.ProviderInpu
 	return nil
 }
 
-func (p *MetaConfigPreparator) validateNodeGroups(ctx context.Context, input config.ProviderInput) error {
+func (p *MetaConfigValidator) validateNodeGroups(ctx context.Context, input config.ProviderInput) error {
 	raw, ok := input.ProviderClusterConfig["nodeGroups"]
 	if !ok {
 		dhlog.FromContext(ctx).DebugContext(ctx, "nodeGroups not found in provider cluster configuration. Skip validation.")
@@ -100,7 +96,7 @@ func (p *MetaConfigPreparator) validateNodeGroups(ctx context.Context, input con
 	return nil
 }
 
-func (p *MetaConfigPreparator) validateWithNATInstanceLayout(ctx context.Context, input config.ProviderInput) error {
+func (p *MetaConfigValidator) validateWithNATInstanceLayout(ctx context.Context, input config.ProviderInput) error {
 	if input.Layout != "with-nat-instance" {
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skip validate WithNATInstance layout. Got layout %v", input.Layout))
 		return nil

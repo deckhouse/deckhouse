@@ -20,25 +20,23 @@ import (
 	"fmt"
 	"strings"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 )
 
 type clientProvider func(pcc map[string]json.RawMessage) (cloudClient, error)
 
-type MetaConfigPreparator struct {
+type MetaConfigValidator struct {
 	clientProvider clientProvider
 }
 
-func NewMetaConfigPreparator() *MetaConfigPreparator {
-	return &MetaConfigPreparator{
+func NewMetaConfigValidator() *MetaConfigValidator {
+	return &MetaConfigValidator{
 		clientProvider: newVcdCloudClient,
 	}
 }
 
-func (p MetaConfigPreparator) Validate(_ context.Context, input config.ProviderInput) error {
+func (p MetaConfigValidator) Validate(_ context.Context, input config.ProviderInput) error {
 	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
 		return fmt.Errorf("%v for provider %s", err, ProviderName)
 	}
@@ -65,18 +63,22 @@ func (p MetaConfigPreparator) Validate(_ context.Context, input config.ProviderI
 	return nil
 }
 
-func (p MetaConfigPreparator) Prepare(ctx context.Context, input config.ProviderInput) (proto.PrepareResult, error) {
+// PatchProviderClusterConfig injects legacyMode for VCD APIs older than the
+// current contract. It is the only provider-side rewrite of a parsed config in
+// dhctl, so config picks it up through an optional-method check rather than a
+// shared interface.
+func (p MetaConfigValidator) PatchProviderClusterConfig(ctx context.Context, input config.ProviderInput) (map[string]any, error) {
 	client, err := p.clientProvider(input.ProviderClusterConfig)
 	if err != nil {
-		return proto.PrepareResult{}, fmt.Errorf("Cannot get cloud client: %w", err)
+		return nil, fmt.Errorf("Cannot get cloud client: %w", err)
 	}
 
 	apiVersion, err := client.GetVersion(ctx)
 	if err != nil {
-		return proto.PrepareResult{}, err
+		return nil, err
 	}
 
-	var result proto.PrepareResult
+	var result map[string]any
 	if err := versionConstraintAction(ctx, apiVersion, func(legacy bool) error {
 		if !legacy {
 			return nil
@@ -84,10 +86,10 @@ func (p MetaConfigPreparator) Prepare(ctx context.Context, input config.Provider
 		if _, ok := input.ProviderClusterConfig["legacyMode"]; ok {
 			return nil
 		}
-		result.ProviderClusterConfig = map[string]interface{}{"legacyMode": true}
+		result = map[string]any{"legacyMode": true}
 		return nil
 	}); err != nil {
-		return proto.PrepareResult{}, err
+		return nil, err
 	}
 
 	return result, nil

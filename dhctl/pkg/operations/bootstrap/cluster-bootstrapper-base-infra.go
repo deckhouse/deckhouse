@@ -47,7 +47,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		&b.Options.Global,
 		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationBootstrap),
 	)

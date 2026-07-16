@@ -32,24 +32,27 @@ const (
 	DhctlOperationDestroy   DhctlOperation = proto.OperationDestroy
 )
 
-// MetaConfigPreparatorProvider selects the per-provider preparator. Only the
-// two in-tree providers that need one carry a dedicated implementation: vcd
-// (Prepare injects legacyMode for old VCD APIs) and yandex (Validate checks the
-// cluster prefix, NAT-instance layout and external-IP counts). Every other
-// provider — including external ones like DVP, whose configuration is validated
-// by the cloud-provider admission webhook and its OpenAPI schema — needs no
-// dhctl-side preparator and gets a no-op.
-func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
-	return selectPreparator
+// MetaConfigValidatorProvider selects the per-provider validator. Only two
+// in-tree providers carry one: yandex (cluster prefix, NAT-instance layout,
+// external-IP counts) and vcd (provider.server format, plus the legacyMode
+// patch it applies through PatchProviderClusterConfig). Every other provider —
+// including external ones like DVP, whose config is checked by the
+// cloud-provider admission webhook and its OpenAPI schema — needs no
+// dhctl-side validation and gets a no-op.
+func MetaConfigValidatorProvider() config.MetaConfigValidatorProvider {
+	return selectValidator
 }
 
-func selectPreparator(ctx context.Context, provider, downloadRootDir string) config.MetaConfigPreparator {
+func selectValidator(ctx context.Context, provider string) config.MetaConfigValidator {
 	switch provider {
 	case yandex.ProviderName:
-		return yandex.NewMetaConfigPreparator(true)
+		// Top-level dhctl paths validate the cluster prefix; the yandex hook
+		// builds its own validator with that check off (the prefix of a running
+		// cluster is already a fact).
+		return yandex.NewMetaConfigValidator(true)
 	case vcd.ProviderName:
-		return vcd.NewMetaConfigPreparator()
+		return vcd.NewMetaConfigValidator()
 	default:
-		return config.DummyPreparatorProvider()(ctx, provider, downloadRootDir)
+		return config.DummyValidatorProvider()(ctx, provider)
 	}
 }

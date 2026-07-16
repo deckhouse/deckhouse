@@ -31,12 +31,12 @@ import (
 )
 
 type Config struct {
-	PreparatorProvider config.MetaConfigPreparatorProvider
+	PreparatorProvider config.MetaConfigValidatorProvider
 }
 
-func NewConfig(preparatorProvider config.MetaConfigPreparatorProvider) Config {
+func NewConfig(validatorProvider config.MetaConfigValidatorProvider) Config {
 	return Config{
-		PreparatorProvider: preparatorProvider,
+		PreparatorProvider: validatorProvider,
 	}
 }
 

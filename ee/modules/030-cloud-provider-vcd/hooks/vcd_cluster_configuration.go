@@ -77,7 +77,7 @@ var _ = cluster_configuration.RegisterHook(
 	// metaconfig is already prepared, and VCD version discovery happens in the
 	// data-discoverer hook (order 10). Validation that matters is done locally by
 	// validateProviderClusterConfig.
-	cluster_configuration.NewConfig(config.DummyPreparatorProvider()),
+	cluster_configuration.NewConfig(config.DummyValidatorProvider()),
 )
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {

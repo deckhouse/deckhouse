@@ -129,7 +129,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,
 			kubeCl,
-			infrastructureprovider.MetaConfigPreparatorProvider(),
+			infrastructureprovider.MetaConfigValidatorProvider(),
 			&opts.Global,
 			infrastructureprovider.DhctlOperationConverge,
 		)

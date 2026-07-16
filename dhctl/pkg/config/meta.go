@@ -30,6 +30,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 	otattribute "go.opentelemetry.io/otel/attribute"
+	ottrace "go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -106,11 +107,11 @@ const (
 	defaultClusterMasterRPPBootstrapServerPort = 4282
 )
 
-func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
-	ctx, span := telemetry.StartSpan(ctx, "validateAndPrepareMetaConfig")
+func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigValidatorProvider, m *MetaConfig) (*MetaConfig, error) {
+	ctx, span := telemetry.StartSpan(ctx, "validateProviderConfig")
 	defer span.End()
 
-	providerPreparator := preparatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
+	validator := validatorProvider(ctx, m.ProviderName)
 	providerInput := m.buildProviderInput()
 
 	span.SetAttributes(
@@ -118,7 +119,6 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 		otattribute.String("provider.layout", m.Layout),
 		otattribute.String("provider.clusterPrefix", m.ClusterPrefix),
 		otattribute.String("provider.operation", m.Operation),
-		otattribute.String("provider.downloadRootDir", m.DownloadRootDir),
 		otattribute.Int("provider.input.providerClusterConfigKeys", len(providerInput.ProviderClusterConfig)),
 	)
 	if cv := providerInput.CloudProviderVars; cv != nil {
@@ -130,36 +130,16 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 		)
 	}
 
-	if err := providerPreparator.Validate(ctx, providerInput); err != nil {
+	if err := validator.Validate(ctx, providerInput); err != nil {
 		return nil, err
 	}
 	span.AddEvent("provider validated")
 
-	result, err := providerPreparator.Prepare(ctx, providerInput)
-	if err != nil {
+	if err := m.patchProviderClusterConfig(ctx, validator, providerInput, span); err != nil {
 		return nil, err
 	}
-	span.AddEvent("provider prepared")
-	span.SetAttributes(otattribute.Int("provider.output.providerClusterConfigKeys", len(result.ProviderClusterConfig)))
 
-	if len(result.ProviderClusterConfig) > 0 && m.ProviderClusterConfig == nil {
-		m.ProviderClusterConfig = make(map[string]json.RawMessage, len(result.ProviderClusterConfig))
-	}
-	for k, v := range result.ProviderClusterConfig {
-		raw, err := json.Marshal(v)
-		if err != nil {
-			return nil, fmt.Errorf("marshal provider cluster config key %q: %w", k, err)
-		}
-		m.ProviderClusterConfig[k] = raw
-	}
-
-	if len(result.ProviderClusterConfig) > 0 {
-		if err := m.validateMutatedProviderClusterConfig(); err != nil {
-			return nil, err
-		}
-	}
-
-	// Re-extract typed fields: the preparator may have mutated PCC.
+	// Re-extract typed fields: the patch above may have rewritten PCC.
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
 	}
@@ -167,10 +147,52 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	return m, nil
 }
 
-// validateMutatedProviderClusterConfig re-validates ProviderClusterConfig
-// against the provider schema after a preparator mutated it, so a buggy
-// provider binary cannot inject an invalid configuration into tfvars.
-func (m *MetaConfig) validateMutatedProviderClusterConfig() error {
+// patchProviderClusterConfig lets a provider rewrite its own parsed
+// configuration. Only vcd needs this (it injects legacyMode for old VCD API
+// versions), so instead of a second method every provider would have to stub
+// out, the capability is optional: a validator that has it gets called, the
+// rest are left alone. The patch is re-validated against the provider schema so
+// a buggy provider cannot inject an invalid configuration into tfvars.
+func (m *MetaConfig) patchProviderClusterConfig(
+	ctx context.Context,
+	validator MetaConfigValidator,
+	input ProviderInput,
+	span ottrace.Span,
+) error {
+	patcher, ok := validator.(interface {
+		PatchProviderClusterConfig(ctx context.Context, input ProviderInput) (map[string]any, error)
+	})
+	if !ok {
+		return nil
+	}
+
+	patch, err := patcher.PatchProviderClusterConfig(ctx, input)
+	if err != nil {
+		return err
+	}
+	if len(patch) == 0 {
+		return nil
+	}
+	span.AddEvent("provider cluster config patched")
+	span.SetAttributes(otattribute.Int("provider.output.providerClusterConfigKeys", len(patch)))
+
+	if m.ProviderClusterConfig == nil {
+		m.ProviderClusterConfig = make(map[string]json.RawMessage, len(patch))
+	}
+	for k, v := range patch {
+		raw, err := json.Marshal(v)
+		if err != nil {
+			return fmt.Errorf("marshal provider cluster config key %q: %w", k, err)
+		}
+		m.ProviderClusterConfig[k] = raw
+	}
+
+	return m.validatePatchedProviderClusterConfig()
+}
+
+// validatePatchedProviderClusterConfig re-validates ProviderClusterConfig
+// against the provider schema after a provider patched it.
+func (m *MetaConfig) validatePatchedProviderClusterConfig() error {
 	var index SchemaIndex
 	_ = json.Unmarshal(m.ProviderClusterConfig["kind"], &index.Kind)
 	_ = json.Unmarshal(m.ProviderClusterConfig["apiVersion"], &index.Version)
@@ -183,13 +205,13 @@ func (m *MetaConfig) validateMutatedProviderClusterConfig() error {
 		return fmt.Errorf("marshal mutated provider cluster configuration: %w", err)
 	}
 	if err := NewSchemaStore(nil).ValidateWithIndex(&index, &doc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
-		return fmt.Errorf("provider %s preparator mutated provider cluster configuration into an invalid state: %w", m.ProviderName, err)
+		return fmt.Errorf("provider %s patched provider cluster configuration into an invalid state: %w", m.ProviderName, err)
 	}
 	return nil
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
-func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
+func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigValidatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
@@ -218,7 +240,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	if m.ClusterType != CloudClusterType {
-		return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+		return validateProviderConfig(ctx, validatorProvider, m)
 	}
 
 	if err := m.prepareProviderName(); err != nil {
@@ -246,7 +268,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		return nil, err
 	}
 
-	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+	return validateProviderConfig(ctx, validatorProvider, m)
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec

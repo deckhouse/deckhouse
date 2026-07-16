@@ -214,7 +214,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		metaConfig, err = config.ParseConfigInCluster(
 			ctx,
 			kubeClient,
-			infrastructureprovider.MetaConfigPreparatorProvider(),
+			infrastructureprovider.MetaConfigValidatorProvider(),
 			nil,
 			infrastructureprovider.DhctlOperationConverge,
 		)

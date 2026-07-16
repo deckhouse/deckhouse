@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -223,7 +222,7 @@ func generateOldDockerCfg(host string, username, password *string) string {
 func generateMetaConfig(t *testing.T, template string, data map[string]any, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
-	cfg, err := ParseConfigFromData(t.Context(), configData, DummyPreparatorProvider(), &options.New().Global)
+	cfg, err := ParseConfigFromData(t.Context(), configData, DummyValidatorProvider(), &options.New().Global)
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -471,33 +470,31 @@ func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
 	require.Equal(t, 1, src.CloudProviderVars.NodeGroups["ng"]["replicas"])
 }
 
-type stubPreparator struct {
-	result proto.PrepareResult
+type stubPatchingValidator struct {
+	patch map[string]any
 }
 
-func (s stubPreparator) Validate(_ context.Context, _ ProviderInput) error {
+func (s stubPatchingValidator) Validate(_ context.Context, _ ProviderInput) error {
 	return nil
 }
 
-func (s stubPreparator) Prepare(_ context.Context, _ ProviderInput) (proto.PrepareResult, error) {
-	return s.result, nil
+func (s stubPatchingValidator) PatchProviderClusterConfig(_ context.Context, _ ProviderInput) (map[string]any, error) {
+	return s.patch, nil
 }
 
-func stubPreparatorProvider(s stubPreparator) MetaConfigPreparatorProvider {
-	return func(_ context.Context, _, _ string) MetaConfigPreparator { return s }
+func stubValidatorProvider(s stubPatchingValidator) MetaConfigValidatorProvider {
+	return func(_ context.Context, _ string) MetaConfigValidator { return s }
 }
 
-func TestValidateAndPrepareMetaConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {
+func TestValidateProviderConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {
 	m := &MetaConfig{
 		ClusterType:           CloudClusterType,
 		ProviderName:          "dvp",
 		ProviderClusterConfig: nil,
 	}
-	prep := stubPreparator{result: proto.PrepareResult{
-		ProviderClusterConfig: map[string]interface{}{"layout": "Standard"},
-	}}
+	v := stubPatchingValidator{patch: map[string]any{"layout": "Standard"}}
 
-	out, err := validateAndPrepareMetaConfig(context.Background(), stubPreparatorProvider(prep), m)
+	out, err := validateProviderConfig(context.Background(), stubValidatorProvider(v), m)
 	require.NoError(t, err)
 	require.NotNil(t, out.ProviderClusterConfig)
 	require.Contains(t, out.ProviderClusterConfig, "layout")

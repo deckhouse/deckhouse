@@ -267,7 +267,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 	metaConfig, err := config.ParseConfigInCluster(
 		ctx,
 		c.kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		c.globalOptions,
 		infrastructureprovider.DhctlOperationConverge,
 	)

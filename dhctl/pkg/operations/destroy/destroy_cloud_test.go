@@ -804,7 +804,7 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		// deckhouse-registry unconditionally; seed it so the retry-loop
 		// doesn't trip the 600 s go-test timeout.
 		testCreateDeckhouseRegistrySecret(t, kubeCl)
-		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil, "")
+		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyValidatorProvider(), nil, "")
 		require.NoError(t, err)
 	}
 

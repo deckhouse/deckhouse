@@ -49,7 +49,7 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	metaConfig, err := config.ParseConfigFromDataEnsureProvider(
 		ctx,
 		configData,
-		infrastructureprovider.MetaConfigPreparatorProvider(),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		nil,
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),

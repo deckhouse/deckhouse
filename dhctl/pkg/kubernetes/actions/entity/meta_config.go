@@ -28,7 +28,7 @@ func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, globalO
 	metaConfig, err := config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		globalOptions,
 		operation,
 	)

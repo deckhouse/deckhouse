@@ -20,32 +20,30 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
-type fakeMutatingPreparator struct {
-	result proto.PrepareResult
+// fakePatchingValidator stands in for vcd: the only provider that patches its
+// own parsed config through the optional PatchProviderClusterConfig method.
+type fakePatchingValidator struct {
+	patch map[string]any
 }
 
-func (p *fakeMutatingPreparator) Validate(_ context.Context, _ ProviderInput) error {
+func (p *fakePatchingValidator) Validate(_ context.Context, _ ProviderInput) error {
 	return nil
 }
 
-func (p *fakeMutatingPreparator) Prepare(_ context.Context, _ ProviderInput) (proto.PrepareResult, error) {
-	return p.result, nil
+func (p *fakePatchingValidator) PatchProviderClusterConfig(_ context.Context, _ ProviderInput) (map[string]any, error) {
+	return p.patch, nil
 }
 
-func fakePreparatorProvider(p MetaConfigPreparator) MetaConfigPreparatorProvider {
-	return func(_ context.Context, _, _ string) MetaConfigPreparator { return p }
+func fakeValidatorProvider(v MetaConfigValidator) MetaConfigValidatorProvider {
+	return func(_ context.Context, _ string) MetaConfigValidator { return v }
 }
 
-func TestPrepareMutationMergeContract(t *testing.T) {
-	preparator := &fakeMutatingPreparator{result: proto.PrepareResult{
-		ProviderClusterConfig: map[string]interface{}{
-			"replaced": map[string]interface{}{"new": true},
-			"added":    "fresh",
-		},
+func TestPatchMergeContract(t *testing.T) {
+	validator := &fakePatchingValidator{patch: map[string]interface{}{
+		"replaced": map[string]interface{}{"new": true},
+		"added":    "fresh",
 	}}
 
 	m := &MetaConfig{
@@ -56,7 +54,7 @@ func TestPrepareMutationMergeContract(t *testing.T) {
 		},
 	}
 
-	_, err := validateAndPrepareMetaConfig(context.Background(), fakePreparatorProvider(preparator), m)
+	_, err := validateProviderConfig(context.Background(), fakeValidatorProvider(validator), m)
 	require.NoError(t, err)
 
 	require.JSONEq(t, `{"old":1}`, string(m.ProviderClusterConfig["kept"]), "keys absent from the result must stay untouched")
@@ -64,18 +62,16 @@ func TestPrepareMutationMergeContract(t *testing.T) {
 	require.JSONEq(t, `"fresh"`, string(m.ProviderClusterConfig["added"]))
 }
 
-func TestPrepareMutationRevalidatesAgainstSchema(t *testing.T) {
+func TestPatchRevalidatesAgainstSchema(t *testing.T) {
 	dir := t.TempDir()
 	writeTestProviderSchema(t, dir, "MutProvConfiguration")
 	// NewSchemaStore is a process-wide singleton: loading here is what makes
-	// the revalidation inside validateAndPrepareMetaConfig see the schema.
+	// the revalidation inside validateProviderConfig see the schema.
 	store := NewSchemaStore(nil)
 	require.NoError(t, store.LoadProviderDir("mutprov", "sha256:mut1", dir))
 
-	preparator := &fakeMutatingPreparator{result: proto.PrepareResult{
-		ProviderClusterConfig: map[string]interface{}{
-			"bogus": "not allowed by additionalProperties: false",
-		},
+	validator := &fakePatchingValidator{patch: map[string]interface{}{
+		"bogus": "not allowed by additionalProperties: false",
 	}}
 
 	m := &MetaConfig{
@@ -87,22 +83,20 @@ func TestPrepareMutationRevalidatesAgainstSchema(t *testing.T) {
 		},
 	}
 
-	_, err := validateAndPrepareMetaConfig(context.Background(), fakePreparatorProvider(preparator), m)
+	_, err := validateProviderConfig(context.Background(), fakeValidatorProvider(validator), m)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "mutated provider cluster configuration into an invalid state")
+	require.Contains(t, err.Error(), "patched provider cluster configuration into an invalid state")
 	require.Contains(t, err.Error(), "bogus")
 }
 
-func TestPrepareMutationValidResultPasses(t *testing.T) {
+func TestPatchValidResultPasses(t *testing.T) {
 	dir := t.TempDir()
 	writeTestProviderSchema(t, dir, "MutProvOkConfiguration")
 	store := NewSchemaStore(nil)
 	require.NoError(t, store.LoadProviderDir("mutprovok", "sha256:mut2", dir))
 
-	preparator := &fakeMutatingPreparator{result: proto.PrepareResult{
-		ProviderClusterConfig: map[string]interface{}{
-			"layout": "Amended",
-		},
+	validator := &fakePatchingValidator{patch: map[string]interface{}{
+		"layout": "Amended",
 	}}
 
 	m := &MetaConfig{
@@ -114,7 +108,7 @@ func TestPrepareMutationValidResultPasses(t *testing.T) {
 		},
 	}
 
-	_, err := validateAndPrepareMetaConfig(context.Background(), fakePreparatorProvider(preparator), m)
+	_, err := validateProviderConfig(context.Background(), fakeValidatorProvider(validator), m)
 	require.NoError(t, err)
 	require.JSONEq(t, `"Amended"`, string(m.ProviderClusterConfig["layout"]))
 }

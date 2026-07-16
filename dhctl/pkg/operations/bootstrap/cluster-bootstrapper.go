@@ -274,7 +274,7 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		&b.Options.Global,
 		config.ValidateOptionValidateExtensions(true),
 		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationBootstrap),

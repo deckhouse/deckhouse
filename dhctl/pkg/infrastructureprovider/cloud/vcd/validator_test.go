@@ -24,8 +24,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-func newTestPreparator(client cloudClient) *MetaConfigPreparator {
-	p := NewMetaConfigPreparator()
+func newTestValidator(client cloudClient) *MetaConfigValidator {
+	p := NewMetaConfigValidator()
 
 	p.clientProvider = func(_ map[string]json.RawMessage) (cloudClient, error) {
 		return client, nil
@@ -34,31 +34,31 @@ func newTestPreparator(client cloudClient) *MetaConfigPreparator {
 	return p
 }
 
-func TestPreparatorWithCurrentAPI(t *testing.T) {
-	preparator := newTestPreparator(testGetCurrentClient())
-	result, err := preparator.Prepare(t.Context(), config.ProviderInput{})
+func TestPatchWithCurrentAPI(t *testing.T) {
+	validator := newTestValidator(testGetCurrentClient())
+	result, err := validator.PatchProviderClusterConfig(t.Context(), config.ProviderInput{})
 
 	require.NoError(t, err)
-	require.Nil(t, result.ProviderClusterConfig)
+	require.Nil(t, result)
 }
 
-func TestPreparatorWithLegacyAPI(t *testing.T) {
-	preparator := newTestPreparator(testGetLegacyClient())
+func TestPatchWithLegacyAPI(t *testing.T) {
+	validator := newTestValidator(testGetLegacyClient())
 
-	result, err := preparator.Prepare(context.TODO(), config.ProviderInput{})
+	result, err := validator.PatchProviderClusterConfig(context.TODO(), config.ProviderInput{})
 	require.NoError(t, err)
-	require.NotNil(t, result.ProviderClusterConfig)
-	require.Contains(t, result.ProviderClusterConfig, "legacyMode")
-	require.Equal(t, true, result.ProviderClusterConfig["legacyMode"])
+	require.NotNil(t, result)
+	require.Contains(t, result, "legacyMode")
+	require.Equal(t, true, result["legacyMode"])
 
 	// does not override if legacyMode already set
 	legacyModeRaw, _ := json.Marshal(false)
 	inputWithLegacy := config.ProviderInput{
 		ProviderClusterConfig: map[string]json.RawMessage{"legacyMode": legacyModeRaw},
 	}
-	result, err = preparator.Prepare(t.Context(), inputWithLegacy)
+	result, err = validator.PatchProviderClusterConfig(t.Context(), inputWithLegacy)
 	require.NoError(t, err)
-	require.Nil(t, result.ProviderClusterConfig)
+	require.Nil(t, result)
 }
 
 func TestValidateMetaConfig(t *testing.T) {
@@ -76,8 +76,8 @@ func TestValidateMetaConfig(t *testing.T) {
 	}
 
 	assertPrefix := func(t *testing.T, prefix string, hasError bool) {
-		preparator := newTestPreparator(testGetLegacyClient())
-		err := preparator.Validate(t.Context(), makeInput(validServer, prefix))
+		validator := newTestValidator(testGetLegacyClient())
+		err := validator.Validate(t.Context(), makeInput(validServer, prefix))
 		if hasError {
 			require.Error(t, err)
 		} else {
@@ -89,7 +89,7 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "1abc", false)
 	assertPrefix(t, "abc-abc", false)
 
-	preparator := newTestPreparator(testGetLegacyClient())
-	err := preparator.Validate(t.Context(), makeInput("https://myserver:8080/api/", "test"))
+	validator := newTestValidator(testGetLegacyClient())
+	err := validator.Validate(t.Context(), makeInput("https://myserver:8080/api/", "test"))
 	require.Error(t, err)
 }

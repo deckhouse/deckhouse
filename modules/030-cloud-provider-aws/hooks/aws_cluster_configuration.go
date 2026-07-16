@@ -119,7 +119,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 	}
 
-	metaCfg, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider(), nil)
+	metaCfg, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), infrastructureprovider.MetaConfigValidatorProvider(), nil)
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 	}

@@ -45,7 +45,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	metaConfig, err := config.ParseConfig(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		&b.Options.Global,
 	)
 	if err != nil {
