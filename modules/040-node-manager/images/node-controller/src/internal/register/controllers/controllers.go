@@ -28,6 +28,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/kubeletcsrapprover"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
+	_ "github.com/deckhouse/node-controller/internal/controller/nodeusercleanup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodetemplate"
 	_ "github.com/deckhouse/node-controller/internal/controller/spottermination"
 	_ "github.com/deckhouse/node-controller/internal/controller/staticproviderid"

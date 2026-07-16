@@ -510,6 +510,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `node-csi-taint` | `Node` (+watch `CSINode`) | `remove_csi_taints.go` | Remove `node.deckhouse.io/csi-not-bootstrapped` taint once `CSINode.spec.drivers` is non-empty |
 | `node-spot-termination` | `Node` | `handle_spot_instance_deletion.go` | Delete the `Instance` of a drained spot node marked `termination-in-progress` |
 | `node-kubelet-csr-approver` | `CertificateSigningRequest` | `kubelet_csr_approver.go` | Auto-approve validated `kubernetes.io/kubelet-serving` CSRs |
+| `node-nodeuser-error-cleanup` | `NodeUser` (+watch `Node` deletes) | `clear_nodeuser_errors.go` | Drop `NodeUser.status.errors` entries keyed by nodes that no longer exist |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -583,3 +584,27 @@ set than the hook, and RBAC blocks approval of any other signer.
 RBAC: `certificatesigningrequests` get/list/watch, `.../approval` update,
 `signers` `approve` on `kubernetes.io/kubelet-serving` (added) and
 `kubernetes.io/kube-apiserver-client` (pre-existing).
+
+### node-nodeuser-error-cleanup (`internal/controller/nodeusercleanup`)
+
+`NodeUser.status.errors` is a map keyed by node name holding per-node provisioning
+errors. When a node is removed its entry can linger. The controller drops entries
+whose node no longer exists among the nodes carrying the `node.deckhouse.io/group`
+label.
+
+```
+NodeUser changed / Node deleted (re-enqueues every NodeUser)
+  ├─ status.errors empty?                     → skip
+  ├─ compute stale = error keys not among labeled group nodes
+  ├─ no stale keys?                           → skip
+  └─ JSON merge patch status.errors {key: null, ...} on the status subresource
+```
+
+**Parity note:** the hook ran on a 30-minute `Schedule` plus a passive Node/NodeUser
+Synchronization binding (`ExecuteHookOnEvents=false`), so a stale entry lingered until
+the next cron tick or an operator restart. The controller reconciles a NodeUser
+reactively on its own changes and re-checks every NodeUser on a Node deletion (only
+deletions can strand an entry; create/update never turns an existing entry stale), so
+stale entries clear promptly. The node set (`node.deckhouse.io/group` label), the stale
+computation and the null-valued merge patch on `/status` match the hook exactly.
+RBAC: `nodeusers` get/list/watch, `nodeusers/status` patch, `nodes` list (pre-existing).

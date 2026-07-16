@@ -244,6 +244,24 @@ rules:
   - get
   - list
   - watch
+# NodeUsers - read + patch status.errors to drop stale per-node entries whose node no
+# longer exists (nodeusercleanup controller, taken over from the clear_nodeuser_errors hook).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeusers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeusers/status
+  verbs:
+  - get
+  - patch
+  - update
 # InstanceClasses + catalog - read for bashible-apiserver-context blob (check #2 known-class-names,
 # check #3 scale-from-zero capacity, and the resolved instanceClass overlay). Missing read makes
 # cloud NodeGroups fail validation and diverges the blob -> bashible checksum churn -> node re-bootstrap.
