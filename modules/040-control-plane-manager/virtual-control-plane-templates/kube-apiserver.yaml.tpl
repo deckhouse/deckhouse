@@ -51,6 +51,7 @@ spec:
         - --proxy-client-cert-file=/pki/front-proxy-client.crt
         - --proxy-client-key-file=/pki/front-proxy-client.key
         - --service-cluster-ip-range=${SERVICE_SUBNET_CIDR}
+        - --enable-aggregator-routing=true
         - --authorization-mode=Node,RBAC
         - --allow-privileged=true
         - --secure-port=6443
@@ -119,6 +120,7 @@ spec:
         - --server-port=0
         - --agent-port=8132
         - --server-count=${VCP_KONNECTIVITY_SERVER_COUNT}
+        - --proxy-strategies=destHost,defaultRoute,default
         - --health-port=8134
         - --admin-port=8133
         - --uds-name=/etc/kubernetes/konnectivity-server/konnectivity-server.socket
@@ -145,6 +147,38 @@ spec:
         - {name: konnectivity-kubeconfig, mountPath: /etc/konnectivity/kubeconfig, readOnly: true}
         resources:
           requests: {cpu: 50m, memory: 64Mi}
+      - name: konnectivity-agent-cp
+        image: ${IMAGE_KONNECTIVITY_AGENT}
+        command:
+        - /proxy-agent
+        args:
+        - --logtostderr=true
+        - --ca-cert=/etc/konnectivity-agent-cp/ca.crt
+        - --proxy-server-host=127.0.0.1
+        - --proxy-server-port=8132
+        - --admin-server-port=8135
+        - --health-server-port=8136
+        - --service-account-token-path=/etc/konnectivity-agent-cp/token
+        - --agent-identifiers=default-route=true
+        livenessProbe:
+          httpGet:
+            port: 8136
+            path: /healthz
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 6
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: konnectivity-agent-cp
+          mountPath: /etc/konnectivity-agent-cp
+          readOnly: true
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 64Mi}
       volumes:
       - name: pki
         secret:
@@ -157,3 +191,6 @@ spec:
       - name: konnectivity-kubeconfig
         secret:
           secretName: d8-admin-kubeconfig-virtual
+      - name: konnectivity-agent-cp
+        secret:
+          secretName: konnectivity-agent-cp

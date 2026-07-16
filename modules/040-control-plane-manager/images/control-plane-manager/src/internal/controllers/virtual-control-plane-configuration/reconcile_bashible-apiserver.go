@@ -124,7 +124,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	}
 
 	// 9. Parent: Service
-	_, res, err = r.reconcileBashibleService(ctx, vcp)
+	parentService, res, err := r.reconcileBashibleService(ctx, vcp)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -135,7 +135,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	}
 
 	// 11. Parent: APIService
-	if res, err := r.reconcileBashibleAPIService(ctx, nestedClient, tlsSecret, albVIP); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleAPIService(ctx, nestedClient, parentService, tlsSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -603,18 +603,18 @@ func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane
 func (r *reconciler) reconcileBashibleAPIService(
 	ctx context.Context,
 	nested client.Client,
+	parentService *corev1.Service,
 	tlsSecret *corev1.Secret,
-	albVIP string,
 ) (reconcile.Result, error) {
 	namespace := bashibleDeckhouseNamespace
-	bashibleAddress := albVIP
-	if bashibleAddress == "" {
+	address := parentService.Spec.ClusterIP
+	if address == "" || address == corev1.ClusterIPNone {
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
 
-	svc := buildNestedBashibleService(namespace)
-	_, err := controllerutil.CreateOrUpdate(ctx, nested, svc, func() error {
-		applyNestedBashibleService(svc)
+	nestedService := buildNestedBashibleService(namespace)
+	_, err := controllerutil.CreateOrUpdate(ctx, nested, nestedService, func() error {
+		applyNestedBashibleService(nestedService)
 		return nil
 	})
 	if err != nil {
@@ -622,9 +622,9 @@ func (r *reconciler) reconcileBashibleAPIService(
 	}
 
 	// Legacy Endpoints for kube-aggregator (< 1.34)
-	ep := buildNestedBashibleEndpoints(namespace, bashibleAddress)
+	ep := buildNestedBashibleEndpoints(namespace, address)
 	if _, err := controllerutil.CreateOrUpdate(ctx, nested, ep, func() error {
-		applyNestedBashibleEndpoints(ep, namespace, bashibleAddress)
+		applyNestedBashibleEndpoints(ep, namespace, address)
 		return nil
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("nested bashible endpoints: %w", err)

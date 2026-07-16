@@ -135,6 +135,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if res, err := r.reconcileKonnectivityCPAgentSecret(ctx, vcp, pkiSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	if res, err := r.reconcileCiliumOperator(ctx, vcp, configSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
