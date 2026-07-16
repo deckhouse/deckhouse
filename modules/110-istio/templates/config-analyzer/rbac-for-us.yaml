@@ -25,6 +25,7 @@ rules:
   - configmaps
   - endpoints
   - namespaces
+  - nodes
   - pods
   - replicationcontrollers
   - secrets
