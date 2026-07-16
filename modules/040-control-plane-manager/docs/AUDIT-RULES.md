@@ -319,6 +319,7 @@ users:
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
   - system:serviceaccount:d8-istio:cni
   - system:serviceaccount:d8-istio:ingress-gateway-controller
+  - system:serviceaccount:d8-istio:istio-config-analyzer
   - system:serviceaccount:d8-istio:kiali
   - system:serviceaccount:d8-istio:multicluster-api-proxy
   - system:serviceaccount:d8-istio:multicluster-metrics-exporter
@@ -795,6 +796,7 @@ rules:
       - system:serviceaccount:d8-istio:alliance-metadata-exporter
       - system:serviceaccount:d8-istio:cni
       - system:serviceaccount:d8-istio:ingress-gateway-controller
+      - system:serviceaccount:d8-istio:istio-config-analyzer
       - system:serviceaccount:d8-istio:kiali
       - system:serviceaccount:d8-istio:multicluster-api-proxy
       - system:serviceaccount:d8-istio:multicluster-metrics-exporter
