@@ -56,3 +56,5 @@ shell:
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /zvirt-cloud-controller-manager cmd/zvirt-cloud-controller-manager/main.go
     - chown 64535:64535 /zvirt-cloud-controller-manager
     - chmod 0755 /zvirt-cloud-controller-manager
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
