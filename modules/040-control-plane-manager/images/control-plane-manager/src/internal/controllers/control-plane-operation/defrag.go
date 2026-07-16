@@ -44,7 +44,7 @@ const (
 	// etcdDefragWaitPodDeadline bounds how long a defrag CPO waits for the local etcd pod
 	// before abandoning: waiting forever would hold the single global etcd slot and deadlock
 	// etcd join on other nodes. See waitEtcdPodResult.
-	etcdDefragWaitPodDeadline = 2 * time.Minute
+	etcdDefragWaitPodDeadline = 10 * time.Minute
 )
 
 // defragEtcdIfNeeded runs defragmentation if the fragmented ratio exceeds etcdDefragFragRatioThreshold.
