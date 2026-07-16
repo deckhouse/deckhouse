@@ -74,9 +74,8 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 			}
 			return result, err
 		}
-		// A step may drive the whole operation to a terminal state (e.g. Abandoned) or ask to
-		// requeue; executeStep already persisted either, so just stop the pipeline here.
-		if state.IsTerminal() || result.RequeueAfter > 0 {
+
+		if state.IsAbandoned() || result.RequeueAfter > 0 {
 			return result, nil
 		}
 	}
