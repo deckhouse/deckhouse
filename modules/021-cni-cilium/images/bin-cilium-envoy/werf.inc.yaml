@@ -45,6 +45,13 @@ shell:
   - git apply --verbose /src/proxy/patches/*.patch
   - rm -rf /src/envoy/.git
 ---
+image: {{ .ModuleName }}/glibc-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+shell:
+  beforeInstall:
+  - pm install libatomic@15.2 libc@2.43 -d /out
+---
 image: {{ .ModuleName }}/cilium-envoy-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
@@ -53,16 +60,16 @@ import:
   add: /src
   to: /src
   before: install
-- from: {{ index $.Images "libs/glibc-v2.41" }}
-  add: /lib64/libm.so.6
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libm.so.6
   to: /usr/lib64/libm.so.6
   before: install
-- from: {{ index $.Images "libs/glibc-v2.41" }}
-  add: /lib64/libc.so.6
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libc.so.6
   to: /usr/lib64/libc.so.6
   before: install
-- from: {{ index $.Images "libs/glibc-v2.41" }}
-  add: /lib64/ld-linux-x86-64.so.2
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/ld-linux-x86-64.so.2
   to: /usr/lib64/ld-linux-x86-64.so.2
   before: install
 mount:
