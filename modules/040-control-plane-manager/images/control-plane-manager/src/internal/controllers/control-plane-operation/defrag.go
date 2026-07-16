@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -150,8 +149,10 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 }
 
 // waitEtcdPodResult abandons the operation once it has run past etcdDefragWaitPodDeadline,
-// releasing the global etcd slot; otherwise it keeps retrying. Shared by DefragEtcd and
-// WaitPodReady (see waitForPodResult in pods.go).
+// releasing the global etcd slot; otherwise it keeps retrying. Only guards DefragEtcd's wait
+// for the pod to appear before defrag even starts — WaitPodReady still waits indefinitely
+// afterwards, since giving up there could free the slot for another node's defrag while this
+// node's etcd is still down, risking a quorum loss.
 func waitEtcdPodResult(op *controlplanev1alpha1.ControlPlaneOperation, podName, reason string) StepResult {
 	if operationElapsed(op, time.Now()) > etcdDefragWaitPodDeadline {
 		return StepResult{
@@ -164,11 +165,6 @@ func waitEtcdPodResult(op *controlplanev1alpha1.ControlPlaneOperation, podName, 
 		Message:      "waiting for etcd pod to be ready before defragmentation",
 		RequeueAfter: requeueWaitPod,
 	}
-}
-
-// isEtcdDefragOperation reports whether op is a periodic etcd-defrag CPO (see buildDefragCPO).
-func isEtcdDefragOperation(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-	return slices.Contains(op.Spec.Steps, controlplanev1alpha1.StepDefragEtcd)
 }
 
 // operationElapsed returns time since op's started-at annotation, or 0 if unset/unparseable.
