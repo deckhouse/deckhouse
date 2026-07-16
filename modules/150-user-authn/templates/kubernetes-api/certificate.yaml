@@ -28,6 +28,10 @@ spec:
   {{- end }}
 {{- end }}
 {{- if and $moduleGateway .Values.userAuthn.publishAPI.enabled (eq .Values.userAuthn.publishAPI.https.mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+{{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+{{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
+  {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}
+{{- end }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -42,6 +46,6 @@ spec:
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "api") }}
   issuerRef:
-    name: {{ printf "letsencrypt-gateway-%s" $moduleGateway.name }}
+    name: {{ $issuerName }}
     kind: ClusterIssuer
 {{- end }}
