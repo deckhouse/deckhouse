@@ -7,6 +7,13 @@ metadata:
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
   annotations:
     template: ""
+    # state=present (not ready): OpenKruise's controller injects the caBundle into this
+    # object at startup and refuses to become ready until the object already exists
+    # (webhook_controller sync -> configuration.Ensure -> Get). A state=ready dependency
+    # on kruise-controller-manager would therefore deadlock (object waits for the pod,
+    # pod waits for the object). state=present breaks the cycle while keeping ordering.
+    werf.io/deploy-dependency-deployment: state=present,kind=Deployment,name=kruise-controller-manager,namespace=d8-ingress-nginx
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=kruise-webhook-service,namespace=d8-ingress-nginx
 webhooks:
   - clientConfig:
       service:
@@ -62,6 +69,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
   annotations:
     template: ""
+    # state=present (not ready): see the MutatingWebhookConfiguration above — kruise
+    # self-injects the caBundle and needs this object to pre-exist, so a state=ready
+    # dependency on its own controller would deadlock.
+    werf.io/deploy-dependency-deployment: state=present,kind=Deployment,name=kruise-controller-manager,namespace=d8-ingress-nginx
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=kruise-webhook-service,namespace=d8-ingress-nginx
 webhooks:
   - clientConfig:
       service:
