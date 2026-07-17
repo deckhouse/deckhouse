@@ -470,31 +470,15 @@ func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
 	require.Equal(t, 1, src.CloudProviderVars.NodeGroups["ng"]["replicas"])
 }
 
-type stubPatchingValidator struct {
-	patch map[string]any
-}
-
-func (s stubPatchingValidator) Validate(_ context.Context, _ ProviderInput) error {
-	return nil
-}
-
-func (s stubPatchingValidator) PatchProviderClusterConfig(_ context.Context, _ ProviderInput) (map[string]any, error) {
-	return s.patch, nil
-}
-
-func stubValidatorProvider(s stubPatchingValidator) MetaConfigValidatorProvider {
-	return func(_ context.Context, _, _ string) MetaConfigValidator { return s }
-}
-
 func TestValidateProviderConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {
 	m := &MetaConfig{
 		ClusterType:           CloudClusterType,
 		ProviderName:          "dvp",
 		ProviderClusterConfig: nil,
 	}
-	v := stubPatchingValidator{patch: map[string]any{"layout": "Standard"}}
+	v := &fakePatchingValidator{patch: map[string]any{"layout": "Standard"}}
 
-	out, err := validateProviderConfig(context.Background(), stubValidatorProvider(v), m)
+	out, err := validateProviderConfig(context.Background(), fakeValidatorProvider(v), m)
 	require.NoError(t, err)
 	require.NotNil(t, out.ProviderClusterConfig)
 	require.Contains(t, out.ProviderClusterConfig, "layout")

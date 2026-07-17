@@ -24,7 +24,7 @@ import (
 )
 
 // ParseMetaConfig parses commander-mode config. operation
-// (infrastructureprovider.DhctlOperation*) reaches the provider preparator,
+// (infrastructureprovider.DhctlOperation*) reaches the provider validator,
 // which skips bootstrap-only checks on other operations.
 func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, operation infrastructureprovider.DhctlOperation, kubeClient config.KubeClientGetter) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")

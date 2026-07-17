@@ -63,7 +63,7 @@ type MetaConfig struct {
 
 	CloudProviderVars *CloudProviderVars `json:"-"`
 	// Operation propagates the dhctl entry point (bootstrap/converge/destroy/
-	// check) to the provider preparator. It is intentionally serialised
+	// check) to the provider validator. It is intentionally serialised
 	// (json:"operation") so a JSON round-trip through dhctl-server RPC or a
 	// state-cache fallback preserves it. MarshalConfig clears it before
 	// emitting tfvars, since the terraform layer does not consume it.
@@ -422,7 +422,7 @@ type cloudProviderModuleSettings struct {
 // applyCloudProviderModuleSettings fills CloudProviderVars.Settings from the
 // cloud-provider-<name> ModuleConfig and extracts the typed Layout. Used on
 // bootstrap-from-file when <Provider>ClusterConfiguration is not supplied —
-// the external preparator and terraform-modules read settings from the MC
+// the external validator and terraform-modules read settings from the MC
 // instead.
 //
 // CloudProviderVars.Settings holds the *full* ModuleConfig object (apiVersion,

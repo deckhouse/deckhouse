@@ -196,7 +196,7 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 		if err != nil {
 			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		} else {
-			// we use dummy preparator because metaConfig was prepared early
+			// we use dummy validator because metaConfig was prepared early
 			cfg, err = metaConfig.DeepCopy().Prepare(ctx, config.DummyValidatorProvider())
 			if err != nil {
 				return plan.HasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)

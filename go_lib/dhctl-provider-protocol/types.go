@@ -61,14 +61,6 @@ type ValidateInput struct {
 	CloudProviderVars *CloudProviderVars `json:"vars,omitempty"`
 }
 
-// PrepareResult is returned by an in-tree provider's Prepare step (currently
-// only vcd, to inject legacyMode). The external validate-only protocol does not
-// use it.
-type PrepareResult struct {
-	// ProviderClusterConfig is the (possibly mutated) providerClusterConfiguration.
-	ProviderClusterConfig map[string]interface{} `json:"providerClusterConfiguration,omitempty"`
-}
-
 // ValidateRequest is the JSON object written to stdin for the validate subcommand.
 type ValidateRequest struct {
 	Input ValidateInput `json:"input"`

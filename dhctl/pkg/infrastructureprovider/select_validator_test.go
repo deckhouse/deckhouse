@@ -25,9 +25,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 )
 
-// In-tree providers without a dedicated preparator (gcp, aws, azure, ...)
-// must fall back to the lightweight prefix-only preparator instead of
-// demanding an external validator binary.
+// In-tree providers without a dedicated validator (gcp, aws, azure, ...)
+// must fall back to the lightweight prefix-only check instead of demanding an
+// external validator binary.
 func TestSelectValidatorInTreeFallback(t *testing.T) {
 	orig := providerBundledInCandi
 	providerBundledInCandi = func(string) bool { return true }

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"golang.org/x/sync/singleflight"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
@@ -36,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -219,30 +217,9 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	// lookup agree on one location even when DownloadDir was left empty.
 	globalOptions = withDownloadDir(globalOptions)
 
-	clusterConfig, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
+	clusterConfigData, parsedClusterConfig, clusterType, cloudProvider, err := readClusterConfigFromCluster(ctx, kubeCl)
 	if err != nil {
 		return nil, err
-	}
-	clusterConfigData := clusterConfig.Data["cluster-configuration.yaml"]
-
-	var parsedClusterConfig map[string]json.RawMessage
-	if err := yaml.Unmarshal(clusterConfigData, &parsedClusterConfig); err != nil {
-		return nil, err
-	}
-	var clusterType string
-	if err := json.Unmarshal(parsedClusterConfig["clusterType"], &clusterType); err != nil {
-		return nil, err
-	}
-
-	var cloudProvider string
-	if clusterType == CloudClusterType {
-		var cloudSpec struct {
-			Provider string `json:"provider"`
-		}
-		if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloudSpec); err != nil {
-			return nil, fmt.Errorf("parse cloud provider from cluster config: %w", err)
-		}
-		cloudProvider = strings.ToLower(cloudSpec.Provider)
 	}
 	needProviderCandi := cloudProvider != "" && !providerCandiPresent(cloudProvider, globalOptions)
 

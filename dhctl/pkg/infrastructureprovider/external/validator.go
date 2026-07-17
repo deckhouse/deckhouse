@@ -46,7 +46,7 @@ func NewBinaryValidator(binaryPath string) *Validator {
 }
 
 func (p *Validator) Validate(ctx context.Context, input config.ProviderInput) error {
-	stdout, err := p.call(ctx, "validate", input)
+	stdout, err := p.call(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -64,10 +64,10 @@ func (p *Validator) Validate(ctx context.Context, input config.ProviderInput) er
 	return nil
 }
 
-// call encodes input, runs the binary subcommand and returns its stdout.
-// Request/response payloads go to the span and debug log in full — deliberate
-// development-stage telemetry.
-func (p *Validator) call(ctx context.Context, subcommand string, input config.ProviderInput) ([]byte, error) {
+// call encodes input, runs the validator binary and returns its stdout.
+func (p *Validator) call(ctx context.Context, input config.ProviderInput) ([]byte, error) {
+	const subcommand = "validate"
+
 	ctx, span := telemetry.StartSpan(ctx, "external."+subcommand)
 	defer span.End()
 	span.SetAttributes(
