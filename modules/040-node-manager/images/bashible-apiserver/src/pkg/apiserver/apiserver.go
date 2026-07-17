@@ -38,6 +38,7 @@ import (
 	"bashible-apiserver/pkg/apis/bashible"
 	"bashible-apiserver/pkg/apis/bashible/install"
 	bashibleregistry "bashible-apiserver/pkg/registry"
+	"bashible-apiserver/pkg/runtimeconfig"
 	"bashible-apiserver/pkg/template"
 )
 
@@ -69,7 +70,8 @@ func init() {
 
 // ExtraConfig holds custom apiserver config
 type ExtraConfig struct { // Place you custom config here.
-	CtrlManager ctrl.Manager
+	CtrlManager   ctrl.Manager
+	RuntimeConfig runtimeconfig.RuntimeConfig
 }
 
 // Config defines the config for the apiserver
@@ -137,7 +139,7 @@ func (c completedConfig) New() (*BashibleServer, error) {
 		resyncTimeout    = 30 * time.Minute
 	)
 
-	kubeClient, err := initializeClientset()
+	kubeClient, err := initializeClientset(c.ExtraConfig.RuntimeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +170,9 @@ func newNodeGroupConfigurationInformerFactory(kubeClient client.Client, resync t
 
 	return factory
 }
-func initializeClientset() (client.Client, error) {
+func initializeClientset(cfg runtimeconfig.RuntimeConfig) (client.Client, error) {
+	cfg.ExportKubeconfigToEnv()
+
 	kcli := client.New()
 	err := kcli.Init()
 
