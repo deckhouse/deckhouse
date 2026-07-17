@@ -34,6 +34,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -112,16 +113,21 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
+	if _, res, err := r.reconcileKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	if res, err := r.reconcileAdminKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret, externalEndpoint); err != nil || !res.IsZero() {
+	adminSecret, res, err := r.reconcileAdminKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret, externalEndpoint)
+	if err != nil || !res.IsZero() {
 		return res, err
 	}
 
 	if err := r.reconcileStatus(ctx, vcp, externalEndpoint); err != nil {
 		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
+	}
+
+	if err := r.ensureKonnectivityCPAgentSecretBootstrap(ctx, vcp, pkiSecret.Data["ca.crt"]); err != nil {
+		return reconcile.Result{}, fmt.Errorf("bootstrap konnectivity-agent-cp secret: %w", err)
 	}
 
 	if res, err := r.reconcileControlPlaneNodes(ctx, vcp, pkiSecret, configSecret); err != nil || !res.IsZero() {
@@ -133,11 +139,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if res, err := r.reconcileKonnectivityCPAgentSecret(ctx, vcp, pkiSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	if res, err := r.reconcileCiliumOperator(ctx, vcp, configSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
 	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken, albVIP); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, apiserverService, pkiSecret, adminSecret, joinToken); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -425,7 +439,7 @@ func (r *reconciler) reconcileKubeconfigSecret(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
-) (reconcile.Result, error) {
+) (*corev1.Secret, reconcile.Result, error) {
 	endpoint := fmt.Sprintf("https://%s:6443", apiserverService.Spec.ClusterIP)
 	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualKubeconfigSecretName, componentKubeconfigFiles, endpoint)
 }
@@ -436,7 +450,7 @@ func (r *reconciler) reconcileAdminKubeconfigSecret(
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
 	endpoint string,
-) (reconcile.Result, error) {
+) (*corev1.Secret, reconcile.Result, error) {
 	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualAdminKubeconfigSecretName, adminKubeconfigFiles, endpoint)
 }
 
@@ -448,31 +462,31 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 	name string,
 	files []kubeconfig.File,
 	endpoint string,
-) (reconcile.Result, error) {
+) (*corev1.Secret, reconcile.Result, error) {
 	target := buildTargetKubeconfigSecret(vcp, name)
 
 	data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files, endpoint)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
+		return nil, reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
 	}
 	target.Data = data
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		return reconcile.Result{}, r.createSecret(ctx, target)
+		return target, reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
+		return nil, reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
 	}
 
 	if equality.Semantic.DeepEqual(current.Data, target.Data) {
-		return reconcile.Result{}, nil
+		return current, reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()
 	current.Data = target.Data
 
-	return reconcile.Result{}, r.patchSecret(ctx, base, current)
+	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
 func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, endpoint string) error {
@@ -853,6 +867,21 @@ func (r *reconciler) patchSecret(ctx context.Context, base, secret *corev1.Secre
 	return r.client.Patch(ctx, secret, client.MergeFrom(base))
 }
 
+// ConfigMap
+func (r *reconciler) getConfigMap(ctx context.Context, namespace, name string) (*corev1.ConfigMap, error) {
+	configMap := &corev1.ConfigMap{}
+	err := r.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, configMap)
+	return configMap, err
+}
+
+func (r *reconciler) createConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
+	return r.client.Create(ctx, configMap)
+}
+
+func (r *reconciler) patchConfigMap(ctx context.Context, base, configMap *corev1.ConfigMap) error {
+	return r.client.Patch(ctx, configMap, client.MergeFrom(base))
+}
+
 // Service
 func (r *reconciler) getService(ctx context.Context, namespace, name string) (*corev1.Service, error) {
 	service := &corev1.Service{}
@@ -906,4 +935,19 @@ func (r *reconciler) deleteControlPlaneNode(ctx context.Context, cpn *controlpla
 	}
 
 	return client.IgnoreNotFound(r.client.Delete(ctx, cpn))
+}
+
+// Deployment
+func (r *reconciler) getDeployment(ctx context.Context, namespace, name string) (*appsv1.Deployment, error) {
+	deployment := &appsv1.Deployment{}
+	err := r.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, deployment)
+	return deployment, err
+}
+
+func (r *reconciler) createDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
+	return r.client.Create(ctx, deployment)
+}
+
+func (r *reconciler) patchDeployment(ctx context.Context, base, deployment *appsv1.Deployment) error {
+	return r.client.Patch(ctx, deployment, client.MergeFrom(base))
 }

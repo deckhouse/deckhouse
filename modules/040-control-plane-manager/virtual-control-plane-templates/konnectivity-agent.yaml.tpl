@@ -47,6 +47,7 @@ spec:
         - --admin-server-port=8133
         - --health-server-port=8134
         - --service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token
+        - --agent-identifiers=ipv4=$(NODE_IP)
         livenessProbe:
           httpGet:
             port: 8134
@@ -55,6 +56,11 @@ spec:
         volumeMounts:
         - name: konnectivity-agent-token
           mountPath: /var/run/secrets/tokens
+        env:
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
       volumes:
       - name: konnectivity-agent-token
         projected:

@@ -17,9 +17,9 @@ limitations under the License.
 package apiserver
 
 import (
+	"bashible-apiserver/pkg/runtimeconfig"
 	"fmt"
 
-	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -32,8 +32,8 @@ const (
 	CtrlManagerLeaderElection = false
 )
 
-func NewCtrlManager() (ctrl.Manager, error) {
-	cfg, err := ctrlManagerClusterConfig()
+func NewCtrlManager(cfg runtimeconfig.RuntimeConfig) (ctrl.Manager, error) {
+	restCfg, err := cfg.RESTConfig()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create cluster config: %w", err)
 	}
@@ -44,7 +44,7 @@ func NewCtrlManager() (ctrl.Manager, error) {
 		},
 	}
 
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
 		LeaderElection:         CtrlManagerLeaderElection,
 		HealthProbeBindAddress: CtrlManagerHealthAddr,
 		Cache:                  cacheOpts,
@@ -62,8 +62,4 @@ func NewCtrlManager() (ctrl.Manager, error) {
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 	return mgr, err
-}
-
-func ctrlManagerClusterConfig() (*rest.Config, error) {
-	return rest.InClusterConfig()
 }
