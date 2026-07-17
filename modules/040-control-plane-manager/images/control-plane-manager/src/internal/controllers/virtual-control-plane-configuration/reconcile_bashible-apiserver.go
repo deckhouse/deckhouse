@@ -91,50 +91,55 @@ func (r *reconciler) reconcileBashibleApiserver(
 		return reconcile.Result{}, fmt.Errorf("build nested client: %w", err)
 	}
 
-	// 3. Nested: RBAC
+	// 3. Nested namespaces required by bashible (context + registry watchers).
+	if res, err := r.reconcileBashibleNestedNamespaces(ctx, nestedClient); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	// 4. Nested: RBAC
 	if res, err := r.reconcileBashibleRBAC(ctx, nestedClient); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 4. Nested: CRDs
+	// 5. Nested: CRDs
 	if res, err := r.reconcileBashibleCRDs(ctx, nestedClient); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 5. Nested: Context Secret
-	if res, err := r.reconcileBashibleContext(ctx, nestedClient, vcp, pkiSecret, joinToken, configSecret); err != nil || !res.IsZero() {
-		return res, err
-	}
-
-	// 6. Nested: Registry Secret
+	// 6. Nested: Registry Secret (must exist before context build — registrySynced gate).
 	if res, err := r.reconcileBashibleRegistrySecret(ctx, nestedClient); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 7. Parent: TLS
+	// 7. Nested: Context Secret
+	if res, err := r.reconcileBashibleContext(ctx, nestedClient, vcp, pkiSecret, joinToken, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	// 8. Parent: TLS
 	tlsSecret, res, err := r.reconcileBashibleTLSSecret(ctx, vcp, pkiSecret)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 8. Parent: Files ConfigMap
+	// 9. Parent: Files ConfigMap
 	if res, err := r.reconcileBashibleFilesConfigMap(ctx, vcp); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 9. Parent: Service
-	service, res, err := r.reconcileBashibleService(ctx, vcp)
+	// 10. Parent: Service
+	parentService, res, err := r.reconcileBashibleService(ctx, vcp)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 10. Parent: Deployment
+	// 11. Parent: Deployment
 	if res, err := r.reconcileBashibleDeployment(ctx, vcp); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	// 11. Parent: APIService
-	if res, err := r.reconcileBashibleAPIService(ctx, nestedClient, service, tlsSecret); err != nil || !res.IsZero() {
+	// 12. Nested: APIService
+	if res, err := r.reconcileBashibleAPIService(ctx, nestedClient, parentService, tlsSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -187,6 +192,7 @@ func (r *reconciler) reconcileBashibleRBAC(ctx context.Context, nestedClient cli
 			if err := nestedClient.Create(ctx, obj); err != nil {
 				return reconcile.Result{}, fmt.Errorf("create %s/%s: %w", gvk.Kind, key, err)
 			}
+			continue
 		}
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("get %s/%s: %w", gvk.Kind, key, err)
@@ -235,6 +241,34 @@ func (r *reconciler) reconcileBashibleCRDs(ctx context.Context, nestedClient cli
 	return reconcile.Result{}, nil
 }
 
+func (r *reconciler) reconcileBashibleNestedNamespaces(
+	ctx context.Context,
+	nestedClient client.Client,
+) (reconcile.Result, error) {
+	for _, name := range []string{bashibleDeckhouseNamespace, bashibleRegistrySecretNS} {
+		ns := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				Labels: map[string]string{
+					constants.HeritageLabelKey: constants.HeritageLabelValue,
+				},
+			},
+		}
+		current := &corev1.Namespace{}
+		err := nestedClient.Get(ctx, client.ObjectKey{Name: name}, current)
+		if apierrors.IsNotFound(err) {
+			if err := nestedClient.Create(ctx, ns); err != nil && !apierrors.IsAlreadyExists(err) {
+				return reconcile.Result{}, fmt.Errorf("create nested namespace %s: %w", name, err)
+			}
+			continue
+		}
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("get nested namespace %s: %w", name, err)
+		}
+	}
+	return reconcile.Result{}, nil
+}
+
 func (r *reconciler) reconcileBashibleContext(
 	ctx context.Context,
 	nestedClient client.Client,
@@ -243,13 +277,29 @@ func (r *reconciler) reconcileBashibleContext(
 	joinToken string,
 	configSecret *corev1.Secret,
 ) (reconcile.Result, error) {
+	current := &corev1.Secret{}
+	key := client.ObjectKey{
+		Name:      bashibleContextSecretName,
+		Namespace: bashibleDeckhouseNamespace,
+	}
+	getErr := nestedClient.Get(ctx, key, current)
+	if getErr != nil && !apierrors.IsNotFound(getErr) {
+		return reconcile.Result{}, getErr
+	}
+
+	proxyCerts, err := resolveBashibleAPIServerProxyCerts(pkiSecret, current)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("resolve apiserverProxyCerts: %w", err)
+	}
+
 	contextInputYAML, err := bashibleapiserver.BuildContextInputYAML(bashibleapiserver.ContextInputParams{
-		VCP:          vcp,
-		CA:           pkiSecret.Data["ca.crt"],
-		JoinToken:    joinToken,
-		ClusterUUID:  string(configSecret.Data["cluster-uuid"]),
-		APIHost:      apiExposeHost(vcp),
-		PackagesHost: packagesExposeHost(vcp),
+		VCP:                 vcp,
+		CA:                  pkiSecret.Data["ca.crt"],
+		JoinToken:           joinToken,
+		ClusterUUID:         string(configSecret.Data["cluster-uuid"]),
+		APIHost:             apiExposeHost(vcp),
+		PackagesHost:        packagesExposeHost(vcp),
+		APIServerProxyCerts: proxyCerts,
 	})
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("build context input: %w", err)
@@ -264,25 +314,78 @@ func (r *reconciler) reconcileBashibleContext(
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
-		StringData: map[string]string{
-			"input.yaml": contextInputYAML,
+		Data: map[string][]byte{
+			"input.yaml": []byte(contextInputYAML),
 		},
 	}
 
-	current := &corev1.Secret{}
-	key := client.ObjectKeyFromObject(target)
-	err = nestedClient.Get(ctx, key, current)
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(getErr) {
 		return reconcile.Result{}, nestedClient.Create(ctx, target)
 	}
-	if err != nil {
-		return reconcile.Result{}, err
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) &&
+		equality.Semantic.DeepEqual(current.Labels, target.Labels) {
+		return reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()
-	current.StringData = target.StringData
+	current.Data = target.Data
 	current.Labels = target.Labels
+	current.StringData = nil
 	return reconcile.Result{}, nestedClient.Patch(ctx, current, client.MergeFrom(base))
+}
+
+func resolveBashibleAPIServerProxyCerts(
+	pkiSecret *corev1.Secret,
+	contextSecret *corev1.Secret,
+) (bashibleapiserver.ContextAPIServerProxyCerts, error) {
+	if contextSecret != nil && len(contextSecret.Data["input.yaml"]) > 0 {
+		var existing struct {
+			APIServerProxyCerts bashibleapiserver.ContextAPIServerProxyCerts `yaml:"apiserverProxyCerts"`
+		}
+		if err := yaml.Unmarshal(contextSecret.Data["input.yaml"], &existing); err == nil &&
+			existing.APIServerProxyCerts.Crt != "" && existing.APIServerProxyCerts.Key != "" {
+			return existing.APIServerProxyCerts, nil
+		}
+	}
+
+	return generateBashibleAPIServerProxyCerts(pkiSecret)
+}
+
+func generateBashibleAPIServerProxyCerts(pkiSecret *corev1.Secret) (bashibleapiserver.ContextAPIServerProxyCerts, error) {
+	caCert, err := pkiutil.ParseCertificatePEM(pkiSecret.Data["ca.crt"])
+	if err != nil {
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("parse VCP CA cert: %w", err)
+	}
+	caKey, err := pkiutil.ParsePrivateKeyPEM(pkiSecret.Data["ca.key"])
+	if err != nil {
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("parse VCP CA key: %w", err)
+	}
+
+	cfg := pkiutil.CertConfig{
+		Config: certutil.Config{
+			CommonName:   "kubernetes-api-proxy",
+			Organization: []string{"node-manager:kubernetes-api-proxy"},
+			Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		},
+		NotAfter:            time.Now().AddDate(10, 0, 0),
+		EncryptionAlgorithm: pkiconstants.EncryptionAlgorithmRSA2048,
+	}
+
+	cert, key, err := pkiutil.NewCertAndKey(caCert, caKey, cfg)
+	if err != nil {
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("sign kubernetes-api-proxy client cert: %w", err)
+	}
+
+	keyPEM, err := pkiutil.MarshalPrivateKeyToPEM(key)
+	if err != nil {
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("marshal kubernetes-api-proxy key: %w", err)
+	}
+
+	return bashibleapiserver.ContextAPIServerProxyCerts{
+		Crt: string(pkiutil.EncodeCertificate(cert)),
+		Key: string(keyPEM),
+	}, nil
 }
 
 func (r *reconciler) reconcileBashibleRegistrySecret(
@@ -291,7 +394,7 @@ func (r *reconciler) reconcileBashibleRegistrySecret(
 ) (reconcile.Result, error) {
 	parentSecret, err := r.getSecret(ctx, bashibleRegistrySecretNS, bashibleRegistrySecretName)
 	if apierrors.IsNotFound(err) {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, fmt.Errorf("parent secret %s/%s not found", bashibleRegistrySecretNS, bashibleRegistrySecretName)
 	}
 	if err != nil {
 		return reconcile.Result{}, err
@@ -314,6 +417,10 @@ func (r *reconciler) reconcileBashibleRegistrySecret(
 	}
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) && current.Type == target.Type {
+		return reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()
@@ -601,18 +708,18 @@ func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane
 func (r *reconciler) reconcileBashibleAPIService(
 	ctx context.Context,
 	nested client.Client,
-	bashibleService *corev1.Service,
+	parentService *corev1.Service,
 	tlsSecret *corev1.Secret,
 ) (reconcile.Result, error) {
 	namespace := bashibleDeckhouseNamespace
-	bashibleAddress := bashibleService.Spec.ClusterIP
-	if bashibleAddress == "" {
+	address := parentService.Spec.ClusterIP
+	if address == "" || address == corev1.ClusterIPNone {
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
 
-	svc := buildNestedBashibleService(namespace)
-	_, err := controllerutil.CreateOrUpdate(ctx, nested, svc, func() error {
-		applyNestedBashibleService(svc)
+	nestedService := buildNestedBashibleService(namespace)
+	_, err := controllerutil.CreateOrUpdate(ctx, nested, nestedService, func() error {
+		applyNestedBashibleService(nestedService)
 		return nil
 	})
 	if err != nil {
@@ -620,9 +727,9 @@ func (r *reconciler) reconcileBashibleAPIService(
 	}
 
 	// Legacy Endpoints for kube-aggregator (< 1.34)
-	ep := buildNestedBashibleEndpoints(namespace, bashibleAddress)
+	ep := buildNestedBashibleEndpoints(namespace, address)
 	if _, err := controllerutil.CreateOrUpdate(ctx, nested, ep, func() error {
-		applyNestedBashibleEndpoints(ep, namespace, bashibleAddress)
+		applyNestedBashibleEndpoints(ep, namespace, address)
 		return nil
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("nested bashible endpoints: %w", err)

@@ -65,7 +65,11 @@ type registryPackagesFixed struct {
 	RppGet     string `json:"rppGet"`
 }
 
-func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane, apiAdvertiseAddress string) (map[string][]byte, error) {
+func renderManifests(
+	globalData map[string][]byte,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiAdvertiseAddress string,
+) (map[string][]byte, error) {
 	table, err := parseImagesTable(globalData)
 	if err != nil {
 		return nil, err
@@ -76,7 +80,13 @@ func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.Vir
 		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
 	}
 
-	replacer := buildManifestReplacer(vcp, versioned, table.Fixed, apiAdvertiseAddress, string(globalData["cluster-uuid"]))
+	replacer := buildManifestReplacer(
+		vcp,
+		versioned,
+		table.Fixed,
+		apiAdvertiseAddress,
+		string(globalData["cluster-uuid"]),
+	)
 
 	rendered := make(map[string][]byte)
 	for key, value := range globalData {
