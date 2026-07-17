@@ -11,7 +11,7 @@ include:
 
 default:
   tags:
-    - deckhouse
+    - k8s-intteam-cloud-d8-ssdlc-runner
 
 test: # джоба-заглушка, т.к. гитлаб не создает пайп если в нем только джоба из хидден-стейджа
   stage: build

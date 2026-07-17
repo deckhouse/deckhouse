@@ -9,8 +9,7 @@ changelog-update:
   stage: .post
   image:
     name: ${CI_REGISTRY}/deckhouse/ssdlc-tools/changelog-generator:0.0.0-fdc38cf9
-  tags:
-    - k8s-intteam-cloud-d8-ssdlc-runner
+    entrypoint: [""]
   extends:
     - .rules:on_release_branch
   resource_group: changelog-update
