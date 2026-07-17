@@ -217,15 +217,16 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	// lookup agree on one location even when DownloadDir was left empty.
 	globalOptions = withDownloadDir(globalOptions)
 
-	clusterConfigData, parsedClusterConfig, clusterType, cloudProvider, err := readClusterConfigFromCluster(ctx, kubeCl)
+	clusterConfig, err := readClusterConfigFromCluster(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}
+	cloudProvider := clusterConfig.Provider
 	needProviderCandi := cloudProvider != "" && !providerCandiPresent(cloudProvider, globalOptions)
 
 	// Cloud clusters need registry data even without downloads: provider
 	// plugins are pulled lazily and read DeckhouseConfig.RegistryDockerCfg.
-	needRegistryData := globalOptions.EnsureCandiAvailable || needProviderCandi || clusterType == CloudClusterType
+	needRegistryData := globalOptions.EnsureCandiAvailable || needProviderCandi || clusterConfig.Type == CloudClusterType
 	if needRegistryData {
 		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
 		if err != nil {
@@ -260,13 +261,13 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 
 	schemaStore := NewSchemaStore(globalOptions)
 
-	_, err = schemaStore.Validate(&clusterConfigData)
+	_, err = schemaStore.Validate(&clusterConfig.Raw)
 	if err != nil {
 		return nil, err
 	}
 
-	metaConfig.ClusterConfig = parsedClusterConfig
-	metaConfig.ClusterType = clusterType
+	metaConfig.ClusterConfig = clusterConfig.Parsed
+	metaConfig.ClusterType = clusterConfig.Type
 
 	_, err = DoByClusterType(ctx, metaConfig, newFromClusterMetaConfigFiller(kubeCl, schemaStore))
 	if err != nil {
@@ -277,7 +278,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	// CloudProviderVars is available when the provider validator runs. The Cloud filler
 	// above has already populated ProviderName (and the mc-flow ModuleConfig or
 	// legacy ProviderClusterConfig).
-	if clusterType == CloudClusterType {
+	if clusterConfig.Type == CloudClusterType {
 		cv, err := CloudProviderVarsFromCluster(ctx, kubeCl, metaConfig.ProviderName)
 		if err != nil {
 			return nil, fmt.Errorf("read cloud provider resources: %w", err)

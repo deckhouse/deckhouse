@@ -38,35 +38,40 @@ const (
 	LegacyProviderClusterConfigSecret = "d8-provider-cluster-configuration"
 )
 
-// readClusterConfigFromCluster fetches the d8-cluster-configuration Secret and
-// splits it into what callers need: the raw document (for schema validation),
-// its parsed fields, the cluster type, and the lowercased cloud provider name
-// ("" for a non-cloud cluster).
-func readClusterConfigFromCluster(
-	ctx context.Context,
-	kubeCl *client.KubernetesClient,
-) (raw []byte, parsed map[string]json.RawMessage, clusterType, cloudProvider string, err error) {
+// clusterConfigFromCluster is the d8-cluster-configuration Secret split into
+// what callers need.
+type clusterConfigFromCluster struct {
+	// Raw is the document itself, kept for schema validation.
+	Raw    []byte
+	Parsed map[string]json.RawMessage
+	Type   string
+	// Provider is the lowercased cloud provider name, "" for a non-cloud cluster.
+	Provider string
+}
+
+func readClusterConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (clusterConfigFromCluster, error) {
 	secret, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, clusterConfigSecretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, nil, "", "", err
+		return clusterConfigFromCluster{}, err
 	}
-	raw = secret.Data["cluster-configuration.yaml"]
 
-	if err := yaml.Unmarshal(raw, &parsed); err != nil {
-		return nil, nil, "", "", fmt.Errorf("unmarshal cluster configuration: %w", err)
+	cfg := clusterConfigFromCluster{Raw: secret.Data["cluster-configuration.yaml"]}
+	if err := yaml.Unmarshal(cfg.Raw, &cfg.Parsed); err != nil {
+		return clusterConfigFromCluster{}, fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
-	if err := json.Unmarshal(parsed["clusterType"], &clusterType); err != nil {
-		return nil, nil, "", "", fmt.Errorf("parse cluster type: %w", err)
+	if err := json.Unmarshal(cfg.Parsed["clusterType"], &cfg.Type); err != nil {
+		return clusterConfigFromCluster{}, fmt.Errorf("parse cluster type: %w", err)
 	}
-	if clusterType != CloudClusterType {
-		return raw, parsed, clusterType, "", nil
+	if cfg.Type != CloudClusterType {
+		return cfg, nil
 	}
 
 	var cloud ClusterConfigCloudSpec
-	if err := json.Unmarshal(parsed["cloud"], &cloud); err != nil {
-		return nil, nil, "", "", fmt.Errorf("parse cloud provider from cluster config: %w", err)
+	if err := json.Unmarshal(cfg.Parsed["cloud"], &cloud); err != nil {
+		return clusterConfigFromCluster{}, fmt.Errorf("parse cloud provider from cluster config: %w", err)
 	}
-	return raw, parsed, clusterType, strings.ToLower(cloud.Provider), nil
+	cfg.Provider = strings.ToLower(cloud.Provider)
+	return cfg, nil
 }
 
 // ClusterUsesProviderModuleConfig reports whether the running cluster is
@@ -74,8 +79,8 @@ func readClusterConfigFromCluster(
 // than the legacy d8-provider-cluster-configuration Secret. A non-cloud cluster
 // reports false.
 func ClusterUsesProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient) (bool, error) {
-	_, _, _, provider, err := readClusterConfigFromCluster(ctx, kubeCl)
-	if err != nil || provider == "" {
+	cfg, err := readClusterConfigFromCluster(ctx, kubeCl)
+	if err != nil || cfg.Provider == "" {
 		return false, err
 	}
 
@@ -83,7 +88,7 @@ func ClusterUsesProviderModuleConfig(ctx context.Context, kubeCl *client.Kuberne
 	// only the ModuleConfig's presence matters here, while parsing it would need a
 	// SchemaStore — and building one is what freezes the process-wide store, so a
 	// store built for this check would then be handed to the edit itself.
-	name := CloudProviderModuleName(provider)
+	name := CloudProviderModuleName(cfg.Provider)
 	if _, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return false, nil
