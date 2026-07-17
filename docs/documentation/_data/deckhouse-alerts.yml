@@ -2934,7 +2934,7 @@ alerts:
         Until every such role is migrated, the upgrade to DKP 1.78 is blocked by the `legacyRBACv2CustomRolesCount` release requirement.
 
         Migrate the role to the new scheme:
-        
+
         - Rename it using the `d8:custom:` name prefix.
         - Replace the labels with the `rbac.deckhouse.io/kind: custom-role` or `custom-capability` label.
         - Update aggregation selectors to use the new labels.
@@ -2943,7 +2943,9 @@ alerts:
 
         List all legacy custom roles:
 
-        
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | startswith("custom:")) and ((.metadata.labels["rbac.deckhouse.io/kind"] // "" | IN("manage", "use")) or ([.aggregationRule.clusterRoleSelectors[]?.matchLabels["rbac.deckhouse.io/kind"] // ""] | any(IN("manage", "use"))))) | .metadata.name'
+        ```
       summary: |
         A legacy RBACv2 custom role is present in the cluster.
       severity: "7"
