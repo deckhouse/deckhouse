@@ -36,7 +36,7 @@
 # from bash-completion-2.16.0
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/share/bash-completion /etc/bashrc.d/bash_completion.sh" }}
 # from glibc-v2.41
-{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libm.so.6 /usr/lib64/libc.so.6 /usr/lib64/ld-linux-x86-64.so.2 /usr/lib64/libc.musl-x86_64.so.1" }}
+{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libm.so.6 /usr/lib64/libc.so.6 /usr/lib64/ld-linux-x86-64.so.2 /usr/lib64/libpthread.so.0 /usr/lib64/libresolv.so.2 /usr/lib64/librt.so.1 /usr/lib64/libdl.so.2 /usr/lib64/libtinfo.so.6" }}
 # from elfutils-elfutils-0.193
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libelf.a /usr/lib64/libelf.so /usr/lib64/libelf.so.1 /usr/lib64/libelf-0.193.so" }}
 # from common/pause
