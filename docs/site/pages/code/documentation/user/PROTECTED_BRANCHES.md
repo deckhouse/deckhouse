@@ -12,7 +12,7 @@ Protected branches restrict changes to important branches of a repository: only 
 
 The default branch of a project is protected automatically when the project is created.
 
-## What branch protection does
+## Protected branch restrictions
 
 The following restrictions apply to a protected branch:
 
@@ -25,7 +25,7 @@ The following restrictions apply to a protected branch:
 When a project is created, its default branch becomes protected automatically. The initial protection level is controlled by the "Initial default branch protection" setting:
 
 - **At the instance level**: "Admin area" → "Settings" → "Repository", the "Default branch" section. Available to instance administrators.
-- **At the group level**: on the group page, go to "Settings" → "Repository", the "Default branch" section. Available to users with the `Owner` role in the group.
+- **At the group level**: On the group page, go to "Settings" → "Repository", the "Default branch" section. Available to users with the `Owner` role in the group.
 
 The group setting takes precedence over the instance setting: if it is not set for the group, the instance setting applies. Projects in a user's personal namespace always use the instance setting.
 
@@ -33,7 +33,7 @@ By default, full protection is applied: push and merge are allowed only for memb
 
 ## Branch rules
 
-Branch protection is configured through branch rules: open the project page and go to "Settings" → "Repository" → "Branch rules". Configuration is available to users with the `Maintainer` and `Owner` roles.
+Branch protection is configured through branch rules. To access rules, open the project page and go to "Settings" → "Repository" → "Branch rules". Configuration is available to users with the `Maintainer` and `Owner` roles.
 
 To create a rule:
 
@@ -48,22 +48,24 @@ To open the settings of an existing rule, click "View details" next to it in the
 
 On the rule page, the "Protect branch" section contains two access lists:
 
-- **"Allowed to merge"** — who can merge merge requests into this branch.
-- **"Allowed to push and merge"** — who can push changes directly to the branch (`git push`) and also merge.
+- **"Allowed to merge"**: Who can merge merge requests into this branch.
+- **"Allowed to push and merge"**: Who can push changes directly to the branch (`git push`) and also merge.
 
-Click "Edit allowed to merge" or "Edit allowed to push and merge" to change the corresponding list. Each list can combine roles, individual users, and groups; the "Allowed to push and merge" list additionally supports deploy keys. Access is granted to anyone who matches at least one of the selected entries.
+To change the corresponding list, click "Edit allowed to merge" or "Edit allowed to push and merge".
+
+Each list can combine roles, individual users, and groups. The "Allowed to push and merge" list additionally supports deploy keys. Access is granted to anyone who matches at least one of the selected entries.
 
 Available options:
 
 | List entry | Who gets access |
 |---|---|
-| "Maintainers" | Project members with the `Maintainer` role or higher. |
-| "Developers and Maintainers" | Project members with the `Developer` role or higher. |
-| "No one" | Nobody. Role-based access is fully disabled. |
-| "Administrators" | Instance administrators. |
-| "Users" | The listed project members with write access to the repository (the `Developer` role or higher). See [Access for individual users and groups](#access-for-individual-users-and-groups). |
-| "Groups" | Direct members of the listed groups with the `Developer` role or higher in the group. The group must be invited to the project with at least the `Developer` role. See [Access for individual users and groups](#access-for-individual-users-and-groups). |
-| "Deploy keys" | The owner of the selected deploy key, including pushes made with the key itself. The key must be enabled in the project with write access, and its owner must be a project member. Only available in the "Allowed to push and merge" list. |
+| "Maintainers" | Project members with the `Maintainer` role or higher |
+| "Developers and Maintainers" | Project members with the `Developer` role or higher |
+| "No one" | Nobody. Role-based access is fully disabled |
+| "Administrators" | Instance administrators |
+| "Users" | The listed project members with write access to the repository (the `Developer` role or higher). For details, see ["Access for individual users and groups"](#access-for-individual-users-and-groups) |
+| "Groups" | Direct members of the listed groups with the `Developer` role or higher in the group. The group must be invited to the project with at least the `Developer` role. For details, see ["Access for individual users and groups"](#access-for-individual-users-and-groups) |
+| "Deploy keys" | The owner of the selected deploy key, including pushes made with the key itself. The key must be enabled in the project with write access, and its owner must be a project member. Only available in the "Allowed to push and merge" list |
 
 ## Access for individual users and groups
 
@@ -71,13 +73,17 @@ Besides roles, access to a protected branch can be granted selectively — to sp
 
 ### Users
 
-In the "Users" selector you can pick project members with write access to the repository — the `Developer` role or higher (including members inherited from the parent group).
+In the "Users" selector you can pick project members with write access to the repository — the `Developer` role or higher, including members inherited from the parent group.
 
-Adding a user to the list does not elevate their permissions in the project: a member without the `Developer` role or higher cannot push to the protected branch even if they are listed. The purpose of these lists is to narrow down the set of people whose role already grants them write access. For example, select "No one" for roles and list specific users — then only they can work with this branch.
+Adding a user to the list does not elevate their permissions in the project. A member without the `Developer` role or higher cannot push to the protected branch even if they are listed.
+
+These lists let you narrow down the set of people whose role already grants them write access. For example, select "No one" for roles and list specific users — then only they can work with this branch.
 
 ### Groups
 
-The "Groups" selector only shows groups invited to the project with the `Developer` role or higher (group invitations are managed in the project's "Manage" → "Members" section). Ancestor groups of the project and groups invited with a lower role cannot be selected.
+The "Groups" selector only shows groups invited to the project with the `Developer` role or higher. Group invitations are managed in the project's "Manage" → "Members" section.
+
+Ancestor groups of the project and groups invited with a lower role cannot be selected.
 
 Only direct members of the invited group with the `Developer` role or higher in that group get access through it. Members of nested subgroups do not get access.
 
@@ -85,18 +91,18 @@ Only direct members of the invited group with the `Developer` role or higher in 
 
 Permissions are checked at the moment of each operation, so membership changes take effect immediately:
 
-- if a user is no longer a project member, their access to the protected branch stops working;
-- if the group's invitation to the project is revoked or its role is downgraded below `Developer`, access for the group's members stops working.
+- If a user is no longer a project member, their access to the protected branch stops working.
+- If the group's invitation to the project is revoked or its role is downgraded below `Developer`, access for the group's members stops working.
 
 The entry remains in the access list and becomes effective again if the membership or invitation is restored. To revoke access permanently, remove the user or group from the list in the branch rule.
 
 ## Allow force push
 
-The "Allow force push" toggle on the rule page allows force pushes (`git push --force`) to the protected branch. Who exactly can force push is determined by the "Allowed to push and merge" list. The toggle is off by default, and force pushes are rejected for everyone, including maintainers and administrators.
+The "Allow force push" toggle on the rule page allows force pushes (`git push --force`) to the protected branch. Users who can force push are determined by the "Allowed to push and merge" list. The toggle is off by default, and force pushes are rejected for everyone, including maintainers and administrators.
 
 ## Notes and limitations
 
-- Access granted on a protected branch does not change the user's role in the project and does not grant any other permissions — it only affects push and merge operations on branches matched by the rule.
+- Access granted on a protected branch does not change the user's role in the project and does not grant any other permissions. It only affects push and merge operations on branches matched by the rule.
 - A rule with a pattern (for example, `release/*`) applies to all existing and future branches whose names match the pattern.
-- Selecting "No one" disables role-based access but does not clear the lists of users, groups, and deploy keys — those listed still have access.
+- Selecting "No one" disables role-based access but does not clear the lists of users, groups, and deploy keys. The listed entities still have access.
 - Only users with the `Maintainer` role or higher can configure branch rules.
