@@ -9,7 +9,6 @@ changelog-update:
   stage: .post
   image:
     name: ${CI_REGISTRY}/deckhouse/ssdlc-tools/changelog-generator:0.0.0-fdc38cf9
-    entrypoint: [""]
   extends:
     - .rules:on_release_branch
   resource_group: changelog-update
@@ -109,7 +108,7 @@ changelog-update:
       deckhouse-collect-changelog \
         --repo-path "${CI_PROJECT_DIR}" \
         --milestone "${MILESTONE}" \
-        --gitlab-project-id "${CI_PROJECT_ID}" \
+        --gitlab-project "${CI_PROJECT_PATH}" \
         --gitlab-token "${BOATSWAIN_TOKEN}" \
         --gitlab-api-url "${CI_API_V4_URL}" \
         --allowed-sections-file "${SECTIONS_FILE}" \
