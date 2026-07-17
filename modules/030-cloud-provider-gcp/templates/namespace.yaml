@@ -1,6 +1,6 @@
 {{- define "labels" }}
-extended-monitoring.deckhouse.io/enabled: ""
 prometheus.deckhouse.io/rules-watcher-enabled: "true"
+extended-monitoring.deckhouse.io/enabled: ""
 security.deckhouse.io/pod-policy: "restricted"
 {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
 security.deckhouse.io/enable-security-policy-check: "true"
@@ -10,7 +10,7 @@ security.deckhouse.io/enable-security-policy-check: "true"
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: d8-cloud-provider-gcp
+  name: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (fromYaml (include "labels" .))) | nindent 2 }}
 ---
-{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}
+{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s" .Chart.Name)) }}
