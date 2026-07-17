@@ -758,11 +758,20 @@ func (r *reconciler) reconcileBashibleAPIService(
 	// Legacy Endpoints for kube-aggregator (< 1.34)
 	ep := buildNestedBashibleEndpoints(namespace, address)
 	if _, err := controllerutil.CreateOrUpdate(ctx, nested, ep, func() error {
+		// TODO: migrate to endpointslice
 		applyNestedBashibleEndpoints(ep, namespace, address)
 		return nil
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("nested bashible endpoints: %w", err)
 	}
+
+	// es := buildNestedBashibleEndpointSlice(namespace, bashibleAddress)
+	// if _, err := controllerutil.CreateOrUpdate(ctx, nested, es, func() error {
+	// 	applyNestedBashibleEndpointSlice(es, namespace, bashibleAddress)
+	// 	return nil
+	// }); err != nil {
+	// 	return reconcile.Result{}, fmt.Errorf("nested bashible endpointslice: %w", err)
+	// }
 
 	caBundle := tlsSecret.Data["ca.crt"]
 	apiservice := &apiregistrationv1.APIService{
@@ -833,5 +842,34 @@ func applyNestedBashibleEndpoints(ep *corev1.Endpoints, namespace, address strin
 			Port:     bashibleNestedServicePort,
 			Protocol: corev1.ProtocolTCP,
 		}},
+	}}
+}
+
+func buildNestedBashibleEndpointSlice(namespace, bashibleAddress string) *discoveryv1.EndpointSlice {
+	slice := &discoveryv1.EndpointSlice{}
+	applyNestedBashibleEndpointSlice(slice, namespace, bashibleAddress)
+	slice.Name = bashibleEndpointSliceName
+	return slice
+}
+
+func applyNestedBashibleEndpointSlice(slice *discoveryv1.EndpointSlice, namespace, bashibleAddress string) {
+	portName := "https"
+	protocol := corev1.ProtocolTCP
+	port := int32(bashibleNestedServicePort)
+
+	if slice.Labels == nil {
+		slice.Labels = map[string]string{}
+	}
+	slice.Namespace = namespace
+	slice.Labels[discoveryv1.LabelServiceName] = bashibleServiceName
+
+	slice.AddressType = discoveryv1.AddressTypeIPv4
+	slice.Endpoints = []discoveryv1.Endpoint{{
+		Addresses: []string{bashibleAddress},
+	}}
+	slice.Ports = []discoveryv1.EndpointPort{{
+		Name:     &portName,
+		Protocol: &protocol,
+		Port:     &port,
 	}}
 }
