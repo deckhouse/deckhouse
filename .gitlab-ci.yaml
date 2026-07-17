@@ -1,0 +1,11 @@
+stages:
+  - .pre
+  - validate
+  - build
+  - test
+  - deploy
+  - .post
+
+include:
+- .gitlab/**.yml
+
