@@ -33,27 +33,22 @@ type ProviderInput struct {
 	CloudProviderVars     *proto.CloudProviderVars
 }
 
-// ProviderHandlers carries a provider's config-parsing hooks. Validation and
-// patching are independent concerns wired separately: Validate never mutates,
-// and Patch — set only for vcd, which injects legacyMode for old VCD APIs — is
-// not part of any validator. A nil field means the provider has nothing to do
-// at that step; a patched configuration is re-validated against the provider
-// schema before it reaches tfvars.
-type ProviderHandlers struct {
-	Validate func(ctx context.Context, input ProviderInput) error
-	Patch    func(ctx context.Context, input ProviderInput) (map[string]any, error)
-}
+// ProviderValidateFunc checks a provider's configuration. Validation never
+// mutates anything; the single provider-side rewrite that exists (vcd's
+// legacyMode) lives entirely in the infrastructure layer.
+type ProviderValidateFunc func(ctx context.Context, input ProviderInput) error
 
-// MetaConfigValidatorProvider selects the ProviderHandlers for the given
-// provider. downloadRootDir is where provider bundles are unpacked; an external
-// provider's validator binary is looked up there.
-type MetaConfigValidatorProvider func(ctx context.Context, provider, downloadRootDir string) ProviderHandlers
+// MetaConfigValidatorProvider selects the validate function for the given
+// provider; nil means the provider has nothing to check. downloadRootDir is
+// where provider bundles are unpacked; an external provider's validator binary
+// is looked up there.
+type MetaConfigValidatorProvider func(ctx context.Context, provider, downloadRootDir string) ProviderValidateFunc
 
 // DummyValidatorProvider validates nothing. Use it where provider validation is
 // deliberately out of scope (static clusters, config parses that only need the
 // typed fields), not as a fallback for a provider that has a validator.
 func DummyValidatorProvider() MetaConfigValidatorProvider {
-	return func(_ context.Context, _, _ string) ProviderHandlers {
-		return ProviderHandlers{}
+	return func(_ context.Context, _, _ string) ProviderValidateFunc {
+		return nil
 	}
 }

@@ -40,8 +40,7 @@ const (
 
 // MetaConfigValidatorProvider selects the validator for a provider. Every cloud
 // provider is validated, in-tree and external alike:
-//   - yandex and vcd have dedicated in-tree validators (vcd additionally
-//     rewrites the parsed config — see its PatchProviderClusterConfig);
+//   - yandex and vcd have dedicated in-tree validators;
 //   - an external provider is validated by the validator binary from its
 //     unpacked OCI bundle, which runs the provider's own pre-bootstrap checks
 //     (DVP: kubeconfig, credential Secret, master NodeGroup, InstanceClass
@@ -55,30 +54,27 @@ func MetaConfigValidatorProvider() config.MetaConfigValidatorProvider {
 	return selectValidator
 }
 
-func selectValidator(ctx context.Context, provider, downloadRootDir string) config.ProviderHandlers {
+func selectValidator(ctx context.Context, provider, downloadRootDir string) config.ProviderValidateFunc {
 	switch provider {
 	case "":
 		// static cluster
-		return config.ProviderHandlers{}
+		return nil
 	case yandex.ProviderName:
 		// Top-level dhctl paths validate the cluster prefix; the yandex hook
 		// builds its own validator with that check off (the prefix of a running
 		// cluster is already a fact).
-		return config.ProviderHandlers{Validate: yandex.NewMetaConfigValidator(true).Validate}
+		return yandex.NewMetaConfigValidator(true).Validate
 	case vcd.ProviderName:
-		return config.ProviderHandlers{
-			Validate: vcd.ValidateMetaConfig,
-			Patch:    vcd.PatchProviderClusterConfig,
-		}
+		return vcd.ValidateMetaConfig
 	default:
 		if binaryPath := findExternalValidatorBinary(downloadRootDir, provider); binaryPath != "" {
-			return config.ProviderHandlers{Validate: external.NewBinaryValidator(binaryPath).Validate}
+			return external.NewBinaryValidator(binaryPath).Validate
 		}
 		// In-tree providers ship their schemas in the image's candi and need no
 		// external validator: keep the lightweight prefix-only check. Only truly
 		// external providers (not in candi) require the downloaded binary.
 		if providerBundledInCandi(provider) {
-			return config.ProviderHandlers{Validate: validateInTreePrefix}
+			return validateInTreePrefix
 		}
 		// Hard-fail instead of silently skipping the provider's own
 		// pre-bootstrap checks: a broken bundle must not reach the
@@ -88,7 +84,7 @@ func selectValidator(ctx context.Context, provider, downloadRootDir string) conf
 			err = fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", provider, providerdir.ValidatorPath(downloadRootDir, provider))
 		}
 		dhlog.FromContext(ctx).ErrorContext(ctx, err.Error())
-		return config.ProviderHandlers{Validate: func(context.Context, config.ProviderInput) error { return err }}
+		return func(context.Context, config.ProviderInput) error { return err }
 	}
 }
 

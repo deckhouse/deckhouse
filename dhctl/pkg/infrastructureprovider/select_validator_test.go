@@ -21,8 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 )
 
 // In-tree providers without a dedicated validator (gcp, aws, azure, ...)
@@ -33,10 +31,10 @@ func TestSelectValidatorInTreeFallback(t *testing.T) {
 	providerBundledInCandi = func(string) bool { return true }
 	t.Cleanup(func() { providerBundledInCandi = orig })
 
-	h := selectValidator(context.Background(), "gcp", t.TempDir())
-	require.Nil(t, h.Patch)
-	require.NoError(t, h.Validate(context.Background(), config.ProviderInput{ClusterPrefix: "ok-prefix", ProviderName: "gcp"}))
-	require.Error(t, h.Validate(context.Background(), config.ProviderInput{ProviderName: "gcp"}), "empty prefix must fail")
+	validate := selectValidator(context.Background(), "gcp", t.TempDir())
+	require.NotNil(t, validate)
+	require.NoError(t, validate(context.Background(), config.ProviderInput{ClusterPrefix: "ok-prefix", ProviderName: "gcp"}))
+	require.Error(t, validate(context.Background(), config.ProviderInput{ProviderName: "gcp"}), "empty prefix must fail")
 }
 
 func TestSelectValidatorExternalMissingValidator(t *testing.T) {
@@ -44,14 +42,7 @@ func TestSelectValidatorExternalMissingValidator(t *testing.T) {
 	providerBundledInCandi = func(string) bool { return false }
 	t.Cleanup(func() { providerBundledInCandi = orig })
 
-	h := selectValidator(context.Background(), "dvp", t.TempDir())
-	err := h.Validate(context.Background(), config.ProviderInput{})
+	validate := selectValidator(context.Background(), "dvp", t.TempDir())
+	err := validate(context.Background(), config.ProviderInput{})
 	require.ErrorContains(t, err, "external validator for provider \"dvp\" not found")
-}
-
-// Only vcd patches the parsed providerClusterConfiguration (legacyMode); for
-// everyone else the Patch handler must stay nil.
-func TestSelectValidatorOnlyVCDPatches(t *testing.T) {
-	require.NotNil(t, selectValidator(context.Background(), vcd.ProviderName, "").Patch)
-	require.Nil(t, selectValidator(context.Background(), yandex.ProviderName, "").Patch)
 }

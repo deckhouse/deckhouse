@@ -16,7 +16,6 @@ package config
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -468,19 +467,6 @@ func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
 
 	require.Equal(t, "v", src.CloudProviderVars.Settings["k"])
 	require.Equal(t, 1, src.CloudProviderVars.NodeGroups["ng"]["replicas"])
-}
-
-func TestValidateProviderConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {
-	m := &MetaConfig{
-		ClusterType:           CloudClusterType,
-		ProviderName:          "dvp",
-		ProviderClusterConfig: nil,
-	}
-	out, err := validateProviderConfig(context.Background(), patchingProvider(map[string]any{"layout": "Standard"}), m)
-	require.NoError(t, err)
-	require.NotNil(t, out.ProviderClusterConfig)
-	require.Contains(t, out.ProviderClusterConfig, "layout")
-	require.Equal(t, "standard", out.Layout)
 }
 
 func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {

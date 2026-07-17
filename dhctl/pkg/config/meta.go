@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"net"
@@ -110,7 +109,7 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 	ctx, span := telemetry.StartSpan(ctx, "validateProviderConfig")
 	defer span.End()
 
-	handlers := validatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
+	validate := validatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
 	providerInput := m.buildProviderInput()
 
 	span.SetAttributes(
@@ -130,75 +129,14 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 		)
 	}
 
-	if handlers.Validate != nil {
-		if err := handlers.Validate(ctx, providerInput); err != nil {
+	if validate != nil {
+		if err := validate(ctx, providerInput); err != nil {
 			return nil, err
 		}
 		span.AddEvent("provider validated")
 	}
 
-	if err := m.patchProviderClusterConfig(ctx, handlers.Patch, providerInput); err != nil {
-		return nil, err
-	}
-
-	// Re-extract typed fields: the patch above may have rewritten PCC.
-	if err := m.extractProviderClusterFields(); err != nil {
-		return nil, err
-	}
-
 	return m, nil
-}
-
-// patchProviderClusterConfig runs the provider's Patch handler, when set, and
-// merges its result into ProviderClusterConfig.
-func (m *MetaConfig) patchProviderClusterConfig(ctx context.Context, patchFunc func(context.Context, ProviderInput) (map[string]any, error), input ProviderInput) error {
-	if patchFunc == nil {
-		return nil
-	}
-
-	patch, err := patchFunc(ctx, input)
-	if err != nil {
-		return err
-	}
-	if len(patch) == 0 {
-		return nil
-	}
-	span := telemetry.SpanFromContext(ctx)
-	span.AddEvent("provider cluster config patched")
-	span.SetAttributes(otattribute.Int("provider.output.providerClusterConfigKeys", len(patch)))
-
-	if m.ProviderClusterConfig == nil {
-		m.ProviderClusterConfig = make(map[string]json.RawMessage, len(patch))
-	}
-	for k, v := range patch {
-		raw, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Errorf("marshal provider cluster config key %q: %w", k, err)
-		}
-		m.ProviderClusterConfig[k] = raw
-	}
-
-	return m.validatePatchedProviderClusterConfig()
-}
-
-// validatePatchedProviderClusterConfig re-validates ProviderClusterConfig
-// against the provider schema after a provider patched it.
-func (m *MetaConfig) validatePatchedProviderClusterConfig() error {
-	var index SchemaIndex
-	_ = json.Unmarshal(m.ProviderClusterConfig["kind"], &index.Kind)
-	_ = json.Unmarshal(m.ProviderClusterConfig["apiVersion"], &index.Version)
-	if !index.IsValid() {
-		return nil
-	}
-
-	doc, err := json.Marshal(m.ProviderClusterConfig)
-	if err != nil {
-		return fmt.Errorf("marshal mutated provider cluster configuration: %w", err)
-	}
-	if err := NewSchemaStore(nil).ValidateWithIndex(&index, &doc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
-		return fmt.Errorf("provider %s patched provider cluster configuration into an invalid state: %w", m.ProviderName, err)
-	}
-	return nil
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure

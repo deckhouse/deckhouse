@@ -30,28 +30,26 @@ func testClientProvider(client cloudClient) clientProvider {
 	}
 }
 
-func TestPatchWithCurrentAPI(t *testing.T) {
-	result, err := patchProviderClusterConfig(t.Context(), config.ProviderInput{}, testClientProvider(testGetCurrentClient()))
-
-	require.NoError(t, err)
-	require.Nil(t, result)
+func TestEnsureLegacyModeCurrentAPI(t *testing.T) {
+	// nil PCC must not panic: the map is created on demand.
+	m := &config.MetaConfig{}
+	require.NoError(t, ensureLegacyMode(t.Context(), m, testClientProvider(testGetCurrentClient())))
+	require.JSONEq(t, "false", string(m.ProviderClusterConfig["legacyMode"]))
 }
 
-func TestPatchWithLegacyAPI(t *testing.T) {
-	result, err := patchProviderClusterConfig(context.TODO(), config.ProviderInput{}, testClientProvider(testGetLegacyClient()))
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	require.Contains(t, result, "legacyMode")
-	require.Equal(t, true, result["legacyMode"])
+func TestEnsureLegacyModeLegacyAPI(t *testing.T) {
+	m := &config.MetaConfig{ProviderClusterConfig: map[string]json.RawMessage{}}
+	require.NoError(t, ensureLegacyMode(context.TODO(), m, testClientProvider(testGetLegacyClient())))
+	require.JSONEq(t, "true", string(m.ProviderClusterConfig["legacyMode"]))
 
-	// does not override if legacyMode already set
+	// does not override a user-set legacyMode and makes no client call
 	legacyModeRaw, _ := json.Marshal(false)
-	inputWithLegacy := config.ProviderInput{
-		ProviderClusterConfig: map[string]json.RawMessage{"legacyMode": legacyModeRaw},
-	}
-	result, err = patchProviderClusterConfig(t.Context(), inputWithLegacy, testClientProvider(testGetLegacyClient()))
-	require.NoError(t, err)
-	require.Nil(t, result)
+	m = &config.MetaConfig{ProviderClusterConfig: map[string]json.RawMessage{"legacyMode": legacyModeRaw}}
+	require.NoError(t, ensureLegacyMode(t.Context(), m, func(map[string]json.RawMessage) (cloudClient, error) {
+		t.Fatal("client must not be built when legacyMode is already set")
+		return nil, nil
+	}))
+	require.JSONEq(t, "false", string(m.ProviderClusterConfig["legacyMode"]))
 }
 
 func TestValidateMetaConfig(t *testing.T) {

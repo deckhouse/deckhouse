@@ -56,37 +56,40 @@ func ValidateMetaConfig(_ context.Context, input config.ProviderInput) error {
 	return nil
 }
 
-// PatchProviderClusterConfig injects legacyMode for VCD APIs older than the
-// current contract. It is the only provider-side rewrite of a parsed config in
-// dhctl and is deliberately not part of the validator.
-func PatchProviderClusterConfig(ctx context.Context, input config.ProviderInput) (map[string]any, error) {
-	return patchProviderClusterConfig(ctx, input, newVcdCloudClient)
+// EnsureLegacyMode sets providerClusterConfiguration.legacyMode for VCD APIs
+// older than the current contract. This is the only provider-side rewrite of a
+// parsed config in dhctl; it is deliberately not part of any validator and is
+// invoked as an explicit vcd special case when the infrastructure provider is
+// built. Idempotent: an already-present legacyMode key (user-set or from a
+// previous call) is left untouched, so at most one VCD API request is made.
+func EnsureLegacyMode(ctx context.Context, metaConfig *config.MetaConfig) error {
+	return ensureLegacyMode(ctx, metaConfig, newVcdCloudClient)
 }
 
-func patchProviderClusterConfig(ctx context.Context, input config.ProviderInput, clients clientProvider) (map[string]any, error) {
-	client, err := clients(input.ProviderClusterConfig)
+func ensureLegacyMode(ctx context.Context, metaConfig *config.MetaConfig, clients clientProvider) error {
+	if _, ok := metaConfig.ProviderClusterConfig["legacyMode"]; ok {
+		return nil
+	}
+
+	client, err := clients(metaConfig.ProviderClusterConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot get cloud client: %w", err)
+		return fmt.Errorf("Cannot get cloud client: %w", err)
 	}
 
 	apiVersion, err := client.GetVersion(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var result map[string]any
-	if err := versionConstraintAction(ctx, apiVersion, func(legacy bool) error {
-		if !legacy {
-			return nil
+	return versionConstraintAction(ctx, apiVersion, func(legacy bool) error {
+		raw, err := json.Marshal(legacy)
+		if err != nil {
+			return fmt.Errorf("marshal legacyMode: %w", err)
 		}
-		if _, ok := input.ProviderClusterConfig["legacyMode"]; ok {
-			return nil
+		if metaConfig.ProviderClusterConfig == nil {
+			metaConfig.ProviderClusterConfig = make(map[string]json.RawMessage, 1)
 		}
-		result = map[string]any{"legacyMode": true}
+		metaConfig.ProviderClusterConfig["legacyMode"] = raw
 		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	})
 }
