@@ -1,3 +1,22 @@
+<!-- markdownlint-disable-next-line MD041 -->
+## List of required OpenStack services
+
+A list of OpenStack services required for Deckhouse Kubernetes Platform to work in OpenStack:
+
+| Service                      |                         API Version                      |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
+
+\* If you need to order a Load Balancer.
+
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+API endpoints and ports are listed in the [official documentation](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
+
 ## Layouts
 
 This section describes the possible node placement layouts in {{ site.data.admin.cloud-types.types[page.cloud_type].name }} infrastructure and the related configuration options.

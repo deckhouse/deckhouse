@@ -35,7 +35,7 @@ title: "Cloud provider — OpenStack: настройки"
 | Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
 | Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
 
-\* Если нужно заказывать Load Balancer.
+\* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
 
 {% alert level="info" %}
 Для Compute и Block Storage фактически поддерживаемая microversion зависит от установленного релиза OpenStack. Для Block Storage минимальной и используемой по умолчанию является microversion 3.0.

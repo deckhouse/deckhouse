@@ -1,5 +1,5 @@
 <!-- markdownlint-disable-next-line MD041 -->
-## Поддерживаемые версии API
+## Список необходимых сервисов OpenStack
 
 Для работы Deckhouse Kubernetes Platform должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
 
