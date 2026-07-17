@@ -10,7 +10,7 @@ changelog-update:
   image:
     name: ${CI_REGISTRY}/deckhouse/ssdlc-tools/changelog-generator:0.0.0-fdc38cf9
   tags:
-    - werf-2-stable
+    - k8s-intteam-cloud-d8-ssdlc-runner
   extends:
     - .rules:on_release_branch
   resource_group: changelog-update
