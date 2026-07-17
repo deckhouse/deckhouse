@@ -515,6 +515,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `node-instanceclass-ng-usage` | `NodeGroup` | `set_instance_class_ng_usage.go` | Record which NodeGroups consume each cloud `InstanceClass` in `status.nodeGroupConsumers` |
 | `capi-crd-migration` (CAPS path) | `CustomResourceDefinition` (+watch caps `Secret`/`Service`) | `sshcredentials_crd_cabundle_injection.go` | Keep the `sshcredentials.deckhouse.io` conversion-webhook CA in sync with the CAPS webhook TLS secret |
 | `node-group-configuration-metrics` | `NodeGroupConfiguration` | `metrics_node_group_configurations.go` | Export `d8_node_group_configurations_total{node_group}` — NGC count aggregated by targeted NodeGroup |
+| `chaos-monkey` | `NodeGroup` (schedule-driven, one-minute ticker) | `chaos_monkey.go` | Periodically drain-and-delete one random MCM `Machine` of every chaos-enabled, ready NodeGroup |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -725,3 +726,40 @@ hook's `NestedStringSlice` `ok` check. Verified live on `deni-static-master-0`: 
 NGCs gave `node_group="*" => 3`, and adding a `parity-test-ng`-targeting NGC produced
 `node_group="parity-test-ng" => 1` alongside it. RBAC: `nodegroupconfigurations`
 get/list/watch (read-only, added).
+
+### chaos-monkey (`internal/controller/chaosmonkey`)
+
+Periodically kills one random node of every NodeGroup whose `spec.chaos.mode` is
+`DrainAndDelete`, by deleting the node's MCM `Machine`
+(`machine.sapcloud.io/v1alpha1`, namespace `d8-cloud-instance-manager`); MCM then
+drains the node, deletes the VM and recreates it.
+
+```
+every minute (ticker)
+  ├─ list Machines; if ANY is already flagged victim → skip this tick (global gate)
+  ├─ list chaos-enabled, ready NodeGroups (isReadyForChaos)
+  ├─ for each NG with mode == DrainAndDelete:
+  │    ├─ periodMinutes = chaos.period in minutes (default 6h); ≤0 → skip
+  │    ├─ probability gate: rand % periodMinutes != 0 → skip
+  │    ├─ pick a random node of the NG → its Machine
+  │    └─ annotate Machine chaos-monkey-victim, then delete it
+```
+
+**Parity note:** the hook (`chaos_monkey.go`) was schedule-only — crontab
+`* * * * *` with purely passive Kubernetes bindings — so the controller uses a
+one-minute ticker raw source rather than a reactive watch. NodeGroup/Node/Machine
+events must NOT trigger it (an always-false `WithEventFilter` drops all primary
+events; raw sources bypass the filter), or the per-minute probability gate would
+fire more often and make chaos more aggressive. `isReadyForChaos` mirrors the hook:
+a `CloudEphemeral` group is ready when `status.desired > 1 && desired == ready`, any
+other group uses `status.nodes` instead. The victim gate keys on the `Machine` label
+`chaos-monkey-victim` while the flag is written as an annotation (asymmetry kept 1:1
+with the hook). The random seed is `time.Now().UnixNano()`, overridable by
+`D8_TEST_RANDOM_SEED` for tests. A sub-minute period is skipped instead of panicking
+on a zero modulus (the whole controller binary would crash, unlike the isolated hook).
+Scope is MCM only, matching the hook 1:1; CAPI-backed NodeGroups
+(`cluster.x-k8s.io`) are not handled yet (migration TODO). Baseline verified live on
+`deni-yand-main` (Yandex + MCM, NG `mcm-test`): `period: 1m` made the hook annotate a
+`Machine` with `chaos-monkey-victim` and set its `deletionTimestamp` at 15:46:00Z.
+RBAC: existing `machine.sapcloud.io/machines` get/list/watch/update/patch/delete and
+`nodes`/`nodegroups` read grants already cover it — no new grants.
