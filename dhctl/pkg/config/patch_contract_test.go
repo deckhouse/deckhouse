@@ -37,7 +37,7 @@ func (p *fakePatchingValidator) PatchProviderClusterConfig(_ context.Context, _ 
 }
 
 func fakeValidatorProvider(v MetaConfigValidator) MetaConfigValidatorProvider {
-	return func(_ context.Context, _ string) MetaConfigValidator { return v }
+	return func(_ context.Context, _, _ string) MetaConfigValidator { return v }
 }
 
 func TestPatchMergeContract(t *testing.T) {

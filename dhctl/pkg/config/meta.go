@@ -111,7 +111,7 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 	ctx, span := telemetry.StartSpan(ctx, "validateProviderConfig")
 	defer span.End()
 
-	validator := validatorProvider(ctx, m.ProviderName)
+	validator := validatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
 	providerInput := m.buildProviderInput()
 
 	span.SetAttributes(
@@ -119,6 +119,7 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 		otattribute.String("provider.layout", m.Layout),
 		otattribute.String("provider.clusterPrefix", m.ClusterPrefix),
 		otattribute.String("provider.operation", m.Operation),
+		otattribute.String("provider.downloadRootDir", m.DownloadRootDir),
 		otattribute.Int("provider.input.providerClusterConfigKeys", len(providerInput.ProviderClusterConfig)),
 	)
 	if cv := providerInput.CloudProviderVars; cv != nil {

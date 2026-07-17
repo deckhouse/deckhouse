@@ -483,7 +483,7 @@ func (s stubPatchingValidator) PatchProviderClusterConfig(_ context.Context, _ P
 }
 
 func stubValidatorProvider(s stubPatchingValidator) MetaConfigValidatorProvider {
-	return func(_ context.Context, _ string) MetaConfigValidator { return s }
+	return func(_ context.Context, _, _ string) MetaConfigValidator { return s }
 }
 
 func TestValidateProviderConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {

@@ -42,16 +42,17 @@ type MetaConfigValidator interface {
 }
 
 // MetaConfigValidatorProvider selects a MetaConfigValidator for the given
-// provider.
-type MetaConfigValidatorProvider func(ctx context.Context, provider string) MetaConfigValidator
+// provider. downloadRootDir is where provider bundles are unpacked; an external
+// provider's validator binary is looked up there.
+type MetaConfigValidatorProvider func(ctx context.Context, provider, downloadRootDir string) MetaConfigValidator
 
 type dummyValidator struct{}
 
-// DummyValidatorProvider validates nothing. It fits providers whose config is
-// checked elsewhere: in-tree providers by their candi OpenAPI schema, external
-// ones (e.g. DVP) by the cloud-provider admission webhook.
+// DummyValidatorProvider validates nothing. Use it where provider validation is
+// deliberately out of scope (static clusters, config parses that only need the
+// typed fields), not as a fallback for a provider that has a validator.
 func DummyValidatorProvider() MetaConfigValidatorProvider {
-	return func(_ context.Context, _ string) MetaConfigValidator {
+	return func(_ context.Context, _, _ string) MetaConfigValidator {
 		return &dummyValidator{}
 	}
 }
