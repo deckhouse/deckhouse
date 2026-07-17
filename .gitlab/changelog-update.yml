@@ -16,7 +16,6 @@ changelog-update:
   resource_group: changelog-update
   variables:
     CI_DEBUG_TRACE: true
-    VAULT_SERVER_URL: https://seguro.flant.com
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse-test # переделать!!!!!
     GIT_STRATEGY: fetch
@@ -26,7 +25,7 @@ changelog-update:
       aud: gitlab-access-aud
   secrets:
     BOATSWAIN_TOKEN:
-      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN@foxtoken
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/foxtoken@projects
       token: $VAULT_ID_TOKEN
       file: false
   script:
