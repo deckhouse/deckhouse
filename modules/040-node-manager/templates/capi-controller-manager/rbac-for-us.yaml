@@ -6,6 +6,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-controller-manager
   namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
 automountServiceAccountToken: false
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -14,6 +16,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-controller-manager:leader-election-role
   namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
 rules:
   - apiGroups:
       - ""
@@ -39,6 +43,8 @@ kind: ClusterRole
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: d8:node-manager:capi-controller-manager:aggregated-manager-role
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
 rules: []
 aggregationRule:
   clusterRoleSelectors:
@@ -50,6 +56,8 @@ kind: ClusterRole
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: d8:node-manager:capi-controller-manager:manager-role
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
 rules:
   ## cluster-api/config/rbac/role.yaml
   - apiGroups:
@@ -331,6 +339,8 @@ metadata:
     {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-controller-manager:leader-election-rolebinding
   namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -345,6 +355,8 @@ kind: ClusterRoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: d8:node-manager:capi-controller-manager:aggregated-manager-rolebinding
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -359,6 +371,8 @@ kind: ClusterRoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: d8:node-manager:capi-controller-manager:manager-rolebinding
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
