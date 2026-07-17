@@ -24,28 +24,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-func newTestValidator(client cloudClient) *MetaConfigValidator {
-	p := NewMetaConfigValidator()
-
-	p.clientProvider = func(_ map[string]json.RawMessage) (cloudClient, error) {
+func testClientProvider(client cloudClient) clientProvider {
+	return func(_ map[string]json.RawMessage) (cloudClient, error) {
 		return client, nil
 	}
-
-	return p
 }
 
 func TestPatchWithCurrentAPI(t *testing.T) {
-	validator := newTestValidator(testGetCurrentClient())
-	result, err := validator.PatchProviderClusterConfig(t.Context(), config.ProviderInput{})
+	result, err := patchProviderClusterConfig(t.Context(), config.ProviderInput{}, testClientProvider(testGetCurrentClient()))
 
 	require.NoError(t, err)
 	require.Nil(t, result)
 }
 
 func TestPatchWithLegacyAPI(t *testing.T) {
-	validator := newTestValidator(testGetLegacyClient())
-
-	result, err := validator.PatchProviderClusterConfig(context.TODO(), config.ProviderInput{})
+	result, err := patchProviderClusterConfig(context.TODO(), config.ProviderInput{}, testClientProvider(testGetLegacyClient()))
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	require.Contains(t, result, "legacyMode")
@@ -56,7 +49,7 @@ func TestPatchWithLegacyAPI(t *testing.T) {
 	inputWithLegacy := config.ProviderInput{
 		ProviderClusterConfig: map[string]json.RawMessage{"legacyMode": legacyModeRaw},
 	}
-	result, err = validator.PatchProviderClusterConfig(t.Context(), inputWithLegacy)
+	result, err = patchProviderClusterConfig(t.Context(), inputWithLegacy, testClientProvider(testGetLegacyClient()))
 	require.NoError(t, err)
 	require.Nil(t, result)
 }
@@ -76,8 +69,7 @@ func TestValidateMetaConfig(t *testing.T) {
 	}
 
 	assertPrefix := func(t *testing.T, prefix string, hasError bool) {
-		validator := newTestValidator(testGetLegacyClient())
-		err := validator.Validate(t.Context(), makeInput(validServer, prefix))
+		err := ValidateMetaConfig(t.Context(), makeInput(validServer, prefix))
 		if hasError {
 			require.Error(t, err)
 		} else {
@@ -89,7 +81,6 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "1abc", false)
 	assertPrefix(t, "abc-abc", false)
 
-	validator := newTestValidator(testGetLegacyClient())
-	err := validator.Validate(t.Context(), makeInput("https://myserver:8080/api/", "test"))
+	err := ValidateMetaConfig(t.Context(), makeInput("https://myserver:8080/api/", "test"))
 	require.Error(t, err)
 }

@@ -38,6 +38,6 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
-}, cluster_configuration.NewConfig(func(_ context.Context, _, _ string) config.MetaConfigValidator {
-	return yandex.NewMetaConfigValidator(false)
+}, cluster_configuration.NewConfig(func(_ context.Context, _, _ string) config.ProviderHandlers {
+	return config.ProviderHandlers{Validate: yandex.NewMetaConfigValidator(false).Validate}
 }))

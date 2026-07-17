@@ -476,9 +476,7 @@ func TestValidateProviderConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {
 		ProviderName:          "dvp",
 		ProviderClusterConfig: nil,
 	}
-	v := &fakePatchingValidator{patch: map[string]any{"layout": "Standard"}}
-
-	out, err := validateProviderConfig(context.Background(), fakeValidatorProvider(v), m)
+	out, err := validateProviderConfig(context.Background(), patchingProvider(map[string]any{"layout": "Standard"}), m)
 	require.NoError(t, err)
 	require.NotNil(t, out.ProviderClusterConfig)
 	require.Contains(t, out.ProviderClusterConfig, "layout")

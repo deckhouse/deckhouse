@@ -21,7 +21,7 @@ import (
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
-// ProviderInput is the native input for provider validators. Unlike a
+// ProviderInput is the native input for provider validation. Unlike a
 // serialized form, ProviderClusterConfig stays as json.RawMessage and
 // CloudProviderVars is already parsed.
 type ProviderInput struct {
@@ -33,39 +33,27 @@ type ProviderInput struct {
 	CloudProviderVars     *proto.CloudProviderVars
 }
 
-// MetaConfigValidator checks a provider's configuration. Validation is the only
-// thing every provider shares: a provider that additionally has to rewrite the
-// parsed configuration (only vcd does) implements the optional patcher method
-// documented in validateProviderConfig.
-type MetaConfigValidator interface {
-	Validate(ctx context.Context, input ProviderInput) error
+// ProviderHandlers carries a provider's config-parsing hooks. Validation and
+// patching are independent concerns wired separately: Validate never mutates,
+// and Patch — set only for vcd, which injects legacyMode for old VCD APIs — is
+// not part of any validator. A nil field means the provider has nothing to do
+// at that step; a patched configuration is re-validated against the provider
+// schema before it reaches tfvars.
+type ProviderHandlers struct {
+	Validate func(ctx context.Context, input ProviderInput) error
+	Patch    func(ctx context.Context, input ProviderInput) (map[string]any, error)
 }
 
-// ProviderConfigPatcher is the optional companion to MetaConfigValidator: a
-// validator that also implements it may rewrite the parsed
-// providerClusterConfiguration. Only vcd does (it injects legacyMode for old
-// VCD APIs); the patch is re-validated against the provider schema before it
-// reaches tfvars.
-type ProviderConfigPatcher interface {
-	PatchProviderClusterConfig(ctx context.Context, input ProviderInput) (map[string]any, error)
-}
-
-// MetaConfigValidatorProvider selects a MetaConfigValidator for the given
+// MetaConfigValidatorProvider selects the ProviderHandlers for the given
 // provider. downloadRootDir is where provider bundles are unpacked; an external
 // provider's validator binary is looked up there.
-type MetaConfigValidatorProvider func(ctx context.Context, provider, downloadRootDir string) MetaConfigValidator
-
-type dummyValidator struct{}
+type MetaConfigValidatorProvider func(ctx context.Context, provider, downloadRootDir string) ProviderHandlers
 
 // DummyValidatorProvider validates nothing. Use it where provider validation is
 // deliberately out of scope (static clusters, config parses that only need the
 // typed fields), not as a fallback for a provider that has a validator.
 func DummyValidatorProvider() MetaConfigValidatorProvider {
-	return func(_ context.Context, _, _ string) MetaConfigValidator {
-		return &dummyValidator{}
+	return func(_ context.Context, _, _ string) ProviderHandlers {
+		return ProviderHandlers{}
 	}
-}
-
-func (p *dummyValidator) Validate(_ context.Context, _ ProviderInput) error {
-	return nil
 }

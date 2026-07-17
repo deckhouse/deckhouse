@@ -110,7 +110,7 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 	ctx, span := telemetry.StartSpan(ctx, "validateProviderConfig")
 	defer span.End()
 
-	validator := validatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
+	handlers := validatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
 	providerInput := m.buildProviderInput()
 
 	span.SetAttributes(
@@ -130,12 +130,14 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 		)
 	}
 
-	if err := validator.Validate(ctx, providerInput); err != nil {
-		return nil, err
+	if handlers.Validate != nil {
+		if err := handlers.Validate(ctx, providerInput); err != nil {
+			return nil, err
+		}
+		span.AddEvent("provider validated")
 	}
-	span.AddEvent("provider validated")
 
-	if err := m.patchProviderClusterConfig(ctx, validator, providerInput); err != nil {
+	if err := m.patchProviderClusterConfig(ctx, handlers.Patch, providerInput); err != nil {
 		return nil, err
 	}
 
@@ -147,17 +149,14 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 	return m, nil
 }
 
-// patchProviderClusterConfig runs the validator's optional
-// ProviderConfigPatcher side and merges its result. Validators without it —
-// everyone except vcd — are left alone, so no provider has to stub out a
-// second method.
-func (m *MetaConfig) patchProviderClusterConfig(ctx context.Context, validator MetaConfigValidator, input ProviderInput) error {
-	patcher, ok := validator.(ProviderConfigPatcher)
-	if !ok {
+// patchProviderClusterConfig runs the provider's Patch handler, when set, and
+// merges its result into ProviderClusterConfig.
+func (m *MetaConfig) patchProviderClusterConfig(ctx context.Context, patchFunc func(context.Context, ProviderInput) (map[string]any, error), input ProviderInput) error {
+	if patchFunc == nil {
 		return nil
 	}
 
-	patch, err := patcher.PatchProviderClusterConfig(ctx, input)
+	patch, err := patchFunc(ctx, input)
 	if err != nil {
 		return err
 	}

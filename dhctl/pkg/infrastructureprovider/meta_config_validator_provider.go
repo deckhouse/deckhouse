@@ -55,27 +55,30 @@ func MetaConfigValidatorProvider() config.MetaConfigValidatorProvider {
 	return selectValidator
 }
 
-func selectValidator(ctx context.Context, provider, downloadRootDir string) config.MetaConfigValidator {
+func selectValidator(ctx context.Context, provider, downloadRootDir string) config.ProviderHandlers {
 	switch provider {
 	case "":
 		// static cluster
-		return config.DummyValidatorProvider()(ctx, "", "")
+		return config.ProviderHandlers{}
 	case yandex.ProviderName:
 		// Top-level dhctl paths validate the cluster prefix; the yandex hook
 		// builds its own validator with that check off (the prefix of a running
 		// cluster is already a fact).
-		return yandex.NewMetaConfigValidator(true)
+		return config.ProviderHandlers{Validate: yandex.NewMetaConfigValidator(true).Validate}
 	case vcd.ProviderName:
-		return vcd.NewMetaConfigValidator()
+		return config.ProviderHandlers{
+			Validate: vcd.ValidateMetaConfig,
+			Patch:    vcd.PatchProviderClusterConfig,
+		}
 	default:
 		if binaryPath := findExternalValidatorBinary(downloadRootDir, provider); binaryPath != "" {
-			return external.NewBinaryValidator(binaryPath)
+			return config.ProviderHandlers{Validate: external.NewBinaryValidator(binaryPath).Validate}
 		}
 		// In-tree providers ship their schemas in the image's candi and need no
 		// external validator: keep the lightweight prefix-only check. Only truly
 		// external providers (not in candi) require the downloaded binary.
 		if providerBundledInCandi(provider) {
-			return &inTreeDefaultValidator{}
+			return config.ProviderHandlers{Validate: validateInTreePrefix}
 		}
 		// Hard-fail instead of silently skipping the provider's own
 		// pre-bootstrap checks: a broken bundle must not reach the
@@ -85,7 +88,7 @@ func selectValidator(ctx context.Context, provider, downloadRootDir string) conf
 			err = fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", provider, providerdir.ValidatorPath(downloadRootDir, provider))
 		}
 		dhlog.FromContext(ctx).ErrorContext(ctx, err.Error())
-		return errValidator{err: err}
+		return config.ProviderHandlers{Validate: func(context.Context, config.ProviderInput) error { return err }}
 	}
 }
 
@@ -108,22 +111,11 @@ var providerBundledInCandi = func(provider string) bool {
 	return config.ProviderBundledInCandi(provider, nil)
 }
 
-// inTreeDefaultValidator is the fallback for in-tree providers without a
+// validateInTreePrefix is the fallback for in-tree providers without a
 // dedicated validator: validate the cluster prefix.
-type inTreeDefaultValidator struct{}
-
-func (p *inTreeDefaultValidator) Validate(_ context.Context, input config.ProviderInput) error {
+func validateInTreePrefix(_ context.Context, input config.ProviderInput) error {
 	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
 		return fmt.Errorf("validate cluster prefix for provider %s: %w", input.ProviderName, err)
 	}
 	return nil
-}
-
-// errValidator always fails with a pre-built error.
-type errValidator struct {
-	err error
-}
-
-func (v errValidator) Validate(context.Context, config.ProviderInput) error {
-	return v.err
 }

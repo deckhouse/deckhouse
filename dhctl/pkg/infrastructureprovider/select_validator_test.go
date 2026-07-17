@@ -33,9 +33,10 @@ func TestSelectValidatorInTreeFallback(t *testing.T) {
 	providerBundledInCandi = func(string) bool { return true }
 	t.Cleanup(func() { providerBundledInCandi = orig })
 
-	p := selectValidator(context.Background(), "gcp", t.TempDir())
-	require.IsType(t, &inTreeDefaultValidator{}, p)
-	require.NoError(t, p.Validate(context.Background(), config.ProviderInput{ClusterPrefix: "ok-prefix", ProviderName: "gcp"}))
+	h := selectValidator(context.Background(), "gcp", t.TempDir())
+	require.Nil(t, h.Patch)
+	require.NoError(t, h.Validate(context.Background(), config.ProviderInput{ClusterPrefix: "ok-prefix", ProviderName: "gcp"}))
+	require.Error(t, h.Validate(context.Background(), config.ProviderInput{ProviderName: "gcp"}), "empty prefix must fail")
 }
 
 func TestSelectValidatorExternalMissingValidator(t *testing.T) {
@@ -43,19 +44,14 @@ func TestSelectValidatorExternalMissingValidator(t *testing.T) {
 	providerBundledInCandi = func(string) bool { return false }
 	t.Cleanup(func() { providerBundledInCandi = orig })
 
-	p := selectValidator(context.Background(), "dvp", t.TempDir())
-	err := p.Validate(context.Background(), config.ProviderInput{})
+	h := selectValidator(context.Background(), "dvp", t.TempDir())
+	err := h.Validate(context.Background(), config.ProviderInput{})
 	require.ErrorContains(t, err, "external validator for provider \"dvp\" not found")
 }
 
-// The vcd legacyMode patch reaches config through an optional-interface check,
-// so nothing at compile time ties vcd's real type to config.ProviderConfigPatcher:
-// rename the method or switch its receiver and the patch silently stops
-// applying. Pin the real selector output against the contract.
-func TestSelectValidatorVCDSatisfiesPatcherContract(t *testing.T) {
-	v := selectValidator(context.Background(), vcd.ProviderName, "")
-	require.Implements(t, (*config.ProviderConfigPatcher)(nil), v, "vcd must keep patching providerClusterConfiguration (legacyMode)")
-
-	other := selectValidator(context.Background(), yandex.ProviderName, "")
-	require.NotImplements(t, (*config.ProviderConfigPatcher)(nil), other, "only vcd may patch the parsed config")
+// Only vcd patches the parsed providerClusterConfiguration (legacyMode); for
+// everyone else the Patch handler must stay nil.
+func TestSelectValidatorOnlyVCDPatches(t *testing.T) {
+	require.NotNil(t, selectValidator(context.Background(), vcd.ProviderName, "").Patch)
+	require.Nil(t, selectValidator(context.Background(), yandex.ProviderName, "").Patch)
 }

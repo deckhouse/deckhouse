@@ -22,29 +22,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakePatchingValidator stands in for vcd: the only provider that patches its
-// own parsed config through the optional PatchProviderClusterConfig method.
-type fakePatchingValidator struct {
-	patch map[string]any
-}
-
-func (p *fakePatchingValidator) Validate(_ context.Context, _ ProviderInput) error {
-	return nil
-}
-
-func (p *fakePatchingValidator) PatchProviderClusterConfig(_ context.Context, _ ProviderInput) (map[string]any, error) {
-	return p.patch, nil
-}
-
-func fakeValidatorProvider(v MetaConfigValidator) MetaConfigValidatorProvider {
-	return func(_ context.Context, _, _ string) MetaConfigValidator { return v }
+// patchingProvider stands in for vcd: the only provider whose Patch handler is
+// set.
+func patchingProvider(patch map[string]any) MetaConfigValidatorProvider {
+	return func(_ context.Context, _, _ string) ProviderHandlers {
+		return ProviderHandlers{Patch: func(context.Context, ProviderInput) (map[string]any, error) { return patch, nil }}
+	}
 }
 
 func TestPatchMergeContract(t *testing.T) {
-	validator := &fakePatchingValidator{patch: map[string]interface{}{
+	provider := patchingProvider(map[string]interface{}{
 		"replaced": map[string]interface{}{"new": true},
 		"added":    "fresh",
-	}}
+	})
 
 	m := &MetaConfig{
 		ProviderName: "mergetest",
@@ -54,7 +44,7 @@ func TestPatchMergeContract(t *testing.T) {
 		},
 	}
 
-	_, err := validateProviderConfig(context.Background(), fakeValidatorProvider(validator), m)
+	_, err := validateProviderConfig(context.Background(), provider, m)
 	require.NoError(t, err)
 
 	require.JSONEq(t, `{"old":1}`, string(m.ProviderClusterConfig["kept"]), "keys absent from the result must stay untouched")
@@ -70,9 +60,9 @@ func TestPatchRevalidatesAgainstSchema(t *testing.T) {
 	store := NewSchemaStore(nil)
 	require.NoError(t, store.LoadProviderDir("mutprov", "sha256:mut1", dir))
 
-	validator := &fakePatchingValidator{patch: map[string]interface{}{
+	provider := patchingProvider(map[string]interface{}{
 		"bogus": "not allowed by additionalProperties: false",
-	}}
+	})
 
 	m := &MetaConfig{
 		ProviderName: "mutprov",
@@ -83,7 +73,7 @@ func TestPatchRevalidatesAgainstSchema(t *testing.T) {
 		},
 	}
 
-	_, err := validateProviderConfig(context.Background(), fakeValidatorProvider(validator), m)
+	_, err := validateProviderConfig(context.Background(), provider, m)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "patched provider cluster configuration into an invalid state")
 	require.Contains(t, err.Error(), "bogus")
@@ -95,9 +85,9 @@ func TestPatchValidResultPasses(t *testing.T) {
 	store := NewSchemaStore(nil)
 	require.NoError(t, store.LoadProviderDir("mutprovok", "sha256:mut2", dir))
 
-	validator := &fakePatchingValidator{patch: map[string]interface{}{
+	provider := patchingProvider(map[string]interface{}{
 		"layout": "Amended",
-	}}
+	})
 
 	m := &MetaConfig{
 		ProviderName: "mutprovok",
@@ -108,7 +98,7 @@ func TestPatchValidResultPasses(t *testing.T) {
 		},
 	}
 
-	_, err := validateProviderConfig(context.Background(), fakeValidatorProvider(validator), m)
+	_, err := validateProviderConfig(context.Background(), provider, m)
 	require.NoError(t, err)
 	require.JSONEq(t, `"Amended"`, string(m.ProviderClusterConfig["layout"]))
 }

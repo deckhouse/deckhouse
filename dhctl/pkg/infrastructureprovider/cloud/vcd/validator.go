@@ -26,17 +26,10 @@ import (
 
 type clientProvider func(pcc map[string]json.RawMessage) (cloudClient, error)
 
-type MetaConfigValidator struct {
-	clientProvider clientProvider
-}
-
-func NewMetaConfigValidator() *MetaConfigValidator {
-	return &MetaConfigValidator{
-		clientProvider: newVcdCloudClient,
-	}
-}
-
-func (p MetaConfigValidator) Validate(_ context.Context, input config.ProviderInput) error {
+// ValidateMetaConfig checks the cluster prefix and the provider.server format.
+// Validation never mutates the config; the legacyMode rewrite lives separately
+// in PatchProviderClusterConfig.
+func ValidateMetaConfig(_ context.Context, input config.ProviderInput) error {
 	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
 		return fmt.Errorf("%v for provider %s", err, ProviderName)
 	}
@@ -65,10 +58,13 @@ func (p MetaConfigValidator) Validate(_ context.Context, input config.ProviderIn
 
 // PatchProviderClusterConfig injects legacyMode for VCD APIs older than the
 // current contract. It is the only provider-side rewrite of a parsed config in
-// dhctl, so config picks it up through an optional-method check rather than a
-// shared interface.
-func (p MetaConfigValidator) PatchProviderClusterConfig(ctx context.Context, input config.ProviderInput) (map[string]any, error) {
-	client, err := p.clientProvider(input.ProviderClusterConfig)
+// dhctl and is deliberately not part of the validator.
+func PatchProviderClusterConfig(ctx context.Context, input config.ProviderInput) (map[string]any, error) {
+	return patchProviderClusterConfig(ctx, input, newVcdCloudClient)
+}
+
+func patchProviderClusterConfig(ctx context.Context, input config.ProviderInput, clients clientProvider) (map[string]any, error) {
+	client, err := clients(input.ProviderClusterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get cloud client: %w", err)
 	}
