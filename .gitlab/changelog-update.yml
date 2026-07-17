@@ -13,6 +13,7 @@ changelog-update:
   extends:
     - .rules:on_release_branch
   resource_group: changelog-update
+  needs: []
   variables:
     CI_DEBUG_TRACE: true
     VAULT_AUTH_PATH: fox
