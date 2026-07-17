@@ -93,18 +93,20 @@ changelog-update:
 
       # Ensure release branches and tags are available for the generator.
       git fetch origin --tags --force
-      git fetch origin "+refs/heads/main:refs/heads/main" || true
+      git fetch origin "+refs/heads/main:refs/heads/main"
       git fetch origin "+refs/heads/release-*:refs/heads/release-*"
 
       SECTIONS_FILE="$(mktemp)"
       OUTPUT_JSON="$(mktemp)"
-      trap 'rm -f "${SECTIONS_FILE}" "${OUTPUT_JSON}"' EXIT
+      CHANGELOG_OUT="$(mktemp -d)"
+      trap 'rm -rf "${SECTIONS_FILE}" "${OUTPUT_JSON}" "${CHANGELOG_OUT}"' EXIT
 
       deckhouse-write-changelog-sections \
         --repo-root "${CI_PROJECT_DIR}" \
         --milestone "${MILESTONE}" \
         --output "${SECTIONS_FILE}"
 
+      # Generator reads git history from release branch refs; working tree can be anything.
       deckhouse-collect-changelog \
         --repo-path "${CI_PROJECT_DIR}" \
         --milestone "${MILESTONE}" \
@@ -112,16 +114,18 @@ changelog-update:
         --gitlab-token "${BOATSWAIN_TOKEN}" \
         --gitlab-api-url "${CI_API_V4_URL}" \
         --allowed-sections-file "${SECTIONS_FILE}" \
-        --changelog-dir "${CI_PROJECT_DIR}/CHANGELOG" \
+        --changelog-dir "${CHANGELOG_OUT}" \
         --output-json "${OUTPUT_JSON}"
-
-      git add -A CHANGELOG/
 
       BRANCH="changelog/${MILESTONE}"
       MINOR_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["minor_version"])' "${OUTPUT_JSON}")"
       RELEASE_MARKDOWN="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release_markdown"])' "${OUTPUT_JSON}")"
 
-      git checkout -B "${BRANCH}"
+      # Branch MR from main (same as GitHub create-pull-request base: main).
+      git checkout -B "${BRANCH}" main
+      mkdir -p CHANGELOG
+      cp -a "${CHANGELOG_OUT}/." CHANGELOG/
+      git add -A CHANGELOG/
       # Always commit/push/MR, even when CHANGELOG/ is unchanged.
       git commit --allow-empty -m "Re-generate changelog ${MILESTONE}" \
         -m "Signed-off-by: deckhouse-BOaTswain <deckhouse-boatswain@flant.com>"
