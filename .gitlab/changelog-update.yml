@@ -1,0 +1,182 @@
+# Changelog update job.
+#
+# Milestone: active GitLab milestone for the current release-x.xx branch (title vX.Y.Z).
+#
+# BOATSWAIN_TOKEN is fetched from Vault via GitLab native secrets integration.
+
+
+changelog-update:
+  stage: .post
+  image:
+    name: ${CI_REGISTRY}/deckhouse/ssdlc-tools/changelog-generator:0.0.0-fdc38cf9
+  extends:
+    - .rules:on_release_branch
+  resource_group: changelog-update
+  variables:
+    GIT_STRATEGY: fetch
+    GIT_DEPTH: "0"
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    BOATSWAIN_TOKEN:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_FOX_TOKEN@token
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - |
+      set -euo pipefail
+
+      # Resolve milestone: explicit var, else active GitLab milestone for this release branch.
+      if [ -n "${CHANGELOG_MILESTONE:-}" ]; then
+        MILESTONE="${CHANGELOG_MILESTONE}"
+        MILESTONE_ID=""
+      else
+        if ! [[ "${CI_COMMIT_BRANCH}" =~ ^release-([0-9]+\.[0-9]+)$ ]]; then
+          echo "expected release-x.xx branch, got '${CI_COMMIT_BRANCH}'" >&2
+          exit 1
+        fi
+        RELEASE_MINOR="${BASH_REMATCH[1]}"
+        RESOLVED="$(python3 - "${RELEASE_MINOR}" <<'PY'
+      import json, os, sys, urllib.parse, urllib.request
+
+      release_minor = sys.argv[1]
+      token = os.environ["BOATSWAIN_TOKEN"]
+      api = os.environ["CI_API_V4_URL"]
+      project_id = os.environ["CI_PROJECT_ID"]
+      prefix = f"v{release_minor}."
+
+      query = urllib.parse.urlencode({"state": "active", "per_page": "100"})
+      url = f"{api}/projects/{project_id}/milestones?{query}"
+      req = urllib.request.Request(
+          url,
+          headers={"PRIVATE-TOKEN": token, "Content-Type": "application/json"},
+      )
+      with urllib.request.urlopen(req) as resp:
+          milestones = json.load(resp)
+
+      matched = [
+          m
+          for m in milestones
+          if isinstance(m.get("title"), str) and m["title"].startswith(prefix)
+      ]
+
+      def patch_key(title: str) -> tuple[int, ...]:
+          return tuple(int(p) for p in title.lstrip("v").split("."))
+
+      matched.sort(key=lambda m: patch_key(m["title"]))
+      if not matched:
+          raise SystemExit(
+              f"no active GitLab milestones for {prefix}* "
+              f"(set CHANGELOG_MILESTONE or create a milestone)"
+          )
+      chosen = matched[-1]
+      print(f"{chosen['title']} {chosen['id']}")
+      PY
+      )"
+        MILESTONE="${RESOLVED%% *}"
+        MILESTONE_ID="${RESOLVED#* }"
+      fi
+
+      if ! [[ "${MILESTONE}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "invalid milestone '${MILESTONE}', expected vX.Y.Z" >&2
+        exit 1
+      fi
+
+      echo "Generating changelog for ${MILESTONE}"
+
+      git config user.name "deckhouse-BOaTswain"
+      git config user.email "deckhouse-boatswain@flant.com"
+
+      # Ensure release branches and tags are available for the generator.
+      git fetch origin --tags --force
+      git fetch origin "+refs/heads/main:refs/heads/main" || true
+      git fetch origin "+refs/heads/release-*:refs/heads/release-*"
+
+      SECTIONS_FILE="$(mktemp)"
+      OUTPUT_JSON="$(mktemp)"
+      trap 'rm -f "${SECTIONS_FILE}" "${OUTPUT_JSON}"' EXIT
+
+      deckhouse-write-changelog-sections \
+        --repo-root "${CI_PROJECT_DIR}" \
+        --milestone "${MILESTONE}" \
+        --output "${SECTIONS_FILE}"
+
+      deckhouse-collect-changelog \
+        --repo-path "${CI_PROJECT_DIR}" \
+        --milestone "${MILESTONE}" \
+        --gitlab-project-id "${CI_PROJECT_ID}" \
+        --gitlab-token "${BOATSWAIN_TOKEN}" \
+        --gitlab-api-url "${CI_API_V4_URL}" \
+        --allowed-sections-file "${SECTIONS_FILE}" \
+        --changelog-dir "${CI_PROJECT_DIR}/CHANGELOG" \
+        --output-json "${OUTPUT_JSON}"
+
+      git add -A CHANGELOG/
+
+      BRANCH="changelog/${MILESTONE}"
+      MINOR_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["minor_version"])' "${OUTPUT_JSON}")"
+      RELEASE_MARKDOWN="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release_markdown"])' "${OUTPUT_JSON}")"
+
+      git checkout -B "${BRANCH}"
+      # Always commit/push/MR, even when CHANGELOG/ is unchanged.
+      git commit --allow-empty -m "Re-generate changelog ${MILESTONE}" \
+        -m "Signed-off-by: deckhouse-BOaTswain <deckhouse-boatswain@flant.com>"
+
+      PUSH_URL="https://oauth2:${BOATSWAIN_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+      git push --force "${PUSH_URL}" "HEAD:refs/heads/${BRANCH}" -o ci.skip
+
+      MR_TITLE="Changelog ${MILESTONE}"
+      MR_DESCRIPTION="${RELEASE_MARKDOWN}
+
+      For more information, see the [changelog](${CI_PROJECT_URL}/-/blob/main/CHANGELOG/CHANGELOG-${MINOR_VERSION}.md)."
+
+      python3 - "${BRANCH}" "${MR_TITLE}" "${MR_DESCRIPTION}" "${MILESTONE_ID:-}" <<'PY'
+      import json, os, sys, urllib.parse, urllib.request
+
+      branch, title, description, milestone_id = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+      token = os.environ["BOATSWAIN_TOKEN"]
+      api = os.environ["CI_API_V4_URL"]
+      project_id = os.environ["CI_PROJECT_ID"]
+      project_url = os.environ["CI_PROJECT_URL"]
+
+      def request(method, url, payload=None):
+          data = None if payload is None else json.dumps(payload).encode()
+          req = urllib.request.Request(
+              url,
+              data=data,
+              method=method,
+              headers={
+                  "PRIVATE-TOKEN": token,
+                  "Content-Type": "application/json",
+              },
+          )
+          with urllib.request.urlopen(req) as resp:
+              return json.load(resp)
+
+      query = urllib.parse.urlencode({"source_branch": branch, "state": "opened"})
+      opened = request("GET", f"{api}/projects/{project_id}/merge_requests?{query}")
+
+      payload = {
+          "title": title,
+          "description": description,
+      }
+      if milestone_id:
+          payload["milestone_id"] = int(milestone_id)
+
+      if opened:
+          iid = opened[0]["iid"]
+          request("PUT", f"{api}/projects/{project_id}/merge_requests/{iid}", payload)
+          print(f"Updated MR !{iid}: {project_url}/-/merge_requests/{iid}")
+      else:
+          payload.update(
+              {
+                  "source_branch": branch,
+                  "target_branch": "main",
+                  "labels": "changelog,auto",
+                  "remove_source_branch": True,
+              }
+          )
+          mr = request("POST", f"{api}/projects/{project_id}/merge_requests", payload)
+          print(f"Created MR: {mr.get('web_url', '')}")
+      PY
