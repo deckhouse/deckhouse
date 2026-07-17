@@ -516,6 +516,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `capi-crd-migration` (CAPS path) | `CustomResourceDefinition` (+watch caps `Secret`/`Service`) | `sshcredentials_crd_cabundle_injection.go` | Keep the `sshcredentials.deckhouse.io` conversion-webhook CA in sync with the CAPS webhook TLS secret |
 | `node-group-configuration-metrics` | `NodeGroupConfiguration` | `metrics_node_group_configurations.go` | Export `d8_node_group_configurations_total{node_group}` — NGC count aggregated by targeted NodeGroup |
 | `chaos-monkey` | `NodeGroup` (schedule-driven, one-minute ticker) | `chaos_monkey.go` | Periodically drain-and-delete one random MCM `Machine` of every chaos-enabled, ready NodeGroup |
+| `yandex-preemptible-cleanup` | `NodeGroup` (schedule-driven, 15-minute ticker) | `yc_delete_preemptible_instances.go` | Rotate the oldest ~10% of preemptible Yandex MCM `Machine`s (node age > 20h) ahead of the cloud's 24h eviction, keeping each NodeGroup ≥ 0.9 ready |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -763,3 +764,48 @@ Scope is MCM only, matching the hook 1:1; CAPI-backed NodeGroups
 `Machine` with `chaos-monkey-victim` and set its `deletionTimestamp` at 15:46:00Z.
 RBAC: existing `machine.sapcloud.io/machines` get/list/watch/update/patch/delete and
 `nodes`/`nodegroups` read grants already cover it — no new grants.
+
+### yandex-preemptible-cleanup (`internal/controller/preemptible`)
+
+Proactively rotates the oldest preemptible Yandex.Cloud nodes before the cloud
+provider force-stops them. Yandex terminates preemptible VMs after at most 24h, so
+once a node's age crosses the 20h (24h-4h) window this controller deletes its MCM
+`Machine` (`machine.sapcloud.io/v1alpha1`, namespace `d8-cloud-instance-manager`);
+MCM then recreates a fresh node.
+
+```
+every 15 minutes (ticker)
+  ├─ collect preemptible YandexMachineClass names (spec.schedulingPolicy.preemptible)
+  │    none → nothing to rotate (MCM-only scope) → return
+  ├─ index Nodes by name → {group, creationTimestamp}
+  ├─ index Yandex NodeGroups (classReference.kind == YandexInstanceClass) → {nodes, ready}
+  ├─ for each Machine:
+  │    ├─ terminating (deletionTimestamp)?                 → skip
+  │    ├─ spec.class.kind != YandexMachineClass?           → skip
+  │    ├─ class not preemptible?                           → skip
+  │    ├─ no Node named after the Machine?                 → skip
+  │    ├─ node age < 20h?                                  → skip (too young)
+  │    └─ NodeGroup ready/nodes < 0.9?                     → skip (protect availability)
+  ├─ sort candidates oldest-first; batch = len/10 (min 1)
+  └─ delete the oldest `batch` Machines
+```
+
+**Parity note:** the hook (`yc_delete_preemptible_instances.go`) was schedule-only —
+crontab `0/15 * * * *` with purely passive Kubernetes bindings — so the controller
+uses a 15-minute ticker raw source rather than a reactive watch (same
+`WithEventFilter`-false pattern as `chaos-monkey`); reactive triggers would rotate
+nodes more aggressively than the intended cadence. The node lookup keys on the
+`Machine` name (MCM names the node after its Machine), matching the hook 1:1. The
+readiness guard skips NodeGroups with zero nodes, which also avoids the `0/0` NaN the
+hook's raw ratio could produce. Scope is MCM only: it reads
+`YandexMachineClass.spec.schedulingPolicy.preemptible`. **CAPI is a deliberate no-op,
+not a regression** — the Deckhouse CAPI `YandexMachineTemplate` does not render
+`preemptible`, and the upstream `cluster-api-provider-yandex` v0.2.0 `YandexMachineSpec`
+has no `schedulingPolicy`/`preemptible` field at all, so CAPI Yandex nodes are never
+preemptible and there is nothing to rotate. Enabling CAPI preemptible rotation is a
+separate provider feature (see the migration TODO / `preemptible-capi` plan). Baseline
+is time-gated (the hook only acts on a real >20h-old preemptible node; a node's
+`creationTimestamp` cannot be forged), so parity is covered by deterministic unit
+tests rather than a same-session live 2a. RBAC: existing
+`machine.sapcloud.io/machines` get/list/watch/delete and
+`yandexmachineclasses`/`nodes`/`nodegroups` read grants already cover it — no new grants.
