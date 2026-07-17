@@ -43,4 +43,8 @@ For Compute and Block Storage, the supported microversion depends on the install
 
 To ensure proper integration and functionality, the OpenStack user associated with the Deckhouse Kubernetes Platform should be granted the "member" role. This role assignment is essential to provide the necessary permissions for interacting with the listed services and managing resources within the OpenStack environment.
 
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+API endpoints and ports are listed in the [official documentation](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
+
 {% include module-settings.liquid %}

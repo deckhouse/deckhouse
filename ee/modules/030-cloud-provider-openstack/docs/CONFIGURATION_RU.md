@@ -43,7 +43,8 @@ title: "Cloud provider — OpenStack: настройки"
 
 Чтобы интеграция и работа с платформой Deckhouse Kubernetes проходила корректно, присвойте ассоциированному пользователю OpenStack роль `member`. Это обеспечит разрешения на взаимодействие с указанными сервисами и управление ресурсами.
 
-В случае использования публичных облаков, адреса и порты API можно узнать в официальной документации сервиса:  
-* [VK Cloud](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints)
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
 
 {% include module-settings.liquid %}
