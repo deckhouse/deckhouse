@@ -126,30 +126,11 @@ subjects:
     name: bashible-apiserver
     apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: bashible-apiserver-readregsecret
-  namespace: d8-system
-rules:
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "watch", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: bashible-apiserver-readregsecret
-  namespace: d8-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: bashible-apiserver-readregsecret
-subjects:
-  - kind: User
-    name: bashible-apiserver
-    apiGroup: rbac.authorization.k8s.io
----
+# Access to registry secrets in d8-system for the bashible-apiserver User is
+# granted by the bashible-apiserver-readregsecret Role/RoleBinding of the
+# tenant's deckhouse module chart (modules/002-deckhouse/templates/rbac-for-us.yaml);
+# they must not be duplicated here, or the tenant's helm release fails with
+# "invalid ownership metadata".
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
