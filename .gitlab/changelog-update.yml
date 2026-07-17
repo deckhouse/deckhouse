@@ -15,6 +15,7 @@ changelog-update:
     - .rules:on_release_branch
   resource_group: changelog-update
   variables:
+    CI_DEBUG_TRACE: true
     VAULT_SERVER_URL: https://seguro.flant.com
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse-test # переделать!!!!!
