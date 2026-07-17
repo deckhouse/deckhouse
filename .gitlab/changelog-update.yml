@@ -8,7 +8,7 @@
 changelog-update:
   stage: .post
   image:
-    name: ${CI_REGISTRY}/deckhouse/ssdlc-tools/changelog-generator:0.0.0-db629065
+    name: ${CI_REGISTRY}/deckhouse/ssdlc-tools/changelog-generator:0.0.0-178d208a
   extends:
     - .rules:on_release_branch
   resource_group: changelog-update
@@ -22,8 +22,12 @@ changelog-update:
     VAULT_ID_TOKEN:
       aud: gitlab-access-aud
   secrets:
-    BOATSWAIN_TOKEN:
+    FOX_TOKEN:
       vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/foxtoken@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    GITHUB_TOKEN:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/token@projects
       token: $VAULT_ID_TOKEN
       file: false
   script:
@@ -111,7 +115,7 @@ changelog-update:
         --repo-path "${CI_PROJECT_DIR}" \
         --milestone "${MILESTONE}" \
         --gitlab-project "${CI_PROJECT_PATH}" \
-        --gitlab-token "${BOATSWAIN_TOKEN}" \
+        --gitlab-token "${FOX_TOKEN}" \
         --gitlab-api-url "${CI_API_V4_URL}" \
         --allowed-sections-file "${SECTIONS_FILE}" \
         --changelog-dir "${CHANGELOG_OUT}" \
