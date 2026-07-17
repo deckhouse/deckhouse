@@ -186,7 +186,6 @@ func (r *reconciler) reconcileBashibleRBAC(ctx context.Context, nestedClient cli
 		key := client.ObjectKeyFromObject(obj)
 		current := &unstructured.Unstructured{}
 		current.SetGroupVersionKind(gvk)
-
 		err := nestedClient.Get(ctx, key, current)
 		if apierrors.IsNotFound(err) {
 			if err := nestedClient.Create(ctx, obj); err != nil {
@@ -668,12 +667,12 @@ func (r *reconciler) reconcileBashibleDeployment(
 		return reconcile.Result{}, fmt.Errorf("get bashible Deployment: %w", err)
 	}
 
-	if equality.Semantic.DeepEqual(current.Spec, target.Spec) {
+	if isBashibleDeploymentInSync(current, target) {
 		return reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()
-	current.Spec = target.Spec
+	applyBashibleDeploymentTarget(current, target)
 	return reconcile.Result{}, r.patchDeployment(ctx, base, current)
 }
 
@@ -703,6 +702,27 @@ func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane
 	}
 
 	return deployment, nil
+}
+
+func isBashibleDeploymentInSync(current, target *appsv1.Deployment) bool {
+	for key, value := range target.Labels {
+		if current.Labels[key] != value {
+			return false
+		}
+	}
+	return equality.Semantic.DeepEqual(current.Spec.Replicas, target.Spec.Replicas) &&
+		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
+		equality.Semantic.DeepDerivative(target.Spec.Template, current.Spec.Template)
+}
+
+func applyBashibleDeploymentTarget(current, target *appsv1.Deployment) {
+	if current.Labels == nil {
+		current.Labels = map[string]string{}
+	}
+	maps.Copy(current.Labels, target.Labels)
+	current.Spec.Replicas = target.Spec.Replicas
+	current.Spec.Selector = target.Spec.Selector
+	current.Spec.Template = target.Spec.Template
 }
 
 func (r *reconciler) reconcileBashibleAPIService(
