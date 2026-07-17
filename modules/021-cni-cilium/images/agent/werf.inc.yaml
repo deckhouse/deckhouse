@@ -294,22 +294,38 @@ import:
   before: setup
   add: /etc/profile.d/bash_completion.sh
   to: /etc/bashrc.d/bash_completion.sh
-- from: {{ index $.Images "libs/glibc-v2.41" }}
-  add: /lib64/libm.so.6
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libm.so.6
   to: /usr/lib64/libm.so.6
-  before: setup
-- from: {{ index $.Images "libs/glibc-v2.41" }}
-  add: /lib64/libc.so.6
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libc.so.6
   to: /usr/lib64/libc.so.6
-  before: setup
-- from: {{ index $.Images "libs/glibc-v2.41" }}
-  add: /lib64/ld-linux-x86-64.so.2
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/ld-linux-x86-64.so.2
   to: /usr/lib64/ld-linux-x86-64.so.2
-  before: setup
-- from: {{ index $.Images "libs/glibc-v2.41" }}
-  add: /lib64/libc.musl-x86_64.so.1
-  to: /usr/lib64/libc.musl-x86_64.so.1
-  before: setup
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libpthread.so.0
+  to: /usr/lib64/libpthread.so.0
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libresolv.so.2
+  to: /usr/lib64/libresolv.so.2
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/librt.so.1
+  to: /usr/lib64/librt.so.1
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libdl.so.2
+  to: /usr/lib64/libdl.so.2
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/usr/lib/libtinfo*
+  to: /usr/lib64/
+  before: install
 - from: {{ index $.Images "tools/elfutils-elfutils-0.193" }}
   add: /usr/lib
   to: /usr/lib64

@@ -74,7 +74,7 @@ import:
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
   add: /out/lib64/libpthread.so.0
-  to: /usr/lib64/ldlibpthread.so.0
+  to: /usr/lib64/libpthread.so.0
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
   add: /out/lib64/libresolv.so.2
