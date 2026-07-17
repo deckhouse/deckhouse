@@ -117,6 +117,8 @@ changelog-update:
         --milestone "${MILESTONE}" \
         --gitlab-project "${CI_PROJECT_PATH}" \
         --gitlab-token "${FOX_TOKEN}" \
+        --github-repo "deckhouse/deckhouse"\
+        --github-token "${GITHUB_TOKEN}" \
         --gitlab-api-url "${CI_API_V4_URL}" \
         --allowed-sections-file "${SECTIONS_FILE}" \
         --changelog-dir "${CHANGELOG_OUT}" \
