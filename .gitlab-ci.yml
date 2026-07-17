@@ -9,13 +9,3 @@ stages:
 include:
 - .gitlab/**.yml
 
-default:
-  tags:
-    - deckhouse
-
-test: # джоба-заглушка, т.к. гитлаб не создает пайп если в нем только джоба из хидден-стейджа
-  stage: build
-  except:
-  - .rules:on_release_branch
-  script:
-  - exit 0
