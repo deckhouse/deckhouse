@@ -44,7 +44,8 @@ func TestSelectValidatorExternalMissingValidator(t *testing.T) {
 	t.Cleanup(func() { providerBundledInCandi = orig })
 
 	p := selectValidator(context.Background(), "dvp", t.TempDir())
-	require.IsType(t, &missingExternalValidator{}, p)
+	err := p.Validate(context.Background(), config.ProviderInput{})
+	require.ErrorContains(t, err, "external validator for provider \"dvp\" not found")
 }
 
 // The vcd legacyMode patch reaches config through an optional-method check, so

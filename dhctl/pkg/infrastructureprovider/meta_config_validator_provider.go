@@ -77,12 +77,15 @@ func selectValidator(ctx context.Context, provider, downloadRootDir string) conf
 		if providerBundledInCandi(provider) {
 			return &inTreeDefaultValidator{}
 		}
-		searched := ""
+		// Hard-fail instead of silently skipping the provider's own
+		// pre-bootstrap checks: a broken bundle must not reach the
+		// infrastructure.
+		err := fmt.Errorf("external validator for provider %q not found: provider plugins directory was not configured", provider)
 		if downloadRootDir != "" {
-			searched = providerdir.ValidatorPath(downloadRootDir, provider)
+			err = fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", provider, providerdir.ValidatorPath(downloadRootDir, provider))
 		}
-		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("external validator for provider %q not found at %q", provider, searched))
-		return &missingExternalValidator{provider: provider, searchedPath: searched}
+		dhlog.FromContext(ctx).ErrorContext(ctx, err.Error())
+		return errValidator{err: err}
 	}
 }
 
@@ -116,18 +119,11 @@ func (p *inTreeDefaultValidator) Validate(_ context.Context, input config.Provid
 	return nil
 }
 
-// missingExternalValidator hard-fails when an external provider's validator
-// binary is absent from the unpacked OCI bundle: silently skipping the
-// provider's own pre-bootstrap checks would let a broken configuration reach
-// the infrastructure.
-type missingExternalValidator struct {
-	provider     string
-	searchedPath string
+// errValidator always fails with a pre-built error.
+type errValidator struct {
+	err error
 }
 
-func (p *missingExternalValidator) Validate(_ context.Context, _ config.ProviderInput) error {
-	if p.searchedPath == "" {
-		return fmt.Errorf("external validator for provider %q not found: provider plugins directory was not configured", p.provider)
-	}
-	return fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", p.provider, p.searchedPath)
+func (v errValidator) Validate(context.Context, config.ProviderInput) error {
+	return v.err
 }

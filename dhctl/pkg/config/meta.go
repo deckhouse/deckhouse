@@ -30,7 +30,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	otattribute "go.opentelemetry.io/otel/attribute"
-	ottrace "go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -136,7 +135,7 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 	}
 	span.AddEvent("provider validated")
 
-	if err := m.patchProviderClusterConfig(ctx, validator, providerInput, span); err != nil {
+	if err := m.patchProviderClusterConfig(ctx, validator, providerInput); err != nil {
 		return nil, err
 	}
 
@@ -154,12 +153,7 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 // out, the capability is optional: a validator that has it gets called, the
 // rest are left alone. The patch is re-validated against the provider schema so
 // a buggy provider cannot inject an invalid configuration into tfvars.
-func (m *MetaConfig) patchProviderClusterConfig(
-	ctx context.Context,
-	validator MetaConfigValidator,
-	input ProviderInput,
-	span ottrace.Span,
-) error {
+func (m *MetaConfig) patchProviderClusterConfig(ctx context.Context, validator MetaConfigValidator, input ProviderInput) error {
 	patcher, ok := validator.(interface {
 		PatchProviderClusterConfig(ctx context.Context, input ProviderInput) (map[string]any, error)
 	})
@@ -174,6 +168,7 @@ func (m *MetaConfig) patchProviderClusterConfig(
 	if len(patch) == 0 {
 		return nil
 	}
+	span := telemetry.SpanFromContext(ctx)
 	span.AddEvent("provider cluster config patched")
 	span.SetAttributes(otattribute.Int("provider.output.providerClusterConfigKeys", len(patch)))
 
