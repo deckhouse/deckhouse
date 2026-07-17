@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.32.0",
+  "version": "v0.32.3",
   "aliases": null,
   "flags": {
     "help": {
@@ -46665,10 +46665,15 @@
           "subcommands": null
         },
         {
-          "name": "push \u003cimages-bundle-path\u003e \u003cregistry\u003e",
+          "name": "push [images-bundle-path] \u003cregistry\u003e",
           "description": "Copy Deckhouse Kubernetes Platform distribution to the third-party registry",
           "aliases": null,
           "flags": {
+            "file": {
+              "description": "`Path` to a tar or chunked package to push. May be repeated to push multiple packages. Can be used instead of the bundle directory argument or combined with it.",
+              "shorthand": "",
+              "global": false
+            },
             "insecure": {
               "description": "Interact with registries over HTTP.",
               "shorthand": "",
@@ -46867,6 +46872,24 @@
             "version": {
               "description": "Package version",
               "shorthand": "v",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "render",
+          "description": "Render package templates to Kubernetes manifests",
+          "aliases": null,
+          "flags": {
+            "file": {
+              "description": "Show only manifests rendered from the template with this file name",
+              "shorthand": "",
+              "global": false
+            },
+            "render-file": {
+              "description": "Write the clean render (without '# Source:' headers) to this file path",
+              "shorthand": "",
               "global": false
             }
           },
