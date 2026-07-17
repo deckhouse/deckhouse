@@ -12,7 +12,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 1. Если `ExternalIP` узла не назначен ни одному сетевому интерфейсу узла, а предоставляется внешней инфраструктурой (например, через NAT 1:1), трафик из PodNetwork к этому адресу не проходит. Поэтому поды, не использующие `hostNetwork`, не смогут обратиться через `ExternalIP` узла к порту, опубликованному с помощью `hostPort`. Для такого подключения используйте `InternalIP` узла.
 1. Для обеспечения стабильной работы `cni-cilium` на узлах кластера отключите Elastic Agent или ограничьте доступ этого агента к серверу управления Elastic. В состав Elastic Agent входит компонент Elastic Endpoint, который использует технологию Extended Berkeley Packet Filter (eBPF) на узлах кластера и может удалять критически важные eBPF-программы, необходимые для корректной работы `cni-cilium`. Детальная информация и обсуждение проблемы доступны в публикациях проектов [Cilium](https://github.com/cilium/cilium/issues/28433) и [Elastic](https://discuss.elastic.co/t/network-disruption-on-kubernetes-node-with-elastic-security-integration-on-debian/354202).
 1. Требования к ядру:
-   * ядро Linux версии не ниже `5.8` для работы модуля `cni-cilium` и его совместной работы с модулями [istio](/modules/istio/), [openvpn](/modules/openvpn/), [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/modules/{% else %}..{% endif %}/node-local-dns/).
+   * ядро Linux версии не ниже `5.8` для работы модуля `cni-cilium` и его совместной работы с модулями [`istio`](/modules/istio/), [`openvpn`](/modules/openvpn/), [`node-local-dns`]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/modules/{% else %}..{% endif %}/node-local-dns/).
 1. Совместимость с ОС:
    * Ubuntu:
      * несовместим с версией 18.04;
