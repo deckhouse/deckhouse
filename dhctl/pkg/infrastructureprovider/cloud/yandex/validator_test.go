@@ -98,9 +98,9 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 	assertSkipValidationWithNATInstance := func(t *testing.T, settings string, nodeGroups json.RawMessage) {
 		input := getInput(t, settings, nodeGroups)
 		input.Operation = proto.OperationConverge
-		preparator := NewMetaConfigValidator(true)
+		validator := NewMetaConfigValidator(true)
 
-		err := preparator.Validate(t.Context(), input)
+		err := validator.Validate(t.Context(), input)
 		require.NoError(t, err)
 	}
 
@@ -117,8 +117,8 @@ func TestNilLoggerDoesNotPanic(t *testing.T) {
 	input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
 
 	do := func() {
-		preparator := NewMetaConfigValidator(true)
-		_ = preparator.Validate(context.TODO(), input)
+		validator := NewMetaConfigValidator(true)
+		_ = validator.Validate(context.TODO(), input)
 	}
 
 	require.NotPanics(t, do)
@@ -178,9 +178,9 @@ func fillTestWithNatInstanceLayout(t *testing.T, input *config.ProviderInput, se
 
 func assertValidation(t *testing.T, input config.ProviderInput, hasError bool) {
 	input.Operation = proto.OperationBootstrap
-	preparator := NewMetaConfigValidator(true)
+	validator := NewMetaConfigValidator(true)
 
-	err := preparator.Validate(t.Context(), input)
+	err := validator.Validate(t.Context(), input)
 	if hasError {
 		require.Error(t, err)
 		return

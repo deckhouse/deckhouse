@@ -43,15 +43,6 @@ validator validate
 - Output: JSON object written to **stdout**, followed by a newline.
 - Errors: diagnostic messages may be written to **stderr** (ignored by dhctl).
 
-## Protocol version
-
-Every request includes a `version` field with the protocol version string.
-The current version is `"1"`.
-
-A binary **must** reject requests with an unknown version by returning an error
-response (for `validate`) or by exiting non-zero if the request cannot be
-decoded at all.
-
 ## Subcommand: validate
 
 Validates provider credentials and configuration before the operation begins.
@@ -59,7 +50,6 @@ Validates provider credentials and configuration before the operation begins.
 **stdin:**
 ```json
 {
-  "version": "1",
   "input": {
     "providerName": "dvp",
     "operation": "bootstrap",
