@@ -129,4 +129,16 @@ spec:
 			})
 		})
 	})
+
+	Context("Without Deckhouse Deployment (not self-hosted)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Should run and leave the image value unset", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").Exists()).To(BeFalse())
+		})
+	})
 })

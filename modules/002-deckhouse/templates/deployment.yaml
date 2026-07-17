@@ -3,6 +3,9 @@ cpu: 150m
 memory: 500Mi
 {{- end }}
 
+{{/* Deckhouse manages this cluster from outside via a kubeconfig (selfHosted is explicitly false): do not render a deckhouse copy (Deployment, VPA, PDB) inside it. */}}
+{{- if or (not (hasKey .Values.deckhouse.internal "selfHosted")) .Values.deckhouse.internal.selfHosted }}
+
 {{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -413,3 +416,4 @@ spec:
         hostPath:
           path: /var/lib/deckhouse/downloaded
           type: DirectoryOrCreate
+{{- end }}
