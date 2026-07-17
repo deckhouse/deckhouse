@@ -51,4 +51,7 @@ impact_level: default | high | low
 `impact_level: default` adds to changelog as usual, this is the default that can be omitted
 `impact_level: high`    something important for users, the impact will be copied to "Know Before Update" section
 `impact_level: low`     omitted in changelog YAML; note there is `type:chore` for chores
+
+Find allowed sections:
+See the changelog-update job output for the full list.
 -->
