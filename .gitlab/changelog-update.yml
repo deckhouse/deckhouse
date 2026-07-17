@@ -2,7 +2,8 @@
 #
 # Milestone: active GitLab milestone for the current release-x.xx branch (title vX.Y.Z).
 #
-# BOATSWAIN_TOKEN is fetched from Vault via GitLab native secrets integration.
+# FOX_TOKEN is fetched from Vault via GitLab native secrets integration.
+# GITHUB_TOKEN is fetched from Vault via GitLab native secrets integration.
 
 
 changelog-update:
@@ -48,7 +49,7 @@ changelog-update:
       import json, os, sys, urllib.parse, urllib.request
 
       release_minor = sys.argv[1]
-      token = os.environ["BOATSWAIN_TOKEN"]
+      token = os.environ["FOX_TOKEN"]
       api = os.environ["CI_API_V4_URL"]
       project_id = os.environ["CI_PROJECT_ID"]
       prefix = f"v{release_minor}."
@@ -134,7 +135,7 @@ changelog-update:
       git commit --allow-empty -m "Re-generate changelog ${MILESTONE}" \
         -m "Signed-off-by: deckhouse-BOaTswain <deckhouse-boatswain@flant.com>"
 
-      PUSH_URL="https://oauth2:${BOATSWAIN_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+      PUSH_URL="https://oauth2:${FOX_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
       git push --force "${PUSH_URL}" "HEAD:refs/heads/${BRANCH}" -o ci.skip
 
       MR_TITLE="Changelog ${MILESTONE}"
@@ -146,7 +147,7 @@ changelog-update:
       import json, os, sys, urllib.parse, urllib.request
 
       branch, title, description, milestone_id = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
-      token = os.environ["BOATSWAIN_TOKEN"]
+      token = os.environ["FOX_TOKEN"]
       api = os.environ["CI_API_V4_URL"]
       project_id = os.environ["CI_PROJECT_ID"]
       project_url = os.environ["CI_PROJECT_URL"]
