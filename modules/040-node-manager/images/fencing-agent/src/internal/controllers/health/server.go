@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package health serves liveness and readiness probes of fencing-agent.
 package health
 
 import (

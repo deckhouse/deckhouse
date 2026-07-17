@@ -47,7 +47,7 @@ func main() {
 }
 
 func run(cfg *config.Config, logger *log.Logger) error {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
 	restCfg, err := kubeclient.NewRestConfig()

@@ -14,10 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package agent holds the runtime context of fencing-agent assembled by the
-// composition root in cmd. Fencing flow components (memberlist client,
-// watchdog manager, FencingNodeState writer, rejoin loop, local Kubernetes
-// Style API server) are attached here by follow-up tasks.
 package agent
 
 import (

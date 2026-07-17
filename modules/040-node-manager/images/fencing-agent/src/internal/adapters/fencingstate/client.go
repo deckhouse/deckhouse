@@ -14,11 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package fencingstate provides the typed Kubernetes client for
-// FencingNodeState. The FencingNodeState writer will live here: creating and
-// updating the failed section as designated writer, the fallback heartbeat
-// for the local node, and deleting the CR on recovery. The scaffold only
-// constructs the client and performs no reads or writes of the CR.
 package fencingstate
 
 import (

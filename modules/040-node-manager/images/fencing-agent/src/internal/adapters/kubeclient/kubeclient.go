@@ -14,10 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package kubeclient constructs Kubernetes clients and resolves the local
-// node identity. Follow-up tasks extend it with the seed list lookup for
-// memberlist and the watch of the agent's own Node (maintenance annotations,
-// planned removal).
 package kubeclient
 
 import (
