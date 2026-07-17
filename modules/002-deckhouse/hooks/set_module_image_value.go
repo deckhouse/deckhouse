@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -65,9 +64,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 	const (
-		deckhouseImagePath      = "deckhouse.internal.currentReleaseImageName"
-		deckhouseBasePath       = "global.modulesImages.registry.base"
-		deckhouseSelfHostedPath = "deckhouse.internal.selfHosted"
+		deckhouseImagePath = "deckhouse.internal.currentReleaseImageName"
+		deckhouseBasePath  = "global.modulesImages.registry.base"
 	)
 
 	deckhouseImages, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "deckhouse")
@@ -75,8 +73,14 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal deckhouse snapshot: %w", err)
 	}
 
-	var desired string
 	switch len(deckhouseImages) {
+	case 0:
+		// Not self-hosted: deckhouse has no own Deployment in this cluster (it
+		// manages the cluster from outside via a kubeconfig). The self-referential
+		// Deployment is not rendered then (see global.deckhouseSelfHosted), so
+		// there is no image value to compute.
+		input.Logger.Info("deckhouse Deployment not found, skipping image value (not self-hosted)")
+		return nil
 	case 1:
 		image := deckhouseImages[0]
 		imageRepoTag, err := gcr.NewTag(image)
@@ -89,32 +93,17 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("registry base path doesn't exist yet")
 		}
 		base := input.Values.Get(deckhouseBasePath).String()
-		desired = fmt.Sprintf("%s:%s", base, tag)
-		input.Values.Set(deckhouseSelfHostedPath, true)
-	case 0:
-		// Deckhouse is not self-hosted in this cluster (e.g. it runs in a
-		// parent cluster and manages this one via a kubeconfig): there is no
-		// own Deployment to read the image from.
-		// TODO(vcp): temporary hardcode; decide on the real image source for
-		// the not-self-hosted mode.
-		desired = notSelfHostedDeckhouseImage
-		input.Values.Set(deckhouseSelfHostedPath, false)
-		input.Logger.Info("deckhouse Deployment not found, using the hardcoded image", slog.String("image", desired))
+		desired := fmt.Sprintf("%s:%s", base, tag)
+
+		// Guards a race with bumpDeckhouseDeployment: if the hook re-runs on the
+		// old leader between the Deployment bump and leader handover, a stale
+		// values entry would make Helm roll the Deployment back.
+		if input.Values.Get(deckhouseImagePath).String() != desired {
+			input.Values.Set(deckhouseImagePath, desired)
+		}
+
+		return nil
 	default:
 		return fmt.Errorf("deckhouse was not able to find an image of itself")
 	}
-
-	// Guards a race with bumpDeckhouseDeployment: if the hook re-runs on the
-	// old leader between the Deployment bump and leader handover, a stale
-	// values entry would make Helm roll the Deployment back.
-	if input.Values.Get(deckhouseImagePath).String() != desired {
-		input.Values.Set(deckhouseImagePath, desired)
-	}
-
-	return nil
 }
-
-// notSelfHostedDeckhouseImage is the deckhouse image used when there is no
-// own Deployment to read the image from (not-self-hosted mode).
-// TODO(vcp): temporary hardcode; decide on the real image source.
-const notSelfHostedDeckhouseImage = "dev-registry.deckhouse.io/sys/deckhouse-oss:pr21346"

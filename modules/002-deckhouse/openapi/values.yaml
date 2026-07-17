@@ -5,8 +5,6 @@ properties:
   internal:
     type: object
     default: {}
-    x-required-for-helm:
-    - currentReleaseImageName
     properties:
       namespaces:
         type: array
@@ -18,14 +16,6 @@ properties:
       chrootMode:
         type: boolean
         default: false
-      selfHosted:
-        type: boolean
-        default: true
-        description: |
-          Deckhouse runs as a Deployment inside this cluster. Set to false by
-          the set_module_image_value hook when there is no own Deployment
-          (deckhouse manages this cluster from outside via a kubeconfig);
-          self-referential templates (Deployment, VPA, PDB) are not rendered then.
       releaseVersionImageHash:
         type: string
       currentReleaseImageName:
