@@ -48,18 +48,14 @@ func TestSelectValidatorExternalMissingValidator(t *testing.T) {
 	require.ErrorContains(t, err, "external validator for provider \"dvp\" not found")
 }
 
-// The vcd legacyMode patch reaches config through an optional-method check, so
-// nothing at compile time ties vcd's real type to the contract config expects:
+// The vcd legacyMode patch reaches config through an optional-interface check,
+// so nothing at compile time ties vcd's real type to config.ProviderConfigPatcher:
 // rename the method or switch its receiver and the patch silently stops
-// applying. Pin the real selector output against that contract.
+// applying. Pin the real selector output against the contract.
 func TestSelectValidatorVCDSatisfiesPatcherContract(t *testing.T) {
-	type providerClusterConfigPatcher interface {
-		PatchProviderClusterConfig(ctx context.Context, input config.ProviderInput) (map[string]any, error)
-	}
-
 	v := selectValidator(context.Background(), vcd.ProviderName, "")
-	require.Implements(t, (*providerClusterConfigPatcher)(nil), v, "vcd must keep patching providerClusterConfiguration (legacyMode)")
+	require.Implements(t, (*config.ProviderConfigPatcher)(nil), v, "vcd must keep patching providerClusterConfiguration (legacyMode)")
 
 	other := selectValidator(context.Background(), yandex.ProviderName, "")
-	require.NotImplements(t, (*providerClusterConfigPatcher)(nil), other, "only vcd may patch the parsed config")
+	require.NotImplements(t, (*config.ProviderConfigPatcher)(nil), other, "only vcd may patch the parsed config")
 }

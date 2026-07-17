@@ -41,6 +41,15 @@ type MetaConfigValidator interface {
 	Validate(ctx context.Context, input ProviderInput) error
 }
 
+// ProviderConfigPatcher is the optional companion to MetaConfigValidator: a
+// validator that also implements it may rewrite the parsed
+// providerClusterConfiguration. Only vcd does (it injects legacyMode for old
+// VCD APIs); the patch is re-validated against the provider schema before it
+// reaches tfvars.
+type ProviderConfigPatcher interface {
+	PatchProviderClusterConfig(ctx context.Context, input ProviderInput) (map[string]any, error)
+}
+
 // MetaConfigValidatorProvider selects a MetaConfigValidator for the given
 // provider. downloadRootDir is where provider bundles are unpacked; an external
 // provider's validator binary is looked up there.

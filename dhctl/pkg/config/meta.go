@@ -147,16 +147,12 @@ func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigVal
 	return m, nil
 }
 
-// patchProviderClusterConfig lets a provider rewrite its own parsed
-// configuration. Only vcd needs this (it injects legacyMode for old VCD API
-// versions), so instead of a second method every provider would have to stub
-// out, the capability is optional: a validator that has it gets called, the
-// rest are left alone. The patch is re-validated against the provider schema so
-// a buggy provider cannot inject an invalid configuration into tfvars.
+// patchProviderClusterConfig runs the validator's optional
+// ProviderConfigPatcher side and merges its result. Validators without it —
+// everyone except vcd — are left alone, so no provider has to stub out a
+// second method.
 func (m *MetaConfig) patchProviderClusterConfig(ctx context.Context, validator MetaConfigValidator, input ProviderInput) error {
-	patcher, ok := validator.(interface {
-		PatchProviderClusterConfig(ctx context.Context, input ProviderInput) (map[string]any, error)
-	})
+	patcher, ok := validator.(ProviderConfigPatcher)
 	if !ok {
 		return nil
 	}
