@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -423,8 +423,22 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость связана с целочисленным переполнением в функции NewNTUnicodeString пакета golang.org/x/sys/windows и защищена build-тегом GOOS=windows. kube-scheduler собирается и запускается исключительно на Linux — уязвимый код не компилируется в бинарь.",
       "timestamp": "2026-07-14T20:40:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/dns/dnsmessage"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике при разборе некорректной или обрезанной SVCB/HTTPS DNS resource record в golang.org/x/net/dns/dnsmessage. Пакет golang.org/x/net/dns не присутствует в vendor-дереве kube-scheduler (vendor формируется автоматически на основе реально импортируемых пакетов) — код не компилируется в бинарь.",
+      "timestamp": "2026-07-17T10:47:01Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-07-14T20:40:20Z"
+  "last_updated": "2026-07-17T10:47:01Z"
 }

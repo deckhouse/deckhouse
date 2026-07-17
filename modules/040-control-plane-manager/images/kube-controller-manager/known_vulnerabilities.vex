@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-4967f958f1248545eec7a13485884e349b6110e4acb5fe1825953bd6a8abef98",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -437,8 +437,22 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость не применима к kube-controller-manager: компонент не выполняет настройку rootfs контейнеров (setupPtmx/setupDevSymlinks) и не использует runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма. github.com/opencontainers/runc присутствует лишь как транзитивная зависимость общего go.mod дерева k8s.io/kubernetes (используется kubelet/CRI-related пакетами того же модуля), не задействованная в исполняемом коде kube-controller-manager.",
       "timestamp": "2026-07-14T20:41:21Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/dns/dnsmessage"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике при разборе некорректной или обрезанной SVCB/HTTPS DNS resource record в golang.org/x/net/dns/dnsmessage. Пакет golang.org/x/net/dns не присутствует в vendor-дереве kube-controller-manager (vendor формируется автоматически на основе реально импортируемых пакетов) — код не компилируется в бинарь.",
+      "timestamp": "2026-07-17T10:47:02Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-07-14T20:41:21Z"
+  "last_updated": "2026-07-17T10:47:02Z"
 }

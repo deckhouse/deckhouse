@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-017b2d41d47cbfeb73ee1faf1053fde46572ef52bf2c9efae04f2048e7f76027",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -101,8 +101,204 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость связана с некорректной обработкой namespaced-элементов в foreign content при последовательном вызове html.Parse и html.Render (XSS). etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/net/html ни в одном компоненте.",
       "timestamp": "2026-07-15T00:35:05Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к утечке памяти на SSH-сервере из-за неочищаемых отклонённых каналов. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh и не реализует ssh.Server — SSH-функциональность в etcd отсутствует.",
+      "timestamp": "2026-07-17T09:44:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость позволяет обойти ограничения сертификата на SSH-сервере при использовании PartialSuccessError. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh — SSH-функциональность отсутствует.",
+      "timestamp": "2026-07-17T09:44:01Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к DoS через необработанные размеры параметров RSA/DSA ключей при аутентификации на SSH-сервере. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh — SSH-функциональность отсутствует.",
+      "timestamp": "2026-07-17T09:44:02Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к deadlock на SSH-клиенте при получении несогласованных global-request ответов от вредоносного SSH-сервера. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh и никогда не вызывает ssh.Dial.",
+      "timestamp": "2026-07-17T09:44:03Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость позволяет обойти проверку физического касания (User Presence) для FIDO/U2F ключей на SSH-сервере. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh и не реализует FIDO/U2F-аутентификацию.",
+      "timestamp": "2026-07-17T09:44:04Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/agent"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent приводит к потере constraint-ограничений при пересылке SSH-ключей удалённому агенту. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh/agent.",
+      "timestamp": "2026-07-17T09:44:05Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/agent"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к тому, что in-memory keyring из agent.NewKeyring() не применяет ограничение ConfirmBeforeUse. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh/agent.",
+      "timestamp": "2026-07-17T09:44:06Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к бесконечному циклу при записи более 4GB данных в один SSH-канал за один вызов Write (переполнение целочисленного счётчика). etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не открывает SSH-каналы.",
+      "timestamp": "2026-07-17T09:44:07Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике SSH-сервера при использовании ssh.CertChecker без настроенных IsUserAuthority/IsHostAuthority. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh и не создаёт CertChecker.",
+      "timestamp": "2026-07-17T09:44:08Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh/knownhosts"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/knownhosts приводит к необнаружению отозванных CA SignatureKey при проверке SSH host key. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh/knownhosts и не выполняет проверку SSH host key.",
+      "timestamp": "2026-07-17T09:44:09Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к обходу проверки source-address на SSH-сервере при использовании non-pubkey callback аутентификации. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/crypto/ssh и не реализует ssh.Server.",
+      "timestamp": "2026-07-17T09:44:10Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике в AES-GCM packet decoder SSH-протокола из-за некорректного приведения типов при обработке специально сформированных данных. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не реализует SSH wire-протокол.",
+      "timestamp": "2026-07-17T09:44:11Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto/ssh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике при приведении некорректных байт протокола к типу ed25519.PrivateKey. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не разбирает SSH-ключевой материал в проводном формате.",
+      "timestamp": "2026-07-17T09:44:12Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net/dns/dnsmessage"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость приводит к панике при разборе некорректной или обрезанной SVCB/HTTPS DNS resource record в golang.org/x/net/dns/dnsmessage. etcdBackup встраивает бинарь etcdctl из дерева etcd, которое не импортирует golang.org/x/net/dns/dnsmessage ни в одном компоненте.",
+      "timestamp": "2026-07-17T10:47:04Z"
     }
   ],
   "timestamp": "2026-03-24T10:13:12Z",
-  "last_updated": "2026-07-15T00:35:05Z"
+  "last_updated": "2026-07-17T10:47:04Z"
 }
