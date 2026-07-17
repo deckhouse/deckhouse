@@ -1,0 +1,47 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: Metal3MachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  {{- if hasKey .nodeGroup.instanceClass "nodeReuse" }}
+  nodeReuse: {{ .nodeGroup.instanceClass.nodeReuse }}
+  {{- end }}
+  template:
+    spec:
+      image:
+        url: {{ .nodeGroup.instanceClass.image.url | quote }}
+        checksum: {{ .nodeGroup.instanceClass.image.checksum | quote }}
+        checksumType: {{ .nodeGroup.instanceClass.image.checksumType | quote }}
+      {{- if .nodeGroup.instanceClass.image.format }}
+        format: {{ .nodeGroup.instanceClass.image.format | quote }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.hostSelector }}
+      hostSelector:
+        {{- if .nodeGroup.instanceClass.hostSelector.matchLabels }}
+        matchLabels:
+          {{- range $key, $value := .nodeGroup.instanceClass.hostSelector.matchLabels }}
+          {{ $key | quote }}: {{ $value | quote }}
+          {{- end }}
+        {{- end }}
+        {{- if .nodeGroup.instanceClass.hostSelector.matchExpressions }}
+        matchExpressions:
+          {{- range $expr := .nodeGroup.instanceClass.hostSelector.matchExpressions }}
+          - key: {{ $expr.key | quote }}
+            operator: {{ $expr.operator | quote }}
+            {{- if $expr.values }}
+            values:
+              {{- range $value := $expr.values }}
+              - {{ $value | quote }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.automatedCleaningMode }}
+      automatedCleaningMode: {{ .nodeGroup.instanceClass.automatedCleaningMode | quote }}
+      {{- end }}

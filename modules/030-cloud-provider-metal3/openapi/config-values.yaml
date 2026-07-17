@@ -1,0 +1,5 @@
+type: object
+additionalProperties: false
+description: |
+  Describes the configuration of a Metal3 cloud provider.
+properties: {}

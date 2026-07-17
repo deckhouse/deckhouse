@@ -113,6 +113,25 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /modules/030-cloud-provider-metal3
+  to: /deckhouse/modules/030-cloud-provider-metal3
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /modules/031-local-path-provisioner
   to: /deckhouse/modules/031-local-path-provisioner
   excludePaths:

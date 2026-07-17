@@ -2436,6 +2436,102 @@ internal:
 				})
 			})
 		})
+
+		Context("Metal3", func() {
+			const nodeManagerMetal3 = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: metal3
+    machineClassKind: ""
+    capiClusterKind: "Metal3Cluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1"
+    capiClusterName: "metal3"
+    capiMachineTemplateKind: "Metal3MachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1"
+    metal3: {}
+  nodeGroups:
+    - cloudInstances:
+        classReference:
+          kind: Metal3InstanceClass
+          name: worker
+        maxPerZone: 5
+        minPerZone: 4
+        zones:
+          - default
+      cri:
+        type: Containerd
+      instanceClass:
+        image:
+          url: http://172.22.0.10:6180/images/ubuntu-24.04.raw
+          checksum: 4571234c4f2d812d5051282b47545a2e5a7f96d02fce77e5a16f0217741e4d49
+          checksumType: sha256
+          format: raw
+        hostSelector:
+          matchLabels:
+            capm3-test: ironic-4
+        automatedCleaningMode: disabled
+        nodeReuse: false
+      kubelet:
+        resourceReservation:
+          mode: Auto
+        topologyManager: {}
+      kubernetesVersion: "1.32"
+      manualRolloutID: ""
+      name: worker
+      nodeType: CloudEphemeral
+      updateEpoch: "1746532947"
+  machineControllerManagerEnabled: false
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerMetal3)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must render Metal3 CAPI resources", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertClusterResources(f, "metal3")
+
+				metal3Cluster := f.KubernetesResource("Metal3Cluster", "d8-cloud-instance-manager", "metal3")
+				Expect(metal3Cluster.Exists()).To(BeTrue())
+				Expect(metal3Cluster.Field("spec.noCloudProvider").Bool()).To(BeTrue())
+				Expect(metal3Cluster.Field("spec.controlPlaneEndpoint.host").String()).To(Equal("10.0.0.1"))
+				Expect(metal3Cluster.Field("spec.controlPlaneEndpoint.port").Int()).To(Equal(int64(6443)))
+
+				template := f.KubernetesResource("Metal3MachineTemplate", "d8-cloud-instance-manager", "worker-609f3479")
+				Expect(template.Exists()).To(BeTrue())
+				Expect(template.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("7a05a4cf10ad29cc5e2eb21769a758f6c623da1f75247a2897094685adeb7936"), "Prevent checksum changing")
+				Expect(template.Field("spec.nodeReuse").Bool()).To(BeFalse())
+				Expect(template.Field("spec.template.spec.image.url").String()).To(Equal("http://172.22.0.10:6180/images/ubuntu-24.04.raw"))
+				Expect(template.Field("spec.template.spec.image.checksum").String()).To(Equal("4571234c4f2d812d5051282b47545a2e5a7f96d02fce77e5a16f0217741e4d49"))
+				Expect(template.Field("spec.template.spec.image.checksumType").String()).To(Equal("sha256"))
+				Expect(template.Field("spec.template.spec.image.format").String()).To(Equal("raw"))
+				Expect(template.Field("spec.template.spec.hostSelector.matchLabels.capm3-test").String()).To(Equal("ironic-4"))
+				Expect(template.Field("spec.template.spec.automatedCleaningMode").String()).To(Equal("disabled"))
+			})
+		})
 	})
 })
 

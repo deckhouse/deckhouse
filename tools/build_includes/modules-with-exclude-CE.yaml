@@ -151,6 +151,25 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /modules/030-cloud-provider-metal3
+  to: /deckhouse/modules/030-cloud-provider-metal3
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /modules/030-cloud-provider-gcp
   to: /deckhouse/modules/030-cloud-provider-gcp
   excludePaths:

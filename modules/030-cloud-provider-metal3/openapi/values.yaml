@@ -1,0 +1,14 @@
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      providerDiscoveryData:
+        type: object
+        default: {}
+        properties:
+          zones:
+            type: array
+            items:
+              type: string
