@@ -47,10 +47,6 @@ message CommanderDetachStart {
   google.protobuf.Struct create_resources_values = 7;
   google.protobuf.Struct delete_resources_values = 8;
   CommanderDetachStartOptions options = 9;
-  // 10 was registry_config: the server now reads registry access from the
-  // target cluster, so callers no longer supply it.
-  reserved 10;
-  reserved "registry_config";
 }
 
 message CommanderDetachCancel {}

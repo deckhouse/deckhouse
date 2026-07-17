@@ -42,10 +42,6 @@ message CheckStart {
   string provider_specific_cluster_config = 3;
   string state = 4;
   CheckStartOptions options = 5;
-  // 6 was registry_config: the server now reads registry access from the
-  // target cluster, so callers no longer supply it.
-  reserved 6;
-  reserved "registry_config";
 }
 
 message CheckCancel {}

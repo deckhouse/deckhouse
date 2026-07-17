@@ -45,10 +45,6 @@ message DestroyStart {
   string provider_specific_cluster_config = 4;
   string state = 5;
   DestroyStartOptions options = 6;
-  // 7 was registry_config: the server now reads registry access from the
-  // target cluster, so callers no longer supply it.
-  reserved 7;
-  reserved "registry_config";
 }
 
 message DestroyPhaseEnd {
