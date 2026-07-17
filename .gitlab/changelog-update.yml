@@ -134,7 +134,7 @@ changelog-update:
       cp -a "${CHANGELOG_OUT}/." CHANGELOG/
       git add -A CHANGELOG/
       # Always commit/push/MR, even when CHANGELOG/ is unchanged.
-      git commit --allow-empty -m "Re-generate changelog ${MILESTONE}" \
+      git commit --allow-empty -m "Re-generate changelog ${MILESTONE} [ci skip]" \
         -m "Signed-off-by: deckhouse-BOaTswain <deckhouse-boatswain@flant.com>"
 
       PUSH_URL="https://oauth2:${FOX_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
