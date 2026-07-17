@@ -511,6 +511,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `node-spot-termination` | `Node` | `handle_spot_instance_deletion.go` | Delete the `Instance` of a drained spot node marked `termination-in-progress` |
 | `node-kubelet-csr-approver` | `CertificateSigningRequest` | `kubelet_csr_approver.go` | Auto-approve validated `kubernetes.io/kubelet-serving` CSRs |
 | `node-nodeuser-error-cleanup` | `NodeUser` (+watch `Node` deletes) | `clear_nodeuser_errors.go` | Drop `NodeUser.status.errors` entries keyed by nodes that no longer exist |
+| `node-machineset-revision-trim` | MCM `MachineSet` | `trim_machine_set_revision_history.go` | Cap the `deployment.kubernetes.io/revision-history` annotation to the first revision |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -608,3 +609,26 @@ deletions can strand an entry; create/update never turns an existing entry stale
 stale entries clear promptly. The node set (`node.deckhouse.io/group` label), the stale
 computation and the null-valued merge patch on `/status` match the hook exactly.
 RBAC: `nodeusers` get/list/watch, `nodeusers/status` patch, `nodes` list (pre-existing).
+
+### node-machineset-revision-trim (`internal/controller/machinesetrevision`)
+
+The machine-controller-manager records every rollout revision of a MachineDeployment in
+its child MachineSet's `deployment.kubernetes.io/revision-history` annotation as an
+ever-growing comma-separated list. The controller collapses it to the first revision once
+it exceeds a small length bound, so the annotation cannot grow without limit.
+
+```
+MachineSet changed (machine.sapcloud.io/v1alpha1, ns d8-cloud-instance-manager)
+  ├─ namespace != d8-cloud-instance-manager?  → skip (hook NamespaceSelector parity)
+  ├─ revision-history length <= 16?           → skip
+  ├─ nothing before the first comma to trim?  → skip (unchanged value)
+  └─ merge-patch revision-history = first revision (other annotations preserved)
+```
+
+**Parity note:** the MachineSet type is not in the node-controller scheme, so the primary
+object is an `unstructured.Unstructured` with the MCM GVK (the same pattern the CAPI/MCM
+controllers use for MachineDeployment). The two guards (`len > 16` and "trimming actually
+changes the value", i.e. there is a comma) and the single-annotation merge patch match the
+hook exactly; a value longer than 16 chars but without a comma is left untouched. The
+hook's MachineSet binding was event-driven, so the reactive watch keeps identical latency.
+RBAC: `machine.sapcloud.io/machinesets` get/list/watch/patch (added).
