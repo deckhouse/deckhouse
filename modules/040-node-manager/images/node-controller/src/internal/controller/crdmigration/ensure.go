@@ -36,6 +36,13 @@ const (
 
 	nodeControllerWebhookSecretName  = "node-controller-webhook-tls"
 	nodeControllerWebhookServiceName = "node-controller-webhook"
+
+	// CAPS (Cluster API Provider Static) serves the sshcredentials.deckhouse.io
+	// conversion webhook; its CA lives in a separate TLS secret/service. Taken over
+	// from the sshcredentials_crd_cabundle_injection hook.
+	capsConversionCRDName  = "sshcredentials.deckhouse.io"
+	capsWebhookSecretName  = "caps-controller-manager-webhook-tls"
+	capsWebhookServiceName = "caps-controller-manager-webhook-service"
 )
 
 var conversionCRDNames = []string{
@@ -104,7 +111,7 @@ func ensureConversionWebhooks(ctx context.Context, c client.Client) error {
 	klog.Info("node-controller webhook CA secret ready")
 
 	for _, crdName := range conversionCRDNames {
-		if err := patchConversionWebhook(ctx, c, crdName, caBundle); err != nil {
+		if err := patchConversionWebhook(ctx, c, crdName, caBundle, nodeControllerWebhookServiceName); err != nil {
 			return fmt.Errorf("patching conversion webhook on %s: %w", crdName, err)
 		}
 	}
@@ -112,7 +119,7 @@ func ensureConversionWebhooks(ctx context.Context, c client.Client) error {
 	return nil
 }
 
-func patchConversionWebhook(ctx context.Context, c client.Client, crdName string, caBundle []byte) error {
+func patchConversionWebhook(ctx context.Context, c client.Client, crdName string, caBundle []byte, serviceName string) error {
 	existing := &apiextensionsv1.CustomResourceDefinition{}
 	if err := c.Get(ctx, types.NamespacedName{Name: crdName}, existing); err != nil {
 		if errors.IsNotFound(err) {
@@ -122,7 +129,7 @@ func patchConversionWebhook(ctx context.Context, c client.Client, crdName string
 		return fmt.Errorf("getting CRD: %w", err)
 	}
 
-	if isConversionWebhookCurrent(existing, caBundle) {
+	if isConversionWebhookCurrent(existing, caBundle, serviceName) {
 		klog.V(1).Infof("CRD %s conversion webhook already up to date", crdName)
 		return nil
 	}
@@ -133,7 +140,7 @@ func patchConversionWebhook(ctx context.Context, c client.Client, crdName string
 		Webhook: &apiextensionsv1.WebhookConversion{
 			ClientConfig: &apiextensionsv1.WebhookClientConfig{
 				Service: &apiextensionsv1.ServiceReference{
-					Name:      nodeControllerWebhookServiceName,
+					Name:      serviceName,
 					Namespace: capiNamespace,
 					Path:      ptrString("/convert"),
 					Port:      ptrInt32(443),
@@ -148,11 +155,11 @@ func patchConversionWebhook(ctx context.Context, c client.Client, crdName string
 		return fmt.Errorf("patching: %w", err)
 	}
 
-	klog.Infof("CRD %s conversion webhook patched to node-controller-webhook", crdName)
+	klog.Infof("CRD %s conversion webhook patched to %s", crdName, serviceName)
 	return nil
 }
 
-func isConversionWebhookCurrent(crd *apiextensionsv1.CustomResourceDefinition, caBundle []byte) bool {
+func isConversionWebhookCurrent(crd *apiextensionsv1.CustomResourceDefinition, caBundle []byte, serviceName string) bool {
 	conv := crd.Spec.Conversion
 	if conv == nil || conv.Strategy != apiextensionsv1.WebhookConverter {
 		return false
@@ -162,7 +169,7 @@ func isConversionWebhookCurrent(crd *apiextensionsv1.CustomResourceDefinition, c
 		return false
 	}
 	svc := wh.ClientConfig.Service
-	if svc.Name != nodeControllerWebhookServiceName || svc.Namespace != capiNamespace {
+	if svc.Name != serviceName || svc.Namespace != capiNamespace {
 		return false
 	}
 	return string(wh.ClientConfig.CABundle) == string(caBundle)

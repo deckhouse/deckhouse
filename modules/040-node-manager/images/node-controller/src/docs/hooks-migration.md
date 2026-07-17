@@ -513,6 +513,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `node-nodeuser-error-cleanup` | `NodeUser` (+watch `Node` deletes) | `clear_nodeuser_errors.go` | Drop `NodeUser.status.errors` entries keyed by nodes that no longer exist |
 | `node-machineset-revision-trim` | MCM `MachineSet` | `trim_machine_set_revision_history.go` | Cap the `deployment.kubernetes.io/revision-history` annotation to the first revision |
 | `node-instanceclass-ng-usage` | `NodeGroup` | `set_instance_class_ng_usage.go` | Record which NodeGroups consume each cloud `InstanceClass` in `status.nodeGroupConsumers` |
+| `capi-crd-migration` (CAPS path) | `CustomResourceDefinition` (+watch caps `Secret`/`Service`) | `sshcredentials_crd_cabundle_injection.go` | Keep the `sshcredentials.deckhouse.io` conversion-webhook CA in sync with the CAPS webhook TLS secret |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -665,3 +666,34 @@ every kind; the controller drops the hook's `kindToVersion` map and dynamic-kind
 `BindingAction` (UpdateKind/Disable) machinery, which was needed only by shell-operator's
 kind-bound snapshot mechanism. RBAC: the InstanceClass resources gain `patch` on top of the
 existing get/list/watch; NodeGroup list and the cloud-provider Secret read already exist.
+
+### sshcredentials CA injection (`internal/controller/crdmigration`, CAPS path)
+
+The `sshcredentials.deckhouse.io` CRD conversion is served by the CAPS (Cluster API Provider
+Static) webhook; its CA must be injected into the CRD's `spec.conversion.webhook.clientConfig`
+so the API server trusts the conversion webhook. This is the same "inject CA into a CRD
+conversion webhook" pattern the `crdmigration` controller already runs for CAPI CRDs and the
+deckhouse CRDs (nodegroups/instances), so it was added there as a third mapping rather than a
+new controller.
+
+```
+CRD sshcredentials.deckhouse.io / caps Secret / caps Service changed
+  ├─ caps-controller-manager-webhook-service missing?   → requeue (gate parity)
+  ├─ caps-controller-manager-webhook-tls missing/empty? → requeue
+  ├─ CRD absent?                                         → skip (no-op)
+  ├─ conversion already points at caps service with same CA? → skip (idempotent)
+  └─ patch spec.conversion = Webhook{ service caps-controller-manager-webhook-service
+       (/convert, :443), caBundle = secret ca.crt, conversionReviewVersions [v1] }
+```
+
+**Parity note:** the hook had a passive CRD binding plus active `Secret`
+(`caps-controller-manager-webhook-tls`) and `Service`
+(`caps-controller-manager-webhook-service`) bindings and an `OnAfterAll` trigger, so it
+restored the CA only on a converge (verified live: a perturbed caBundle was restored only
+after a Deckhouse restart re-ran the hook). With the CRD as the controller's **primary**
+object, the caBundle is restored the instant the CRD is perturbed — end state identical,
+latency improved. The webhook Service existence gate mirrors the hook's `webhook-service`
+binding (no point pointing the CRD at a missing service). The shared `patchConversionWebhook`
+/`isConversionWebhookCurrent` helpers were parameterised by service name; the CAPI and
+deckhouse-CRD paths are unchanged. RBAC: cluster-wide `secrets`, `services` and
+`customresourcedefinitions` access already exists — no new grants.
