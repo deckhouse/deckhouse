@@ -517,6 +517,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `node-group-configuration-metrics` | `NodeGroupConfiguration` | `metrics_node_group_configurations.go` | Export `d8_node_group_configurations_total{node_group}` — NGC count aggregated by targeted NodeGroup |
 | `chaos-monkey` | `NodeGroup` (schedule-driven, one-minute ticker) | `chaos_monkey.go` | Periodically drain-and-delete one random MCM `Machine` of every chaos-enabled, ready NodeGroup |
 | `yandex-preemptible-cleanup` | `NodeGroup` (schedule-driven, 15-minute ticker) | `yc_delete_preemptible_instances.go` | Rotate the oldest ~10% of preemptible Yandex MCM `Machine`s (node age > 20h) ahead of the cloud's 24h eviction, keeping each NodeGroup ≥ 0.9 ready |
+| `bashible-apiserver-host-ip` | `Pod` (`app=bashible-apiserver`, `d8-cloud-instance-manager`) | `change_host_ip.go` | Record the node host IP into `node.deckhouse.io/initial-host-ip`; delete the Pod when the live `status.hostIP` diverges so it is recreated with a certificate valid for the new address |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -809,3 +810,35 @@ is time-gated (the hook only acts on a real >20h-old preemptible node; a node's
 tests rather than a same-session live 2a. RBAC: existing
 `machine.sapcloud.io/machines` get/list/watch/delete and
 `yandexmachineclasses`/`nodes`/`nodegroups` read grants already cover it — no new grants.
+
+### bashible-apiserver-host-ip (`internal/controller/hostipchange`)
+
+Keeps the `bashible-apiserver` Pod consistent with the host IP of the node it runs
+on. bashible-apiserver serves node bootstrap data over a certificate pinned to its
+host IP; if the node reappears with a different IP (e.g. a reboot with a new DHCP
+lease) the Pod must be recreated so its certificate matches the new address.
+
+```
+Pod app=bashible-apiserver in d8-cloud-instance-manager (reactive watch)
+  ├─ status.hostIP == ""?                          → skip (not scheduled yet)
+  ├─ annotation node.deckhouse.io/initial-host-ip absent?
+  │    → merge-patch it = current status.hostIP    (record initial IP)
+  └─ initial-host-ip != status.hostIP?             → delete Pod (Deployment recreates)
+```
+
+**Parity note:** the hook (`change_host_ip.go`) is a one-liner instantiation of the
+shared `go_lib/hooks/change_host_address` library for
+`("bashible-apiserver", "d8-cloud-instance-manager")`. That library is still used by
+nine other modules (cloud-provider-\*, `002-deckhouse`, `038-registry`) for their own
+components, so **only the node-manager bashible-apiserver instance moves here** — the
+library and its other callers stay untouched. The controller is reactive: it uses
+`For(&Pod{})` with a `WithEventFilter` predicate narrowing to
+`app=bashible-apiserver` in `d8-cloud-instance-manager`, reusing the cluster-wide Pod
+informer that `bashible-context` already establishes (no extra watch cost). Pods are
+`DisableFor` the client cache, so the reconcile `Get` reads the live Pod (fresh
+`status.hostIP`) straight from the API. The three branches (skip empty IP / record /
+delete on mismatch) mirror the library's `changeHostAddressHandler` 1:1. RBAC: the
+existing `pods` grant gained `patch` (record the annotation) alongside the pre-existing
+`get`/`list`/`watch`/`delete`. Live baseline verified on deni-yand: faking the
+annotation to a stale IP made the old hook delete the Pod, which the Deployment
+recreated with `initial-host-ip` re-recorded to the real host IP.

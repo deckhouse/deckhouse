@@ -25,6 +25,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/crdmigration"
 	_ "github.com/deckhouse/node-controller/internal/controller/csitaint"
 	_ "github.com/deckhouse/node-controller/internal/controller/draining"
+	_ "github.com/deckhouse/node-controller/internal/controller/hostipchange"
 	_ "github.com/deckhouse/node-controller/internal/controller/instance"
 	_ "github.com/deckhouse/node-controller/internal/controller/instanceclassusage"
 	_ "github.com/deckhouse/node-controller/internal/controller/kubeletcsrapprover"
