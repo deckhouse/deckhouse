@@ -141,7 +141,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость находится в коде Docker daemon (AuthZ-плагины). Containerd запускает Docker daemon, не использует AuthZ-плагины Moby; уязвимый путь выполнения отсутствует.",
+      "impact_statement": "Уязвимость находится в коде Docker daemon (AuthZ-плагины). Containerd не запускает Docker daemon, не использует AuthZ-плагины Moby; уязвимый путь выполнения отсутствует.",
       "timestamp": "2026-07-15T09:16:21.438843Z"
     },
     {
