@@ -44,6 +44,9 @@ spec:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: node-termination-handler
+        {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+        security.deckhouse.io/security-policy-exception: node-termination-handler
+        {{- end }}
     spec:
       affinity:
         nodeAffinity:
