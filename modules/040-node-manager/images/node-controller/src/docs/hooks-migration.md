@@ -512,6 +512,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `node-kubelet-csr-approver` | `CertificateSigningRequest` | `kubelet_csr_approver.go` | Auto-approve validated `kubernetes.io/kubelet-serving` CSRs |
 | `node-nodeuser-error-cleanup` | `NodeUser` (+watch `Node` deletes) | `clear_nodeuser_errors.go` | Drop `NodeUser.status.errors` entries keyed by nodes that no longer exist |
 | `node-machineset-revision-trim` | MCM `MachineSet` | `trim_machine_set_revision_history.go` | Cap the `deployment.kubernetes.io/revision-history` annotation to the first revision |
+| `node-instanceclass-ng-usage` | `NodeGroup` | `set_instance_class_ng_usage.go` | Record which NodeGroups consume each cloud `InstanceClass` in `status.nodeGroupConsumers` |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -632,3 +633,35 @@ changes the value", i.e. there is a comma) and the single-annotation merge patch
 hook exactly; a value longer than 16 chars but without a comma is left untouched. The
 hook's MachineSet binding was event-driven, so the reactive watch keeps identical latency.
 RBAC: `machine.sapcloud.io/machinesets` get/list/watch/patch (added).
+
+### node-instanceclass-ng-usage (`internal/controller/instanceclassusage`)
+
+Records the reverse reference of each cloud `InstanceClass`: the list of NodeGroups that
+consume it, written to `InstanceClass.status.nodeGroupConsumers`. The validating webhook
+refuses to delete an InstanceClass whose consumer list is non-empty, so this protects an
+in-use class from deletion.
+
+```
+NodeGroup changed
+  ├─ read active kind from Secret kube-system/d8-node-manager-cloud-provider[instanceClassKind]
+  ├─ kind empty (no cloud provider)?          → skip
+  ├─ build icName -> [ngName] from every CloudEphemeral NodeGroup whose
+  │    spec.cloudInstances.classReference.kind == active kind
+  └─ for each InstanceClass of the active kind:
+       desired = sorted consumers (or [] if unused)
+       status.nodeGroupConsumers already equal? → skip
+       merge-patch status.nodeGroupConsumers = desired (NotFound = ok)
+```
+
+**Parity note:** the hook had three bindings but only the `NodeGroup` one was active
+(its `InstanceClass` and cloud-provider-`Secret` bindings were passive,
+`ExecuteHookOnEvents=false`), so the primary `NodeGroup` watch reproduces every trigger;
+each reconcile recomputes the consumer lists for all InstanceClasses of the active kind.
+InstanceClass CRDs have **no status subresource** (verified for both `deckhouse.io/v1alpha1`
+and `deckhouse.io/v1`), so `status.nodeGroupConsumers` is a plain field patched on the main
+resource — not via `Status().Patch()`. All provider kinds serve `deckhouse.io/v1alpha1`
+(v1-only kinds also serve v1alpha1 via conversion), so a single version lists and patches
+every kind; the controller drops the hook's `kindToVersion` map and dynamic-kind
+`BindingAction` (UpdateKind/Disable) machinery, which was needed only by shell-operator's
+kind-bound snapshot mechanism. RBAC: the InstanceClass resources gain `patch` on top of the
+existing get/list/watch; NodeGroup list and the cloud-provider Secret read already exist.

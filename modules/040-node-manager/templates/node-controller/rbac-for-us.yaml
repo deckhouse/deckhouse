@@ -277,6 +277,8 @@ rules:
 # InstanceClasses + catalog - read for bashible-apiserver-context blob (check #2 known-class-names,
 # check #3 scale-from-zero capacity, and the resolved instanceClass overlay). Missing read makes
 # cloud NodeGroups fail validation and diverges the blob -> bashible checksum churn -> node re-bootstrap.
+# patch: the instanceclassusage controller (taken over from the set_instance_class_ng_usage hook)
+# writes status.nodeGroupConsumers on the main resource (InstanceClass has no status subresource).
 - apiGroups:
   - deckhouse.io
   resources:
@@ -296,6 +298,7 @@ rules:
   - get
   - list
   - watch
+  - patch
 # ConfigMaps - read for cluster configuration
 - apiGroups:
   - ""

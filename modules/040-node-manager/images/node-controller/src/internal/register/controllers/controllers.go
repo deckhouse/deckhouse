@@ -25,6 +25,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/csitaint"
 	_ "github.com/deckhouse/node-controller/internal/controller/draining"
 	_ "github.com/deckhouse/node-controller/internal/controller/instance"
+	_ "github.com/deckhouse/node-controller/internal/controller/instanceclassusage"
 	_ "github.com/deckhouse/node-controller/internal/controller/kubeletcsrapprover"
 	_ "github.com/deckhouse/node-controller/internal/controller/machinesetrevision"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
