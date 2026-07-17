@@ -27,13 +27,13 @@ If you need to configure a module because, say, you have a bare metal cluster an
 
 A list of OpenStack services required for Deckhouse Kubernetes Platform to work in OpenStack:
 
-| Service                           | API Version |
-|:----------------------------------|:-----------:|
-| Identity (Keystone)               | v3          |
-| Compute (Nova)                    | v2          |
-| Network (Neutron)                 | v2          |
-| Block Storage (Cinder)            | v3          |
-| Load Balancing (Octavia) *        | v2          |
+| Service                      |                         API Version                      |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
 
 \* If you need to order a Load Balancer.
 

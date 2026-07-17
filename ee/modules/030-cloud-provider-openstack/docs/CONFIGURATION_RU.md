@@ -27,15 +27,19 @@ title: "Cloud provider — OpenStack: настройки"
 
 Список сервисов OpenStack, необходимых для работы Deckhouse Kubernetes Platform в OpenStack:
 
-| Сервис                           | Версия API |
-|:---------------------------------|:----------:|
-| Identity (Keystone)              | v3         |
-| Compute (Nova)                   | v2         |
-| Network (Neutron)                | v2         |
-| Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) *       | v2         |
+| Сервис                     |                         Версия API                         |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
 
 \* Если нужно заказывать Load Balancer.
+
+{% alert level="info" %}
+Для Compute и Block Storage фактически поддерживаемая microversion зависит от установленного релиза OpenStack. Для Block Storage минимальной и используемой по умолчанию является microversion 3.0.
+{% endalert %}
 
 Чтобы интеграция и работа с платформой Deckhouse Kubernetes проходила корректно, присвойте ассоциированному пользователю OpenStack роль `member`. Это обеспечит разрешения на взаимодействие с указанными сервисами и управление ресурсами.
 
