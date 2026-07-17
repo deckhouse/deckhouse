@@ -21,6 +21,8 @@ import (
 	"sync"
 	"time"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
+
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
@@ -71,6 +73,7 @@ func RegisterController(
 	handler *confighandler.Handler,
 	ms metricsstorage.Storage,
 	exts extenders.IExtendersStack,
+	pkgRuntime packageRuntime,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -84,6 +87,7 @@ func RegisterController(
 		metricStorage:    ms,
 		configValidator:  configtools.NewValidator(mm, conversionsStore),
 		exts:             exts,
+		packageRuntime:   pkgRuntime,
 	}
 
 	r.init.Add(1)
@@ -121,6 +125,12 @@ func RegisterController(
 	return nil
 }
 
+type packageRuntime interface {
+	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, enabled *bool)
+	RemoveModule(name string)
+	HasModule(name string) bool
+}
+
 type reconciler struct {
 	init             *sync.WaitGroup
 	client           client.Client
@@ -128,6 +138,7 @@ type reconciler struct {
 	edition          *d8edition.Edition
 	handler          *confighandler.Handler
 	moduleManager    moduleManager
+	packageRuntime   packageRuntime
 	metricStorage    metricsstorage.Storage
 	configValidator  *configtools.Validator
 	exts             extenders.IExtendersStack
@@ -209,11 +220,26 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		}
 	}
 
-	// send an event to addon-operator only if the module exists, or it is the global one
-	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
-	if moduleConfig.Name == moduleGlobal || basicModule != nil {
-		r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
-		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
+	// Route settings to the appropriate runtime engine.
+	// v2-managed modules (embedded or downloaded via packages) use
+	// the package runtime; everything else falls back to addon-operator.
+	if r.packageRuntime.HasModule(moduleConfig.Name) || moduleConfig.Name == moduleGlobal {
+		// v2 path: update settings in the package runtime and skip
+		// the addon-operator event to avoid double-application (G2).
+		r.logger.Debug("update v2 module settings", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
+		r.packageRuntime.UpdateModulesSettings(
+			moduleConfig.Name,
+			moduleConfig.Spec.Version,
+			addonutils.Values(moduleConfig.Spec.Settings.GetMap()),
+			moduleConfig.Spec.Enabled,
+		)
+	} else {
+		// v1 path: existing addon-operator event dispatch.
+		basicModule := r.moduleManager.GetModule(moduleConfig.Name)
+		if basicModule != nil {
+			r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
+			r.handler.HandleEvent(moduleConfig, config.EventUpdate)
+		}
 	}
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
@@ -411,8 +437,17 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 }
 
 func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	// send event to addon-operator
-	r.handler.HandleEvent(moduleConfig, config.EventDelete)
+	// Route delete to the appropriate runtime engine.
+	if r.packageRuntime.HasModule(moduleConfig.Name) || moduleConfig.Name == moduleGlobal {
+		// v2 path: reset settings and clear the enabled intent.
+		// For embedded modules, deletion of ModuleConfig does not mean
+		// package removal — only settings/intent are reset (G4).
+		r.logger.Debug("reset v2 module settings on delete", slog.String("name", moduleConfig.Name))
+		r.packageRuntime.UpdateModulesSettings(moduleConfig.Name, 0, make(addonutils.Values), nil)
+	} else {
+		// v1 path: existing addon-operator event dispatch.
+		r.handler.HandleEvent(moduleConfig, config.EventDelete)
+	}
 
 	// clear obsolete metrics
 	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, moduleConfig.Name)

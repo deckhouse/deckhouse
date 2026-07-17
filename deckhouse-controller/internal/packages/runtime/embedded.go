@@ -47,6 +47,7 @@ const (
 var dummyModules = []string{
 	"000-common",
 	"007-registrypackages",
+	"040-node-manager", // TODO(pilot/module-settings): remove after scheduler integration
 }
 
 // loadGlobal loads the global module from the embedded directory and registers
@@ -139,6 +140,14 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 
 			r.mu.Lock()
 			r.modules[module.GetName()] = module
+			// Optimistically register before AddNode so a successful
+			// schedule can resolve it; if AddNode rejects the addition
+			// (dependency cycle), roll back the map entry.
+			if err = r.scheduler.AddNode(module); err != nil {
+				delete(r.modules, module.GetName())
+				r.mu.Unlock()
+				return fmt.Errorf("add node: %w", err)
+			}
 			r.mu.Unlock()
 
 			// register package in status and packages stores

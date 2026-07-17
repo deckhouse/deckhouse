@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -173,10 +174,14 @@ func (m *Module) GetVersion() *semver.Version {
 	return semver.MustParse("v0.0.0")
 }
 
+// GetEnabledScriptDescriptor returns nil: global has no enabled script.
+func (m *Module) GetEnabledScriptDescriptor() *script.Descriptor {
+	return nil
+}
+
 // GetConstraints returns the scheduler constraints for the global module: it
 // sits at order 0 (the barrier ahead of every other package) and is always
-// enabled. Not registered with the scheduler yet — see the global-node wiring
-// in runtime.
+// enabled.
 func (m *Module) GetConstraints() schedule.Constraints {
 	return schedule.Constraints{
 		Order: 0,

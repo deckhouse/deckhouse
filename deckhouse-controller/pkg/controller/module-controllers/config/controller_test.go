@@ -110,6 +110,7 @@ func (suite *ControllerTestSuite) buildReconciler() {
 		metricStorage:    metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
 		configValidator:  nil, // Disable validation in tests to avoid schema issues
 		exts:             nil, // Extenders not needed for these tests
+		packageRuntime:   newMockPackageRuntime(false), // v1 path by default; set true for v2 tests
 	}
 
 	// simulate initialization
@@ -262,4 +263,35 @@ func newMockHandler() *confighandler.Handler {
 	handler.StartInformer(context.Background(), configEventCh)
 
 	return handler
+}
+
+type mockPackageRuntime struct {
+	settingsCalls   []settingsCall
+	removeCalls     []string
+	hasModuleResult bool
+}
+
+type settingsCall struct {
+	name            string
+	settingsVersion int
+	settings        utils.Values
+	enabled         *bool
+}
+
+func (m *mockPackageRuntime) UpdateModulesSettings(name string, settingsVersion int, settings utils.Values, enabled *bool) {
+	m.settingsCalls = append(m.settingsCalls, settingsCall{name, settingsVersion, settings, enabled})
+}
+
+func (m *mockPackageRuntime) RemoveModule(name string) {
+	m.removeCalls = append(m.removeCalls, name)
+}
+
+func (m *mockPackageRuntime) HasModule(name string) bool {
+	return m.hasModuleResult
+}
+
+func newMockPackageRuntime(hasModule bool) *mockPackageRuntime {
+	return &mockPackageRuntime{
+		hasModuleResult: hasModule,
+	}
 }
