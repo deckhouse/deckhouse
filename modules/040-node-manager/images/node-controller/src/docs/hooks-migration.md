@@ -514,6 +514,7 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `node-machineset-revision-trim` | MCM `MachineSet` | `trim_machine_set_revision_history.go` | Cap the `deployment.kubernetes.io/revision-history` annotation to the first revision |
 | `node-instanceclass-ng-usage` | `NodeGroup` | `set_instance_class_ng_usage.go` | Record which NodeGroups consume each cloud `InstanceClass` in `status.nodeGroupConsumers` |
 | `capi-crd-migration` (CAPS path) | `CustomResourceDefinition` (+watch caps `Secret`/`Service`) | `sshcredentials_crd_cabundle_injection.go` | Keep the `sshcredentials.deckhouse.io` conversion-webhook CA in sync with the CAPS webhook TLS secret |
+| `node-group-configuration-metrics` | `NodeGroupConfiguration` | `metrics_node_group_configurations.go` | Export `d8_node_group_configurations_total{node_group}` — NGC count aggregated by targeted NodeGroup |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -697,3 +698,30 @@ binding (no point pointing the CRD at a missing service). The shared `patchConve
 /`isConversionWebhookCurrent` helpers were parameterised by service name; the CAPI and
 deckhouse-CRD paths are unchanged. RBAC: cluster-wide `secrets`, `services` and
 `customresourcedefinitions` access already exists — no new grants.
+
+### node-group-configuration-metrics (`internal/controller/ngconfigmetrics`)
+
+Exports `d8_node_group_configurations_total{node_group}`: the number of
+`NodeGroupConfiguration` objects that target each NodeGroup. A configuration without
+`spec.nodeGroups` targets all groups and is counted under `node_group="*"`.
+
+```
+NodeGroupConfiguration changed
+  ├─ list all NodeGroupConfigurations
+  ├─ for each: targets = spec.nodeGroups (absent → ["*"]; explicit [] → none)
+  │    countByNodeGroup[target]++
+  ├─ gauge.Reset()            (drops series for deleted/retargeted configs)
+  └─ set d8_node_group_configurations_total{node_group=target} = count
+```
+
+**Parity note:** the hook's only binding was the `NodeGroupConfiguration` watch
+(`ExecuteHookOnSynchronization=true`); on every event it called
+`MetricsCollector.Expire("node_group_configurations")` and re-emitted one series per
+`node_group`. The controller reproduces this exactly: a `NodeGroupConfiguration` primary
+watch, a full recompute via `List`, and a `GaugeVec.Reset()` before setting the current
+counts (the direct equivalent of the group `Expire`). The default-to-`*` rule fires only
+when `spec.nodeGroups` is absent — an explicit empty list yields no series, matching the
+hook's `NestedStringSlice` `ok` check. Verified live on `deni-static-master-0`: three `*`
+NGCs gave `node_group="*" => 3`, and adding a `parity-test-ng`-targeting NGC produced
+`node_group="parity-test-ng" => 1` alongside it. RBAC: `nodegroupconfigurations`
+get/list/watch (read-only, added).

@@ -28,6 +28,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/instanceclassusage"
 	_ "github.com/deckhouse/node-controller/internal/controller/kubeletcsrapprover"
 	_ "github.com/deckhouse/node-controller/internal/controller/machinesetrevision"
+	_ "github.com/deckhouse/node-controller/internal/controller/ngconfigmetrics"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodeusercleanup"

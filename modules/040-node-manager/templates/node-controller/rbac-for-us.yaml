@@ -274,6 +274,16 @@ rules:
   - get
   - patch
   - update
+# NodeGroupConfigurations - read to aggregate the d8_node_group_configurations_total metric
+# (ngconfigmetrics controller, taken over from the metrics_node_group_configurations hook).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroupconfigurations
+  verbs:
+  - get
+  - list
+  - watch
 # InstanceClasses + catalog - read for bashible-apiserver-context blob (check #2 known-class-names,
 # check #3 scale-from-zero capacity, and the resolved instanceClass overlay). Missing read makes
 # cloud NodeGroups fail validation and diverges the blob -> bashible checksum churn -> node re-bootstrap.
