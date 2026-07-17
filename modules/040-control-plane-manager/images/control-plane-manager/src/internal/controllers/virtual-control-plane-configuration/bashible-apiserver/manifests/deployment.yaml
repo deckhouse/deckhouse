@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bashible-apiserver
+  namespace: ${NAMESPACE}
+  labels:
+    app: bashible-apiserver
+    heritage: deckhouse
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bashible-apiserver
+  template:
+    metadata:
+      labels:
+        app: bashible-apiserver
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+      - name: bashible-apiserver
+        image: ${IMAGE_BASHIBLE_APISERVER}
+        imagePullPolicy: IfNotPresent
+        args:
+          - --cert-dir=/var/certs
+          - --secure-port=4221
+        ports:
+          - name: https
+            containerPort: 4221
+            protocol: TCP
+        resources:
+          requests:
+            cpu: 25m
+            memory: 150Mi
+          limits:
+            memory: 256Mi
+        env:
+        - name: BASHIBLE_DECKHOUSE_READYZ_ENABLED
+          value: "false"
+        - name: BASHIBLE_KUBECONFIG
+          value: /var/bashible/kubeconfig/bashible-apiserver.conf
+        volumeMounts:
+          - name: certs
+            mountPath: /var/certs
+            readOnly: true
+          - name: dependency-files
+            mountPath: /var/files
+            readOnly: true
+          - name: kubeconfig
+            mountPath: /var/bashible/kubeconfig
+            readOnly: true
+      volumes:
+        - name: certs
+          secret:
+            secretName: bashible-apiserver-tls
+        - name: dependency-files
+          configMap:
+            name: bashible-apiserver-files
+        - name: kubeconfig
+          secret:
+            secretName: bashible-apiserver-kubeconfig
+      

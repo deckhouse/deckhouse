@@ -23,6 +23,7 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -45,6 +46,7 @@ type fixedImages struct {
 	KonnectivityAgent  string `json:"konnectivityAgent"`
 	Cilium             string `json:"cilium"`
 	CiliumOperator     string `json:"ciliumOperator"`
+	BashibleApiserver  string `json:"bashibleApiserver"`
 }
 
 type registryPackagesTable struct {
@@ -63,7 +65,11 @@ type registryPackagesFixed struct {
 	RppGet     string `json:"rppGet"`
 }
 
-func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.VirtualControlPlane, apiAdvertiseAddress string) (map[string][]byte, error) {
+func renderManifests(
+	globalData map[string][]byte,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiAdvertiseAddress string,
+) (map[string][]byte, error) {
 	table, err := parseImagesTable(globalData)
 	if err != nil {
 		return nil, err
@@ -74,7 +80,13 @@ func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.Vir
 		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
 	}
 
-	replacer := buildManifestReplacer(vcp, versioned, table.Fixed, apiAdvertiseAddress, string(globalData["cluster-uuid"]))
+	replacer := buildManifestReplacer(
+		vcp,
+		versioned,
+		table.Fixed,
+		apiAdvertiseAddress,
+		string(globalData["cluster-uuid"]),
+	)
 
 	rendered := make(map[string][]byte)
 	for key, value := range globalData {
@@ -87,6 +99,17 @@ func renderManifests(globalData map[string][]byte, vcp *controlplanev1alpha1.Vir
 	}
 
 	return rendered, nil
+}
+
+func bashibleApiserverImageFromConfig(configSecret *corev1.Secret) (string, error) {
+	table, err := parseImagesTable(configSecret.Data)
+	if err != nil {
+		return "", err
+	}
+	if table.Fixed.BashibleApiserver == "" {
+		return "", fmt.Errorf("images.fixed.bashibleApiserver is empty")
+	}
+	return table.Fixed.BashibleApiserver, nil
 }
 
 func parseImagesTable(globalData map[string][]byte) (imagesTable, error) {
