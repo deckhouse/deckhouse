@@ -13,6 +13,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry-bundle v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
@@ -272,3 +273,5 @@ replace github.com/deckhouse/deckhouse/go_lib/registry => ../go_lib/registry
 replace github.com/deckhouse/deckhouse/go_lib/registry-bundle => ../go_lib/registry-bundle
 
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ../go_lib/controlplane
+
+replace github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ../go_lib/dhctl-provider-protocol

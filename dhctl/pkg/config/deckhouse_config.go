@@ -49,6 +49,7 @@ type DeckhouseInstaller struct {
 	InfrastructureState      []byte
 	NodesInfrastructureState map[string][]byte
 	CloudDiscovery           []byte
+	ProviderName             string
 	ModuleConfigs            []*ModuleConfig
 
 	// ModuleConfigCRDPath is the path to the ModuleConfig CRD manifest shipped
@@ -70,6 +71,29 @@ type DeckhouseInstaller struct {
 
 	CommanderMode bool
 	CommanderUUID uuid.UUID
+}
+
+// HasProviderModuleConfig reports whether the installer carries a
+// cloud-provider-<name> ModuleConfig (the mc-flow provider format). Mirrors
+// MetaConfig.HasProviderModuleConfig.
+func (c *DeckhouseInstaller) HasProviderModuleConfig() bool {
+	if c == nil || c.ProviderName == "" {
+		return false
+	}
+	target := CloudProviderModuleName(c.ProviderName)
+	for _, mc := range c.ModuleConfigs {
+		if mc.Name == target {
+			return true
+		}
+	}
+	return false
+}
+
+// HasLegacyProviderConfig reports whether the installer carries a non-empty
+// d8-provider-cluster-configuration payload (the legacy provider format).
+// Mirrors MetaConfig.HasLegacyProviderConfig.
+func (c *DeckhouseInstaller) HasLegacyProviderConfig() bool {
+	return c != nil && len(c.ProviderClusterConfig) > 0
 }
 
 func (c *DeckhouseInstaller) GetImageTag(ctx context.Context, forceVersionTag bool) (string, error) {
@@ -234,6 +258,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		ProviderClusterConfig: providerClusterConfig,
 		StaticClusterConfig:   staticClusterConfig,
 		ClusterConfig:         clusterConfig,
+		ProviderName:          metaConfig.ProviderName,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
 		ModuleConfigCRDPath:   moduleConfigCRDPath,
 		InstallerVersion:      metaConfig.InstallerVersion,

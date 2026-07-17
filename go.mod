@@ -55,6 +55,7 @@ require (
 	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
+	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
@@ -112,6 +113,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
+	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/lib-connection v0.13.0 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -365,7 +367,11 @@ require (
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 
+replace github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ./go_lib/dhctl-provider-protocol
+
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/go_lib/cloud-provider => ./go_lib/cloud-provider
 
 replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
 

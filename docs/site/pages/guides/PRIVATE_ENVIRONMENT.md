@@ -1131,29 +1131,26 @@ You should see a container named `squid` in the list.
   * HTTP and HTTPS proxy addresses
   * hostnames and IP addresses that **must not** use the proxy (internal names and internal IPs of your servers).
 
-* In `InitConfiguration`, add registry access settings:
+* In the `deckhouse` ModuleConfig:
+  * Set [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) to `Stable` to use the stable [release channel](../documentation/v1/reference/release-channels.html).
+  * In the `spec.settings.registry` section, specify access settings for the private container registry (Harbor in this guide):
 
-  ```yaml
-  deckhouse:
-    # Docker registry that hosts Deckhouse images (set the DKP edition).
-    imagesRepo: harbor.example/deckhouse/<EDITION>
-    # Base64-encoded Docker client auth string for the registry.
-    registryDockerCfg: <DOCKER_CFG_BASE64>
-    # Registry protocol (HTTP or HTTPS).
-    registryScheme: HTTPS
-    # Root CA used to verify the registry certificate.
-    # Example: `cat harbor/certs/ca.crt`.
-    registryCA: |
-      -----BEGIN CERTIFICATE-----
-      ...
-      -----END CERTIFICATE-----
-  ```
+    ```yaml
+    # Settings for accessing the container registry with DKP images.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Address of the registry.
+        imagesRepo: <IMAGES_REPO_URI>
+        # Username for authenticating with the registry.
+        username: <REGISTRY_USERNAME>
+        # Password for authenticating with the registry.
+        password: <REGISTRY_PASSWORD>
+        scheme: HTTPS
+        # Root CA certificate in PEM format used to verify the registry server certificate.
+        ca: <REGISTRY_CA>
+    ```
 
-  `<DOCKER_CFG_BASE64>` is the contents of the Docker client config (on Linux, usually `$HOME/.docker/config.json`) for the third-party registry, encoded in Base64.
-
-  For example, for registry `harbor.example` with user `user` and password `P@ssw0rd`, the value is `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (Base64 of `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}`).
-
-* In the `deckhouse` ModuleConfig, set [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) to `Stable` for the stable [update channel](../documentation/v1/reference/release-channels.html).
 * In the [global](../documentation/v1/reference/api/global.html) ModuleConfig, enable self-signed certificates for modules and set `publicDomainTemplate` for system application hostnames:
 
   ```yaml

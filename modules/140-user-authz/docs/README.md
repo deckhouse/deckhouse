@@ -113,6 +113,43 @@ Role-based model subsystems composition table.
 
 {% include rbac/rbac-subsystems-list.liquid %}
 
+### Migration to the new role names in DKP 1.78
+
+{% alert level="warning" %}
+Prior to DKP 1.78, the roles keep working under their existing names.
+{% endalert %}
+
+In DKP 1.78, the roles of the experimental model will be renamed, and the current names (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) will become deprecated. For backward compatibility they will be kept as alias roles for exactly one release: existing bindings will keep working and granting the same permissions as the new roles, after which the aliases will be removed.
+
+Name mapping:
+
+| Current name (to be deprecated) | New name |
+|-----------------|----------|
+| `d8:manage:all:<level>` | `d8:system:<level>` |
+| `d8:manage:<subsystem>:<level>` | `d8:subsystem:<subsystem>:<level>` |
+| `d8:use:role:<level>` | `d8:namespace:<level>` |
+
+The new model will also introduce the `superadmin` access level (for example, `d8:namespace:superadmin`, `d8:system:superadmin`) for managing system resources.
+
+{% alert level="info" %}
+The `d8:use:role:admin` role will map to `d8:namespace:admin` and, as a result, will no longer grant the right to re-issue ServiceAccount tokens or impersonate — that will require the `superadmin` level.
+{% endalert %}
+
+Capabilities (the `d8:manage:permission:*` and `d8:use:capability:*` building-block roles) will be renamed **without** compatibility aliases, as they are meant to be aggregated into roles, not bound directly. If you have a RoleBinding or ClusterRoleBinding object pointing directly at such a capability, it will stop granting anything after the upgrade. Recreate the binding against the appropriate role (or a custom role aggregating the new capability).
+
+How to prepare for the migration:
+
+1. Find the bindings that use the current role names:
+
+   ```shell
+   d8 k get clusterrolebindings,rolebindings -A -o json \
+     | jq -r '.items[] | select(.roleRef.name | test("^d8:(manage|use):")) | "\(.kind) \(.metadata.namespace // "-") \(.metadata.name) -> \(.roleRef.name)"'
+   ```
+
+1. After upgrading to DKP 1.78, migrate these RoleBinding and ClusterRoleBinding objects to the new role names within one release cycle. Since the `roleRef` field is immutable, delete the binding and recreate it with the new role name.
+
+For a guide on migrating your custom roles, see the [FAQ](faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178).
+
 <div style="height: 0;" id="the-obsolete-role-based-model"></div>
 
 ## Current role-based model

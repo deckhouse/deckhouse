@@ -93,7 +93,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 				UUID:             clusterUUID,
 				DI:               di,
 				TmpDir:           tmpDir,
-				IsDebug:          params.isDebug(),
+				IsDebug:          params.IsDebug,
 				Settings:         set,
 				AdditionalParams: additionalParams,
 			}

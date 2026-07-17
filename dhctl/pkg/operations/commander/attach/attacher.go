@@ -211,13 +211,13 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		}
 		kubeClient = &client.KubernetesClient{KubeClient: kubeCl}
 
+		preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 		metaConfig, err = config.ParseConfigInCluster(
 			ctx,
 			kubeClient,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(),
-			),
+			infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 			nil,
+			infrastructureprovider.DhctlOperationConverge,
 		)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)
@@ -390,6 +390,7 @@ func (i *Attacher) check(
 			CommanderModeParams: commander.NewCommanderModeParams(
 				[]byte(scanResult.ClusterConfiguration),
 				[]byte(scanResult.ProviderSpecificClusterConfiguration),
+				nil,
 			),
 			InfrastructureContext: i.Params.InfrastructureContext,
 			TmpDir:                i.Params.TmpDir,

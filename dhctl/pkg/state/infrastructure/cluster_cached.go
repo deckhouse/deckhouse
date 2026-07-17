@@ -30,14 +30,16 @@ import (
 type KubeTerraStateLoader struct {
 	kubeProvider kubernetes.KubeClientProviderWithCtx
 	stateCache   state.Cache
+	operation    string
 
 	forceFromCache bool
 }
 
-func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache) *KubeTerraStateLoader {
+func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, operation string) *KubeTerraStateLoader {
 	return &KubeTerraStateLoader{
 		kubeProvider: kubeProvider,
 		stateCache:   stateCache,
+		operation:    operation,
 
 		forceFromCache: false,
 	}
@@ -72,13 +74,13 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, globalOpt
 		return nil, err
 	}
 
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	metaConfig, err = config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		),
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		globalOptions,
+		s.operation,
 	)
 	if err != nil {
 		return nil, err

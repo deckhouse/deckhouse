@@ -51,6 +51,7 @@ permissions:
   contents: read
   id-token: write
   pull-requests: read
+  packages: read
 
 jobs:
 
@@ -247,13 +248,38 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -629,13 +655,38 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -793,13 +844,38 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -869,13 +945,38 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -1024,13 +1125,38 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -1884,13 +2010,38 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -2177,13 +2328,38 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -2306,13 +2482,38 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"

@@ -46,6 +46,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
@@ -80,6 +81,10 @@ type Application struct {
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
+
+	// maintenance is the package maintenance mode, set by the Configure task and
+	// read by the Run/nelm layer. Empty (Managed) means reconcile normally.
+	maintenance nelm.MaintenanceState
 
 	// grantResolver resolves per-project cluster resource grants for settings
 	// fields tagged with x-deckhouse-grantable-resource. Never nil (defaults to NoopResolver).
@@ -495,6 +500,18 @@ func (a *Application) GetSettings() addonutils.Values {
 	return a.values.GetSettings()
 }
 
+// SetMaintenance records the application maintenance mode. Called by the Configure
+// task on the package's serialized queue.
+func (a *Application) SetMaintenance(state nelm.MaintenanceState) {
+	a.maintenance = state
+}
+
+// GetMaintenance returns the application maintenance mode. Empty (Managed) means
+// the application reconciles normally.
+func (a *Application) GetMaintenance() nelm.MaintenanceState {
+	return a.maintenance
+}
+
 // GetConstraints returns scheduler checks, their determine if an app should be enabled/disabled
 func (a *Application) GetConstraints() schedule.Constraints {
 	return a.definition.Constraints()
@@ -572,7 +589,7 @@ func (a *Application) GetHooksByBinding(binding shtypes.BindingType) []hooks.Con
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.
-// It creates a binding context with snapshots for BeforeHelm/AfterHelm/AfterDeleteHelm hooks.
+// It creates a binding context with snapshots for BeforeHelm/AfterHelm/BeforeDeleteHelm/AfterDeleteHelm hooks.
 func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error {
 	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "RunHooksByBinding")
 	defer span.End()
@@ -588,7 +605,8 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute a hook
-		if binding == types.BeforeHelm || binding == types.AfterHelm || binding == types.AfterDeleteHelm {
+		if binding == types.BeforeHelm || binding == types.AfterHelm ||
+			binding == types.BeforeDeleteHelm || binding == types.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}
