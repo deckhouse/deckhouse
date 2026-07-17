@@ -123,6 +123,9 @@ osDistributions:
           en: <b>Ubuntu 18.04</b> is no longer supported by Ubuntu developers
       - version: '20.04'
         editions: [ce, be, se, se-plus, ee]
+        note_content:
+          ru: <b>Ubuntu 20.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
+          en: <b>Ubuntu 20.04</b> is no longer supported by Ubuntu developers
       - version: '22.04'
         editions: [ce, be, se, se-plus, ee]
       - version: '24.04'
@@ -203,9 +206,9 @@ registries:
     shortname: Artifactory
     url: https://jfrog.com/artifactory/
   dockerv2:
-    longname: Docker Registry v2
-    shortname: Docker Registry
-    url: https://docs.docker.com/registry/
+    longname: CNCF Distribution Registry
+    shortname: CNCF Distribution
+    url: https://distribution.github.io/distribution/
   quay:
     longname: Project Quay
     shortname: Quay
