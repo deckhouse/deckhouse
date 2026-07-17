@@ -462,6 +462,7 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
 			SSHProviderInitializer: b.SSHProviderInitializer,
 			MetaConfig:             bctx.metaConfig,
+			InstallConfig:          bctx.deckhouseInstallConfig,
 			LegacyMode:             b.SSHProviderInitializer.IsLegacyMode(),
 			GlobalOpts:             &b.Options.Global,
 		}, ctx)
