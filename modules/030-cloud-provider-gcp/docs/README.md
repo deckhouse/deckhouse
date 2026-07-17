@@ -14,9 +14,3 @@ Features of the `cloud-provider-gcp` module:
 - Provisioning disks in GCP using the `CSI storage` component.
 - Enabling the necessary CNI plugin (uses the [cni-cilium](/modules/cni-cilium/)).
 - Register in the [node-manager](/modules/node-manager/) module so that [GCPInstanceClasses](cr.html#gcpinstanceclass) can be used when creating the [NodeGroup](/modules/node-manager/cr.html#nodegroup).
-
-{% alert level="warning" %}
-Starting with DKP version 1.77, GCP uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
-
-New clusters require Linux kernel version 5.8 or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
-{% endalert %}
