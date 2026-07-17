@@ -22,7 +22,6 @@ import (
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -79,7 +78,7 @@ func buildTargetPostgres(configSecret *corev1.Secret, vcp *controlplanev1alpha1.
 	if err := yaml.Unmarshal(raw, obj); err != nil {
 		return nil, fmt.Errorf("decode datastore manifest: %w", err)
 	}
-	obj.SetNamespace(constants.VirtualControlPlaneNamespacePrefix + vcp.Name)
+	obj.SetNamespace(vcpNamespace(vcp))
 
 	return obj, nil
 }

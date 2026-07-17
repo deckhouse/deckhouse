@@ -29,8 +29,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const registryPackagesProxyTokenNamespace = "d8-cloud-instance-manager"
@@ -99,7 +100,7 @@ func (r *reconciler) reconcileJoinScript(
 	)
 	rendered := replacer.Replace(string(tpl))
 
-	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	ns := vcpNamespace(vcp)
 	target := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.VirtualJoinScriptSecretName,
@@ -112,6 +113,9 @@ func (r *reconciler) reconcileJoinScript(
 
 	current, err := r.getSecret(ctx, ns, target.Name)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {

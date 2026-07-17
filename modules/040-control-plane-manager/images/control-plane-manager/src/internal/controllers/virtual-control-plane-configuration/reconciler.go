@@ -190,7 +190,7 @@ func (r *reconciler) reconcileNamespace(ctx context.Context, vcp *controlplanev1
 func buildTargetNamespace(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: constants.VirtualControlPlaneNamespacePrefix + vcp.Name,
+			Name: vcpNamespace(vcp),
 			Labels: map[string]string{
 				constants.HeritageLabelKey: constants.HeritageLabelValue,
 			},
@@ -220,6 +220,9 @@ func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *control
 
 	current, err := r.getService(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return nil, reconcile.Result{}, err
+		}
 		if err := r.createService(ctx, target); err != nil {
 			return nil, reconcile.Result{}, err
 		}
@@ -245,7 +248,7 @@ func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *control
 }
 
 func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -299,13 +302,26 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 	current.Spec.Ports = target.Spec.Ports
 }
 
+// vcpNamespace is the parent-cluster namespace that holds a VCP's control-plane objects.
+func vcpNamespace(vcp *controlplanev1alpha1.VirtualControlPlane) string {
+	return constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+}
+
+// virtualAPIServerPort is the secure port the tenant kube-apiserver listens on.
+const virtualAPIServerPort int32 = 6443
+
+// apiServerHTTPSURL builds the https URL of the tenant apiserver for the given host.
+func apiServerHTTPSURL(host string) string {
+	return fmt.Sprintf("https://%s:%d", host, virtualAPIServerPort)
+}
+
 // externalAPIEndpoint returns the hostname and port joining nodes use to reach the virtual apiserver through the per-VCP ALB.
 func externalAPIEndpoint(vcp *controlplanev1alpha1.VirtualControlPlane) (string, int32) {
-	return apiExposeHost(vcp), 6443
+	return apiExposeHost(vcp), virtualAPIServerPort
 }
 
 func externalAPIEndpointURL(host string) string {
-	return fmt.Sprintf("https://%s:6443", host)
+	return apiServerHTTPSURL(host)
 }
 
 // apiServerCertExtraSANs returns the stable ALB hostnames that must be in the apiserver serving cert.
@@ -329,6 +345,9 @@ func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1
 		}
 		target.Data = data
 
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return nil, reconcile.Result{}, err
+		}
 		if err := r.createSecret(ctx, target); err != nil {
 			return nil, reconcile.Result{}, err
 		}
@@ -357,7 +376,7 @@ func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1
 
 func buildTargetPKISecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
 	name := constants.VirtualPKISecretName
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -389,7 +408,7 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 		}
 	}
 
-	nodeName := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	nodeName := vcpNamespace(vcp)
 	if _, err := pki.CreatePKIBundle(
 		nodeName,
 		constants.DefaultTenantClusterDomain,
@@ -444,7 +463,7 @@ func (r *reconciler) reconcileKubeconfigSecret(
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
 ) (*corev1.Secret, reconcile.Result, error) {
-	endpoint := fmt.Sprintf("https://%s:6443", apiserverService.Spec.ClusterIP)
+	endpoint := apiServerHTTPSURL(apiserverService.Spec.ClusterIP)
 	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualKubeconfigSecretName, componentKubeconfigFiles, endpoint)
 }
 
@@ -477,6 +496,9 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return nil, reconcile.Result{}, err
+		}
 		return target, reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
@@ -495,7 +517,7 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 
 func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, endpoint string) error {
 	ref := &controlplanev1alpha1.VirtualControlPlaneKubeconfigSecretRef{
-		Namespace: constants.VirtualControlPlaneNamespacePrefix + vcp.Name,
+		Namespace: vcpNamespace(vcp),
 		Name:      constants.VirtualAdminKubeconfigSecretName,
 	}
 
@@ -513,7 +535,7 @@ func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alp
 }
 
 func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane, name string) *corev1.Secret {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -621,6 +643,9 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return nil, reconcile.Result{}, err
+		}
 		if err := r.createSecret(ctx, target); err != nil {
 			return nil, reconcile.Result{}, err
 		}
@@ -641,7 +666,7 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 }
 
 func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -771,7 +796,7 @@ func buildTargetControlPlaneNode(
 	return &controlplanev1alpha1.ControlPlaneNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      computeControlPlaneNodeName(vcp, ordinal),
-			Namespace: constants.VirtualControlPlaneNamespacePrefix + vcp.Name,
+			Namespace: vcpNamespace(vcp),
 			Labels: map[string]string{
 				constants.HeritageLabelKey:                       constants.HeritageLabelValue,
 				constants.ControlPlaneTypeLabelKey:               string(constants.ControlPlaneTypeVirtual),

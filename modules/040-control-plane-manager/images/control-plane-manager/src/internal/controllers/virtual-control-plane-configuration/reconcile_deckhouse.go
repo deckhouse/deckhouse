@@ -425,7 +425,7 @@ func buildTargetDeckhouseDeployment(
 	image string,
 	albVIP string,
 ) (*appsv1.Deployment, error) {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	rendered := strings.NewReplacer(
 		"${NAMESPACE}", namespace,

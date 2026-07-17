@@ -133,7 +133,7 @@ func buildManifestReplacer(
 	apiAdvertiseAddress string,
 	clusterUUID string,
 ) *strings.Replacer {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
