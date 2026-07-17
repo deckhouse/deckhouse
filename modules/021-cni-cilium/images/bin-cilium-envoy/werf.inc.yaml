@@ -4,7 +4,7 @@
 {{- $ciliumProxyCacheRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-v1" }}
 {{- $ciliumProxyDepsRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-lfs-v1" }}
 #  to force manual creation of fresh build cache
-{{- $buildWithPreparedCacheAndDeps := false }}
+{{- $buildWithPreparedCacheAndDeps := true }}
 #
 ---
 # #####################################################################
@@ -60,33 +60,17 @@ import:
   add: /src
   to: /src
   before: install
-- from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libm.so.6
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/libm.so.6
   to: /usr/lib64/libm.so.6
   before: install
-- from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libc.so.6
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/libc.so.6
   to: /usr/lib64/libc.so.6
   before: install
-- from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/ld-linux-x86-64.so.2
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/ld-linux-x86-64.so.2
   to: /usr/lib64/ld-linux-x86-64.so.2
-  before: install
-- from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libpthread.so.0
-  to: /usr/lib64/ldlibpthread.so.0
-  before: install
-- from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libresolv.so.2
-  to: /usr/lib64/libresolv.so.2
-  before: install
-- from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/librt.so.1
-  to: /usr/lib64/librt.so.1
-  before: install
-- from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libdl.so.2
-  to: /usr/lib64/libdl.so.2
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
