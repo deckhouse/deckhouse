@@ -228,6 +228,21 @@ rules:
   - get
   - list
   - watch
+# NodeConfigs - the per-node desired state of immutable OS nodes. The node-config
+# controller renders one object per node of an immutable NodeGroup; the on-node
+# agent watches it and owns its status, which is why status is not listed here.
+- apiGroups:
+  - internal.deckhouse.io
+  resources:
+  - nodeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
 # Instance lifecycle and status reconciliation
 - apiGroups:
   - deckhouse.io

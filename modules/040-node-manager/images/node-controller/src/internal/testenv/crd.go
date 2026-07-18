@@ -30,9 +30,10 @@ const (
 	MachineCRDFile           ControllerCRDFile = "machine.yaml"
 	MachineDeploymentCRDFile ControllerCRDFile = "machine-deployment.yaml"
 
-	NodeGroupCRDFile NodeManagerCRDFile = "node_group.yaml"
-	MCMCRDFile       NodeManagerCRDFile = "mcm.yaml"
-	InstanceCRDFile  NodeManagerCRDFile = "instance.yaml"
+	NodeGroupCRDFile  NodeManagerCRDFile = "node_group.yaml"
+	MCMCRDFile        NodeManagerCRDFile = "mcm.yaml"
+	InstanceCRDFile   NodeManagerCRDFile = "instance.yaml"
+	NodeConfigCRDFile NodeManagerCRDFile = "nodeconfig.yaml"
 )
 
 func ControllerCRDPaths(crds ...ControllerCRDFile) []string {
@@ -98,6 +99,10 @@ func WithMCMCRDFile() crdOpt {
 
 func WithInstanceCRDFile() crdOpt {
 	return WithNodeManager(InstanceCRDFile)
+}
+
+func WithNodeConfigCRDFile() crdOpt {
+	return WithNodeManager(NodeConfigCRDFile)
 }
 
 func CRDPaths(opts ...crdOpt) []string {
