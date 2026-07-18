@@ -36,12 +36,40 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		OSImage:                             defaultOSImage,
 		APIServerEndpoints:                  in.APIServerEndpoints,
 		Extensions:                          renderExtensions(in.SysextDigests),
+		Kernel:                              renderKernel(),
+		Network:                             renderNetwork(node),
 		Kubelet:                             renderKubelet(ng, node, in),
 		ContainerRuntime:                    renderContainerRuntime(ng),
 		UpdatePolicy:                        renderUpdatePolicy(ng),
 		RegistryPackagesProxyAccessTokenB64: in.RegistryPackagesProxyToken,
 	}
 	return spec
+}
+
+// renderKernel repeats the sysctl settings the node was bootstrapped with. This
+// config replaces the bootstrap one wholesale, and a key that disappears from
+// the desired state is restored to its pre-managed value — dropping
+// kernel.panic here would stop kubelet from starting after the next restart.
+func renderKernel() internalv1alpha1.Kernel {
+	return internalv1alpha1.Kernel{
+		Sysctl: map[string]internalv1alpha1.SysctlValue{
+			"net.ipv4.ip_forward": "1",
+			"vm.max_map_count":    "262144",
+			// kubelet refuses to start without these (protect-kernel-defaults).
+			"kernel.panic":         "10",
+			"kernel.panic_on_oops": "1",
+		},
+	}
+}
+
+// renderNetwork keeps the hostname the node booted with. The olcedar init
+// renders it from this config on every boot, so losing it here would leave the
+// node nameless after a reboot.
+func renderNetwork(node *corev1.Node) internalv1alpha1.Network {
+	return internalv1alpha1.Network{
+		Hostname:   node.Name,
+		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+	}
 }
 
 // renderExtensions lists the system extensions the node merges onto its

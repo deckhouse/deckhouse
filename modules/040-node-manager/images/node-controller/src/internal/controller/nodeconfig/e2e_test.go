@@ -115,6 +115,14 @@ var _ = Describe("NodeConfig controller", func() {
 
 			g.Expect(nc.Spec.RegistryPackagesProxyAccessTokenB64).NotTo(BeEmpty())
 
+			// This config replaces the bootstrap one wholesale, so what the
+			// node was bootstrapped with has to survive in it: kubelet does
+			// not start without kernel.panic, and the OS renders its hostname
+			// from this spec on every boot.
+			g.Expect(nc.Spec.Kernel.Sysctl).To(HaveKeyWithValue("kernel.panic", internalv1alpha1.SysctlValue("10")))
+			g.Expect(nc.Spec.Kernel.Sysctl).To(HaveKeyWithValue("kernel.panic_on_oops", internalv1alpha1.SysctlValue("1")))
+			g.Expect(nc.Spec.Network.Hostname).To(Equal(nodeName))
+
 			// The object is owned by its node, so it is collected with it.
 			g.Expect(nc.OwnerReferences).To(HaveLen(1))
 			g.Expect(nc.OwnerReferences[0].Kind).To(Equal("Node"))
