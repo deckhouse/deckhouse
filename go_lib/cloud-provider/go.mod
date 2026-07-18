@@ -7,7 +7,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000
 	github.com/go-logr/logr v1.4.3
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
+	golang.org/x/exp 764159d718ef
 	k8s.io/api v0.33.12
 	k8s.io/apimachinery v0.33.12
 	k8s.io/client-go v0.33.12
