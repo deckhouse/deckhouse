@@ -27,6 +27,13 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
+// Digests as the release publishes them: prefixed, 64 hex characters.
+const (
+	containerdDigest = "sha256:39a573a08f7562f559aec50882c078ffba3f8eef7d7a479e5db0c021a79135fb"
+	cniDigest        = "sha256:fb8005248e6c8f8ca656636174d0db273d35ef460dca527eb6f649127de83f89"
+	kubeletDigest    = "sha256:c91f277a75f2daaafe9fc13036ce5e880595a3dfad2e6ecc4acb82994dc609fb"
+)
+
 const immutableNodeManagerValues = `
 internal:
   capiControllerManagerEnabled: true
@@ -145,6 +152,11 @@ var _ = Describe("Module :: node-manager :: helm template :: immutable NodeGroup
 		f.ValuesSet("global.discovery.clusterDomain", "cluster.local")
 		f.ValuesSet("global.discovery.clusterDNSAddress", "10.222.0.10")
 		f.ValuesSet("global.modulesImages", GetModulesImages())
+		// Real digests already carry the sha256: prefix the NodeConfig schema
+		// demands, so the rendered value must not add one.
+		f.ValuesSet("global.modulesImages.digests.registrypackages.containerdSysext224", containerdDigest)
+		f.ValuesSet("global.modulesImages.digests.registrypackages.kubernetesCniSysext162", cniDigest)
+		f.ValuesSet("global.modulesImages.digests.registrypackages.kubeletSysext1349", kubeletDigest)
 		f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+immutableNodeManagerValues)
 		setBashibleAPIServerTLSValues(f)
 		f.HelmRender(WithFilteredRenderOutput(rendered, []string{"node-group/node-group.yaml"}))
@@ -178,9 +190,10 @@ var _ = Describe("Module :: node-manager :: helm template :: immutable NodeGroup
 		Expect(immutable).Should(ContainSubstring("clusterDNS: [\"10.222.0.10\"]"))
 		Expect(immutable).Should(ContainSubstring("- \"https://10.0.0.1:6443\""))
 		// The kubelet extension must follow the effective cluster version.
-		Expect(immutable).Should(ContainSubstring("sha256:imageHash-registrypackages-kubeletSysext1349"))
-		Expect(immutable).Should(ContainSubstring("sha256:imageHash-registrypackages-containerdSysext224"))
-		Expect(immutable).Should(ContainSubstring("sha256:imageHash-registrypackages-kubernetesCniSysext162"))
+		Expect(immutable).Should(ContainSubstring("digest: " + kubeletDigest))
+		Expect(immutable).Should(ContainSubstring("digest: " + containerdDigest))
+		Expect(immutable).Should(ContainSubstring("digest: " + cniDigest))
+		Expect(immutable).ShouldNot(ContainSubstring("sha256:sha256:"))
 		Expect(immutable).Should(ContainSubstring("caCert: " + base64.StdEncoding.EncodeToString([]byte("myclusterca"))))
 		Expect(immutable).Should(ContainSubstring("registryPackagesProxyAccessTokenB64: " + base64.StdEncoding.EncodeToString([]byte("rpptoken"))))
 	})

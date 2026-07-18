@@ -20,7 +20,8 @@
   {{- $ng := index . 1 }}
   {{- $bootstrap_token := index . 2 -}}
   {{- $digests := $context.Values.global.modulesImages.digests.registrypackages -}}
-  {{- /* kubeletSysext1356 carries the kubelet of Kubernetes 1.35.6. */ -}}
+  {{- /* kubeletSysext1356 carries the kubelet of Kubernetes 1.35.6. The values
+       already carry the sha256: prefix the NodeConfig schema requires. */ -}}
   {{- $kubelet_sysext_key := printf "kubeletSysext%s" (replace "." "" $context.Values.global.discovery.kubernetesVersion) -}}
   {{- $kubelet_digest := index $digests $kubelet_sysext_key -}}
   {{- if not $kubelet_digest }}
@@ -46,13 +47,13 @@ write_files:
       osImage: registry.deckhouse.io/deckhouse/olcedar@v0.1
       extensions:
       - name: containerd
-        digest: sha256:{{ index $digests "containerdSysext224" }}
+        digest: {{ index $digests "containerdSysext224" }}
         requestedBy: node-manager
       - name: kubernetes-cni
-        digest: sha256:{{ index $digests "kubernetesCniSysext162" }}
+        digest: {{ index $digests "kubernetesCniSysext162" }}
         requestedBy: node-manager
       - name: kubelet
-        digest: sha256:{{ $kubelet_digest }}
+        digest: {{ $kubelet_digest }}
         requestedBy: node-manager
       kernel:
         sysctl:
