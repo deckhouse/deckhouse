@@ -155,6 +155,31 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	It("renders a NodeConfig for a group that has no status yet", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-fresh")
+		createImmutableNodeGroup(ctx, ngName, nil)
+
+		// A brand new group has no status.kubernetesVersion: the version has to
+		// come from the cluster configuration, or the first node of a group
+		// would never get its config.
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		ng.Status.KubernetesVersion = ""
+		Expect(k8sClient.Status().Update(ctx, ng)).To(Succeed())
+
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			byName := map[string]string{}
+			for _, ext := range nc.Spec.Extensions {
+				byName[ext.Name] = ext.Digest
+			}
+			g.Expect(byName).To(HaveKeyWithValue(kubeletExtension, testKubeletDigest))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	It("leaves nodes of a bashible-managed group alone", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-mutable")
 		ng := &deckhousev1.NodeGroup{
@@ -317,6 +342,15 @@ func ensureClusterInputs(ctx context.Context) {
 	ensureObject(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: registryPackagesProxyTokenSecret},
 		Data:       map[string][]byte{registryPackagesProxyTokenKey: []byte("proxy-token")},
+	})
+
+	// The cluster's own Kubernetes version: the group's status carries it only
+	// once the group has nodes, so this is where the version comes from.
+	ensureObject(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: clusterConfigSecretName},
+		Data: map[string][]byte{
+			clusterConfigKey: []byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nclusterDomain: cluster.local\nkubernetesVersion: \"" + testKubernetesVersion + ".6\"\n"),
+		},
 	})
 }
 

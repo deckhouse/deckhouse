@@ -39,6 +39,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -50,12 +51,16 @@ type Reconciler struct {
 	register.Base
 
 	sources *sourceReader
+	// derived answers which Kubernetes version this group runs — the same
+	// answer bashible gets, so both kinds of node follow one cluster decision.
+	derived *derived_status.Service
 }
 
 // Setup wires an uncached reader: the secrets and config maps a NodeConfig is
 // rendered from live outside the manager's cache scope.
 func (r *Reconciler) Setup(mgr ctrl.Manager) error {
 	r.sources = &sourceReader{Client: r.Client, Reader: mgr.GetAPIReader()}
+	r.derived = &derived_status.Service{Client: r.Client, Reader: mgr.GetAPIReader()}
 	return nil
 }
 
@@ -124,7 +129,7 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
 
-	inputs, err := r.sources.readClusterInputs(ctx, ng.Status.KubernetesVersion)
+	inputs, err := r.sources.readClusterInputs(ctx, r.kubernetesVersion(ctx, ng))
 	if err != nil {
 		logger.Error(err, "cannot render NodeConfig yet", "node", nodeName, "nodeGroup", ngName)
 		return ctrl.Result{}, err
@@ -132,6 +137,18 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 
 	desired := newNodeConfig(ng, node, inputs)
 	return ctrl.Result{}, r.apply(ctx, desired, logger)
+}
+
+// kubernetesVersion is the version the group's kubelet must match. It is
+// derived from the cluster configuration rather than read from the group's
+// status, which is only filled once the group has bashible-managed nodes.
+func (r *Reconciler) kubernetesVersion(ctx context.Context, ng *v1.NodeGroup) string {
+	// Compute reports the version even when it fails on a later step.
+	derived, _ := r.derived.Compute(ctx, ng)
+	if derived.KubernetesVersion != "" {
+		return derived.KubernetesVersion
+	}
+	return ng.Status.KubernetesVersion
 }
 
 // apply creates the object or patches it when the rendered spec drifted. The
