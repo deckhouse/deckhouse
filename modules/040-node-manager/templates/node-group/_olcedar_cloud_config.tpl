@@ -26,7 +26,9 @@
   {{- $kubelet_digest := index $digests $kubelet_sysext_key -}}
   {{- if not $kubelet_digest }}
     {{- fail (printf "no kubelet sysext package for Kubernetes %s (looked up %s)" $context.Values.global.discovery.kubernetesVersion $kubelet_sysext_key) }}
-  {{- end }}
+  {{- end -}}
+  {{- /* The node reads the first line to decide whether this is userdata it can
+         parse, so the document must start with the header and nothing before it. */ -}}
 #cloud-config
 write_files:
 - path: /config/config.ign

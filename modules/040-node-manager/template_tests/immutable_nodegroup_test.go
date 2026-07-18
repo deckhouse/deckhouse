@@ -180,6 +180,9 @@ var _ = Describe("Module :: node-manager :: helm template :: immutable NodeGroup
 		}
 
 		Expect(immutable).ShouldNot(BeEmpty(), "the immutable group must get a NodeConfig userdata")
+		// The node reads the first line to decide whether it can parse the
+		// userdata at all, so nothing may precede the header.
+		Expect(immutable).Should(HavePrefix("#cloud-config\n"))
 		Expect(mutable).Should(ContainSubstring("bootstrap.sh"), "the mutable group must keep the bashible userdata")
 
 		Expect(immutable).Should(ContainSubstring("nodeName: __NODE_NAME__"))
