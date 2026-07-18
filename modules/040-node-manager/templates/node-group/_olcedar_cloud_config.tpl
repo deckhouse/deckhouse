@@ -71,6 +71,9 @@ write_files:
         clusterDNS: ["{{ $context.Values.global.discovery.clusterDNSAddress }}"]
         caCert: {{ $context.Values.nodeManager.internal.kubernetesCA | b64enc }}
         bootstrapToken: {{ $bootstrap_token }}
+        # Without it the node never gets a providerID, and CAPI cannot match the
+        # Machine it ordered to the Node that registered.
+        externalCloudProvider: true
         registerWithTaints:
         - key: node.deckhouse.io/uninitialized
           effect: NoSchedule

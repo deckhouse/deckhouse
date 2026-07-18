@@ -122,6 +122,7 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Spec.Kernel.Sysctl).To(HaveKeyWithValue("kernel.panic", internalv1alpha1.SysctlValue("10")))
 			g.Expect(nc.Spec.Kernel.Sysctl).To(HaveKeyWithValue("kernel.panic_on_oops", internalv1alpha1.SysctlValue("1")))
 			g.Expect(nc.Spec.Network.Hostname).To(Equal(nodeName))
+			g.Expect(nc.Spec.Kubelet.ExternalCloudProvider).To(BeTrue())
 
 			// The object is owned by its node, so it is collected with it.
 			g.Expect(nc.OwnerReferences).To(HaveLen(1))
