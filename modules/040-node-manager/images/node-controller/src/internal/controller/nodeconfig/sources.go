@@ -147,8 +147,9 @@ func podReady(pod *corev1.Pod) bool {
 }
 
 // readDNS returns the cluster domain and the in-cluster DNS service address.
-func (s *sourceReader) readDNS(ctx context.Context) (domain, dns string) {
-	domain = "cluster.local"
+func (s *sourceReader) readDNS(ctx context.Context) (string, string) {
+	domain := "cluster.local"
+	dns := ""
 
 	secret := &corev1.Secret{}
 	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterConfigSecretName}, secret); err == nil {

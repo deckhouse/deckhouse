@@ -49,9 +49,6 @@ const (
 	registryPackagesProxyTokenSecret = "registry-packages-proxy-token"
 	registryPackagesProxyTokenKey    = "token"
 
-	// bootstrapTokenNGLabel selects the bootstrap token issued for a group.
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
-
 	// clusterConfigSecretName holds the cluster domain and pod subnet layout.
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
