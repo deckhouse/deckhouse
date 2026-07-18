@@ -3,7 +3,7 @@
   "storage": {
     "disks": [
       {
-        "device": "/dev/sda",
+        "device": "__INSTALL_DISK__",
         "wipeTable": true,
         "partitions": [
           {

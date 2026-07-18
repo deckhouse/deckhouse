@@ -7,11 +7,13 @@
   reconciles). The format is #cloud-config, but there is no cloud-init on the
   node: only write_files is read, so runcmd and friends would be ignored.
 
-  One Secret serves every machine of the group, so the per-machine node name
-  cannot be rendered here: __NODE_NAME__ is substituted on the node from the
-  NoCloud meta-data. The placeholder is not a valid DNS1123 subdomain, so a
-  node that failed to substitute it refuses the config instead of registering
-  under a name shared with its neighbours.
+  One Secret serves every machine of the group, so neither the node name nor
+  the install disk can be rendered here: __NODE_NAME__ is substituted on the
+  node from the NoCloud meta-data and __INSTALL_DISK__ from the disks the guest
+  actually has (the platform decides whether the cloud-init CDROM or the root
+  disk comes first). The node-name placeholder is not a valid DNS1123
+  subdomain, so a node that failed to substitute it refuses the config instead
+  of registering under a name shared with its neighbours.
 */ -}}
 {{- define "node_group_olcedar_cloud_config" }}
   {{- $context := index . 0 }}

@@ -172,6 +172,7 @@ var _ = Describe("Module :: node-manager :: helm template :: immutable NodeGroup
 
 		Expect(immutable).Should(ContainSubstring("nodeName: __NODE_NAME__"))
 		Expect(immutable).Should(ContainSubstring("/config/config.ign"))
+		Expect(immutable).Should(ContainSubstring("__INSTALL_DISK__"))
 		Expect(immutable).Should(ContainSubstring("bootstrapToken: immutabletoken"))
 		Expect(immutable).Should(ContainSubstring("clusterDNS: [\"10.222.0.10\"]"))
 		Expect(immutable).Should(ContainSubstring("- \"https://10.0.0.1:6443\""))
