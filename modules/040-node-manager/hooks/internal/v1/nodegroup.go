@@ -55,6 +55,15 @@ func (nt NodeType) String() string {
 	return string(nt)
 }
 
+// OSType tells whether the nodes of a group run a mutable OS configured by
+// bashible or an immutable one configured by a NodeConfig.
+type OSType string
+
+const (
+	OSTypeMutable   OSType = "Mutable"
+	OSTypeImmutable OSType = "Immutable"
+)
+
 // NodeGroup is a group of nodes in Kubernetes.
 type NodeGroup struct {
 	metav1.TypeMeta `json:",inline"`
@@ -75,6 +84,9 @@ type NodeGroup struct {
 type NodeGroupSpec struct {
 	// Type of nodes in group: CloudEphemeral, CloudPermanent, CloudStatic, Static. Field is required
 	NodeType NodeType `json:"nodeType,omitempty"`
+
+	// OS mutability of the nodes in group: Mutable (bashible), Immutable (olcedar). Optional, defaults to Mutable.
+	OSType OSType `json:"osType,omitempty"`
 
 	// Maximum drain time of CloudEphemeral machines in seconds
 	NodeDrainTimeoutSecond *int64 `json:"nodeDrainTimeoutSecond,omitempty"`
