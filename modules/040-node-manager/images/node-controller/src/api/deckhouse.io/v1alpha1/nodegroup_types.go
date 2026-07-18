@@ -62,10 +62,25 @@ const (
 )
 
 // NodeGroupSpec defines the desired state of NodeGroup (v1alpha1 version)
+// OSType selects how the node OS is managed: the classic mutable OS configured
+// by bashible, or the immutable OS (olcedar) reconciled by the on-node agent
+// from a NodeConfig object.
+// +kubebuilder:validation:Enum=Mutable;Immutable
+type OSType string
+
+const (
+	OSTypeMutable   OSType = "Mutable"
+	OSTypeImmutable OSType = "Immutable"
+)
+
 type NodeGroupSpec struct {
 	// NodeType specifies the type of nodes in this group
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
+
+	// OSType selects the node OS management model (Mutable by default).
+	// +optional
+	OSType OSType `json:"osType,omitempty"`
 
 	// CRI specifies container runtime settings
 	// +optional

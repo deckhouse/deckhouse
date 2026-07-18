@@ -106,6 +106,17 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
+                osType:
+                  description: |
+                    How the node OS is managed:
+                    - `Mutable` (default) — the classic OS configured on the fly by bashible;
+                    - `Immutable` — the immutable OS: the on-node agent reconciles the node from a NodeConfig object, bashible is not used.
+
+                    The field cannot be changed after the NodeGroup is created.
+                  type: string
+                  enum:
+                    - Mutable
+                    - Immutable
                 kubernetesVersion:
                   description: |
                     The desired minor version of Kubernetes.
@@ -742,6 +753,17 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
+                osType:
+                  description: |
+                    How the node OS is managed:
+                    - `Mutable` (default) — the classic OS configured on the fly by bashible;
+                    - `Immutable` — the immutable OS: the on-node agent reconciles the node from a NodeConfig object, bashible is not used.
+
+                    The field cannot be changed after the NodeGroup is created.
+                  type: string
+                  enum:
+                    - Mutable
+                    - Immutable
                 cri:
                   type: object
                   description: |
@@ -1421,6 +1443,20 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                osType:
+                  description: |
+                    How the node OS is managed:
+                    - `Mutable` (default) — the classic OS configured on the fly by bashible;
+                    - `Immutable` — the immutable OS: the on-node agent reconciles the node from a NodeConfig object, bashible is not used.
+
+                    The field cannot be changed after the NodeGroup is created.
+                  type: string
+                  enum:
+                    - Mutable
+                    - Immutable
+                  x-kubernetes-validations:
+                    - rule: self == oldSelf
+                      message: osType is immutable
                 nodeDrainTimeoutSecond:
                   type: integer
                   description: |
