@@ -128,6 +128,12 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
 		}
+		// Switching an existing group between the bashible and the immutable OS
+		// would have to re-provision every node in it; that migration is not
+		// implemented, so the field is fixed at creation time.
+		if osTypeOrDefault(oldNG) != osTypeOrDefault(ng) {
+			return admission.Denied(".spec.osType field is immutable")
+		}
 	}
 
 	if ng.Spec.CloudInstances != nil {
@@ -339,11 +345,76 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
+	if osTypeOrDefault(ng) == v1.OSTypeImmutable {
+		if err := validateImmutableNodeGroup(ng); err != nil {
+			return admission.Denied(err.Error())
+		}
+	}
+
 	// Return with warnings if any
 	if len(warnings) > 0 {
 		return admission.Allowed("").WithWarnings(warnings...)
 	}
 	return admission.Allowed("")
+}
+
+// osTypeOrDefault returns the effective OS type: an empty field means the
+// classic bashible-managed OS.
+func osTypeOrDefault(ng *v1.NodeGroup) v1.OSType {
+	if ng.Spec.OSType == "" {
+		return v1.OSTypeMutable
+	}
+	return ng.Spec.OSType
+}
+
+// validateImmutableNodeGroup rejects settings that an immutable OS node cannot
+// honour. The immutable OS ships containerd and kubelet as signed system
+// extensions and has no shell, so runtime selection, node-local tuning that
+// bashible used to perform, and SSH-based provisioning have no implementation
+// behind them. Denying them up front is better than accepting a config that
+// would be silently ignored on the node.
+func validateImmutableNodeGroup(ng *v1.NodeGroup) error {
+	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
+		return fmt.Errorf("osType=Immutable is only supported for nodeType=CloudEphemeral, got %q", ng.Spec.NodeType)
+	}
+
+	// staticInstances provisioning goes through CAPS, which bootstraps nodes
+	// over SSH; the immutable OS has no SSH server.
+	if ng.Spec.StaticInstances != nil {
+		return fmt.Errorf(".spec.staticInstances is not supported with osType=Immutable: static provisioning bootstraps nodes over SSH")
+	}
+
+	// The container runtime is delivered as a signed system extension chosen by
+	// the platform, so its type is not selectable.
+	if ng.Spec.CRI != nil && ng.Spec.CRI.Type != "" {
+		return fmt.Errorf(".spec.cri.type is not supported with osType=Immutable: the container runtime is delivered as a signed system extension")
+	}
+
+	if ng.Spec.Kubelet != nil {
+		// The immutable OS has a single writable partition; the kubelet root
+		// directory is fixed at /var/lib/kubelet.
+		if ng.Spec.Kubelet.RootDir != "" {
+			return fmt.Errorf(".spec.kubelet.rootDir is not supported with osType=Immutable: the kubelet root directory is fixed")
+		}
+		// Swap is not configured on the immutable OS.
+		if ng.Spec.Kubelet.MemorySwap != nil {
+			return fmt.Errorf(".spec.kubelet.memorySwap is not supported with osType=Immutable")
+		}
+	}
+
+	// GPU support needs a driver system extension and a matching containerd
+	// runtime; neither is built yet.
+	if ng.Spec.GPU != nil {
+		return fmt.Errorf(".spec.gpu is not supported with osType=Immutable")
+	}
+
+	// Chaos monkey drains and deletes machines; that part works, but the
+	// bashible-based recovery path it assumes does not.
+	if ng.Spec.Chaos != nil && ng.Spec.Chaos.Mode == v1.ChaosModeDrainAndDelete {
+		return fmt.Errorf(".spec.chaos.mode=DrainAndDelete is not supported with osType=Immutable")
+	}
+
+	return nil
 }
 
 // validateLabelSelectorImmutability checks that staticInstances.labelSelector

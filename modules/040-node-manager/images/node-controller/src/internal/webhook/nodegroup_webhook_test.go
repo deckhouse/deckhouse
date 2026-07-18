@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -919,5 +921,150 @@ func TestLoadProviderClusterConfig_InvalidJSON(t *testing.T) {
 	_, err := w.loadProviderClusterConfig(context.Background())
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+// immutableNodeGroup returns a NodeGroup that an immutable OS node can honour:
+// cloud-ephemeral provisioning and nothing that needs a shell on the node.
+func immutableNodeGroup(name string) *v1.NodeGroup {
+	ng := baseNodeGroup(name, v1.NodeTypeCloudEphemeral)
+	ng.Spec.OSType = v1.OSTypeImmutable
+	return ng
+}
+
+func TestValidation_OSTypeImmutability(t *testing.T) {
+	s := newScheme()
+	w := &NodeGroupValidator{Client: fake.NewClientBuilder().WithScheme(s).Build(), decoder: admission.NewDecoder(s)}
+
+	tests := []struct {
+		name       string
+		oldOSType  v1.OSType
+		newOSType  v1.OSType
+		expAllowed bool
+	}{
+		{name: "mutable to immutable", oldOSType: v1.OSTypeMutable, newOSType: v1.OSTypeImmutable, expAllowed: false},
+		{name: "immutable to mutable", oldOSType: v1.OSTypeImmutable, newOSType: v1.OSTypeMutable, expAllowed: false},
+		// An empty field means Mutable, so filling it in explicitly is not a change.
+		{name: "empty to mutable", oldOSType: "", newOSType: v1.OSTypeMutable, expAllowed: true},
+		{name: "empty to immutable", oldOSType: "", newOSType: v1.OSTypeImmutable, expAllowed: false},
+		{name: "unchanged immutable", oldOSType: v1.OSTypeImmutable, newOSType: v1.OSTypeImmutable, expAllowed: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+			oldNG.Spec.OSType = tt.oldOSType
+			newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+			newNG.Spec.OSType = tt.newOSType
+
+			resp := w.Handle(t.Context(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
+			if resp.Allowed != tt.expAllowed {
+				t.Fatalf("allowed = %v, want %v (result: %v)", resp.Allowed, tt.expAllowed, resp.Result)
+			}
+			if !tt.expAllowed && (resp.Result == nil || resp.Result.Code != http.StatusForbidden) {
+				t.Fatalf("expected 403, got: %v", resp.Result)
+			}
+		})
+	}
+}
+
+func TestValidation_ImmutableUnsupportedSettings(t *testing.T) {
+	s := newScheme()
+	w := &NodeGroupValidator{Client: fake.NewClientBuilder().WithScheme(s).Build(), decoder: admission.NewDecoder(s)}
+
+	tests := []struct {
+		name       string
+		mutate     func(ng *v1.NodeGroup)
+		expAllowed bool
+		expMessage string
+	}{
+		{
+			name:       "plain immutable group is allowed",
+			mutate:     func(*v1.NodeGroup) {},
+			expAllowed: true,
+		},
+		{
+			name:       "kubelet settings that the agent supports are allowed",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.Kubelet = &v1.KubeletSpec{MaxPods: ptr.To[int32](110)} },
+			expAllowed: true,
+		},
+		{
+			name:       "static node type",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.NodeType = v1.NodeTypeStatic },
+			expAllowed: false,
+			expMessage: "nodeType=CloudEphemeral",
+		},
+		{
+			name:       "static instances",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.StaticInstances = &v1.StaticInstancesSpec{} },
+			expAllowed: false,
+			expMessage: ".spec.staticInstances",
+		},
+		{
+			name:       "cri type",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeContainerd} },
+			expAllowed: false,
+			expMessage: ".spec.cri.type",
+		},
+		{
+			name:       "kubelet rootDir",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.Kubelet = &v1.KubeletSpec{RootDir: "/mnt/kubelet"} },
+			expAllowed: false,
+			expMessage: ".spec.kubelet.rootDir",
+		},
+		{
+			name:       "kubelet memorySwap",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.Kubelet = &v1.KubeletSpec{MemorySwap: &v1.MemorySwapSpec{Behavior: "LimitedSwap"}} },
+			expAllowed: false,
+			expMessage: ".spec.kubelet.memorySwap",
+		},
+		{
+			name:       "gpu",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.GPU = &v1.GPUSpec{Mode: "TimeSlicing"} },
+			expAllowed: false,
+			expMessage: ".spec.gpu",
+		},
+		{
+			name:       "chaos drain and delete",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.Chaos = &v1.ChaosSpec{Mode: v1.ChaosModeDrainAndDelete} },
+			expAllowed: false,
+			expMessage: ".spec.chaos.mode",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ng := immutableNodeGroup("workers-imm")
+			tt.mutate(ng)
+
+			resp := w.Handle(t.Context(), makeAdmissionRequest(t, "CREATE", ng, nil))
+			if resp.Allowed != tt.expAllowed {
+				t.Fatalf("allowed = %v, want %v (result: %v)", resp.Allowed, tt.expAllowed, resp.Result)
+			}
+			if tt.expAllowed {
+				return
+			}
+			if resp.Result == nil || resp.Result.Code != http.StatusForbidden {
+				t.Fatalf("expected 403, got: %v", resp.Result)
+			}
+			if !strings.Contains(resp.Result.Message, tt.expMessage) {
+				t.Fatalf("message %q does not mention %q", resp.Result.Message, tt.expMessage)
+			}
+		})
+	}
+}
+
+// A mutable group must keep accepting everything it accepted before.
+func TestValidation_MutableGroupUnaffected(t *testing.T) {
+	s := newScheme()
+	w := &NodeGroupValidator{Client: fake.NewClientBuilder().WithScheme(s).Build(), decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("workers", v1.NodeTypeStatic)
+	ng.Spec.Kubelet = &v1.KubeletSpec{RootDir: "/mnt/kubelet"}
+	ng.Spec.GPU = &v1.GPUSpec{Mode: "TimeSlicing"}
+
+	resp := w.Handle(t.Context(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("mutable group must stay allowed, got: %v", resp.Result)
 	}
 }
