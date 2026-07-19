@@ -158,15 +158,17 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Optimistically register the module before AddNode so a successful
-	// schedule can resolve it; if AddNode rejects the addition (dependency
-	// cycle), roll back the map entry so we never expose a package the
-	// scheduler never accepted.
+	// When the package system is enabled, register the module in the
+	// scheduler so Reschedule can drive its lifecycle (Configure→Startup→Run).
+	// Gated by the feature flag to avoid introducing startup failures when the
+	// scheduler is never started.
 	r.modules[module.GetName()] = module
-	if err = r.scheduler.AddNode(module); err != nil {
-		delete(r.modules, module.GetName())
-		span.SetStatus(codes.Error, err.Error())
-		return "", status.NewError("DependencyCycle", err)
+	if app.PackageSystemEnabled() {
+		if err = r.scheduler.AddNode(module); err != nil {
+			delete(r.modules, module.GetName())
+			span.SetStatus(codes.Error, err.Error())
+			return "", status.NewError("DependencyCycle", err)
+		}
 	}
 
 	return module.GetVersion().String(), nil

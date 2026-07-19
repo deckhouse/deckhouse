@@ -203,8 +203,12 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	// Register global node: it serves as the order-0 barrier in the scheduler
 	// graph, ensuring every module waits for global to complete before running.
 	// Done after buildScheduler so AddNode can simulate the cycle-free graph.
-	if err := r.scheduler.AddNode(r.global); err != nil {
-		return nil, fmt.Errorf("add global node: %w", err)
+	// Gated by PackageSystemEnabled — when the flag is off the scheduler is
+	// never started, so AddNode would only introduce startup-failure risk.
+	if app.PackageSystemEnabled() {
+		if err := r.scheduler.AddNode(r.global); err != nil {
+			return nil, fmt.Errorf("add global node: %w", err)
+		}
 	}
 
 	if err := r.loadEmbedded(context.Background()); err != nil {

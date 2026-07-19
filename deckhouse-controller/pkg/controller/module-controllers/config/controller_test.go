@@ -100,17 +100,18 @@ func (suite *ControllerTestSuite) setupTestControllerRaw(raw string) {
 
 func (suite *ControllerTestSuite) buildReconciler() {
 	rec := &reconciler{
-		init:             new(sync.WaitGroup),
-		client:           suite.Client(),
-		logger:           log.NewNop(),
-		handler:          newMockHandler(),
-		conversionsStore: conversionsStore,
-		moduleManager:    newMockModuleManager(),
-		edition:          &d8edition.Edition{Name: "fe", Bundle: "Default"},
-		metricStorage:    metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
-		configValidator:  nil, // Disable validation in tests to avoid schema issues
-		exts:             nil, // Extenders not needed for these tests
-		packageRuntime:   newMockPackageRuntime(false), // v1 path by default; set true for v2 tests
+		init:                 new(sync.WaitGroup),
+		client:               suite.Client(),
+		logger:               log.NewNop(),
+		handler:              newMockHandler(),
+		conversionsStore:     conversionsStore,
+		moduleManager:        newMockModuleManager(),
+		edition:              &d8edition.Edition{Name: "fe", Bundle: "Default"},
+		metricStorage:        metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
+		configValidator:      nil,                          // Disable validation in tests to avoid schema issues
+		exts:                 nil,                          // Extenders not needed for these tests
+		packageRuntime:       newMockPackageRuntime(false), // v1 path by default; set true for v2 tests
+		packageSystemEnabled: true,                         // gate required to enter the v2 branch
 	}
 
 	// simulate initialization
@@ -130,6 +131,61 @@ func clearModuleConditionTimes(obj client.Object) {
 		module.Status.Conditions[i].LastProbeTime = metav1.Time{}
 		module.Status.Conditions[i].LastTransitionTime = metav1.Time{}
 	}
+}
+
+// TestV2ModuleConfigRouting verifies that when the package-system feature flag
+// is enabled and the module is tracked by the package runtime, handleModuleConfig
+// routes settings via UpdateModulesSettings instead of the addon-operator
+// HandleEvent. Conversely, when the flag is off it always uses the v1 path.
+func (suite *ControllerTestSuite) TestV2ModuleConfigRouting() {
+	suite.Run("v2 path: settings routed to UpdateModulesSettings", func() {
+		suite.setupTestController("enable-module.yaml")
+
+		// Override with v2-aware mock
+		mockPkg := newMockPackageRuntime(true) // HasModule returns true
+		suite.r.packageRuntime = mockPkg
+		suite.r.packageSystemEnabled = true
+
+		config := suite.moduleConfig("test-module")
+		_, err := suite.r.handleModuleConfig(context.TODO(), config)
+		require.NoError(suite.T(), err)
+
+		// Verify UpdateModulesSettings was called with correct arguments
+		require.Len(suite.T(), mockPkg.settingsCalls, 1)
+		assert.Equal(suite.T(), "test-module", mockPkg.settingsCalls[0].name)
+		assert.Equal(suite.T(), config.Spec.Version, mockPkg.settingsCalls[0].settingsVersion)
+		assert.Equal(suite.T(), config.Spec.Enabled, mockPkg.settingsCalls[0].enabled)
+	})
+
+	suite.Run("v1 path: flag off falls back to addon-operator", func() {
+		suite.setupTestController("enable-module.yaml")
+
+		mockPkg := newMockPackageRuntime(true) // HasModule returns true
+		suite.r.packageRuntime = mockPkg
+		suite.r.packageSystemEnabled = false // flag off → v1 path
+
+		config := suite.moduleConfig("test-module")
+		_, err := suite.r.handleModuleConfig(context.TODO(), config)
+		require.NoError(suite.T(), err)
+
+		// Verify UpdateModulesSettings was NOT called (v1 path)
+		assert.Empty(suite.T(), mockPkg.settingsCalls)
+	})
+
+	suite.Run("v1 path: unknown module always goes to addon-operator", func() {
+		suite.setupTestController("enable-module.yaml")
+
+		mockPkg := newMockPackageRuntime(false) // HasModule returns false
+		suite.r.packageRuntime = mockPkg
+		suite.r.packageSystemEnabled = true
+
+		config := suite.moduleConfig("test-module")
+		_, err := suite.r.handleModuleConfig(context.TODO(), config)
+		require.NoError(suite.T(), err)
+
+		// Verify UpdateModulesSettings was NOT called (unknown to runtime)
+		assert.Empty(suite.T(), mockPkg.settingsCalls)
+	})
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
@@ -267,7 +323,6 @@ func newMockHandler() *confighandler.Handler {
 
 type mockPackageRuntime struct {
 	settingsCalls   []settingsCall
-	removeCalls     []string
 	hasModuleResult bool
 }
 
@@ -280,10 +335,6 @@ type settingsCall struct {
 
 func (m *mockPackageRuntime) UpdateModulesSettings(name string, settingsVersion int, settings utils.Values, enabled *bool) {
 	m.settingsCalls = append(m.settingsCalls, settingsCall{name, settingsVersion, settings, enabled})
-}
-
-func (m *mockPackageRuntime) RemoveModule(name string) {
-	m.removeCalls = append(m.removeCalls, name)
 }
 
 func (m *mockPackageRuntime) HasModule(name string) bool {
