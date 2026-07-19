@@ -12,8 +12,14 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 type: Opaque
+  {{- $bootstrap_token := pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first }}
 data:
-  cloud-config: {{ include "node_group_cloud_init_cloud_config" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
-  bootstrap.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
+  {{- /* An olcedar node has no bashible: it is handed the same userdata a CAPI-provisioned one gets. */}}
+  {{- if eq ($ng.systemType | default "Mutable") "Immutable" }}
+  cloud-config: {{ include "node_group_olcedar_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
+  {{- else }}
+  cloud-config: {{ include "node_group_cloud_init_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
+  bootstrap.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng $bootstrap_token) | b64enc }}
+  {{- end }}
   apiserverEndpoints: {{ $context.Values.nodeManager.internal.clusterMasterAddresses | toYaml | b64enc }}
 {{- end }}

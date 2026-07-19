@@ -989,10 +989,16 @@ func TestValidation_ImmutableUnsupportedSettings(t *testing.T) {
 			expAllowed: true,
 		},
 		{
-			name:       "static node type",
+			// Any kind of node group can run immutable nodes; only the way they
+			// are provisioned is constrained.
+			name:       "static node type is allowed",
 			mutate:     func(ng *v1.NodeGroup) { ng.Spec.NodeType = v1.NodeTypeStatic },
-			expAllowed: false,
-			expMessage: "nodeType=CloudEphemeral",
+			expAllowed: true,
+		},
+		{
+			name:       "cloud permanent node type is allowed",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.NodeType = v1.NodeTypeCloudPermanent },
+			expAllowed: true,
 		},
 		{
 			name:       "static instances",
@@ -1017,6 +1023,34 @@ func TestValidation_ImmutableUnsupportedSettings(t *testing.T) {
 			mutate:     func(ng *v1.NodeGroup) { ng.Spec.Kubelet = &v1.KubeletSpec{MemorySwap: &v1.MemorySwapSpec{Behavior: "LimitedSwap"}} },
 			expAllowed: false,
 			expMessage: ".spec.kubelet.memorySwap",
+		},
+		{
+			name:       "kubelet seccompDefault",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.Kubelet = &v1.KubeletSpec{SeccompDefault: ptr.To(true)} },
+			expAllowed: false,
+			expMessage: ".spec.kubelet.seccompDefault",
+		},
+		{
+			name: "kubelet resourceReservation",
+			mutate: func(ng *v1.NodeGroup) {
+				ng.Spec.Kubelet = &v1.KubeletSpec{ResourceReservation: &v1.ResourceReservationSpec{Mode: "Auto"}}
+			},
+			expAllowed: false,
+			expMessage: ".spec.kubelet.resourceReservation",
+		},
+		{
+			name: "kubelet topologyManager",
+			mutate: func(ng *v1.NodeGroup) {
+				ng.Spec.Kubelet = &v1.KubeletSpec{TopologyManager: &v1.TopologyManagerSpec{Policy: "BestEffort"}}
+			},
+			expAllowed: false,
+			expMessage: ".spec.kubelet.topologyManager",
+		},
+		{
+			name:       "manage kernel",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.OperatingSystem = &v1.OperatingSystemSpec{ManageKernel: ptr.To(true)} },
+			expAllowed: false,
+			expMessage: ".spec.operatingSystem.manageKernel",
 		},
 		{
 			name:       "gpu",

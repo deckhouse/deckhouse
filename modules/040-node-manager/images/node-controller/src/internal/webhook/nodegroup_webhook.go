@@ -374,12 +374,9 @@ func systemTypeOrDefault(ng *v1.NodeGroup) v1.SystemType {
 // behind them. Denying them up front is better than accepting a config that
 // would be silently ignored on the node.
 func validateImmutableNodeGroup(ng *v1.NodeGroup) error {
-	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
-		return fmt.Errorf("systemType=Immutable is only supported for nodeType=CloudEphemeral, got %q", ng.Spec.NodeType)
-	}
-
 	// staticInstances provisioning goes through CAPS, which bootstraps nodes
-	// over SSH; an olcedar node has no SSH server.
+	// over SSH; an olcedar node has no SSH server. Static groups themselves are
+	// fine — their nodes register on their own.
 	if ng.Spec.StaticInstances != nil {
 		return fmt.Errorf(".spec.staticInstances is not supported with systemType=Immutable: static provisioning bootstraps nodes over SSH")
 	}
@@ -390,16 +387,14 @@ func validateImmutableNodeGroup(ng *v1.NodeGroup) error {
 		return fmt.Errorf(".spec.cri.type is not supported with systemType=Immutable: the container runtime is delivered as a signed system extension")
 	}
 
-	if ng.Spec.Kubelet != nil {
-		// An olcedar node has a single writable partition; the kubelet root
-		// directory is fixed at /var/lib/kubelet.
-		if ng.Spec.Kubelet.RootDir != "" {
-			return fmt.Errorf(".spec.kubelet.rootDir is not supported with systemType=Immutable: the kubelet root directory is fixed")
-		}
-		// Swap is not configured on an olcedar node.
-		if ng.Spec.Kubelet.MemorySwap != nil {
-			return fmt.Errorf(".spec.kubelet.memorySwap is not supported with systemType=Immutable")
-		}
+	// Kernel management belongs to the image, which ships the kernel it was
+	// built with.
+	if ng.Spec.OperatingSystem != nil && ng.Spec.OperatingSystem.ManageKernel != nil {
+		return fmt.Errorf(".spec.operatingSystem.manageKernel is not supported with systemType=Immutable: the kernel comes with the image")
+	}
+
+	if err := validateImmutableKubelet(ng); err != nil {
+		return err
 	}
 
 	// GPU support needs a driver system extension and a matching containerd
@@ -414,6 +409,35 @@ func validateImmutableNodeGroup(ng *v1.NodeGroup) error {
 		return fmt.Errorf(".spec.chaos.mode=DrainAndDelete is not supported with systemType=Immutable")
 	}
 
+	return nil
+}
+
+// validateImmutableKubelet rejects the kubelet settings that never reach the
+// node: a NodeConfig carries maxPods and the container log limits, and nothing
+// else of this section. Accepting them silently would leave the operator with
+// a NodeGroup that claims settings the nodes do not have.
+func validateImmutableKubelet(ng *v1.NodeGroup) error {
+	if ng.Spec.Kubelet == nil {
+		return nil
+	}
+	// An olcedar node has a single writable partition; the kubelet root
+	// directory is fixed at /var/lib/kubelet.
+	if ng.Spec.Kubelet.RootDir != "" {
+		return fmt.Errorf(".spec.kubelet.rootDir is not supported with systemType=Immutable: the kubelet root directory is fixed")
+	}
+	// Swap is not configured on an olcedar node.
+	if ng.Spec.Kubelet.MemorySwap != nil {
+		return fmt.Errorf(".spec.kubelet.memorySwap is not supported with systemType=Immutable")
+	}
+	if ng.Spec.Kubelet.SeccompDefault != nil {
+		return fmt.Errorf(".spec.kubelet.seccompDefault is not supported with systemType=Immutable")
+	}
+	if ng.Spec.Kubelet.ResourceReservation != nil {
+		return fmt.Errorf(".spec.kubelet.resourceReservation is not supported with systemType=Immutable")
+	}
+	if ng.Spec.Kubelet.TopologyManager != nil {
+		return fmt.Errorf(".spec.kubelet.topologyManager is not supported with systemType=Immutable")
+	}
 	return nil
 }
 
