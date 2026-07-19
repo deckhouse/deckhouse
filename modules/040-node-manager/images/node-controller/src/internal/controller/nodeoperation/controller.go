@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -56,9 +57,19 @@ type Reconciler struct {
 	register.Base
 }
 
-// SetupWatches follows the nodes an operation waits on: the drain finishing is
-// what lets the operation move on.
+// SetupWatches follows what an operation waits on: the node it is draining, and
+// the Drain operation it spawned to do the eviction.
 func (r *Reconciler) SetupWatches(w register.Watcher) {
+	// A child finishing is what lets its parent hand the node over.
+	w.Watches(&v1alpha1.NodeOperation{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+		for _, owner := range obj.GetOwnerReferences() {
+			if owner.Kind == "NodeOperation" {
+				return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: owner.Name}}}
+			}
+		}
+		return nil
+	}))
+
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		ops := &v1alpha1.NodeOperationList{}
 		if err := r.Client.List(ctx, ops); err != nil {
@@ -111,23 +122,78 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	// The workload leaves before the node is interrupted, unless whoever
-	// created the operation asked for it not to.
-	if !skipDrain(op) && !drained(node) {
-		return ctrl.Result{}, r.startDrain(ctx, node, logger)
-	}
-
-	// A Drain is done once the workload is gone: there is nothing for the node
-	// to carry out, and it stays unschedulable until someone says otherwise.
+	// A Drain is the eviction itself: it asks the draining controller to empty
+	// the node and is done once the workload is gone. The node stays
+	// unschedulable until someone says otherwise.
 	if op.Spec.Type == v1alpha1.NodeOperationDrain {
+		if !drained(node) {
+			return ctrl.Result{}, r.startDrain(ctx, node, logger)
+		}
 		return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationCompleted, "Drained",
 			"The workload has left the node, which stays unschedulable", logger)
+	}
+
+	// Every other operation interrupts the node, so the workload leaves first —
+	// through a Drain operation of its own rather than a side effect of this
+	// one. The eviction is then a step anyone can see, with its own phases, and
+	// it is carried out by the one piece of code that knows how.
+	if !skipDrain(op) {
+		done, err := r.ensureDrained(ctx, op, logger)
+		if err != nil || !done {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Handing the operation to the node: from here the node carries it out and
 	// reports back through the same object.
 	return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationInProgress, "NodePrepared",
 		"The node may carry the operation out", logger)
+}
+
+// ensureDrained runs the eviction this operation needs as a Drain operation of
+// its own, and reports whether it has finished. The child belongs to its
+// parent: deleting the parent takes the record of its eviction with it.
+func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperation, logger logr.Logger) (bool, error) {
+	name := op.Name + "-drain"
+
+	child := &v1alpha1.NodeOperation{}
+	err := r.Client.Get(ctx, types.NamespacedName{Name: name}, child)
+	if apierrors.IsNotFound(err) {
+		child = &v1alpha1.NodeOperation{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       "NodeOperation",
+					Name:       op.Name,
+					UID:        op.UID,
+					Controller: ptr.To(true),
+				}},
+			},
+			Spec: v1alpha1.NodeOperationSpec{
+				Type:     v1alpha1.NodeOperationDrain,
+				NodeName: op.Spec.NodeName,
+			},
+		}
+		if err := r.Client.Create(ctx, child); err != nil && !apierrors.IsAlreadyExists(err) {
+			return false, fmt.Errorf("evict the workload of %s: %w", op.Spec.NodeName, err)
+		}
+		logger.Info("evicting the workload before the operation", "operation", op.Name, "drain", name)
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read the drain of %s: %w", op.Name, err)
+	}
+
+	switch child.Status.Phase {
+	case v1alpha1.NodeOperationCompleted:
+		return true, nil
+	case v1alpha1.NodeOperationFailed:
+		return false, r.fail(ctx, op, "DrainFailed",
+			fmt.Sprintf("the workload could not be evicted, see NodeOperation %s", name), logger)
+	default:
+		return false, nil
+	}
 }
 
 // startDrain hands the node to the draining controller, which evicts the pods

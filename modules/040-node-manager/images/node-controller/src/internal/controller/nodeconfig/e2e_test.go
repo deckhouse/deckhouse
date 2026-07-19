@@ -269,7 +269,17 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(op.Spec.Drain.Skip).To(BeFalse())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		// The node is drained before it is handed the operation.
+		// The eviction is an operation of its own rather than a side effect, so
+		// it can be watched, and it belongs to the operation that needs it.
+		drain := &v1alpha1.NodeOperation{}
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name + "-drain"}, drain)).To(Succeed())
+			g.Expect(drain.Spec.Type).To(Equal(v1alpha1.NodeOperationDrain))
+			g.Expect(drain.Spec.NodeName).To(Equal(nodeName))
+			g.Expect(drain.OwnerReferences).To(HaveLen(1))
+			g.Expect(drain.OwnerReferences[0].Name).To(Equal(op.Name))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
 		node := &corev1.Node{}
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
@@ -288,8 +298,14 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(k8sClient.Update(ctx, node)).To(Succeed())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
+		// The eviction finishing is what lets the parent hand the node over.
 		Eventually(func(g Gomega) {
-			g.Expect(findOperation(ctx, g, nodeName).Status.Phase).To(Equal(v1alpha1.NodeOperationInProgress))
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name + "-drain"}, drain)).To(Succeed())
+			g.Expect(drain.Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+
+			parent := &v1alpha1.NodeOperation{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, parent)).To(Succeed())
+			g.Expect(parent.Status.Phase).To(Equal(v1alpha1.NodeOperationInProgress))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the node reporting the operation done")
@@ -437,7 +453,9 @@ func findOperation(ctx context.Context, g Gomega, nodeName string) *v1alpha1.Nod
 	ops := &v1alpha1.NodeOperationList{}
 	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
 	for i := range ops.Items {
-		if ops.Items[i].Spec.NodeName == nodeName {
+		// The child Drain names the same node; the caller is after the
+		// operation that asked for it.
+		if ops.Items[i].Spec.NodeName == nodeName && ops.Items[i].Spec.Type != v1alpha1.NodeOperationDrain {
 			return &ops.Items[i]
 		}
 	}

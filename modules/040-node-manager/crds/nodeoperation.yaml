@@ -95,7 +95,9 @@ spec:
                 drain:
                   type: object
                   description: |
-                    How to evict the workload before the node is interrupted. Applies to `Reboot` and `Drain`, and to `ApproveDisruption` when node-manager creates it from a group whose disruption approval mode drains nodes.
+                    How to evict the workload before the node is interrupted.
+
+                    The eviction is carried out by a `Drain` operation of its own, created for and owned by this one, so it can be watched like any other operation and is removed together with its parent.
                   properties:
                     skip:
                       type: boolean
