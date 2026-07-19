@@ -86,8 +86,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// A finished operation is history: it is kept for the record and never
-	// acted on again.
+	// acted on again. The node goes back to the scheduler — except after a
+	// Drain, which was asked for precisely to keep it out.
 	if op.Status.Phase == v1alpha1.NodeOperationCompleted || op.Status.Phase == v1alpha1.NodeOperationFailed {
+		if op.Spec.Type == v1alpha1.NodeOperationDrain {
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, r.releaseNode(ctx, op, logger)
 	}
 
@@ -111,6 +115,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// created the operation asked for it not to.
 	if !skipDrain(op) && !drained(node) {
 		return ctrl.Result{}, r.startDrain(ctx, node, logger)
+	}
+
+	// A Drain is done once the workload is gone: there is nothing for the node
+	// to carry out, and it stays unschedulable until someone says otherwise.
+	if op.Spec.Type == v1alpha1.NodeOperationDrain {
+		return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationCompleted, "Drained",
+			"The workload has left the node, which stays unschedulable", logger)
 	}
 
 	// Handing the operation to the node: from here the node carries it out and

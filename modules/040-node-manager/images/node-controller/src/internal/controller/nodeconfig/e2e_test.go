@@ -25,8 +25,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -308,6 +308,53 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As an operator, I want to drain an immutable node by creating
+	// a NodeOperation, so that the workload leaves and the node stays out of
+	// the scheduler until I say otherwise.
+	It("completes a drain and leaves the node unschedulable", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-drain")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		op := &v1alpha1.NodeOperation{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("drain")},
+			Spec: v1alpha1.NodeOperationSpec{
+				Type:     v1alpha1.NodeOperationDrain,
+				NodeName: nodeName,
+			},
+		}
+		Expect(k8sClient.Create(ctx, op)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		node := &corev1.Node{}
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, "node-operation"))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the drain finishing")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			node.Annotations[nodecommon.DrainedAnnotation] = "node-operation"
+			node.Spec.Unschedulable = true
+			g.Expect(k8sClient.Update(ctx, node)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// The eviction was the whole job: nobody has to carry anything out.
+		Eventually(func(g Gomega) {
+			done := &v1alpha1.NodeOperation{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, done)).To(Succeed())
+			g.Expect(done.Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// And the node stays where the operator put it.
+		Consistently(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			g.Expect(node.Spec.Unschedulable).To(BeTrue())
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	It("leaves a manual group to the operator", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-manual")
 		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
@@ -334,8 +381,8 @@ var _ = Describe("NodeConfig controller", func() {
 		ng := &deckhousev1.NodeGroup{
 			ObjectMeta: metav1.ObjectMeta{Name: ngName},
 			Spec: deckhousev1.NodeGroupSpec{
-				NodeType: deckhousev1.NodeTypeCloudEphemeral,
-				SystemType:   deckhousev1.SystemTypeMutable,
+				NodeType:   deckhousev1.NodeTypeCloudEphemeral,
+				SystemType: deckhousev1.SystemTypeMutable,
 				CloudInstances: &deckhousev1.CloudInstancesSpec{
 					MinPerZone: 1,
 					MaxPerZone: 3,
@@ -470,8 +517,8 @@ func createImmutableNodeGroup(ctx context.Context, name string, mutate func(*dec
 	ng := &deckhousev1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: deckhousev1.NodeGroupSpec{
-			NodeType: deckhousev1.NodeTypeCloudEphemeral,
-			SystemType:   deckhousev1.SystemTypeImmutable,
+			NodeType:   deckhousev1.NodeTypeCloudEphemeral,
+			SystemType: deckhousev1.SystemTypeImmutable,
 			// A CloudEphemeral group must declare how its nodes are ordered.
 			CloudInstances: &deckhousev1.CloudInstancesSpec{
 				MinPerZone: 1,

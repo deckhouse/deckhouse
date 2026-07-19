@@ -75,7 +75,7 @@ spec:
                     The operation to perform on the node:
 
                     * `Reboot` — reboot the node;
-                    * `Drain` — evict the workload from the node and keep it unschedulable;
+                    * `Drain` — evict the workload from the node and keep it unschedulable. The operation is complete once the workload is gone; the node stays out of the scheduler until an operator returns it;
                     * `ApproveDisruption` — allow the node to apply a configuration whose application interrupts it (restarting kubelet or the container runtime, remerging the system extensions, changing the OS image).
 
                     An `ApproveDisruption` operation is normally created by node-manager in answer to a node that asked for it; the other two are meant for an operator.
