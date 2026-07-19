@@ -71,6 +71,9 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: allRequestName}}}
 	})
 	w.Watches(&v1.NodeGroup{}, allMapper)
+	// A node reporting the spec it was given frees its rollout slot, which is
+	// what lets the next node of the group be updated.
+	w.Watches(&internalv1alpha1.NodeConfig{}, allMapper)
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -136,7 +139,7 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 	}
 
 	desired := newNodeConfig(ng, node, inputs)
-	return ctrl.Result{}, r.apply(ctx, desired, logger)
+	return ctrl.Result{}, r.apply(ctx, ng, desired, logger)
 }
 
 // kubernetesVersion is the version the group's kubelet must match. It is
@@ -153,7 +156,7 @@ func (r *Reconciler) kubernetesVersion(ctx context.Context, ng *v1.NodeGroup) st
 
 // apply creates the object or patches it when the rendered spec drifted. The
 // status belongs to the node-local agent and is never touched here.
-func (r *Reconciler) apply(ctx context.Context, desired *internalv1alpha1.NodeConfig, logger logr.Logger) error {
+func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, desired *internalv1alpha1.NodeConfig, logger logr.Logger) error {
 	existing := &internalv1alpha1.NodeConfig{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
 	if apierrors.IsNotFound(err) {
@@ -173,6 +176,17 @@ func (r *Reconciler) apply(ctx context.Context, desired *internalv1alpha1.NodeCo
 	if apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) &&
 		apiequality.Semantic.DeepEqual(existing.Labels, desired.Labels) {
 		logger.V(1).Info("NodeConfig unchanged", "node", desired.Name)
+		return nil
+	}
+
+	// A node that just joined is configured immediately; only changes to a node
+	// that already has its config wait for a rollout slot.
+	slot, err := r.rolloutSlot(ctx, ng, desired.Name)
+	if err != nil {
+		return err
+	}
+	if !slot {
+		logger.Info("holding the NodeConfig back until the group has a free rollout slot", "node", desired.Name, "nodeGroup", ng.Name)
 		return nil
 	}
 

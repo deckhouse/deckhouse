@@ -67,6 +67,10 @@ const (
 
 	// registryPackagesDigestsKey is the module the sysext images are built in.
 	registryPackagesDigestsKey = "registrypackages"
+
+	// phaseReady is what the node reports once it has reconciled the spec it
+	// was given.
+	phaseReady = "Ready"
 )
 
 // defaultOSImage is the olcedar image the node boots from.

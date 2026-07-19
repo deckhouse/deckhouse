@@ -180,6 +180,56 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As a cluster operator, I want a change to a NodeGroup to reach
+	// its immutable nodes a few at a time, so that one bad setting cannot take
+	// the whole group down at once.
+	It("rolls a NodeGroup change out to the group one node at a time", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-roll")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](110)}
+		})
+		first := testenv.UniqueName("node")
+		second := testenv.UniqueName("node")
+		createNode(ctx, first, ngName)
+		createNode(ctx, second, ngName)
+
+		// Both nodes are configured on arrival: a node without a config has
+		// nothing to run on, so it never waits for a slot.
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, first).Spec.Kubelet.MaxPods).To(Equal(110))
+			g.Expect(getNodeConfig(ctx, g, second).Spec.Kubelet.MaxPods).To(Equal(110))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		reportApplied(ctx, first)
+		reportApplied(ctx, second)
+
+		By("raising maxPods on the NodeGroup")
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		patch := client.MergeFrom(ng.DeepCopy())
+		ng.Spec.Kubelet.MaxPods = ptr.To[int32](200)
+		Expect(k8sClient.Patch(ctx, ng, patch)).To(Succeed())
+
+		// One node takes the change; the other keeps the old config until the
+		// first one reports back.
+		Eventually(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, first, second)).To(Equal(1))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, first, second)).To(Equal(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the updated node reporting the spec it was given")
+		for _, name := range []string{first, second} {
+			if getNodeConfig(ctx, Default, name).Spec.Kubelet.MaxPods == 200 {
+				reportApplied(ctx, name)
+			}
+		}
+
+		Eventually(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, first, second)).To(Equal(2))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	It("leaves nodes of a bashible-managed group alone", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-mutable")
 		ng := &deckhousev1.NodeGroup{
@@ -234,6 +284,30 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
+
+// reportApplied is what the node agent does after reconciling the spec it was
+// given: the rollout waits for exactly this before moving on.
+func reportApplied(ctx context.Context, name string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		nc := getNodeConfig(ctx, g, name)
+		nc.Status.ObservedGeneration = nc.Generation
+		nc.Status.Phase = phaseReady
+		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// updatedNodes counts how many of the named nodes already carry the new spec.
+func updatedNodes(ctx context.Context, g Gomega, names ...string) int {
+	updated := 0
+	for _, name := range names {
+		if getNodeConfig(ctx, g, name).Spec.Kubelet.MaxPods == 200 {
+			updated++
+		}
+	}
+	return updated
+}
 
 func getNodeConfig(ctx context.Context, g Gomega, name string) *internalv1alpha1.NodeConfig {
 	nc := &internalv1alpha1.NodeConfig{}
