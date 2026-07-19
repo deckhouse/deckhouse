@@ -1,5 +1,5 @@
 {{- /*
-  Bootstrap userdata for a node of an olcedar (osType=Immutable) group.
+  Bootstrap userdata for a node of an olcedar (systemType=Immutable) group.
 
   Such a node has no bashible: the whole bootstrap is the pair of files the
   olcedar initramfs picks out of the userdata by basename — config.ign (the

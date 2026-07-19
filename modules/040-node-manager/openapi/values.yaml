@@ -383,7 +383,7 @@ properties:
               # See NodeGroup in candi/openapi/node_group.yaml
               type: string
               enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
-            osType:
+            systemType:
               # See NodeGroup in candi/openapi/node_group.yaml
               type: string
               enum: ["Mutable", "Immutable"]

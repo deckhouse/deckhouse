@@ -69,7 +69,7 @@ internal:
     dvp: {}
   nodeGroups:
   - name: immutable-worker
-    osType: Immutable
+    systemType: Immutable
     serializedLabels: ""
     serializedTaints: ""
     nodeType: CloudEphemeral

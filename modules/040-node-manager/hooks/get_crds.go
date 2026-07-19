@@ -304,8 +304,8 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	res := make(map[string]interface{})
 
 	res["nodeType"] = nodeGroupSpec.NodeType
-	if nodeGroupSpec.OSType != "" {
-		res["osType"] = nodeGroupSpec.OSType
+	if nodeGroupSpec.SystemType != "" {
+		res["systemType"] = nodeGroupSpec.SystemType
 	}
 	if !nodeGroupSpec.CRI.IsEmpty() {
 		res["cri"] = nodeGroupSpec.CRI

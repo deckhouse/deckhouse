@@ -19,7 +19,7 @@ data:
   format: {{ "cloud-config" | b64enc}}
   {{- /* An olcedar node bootstraps from a NodeConfig file, not from bashible. */}}
   {{- $bootstrap_token := pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first }}
-  {{- if eq ($ng.osType | default "Mutable") "Immutable" }}
+  {{- if eq ($ng.systemType | default "Mutable") "Immutable" }}
   value: {{ include "node_group_olcedar_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
   {{- else }}
   value: {{ include "node_group_capi_cloud_init_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}

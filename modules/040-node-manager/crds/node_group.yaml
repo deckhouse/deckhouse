@@ -106,7 +106,7 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
-                osType:
+                systemType:
                   description: |
                     How the node is managed:
                     - `Mutable` (default) — the classic node configured on the fly by bashible;
@@ -753,7 +753,7 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
-                osType:
+                systemType:
                   description: |
                     How the node is managed:
                     - `Mutable` (default) — the classic node configured on the fly by bashible;
@@ -1443,7 +1443,7 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
-                osType:
+                systemType:
                   description: |
                     How the node is managed:
                     - `Mutable` (default) — the classic node configured on the fly by bashible;
@@ -1456,7 +1456,7 @@ spec:
                     - Immutable
                   x-kubernetes-validations:
                     - rule: self == oldSelf
-                      message: osType is immutable
+                      message: systemType is immutable
                 nodeDrainTimeoutSecond:
                   type: integer
                   description: |

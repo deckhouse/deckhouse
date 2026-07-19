@@ -138,7 +138,7 @@ func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 	}
 }
 
-func TestValidation_NodeTypeImmutability(t *testing.T) {
+func TestValidation_NodeTypeImsystemType(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
@@ -155,7 +155,7 @@ func TestValidation_NodeTypeImmutability(t *testing.T) {
 	}
 }
 
-func TestValidation_NodeTypeImmutability_SameType(t *testing.T) {
+func TestValidation_NodeTypeImsystemType_SameType(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
@@ -560,7 +560,7 @@ func TestValidation_TopologyManagerWithValidConfig(t *testing.T) {
 	}
 }
 
-func TestValidation_LabelSelectorImmutability(t *testing.T) {
+func TestValidation_LabelSelectorImsystemType(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
@@ -928,34 +928,34 @@ func TestLoadProviderClusterConfig_InvalidJSON(t *testing.T) {
 // cloud-ephemeral provisioning and nothing that needs a shell on the node.
 func immutableNodeGroup(name string) *v1.NodeGroup {
 	ng := baseNodeGroup(name, v1.NodeTypeCloudEphemeral)
-	ng.Spec.OSType = v1.OSTypeImmutable
+	ng.Spec.SystemType = v1.SystemTypeImmutable
 	return ng
 }
 
-func TestValidation_OSTypeImmutability(t *testing.T) {
+func TestValidation_SystemTypeImsystemType(t *testing.T) {
 	s := newScheme()
 	w := &NodeGroupValidator{Client: fake.NewClientBuilder().WithScheme(s).Build(), decoder: admission.NewDecoder(s)}
 
 	tests := []struct {
 		name       string
-		oldOSType  v1.OSType
-		newOSType  v1.OSType
+		oldSystemType  v1.SystemType
+		newSystemType  v1.SystemType
 		expAllowed bool
 	}{
-		{name: "mutable to immutable", oldOSType: v1.OSTypeMutable, newOSType: v1.OSTypeImmutable, expAllowed: false},
-		{name: "immutable to mutable", oldOSType: v1.OSTypeImmutable, newOSType: v1.OSTypeMutable, expAllowed: false},
+		{name: "mutable to immutable", oldSystemType: v1.SystemTypeMutable, newSystemType: v1.SystemTypeImmutable, expAllowed: false},
+		{name: "immutable to mutable", oldSystemType: v1.SystemTypeImmutable, newSystemType: v1.SystemTypeMutable, expAllowed: false},
 		// An empty field means Mutable, so filling it in explicitly is not a change.
-		{name: "empty to mutable", oldOSType: "", newOSType: v1.OSTypeMutable, expAllowed: true},
-		{name: "empty to immutable", oldOSType: "", newOSType: v1.OSTypeImmutable, expAllowed: false},
-		{name: "unchanged immutable", oldOSType: v1.OSTypeImmutable, newOSType: v1.OSTypeImmutable, expAllowed: true},
+		{name: "empty to mutable", oldSystemType: "", newSystemType: v1.SystemTypeMutable, expAllowed: true},
+		{name: "empty to immutable", oldSystemType: "", newSystemType: v1.SystemTypeImmutable, expAllowed: false},
+		{name: "unchanged immutable", oldSystemType: v1.SystemTypeImmutable, newSystemType: v1.SystemTypeImmutable, expAllowed: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			oldNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
-			oldNG.Spec.OSType = tt.oldOSType
+			oldNG.Spec.SystemType = tt.oldSystemType
 			newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
-			newNG.Spec.OSType = tt.newOSType
+			newNG.Spec.SystemType = tt.newSystemType
 
 			resp := w.Handle(t.Context(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
 			if resp.Allowed != tt.expAllowed {

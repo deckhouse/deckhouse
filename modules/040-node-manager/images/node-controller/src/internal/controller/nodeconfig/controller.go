@@ -125,7 +125,7 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 		return ctrl.Result{}, err
 	}
 
-	if ng.Spec.OSType != v1.OSTypeImmutable {
+	if ng.Spec.SystemType != v1.SystemTypeImmutable {
 		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
 

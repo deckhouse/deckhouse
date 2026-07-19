@@ -186,7 +186,7 @@ var _ = Describe("NodeConfig controller", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: ngName},
 			Spec: deckhousev1.NodeGroupSpec{
 				NodeType: deckhousev1.NodeTypeCloudEphemeral,
-				OSType:   deckhousev1.OSTypeMutable,
+				SystemType:   deckhousev1.SystemTypeMutable,
 				CloudInstances: &deckhousev1.CloudInstancesSpec{
 					MinPerZone: 1,
 					MaxPerZone: 3,
@@ -248,7 +248,7 @@ func createImmutableNodeGroup(ctx context.Context, name string, mutate func(*dec
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: deckhousev1.NodeGroupSpec{
 			NodeType: deckhousev1.NodeTypeCloudEphemeral,
-			OSType:   deckhousev1.OSTypeImmutable,
+			SystemType:   deckhousev1.SystemTypeImmutable,
 			// A CloudEphemeral group must declare how its nodes are ordered.
 			CloudInstances: &deckhousev1.CloudInstancesSpec{
 				MinPerZone: 1,

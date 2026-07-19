@@ -55,13 +55,13 @@ func (nt NodeType) String() string {
 	return string(nt)
 }
 
-// OSType tells whether the nodes of a group run a mutable OS configured by
-// bashible or an immutable one configured by a NodeConfig.
-type OSType string
+// SystemType tells whether the nodes of a group are configured on the fly by
+// bashible or reconciled from a NodeConfig object.
+type SystemType string
 
 const (
-	OSTypeMutable   OSType = "Mutable"
-	OSTypeImmutable OSType = "Immutable"
+	SystemTypeMutable   SystemType = "Mutable"
+	SystemTypeImmutable SystemType = "Immutable"
 )
 
 // NodeGroup is a group of nodes in Kubernetes.
@@ -87,7 +87,7 @@ type NodeGroupSpec struct {
 
 	// How the nodes of the group are managed: Mutable (bashible), Immutable (olcedar,
 	// a type 1 hypervisor). Optional, defaults to Mutable.
-	OSType OSType `json:"osType,omitempty"`
+	SystemType SystemType `json:"systemType,omitempty"`
 
 	// Maximum drain time of CloudEphemeral machines in seconds
 	NodeDrainTimeoutSecond *int64 `json:"nodeDrainTimeoutSecond,omitempty"`

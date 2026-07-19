@@ -21,7 +21,7 @@ limitations under the License.
 // NOTE: This webhook only validates things that CRD OpenAPI schema cannot validate:
 // - Cross-field logic (minPerZone vs maxPerZone)
 // - Cluster state dependent checks (zones, endpoints, nodes)
-// - Immutability on UPDATE
+// - ImsystemType on UPDATE
 // - Cross-resource validation (ModuleConfig)
 //
 // The following validations are handled by CRD and NOT duplicated here:
@@ -131,8 +131,8 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		// Switching an existing group between the bashible and the olcedar
 		// would have to re-provision every node in it; that migration is not
 		// implemented, so the field is fixed at creation time.
-		if osTypeOrDefault(oldNG) != osTypeOrDefault(ng) {
-			return admission.Denied(".spec.osType field is immutable")
+		if systemTypeOrDefault(oldNG) != systemTypeOrDefault(ng) {
+			return admission.Denied(".spec.systemType field is immutable")
 		}
 	}
 
@@ -253,7 +253,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	if req.Operation == "UPDATE" && oldNG != nil {
 		if ng.Spec.NodeType == v1.NodeTypeStatic || ng.Spec.NodeType == v1.NodeTypeCloudStatic {
-			if err := validateLabelSelectorImmutability(oldNG, ng); err != nil {
+			if err := validateLabelSelectorImsystemType(oldNG, ng); err != nil {
 				return admission.Denied(err.Error())
 			}
 		}
@@ -345,7 +345,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	if osTypeOrDefault(ng) == v1.OSTypeImmutable {
+	if systemTypeOrDefault(ng) == v1.SystemTypeImmutable {
 		if err := validateImmutableNodeGroup(ng); err != nil {
 			return admission.Denied(err.Error())
 		}
@@ -358,13 +358,13 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	return admission.Allowed("")
 }
 
-// osTypeOrDefault returns the effective OS type: an empty field means the
+// systemTypeOrDefault returns the effective OS type: an empty field means the
 // classic bashible-managed OS.
-func osTypeOrDefault(ng *v1.NodeGroup) v1.OSType {
-	if ng.Spec.OSType == "" {
-		return v1.OSTypeMutable
+func systemTypeOrDefault(ng *v1.NodeGroup) v1.SystemType {
+	if ng.Spec.SystemType == "" {
+		return v1.SystemTypeMutable
 	}
-	return ng.Spec.OSType
+	return ng.Spec.SystemType
 }
 
 // validateImmutableNodeGroup rejects settings that an olcedar node cannot
@@ -375,51 +375,51 @@ func osTypeOrDefault(ng *v1.NodeGroup) v1.OSType {
 // would be silently ignored on the node.
 func validateImmutableNodeGroup(ng *v1.NodeGroup) error {
 	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
-		return fmt.Errorf("osType=Immutable is only supported for nodeType=CloudEphemeral, got %q", ng.Spec.NodeType)
+		return fmt.Errorf("systemType=Immutable is only supported for nodeType=CloudEphemeral, got %q", ng.Spec.NodeType)
 	}
 
 	// staticInstances provisioning goes through CAPS, which bootstraps nodes
 	// over SSH; an olcedar node has no SSH server.
 	if ng.Spec.StaticInstances != nil {
-		return fmt.Errorf(".spec.staticInstances is not supported with osType=Immutable: static provisioning bootstraps nodes over SSH")
+		return fmt.Errorf(".spec.staticInstances is not supported with systemType=Immutable: static provisioning bootstraps nodes over SSH")
 	}
 
 	// The container runtime is delivered as a signed system extension chosen by
 	// the platform, so its type is not selectable.
 	if ng.Spec.CRI != nil && ng.Spec.CRI.Type != "" {
-		return fmt.Errorf(".spec.cri.type is not supported with osType=Immutable: the container runtime is delivered as a signed system extension")
+		return fmt.Errorf(".spec.cri.type is not supported with systemType=Immutable: the container runtime is delivered as a signed system extension")
 	}
 
 	if ng.Spec.Kubelet != nil {
 		// An olcedar node has a single writable partition; the kubelet root
 		// directory is fixed at /var/lib/kubelet.
 		if ng.Spec.Kubelet.RootDir != "" {
-			return fmt.Errorf(".spec.kubelet.rootDir is not supported with osType=Immutable: the kubelet root directory is fixed")
+			return fmt.Errorf(".spec.kubelet.rootDir is not supported with systemType=Immutable: the kubelet root directory is fixed")
 		}
 		// Swap is not configured on an olcedar node.
 		if ng.Spec.Kubelet.MemorySwap != nil {
-			return fmt.Errorf(".spec.kubelet.memorySwap is not supported with osType=Immutable")
+			return fmt.Errorf(".spec.kubelet.memorySwap is not supported with systemType=Immutable")
 		}
 	}
 
 	// GPU support needs a driver system extension and a matching containerd
 	// runtime; neither is built yet.
 	if ng.Spec.GPU != nil {
-		return fmt.Errorf(".spec.gpu is not supported with osType=Immutable")
+		return fmt.Errorf(".spec.gpu is not supported with systemType=Immutable")
 	}
 
 	// Chaos monkey drains and deletes machines; that part works, but the
 	// bashible-based recovery path it assumes does not.
 	if ng.Spec.Chaos != nil && ng.Spec.Chaos.Mode == v1.ChaosModeDrainAndDelete {
-		return fmt.Errorf(".spec.chaos.mode=DrainAndDelete is not supported with osType=Immutable")
+		return fmt.Errorf(".spec.chaos.mode=DrainAndDelete is not supported with systemType=Immutable")
 	}
 
 	return nil
 }
 
-// validateLabelSelectorImmutability checks that staticInstances.labelSelector
+// validateLabelSelectorImsystemType checks that staticInstances.labelSelector
 // cannot be modified or removed once set (but can be added).
-func validateLabelSelectorImmutability(oldNG, newNG *v1.NodeGroup) error {
+func validateLabelSelectorImsystemType(oldNG, newNG *v1.NodeGroup) error {
 	// Check if old staticInstances exists
 	if oldNG.Spec.StaticInstances == nil {
 		return nil // Can add new staticInstances
