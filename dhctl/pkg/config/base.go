@@ -818,13 +818,14 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOpti
 	return os.MkdirAll(filepath.Join(globalOptions.DownloadDir, "plugins"), 0o755)
 }
 
-// dropStalePlanRules removes a plan_rules.yml left in the candi dir by an
-// earlier single-provider bundle install. The candi image just overwrote
-// terraform_versions.yml with its multi-provider copy and ships no plan rules
-// of its own, so a surviving file now describes a different versions file —
-// which the settings loader rejects ("requires a single-provider bundle").
-// The download dir outlives a single dhctl run, so this is a real state leak
-// between bootstrap and the later check/converge.
+// dropStalePlanRules removes a plan_rules.yml that an older dhctl copied into
+// the candi dir together with a provider bundle's versions file. This dhctl
+// reads bundle settings where the bundle keeps them and copies nothing, but the
+// download dir outlives a dhctl upgrade: the candi image overwrites
+// terraform_versions.yml with its multi-provider copy and ships no plan rules,
+// so a leftover file would describe a versions file that is no longer there and
+// the settings loader would refuse to start ("requires a single-provider
+// bundle").
 func dropStalePlanRules(candiDir string) error {
 	err := os.Remove(filepath.Join(candiDir, providerdir.PlanRulesFilename))
 	if err != nil && !errors.Is(err, iofs.ErrNotExist) {

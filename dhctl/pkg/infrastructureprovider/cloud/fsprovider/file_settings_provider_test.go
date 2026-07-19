@@ -42,7 +42,6 @@ var tofuProviders = []string{
 	yandex.ProviderName,
 	"dynamix",
 	"zvirt",
-	"dvp",
 	"vsphere",
 	"huaweicloud",
 	"openstack",
@@ -177,4 +176,43 @@ kubernetes:
 	set, ok := store["dvp"]
 	require.True(t, ok, "provider settings must come from the unpacked bundle")
 	require.Equal(t, "kubernetes_manifest", set.VMResource().Type)
+}
+
+// Only the canonical <provider> symlink is read: the digest dir it points at is
+// also on disk (as are digest dirs of previously delivered versions and, mid
+// unpack, an incomplete *.partial tree), and picking one of those would make the
+// effective settings depend on directory ordering.
+func TestBundleSettingsSkipDigestAndPartialDirs(t *testing.T) {
+	downloadDir := t.TempDir()
+	writeBundle := func(dir, cloudName string) {
+		tm := filepath.Join(downloadDir, dir, "terraform-manager")
+		require.NoError(t, os.MkdirAll(tm, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(tm, versionFile), fmt.Appendf(nil, `opentofu: 1.12.0
+terraform: 0.14.8
+kubernetes:
+  namespace: hashicorp
+  cloudName: %s
+  type: kubernetes
+  version: "2.38.0"
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true
+`, cloudName), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(tm, planRulesFilename), []byte("vmResource:\n  type: kubernetes_manifest\n"), 0o644))
+	}
+
+	// Current bundle, a stale one and an interrupted unpack, as they coexist on disk.
+	writeBundle("dvp@sha256:current", "DVP")
+	writeBundle("dvp@sha256:stale", "STALEDVP")
+	writeBundle("dvp@sha256:broken.partial", "PARTIALDVP")
+	require.NoError(t, os.Symlink("dvp@sha256:current", filepath.Join(downloadDir, "dvp")))
+
+	store, err := loadOrGetStore(t.Context(), options.DefaultInfrastructureVersions, downloadDir)
+	require.NoError(t, err)
+
+	require.Contains(t, store, "dvp")
+	require.NotContains(t, store, "staledvp")
+	require.NotContains(t, store, "partialdvp")
 }

@@ -253,6 +253,15 @@ func mergeBundleSettings(ctx context.Context, store settingsStore, downloadDir s
 	}
 
 	for _, match := range matches {
+		// A bundle is unpacked into <provider>@<digest> (and, while unpacking,
+		// <provider>@<digest>.partial) with a plain <provider> symlink pointing
+		// at the current one. Read through that symlink only: the digest dirs of
+		// previously delivered versions may still be around, and an unfinished
+		// one holds an incomplete tree.
+		if strings.Contains(filepath.Base(filepath.Dir(filepath.Dir(match))), "@") {
+			continue
+		}
+
 		bundle, err := loadTerraformVersionFileSettings(ctx, match)
 		if err != nil {
 			return fmt.Errorf("load provider bundle settings %s: %w", match, err)
