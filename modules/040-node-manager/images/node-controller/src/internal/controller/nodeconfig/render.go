@@ -36,6 +36,7 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		OSImage:                             defaultOSImage,
 		APIServerEndpoints:                  in.APIServerEndpoints,
 		Extensions:                          renderExtensions(in.SysextDigests),
+		Storage:                             renderStorage(),
 		Kernel:                              renderKernel(),
 		Network:                             renderNetwork(node),
 		Kubelet:                             renderKubelet(ng, node, in),
@@ -44,6 +45,19 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		RegistryPackagesProxyAccessTokenB64: in.RegistryPackagesProxyToken,
 	}
 	return spec
+}
+
+// renderStorage repeats the disk selection the node was bootstrapped with. The
+// boot path selects the install disk on every boot, not only the first one, and
+// this config replaces the bootstrap one wholesale — a node whose stored config
+// names no disk drops into the emergency shell on its next reboot instead of
+// coming back.
+//
+// An empty selector means "the first whole disk that is not the cloud-init
+// CDROM", which is what the bootstrap userdata asks for: the platform decides
+// the order the guest sees its disks in, so no fixed path can be rendered here.
+func renderStorage() internalv1alpha1.Storage {
+	return internalv1alpha1.Storage{DiskSelector: &internalv1alpha1.DiskSelector{}}
 }
 
 // renderKernel repeats the sysctl settings the node was bootstrapped with. This

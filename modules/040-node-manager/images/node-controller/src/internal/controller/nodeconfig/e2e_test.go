@@ -104,6 +104,11 @@ var _ = Describe("NodeConfig controller", func() {
 			// node unable to start kubelet at all.
 			g.Expect(nc.Spec.Kubelet.CACert).To(Equal(base64.StdEncoding.EncodeToString([]byte(testClusterCA))))
 
+			// The boot path picks the install disk on every boot, not only the
+			// first one, so a config that names no disk drops the node into the
+			// emergency shell the next time it restarts.
+			g.Expect(nc.Spec.Storage.DiskSelector).NotTo(BeNil())
+
 			// The node talks to the API servers the cluster actually has.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
 
