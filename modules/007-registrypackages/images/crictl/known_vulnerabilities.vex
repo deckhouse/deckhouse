@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 11,
+  "version": 14,
   "statements": [
     {
       "vulnerability": {
@@ -143,8 +143,50 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-29181 связана с серверной обработкой входящих HTTP baggage-заголовков в OpenTelemetry. crictl является CLI-клиентом CRI, не поднимает HTTP-сервер и не принимает удалённые запросы с baggage-заголовками. Уязвимый код присутствует в зависимостях, но отсутствует в достижимом пути выполнения.",
       "timestamp": "2026-05-20T15:38:07.005409Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41568 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает функцию createIfNotExists в демоне Docker Engine при операции docker cp. Уязвимый код не выполняется в рамках cri-tools.",
+      "timestamp": "2026-07-15T09:47:14.676108Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость невозможно эксплуатировать в рамках Deckhouse: уязвимость связана с гонкой состояний между созданием точки монтирования и вызовом mount() в демоне Docker Engine при операции docker cp. Уязвимый код не выполняется в рамках cri-tools.",
+      "timestamp": "2026-07-15T09:48:28.204899Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает серверный обработчик PUT /containers/{id}/archive в демоне Docker Engine. Уязвимый код не выполняется в рамках cri-tools.",
+      "timestamp": "2026-07-15T09:49:20.877824Z"
     }
   ],
   "timestamp": "2026-01-21T10:25:02Z",
-  "last_updated": "2026-05-20T15:38:07Z"
+  "last_updated": "2026-07-15T09:49:20Z"
 }
