@@ -49,7 +49,7 @@ var tofuProviders = []string{
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(t.Context(), options.DefaultInfrastructureVersions)
+	s, err := loadProvidersForTest(t.Context(), options.DefaultInfrastructureVersions)
 	require.NoError(t, err)
 
 	all := append(make([]string, 0), tofuProviders...)
@@ -59,7 +59,7 @@ func TestAllProviderPresentInStore(t *testing.T) {
 }
 
 func TestProvidersSettings(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(t.Context(), options.DefaultInfrastructureVersions)
+	s, err := loadProvidersForTest(t.Context(), options.DefaultInfrastructureVersions)
 	require.NoError(t, err)
 
 	assertSettings := func(t *testing.T, s settingsStore, p string, assertProvider func(t *testing.T, settings settings.ProviderSettings)) {
@@ -244,4 +244,11 @@ func TestBundleSettingsIgnoreInTreeAndBrokenBundles(t *testing.T) {
 	require.Contains(t, store, "aws", "candi stays authoritative for in-tree providers")
 	require.Contains(t, store, "dvp")
 	require.NotContains(t, store, "brokenprovider")
+}
+
+// loadProvidersForTest keeps the tests focused on the providers a versions file
+// describes, without the tool versions loadVersionsFile also returns.
+func loadProvidersForTest(ctx context.Context, filename string) (settingsStore, error) {
+	file, err := loadVersionsFile(ctx, filename, toolVersions{})
+	return file.providers, err
 }

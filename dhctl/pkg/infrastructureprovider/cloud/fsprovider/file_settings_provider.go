@@ -65,12 +65,13 @@ func loadOrGetStore(ctx context.Context, infraVersionsFile, downloadDir string) 
 		return store, nil
 	}
 
-	store, terraformVersion, tofuVersion, err := loadVersionsFile(ctx, infraVersionsFile, toolVersions{})
+	candi, err := loadVersionsFile(ctx, infraVersionsFile, toolVersions{})
 	if err != nil {
 		return nil, err
 	}
+	store = candi.providers
 
-	mergeBundleSettings(ctx, store, downloadDir, toolVersions{terraform: terraformVersion, opentofu: tofuVersion})
+	mergeBundleSettings(ctx, store, downloadDir, candi.tools)
 
 	fileToSettingsStore[cacheKey] = store
 
@@ -136,115 +137,139 @@ func simpleFromMap(s any, terraformVersion, openTofuVersion string) (*settings.S
 	return &set, nil
 }
 
-func loadTerraformVersionFileSettings(ctx context.Context, filename string) (settingsStore, error) {
-	store, _, _, err := loadVersionsFile(ctx, filename, toolVersions{})
-	return store, err
-}
-
-// toolVersions are the terraform/opentofu versions every provider entry is
-// pinned to. A provider bundle ships only the fragment describing itself and
-// inherits them from the candi file it extends.
+// toolVersions are the terraform/opentofu versions every provider entry in a
+// versions file is pinned to.
 type toolVersions struct {
 	terraform string
 	opentofu  string
 }
 
-func loadVersionsFile(ctx context.Context, filename string, inherited toolVersions) (settingsStore, string, string, error) {
-	infrastructureProviders := make(map[string]any)
+// versionsFile is one parsed terraform_versions.yml.
+type versionsFile struct {
+	tools     toolVersions
+	providers settingsStore
+}
 
-	file, err := os.ReadFile(filename)
+// loadVersionsFile parses a terraform_versions.yml. A provider bundle ships
+// only the fragment describing itself and omits the tool versions it does not
+// use, so it inherits them from the candi file it extends; the candi file
+// itself is parsed with no inherited versions and must carry both.
+func loadVersionsFile(ctx context.Context, filename string, inherited toolVersions) (versionsFile, error) {
+	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("Cannot read infrastructure versions file %s: %v", filename, err)
+		return versionsFile{}, fmt.Errorf("Cannot read infrastructure versions file %s: %v", filename, err)
 	}
 
-	err = yaml.Unmarshal(file, &infrastructureProviders)
+	raw := make(map[string]any)
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return versionsFile{}, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: %v", filename, err)
+	}
+
+	tools, err := parseToolVersions(ctx, filename, raw, inherited)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("Cannot unmarshal infrastructure versions file %s: %v", filename, err)
+		return versionsFile{}, err
 	}
 
-	terraformVersion, tofuVersion := inherited.terraform, inherited.opentofu
-
-	for name, rawSettings := range infrastructureProviders {
-		var ok bool
-		switch name {
-		case opentofuKey:
-			tofuVersion, ok = rawSettings.(string)
-			if !ok {
-				return nil, "", "", fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for OpenTofu version setting", name)
-			}
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found opentofu version: %s", tofuVersion))
-		case terraformKey:
-			terraformVersion, ok = rawSettings.(string)
-			if !ok {
-				return nil, "", "", fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for Terraform version setting", name)
-			}
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found terraform version: %s", terraformVersion))
-		}
+	providers, err := parseProviders(ctx, raw, tools)
+	if err != nil {
+		return versionsFile{}, err
 	}
 
-	if terraformVersion == "" {
-		return nil, "", "", fmt.Errorf("Cannot unmarshal infrastructure versions file %s: missing terraform version", filename)
+	if err := applyPlanRules(filename, providers); err != nil {
+		return versionsFile{}, err
 	}
 
-	if tofuVersion == "" {
-		return nil, "", "", fmt.Errorf("Cannot unmarshal infrastructure versions file %s: missing opentofu version", filename)
-	}
+	return versionsFile{tools: tools, providers: providers}, nil
+}
 
-	res := make(settingsStore)
+func parseToolVersions(ctx context.Context, filename string, raw map[string]any, inherited toolVersions) (toolVersions, error) {
+	tools := inherited
 
-	noneProviderKeys := map[string]struct{}{
-		opentofuKey:  {},
-		terraformKey: {},
-	}
-
-	for name, rawSettings := range infrastructureProviders {
-		if _, ok := noneProviderKeys[name]; ok {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found non-provider-name key %s", name))
+	for name, rawSettings := range raw {
+		if name != opentofuKey && name != terraformKey {
 			continue
 		}
 
-		set, err := simpleFromMap(rawSettings, terraformVersion, tofuVersion)
+		version, ok := rawSettings.(string)
+		if !ok {
+			return toolVersions{}, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for %s version setting", filename, name)
+		}
+
+		if name == opentofuKey {
+			tools.opentofu = version
+		} else {
+			tools.terraform = version
+		}
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found %s version: %s", name, version))
+	}
+
+	if tools.terraform == "" {
+		return toolVersions{}, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: missing terraform version", filename)
+	}
+	if tools.opentofu == "" {
+		return toolVersions{}, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: missing opentofu version", filename)
+	}
+
+	return tools, nil
+}
+
+func parseProviders(ctx context.Context, raw map[string]any, tools toolVersions) (settingsStore, error) {
+	res := make(settingsStore)
+
+	for name, rawSettings := range raw {
+		if name == opentofuKey || name == terraformKey {
+			continue
+		}
+
+		set, err := simpleFromMap(rawSettings, tools.terraform, tools.opentofu)
 		if err != nil {
-			return nil, "", "", fmt.Errorf("Cannot unmarshal infrastructure settings for provider %s: %v", name, err)
+			return nil, fmt.Errorf("Cannot unmarshal infrastructure settings for provider %s: %v", name, err)
 		}
 
 		cloudName := strings.ToLower(set.CloudName())
-
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found provider settings for %s: %s", name, cloudName))
-
 		res[cloudName] = set
 	}
 
+	return res, nil
+}
+
+// applyPlanRules attaches the plan rules that sit next to a single-provider
+// bundle's versions file. Such a bundle must carry them (they say which
+// resource a VM is), and a multi-provider file must not: the rules describe one
+// provider, so finding them there means the two files got out of sync.
+func applyPlanRules(filename string, providers settingsStore) error {
 	planRule, err := loadPlanRules(filename)
 	if err != nil {
-		return nil, "", "", err
-	}
-	if planRule != nil && len(res) != 1 {
-		return nil, "", "", fmt.Errorf("plan_rules.yml next to %s requires a single-provider bundle, got %d providers", filename, len(res))
+		return err
 	}
 
-	// External providers ship as a single-provider bundle: plan_rules.yml travels
-	// next to terraform_versions.yml (delivered into candi by copyTFVersionFile),
-	// so the rule is loaded here. The main multi-provider candi has no plan_rules.
-	if len(res) == 1 {
-		for cloudName, set := range res {
-			simple, ok := set.(*settings.Simple)
-			if !ok {
-				return nil, "", "", fmt.Errorf("provider %s settings have unexpected type %T", cloudName, set)
+	if len(providers) != 1 {
+		if planRule != nil {
+			return fmt.Errorf("plan_rules.yml next to %s requires a single-provider bundle, got %d providers", filename, len(providers))
+		}
+		return nil
+	}
+
+	for cloudName, set := range providers {
+		simple, ok := set.(*settings.Simple)
+		if !ok {
+			return fmt.Errorf("provider %s settings have unexpected type %T", cloudName, set)
+		}
+
+		if planRule != nil {
+			simple.VMResourceVal = planRule
+			if err := simple.Validate(false); err != nil {
+				return fmt.Errorf("validate provider %s after plan_rules merge: %w", cloudName, err)
 			}
-			if planRule != nil {
-				simple.VMResourceVal = planRule
-				if err := simple.Validate(false); err != nil {
-					return nil, "", "", fmt.Errorf("validate provider %s after plan_rules merge: %w", simple.CloudName(), err)
-				}
-			}
-			if simple.VMResourceVal == nil {
-				return nil, "", "", fmt.Errorf("single-provider bundle %q requires plan_rules.yml with vmResource next to %s", cloudName, filename)
-			}
+		}
+
+		if simple.VMResourceVal == nil {
+			return fmt.Errorf("single-provider bundle %q requires plan_rules.yml with vmResource next to %s", cloudName, filename)
 		}
 	}
 
-	return res, terraformVersion, tofuVersion, nil
+	return nil
 }
 
 // mergeBundleSettings adds the settings of providers that the candi image does
@@ -282,13 +307,13 @@ func mergeBundleSettings(ctx context.Context, store settingsStore, downloadDir s
 			continue
 		}
 
-		bundle, _, _, err := loadVersionsFile(ctx, match, inherited)
+		bundle, err := loadVersionsFile(ctx, match, inherited)
 		if err != nil {
 			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Skipping provider bundle settings %s: %v", match, err))
 			continue
 		}
 
-		for cloudName, set := range bundle {
+		for cloudName, set := range bundle.providers {
 			if _, known := store[cloudName]; known {
 				continue
 			}

@@ -81,7 +81,7 @@ kubernetes:
   useOpentofu: true
 `), 0o644))
 
-	_, err := loadTerraformVersionFileSettings(context.TODO(), infraVersionsFile)
+	_, err := loadProvidersForTest(context.TODO(), infraVersionsFile)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "DVP")
 	require.Contains(t, err.Error(), "plan_rules.yml")
@@ -114,7 +114,7 @@ vmResource:
     value: VirtualMachine
 `), 0o644))
 
-	store, err := loadTerraformVersionFileSettings(context.TODO(), infraVersionsFile)
+	store, err := loadProvidersForTest(context.TODO(), infraVersionsFile)
 	require.NoError(t, err)
 	require.NotNil(t, store["dvp"].VMResource())
 }
