@@ -269,7 +269,7 @@ func TestBundleSettingsIgnoreInTreeAndBrokenBundles(t *testing.T) {
 
 	broken := filepath.Join(downloadDir, "brokenprovider", "terraform-manager")
 	require.NoError(t, os.MkdirAll(broken, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(broken, versionFile), []byte("не yaml: [{"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(broken, versionFile), []byte("not yaml: [{"), 0o644))
 
 	installDVPBundle(t, downloadDir, "dvp")
 
