@@ -40,6 +40,7 @@ var terraformProviders = []string{
 
 var tofuProviders = []string{
 	yandex.ProviderName,
+	"dvp",
 	"dynamix",
 	"zvirt",
 	"vsphere",
@@ -156,12 +157,45 @@ func TestBundleSettingsMergedFromDownloadDir(t *testing.T) {
 	downloadDir := t.TempDir()
 	installDVPBundle(t, downloadDir, "dvp")
 
-	store, err := loadOrGetStore(t.Context(), options.DefaultInfrastructureVersions, downloadDir)
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
 	require.NoError(t, err)
 
 	set, ok := store["dvp"]
 	require.True(t, ok, "provider settings must come from the unpacked bundle")
 	require.Equal(t, "kubernetes_manifest", set.VMResource().Type)
+}
+
+// writeCandiVersions stands in for the candi versions file, so the bundle tests
+// exercise the merge whatever providers the shipped candi happens to carry.
+func writeCandiVersions(t *testing.T) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), versionFile)
+	require.NoError(t, os.WriteFile(path, []byte(`opentofu: 1.12.0
+terraform: 0.14.8
+aws:
+  namespace: hashicorp
+  cloudName: AWS
+  type: aws
+  version: "4.62.0"
+  artifact: terraform-provider-aws
+  artifactBinary: terraform-provider-aws
+  destinationBinary: terraform-provider-aws
+  vmResourceType: aws_instance
+  useOpentofu: false
+yandex:
+  namespace: yandex-cloud
+  cloudName: Yandex
+  type: yandex
+  version: "0.121.0"
+  artifact: terraform-provider-yandex
+  artifactBinary: terraform-provider-yandex
+  destinationBinary: terraform-provider-yandex
+  vmResourceType: yandex_compute_instance
+  useOpentofu: true
+`), 0o644))
+
+	return path
 }
 
 // installDVPBundle lays out an unpacked bundle from the files the DVP module
@@ -211,7 +245,7 @@ kubernetes:
 	writeBundle("dvp@sha256:broken.partial", "PARTIALDVP")
 	require.NoError(t, os.Symlink("dvp@sha256:current", filepath.Join(downloadDir, "dvp")))
 
-	store, err := loadOrGetStore(t.Context(), options.DefaultInfrastructureVersions, downloadDir)
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
 	require.NoError(t, err)
 
 	require.Contains(t, store, "dvp")
@@ -239,7 +273,7 @@ func TestBundleSettingsIgnoreInTreeAndBrokenBundles(t *testing.T) {
 
 	installDVPBundle(t, downloadDir, "dvp")
 
-	store, err := loadOrGetStore(t.Context(), options.DefaultInfrastructureVersions, downloadDir)
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
 	require.NoError(t, err, "one unusable bundle must not take down the whole store")
 	require.Contains(t, store, "aws", "candi stays authoritative for in-tree providers")
 	require.Contains(t, store, "dvp")
