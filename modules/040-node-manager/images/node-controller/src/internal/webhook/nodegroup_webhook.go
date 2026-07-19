@@ -412,6 +412,16 @@ func validateImmutableNodeGroup(ng *v1.NodeGroup) error {
 	return nil
 }
 
+const (
+	// defaultKubeletRootDir is what the API server fills in when the field is
+	// left alone; only a different value is a request the node cannot meet.
+	defaultKubeletRootDir = "/var/lib/kubelet"
+
+	// resourceReservationStatic names amounts to reserve, as opposed to Auto,
+	// which asks for nothing in particular.
+	resourceReservationStatic = "Static"
+)
+
 // validateImmutableKubelet rejects the kubelet settings that never reach the
 // node: a NodeConfig carries maxPods and the container log limits, and nothing
 // else of this section. Accepting them silently would leave the operator with
@@ -420,10 +430,11 @@ func validateImmutableKubelet(ng *v1.NodeGroup) error {
 	if ng.Spec.Kubelet == nil {
 		return nil
 	}
-	// An olcedar node has a single writable partition; the kubelet root
-	// directory is fixed at /var/lib/kubelet.
-	if ng.Spec.Kubelet.RootDir != "" {
-		return fmt.Errorf(".spec.kubelet.rootDir is not supported with systemType=Immutable: the kubelet root directory is fixed")
+	// An olcedar node has a single writable partition, so the kubelet root
+	// directory is fixed. Rejecting the default value too would make the group
+	// impossible to edit, since the API server fills it in.
+	if ng.Spec.Kubelet.RootDir != "" && ng.Spec.Kubelet.RootDir != defaultKubeletRootDir {
+		return fmt.Errorf(".spec.kubelet.rootDir cannot be changed with systemType=Immutable: the kubelet root directory is fixed at %s", defaultKubeletRootDir)
 	}
 	// Swap is not configured on an olcedar node.
 	if ng.Spec.Kubelet.MemorySwap != nil {
@@ -432,8 +443,11 @@ func validateImmutableKubelet(ng *v1.NodeGroup) error {
 	if ng.Spec.Kubelet.SeccompDefault != nil {
 		return fmt.Errorf(".spec.kubelet.seccompDefault is not supported with systemType=Immutable")
 	}
-	if ng.Spec.Kubelet.ResourceReservation != nil {
-		return fmt.Errorf(".spec.kubelet.resourceReservation is not supported with systemType=Immutable")
+	// Auto is what the API server fills in for every group, and it asks for
+	// nothing in particular; a Static reservation names amounts the node would
+	// silently not honour.
+	if ng.Spec.Kubelet.ResourceReservation != nil && ng.Spec.Kubelet.ResourceReservation.Mode == resourceReservationStatic {
+		return fmt.Errorf(".spec.kubelet.resourceReservation.mode=%s is not supported with systemType=Immutable", resourceReservationStatic)
 	}
 	if ng.Spec.Kubelet.TopologyManager != nil {
 		return fmt.Errorf(".spec.kubelet.topologyManager is not supported with systemType=Immutable")

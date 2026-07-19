@@ -1031,12 +1031,27 @@ func TestValidation_ImmutableUnsupportedSettings(t *testing.T) {
 			expMessage: ".spec.kubelet.seccompDefault",
 		},
 		{
-			name: "kubelet resourceReservation",
+			// Auto is the value the API server fills in for every group, so
+			// rejecting it would make an immutable group impossible to edit.
+			name: "kubelet resourceReservation left at Auto is allowed",
 			mutate: func(ng *v1.NodeGroup) {
 				ng.Spec.Kubelet = &v1.KubeletSpec{ResourceReservation: &v1.ResourceReservationSpec{Mode: "Auto"}}
 			},
+			expAllowed: true,
+		},
+		{
+			name: "kubelet resourceReservation asking for amounts",
+			mutate: func(ng *v1.NodeGroup) {
+				ng.Spec.Kubelet = &v1.KubeletSpec{ResourceReservation: &v1.ResourceReservationSpec{Mode: "Static"}}
+			},
 			expAllowed: false,
 			expMessage: ".spec.kubelet.resourceReservation",
+		},
+		{
+			// Likewise the default root directory: it is what the node uses.
+			name:       "kubelet rootDir left at the default is allowed",
+			mutate:     func(ng *v1.NodeGroup) { ng.Spec.Kubelet = &v1.KubeletSpec{RootDir: "/var/lib/kubelet"} },
+			expAllowed: true,
 		},
 		{
 			name: "kubelet topologyManager",
