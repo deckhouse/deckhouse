@@ -389,6 +389,42 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// The node reports a Reboot done by writing the phase itself, which is not
+	// the path that records the time. Without a finish time the operation would
+	// be collected on its creation time instead, and the field an operator reads
+	// to see when a node came back would stay empty.
+	It("records when an operation the node finished finished", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-stamp")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		op := &v1alpha1.NodeOperation{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("reported")},
+			Spec: v1alpha1.NodeOperationSpec{
+				Type:     v1alpha1.NodeOperationDrain,
+				NodeName: nodeName,
+			},
+		}
+		Expect(k8sClient.Create(ctx, op)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		By("the node reporting it done, the way the agent does")
+		Eventually(func(g Gomega) {
+			fresh := &v1alpha1.NodeOperation{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
+			fresh.Status.Phase = v1alpha1.NodeOperationCompleted
+			fresh.Status.FinishedAt = nil
+			g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Eventually(func(g Gomega) {
+			fresh := &v1alpha1.NodeOperation{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
+			g.Expect(fresh.Status.FinishedAt).NotTo(BeNil(), "the finish time must be recorded")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// A record of what was done to a node is worth having while it is recent.
 	It("keeps a freshly finished operation", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-keep")

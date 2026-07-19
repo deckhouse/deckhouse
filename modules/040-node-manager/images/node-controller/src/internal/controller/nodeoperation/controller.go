@@ -210,9 +210,17 @@ const retention = 24 * time.Hour
 // otherwise asks to be called again when it is. The parent takes its child
 // Drain with it, since the child is owned by it.
 func (r *Reconciler) collect(ctx context.Context, op *v1alpha1.NodeOperation, logger logr.Logger) (ctrl.Result, error) {
-	// An operation that finished before this field existed, or whose finish was
-	// never recorded, is measured from its creation instead of being kept
-	// forever.
+	// The node reports a Reboot or an ApproveDisruption finished by writing the
+	// phase itself, which is not the path that stamps the time. Whoever ended
+	// the operation, it ended when this controller first saw it ended.
+	if op.Status.FinishedAt == nil {
+		if err := r.stampFinished(ctx, op); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// An operation that finished before this field existed is measured from its
+	// creation instead of being kept forever.
 	finished := op.CreationTimestamp.Time
 	if op.Status.FinishedAt != nil {
 		finished = op.Status.FinishedAt.Time
@@ -227,6 +235,18 @@ func (r *Reconciler) collect(ctx context.Context, op *v1alpha1.NodeOperation, lo
 	}
 	logger.Info("collected a finished operation", "operation", op.Name, "type", op.Spec.Type, "node", op.Spec.NodeName)
 	return ctrl.Result{}, nil
+}
+
+// stampFinished records when a finished operation finished, for the operations
+// whose last phase was written by the node rather than by this controller.
+func (r *Reconciler) stampFinished(ctx context.Context, op *v1alpha1.NodeOperation) error {
+	patch := client.MergeFrom(op.DeepCopy())
+	now := metav1.Now()
+	op.Status.FinishedAt = &now
+	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
+		return fmt.Errorf("record when %s finished: %w", op.Name, err)
+	}
+	return nil
 }
 
 // ownedByNode makes the node the owner of an operation created for it, so that
