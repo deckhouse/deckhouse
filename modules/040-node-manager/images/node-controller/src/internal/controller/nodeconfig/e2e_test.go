@@ -26,6 +26,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -230,6 +231,92 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As a cluster operator, I want a node that has to restart
+	// kubelet to apply its config to be drained first, so that the workload
+	// leaves before the interruption instead of being cut off by it.
+	It("drains a node before letting it interrupt itself, then takes it back", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-disrupt")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		// A group of one is interrupted without a drain — there is nowhere for
+		// its workload to go — so the group has to look bigger than that.
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		ng.Status.Nodes = 2
+		Expect(k8sClient.Status().Update(ctx, ng)).To(Succeed())
+
+		var generation int64
+		Eventually(func(g Gomega) {
+			generation = getNodeConfig(ctx, g, nodeName).Generation
+			g.Expect(generation).NotTo(BeZero())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the agent reporting it cannot apply the config without an interruption")
+		requestDisruption(ctx, nodeName, generation)
+
+		node := &corev1.Node{}
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, drainingSource))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// Permission is withheld until the workload is actually gone.
+		Consistently(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Annotations).NotTo(HaveKey(disruptionApprovedAnnotation))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the drain finishing")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			node.Annotations[nodecommon.DrainedAnnotation] = drainingSource
+			node.Spec.Unschedulable = true
+			g.Expect(k8sClient.Update(ctx, node)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// The permission names the revision it covers, so it cannot be reused
+		// for whatever the operator changes next.
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Annotations).To(
+				HaveKeyWithValue(disruptionApprovedAnnotation, fmt.Sprintf("%d", generation)))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the agent applying the config it was allowed to interrupt for")
+		clearDisruption(ctx, nodeName)
+
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			g.Expect(node.Spec.Unschedulable).To(BeFalse())
+			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
+			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	It("leaves a manual group to the operator", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-manual")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Disruptions = &deckhousev1.DisruptionsSpec{ApprovalMode: deckhousev1.DisruptionApprovalModeManual}
+		})
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		var generation int64
+		Eventually(func(g Gomega) {
+			generation = getNodeConfig(ctx, g, nodeName).Generation
+			g.Expect(generation).NotTo(BeZero())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		requestDisruption(ctx, nodeName, generation)
+
+		// Nothing happens on its own: no drain, no permission.
+		Consistently(func(g Gomega) {
+			node := &corev1.Node{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
+			g.Expect(getNodeConfig(ctx, g, nodeName).Annotations).NotTo(HaveKey(disruptionApprovedAnnotation))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	It("leaves nodes of a bashible-managed group alone", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-mutable")
 		ng := &deckhousev1.NodeGroup{
@@ -284,6 +371,43 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
+
+// requestDisruption is what the agent does when the config it was given cannot
+// be applied without restarting kubelet, containerd or the extensions.
+func requestDisruption(ctx context.Context, name string, generation int64) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		nc := getNodeConfig(ctx, g, name)
+		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
+			Type:               disruptionRequiredCondition,
+			Status:             metav1.ConditionTrue,
+			Reason:             "KubeletRestartRequired",
+			Message:            "applying this config restarts kubelet",
+			ObservedGeneration: generation,
+		})
+		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// clearDisruption is what the agent does once it has applied the config.
+func clearDisruption(ctx context.Context, name string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		nc := getNodeConfig(ctx, g, name)
+		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
+			Type:               disruptionRequiredCondition,
+			Status:             metav1.ConditionFalse,
+			Reason:             "Applied",
+			Message:            "config applied",
+			ObservedGeneration: nc.Generation,
+		})
+		nc.Status.ObservedGeneration = nc.Generation
+		nc.Status.Phase = phaseReady
+		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
 
 // reportApplied is what the node agent does after reconciling the spec it was
 // given: the rollout waits for exactly this before moving on.

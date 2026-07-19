@@ -139,7 +139,19 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 	}
 
 	desired := newNodeConfig(ng, node, inputs)
-	return ctrl.Result{}, r.apply(ctx, ng, desired, logger)
+	if err := r.apply(ctx, ng, desired, logger); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// The node may be asking to interrupt itself to apply what it was given.
+	existing := &internalv1alpha1.NodeConfig{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: nodeName}, existing); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, r.reconcileDisruption(ctx, ng, node, existing, logger)
 }
 
 // kubernetesVersion is the version the group's kubelet must match. It is
