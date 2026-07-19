@@ -30,6 +30,10 @@ const (
 	// on its own, and an operation left open keeps it out of the scheduler.
 	operationTimeout = 30 * time.Minute
 
+	// operationNodeLabel names the node an operation is for, so the operations
+	// of one node can be found without reading everyone else's.
+	operationNodeLabel = "node-manager.deckhouse.io/node"
+
 	// drainingSource marks the drains this controller asked for, so it only
 	// releases nodes it took away itself.
 	drainingSource = "node-operation"

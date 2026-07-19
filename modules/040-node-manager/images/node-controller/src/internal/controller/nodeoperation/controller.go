@@ -164,11 +164,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // since is how long the operation has been waiting for the node.
 func (r *Reconciler) since(op *v1alpha1.NodeOperation) time.Duration {
-	handed := meta.FindStatusCondition(op.Status.Conditions, conditionProgress)
-	if handed == nil {
+	if op.Status.StartedAt == nil {
 		return 0
 	}
-	return time.Since(handed.LastTransitionTime.Time)
+	return time.Since(op.Status.StartedAt.Time)
 }
 
 func terminal(op *v1alpha1.NodeOperation) bool {
@@ -179,14 +178,19 @@ func terminal(op *v1alpha1.NodeOperation) bool {
 // its own, and reports whether it has finished. The child belongs to its
 // parent: deleting the parent takes the record of its eviction with it.
 func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperation, logger logr.Logger) (bool, error) {
-	name := op.Name + "-drain"
+	child, err := r.drainOf(ctx, op)
+	if err != nil {
+		return false, err
+	}
 
-	child := &v1alpha1.NodeOperation{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: name}, child)
-	if apierrors.IsNotFound(err) {
+	if child == nil {
 		child = &v1alpha1.NodeOperation{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
+				// Generated, not derived from the parent's name: a name this
+				// controller computed could already belong to an operation
+				// someone else created, and that one is not ours to touch.
+				GenerateName: op.Name + "-drain-",
+				Labels:       map[string]string{operationNodeLabel: op.Spec.NodeName},
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion: v1alpha1.GroupVersion.String(),
 					Kind:       "NodeOperation",
@@ -200,23 +204,10 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 				NodeName: op.Spec.NodeName,
 			},
 		}
-		if err := r.Client.Create(ctx, child); err != nil && !apierrors.IsAlreadyExists(err) {
+		if err := r.Client.Create(ctx, child); err != nil {
 			return false, fmt.Errorf("evict the workload of %s: %w", op.Spec.NodeName, err)
 		}
-		logger.Info("evicting the workload before the operation", "operation", op.Name, "drain", name)
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("read the drain of %s: %w", op.Name, err)
-	}
-
-	// A child of a previous operation with the same name says nothing about
-	// this one: trusting it would hand over a node whose workload is still
-	// running.
-	if !ownedBy(child, op) {
-		if err := r.Client.Delete(ctx, child); err != nil && !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("replace the stale drain of %s: %w", op.Name, err)
-		}
+		logger.Info("evicting the workload before the operation", "operation", op.Name, "drain", child.Name)
 		return false, nil
 	}
 
@@ -225,10 +216,26 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 		return true, nil
 	case v1alpha1.NodeOperationFailed:
 		return false, r.fail(ctx, op, "DrainFailed",
-			fmt.Sprintf("the workload could not be evicted, see NodeOperation %s", name), logger)
+			fmt.Sprintf("the workload could not be evicted, see NodeOperation %s", child.Name), logger)
 	default:
 		return false, nil
 	}
+}
+
+// drainOf finds the eviction this operation spawned, by ownership rather than
+// by a name that anyone could have taken.
+func (r *Reconciler) drainOf(ctx context.Context, op *v1alpha1.NodeOperation) (*v1alpha1.NodeOperation, error) {
+	children := &v1alpha1.NodeOperationList{}
+	if err := r.Client.List(ctx, children, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
+		return nil, fmt.Errorf("list the drains of %s: %w", op.Name, err)
+	}
+	for i := range children.Items {
+		child := &children.Items[i]
+		if child.Spec.Type == v1alpha1.NodeOperationDrain && ownedBy(child, op) {
+			return child, nil
+		}
+	}
+	return nil, nil
 }
 
 // startDrain hands the node to the draining controller, which evicts the pods
@@ -288,6 +295,10 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 	patch := client.MergeFrom(op.DeepCopy())
 	op.Status.Phase = phase
 	op.Status.ObservedGeneration = op.Generation
+	if phase == v1alpha1.NodeOperationInProgress && op.Status.StartedAt == nil {
+		now := metav1.Now()
+		op.Status.StartedAt = &now
+	}
 	meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
 		Type:               conditionProgress,
 		Status:             metav1.ConditionTrue,
@@ -315,7 +326,7 @@ func drained(node *corev1.Node) bool {
 }
 
 // ownedBy reports whether the child was created for this exact operation, not
-// for an earlier one that happened to have the same name.
+// for an earlier one of the same name.
 func ownedBy(child, parent *v1alpha1.NodeOperation) bool {
 	for _, owner := range child.OwnerReferences {
 		if owner.UID == parent.UID {

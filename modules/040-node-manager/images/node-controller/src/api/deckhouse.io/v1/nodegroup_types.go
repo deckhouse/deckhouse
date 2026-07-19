@@ -80,9 +80,9 @@ type NodeGroupSpec struct {
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
 
-	// SystemType selects the node OS management model. Immutable nodes run the
-	// olcedar OS and are configured through NodeConfig objects instead of
-	// bashible; the field cannot be changed after creation.
+	// SystemType selects how the node is managed. An Immutable node runs
+	// olcedar, a type 1 hypervisor, and is reconciled from a NodeConfig object
+	// instead of by bashible; the field cannot be changed after creation.
 	// +optional
 	SystemType SystemType `json:"systemType,omitempty"`
 

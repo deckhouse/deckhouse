@@ -109,7 +109,7 @@ spec:
                 systemType:
                   description: |
                     How the node is managed:
-                    - `Mutable` (default) — the classic node configured on the fly by bashible;
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
                     - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
 
                     The field cannot be changed after the NodeGroup is created.
@@ -117,6 +117,9 @@ spec:
                   enum:
                     - Mutable
                     - Immutable
+                  x-kubernetes-validations:
+                    - rule: self == oldSelf
+                      message: systemType is immutable
                 kubernetesVersion:
                   description: |
                     The desired minor version of Kubernetes.
@@ -756,7 +759,7 @@ spec:
                 systemType:
                   description: |
                     How the node is managed:
-                    - `Mutable` (default) — the classic node configured on the fly by bashible;
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
                     - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
 
                     The field cannot be changed after the NodeGroup is created.
@@ -764,6 +767,9 @@ spec:
                   enum:
                     - Mutable
                     - Immutable
+                  x-kubernetes-validations:
+                    - rule: self == oldSelf
+                      message: systemType is immutable
                 cri:
                   type: object
                   description: |
@@ -1446,7 +1452,7 @@ spec:
                 systemType:
                   description: |
                     How the node is managed:
-                    - `Mutable` (default) — the classic node configured on the fly by bashible;
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
                     - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
 
                     The field cannot be changed after the NodeGroup is created.

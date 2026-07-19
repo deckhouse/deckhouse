@@ -77,7 +77,8 @@ type NodeSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	NodeName string `json:"nodeName"`
-	// OSImage is the OS image reference (resolved from the release channel).
+	// OSImage is the system image the node boots (resolved from the release
+	// channel).
 	OSImage string `json:"osImage"`
 	// Storage selects the target disk for the OS install. The partition layout
 	// is fixed (boot/config/data), so only the whole-disk device is needed.

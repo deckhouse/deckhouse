@@ -271,13 +271,11 @@ var _ = Describe("NodeConfig controller", func() {
 
 		// The eviction is an operation of its own rather than a side effect, so
 		// it can be watched, and it belongs to the operation that needs it.
-		drain := &v1alpha1.NodeOperation{}
+		var drain *v1alpha1.NodeOperation
 		Eventually(func(g Gomega) {
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name + "-drain"}, drain)).To(Succeed())
-			g.Expect(drain.Spec.Type).To(Equal(v1alpha1.NodeOperationDrain))
+			drain = findDrainOf(ctx, g, op.Name)
+			g.Expect(drain).NotTo(BeNil())
 			g.Expect(drain.Spec.NodeName).To(Equal(nodeName))
-			g.Expect(drain.OwnerReferences).To(HaveLen(1))
-			g.Expect(drain.OwnerReferences[0].Name).To(Equal(op.Name))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		node := &corev1.Node{}
@@ -300,8 +298,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 		// The eviction finishing is what lets the parent hand the node over.
 		Eventually(func(g Gomega) {
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name + "-drain"}, drain)).To(Succeed())
-			g.Expect(drain.Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+			g.Expect(findDrainOf(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
 
 			parent := &v1alpha1.NodeOperation{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, parent)).To(Succeed())
@@ -520,6 +517,24 @@ func reportHeld(ctx context.Context, name string, heldGeneration int64) {
 		nc.Status.Phase = phaseReady
 		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// findDrainOf returns the eviction a given operation spawned, located the way
+// the controller locates it: by ownership, not by a name anyone could take.
+func findDrainOf(ctx context.Context, g Gomega, parent string) *v1alpha1.NodeOperation {
+	ops := &v1alpha1.NodeOperationList{}
+	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
+	for i := range ops.Items {
+		if ops.Items[i].Spec.Type != v1alpha1.NodeOperationDrain {
+			continue
+		}
+		for _, owner := range ops.Items[i].OwnerReferences {
+			if owner.Name == parent {
+				return &ops.Items[i]
+			}
+		}
+	}
+	return nil
 }
 
 // findOperation returns the operation covering this node, if the controller

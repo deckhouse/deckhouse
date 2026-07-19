@@ -1,0 +1,71 @@
+# The agent on an immutable node reaches the API with the kubelet's identity
+# (user system:node:<name>, group system:nodes). The Node authorizer does not
+# cover custom resources, so without this the agent can neither read the
+# NodeConfig it is meant to reconcile nor report what it did with it — and the
+# rollout, which waits for exactly that report, would never move past the first
+# node.
+#
+# The grants are cluster-wide because both resources are cluster-scoped: RBAC
+# cannot narrow them to "this node's own object". A node can therefore read the
+# configs of its neighbours, which is the same trade kubelet self-registration
+# makes; restricting it needs an admission policy rather than RBAC.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:node-agent
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+# The desired state of the node, and the report of what the node made of it.
+- apiGroups:
+  - internal.deckhouse.io
+  resources:
+  - nodeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  # A node whose object is missing on first contact registers one from the
+  # config it was provisioned with: its status has nowhere else to go.
+  - create
+- apiGroups:
+  - internal.deckhouse.io
+  resources:
+  - nodeconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+# Operations tell the node what the cluster has prepared for it — a reboot to
+# carry out, permission to interrupt itself — and the node reports the outcome
+# through their status. Creating one is not the node's to do: that is the
+# cluster's decision, or an operator's.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:node-agent
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:node-agent
+subjects:
+- kind: Group
+  name: system:nodes
+  apiGroup: rbac.authorization.k8s.io

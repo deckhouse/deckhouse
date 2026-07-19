@@ -358,8 +358,8 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	return admission.Allowed("")
 }
 
-// systemTypeOrDefault returns the effective OS type: an empty field means the
-// classic bashible-managed OS.
+// systemTypeOrDefault returns how the node is managed: an empty field means the
+// classic bashible-managed node.
 func systemTypeOrDefault(ng *v1.NodeGroup) v1.SystemType {
 	if ng.Spec.SystemType == "" {
 		return v1.SystemTypeMutable

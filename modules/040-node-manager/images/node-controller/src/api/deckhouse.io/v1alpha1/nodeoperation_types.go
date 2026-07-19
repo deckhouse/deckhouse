@@ -111,6 +111,13 @@ type NodeOperationStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
+	// StartedAt is when the node was handed the operation. The wait for the
+	// node is measured from here rather than from a condition timestamp, which
+	// only moves when the condition's status changes and would still be the
+	// moment the operation was queued.
+	// +optional
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+
 	// Conditions carry the details of the operation's progress.
 	// +optional
 	// +listType=map

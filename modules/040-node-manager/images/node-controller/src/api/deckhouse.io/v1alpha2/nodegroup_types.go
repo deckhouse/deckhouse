@@ -78,7 +78,7 @@ type NodeGroupSpec struct {
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
 
-	// SystemType selects the node OS management model (Mutable by default).
+	// SystemType selects how the node is managed (Mutable by default).
 	// +optional
 	SystemType SystemType `json:"systemType,omitempty"`
 

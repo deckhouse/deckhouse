@@ -338,8 +338,8 @@ spec:
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
               osImage:
-                description: OSImage is the OS image reference (resolved from the
-                  release channel).
+                description: OSImage is the system image the node boots (resolved
+                  from the release channel).
                 type: string
               registryPackagesProxyAccessTokenB64:
                 description: |-
