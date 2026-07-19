@@ -40,6 +40,7 @@ internal:
   bootstrapTokens:
     immutable-worker: immutabletoken
     immutable-static: statictoken
+    immutable-permanent: permanenttoken
     worker: mytoken
   capiControllerManagerWebhookCert:
     ca: string
@@ -132,6 +133,12 @@ internal:
     serializedTaints: ""
     nodeType: Static
     kubernetesVersion: "1.34"
+  - name: immutable-permanent
+    systemType: Immutable
+    serializedLabels: ""
+    serializedTaints: ""
+    nodeType: CloudPermanent
+    kubernetesVersion: "1.34"
   machineControllerManagerEnabled: false
 `
 
@@ -169,16 +176,20 @@ var _ = Describe("Module :: node-manager :: helm template :: immutable NodeGroup
 		f.HelmRender(WithFilteredRenderOutput(rendered, []string{"node-group/node-group.yaml"}))
 	})
 
-	It("hands a static immutable group the same NodeConfig userdata", func() {
+	It("hands every manually bootstrapped immutable group the same NodeConfig userdata", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-		secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "manual-bootstrap-for-immutable-static")
-		Expect(secret.Exists()).To(BeTrue())
-		userdata, err := base64.StdEncoding.DecodeString(secret.Field("data.cloud-config").String())
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(string(userdata)).Should(ContainSubstring("kind: NodeConfig"))
-		// bashible's bootstrap script has no business on such a node.
-		Expect(secret.Field(`data.bootstrap\.sh`).Exists()).To(BeFalse())
+		// Static and cloud permanent groups bootstrap their nodes by hand and
+		// are served by the same Secret.
+		for _, ngName := range []string{"immutable-static", "immutable-permanent"} {
+			secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "manual-bootstrap-for-"+ngName)
+			Expect(secret.Exists()).To(BeTrue(), ngName)
+			userdata, err := base64.StdEncoding.DecodeString(secret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred(), ngName)
+			Expect(string(userdata)).Should(ContainSubstring("kind: NodeConfig"), ngName)
+			// bashible's bootstrap script has no business on such a node.
+			Expect(secret.Field(`data.bootstrap\.sh`).Exists()).To(BeFalse(), ngName)
+		}
 	})
 
 	It("bootstraps the immutable group from a NodeConfig and the mutable one from bashible", func() {
