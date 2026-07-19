@@ -148,27 +148,13 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 }
 
 // An external provider ships its settings inside its OCI bundle, not in the
-// candi image. They must be picked up from where the bundle was unpacked: the
-// candi dir is rewritten by every candi download, so a copy placed there does
-// not survive to the next dhctl run.
+// candi image. The fixture is the artifact werf actually packs (see
+// modules/030-cloud-provider-dvp/images/terraform-manager/werf.inc.yaml), not a
+// hand-written copy: the real file carries no `terraform:` key, and a fixture
+// that invents one hides that the loader rejects it.
 func TestBundleSettingsMergedFromDownloadDir(t *testing.T) {
 	downloadDir := t.TempDir()
-	bundleTM := filepath.Join(downloadDir, "dvp", "terraform-manager")
-	require.NoError(t, os.MkdirAll(bundleTM, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(bundleTM, versionFile), []byte(`opentofu: 1.12.0
-terraform: 0.14.8
-kubernetes:
-  namespace: hashicorp
-  cloudName: DVP
-  type: kubernetes
-  version: "2.38.0"
-  artifact: terraform-provider-kubernetes
-  artifactBinary: terraform-provider-kubernetes
-  destinationBinary: terraform-provider-kubernetes
-  vmResourceType: kubernetes_manifest
-  useOpentofu: true
-`), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(bundleTM, planRulesFilename), []byte("vmResource:\n  type: kubernetes_manifest\n"), 0o644))
+	installDVPBundle(t, downloadDir, "dvp")
 
 	store, err := loadOrGetStore(t.Context(), options.DefaultInfrastructureVersions, downloadDir)
 	require.NoError(t, err)
@@ -176,6 +162,22 @@ kubernetes:
 	set, ok := store["dvp"]
 	require.True(t, ok, "provider settings must come from the unpacked bundle")
 	require.Equal(t, "kubernetes_manifest", set.VMResource().Type)
+}
+
+// installDVPBundle lays out an unpacked bundle from the files the DVP module
+// ships, so the test breaks whenever the shipped artifact stops loading.
+func installDVPBundle(t *testing.T, downloadDir, dirName string) {
+	t.Helper()
+
+	moduleCandi := filepath.Join("..", "..", "..", "..", "..", "modules", "030-cloud-provider-dvp", "candi")
+	tm := filepath.Join(downloadDir, dirName, "terraform-manager")
+	require.NoError(t, os.MkdirAll(tm, 0o755))
+
+	for _, name := range []string{versionFile, planRulesFilename} {
+		data, err := os.ReadFile(filepath.Join(moduleCandi, name))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tm, name), data, 0o644))
+	}
 }
 
 // Only the canonical <provider> symlink is read: the digest dir it points at is
@@ -215,4 +217,31 @@ kubernetes:
 	require.Contains(t, store, "dvp")
 	require.NotContains(t, store, "staledvp")
 	require.NotContains(t, store, "partialdvp")
+}
+
+// In-tree providers unpack their terraform-manager bundle into the same
+// download dir, and their fragment describes only themselves — no plan_rules,
+// and only the one tool version they use. Those bundles must be ignored: candi
+// already carries the provider, and treating them as external once broke every
+// provider at once.
+func TestBundleSettingsIgnoreInTreeAndBrokenBundles(t *testing.T) {
+	downloadDir := t.TempDir()
+
+	inTree := filepath.Join(downloadDir, "aws", "terraform-manager")
+	require.NoError(t, os.MkdirAll(inTree, 0o755))
+	awsFragment, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "modules", "030-cloud-provider-aws", "candi", versionFile))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(inTree, versionFile), awsFragment, 0o644))
+
+	broken := filepath.Join(downloadDir, "brokenprovider", "terraform-manager")
+	require.NoError(t, os.MkdirAll(broken, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(broken, versionFile), []byte("не yaml: [{"), 0o644))
+
+	installDVPBundle(t, downloadDir, "dvp")
+
+	store, err := loadOrGetStore(t.Context(), options.DefaultInfrastructureVersions, downloadDir)
+	require.NoError(t, err, "one unusable bundle must not take down the whole store")
+	require.Contains(t, store, "aws", "candi stays authoritative for in-tree providers")
+	require.Contains(t, store, "dvp")
+	require.NotContains(t, store, "brokenprovider")
 }
