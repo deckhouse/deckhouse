@@ -29,7 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	_ "github.com/deckhouse/node-controller/internal/controller/nodeoperation"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -65,6 +67,7 @@ var _ = BeforeSuite(func() {
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
 	Expect(internalv1alpha1.AddToScheme(scheme)).To(Succeed())
+	Expect(v1alpha1.AddToScheme(scheme)).To(Succeed())
 
 	By("bootstrapping the envtest environment with the NodeGroup and NodeConfig CRDs")
 	var err error
@@ -73,14 +76,15 @@ var _ = BeforeSuite(func() {
 		testenv.CRDPaths(
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithNodeConfigCRDFile(),
+			testenv.WithNodeOperationCRDFile(),
 		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	// The node-config controller registered itself via its package init(); since
-	// only this package is compiled into the test binary, NewManager wires up
-	// just that controller.
-	By("starting the manager with the node-config controller")
+	// Both controllers registered themselves via their package init(): the
+	// disruption of a node is a conversation between them, so the suite runs
+	// the pair the cluster runs.
+	By("starting the manager with the node-config and node-operation controllers")
 	mgr, err := testenv.NewManager(cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 

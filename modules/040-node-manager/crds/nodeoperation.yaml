@@ -1,0 +1,166 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodeoperations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: nodeoperations
+    singular: nodeoperation
+    kind: NodeOperation
+    shortNames:
+      - nop
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Phase
+          jsonPath: .status.phase
+          type: string
+        - name: Type
+          jsonPath: .spec.type
+          type: string
+        - name: Node
+          jsonPath: .spec.nodeName
+          type: string
+        - name: Age
+          jsonPath: .metadata.creationTimestamp
+          type: date
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes an operation on a node that interrupts its work: a reboot, an eviction of its workload, or the permission a node needs before applying a configuration it cannot apply without a pause.
+
+            An operation is a record of intent, not a switch: it is created once, carried through its phases by node-manager and the on-node agent, and kept afterwards as the history of what was done to the node and why. Editing the spec of an existing operation is rejected — create another one instead.
+
+            Operations are how disruptive work is coordinated for the nodes of a NodeGroup with `systemType: Immutable`, and the same resource is available to an operator who needs to reboot or drain such a node by hand.
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - type
+                - nodeName
+              x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: the spec of an operation is immutable; create another operation instead
+                - rule: "self.type != 'ApproveDisruption' || has(self.configGeneration)"
+                  message: ApproveDisruption requires .spec.configGeneration
+                - rule: "self.type == 'ApproveDisruption' || !has(self.configGeneration)"
+                  message: .spec.configGeneration is only meaningful for ApproveDisruption
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - Reboot
+                    - Drain
+                    - ApproveDisruption
+                  description: |
+                    The operation to perform on the node:
+
+                    * `Reboot` — reboot the node;
+                    * `Drain` — evict the workload from the node and keep it unschedulable;
+                    * `ApproveDisruption` — allow the node to apply a configuration whose application interrupts it (restarting kubelet or the container runtime, remerging the system extensions, changing the OS image).
+
+                    An `ApproveDisruption` operation is normally created by node-manager in answer to a node that asked for it; the other two are meant for an operator.
+                nodeName:
+                  type: string
+                  minLength: 1
+                  description: |
+                    The name of the node the operation applies to.
+                configGeneration:
+                  type: integer
+                  format: int64
+                  minimum: 1
+                  description: |
+                    The revision of the node's NodeConfig this permission covers (`.metadata.generation` of the NodeConfig object).
+
+                    The permission is deliberately narrow: it authorises the interruption one particular configuration needs, so a configuration published afterwards asks again. Only meaningful for `ApproveDisruption`.
+                drain:
+                  type: object
+                  description: |
+                    How to evict the workload before the node is interrupted. Applies to `Reboot` and `Drain`, and to `ApproveDisruption` when node-manager creates it from a group whose disruption approval mode drains nodes.
+                  properties:
+                    skip:
+                      type: boolean
+                      default: false
+                      description: |
+                        Interrupt the node without evicting its workload first.
+
+                        The workload is then cut off by the interruption instead of being moved, so this is for nodes whose pods must not be evicted (a single-node group, a node running the only replica of something that cannot be moved).
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - InProgress
+                    - Completed
+                    - Failed
+                  description: |
+                    The current phase of the operation:
+
+                    * `Pending` — the operation is queued and node-manager has not started it yet;
+                    * `InProgress` — the node has been prepared (drained, unless the drain was skipped) and is carrying the operation out;
+                    * `Completed` — the operation finished successfully;
+                    * `Failed` — the operation failed. See `conditions` and the events for the reason.
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    The generation of the spec this status reflects.
+                conditions:
+                  type: array
+                  description: |
+                    The latest details of the operation's progress.
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                        maxLength: 316
+                        pattern: '^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$'
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      reason:
+                        type: string
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: '^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$'
+                      message:
+                        type: string
+                        maxLength: 32768
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        minimum: 0

@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -232,9 +233,10 @@ var _ = Describe("NodeConfig controller", func() {
 	})
 
 	// User story: As a cluster operator, I want a node that has to restart
-	// kubelet to apply its config to be drained first, so that the workload
-	// leaves before the interruption instead of being cut off by it.
-	It("drains a node before letting it interrupt itself, then takes it back", func(ctx context.Context) {
+	// kubelet to apply its config to be drained first and to see that happening,
+	// so that the workload leaves before the interruption and I can tell what is
+	// being done to the node and why.
+	It("asks to interrupt a node through a NodeOperation", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-disrupt")
 		createImmutableNodeGroup(ctx, ngName, nil)
 		nodeName := testenv.UniqueName("node")
@@ -256,40 +258,53 @@ var _ = Describe("NodeConfig controller", func() {
 		By("the agent reporting it cannot apply the config without an interruption")
 		requestDisruption(ctx, nodeName, generation)
 
+		// The answer is an operation naming the node and the revision it
+		// covers — the same object an operator would create by hand.
+		var op *v1alpha1.NodeOperation
+		Eventually(func(g Gomega) {
+			op = findOperation(ctx, g, nodeName)
+			g.Expect(op).NotTo(BeNil())
+			g.Expect(op.Spec.Type).To(Equal(v1alpha1.NodeOperationApproveDisruption))
+			g.Expect(op.Spec.ConfigGeneration).To(HaveValue(Equal(generation)))
+			g.Expect(op.Spec.Drain.Skip).To(BeFalse())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// The node is drained before it is handed the operation.
 		node := &corev1.Node{}
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, drainingSource))
+			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, "node-operation"))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		// Permission is withheld until the workload is actually gone.
 		Consistently(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Annotations).NotTo(HaveKey(disruptionApprovedAnnotation))
+			g.Expect(findOperation(ctx, g, nodeName).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationInProgress))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the drain finishing")
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			node.Annotations[nodecommon.DrainedAnnotation] = drainingSource
+			node.Annotations[nodecommon.DrainedAnnotation] = "node-operation"
 			node.Spec.Unschedulable = true
 			g.Expect(k8sClient.Update(ctx, node)).To(Succeed())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		// The permission names the revision it covers, so it cannot be reused
-		// for whatever the operator changes next.
 		Eventually(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Annotations).To(
-				HaveKeyWithValue(disruptionApprovedAnnotation, fmt.Sprintf("%d", generation)))
+			g.Expect(findOperation(ctx, g, nodeName).Status.Phase).To(Equal(v1alpha1.NodeOperationInProgress))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		By("the agent applying the config it was allowed to interrupt for")
-		clearDisruption(ctx, nodeName)
+		By("the node reporting the operation done")
+		Eventually(func(g Gomega) {
+			done := findOperation(ctx, g, nodeName)
+			done.Status.Phase = v1alpha1.NodeOperationCompleted
+			g.Expect(k8sClient.Status().Update(ctx, done)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
+		// The node goes back to the scheduler, and the finished operation stays
+		// as the record of what happened.
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
 			g.Expect(node.Spec.Unschedulable).To(BeFalse())
 			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
-			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -308,12 +323,9 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 		requestDisruption(ctx, nodeName, generation)
 
-		// Nothing happens on its own: no drain, no permission.
+		// Nothing is created on the node's behalf: the operator decides.
 		Consistently(func(g Gomega) {
-			node := &corev1.Node{}
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
-			g.Expect(getNodeConfig(ctx, g, nodeName).Annotations).NotTo(HaveKey(disruptionApprovedAnnotation))
+			g.Expect(findOperation(ctx, g, nodeName)).To(BeNil())
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -371,6 +383,19 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
+
+// findOperation returns the operation covering this node, if the controller
+// asked for one.
+func findOperation(ctx context.Context, g Gomega, nodeName string) *v1alpha1.NodeOperation {
+	ops := &v1alpha1.NodeOperationList{}
+	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
+	for i := range ops.Items {
+		if ops.Items[i].Spec.NodeName == nodeName {
+			return &ops.Items[i]
+		}
+	}
+	return nil
+}
 
 // requestDisruption is what the agent does when the config it was given cannot
 // be applied without restarting kubelet, containerd or the extensions.

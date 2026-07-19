@@ -231,6 +231,29 @@ rules:
 # NodeConfigs - the per-node desired state of olcedar nodes. The node-config
 # controller renders one object per node of an immutable NodeGroup; the on-node
 # agent watches it and owns its status, which is why status is not listed here.
+# NodeOperations - the record of every interruption of a node: node-manager
+# creates the ones a node asks for and carries them through their phases, an
+# operator creates the rest.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - internal.deckhouse.io
   resources:

@@ -53,9 +53,9 @@ import (
 )
 
 const (
-	victimKey        = "node.deckhouse.io/chaos-monkey-victim"
-	nodeGroupLabel   = "node.deckhouse.io/group"
-	machineNodeLabel = "node"
+	victimKey          = "node.deckhouse.io/chaos-monkey-victim"
+	nodeGroupLabel     = "node.deckhouse.io/group"
+	machineNodeLabel   = "node"
 	defaultChaosPeriod = "6h"
 	tickInterval       = time.Minute
 )

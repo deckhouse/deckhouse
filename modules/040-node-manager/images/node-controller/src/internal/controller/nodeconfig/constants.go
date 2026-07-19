@@ -75,15 +75,6 @@ const (
 	// disruptionRequiredCondition is how the agent says it cannot apply the
 	// config it was given without interrupting the node.
 	disruptionRequiredCondition = "DisruptionRequired"
-
-	// disruptionApprovedAnnotation carries the config revision the node is
-	// allowed to interrupt itself for. It lives on the NodeConfig rather than
-	// in its spec: a spec write would bump the very generation it names.
-	disruptionApprovedAnnotation = "node-manager.deckhouse.io/disruption-approved"
-
-	// drainingSource marks the drains this controller asked for, so it only
-	// ever uncordons nodes it cordoned itself.
-	drainingSource = "nodelet"
 )
 
 // defaultOSImage is the olcedar image the node boots from.

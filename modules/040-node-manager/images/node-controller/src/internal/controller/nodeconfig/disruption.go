@@ -19,103 +19,99 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/utils/ptr"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
-// reconcileDisruption answers the node's request to interrupt itself. An agent
-// that cannot apply a config without restarting kubelet, containerd or the
-// system extensions says so in its status and waits; this is the cluster side
-// of that conversation — the same trade bashible nodes make through the
-// disruption-required/-approved annotations on the Node.
+// reconcileDisruption answers a node that cannot apply its config without
+// restarting kubelet, containerd or the system extensions. The answer is a
+// NodeOperation: the node is drained and interrupted through the same resource
+// an operator would use to reboot it by hand, so what is being done to a node —
+// and who asked for it — is visible in one place instead of an annotation.
 //
-// The permission is an annotation naming the config revision it covers, so it
-// authorises one particular change and not everything that follows. It also
-// keeps the spec untouched: writing to the spec would bump the generation the
-// permission refers to.
+// The operation names the config revision it covers, so it authorises one
+// particular change and not everything that follows.
 func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, nc *internalv1alpha1.NodeConfig, logger logr.Logger) error {
 	if !disruptionRequested(nc) {
-		// Nothing pending: give the node back to the scheduler if this
-		// controller was the one that took it away.
-		return r.finishDisruption(ctx, node, logger)
+		return nil
+	}
+
+	existing, err := r.findApproval(ctx, nc)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		// The operation is already on its way; the nodeoperation controller
+		// drains the node and hands it over.
+		return nil
 	}
 
 	if approvalMode(ng) == v1.DisruptionApprovalModeManual {
 		logger.Info("node needs a disruption an operator has to approve",
-			"node", node.Name, "nodeGroup", ng.Name,
-			"annotation", fmt.Sprintf("%s=%d", disruptionApprovedAnnotation, nc.Generation))
+			"node", node.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation)
 		r.Recorder.Event(ng, corev1.EventTypeNormal, "DisruptionRequired",
-			"Node "+node.Name+" is waiting for a manual disruption approval")
+			fmt.Sprintf("Node %s is waiting for a NodeOperation of type ApproveDisruption for config generation %d",
+				node.Name, nc.Generation))
 		return nil
 	}
 
-	if r.needDrain(ng) && !drained(node) {
-		return r.startDrain(ctx, node, logger)
-	}
-
-	return r.approveDisruption(ctx, nc, logger)
+	return r.createApproval(ctx, ng, nc, logger)
 }
 
-// startDrain hands the node to the draining controller, which evicts the pods
-// and reports back through the drained annotation.
-func (r *Reconciler) startDrain(ctx context.Context, node *corev1.Node, logger logr.Logger) error {
-	if node.Annotations[nodecommon.DrainingAnnotation] == drainingSource {
-		return nil
+// findApproval looks for the operation that already covers this revision, so a
+// node is asked about once rather than on every pass.
+func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.NodeConfig) (*v1alpha1.NodeOperation, error) {
+	ops := &v1alpha1.NodeOperationList{}
+	if err := r.Client.List(ctx, ops); err != nil {
+		return nil, fmt.Errorf("list NodeOperations: %w", err)
 	}
-	patch := client.MergeFrom(node.DeepCopy())
-	if node.Annotations == nil {
-		node.Annotations = map[string]string{}
+	for i := range ops.Items {
+		op := &ops.Items[i]
+		if op.Spec.Type != v1alpha1.NodeOperationApproveDisruption ||
+			op.Spec.NodeName != nc.Name ||
+			op.Spec.ConfigGeneration == nil || *op.Spec.ConfigGeneration != nc.Generation {
+			continue
+		}
+		return op, nil
 	}
-	node.Annotations[nodecommon.DrainingAnnotation] = drainingSource
-	if err := r.Client.Patch(ctx, node, patch); err != nil {
-		return fmt.Errorf("start drain of %s: %w", node.Name, err)
-	}
-	logger.Info("draining the node before the disruption it asked for", "node", node.Name)
-	return nil
+	return nil, nil
 }
 
-func (r *Reconciler) approveDisruption(ctx context.Context, nc *internalv1alpha1.NodeConfig, logger logr.Logger) error {
-	revision := strconv.FormatInt(nc.Generation, 10)
-	if nc.Annotations[disruptionApprovedAnnotation] == revision {
-		return nil
+func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, nc *internalv1alpha1.NodeConfig, logger logr.Logger) error {
+	op := &v1alpha1.NodeOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("approve-%s-%d", nc.Name, nc.Generation),
+			Labels: map[string]string{
+				nodeGroupNameLabel: ng.Name,
+				managedByLabel:     managedByValue,
+			},
+		},
+		Spec: v1alpha1.NodeOperationSpec{
+			Type:             v1alpha1.NodeOperationApproveDisruption,
+			NodeName:         nc.Name,
+			ConfigGeneration: ptr.To(nc.Generation),
+			Drain:            &v1alpha1.NodeOperationDrainSpec{Skip: !needDrain(ng)},
+		},
 	}
-	patch := client.MergeFrom(nc.DeepCopy())
-	if nc.Annotations == nil {
-		nc.Annotations = map[string]string{}
+	if err := r.Client.Create(ctx, op); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil
+		}
+		return fmt.Errorf("ask for a disruption of %s: %w", nc.Name, err)
 	}
-	nc.Annotations[disruptionApprovedAnnotation] = revision
-	if err := r.Client.Patch(ctx, nc, patch); err != nil {
-		return fmt.Errorf("approve disruption for %s: %w", nc.Name, err)
-	}
-	logger.Info("disruption approved", "node", nc.Name, "revision", revision)
-	return nil
-}
-
-// finishDisruption returns a node this controller drained to the scheduler.
-// The draining controller owns the eviction; the annotations it keys on are
-// removed here so the node is not left cordoned after the config was applied.
-func (r *Reconciler) finishDisruption(ctx context.Context, node *corev1.Node, logger logr.Logger) error {
-	if node.Annotations[nodecommon.DrainedAnnotation] != drainingSource &&
-		node.Annotations[nodecommon.DrainingAnnotation] != drainingSource {
-		return nil
-	}
-	patch := client.MergeFrom(node.DeepCopy())
-	delete(node.Annotations, nodecommon.DrainingAnnotation)
-	delete(node.Annotations, nodecommon.DrainedAnnotation)
-	node.Spec.Unschedulable = false
-	if err := r.Client.Patch(ctx, node, patch); err != nil {
-		return fmt.Errorf("finish drain of %s: %w", node.Name, err)
-	}
-	logger.Info("node returned to the scheduler after its disruption", "node", node.Name)
+	logger.Info("asked to interrupt the node for its new config",
+		"node", nc.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation, "operation", op.Name)
+	r.Recorder.Event(ng, corev1.EventTypeNormal, "DisruptionRequested",
+		fmt.Sprintf("Created NodeOperation %s to interrupt node %s", op.Name, nc.Name))
 	return nil
 }
 
@@ -124,10 +120,6 @@ func (r *Reconciler) finishDisruption(ctx context.Context, node *corev1.Node, lo
 func disruptionRequested(nc *internalv1alpha1.NodeConfig) bool {
 	cond := meta.FindStatusCondition(nc.Status.Conditions, disruptionRequiredCondition)
 	return cond != nil && cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == nc.Generation
-}
-
-func drained(node *corev1.Node) bool {
-	return node.Annotations[nodecommon.DrainedAnnotation] == drainingSource
 }
 
 func approvalMode(ng *v1.NodeGroup) v1.DisruptionApprovalMode {
@@ -139,7 +131,7 @@ func approvalMode(ng *v1.NodeGroup) v1.DisruptionApprovalMode {
 
 // needDrain mirrors the update-approval rule: a group that would lose its only
 // node to the drain is interrupted without one.
-func (r *Reconciler) needDrain(ng *v1.NodeGroup) bool {
+func needDrain(ng *v1.NodeGroup) bool {
 	if ng.Status.Nodes <= 1 {
 		return false
 	}
