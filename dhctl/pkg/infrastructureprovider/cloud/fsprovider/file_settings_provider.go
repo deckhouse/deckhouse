@@ -15,6 +15,7 @@
 package fsprovider
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
 )
 
 const (
@@ -37,7 +39,7 @@ const (
 )
 
 type (
-	settingsStore map[string]settings.ProviderSettings
+	settingsStore map[string]*settings.Simple
 	loader        func(ctx context.Context, infraVersionsFile, downloadDir string) (settingsStore, error)
 )
 
@@ -110,33 +112,6 @@ func (p *SettingsProvider) GetSettings(_ context.Context, provider string, _ clo
 	return set, nil
 }
 
-func simpleFromMap(s any, terraformVersion, openTofuVersion string) (*settings.Simple, error) {
-	sJSON, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	set := settings.Simple{}
-
-	if err := json.Unmarshal(sJSON, &set); err != nil {
-		return nil, err
-	}
-
-	if err := set.Validate(false); err != nil {
-		return nil, err
-	}
-
-	if set.UseOpenTofu() {
-		set.InfrastructureVersionVal = new(openTofuVersion)
-	} else {
-		set.InfrastructureVersionVal = new(terraformVersion)
-	}
-
-	set.CloudNameVal = new(strings.ToLower(*set.CloudNameVal))
-
-	return &set, nil
-}
-
 // toolVersions are the terraform/opentofu versions every provider entry in a
 // versions file is pinned to.
 type toolVersions struct {
@@ -150,100 +125,97 @@ type versionsFile struct {
 	providers settingsStore
 }
 
+// versionsDoc is that file as it lies on disk: the two tool versions and one
+// entry per provider, all at the top level.
+type versionsDoc struct {
+	Terraform string `json:"terraform"`
+	Opentofu  string `json:"opentofu"`
+
+	providers map[string]json.RawMessage
+}
+
 // loadVersionsFile parses a terraform_versions.yml. A provider bundle ships
 // only the fragment describing itself and omits the tool versions it does not
 // use, so it inherits them from the candi file it extends; the candi file
 // itself is parsed with no inherited versions and must carry both.
 func loadVersionsFile(ctx context.Context, filename string, inherited toolVersions) (versionsFile, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return versionsFile{}, fmt.Errorf("Cannot read infrastructure versions file %s: %v", filename, err)
-	}
-
-	raw := make(map[string]any)
-	if err := yaml.Unmarshal(data, &raw); err != nil {
-		return versionsFile{}, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: %v", filename, err)
-	}
-
-	tools, err := parseToolVersions(ctx, filename, raw, inherited)
+	doc, err := readVersionsDoc(filename)
 	if err != nil {
 		return versionsFile{}, err
 	}
 
-	providers, err := parseProviders(ctx, raw, tools)
+	tools := toolVersions{
+		terraform: cmp.Or(doc.Terraform, inherited.terraform),
+		opentofu:  cmp.Or(doc.Opentofu, inherited.opentofu),
+	}
+	if tools.terraform == "" || tools.opentofu == "" {
+		return versionsFile{}, fmt.Errorf("infrastructure versions file %s must set both terraform and opentofu versions", filename)
+	}
+
+	providers := make(settingsStore, len(doc.providers))
+	for name, entry := range doc.providers {
+		set, err := parseProvider(entry, tools)
+		if err != nil {
+			return versionsFile{}, fmt.Errorf("parse settings for provider %s in %s: %w", name, filename, err)
+		}
+
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found provider settings for %s: %s", name, set.CloudName()))
+		providers[set.CloudName()] = set
+	}
+
+	planRule, err := loadPlanRules(filename)
 	if err != nil {
 		return versionsFile{}, err
 	}
-
-	if err := applyPlanRules(filename, providers); err != nil {
+	if err := attachPlanRules(filename, providers, planRule); err != nil {
 		return versionsFile{}, err
 	}
 
 	return versionsFile{tools: tools, providers: providers}, nil
 }
 
-func parseToolVersions(ctx context.Context, filename string, raw map[string]any, inherited toolVersions) (toolVersions, error) {
-	tools := inherited
-
-	for name, rawSettings := range raw {
-		if name != opentofuKey && name != terraformKey {
-			continue
-		}
-
-		version, ok := rawSettings.(string)
-		if !ok {
-			return toolVersions{}, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for %s version setting", filename, name)
-		}
-
-		if name == opentofuKey {
-			tools.opentofu = version
-		} else {
-			tools.terraform = version
-		}
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found %s version: %s", name, version))
+func readVersionsDoc(filename string) (versionsDoc, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return versionsDoc{}, fmt.Errorf("read infrastructure versions file %s: %w", filename, err)
 	}
 
-	if tools.terraform == "" {
-		return toolVersions{}, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: missing terraform version", filename)
+	doc := versionsDoc{}
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return versionsDoc{}, fmt.Errorf("parse tool versions in %s: %w", filename, err)
 	}
-	if tools.opentofu == "" {
-		return toolVersions{}, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: missing opentofu version", filename)
+	if err := yaml.Unmarshal(data, &doc.providers); err != nil {
+		return versionsDoc{}, fmt.Errorf("parse provider entries in %s: %w", filename, err)
 	}
+	delete(doc.providers, terraformKey)
+	delete(doc.providers, opentofuKey)
 
-	return tools, nil
+	return doc, nil
 }
 
-func parseProviders(ctx context.Context, raw map[string]any, tools toolVersions) (settingsStore, error) {
-	res := make(settingsStore)
-
-	for name, rawSettings := range raw {
-		if name == opentofuKey || name == terraformKey {
-			continue
-		}
-
-		set, err := simpleFromMap(rawSettings, tools.terraform, tools.opentofu)
-		if err != nil {
-			return nil, fmt.Errorf("Cannot unmarshal infrastructure settings for provider %s: %v", name, err)
-		}
-
-		cloudName := strings.ToLower(set.CloudName())
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found provider settings for %s: %s", name, cloudName))
-		res[cloudName] = set
+func parseProvider(entry json.RawMessage, tools toolVersions) (*settings.Simple, error) {
+	set := settings.Simple{}
+	if err := json.Unmarshal(entry, &set); err != nil {
+		return nil, err
+	}
+	if err := set.Validate(false); err != nil {
+		return nil, err
 	}
 
-	return res, nil
+	set.InfrastructureVersionVal = new(tools.terraform)
+	if set.UseOpenTofu() {
+		set.InfrastructureVersionVal = new(tools.opentofu)
+	}
+	set.CloudNameVal = new(strings.ToLower(*set.CloudNameVal))
+
+	return &set, nil
 }
 
-// applyPlanRules attaches the plan rules that sit next to a single-provider
+// attachPlanRules attaches the plan rules that sit next to a single-provider
 // bundle's versions file. Such a bundle must carry them (they say which
 // resource a VM is), and a multi-provider file must not: the rules describe one
 // provider, so finding them there means the two files got out of sync.
-func applyPlanRules(filename string, providers settingsStore) error {
-	planRule, err := loadPlanRules(filename)
-	if err != nil {
-		return err
-	}
-
+func attachPlanRules(filename string, providers settingsStore, planRule *vmresource.Rule) error {
 	if len(providers) != 1 {
 		if planRule != nil {
 			return fmt.Errorf("plan_rules.yml next to %s requires a single-provider bundle, got %d providers", filename, len(providers))
@@ -252,19 +224,14 @@ func applyPlanRules(filename string, providers settingsStore) error {
 	}
 
 	for cloudName, set := range providers {
-		simple, ok := set.(*settings.Simple)
-		if !ok {
-			return fmt.Errorf("provider %s settings have unexpected type %T", cloudName, set)
-		}
-
 		if planRule != nil {
-			simple.VMResourceVal = planRule
-			if err := simple.Validate(false); err != nil {
+			set.VMResourceVal = planRule
+			if err := set.Validate(false); err != nil {
 				return fmt.Errorf("validate provider %s after plan_rules merge: %w", cloudName, err)
 			}
 		}
 
-		if simple.VMResourceVal == nil {
+		if set.VMResourceVal == nil {
 			return fmt.Errorf("single-provider bundle %q requires plan_rules.yml with vmResource next to %s", cloudName, filename)
 		}
 	}
