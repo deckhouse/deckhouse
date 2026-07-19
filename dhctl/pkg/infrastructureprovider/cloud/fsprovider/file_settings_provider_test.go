@@ -17,6 +17,8 @@ package fsprovider
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/name212/govalue"
@@ -94,7 +96,7 @@ func TestProvidersSettings(t *testing.T) {
 
 func TestProviderSettingsLoadError(t *testing.T) {
 	// settings store returns error on not exists file
-	sFailed := newSettingsProvider(t.Context(), "/not/exists/file-aakjdiejfuefuefjej", func(_ context.Context, _ string) (settingsStore, error) {
+	sFailed := newSettingsProvider(t.Context(), "/not/exists/file-aakjdiejfuefuefjej", "", func(_ context.Context, _, _ string) (settingsStore, error) {
 		return nil, fmt.Errorf("file does not exist")
 	})
 	require.Error(t, sFailed.initError)
@@ -113,7 +115,9 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 		require.NoError(t, store.initError)
 		require.NotNil(t, store)
 		require.Len(t, fileToSettingsStore, 1)
-		require.Contains(t, fileToSettingsStore, file)
+		// The store is keyed by the versions file plus the bundle download dir,
+		// since bundles contribute their own provider settings.
+		require.Contains(t, fileToSettingsStore, file+"\x00")
 	}
 
 	allProviders := append(make([]string, 0), tofuProviders...)
@@ -123,10 +127,10 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 		require.Len(t, store.store, len(allProviders))
 	}
 
-	sFirst := newSettingsProvider(t.Context(), file, loadOrGetStore)
+	sFirst := newSettingsProvider(t.Context(), file, "", loadOrGetStore)
 	assertOneStoreInCache(t, sFirst)
 
-	sSecond := newSettingsProvider(t.Context(), file, loadOrGetStore)
+	sSecond := newSettingsProvider(t.Context(), file, "", loadOrGetStore)
 	assertOneStoreInCache(t, sSecond)
 
 	require.Equal(t, sFirst.store, sSecond.store)
@@ -142,4 +146,35 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 	_, err = sFirst.GetSettings(t.Context(), "incorrect", cloud.ProviderAdditionalParams{})
 	require.Error(t, err)
 	assertGettingDoesNotAffectStores(t, sFirst)
+}
+
+// An external provider ships its settings inside its OCI bundle, not in the
+// candi image. They must be picked up from where the bundle was unpacked: the
+// candi dir is rewritten by every candi download, so a copy placed there does
+// not survive to the next dhctl run.
+func TestBundleSettingsMergedFromDownloadDir(t *testing.T) {
+	downloadDir := t.TempDir()
+	bundleTM := filepath.Join(downloadDir, "dvp", "terraform-manager")
+	require.NoError(t, os.MkdirAll(bundleTM, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(bundleTM, versionFile), []byte(`opentofu: 1.12.0
+terraform: 0.14.8
+kubernetes:
+  namespace: hashicorp
+  cloudName: DVP
+  type: kubernetes
+  version: "2.38.0"
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true
+`), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(bundleTM, planRulesFilename), []byte("vmResource:\n  type: kubernetes_manifest\n"), 0o644))
+
+	store, err := loadOrGetStore(t.Context(), options.DefaultInfrastructureVersions, downloadDir)
+	require.NoError(t, err)
+
+	set, ok := store["dvp"]
+	require.True(t, ok, "provider settings must come from the unpacked bundle")
+	require.Equal(t, "kubernetes_manifest", set.VMResource().Type)
 }

@@ -24,9 +24,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 )
 
-const planRulesFilename = "plan_rules.yml"
+const planRulesFilename = providerdir.PlanRulesFilename
 
 type planRulesFile struct {
 	VMResource *vmresource.Rule `json:"vmResource,omitempty"`

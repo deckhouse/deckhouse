@@ -22,6 +22,13 @@ import (
 // ProviderDir returns the stable per-provider root under root
 // (<root>/<provider>). Once a bundle is unpacked it is a symlink to the
 // current ProviderDigestDir.
+// PlanRulesFilename is the terraform plan-rules file of a single-provider
+// bundle. It lives next to terraform_versions.yml and describes exactly that
+// file's provider, so the two must always be written and removed as a pair:
+// a plan_rules.yml next to a multi-provider versions file is rejected by the
+// settings loader.
+const PlanRulesFilename = "plan_rules.yml"
+
 func ProviderDir(root, provider string) string {
 	return filepath.Join(root, strings.ToLower(provider))
 }

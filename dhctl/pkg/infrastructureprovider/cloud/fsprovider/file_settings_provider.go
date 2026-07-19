@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -37,7 +38,7 @@ const (
 
 type (
 	settingsStore map[string]settings.ProviderSettings
-	loader        func(ctx context.Context, infraVersionsFile string) (settingsStore, error)
+	loader        func(ctx context.Context, infraVersionsFile, downloadDir string) (settingsStore, error)
 )
 
 type SettingsProvider struct {
@@ -52,11 +53,13 @@ var (
 	fileToSettingsStore    = make(map[string]settingsStore)
 )
 
-func loadOrGetStore(ctx context.Context, infraVersionsFile string) (settingsStore, error) {
+func loadOrGetStore(ctx context.Context, infraVersionsFile, downloadDir string) (settingsStore, error) {
 	fileSettingsStoreMutex.Lock()
 	defer fileSettingsStoreMutex.Unlock()
 
-	store, ok := fileToSettingsStore[infraVersionsFile]
+	cacheKey := infraVersionsFile + "\x00" + downloadDir
+
+	store, ok := fileToSettingsStore[cacheKey]
 	if ok {
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Providers settings store for terraform versions file %s loaded from cache", infraVersionsFile))
 		return store, nil
@@ -67,15 +70,19 @@ func loadOrGetStore(ctx context.Context, infraVersionsFile string) (settingsStor
 		return nil, err
 	}
 
-	fileToSettingsStore[infraVersionsFile] = store
+	if err := mergeBundleSettings(ctx, store, downloadDir); err != nil {
+		return nil, err
+	}
+
+	fileToSettingsStore[cacheKey] = store
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Providers settings store for terraform versions file %s loaded from file and added to cache", infraVersionsFile))
 
 	return store, nil
 }
 
-func newSettingsProvider(ctx context.Context, infraVersionsFile string, loader loader) *SettingsProvider {
-	store, err := loader(ctx, infraVersionsFile)
+func newSettingsProvider(ctx context.Context, infraVersionsFile, downloadDir string, loader loader) *SettingsProvider {
+	store, err := loader(ctx, infraVersionsFile, downloadDir)
 	if err != nil {
 		return &SettingsProvider{
 			initError: err,
@@ -227,4 +234,34 @@ func loadTerraformVersionFileSettings(ctx context.Context, filename string) (set
 	}
 
 	return res, nil
+}
+
+// mergeBundleSettings adds the settings of every external provider bundle
+// unpacked under downloadDir. A bundle ships its own single-provider
+// terraform_versions.yml (with plan_rules.yml beside it), so its settings are
+// read where they live instead of being copied into the shared candi dir —
+// which the candi image overwrites on every run, leaving the two files
+// describing different providers. Bundle settings win over the candi defaults.
+func mergeBundleSettings(ctx context.Context, store settingsStore, downloadDir string) error {
+	if downloadDir == "" {
+		return nil
+	}
+
+	matches, err := filepath.Glob(filepath.Join(downloadDir, "*", "terraform-manager", versionFile))
+	if err != nil {
+		return fmt.Errorf("look up provider bundle versions files: %w", err)
+	}
+
+	for _, match := range matches {
+		bundle, err := loadTerraformVersionFileSettings(ctx, match)
+		if err != nil {
+			return fmt.Errorf("load provider bundle settings %s: %w", match, err)
+		}
+		for cloudName, set := range bundle {
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider settings for %s taken from bundle %s", cloudName, match))
+			store[cloudName] = set
+		}
+	}
+
+	return nil
 }
