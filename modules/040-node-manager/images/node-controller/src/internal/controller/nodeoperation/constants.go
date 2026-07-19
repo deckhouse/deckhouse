@@ -16,12 +16,19 @@ limitations under the License.
 
 package nodeoperation
 
+import "time"
+
 const (
 	controllerName = "node-operation"
 
 	// conditionProgress is the single condition an operation carries: where it
 	// is and why. The phase says what happened; this says who decided so.
 	conditionProgress = "Progress"
+
+	// operationTimeout bounds how long an operation may wait for the node to
+	// carry it out. A node that says nothing for this long is not coming back
+	// on its own, and an operation left open keeps it out of the scheduler.
+	operationTimeout = 30 * time.Minute
 
 	// drainingSource marks the drains this controller asked for, so it only
 	// releases nodes it took away itself.

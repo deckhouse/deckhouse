@@ -60,6 +60,13 @@ func (r *Reconciler) rolloutSlot(ctx context.Context, ng *v1.NodeGroup, nodeName
 // given. A node that has not reported back yet counts as still updating, so a
 // silent agent holds the rollout rather than letting it run ahead.
 func applied(nc *internalv1alpha1.NodeConfig) bool {
+	// A node waiting for permission to interrupt itself has not applied
+	// anything, whatever else its status says. Counting it as done would free
+	// the slot and walk the change through the whole group while every node
+	// sits waiting.
+	if disruptionRequested(nc) {
+		return false
+	}
 	return nc.Status.ObservedGeneration == nc.Generation && nc.Status.Phase == phaseReady
 }
 

@@ -72,6 +72,10 @@ const (
 	// was given.
 	phaseReady = "Ready"
 
+	// operationNodeLabel names the node an operation was created for, so the
+	// operations of one node can be found without reading everyone else's.
+	operationNodeLabel = "node-manager.deckhouse.io/node"
+
 	// disruptionRequiredCondition is how the agent says it cannot apply the
 	// config it was given without interrupting the node.
 	disruptionRequiredCondition = "DisruptionRequired"

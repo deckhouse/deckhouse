@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
@@ -64,15 +65,15 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 		return nil
 	}
 
-	return r.createApproval(ctx, ng, nc, logger)
+	return r.createApproval(ctx, ng, node, nc, logger)
 }
 
 // findApproval looks for the operation that already covers this revision, so a
 // node is asked about once rather than on every pass.
 func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.NodeConfig) (*v1alpha1.NodeOperation, error) {
 	ops := &v1alpha1.NodeOperationList{}
-	if err := r.Client.List(ctx, ops); err != nil {
-		return nil, fmt.Errorf("list NodeOperations: %w", err)
+	if err := r.Client.List(ctx, ops, client.MatchingLabels{operationNodeLabel: nc.Name}); err != nil {
+		return nil, fmt.Errorf("list NodeOperations of %s: %w", nc.Name, err)
 	}
 	for i := range ops.Items {
 		op := &ops.Items[i]
@@ -81,19 +82,37 @@ func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.Node
 			op.Spec.ConfigGeneration == nil || *op.Spec.ConfigGeneration != nc.Generation {
 			continue
 		}
+		// A finished operation is not one in flight. Treating a failed one as
+		// still pending would leave the node asking forever for permission
+		// nobody is going to grant again.
+		if op.Status.Phase == v1alpha1.NodeOperationCompleted || op.Status.Phase == v1alpha1.NodeOperationFailed {
+			continue
+		}
 		return op, nil
 	}
 	return nil, nil
 }
 
-func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, nc *internalv1alpha1.NodeConfig, logger logr.Logger) error {
+func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, nc *internalv1alpha1.NodeConfig, logger logr.Logger) error {
 	op := &v1alpha1.NodeOperation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("approve-%s-%d", nc.Name, nc.Generation),
+			// Generated rather than derived from the generation: a retry after
+			// a failed attempt needs a name of its own, and the history of what
+			// was tried is worth keeping.
+			GenerateName: fmt.Sprintf("approve-%s-", nc.Name),
 			Labels: map[string]string{
 				nodeGroupNameLabel: ng.Name,
 				managedByLabel:     managedByValue,
+				operationNodeLabel: nc.Name,
 			},
+			// Owned by the node: when the node goes, so does the record of what
+			// was done to it, instead of accumulating forever.
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "v1",
+				Kind:       "Node",
+				Name:       node.Name,
+				UID:        node.UID,
+			}},
 		},
 		Spec: v1alpha1.NodeOperationSpec{
 			Type:             v1alpha1.NodeOperationApproveDisruption,

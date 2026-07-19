@@ -30,6 +30,7 @@ package nodeoperation
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -99,7 +100,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// A finished operation is history: it is kept for the record and never
 	// acted on again. The node goes back to the scheduler — except after a
 	// Drain, which was asked for precisely to keep it out.
-	if op.Status.Phase == v1alpha1.NodeOperationCompleted || op.Status.Phase == v1alpha1.NodeOperationFailed {
+	if terminal(op) {
 		if op.Spec.Type == v1alpha1.NodeOperationDrain {
 			return ctrl.Result{}, nil
 		}
@@ -146,8 +147,32 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Handing the operation to the node: from here the node carries it out and
 	// reports back through the same object.
-	return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationInProgress, "NodePrepared",
-		"The node may carry the operation out", logger)
+	if op.Status.Phase != v1alpha1.NodeOperationInProgress {
+		return ctrl.Result{RequeueAfter: operationTimeout}, r.setPhase(ctx, op, v1alpha1.NodeOperationInProgress, "NodePrepared",
+			"The node may carry the operation out", logger)
+	}
+
+	// The node has had it for a while and said nothing. Something is wrong with
+	// the node, and leaving the operation open would keep it out of the
+	// scheduler forever, with no sign that nothing is coming.
+	if waited := r.since(op); waited > operationTimeout {
+		return ctrl.Result{}, r.fail(ctx, op, "NodeTimedOut",
+			fmt.Sprintf("the node did not report back within %s", operationTimeout), logger)
+	}
+	return ctrl.Result{RequeueAfter: operationTimeout}, nil
+}
+
+// since is how long the operation has been waiting for the node.
+func (r *Reconciler) since(op *v1alpha1.NodeOperation) time.Duration {
+	handed := meta.FindStatusCondition(op.Status.Conditions, conditionProgress)
+	if handed == nil {
+		return 0
+	}
+	return time.Since(handed.LastTransitionTime.Time)
+}
+
+func terminal(op *v1alpha1.NodeOperation) bool {
+	return op.Status.Phase == v1alpha1.NodeOperationCompleted || op.Status.Phase == v1alpha1.NodeOperationFailed
 }
 
 // ensureDrained runs the eviction this operation needs as a Drain operation of
@@ -183,6 +208,16 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 	}
 	if err != nil {
 		return false, fmt.Errorf("read the drain of %s: %w", op.Name, err)
+	}
+
+	// A child of a previous operation with the same name says nothing about
+	// this one: trusting it would hand over a node whose workload is still
+	// running.
+	if !ownedBy(child, op) {
+		if err := r.Client.Delete(ctx, child); err != nil && !apierrors.IsNotFound(err) {
+			return false, fmt.Errorf("replace the stale drain of %s: %w", op.Name, err)
+		}
+		return false, nil
 	}
 
 	switch child.Status.Phase {
@@ -244,6 +279,12 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 	if op.Status.Phase == phase {
 		return nil
 	}
+	// How an operation ended is decided once. The node and this controller both
+	// write here, so without this a late report could reopen a failed operation
+	// and hand a node over that nobody prepared.
+	if terminal(op) {
+		return nil
+	}
 	patch := client.MergeFrom(op.DeepCopy())
 	op.Status.Phase = phase
 	op.Status.ObservedGeneration = op.Generation
@@ -271,4 +312,15 @@ func skipDrain(op *v1alpha1.NodeOperation) bool {
 
 func drained(node *corev1.Node) bool {
 	return node.Annotations[nodecommon.DrainedAnnotation] == drainingSource
+}
+
+// ownedBy reports whether the child was created for this exact operation, not
+// for an earlier one that happened to have the same name.
+func ownedBy(child, parent *v1alpha1.NodeOperation) bool {
+	for _, owner := range child.OwnerReferences {
+		if owner.UID == parent.UID {
+			return true
+		}
+	}
+	return false
 }

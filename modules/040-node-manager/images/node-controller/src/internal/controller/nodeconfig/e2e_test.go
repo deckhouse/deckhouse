@@ -371,6 +371,57 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// A node waiting for permission has not applied anything, whatever its
+	// status claims. If the rollout took the claim at face value, the change
+	// would walk through the whole group while every node sat waiting — exactly
+	// what maxConcurrent exists to prevent.
+	It("does not count a node waiting for a disruption as updated", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-wait")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](110)}
+		})
+		first := testenv.UniqueName("node")
+		second := testenv.UniqueName("node")
+		createNode(ctx, first, ngName)
+		createNode(ctx, second, ngName)
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, first).Spec.Kubelet.MaxPods).To(Equal(110))
+			g.Expect(getNodeConfig(ctx, g, second).Spec.Kubelet.MaxPods).To(Equal(110))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		reportApplied(ctx, first)
+		reportApplied(ctx, second)
+
+		By("raising maxPods, and the node that gets it asking to be interrupted")
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		patch := client.MergeFrom(ng.DeepCopy())
+		ng.Spec.Kubelet.MaxPods = ptr.To[int32](200)
+		Expect(k8sClient.Patch(ctx, ng, patch)).To(Succeed())
+
+		var waiting string
+		Eventually(func(g Gomega) {
+			waiting = ""
+			for _, name := range []string{first, second} {
+				if getNodeConfig(ctx, g, name).Spec.Kubelet.MaxPods == 200 {
+					waiting = name
+				}
+			}
+			g.Expect(waiting).NotTo(BeEmpty())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// The node reports the way the agent does while holding a config: the
+		// generation it is still running, plus the request to interrupt it.
+		nc := getNodeConfig(ctx, Default, waiting)
+		heldGeneration := nc.Generation
+		reportHeld(ctx, waiting, heldGeneration)
+
+		// The other node must not be given the change while this one waits.
+		Consistently(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, first, second)).To(Equal(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	It("leaves a manual group to the operator", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-manual")
 		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
@@ -446,6 +497,30 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
+
+// reportHeld is what the agent publishes while it holds a config it may not
+// apply yet: the generation it is still running, and the request to interrupt.
+func reportHeld(ctx context.Context, name string, heldGeneration int64) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		nc := getNodeConfig(ctx, g, name)
+		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
+			Type:               disruptionRequiredCondition,
+			Status:             metav1.ConditionTrue,
+			Reason:             "KubeletRestartRequired",
+			Message:            "applying this config restarts kubelet",
+			ObservedGeneration: heldGeneration,
+		})
+		// Deliberately the held generation with a Ready phase — an agent that
+		// overstates what it has applied. The rollout must not take a node's
+		// word for it while that same status says the node is still waiting to
+		// be interrupted.
+		nc.Status.ObservedGeneration = heldGeneration
+		nc.Status.Phase = phaseReady
+		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
 
 // findOperation returns the operation covering this node, if the controller
 // asked for one.
