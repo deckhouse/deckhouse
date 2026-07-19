@@ -99,6 +99,10 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 	kubelet := internalv1alpha1.Kubelet{
 		ClusterDomain: in.ClusterDomain,
 		NodeLabels:    renderNodeLabels(ng),
+		// kubelet reads the CA from disk on every start, and on an immutable
+		// node that file is on tmpfs. Without the CA in the config the node
+		// cannot rewrite it after a reboot and kubelet never comes back.
+		CACert: in.KubernetesCA,
 		// Without it the node never gets a providerID, and CAPI cannot match
 		// the Machine it ordered to the Node that registered.
 		ExternalCloudProvider: ng.Spec.NodeType == v1.NodeTypeCloudEphemeral,

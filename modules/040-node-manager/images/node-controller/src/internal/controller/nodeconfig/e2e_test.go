@@ -18,6 +18,7 @@ package nodeconfig
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -50,6 +51,7 @@ const (
 	testContainerdDigest  = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
 	testCNIDigest         = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest     = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+	testClusterCA         = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
 // User story: As a cluster operator, I want the nodes of an immutable NodeGroup
@@ -96,6 +98,11 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Spec.Kubelet.ClusterDomain).To(Equal("cluster.local"))
 			g.Expect(nc.Spec.Kubelet.NodeLabels).To(HaveKeyWithValue(nodecommon.NodeGroupLabel, internalv1alpha1.NodeLabelValue(ngName)))
 			g.Expect(nc.Spec.Kubelet.NodeLabels).To(HaveKeyWithValue("role", internalv1alpha1.NodeLabelValue("worker")))
+
+			// kubelet loads the CA from a file on tmpfs, so the node rewrites
+			// it from here on every boot. A config without it leaves a rebooted
+			// node unable to start kubelet at all.
+			g.Expect(nc.Spec.Kubelet.CACert).To(Equal(base64.StdEncoding.EncodeToString([]byte(testClusterCA))))
 
 			// The node talks to the API servers the cluster actually has.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
@@ -720,6 +727,15 @@ func ensureClusterInputs(ctx context.Context) {
 	ensureObject(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: registryPackagesProxyTokenSecret},
 		Data:       map[string][]byte{registryPackagesProxyTokenKey: []byte("proxy-token")},
+	})
+
+	// In a real cluster kube-controller-manager publishes this ConfigMap into
+	// every namespace; envtest runs the apiserver alone, so the suite creates
+	// it. Without the CA a node cannot start kubelet after a reboot, which is
+	// why rendering refuses to proceed without it.
+	ensureObject(ctx, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: clusterCAConfigMap},
+		Data:       map[string]string{clusterCAKey: testClusterCA},
 	})
 
 	// The cluster's own Kubernetes version: the group's status carries it only

@@ -216,8 +216,9 @@ var _ = Describe("Module :: node-manager :: helm template :: immutable NodeGroup
 		Expect(mutable).Should(ContainSubstring("bootstrap.sh"), "the mutable group must keep the bashible userdata")
 
 		Expect(immutable).Should(ContainSubstring("nodeName: __NODE_NAME__"))
-		Expect(immutable).Should(ContainSubstring("/config/config.ign"))
-		Expect(immutable).Should(ContainSubstring("__INSTALL_DISK__"))
+		// The install disk is chosen on the node: the platform decides the order
+		// the guest sees its disks in, so a group-wide userdata cannot name one.
+		Expect(immutable).Should(ContainSubstring("diskSelector: {}"))
 		Expect(immutable).Should(ContainSubstring("externalCloudProvider: true"))
 		Expect(immutable).Should(ContainSubstring("bootstrapToken: immutabletoken"))
 		Expect(immutable).Should(ContainSubstring("clusterDNS: [\"10.222.0.10\"]"))

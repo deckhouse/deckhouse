@@ -56,6 +56,12 @@ const (
 	// dnsAppLabel finds the in-cluster DNS service.
 	dnsAppLabel = "k8s-app"
 
+	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given.
+	// The node needs it after every reboot: kubelet verifies the API server
+	// against it and refuses to start without the file.
+	clusterCAConfigMap = "kube-root-ca.crt"
+	clusterCAKey       = "ca.crt"
+
 	// apiserverPort is where the node-local API proxy forwards to.
 	apiserverPort = 6443
 

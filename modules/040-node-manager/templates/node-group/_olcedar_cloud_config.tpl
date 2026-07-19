@@ -1,19 +1,20 @@
 {{- /*
   Bootstrap userdata for a node of an olcedar (systemType=Immutable) group.
 
-  Such a node has no bashible: the whole bootstrap is the pair of files the
-  olcedar initramfs picks out of the userdata by basename — config.ign (the
-  install disk layout) and nodeconfig.yaml (the desired state nodelet
-  reconciles). The format is #cloud-config, but there is no cloud-init on the
-  node: only write_files is read, so runcmd and friends would be ignored.
+  Such a node has no bashible: the whole bootstrap is the nodeconfig.yaml the
+  olcedar initramfs picks out of the userdata by basename — the desired state
+  nodelet reconciles. The format is #cloud-config, but there is no cloud-init
+  on the node: only write_files is read, so runcmd and friends would be ignored.
 
-  One Secret serves every machine of the group, so neither the node name nor
-  the install disk can be rendered here: __NODE_NAME__ is substituted on the
-  node from the NoCloud meta-data and __INSTALL_DISK__ from the disks the guest
-  actually has (the platform decides whether the cloud-init CDROM or the root
-  disk comes first). The node-name placeholder is not a valid DNS1123
-  subdomain, so a node that failed to substitute it refuses the config instead
-  of registering under a name shared with its neighbours.
+  One Secret serves every machine of the group, so the node name cannot be
+  rendered here: __NODE_NAME__ is substituted on the node from the NoCloud
+  meta-data. The placeholder is not a valid DNS1123 subdomain, so a node that
+  failed to substitute it refuses the config instead of registering under a
+  name shared with its neighbours.
+
+  The install disk is not named either: the platform decides whether the
+  cloud-init CDROM or the root disk comes first, so the disk is selected on the
+  node — an empty diskSelector takes the first whole disk that is not a CDROM.
 */ -}}
 {{- define "node_group_olcedar_cloud_config" }}
   {{- $context := index . 0 }}
@@ -31,9 +32,6 @@
          parse, so the document must start with the header and nothing before it. */ -}}
 #cloud-config
 write_files:
-- path: /config/config.ign
-  content: |
-{{ $context.Files.Get "olcedar/config.ign" | indent 4 }}
 - path: /config/nodeconfig.yaml
   content: |
     apiVersion: internal.deckhouse.io/v1alpha1
@@ -44,6 +42,8 @@ write_files:
         node.deckhouse.io/group: {{ $ng.name }}
     spec:
       nodeName: __NODE_NAME__
+      storage:
+        diskSelector: {}
       # TODO: resolve the OS image from the release channel once it is published
       # there; the same pin lives in node-controller's nodeconfig controller.
       osImage: registry.deckhouse.io/deckhouse/olcedar@v0.1

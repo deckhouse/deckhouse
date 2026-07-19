@@ -42,6 +42,11 @@ type clusterInputs struct {
 	// ClusterDomain and ClusterDNS configure kubelet's DNS.
 	ClusterDomain string
 	ClusterDNS    string
+	// KubernetesCA is the base64-encoded cluster CA. kubelet loads it from disk
+	// on every start, and on an immutable node that file lives on tmpfs — so a
+	// config without the CA leaves the node unable to start kubelet after a
+	// reboot, with no way to get the certificate back.
+	KubernetesCA string
 	// SysextDigests maps an extension name to the image digest to pull.
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
@@ -75,6 +80,12 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 
 	in.ClusterDomain, in.ClusterDNS = s.readDNS(ctx)
 
+	ca, err := s.readClusterCA(ctx)
+	if err != nil {
+		return in, err
+	}
+	in.KubernetesCA = ca
+
 	digests, err := s.readSysextDigests(ctx, kubernetesVersion)
 	if err != nil {
 		return in, err
@@ -88,6 +99,21 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	in.RegistryPackagesProxyToken = token
 
 	return in, nil
+}
+
+// readClusterCA returns the cluster CA, base64-encoded the way the NodeConfig
+// carries it. It comes from the ConfigMap Kubernetes publishes for every
+// ServiceAccount, so there is nothing module-specific to keep in sync.
+func (s *sourceReader) readClusterCA(ctx context.Context) (string, error) {
+	cm := &corev1.ConfigMap{}
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterCAConfigMap}, cm); err != nil {
+		return "", fmt.Errorf("read the cluster CA from %s/%s: %w", kubeSystemNS, clusterCAConfigMap, err)
+	}
+	ca := cm.Data[clusterCAKey]
+	if ca == "" {
+		return "", fmt.Errorf("configmap %s/%s carries no %s", kubeSystemNS, clusterCAConfigMap, clusterCAKey)
+	}
+	return base64.StdEncoding.EncodeToString([]byte(ca)), nil
 }
 
 // readAPIServerEndpoints merges the control-plane pod IPs with the kubernetes
