@@ -138,6 +138,12 @@ spec:
                   format: date-time
                   description: |
                     When the node was handed the operation. The wait for the node is measured from here.
+                finishedAt:
+                  type: string
+                  format: date-time
+                  description: |
+                    When the operation reached a terminal phase. A finished operation is kept as the
+                    record of what was done to the node and is collected once it is a day old.
                 conditions:
                   type: array
                   description: |

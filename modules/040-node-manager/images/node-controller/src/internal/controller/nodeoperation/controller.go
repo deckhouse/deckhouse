@@ -56,6 +56,24 @@ func init() {
 
 type Reconciler struct {
 	register.Base
+
+	// APIReader reads past the manager's cache. Deciding whether to create a
+	// child operation from a cached list creates a second one whenever the
+	// cache has not caught up with the first.
+	APIReader client.Reader
+}
+
+// Setup wires the uncached reader.
+func (r *Reconciler) Setup(mgr ctrl.Manager) error {
+	r.APIReader = mgr.GetAPIReader()
+	return nil
+}
+
+func (r *Reconciler) reader() client.Reader {
+	if r.APIReader != nil {
+		return r.APIReader
+	}
+	return r.Client
 }
 
 // SetupWatches follows what an operation waits on: the node it is draining, and
@@ -97,14 +115,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	// A finished operation is history: it is kept for the record and never
-	// acted on again. The node goes back to the scheduler — except after a
-	// Drain, which was asked for precisely to keep it out.
+	// A finished operation is history: it is kept for the record and never acted
+	// on again, until it is old enough to collect. The node goes back to the
+	// scheduler — except after a Drain, which was asked for precisely to keep it
+	// out.
 	if terminal(op) {
-		if op.Spec.Type == v1alpha1.NodeOperationDrain {
-			return ctrl.Result{}, nil
+		if op.Spec.Type != v1alpha1.NodeOperationDrain {
+			if err := r.releaseNode(ctx, op, logger); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
-		return ctrl.Result{}, r.releaseNode(ctx, op, logger)
+		return r.collect(ctx, op, logger)
 	}
 
 	node := &corev1.Node{}
@@ -113,6 +134,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, r.fail(ctx, op, "NodeNotFound",
 				fmt.Sprintf("node %s does not exist", op.Spec.NodeName), logger)
 		}
+		return ctrl.Result{}, err
+	}
+
+	if err := r.ownedByNode(ctx, op, node); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -174,6 +199,57 @@ func terminal(op *v1alpha1.NodeOperation) bool {
 	return op.Status.Phase == v1alpha1.NodeOperationCompleted || op.Status.Phase == v1alpha1.NodeOperationFailed
 }
 
+// retention is how long a finished operation is kept. It is the record of what
+// was done to a node, which is worth having while someone is still looking into
+// what happened, and worth nothing a day later — a cluster that reboots nodes
+// or rolls configs out produces one of these per node per change, so without a
+// limit the list only grows.
+const retention = 24 * time.Hour
+
+// collect deletes a finished operation once it is older than the retention, and
+// otherwise asks to be called again when it is. The parent takes its child
+// Drain with it, since the child is owned by it.
+func (r *Reconciler) collect(ctx context.Context, op *v1alpha1.NodeOperation, logger logr.Logger) (ctrl.Result, error) {
+	// An operation that finished before this field existed, or whose finish was
+	// never recorded, is measured from its creation instead of being kept
+	// forever.
+	finished := op.CreationTimestamp.Time
+	if op.Status.FinishedAt != nil {
+		finished = op.Status.FinishedAt.Time
+	}
+
+	if age := time.Since(finished); age < retention {
+		return ctrl.Result{RequeueAfter: retention - age}, nil
+	}
+
+	if err := r.Client.Delete(ctx, op); err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, fmt.Errorf("collect the finished operation %s: %w", op.Name, err)
+	}
+	logger.Info("collected a finished operation", "operation", op.Name, "type", op.Spec.Type, "node", op.Spec.NodeName)
+	return ctrl.Result{}, nil
+}
+
+// ownedByNode makes the node the owner of an operation created for it, so that
+// a node leaving the cluster takes the operations addressed to it along.
+// Operations this controller creates already carry an owner; the ones an
+// operator writes by hand do not.
+func (r *Reconciler) ownedByNode(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node) error {
+	if len(op.OwnerReferences) > 0 {
+		return nil
+	}
+	patch := client.MergeFrom(op.DeepCopy())
+	op.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "v1",
+		Kind:       "Node",
+		Name:       node.Name,
+		UID:        node.UID,
+	}}
+	if err := r.Client.Patch(ctx, op, patch); err != nil {
+		return fmt.Errorf("set the owner of %s: %w", op.Name, err)
+	}
+	return nil
+}
+
 // ensureDrained runs the eviction this operation needs as a Drain operation of
 // its own, and reports whether it has finished. The child belongs to its
 // parent: deleting the parent takes the record of its eviction with it.
@@ -224,9 +300,13 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 
 // drainOf finds the eviction this operation spawned, by ownership rather than
 // by a name that anyone could have taken.
+//
+// The read goes straight to the API server. A cached list can still be missing
+// a child created moments ago, and the caller creates one when it finds none —
+// which is how a single operation ended up with two evictions of the same node.
 func (r *Reconciler) drainOf(ctx context.Context, op *v1alpha1.NodeOperation) (*v1alpha1.NodeOperation, error) {
 	children := &v1alpha1.NodeOperationList{}
-	if err := r.Client.List(ctx, children, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
+	if err := r.reader().List(ctx, children, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
 		return nil, fmt.Errorf("list the drains of %s: %w", op.Name, err)
 	}
 	for i := range children.Items {
@@ -298,6 +378,10 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 	if phase == v1alpha1.NodeOperationInProgress && op.Status.StartedAt == nil {
 		now := metav1.Now()
 		op.Status.StartedAt = &now
+	}
+	if phase == v1alpha1.NodeOperationCompleted || phase == v1alpha1.NodeOperationFailed {
+		now := metav1.Now()
+		op.Status.FinishedAt = &now
 	}
 	meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
 		Type:               conditionProgress,

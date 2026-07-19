@@ -118,6 +118,12 @@ type NodeOperationStatus struct {
 	// +optional
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
+	// FinishedAt is when the operation reached a terminal phase. A finished
+	// operation is kept as the record of what was done to the node and is
+	// collected once it is old enough, which is measured from here.
+	// +optional
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+
 	// Conditions carry the details of the operation's progress.
 	// +optional
 	// +listType=map

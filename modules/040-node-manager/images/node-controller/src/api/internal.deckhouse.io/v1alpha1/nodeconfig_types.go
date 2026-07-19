@@ -151,7 +151,7 @@ type DiskSelector struct {
 	Size string `json:"size,omitempty"`
 	// Type matches the disk kind.
 	// +optional
-	// +kubebuilder:validation:Enum=ssd;hdd;nvme;sd
+	// +kubebuilder:validation:Enum=SSD;HDD;NVMe;SD
 	Type string `json:"type,omitempty"`
 	// Rotational matches spinning (true) vs solid-state (false) disks.
 	// +optional

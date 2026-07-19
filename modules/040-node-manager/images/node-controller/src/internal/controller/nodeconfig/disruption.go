@@ -70,9 +70,13 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 
 // findApproval looks for the operation that already covers this revision, so a
 // node is asked about once rather than on every pass.
+//
+// The read goes straight to the API server: the caller creates an approval when
+// it finds none, and a cached list that has not caught up with the previous one
+// yields a second request for permission for the same revision.
 func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.NodeConfig) (*v1alpha1.NodeOperation, error) {
 	ops := &v1alpha1.NodeOperationList{}
-	if err := r.Client.List(ctx, ops, client.MatchingLabels{operationNodeLabel: nc.Name}); err != nil {
+	if err := r.sources.reader().List(ctx, ops, client.MatchingLabels{operationNodeLabel: nc.Name}); err != nil {
 		return nil, fmt.Errorf("list NodeOperations of %s: %w", nc.Name, err)
 	}
 	for i := range ops.Items {

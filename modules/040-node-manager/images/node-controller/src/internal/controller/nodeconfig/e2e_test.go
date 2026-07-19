@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -331,6 +332,92 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(node.Spec.Unschedulable).To(BeFalse())
 			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// One eviction, not one per reconcile: the operation is reconciled again
+		// every time its own status changes, and a cached lookup that has not
+		// caught up with the child it just created makes another.
+		Consistently(func(g Gomega) {
+			ops := &v1alpha1.NodeOperationList{}
+			g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
+			drains := 0
+			for i := range ops.Items {
+				if ops.Items[i].Spec.Type != v1alpha1.NodeOperationDrain {
+					continue
+				}
+				for _, owner := range ops.Items[i].OwnerReferences {
+					if owner.Name == op.Name {
+						drains++
+					}
+				}
+			}
+			g.Expect(drains).To(Equal(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As an operator, I want finished operations to disappear on
+	// their own, so that the list stays the record of what is happening rather
+	// than everything that ever happened.
+	It("collects a finished operation once it is old enough", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-gc")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		op := &v1alpha1.NodeOperation{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("old")},
+			Spec: v1alpha1.NodeOperationSpec{
+				Type:     v1alpha1.NodeOperationDrain,
+				NodeName: nodeName,
+			},
+		}
+		Expect(k8sClient.Create(ctx, op)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		By("the operation having finished a day ago")
+		Eventually(func(g Gomega) {
+			fresh := &v1alpha1.NodeOperation{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
+			fresh.Status.Phase = v1alpha1.NodeOperationCompleted
+			finished := metav1.NewTime(time.Now().Add(-25 * time.Hour))
+			fresh.Status.FinishedAt = &finished
+			g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Eventually(func(g Gomega) {
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, &v1alpha1.NodeOperation{})
+			g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "the finished operation must be collected")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// A record of what was done to a node is worth having while it is recent.
+	It("keeps a freshly finished operation", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-keep")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		op := &v1alpha1.NodeOperation{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("recent")},
+			Spec: v1alpha1.NodeOperationSpec{
+				Type:     v1alpha1.NodeOperationDrain,
+				NodeName: nodeName,
+			},
+		}
+		Expect(k8sClient.Create(ctx, op)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		Eventually(func(g Gomega) {
+			fresh := &v1alpha1.NodeOperation{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
+			fresh.Status.Phase = v1alpha1.NodeOperationCompleted
+			now := metav1.Now()
+			fresh.Status.FinishedAt = &now
+			g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Consistently(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, &v1alpha1.NodeOperation{})).To(Succeed())
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As an operator, I want to drain an immutable node by creating

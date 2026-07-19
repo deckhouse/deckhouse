@@ -390,10 +390,10 @@ spec:
                       type:
                         description: Type matches the disk kind.
                         enum:
-                        - ssd
-                        - hdd
-                        - nvme
-                        - sd
+                        - SSD
+                        - HDD
+                        - NVMe
+                        - SD
                         type: string
                       wwid:
                         description: WWID matches the World Wide Identifier (glob).
