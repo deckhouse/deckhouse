@@ -85,7 +85,8 @@ type NodeGroupSpec struct {
 	// Type of nodes in group: CloudEphemeral, CloudPermanent, CloudStatic, Static. Field is required
 	NodeType NodeType `json:"nodeType,omitempty"`
 
-	// OS mutability of the nodes in group: Mutable (bashible), Immutable (olcedar). Optional, defaults to Mutable.
+	// How the nodes of the group are managed: Mutable (bashible), Immutable (olcedar,
+	// a type 1 hypervisor). Optional, defaults to Mutable.
 	OSType OSType `json:"osType,omitempty"`
 
 	// Maximum drain time of CloudEphemeral machines in seconds

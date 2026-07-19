@@ -62,8 +62,8 @@ const (
 )
 
 // NodeGroupSpec defines the desired state of NodeGroup (v1alpha2 version)
-// OSType selects how the node OS is managed: the classic mutable OS configured
-// by bashible, or the immutable OS (olcedar) reconciled by the on-node agent
+// OSType selects how the node is managed: the classic mutable node configured
+// by bashible, or an olcedar node — a type 1 hypervisor — reconciled by the on-node agent
 // from a NodeConfig object.
 // +kubebuilder:validation:Enum=Mutable;Immutable
 type OSType string

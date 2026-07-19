@@ -93,7 +93,7 @@ func renderExtensions(digests map[string]string) []internalv1alpha1.Extension {
 }
 
 // renderKubelet maps the kubelet settings a NodeGroup carries onto the node.
-// Settings the immutable OS cannot honour are rejected by the admission webhook
+// Settings an olcedar node cannot honour are rejected by the admission webhook
 // instead of being silently dropped here.
 func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.Kubelet {
 	kubelet := internalv1alpha1.Kubelet{

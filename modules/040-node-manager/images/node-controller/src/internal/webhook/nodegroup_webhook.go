@@ -128,7 +128,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
 		}
-		// Switching an existing group between the bashible and the immutable OS
+		// Switching an existing group between the bashible and the olcedar
 		// would have to re-provision every node in it; that migration is not
 		// implemented, so the field is fixed at creation time.
 		if osTypeOrDefault(oldNG) != osTypeOrDefault(ng) {
@@ -367,8 +367,8 @@ func osTypeOrDefault(ng *v1.NodeGroup) v1.OSType {
 	return ng.Spec.OSType
 }
 
-// validateImmutableNodeGroup rejects settings that an immutable OS node cannot
-// honour. The immutable OS ships containerd and kubelet as signed system
+// validateImmutableNodeGroup rejects settings that an olcedar node cannot
+// honour. Such a node ships containerd and kubelet as signed system
 // extensions and has no shell, so runtime selection, node-local tuning that
 // bashible used to perform, and SSH-based provisioning have no implementation
 // behind them. Denying them up front is better than accepting a config that
@@ -379,7 +379,7 @@ func validateImmutableNodeGroup(ng *v1.NodeGroup) error {
 	}
 
 	// staticInstances provisioning goes through CAPS, which bootstraps nodes
-	// over SSH; the immutable OS has no SSH server.
+	// over SSH; an olcedar node has no SSH server.
 	if ng.Spec.StaticInstances != nil {
 		return fmt.Errorf(".spec.staticInstances is not supported with osType=Immutable: static provisioning bootstraps nodes over SSH")
 	}
@@ -391,12 +391,12 @@ func validateImmutableNodeGroup(ng *v1.NodeGroup) error {
 	}
 
 	if ng.Spec.Kubelet != nil {
-		// The immutable OS has a single writable partition; the kubelet root
+		// An olcedar node has a single writable partition; the kubelet root
 		// directory is fixed at /var/lib/kubelet.
 		if ng.Spec.Kubelet.RootDir != "" {
 			return fmt.Errorf(".spec.kubelet.rootDir is not supported with osType=Immutable: the kubelet root directory is fixed")
 		}
-		// Swap is not configured on the immutable OS.
+		// Swap is not configured on an olcedar node.
 		if ng.Spec.Kubelet.MemorySwap != nil {
 			return fmt.Errorf(".spec.kubelet.memorySwap is not supported with osType=Immutable")
 		}

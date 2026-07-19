@@ -228,7 +228,7 @@ rules:
   - get
   - list
   - watch
-# NodeConfigs - the per-node desired state of immutable OS nodes. The node-config
+# NodeConfigs - the per-node desired state of olcedar nodes. The node-config
 # controller renders one object per node of an immutable NodeGroup; the on-node
 # agent watches it and owns its status, which is why status is not listed here.
 - apiGroups:

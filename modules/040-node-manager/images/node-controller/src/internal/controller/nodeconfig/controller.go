@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Package nodeconfig renders a NodeConfig object for every node of an
-// immutable-OS NodeGroup. Such nodes carry no bashible: the on-node agent
+// an olcedar NodeGroup. Such nodes carry no bashible: the on-node agent
 // watches its own NodeConfig, reconciles the node towards it and reports the
 // outcome back through the object's status. This controller is the writer of
 // that desired state, built from the NodeGroup the node belongs to plus the

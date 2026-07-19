@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the internal.deckhouse.io
-// v1alpha1 API group. NodeConfig is the per-node desired state for immutable OS
+// v1alpha1 API group. NodeConfig is the per-node desired state for olcedar
 // nodes: node-controller renders it from a NodeGroup, the on-node agent
 // (nodelet) watches it and reports back through status.
 // +kubebuilder:object:generate=true

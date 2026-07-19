@@ -924,7 +924,7 @@ func TestLoadProviderClusterConfig_InvalidJSON(t *testing.T) {
 	}
 }
 
-// immutableNodeGroup returns a NodeGroup that an immutable OS node can honour:
+// immutableNodeGroup returns a NodeGroup that an olcedar node can honour:
 // cloud-ephemeral provisioning and nothing that needs a shell on the node.
 func immutableNodeGroup(name string) *v1.NodeGroup {
 	ng := baseNodeGroup(name, v1.NodeTypeCloudEphemeral)

@@ -108,9 +108,9 @@ spec:
                     - Hybrid
                 osType:
                   description: |
-                    How the node OS is managed:
-                    - `Mutable` (default) — the classic OS configured on the fly by bashible;
-                    - `Immutable` — the immutable OS: the on-node agent reconciles the node from a NodeConfig object, bashible is not used.
+                    How the node is managed:
+                    - `Mutable` (default) — the classic node configured on the fly by bashible;
+                    - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
 
                     The field cannot be changed after the NodeGroup is created.
                   type: string
@@ -755,9 +755,9 @@ spec:
                     - Hybrid
                 osType:
                   description: |
-                    How the node OS is managed:
-                    - `Mutable` (default) — the classic OS configured on the fly by bashible;
-                    - `Immutable` — the immutable OS: the on-node agent reconciles the node from a NodeConfig object, bashible is not used.
+                    How the node is managed:
+                    - `Mutable` (default) — the classic node configured on the fly by bashible;
+                    - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
 
                     The field cannot be changed after the NodeGroup is created.
                   type: string
@@ -1445,9 +1445,9 @@ spec:
                     - Static
                 osType:
                   description: |
-                    How the node OS is managed:
-                    - `Mutable` (default) — the classic OS configured on the fly by bashible;
-                    - `Immutable` — the immutable OS: the on-node agent reconciles the node from a NodeConfig object, bashible is not used.
+                    How the node is managed:
+                    - `Mutable` (default) — the classic node configured on the fly by bashible;
+                    - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
 
                     The field cannot be changed after the NodeGroup is created.
                   type: string

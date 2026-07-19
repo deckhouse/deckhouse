@@ -69,7 +69,7 @@ const (
 	registryPackagesDigestsKey = "registrypackages"
 )
 
-// defaultOSImage is the immutable OS image the node boots from.
+// defaultOSImage is the olcedar image the node boots from.
 //
 // TODO: resolve this from the Deckhouse release channel once the OS image is
 // published there; until then the image is pinned to a known-good build so the
