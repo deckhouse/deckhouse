@@ -25,7 +25,7 @@ title: "Cloud provider — OpenStack: настройки"
 
 ## Список необходимых сервисов OpenStack
 
-Список сервисов OpenStack, необходимых для работы Deckhouse Kubernetes Platform в OpenStack:
+Список сервисов, необходимых для работы Deckhouse Kubernetes Platform в OpenStack:
 
 | Сервис                     |                         Версия API                         |
 | :------------------------- | :--------------------------------------------------------: |

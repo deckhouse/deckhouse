@@ -25,7 +25,7 @@ If you need to configure a module because, say, you have a bare metal cluster an
 
 ## List of required OpenStack services
 
-A list of OpenStack services required for Deckhouse Kubernetes Platform to work in OpenStack:
+A list of services required for Deckhouse Kubernetes Platform to work in OpenStack:
 
 | Service                      |                         API Version                      |
 | :------------------------- | :--------------------------------------------------------: |
