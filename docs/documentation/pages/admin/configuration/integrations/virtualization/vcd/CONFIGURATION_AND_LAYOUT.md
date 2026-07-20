@@ -3,6 +3,18 @@ title: Layouts and configuration in VMware Cloud Director
 permalink: en/admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
 ---
 
+## List of required VMware Cloud Director services
+
+The following VMware Cloud Director service must be available for Deckhouse Kubernetes Platform to operate:
+
+| Service                   | API version      |
+| :------------------------ | :---------:      |
+| VMware Cloud Director API | `37.2` and later |
+
+{% alert level="info" %}
+For VMware Cloud Director API versions earlier than `37.2`, compatibility mode for legacy API versions is used.
+{% endalert %}
+
 ## Layouts
 
 Deckhouse Kubernetes Platform supports two layouts for deploying resources in VCD.
