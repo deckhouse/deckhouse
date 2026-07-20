@@ -30,26 +30,6 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
       key: clusterUUID
 {{- end -}}
 
-{{- define "capdvp_controller_manager_ports" -}}
-- name: webhook-server
-  containerPort: 4202
-  protocol: TCP
-{{- end -}}
-
-{{- define "capdvp_controller_manager_volume_mounts" -}}
-- name: capdvp-webhook-tls
-  mountPath: "/tmp/k8s-webhook-server/serving-certs"
-  readOnly: true
-{{- end -}}
-
-{{- define "capdvp_controller_manager_volumes" -}}
-- name: capdvp-webhook-tls
-  secret:
-    secretName: capdvp-webhook-tls
-    defaultMode: 420
-{{- end -}}
-
-
 {{- if not (default false (dig "nodes" "disabled" false .Values.cloudProviderDvp)) }}
 {{- $capiConfig := dict -}}
 {{- $_ := set $capiConfig "fullname" "capdvp-controller-manager" -}}
