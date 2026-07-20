@@ -341,7 +341,7 @@ metadata:
   name: storageclasses
 spec:
   grantedResource:
-    apiVersion: storage.k8s.io/v1
+    apiGroup: storage.k8s.io
     kind: StorageClass
   enforcement: Managed
   defaultAvailability: All

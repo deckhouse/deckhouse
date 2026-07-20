@@ -49,7 +49,7 @@ const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 const globalValues = `
   clusterIsBootstrapped: true
-  enabledModules: ["vertical-pod-autoscaler"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -163,6 +163,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			ccmClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:cloud-controller-manager")
 			ccmClusterRoleBinding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:cloud-controller-manager")
 			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
 
 			ebsControllerPluginDeployment := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			ebsCSIDriver := f.KubernetesGlobalResource("CSIDriver", "ebs.csi.aws.com")
@@ -281,6 +282,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 
 			// user story #2
 			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmVPA.Exists()).To(BeTrue())
 			Expect(ccmServiceAccount.Exists()).To(BeTrue())
 			Expect(ccmClusterRole.Exists()).To(BeTrue())
 			Expect(ccmClusterRoleBinding.Exists()).To(BeTrue())
@@ -404,7 +406,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
 				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]`)
 				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
 				f.HelmRender()
 			})
@@ -435,17 +437,126 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
+	Context("SecurityPolicyException resources", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "admission-policy-engine-crd"]`)
+			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render SecurityPolicyException for CCM", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			spe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-controller-manager")
+			Expect(spe.Exists()).To(BeTrue())
+		})
+
+		It("Should render SecurityPolicyException for CSI controller", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			spe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-controller")
+			Expect(spe.Exists()).To(BeTrue())
+		})
+
+		It("Should render SecurityPolicyException for CSI node", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			spe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-node")
+			Expect(spe.Exists()).To(BeTrue())
+		})
+
+		It("Should NOT render SecurityPolicyException when admission-policy-engine-crd is absent", func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSpe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmSpe.Exists()).To(BeFalse())
+
+			csiControllerSpe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-controller")
+			Expect(csiControllerSpe.Exists()).To(BeFalse())
+
+			csiNodeSpe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-node")
+			Expect(csiNodeSpe.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Node termination handler", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render node-termination-handler DaemonSet", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ds := f.KubernetesResource("DaemonSet", moduleNamespace, "node-termination-handler")
+			Expect(ds.Exists()).To(BeTrue())
+		})
+
+		It("Should render node-termination-handler RBAC resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			sa := f.KubernetesResource("ServiceAccount", moduleNamespace, "node-termination-handler")
+			Expect(sa.Exists()).To(BeTrue())
+
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:node-termination-handler")
+			Expect(cr.Exists()).To(BeTrue())
+
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:node-termination-handler")
+			Expect(crb.Exists()).To(BeTrue())
+		})
+
+		Context("VPA enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA for node-termination-handler", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				vpa := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "node-termination-handler")
+				Expect(vpa.Exists()).To(BeTrue())
+			})
+		})
+
+		Context("VPA disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should not render VPA for node-termination-handler", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				vpa := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "node-termination-handler")
+				Expect(vpa.Exists()).To(BeFalse())
+			})
+		})
+	})
+
 	Context("AWS with existing CNI secret data", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
-			f.ValuesSet("cloudProviderAws.internal.cniSecretData", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`cni: %s
+			f.ValuesSet("cloudProviderAws.internal.cniSecretData", base64.StdEncoding.EncodeToString(fmt.Appendf(nil, `cni: %s
 flannel: %s
 `,
 				base64.StdEncoding.EncodeToString([]byte("flannel")),
 				base64.StdEncoding.EncodeToString([]byte(`{"podNetworkMode":"host-gw"}`)),
-			))))
+			)))
 			f.HelmRender()
 		})
 
