@@ -1,6 +1,5 @@
-{{/* TODO: Change after merging PR*/}}
-{{- $version := "fix/huawei-cve" }}
-{{- $version_common := "fix/huawei-cve" }}
+{{- $version := "v0.7.3" }}
+{{- $version_common := "v0.8.1" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless

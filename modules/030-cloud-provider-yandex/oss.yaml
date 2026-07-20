@@ -12,7 +12,7 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: ccm-yandex
-  version: "fix/cve-yandex-ccm" # TODO: Change after merging PR
+  version: v0.33.4
 
 - name: Yandex Cloud CSI driver
   link: https://github.com/deckhouse/yandex-csi-driver
@@ -20,7 +20,7 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: csi-yandex
-  version: "fix/cve-yandex-csi" # TODO: Change after merging PR
+  version: v0.15.2
 
 - name: Yandex Cloud Cluster API provider
   link: https://github.com/yandex-cloud/cluster-api-provider-yandex
