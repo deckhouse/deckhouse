@@ -162,7 +162,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (pod) (avg_over_time(kube_controller_pod{namespace=~\"$namespace\", pod=\"$pod\"}[$__range]))",
+          "expr": "max by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\", pod=\"$pod\"}[$__range]))",
           "format": "table",
           "hide": true,
           "instant": true,
@@ -1361,7 +1361,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({__name__=~\"DCGM_FI_DEV_GPU_UTIL|DCGM_FI_PROF_SM_ACTIVE|DCGM_FI_PROF_GR_ENGINE_ACTIVE|DCGM_FI_DEV_FB_USED\",exported_namespace!=\"\"},exported_namespace{source=\"deckhouse\"})",
+          "query": "label_values({__name__=~\"DCGM_FI_DEV_GPU_UTIL|DCGM_FI_PROF_SM_ACTIVE|DCGM_FI_PROF_GR_ENGINE_ACTIVE|DCGM_FI_DEV_FB_USED\",source=\"deckhouse\",exported_namespace!=\"\"},exported_namespace)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -1391,7 +1391,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({__name__=~\"DCGM_FI_DEV_GPU_UTIL|DCGM_FI_PROF_SM_ACTIVE|DCGM_FI_PROF_GR_ENGINE_ACTIVE|DCGM_FI_DEV_FB_USED\",exported_namespace=\"$namespace\",exported_pod!=\"\"},exported_pod{source=\"deckhouse\"})",
+          "query": "label_values({__name__=~\"DCGM_FI_DEV_GPU_UTIL|DCGM_FI_PROF_SM_ACTIVE|DCGM_FI_PROF_GR_ENGINE_ACTIVE|DCGM_FI_DEV_FB_USED\",source=\"deckhouse\",exported_namespace=\"$namespace\",exported_pod!=\"\"},exported_pod)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,

@@ -598,7 +598,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"d8-system\", pod=~\"webhook-handler-.*\", container!=\"POD\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{source=\"deckhouse\", namespace=\"d8-system\", pod=~\"webhook-handler-.*\", container!=\"POD\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "{{ pod }}",
           "refId": "A"

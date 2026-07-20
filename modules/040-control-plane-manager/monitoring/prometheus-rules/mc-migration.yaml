@@ -3,7 +3,7 @@
     - alert: D8ObsoletePublishAPIinUserAuthn
       for: 5m
       expr: |
-        d8_obsolete_publishapi_in_user_authn == 1
+        d8_obsolete_publishapi_in_user_authn{source="deckhouse"} == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager
@@ -55,7 +55,7 @@
     - alert: D8ObsoleteGlobalControlPlaneResourcesRequests
       for: 5m
       expr: |
-        d8_obsolete_global_control_plane_resources_requests == 1
+        d8_obsolete_global_control_plane_resources_requests{source="deckhouse"} == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager
@@ -145,7 +145,7 @@
     - alert: D8ObsoleteEncryptionAlgorithmInClusterConfiguration
       for: 5m
       expr: |
-        d8_obsolete_encryption_algorithm_in_cluster_configuration == 1
+        d8_obsolete_encryption_algorithm_in_cluster_configuration{source="deckhouse"} == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager
@@ -191,7 +191,7 @@
     - alert: D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig
       for: 5m
       expr: |
-        d8_control_plane_manager_obsolete_moduleconfig{moduleconfig="monitoring-kubernetes-control-plane"} == 1
+        d8_control_plane_manager_obsolete_moduleconfig{source="deckhouse", moduleconfig="monitoring-kubernetes-control-plane"} == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager

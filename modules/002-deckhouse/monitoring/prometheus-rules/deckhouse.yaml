@@ -166,6 +166,8 @@
         This alert often indicates that the Deckhouse Pod is experiencing connectivity issues with the Internet.
 
   - record: d8:deckhouse_queue_is_hung:with_head
+    labels:
+      source: deckhouse
     expr: |
       (max by (pod, instance, queue) (
         min_over_time(deckhouse_tasks_queue_length{source="deckhouse", queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])
@@ -175,8 +177,8 @@
 
   - alert: D8DeckhouseQueueIsHung
     expr: |
-      d8:deckhouse_queue_is_hung:with_head
-      * on(module) group_left() max by (module) (deckhouse_mm_module_info{critical="false", module!=""})
+      d8:deckhouse_queue_is_hung:with_head{source="deckhouse"}
+      * on(module) group_left() max by (module) (deckhouse_mm_module_info{source="deckhouse", critical="false", module!=""})
     for: 10m
     labels:
       severity_level: "6"
@@ -207,8 +209,8 @@
 
   - alert: D8DeckhouseQueueIsHungCritical
     expr: |
-      d8:deckhouse_queue_is_hung:with_head
-      * on(module) group_left() max by (module) (deckhouse_mm_module_info{critical="true", module!=""})
+      d8:deckhouse_queue_is_hung:with_head{source="deckhouse"}
+      * on(module) group_left() max by (module) (deckhouse_mm_module_info{source="deckhouse", critical="true", module!=""})
     for: 10m
     labels:
       severity_level: "4"
@@ -239,7 +241,7 @@
 
   - alert: D8DeckhouseQueueIsHungGlobal
     expr: |
-      d8:deckhouse_queue_is_hung:with_head{module=""}
+      d8:deckhouse_queue_is_hung:with_head{source="deckhouse", module=""}
     for: 10m
     labels:
       severity_level: "4"
@@ -697,7 +699,7 @@
           d8 k -n d8-system logs -f -l app=deckhouse
           ```
   - alert: DeckhouseMigratedModuleNotDownloaded
-    expr: d8_migrated_module_not_downloaded == 1
+    expr: d8_migrated_module_not_downloaded{source="deckhouse"} == 1
     for: 10m
     labels:
       severity_level: "6"
@@ -763,7 +765,7 @@
   rules:
   - alert: D8DeckhouseObsoleteMonitoringDeckhouseModuleConfig
     expr: |
-      d8_deckhouse_obsolete_moduleconfig{moduleconfig="monitoring-deckhouse"} == 1
+      d8_deckhouse_obsolete_moduleconfig{source="deckhouse", moduleconfig="monitoring-deckhouse"} == 1
     for: 5m
     labels:
       severity_level: "9"

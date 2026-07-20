@@ -68,7 +68,7 @@
   - alert: D8TerraformStateExporterPodIsNotReady
     expr: |
       min by (pod) (
-        kube_controller_pod{namespace="d8-system", controller_type="Deployment", controller_name="terraform-state-exporter"}
+        kube_controller_pod{source="deckhouse", namespace="d8-system", controller_type="Deployment", controller_name="terraform-state-exporter"}
         * on (pod) group_right() kube_pod_status_ready{source="deckhouse", condition="true", namespace="d8-system"}
       ) != 1
     for: 10m

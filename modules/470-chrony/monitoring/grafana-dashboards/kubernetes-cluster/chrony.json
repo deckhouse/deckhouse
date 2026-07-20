@@ -408,7 +408,7 @@
           "refId": "C"
         },
         {
-          "expr": "max by (node) (max_over_time(chrony_tracking_last_offset_seconds:abs{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_tracking_last_offset_seconds:abs{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -416,7 +416,7 @@
           "refId": "D"
         },
         {
-          "expr": "max by (node) (max_over_time(chrony_rtt_seconds{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_rtt_seconds{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -503,7 +503,7 @@
       "targets": [
         {
           "alias": "Frequency",
-          "expr": "max_over_time(chrony_rtt_seconds{node=~\"$node\"}[$__rate_interval])",
+          "expr": "max_over_time(chrony_rtt_seconds{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
           "groupBy": [
             {
