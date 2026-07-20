@@ -1697,7 +1697,7 @@ To add a GPU node to the cluster, perform the following steps:
 1. Install the NVIDIA driver and NVIDIA Container Toolkit.
 
    Install the NVIDIA driver and NVIDIA Container Toolkit directly on the nodes, either manually or via the [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource.
-   Current NodeGroupConfiguration examples for the `gpu` NodeGroup (Ubuntu, Debian, CentOS, RED OS, Astra Linux) are available in the [`gpu` module FAQ](/modules/gpu/faq.html#how-do-i-work-with-gpu-nodes).
+   Current NodeGroupConfiguration examples for the `gpu` NodeGroup (Ubuntu, Debian, CentOS) are available in the [`gpu` module FAQ](/modules/gpu/faq.html#how-do-i-work-with-gpu-nodes).
 
 1. After the configuration is applied, perform a bootstrap and reboot the nodes so that settings are applied and the drivers get installed.
 
