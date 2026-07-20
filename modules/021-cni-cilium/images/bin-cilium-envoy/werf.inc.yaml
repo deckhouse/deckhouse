@@ -4,7 +4,7 @@
 {{- $ciliumProxyCacheRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-v1" }}
 {{- $ciliumProxyDepsRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-lfs-v1" }}
 #  to force manual creation of fresh build cache
-{{- $buildWithPreparedCacheAndDeps := false }}
+{{- $buildWithPreparedCacheAndDeps := true }}
 #
 ---
 # #####################################################################
