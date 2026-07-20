@@ -11,6 +11,7 @@
           (kube_pod_status_ready{source="deckhouse", condition="true"} == 1)
           * on (pod, namespace) group_right()
           kube_controller_pod{
+            source="deckhouse",
             controller_type="DaemonSet",
             namespace="kube-system",
             controller_name="d8-control-plane-manager"

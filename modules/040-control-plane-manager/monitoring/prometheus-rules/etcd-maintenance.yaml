@@ -3,7 +3,7 @@
     - alert: D8InvalidEtcdDefragCronSchedule
       for: 5m
       expr: |
-        d8_invalid_etcd_defrag_cron_schedule == 1
+        d8_invalid_etcd_defrag_cron_schedule{source="deckhouse"} == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager

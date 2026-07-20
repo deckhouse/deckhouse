@@ -7,7 +7,7 @@
   - alert: D8SignatureErrorsDetected
     for: 30m
     expr: |
-      increase(apiserver_storage_signature_errors_total{mode="enforce"}[5m]) > 0
+      increase(apiserver_storage_signature_errors_total{source="deckhouse", mode="enforce"}[5m]) > 0
     labels:
       severity_level: "2"
       tier: cluster
@@ -37,7 +37,7 @@
   - alert: D8SignatureErrorsDetected
     for: 30m
     expr: |
-      increase(apiserver_storage_signature_errors_total{mode=~"rollback|migrate"}[5m]) > 0
+      increase(apiserver_storage_signature_errors_total{source="deckhouse", mode=~"rollback|migrate"}[5m]) > 0
     labels:
       severity_level: "7"
       tier: cluster

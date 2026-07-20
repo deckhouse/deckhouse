@@ -4,11 +4,13 @@
     expr: |
       (
         kube_deployment_spec_replicas{
+          source="deckhouse",
           namespace="d8-user-authz",
           deployment="permission-browser-apiserver"
         }
         -
         kube_deployment_status_replicas_available{
+          source="deckhouse",
           namespace="d8-user-authz",
           deployment="permission-browser-apiserver"
         }

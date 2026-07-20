@@ -98,7 +98,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (\n  rate(controller_runtime_reconcile_errors_total{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
+          "expr": "sum (\n  rate(controller_runtime_reconcile_errors_total{source=\"deckhouse\", \n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -172,7 +172,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (\n  workqueue_depth{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }\n)",
+          "expr": "sum (\n  workqueue_depth{source=\"deckhouse\", \n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -246,7 +246,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(\n  0.99,\n  sum by (le) (\n    rate(controller_runtime_reconcile_time_seconds_bucket{\n      namespace=\"d8-cloud-instance-manager\",\n      job=\"node-controller\"\n    }[1m])\n  )\n)",
+          "expr": "histogram_quantile(\n  0.99,\n  sum by (le) (\n    rate(controller_runtime_reconcile_time_seconds_bucket{source=\"deckhouse\", \n      namespace=\"d8-cloud-instance-manager\",\n      job=\"node-controller\"\n    }[1m])\n  )\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -316,7 +316,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (\nnode_controller_cache_objects{\nnamespace=\"d8-cloud-instance-manager\",\njob=\"node-controller\"\n}\n)",
+          "expr": "sum (\nnode_controller_cache_objects{source=\"deckhouse\", \nnamespace=\"d8-cloud-instance-manager\",\njob=\"node-controller\"\n}\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -381,7 +381,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(go_goroutines{namespace=\"d8-cloud-instance-manager\", pod=~\"node-controller.*\"})",
+          "expr": "sum(go_goroutines{source=\"deckhouse\", namespace=\"d8-cloud-instance-manager\", pod=~\"node-controller.*\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -453,7 +453,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(\ngo_memstats_heap_alloc_bytes{\nnamespace=\"d8-cloud-instance-manager\",\npod=~\"node-controller.*\"\n}\n)/1024/1024",
+          "expr": "sum(\ngo_memstats_heap_alloc_bytes{source=\"deckhouse\", \nnamespace=\"d8-cloud-instance-manager\",\npod=~\"node-controller.*\"\n}\n)/1024/1024",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
@@ -521,7 +521,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(go_memstats_heap_objects{namespace=\"d8-cloud-instance-manager\", pod=~\"node-controller.*\"})",
+          "expr": "sum(go_memstats_heap_objects{source=\"deckhouse\", namespace=\"d8-cloud-instance-manager\", pod=~\"node-controller.*\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -664,7 +664,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by(pod) (\n  max(kube_controller_pod{node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (rate(container_cpu_usage_seconds_total{node=~\".*\", container!=\"POD\", pod=~\".*\", namespace=\"d8-cloud-instance-manager\"}[$__rate_interval]))\n)",
+          "expr": "sum by(pod) (\n  max(kube_controller_pod{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", node=~\".*\", container!=\"POD\", pod=~\".*\", namespace=\"d8-cloud-instance-manager\"}[$__rate_interval]))\n)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -848,7 +848,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (\n  max(kube_controller_pod{node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_rss{node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
+          "expr": "sum (\n  max(kube_controller_pod{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_rss{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RSS",
@@ -861,7 +861,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (\n  max(kube_controller_pod{node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_cache{node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
+          "expr": "sum (\n  max(kube_controller_pod{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_cache{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Cache",
@@ -874,7 +874,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (\n  max(kube_controller_pod{node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_swap{node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
+          "expr": "sum (\n  max(kube_controller_pod{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_swap{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Swap",
@@ -887,7 +887,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (\n  max(kube_controller_pod{node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
+          "expr": "sum (\n  max(kube_controller_pod{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Working set bytes without kmem",
@@ -900,7 +900,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (\n  max(kube_controller_pod{node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory:kmem{node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
+          "expr": "sum (\n  max(kube_controller_pod{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", controller=\"deploy/node-controller\", pod=~\".*\"}) by(pod)\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory:kmem{source=\"deckhouse\", node=~\".*\", namespace=\"d8-cloud-instance-manager\", pod=~\".*\", container!=\"POD\"}[$__rate_interval]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Kmem",
@@ -1009,7 +1009,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (webhook)(\nrate(\ncontroller_runtime_webhook_latency_seconds_count{\nnamespace=\"d8-cloud-instance-manager\",\npod=~\"node-controller.*\"\n}[$__rate_interval]\n))",
+          "expr": "sum by (webhook)(\nrate(\ncontroller_runtime_webhook_latency_seconds_count{source=\"deckhouse\", \nnamespace=\"d8-cloud-instance-manager\",\npod=~\"node-controller.*\"\n}[$__rate_interval]\n))",
           "instant": false,
           "interval": "1m",
           "legendFormat": "{{controller}}",
@@ -1105,7 +1105,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (controller) (\n  rate(controller_runtime_reconcile_total{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
+          "expr": "sum by (controller) (\n  rate(controller_runtime_reconcile_total{source=\"deckhouse\", \n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
           "instant": false,
           "interval": "1m",
           "legendFormat": "{{controller}}",
@@ -1202,7 +1202,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(\n  0.99,\n  sum by (controller, le) (\n    rate(controller_runtime_reconcile_time_seconds_bucket{\n      namespace=\"d8-cloud-instance-manager\",\n      job=\"node-controller\"\n    }[1m])\n  )\n)",
+          "expr": "histogram_quantile(\n  0.99,\n  sum by (controller, le) (\n    rate(controller_runtime_reconcile_time_seconds_bucket{source=\"deckhouse\", \n      namespace=\"d8-cloud-instance-manager\",\n      job=\"node-controller\"\n    }[1m])\n  )\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1293,7 +1293,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by(controller)(\ncontroller_runtime_active_workers{\njob=\"node-controller\"\n}\n)",
+          "expr": "sum by(controller)(\ncontroller_runtime_active_workers{source=\"deckhouse\", \njob=\"node-controller\"\n}\n)",
           "instant": false,
           "legendFormat": "{{controller}}",
           "range": true,
@@ -1385,7 +1385,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (controller) (\n  rate(controller_runtime_reconcile_errors_total{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
+          "expr": "sum by (controller) (\n  rate(controller_runtime_reconcile_errors_total{source=\"deckhouse\", \n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1479,7 +1479,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (operation) (\n  rate(node_controller_client_requests_total{\n    namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\"\n  }[$__rate_interval])\n)",
+          "expr": "sum by (operation) (\n  rate(node_controller_client_requests_total{source=\"deckhouse\", \n    namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\"\n  }[$__rate_interval])\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1593,7 +1593,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by(api_group, kind) (node_controller_cache_objects)",
+          "expr": "sum by(api_group, kind) (node_controller_cache_objects{source=\"deckhouse\"})",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -1692,7 +1692,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (name) (\n  workqueue_depth{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }\n)",
+          "expr": "sum by (name) (\n  workqueue_depth{source=\"deckhouse\", \n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1773,7 +1773,7 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "max(\n  go_gc_duration_seconds{\n    namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\",\n    quantile=\"0.75\"\n  }\n)"
+                  "max(\n  go_gc_duration_seconds{\n    source=\"deckhouse\", namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\",\n    quantile=\"0.75\"\n  }\n)"
                 ],
                 "prefix": "All except:",
                 "readOnly": true
@@ -1819,7 +1819,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max(\n  go_gc_duration_seconds{\n    namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\",\n    quantile=\"0.75\"\n  }\n)",
+          "expr": "max(\n  go_gc_duration_seconds{\n    source=\"deckhouse\", namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\",\n    quantile=\"0.75\"\n  }\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,

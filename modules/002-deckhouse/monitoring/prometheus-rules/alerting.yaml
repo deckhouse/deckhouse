@@ -248,7 +248,7 @@
         ```
 
   - alert: ApplicationIsInMaintenanceMode
-    expr: sum(deckhouse_application_maintenance{state="NoResourceReconciliation"}) by (namespace, name) > 0
+    expr: sum(deckhouse_application_maintenance{source="deckhouse", state="NoResourceReconciliation"}) by (namespace, name) > 0
     labels:
       severity_level: "6"
     annotations:
