@@ -23,6 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -34,11 +35,12 @@ func PrepareBootstrap(
 	nodeIP string,
 	metaConfig *config.MetaConfig,
 	globalOptions *options.GlobalOptions,
+	pkiProvider registry.PKIProvider,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBootstrap")
 	defer span.End()
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP, pkiProvider)
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -42,5 +43,35 @@ func TestState_BashibleStepsStatus_RoundTrip(t *testing.T) {
 
 	got, err := s.BashibleStepsStatus(t.Context())
 	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
+func TestState_RegistryPKI_NotFoundWhenNothingSaved(t *testing.T) {
+	s := NewBootstrapState(cache.NewTestCache())
+
+	pki, ok, err := s.RegistryPKI(t.Context())
+	require.NoError(t, err)
+	require.False(t, ok)
+	require.Equal(t, registry.PKI{}, pki)
+}
+
+func TestState_RegistryPKI_RoundTrip(t *testing.T) {
+	s := NewBootstrapState(cache.NewTestCache())
+
+	want := registry.PKI{
+		CA: registry.PKICertKey{Cert: "cert-data", Key: "key-data"},
+		ROUser: registry.PKIUser{
+			Name: "ro", Password: "ro-pass", PasswordHash: "ro-hash",
+		},
+		RWUser: registry.PKIUser{
+			Name: "rw", Password: "rw-pass", PasswordHash: "rw-hash",
+		},
+	}
+
+	require.NoError(t, s.SaveRegistryPKI(t.Context(), want))
+
+	got, ok, err := s.RegistryPKI(t.Context())
+	require.NoError(t, err)
+	require.True(t, ok)
 	require.Equal(t, want, got)
 }

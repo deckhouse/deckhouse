@@ -142,3 +142,14 @@ func TestRunner_PushStepsStatus_Success(t *testing.T) {
 	require.Contains(t, captured[0], validChecksum)
 	require.Contains(t, captured[0], "000_step_one")
 }
+
+func TestRunner_ClearBundleStepsDir(t *testing.T) {
+	var captured []string
+	node := newTestNode(t, nil, nil, &captured)
+
+	r := NewRunner(node, slog.Default())
+
+	require.NoError(t, r.clearBundleStepsDir(t.Context()))
+	require.Len(t, captured, 1)
+	require.Equal(t, "rm -rf "+bundleStepsDir, captured[0])
+}

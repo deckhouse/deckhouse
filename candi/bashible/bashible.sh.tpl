@@ -559,6 +559,15 @@ function main() {
         echo ===
         return 0
       else
+        # dhctl attributes all subsequent output to whichever step last
+        # printed an "=== Step: ..." header (see bashibleStepsHeaderRegexp in
+        # lib-connection), which otherwise would still be the PREVIOUS
+        # (skipped) step here since this branch fails without ever running
+        # the step. Emit our own header first so this failure is correctly
+        # attributed to this step, not the last one that happened to skip.
+        echo ===
+        echo "=== Step: $step"
+        echo ===
         >&2 echo "ERROR: Step ${step_base} already completed in a previous bootstrap attempt with different content."
         >&2 echo "ERROR: Recorded checksum: ${step_recorded_checksum}, current checksum: ${step_checksum}."
         >&2 echo "ERROR: Resuming would re-run it against a node that may already reflect its old version, which is unsafe."

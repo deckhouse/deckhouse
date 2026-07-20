@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -26,6 +27,7 @@ const (
 	PostBootstrapResultCacheKey      = "post-bootstrap-result"
 	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
 	BashibleStepsStatusCacheKey      = "bashible-bundle-steps-status"
+	RegistryPKICacheKey              = "registry-pki"
 )
 
 type State struct {
@@ -74,6 +76,32 @@ func (s *State) BashibleStepsStatus(ctx context.Context) (map[string]string, err
 	}
 
 	return statuses, nil
+}
+
+// SaveRegistryPKI persists the generated registry CA/user PKI so subsequent
+// bootstrap attempts for the same cluster reuse it instead of generating a
+// new one every process invocation (which would push different credentials
+// than an earlier, possibly interrupted, attempt already used).
+func (s *State) SaveRegistryPKI(ctx context.Context, pki registry.PKI) error {
+	return s.cache.SaveStruct(ctx, RegistryPKICacheKey, pki)
+}
+
+// RegistryPKI loads the previously saved registry PKI. ok is false, with no
+// error, if nothing has been saved yet.
+func (s *State) RegistryPKI(ctx context.Context) (pki registry.PKI, ok bool, err error) {
+	inCache, err := s.cache.InCache(ctx, RegistryPKICacheKey)
+	if err != nil {
+		return registry.PKI{}, false, err
+	}
+	if !inCache {
+		return registry.PKI{}, false, nil
+	}
+
+	if err := s.cache.LoadStruct(ctx, RegistryPKICacheKey, &pki); err != nil {
+		return registry.PKI{}, false, err
+	}
+
+	return pki, true, nil
 }
 
 func (s *State) PostBootstrapScriptResult(ctx context.Context) ([]byte, error) {

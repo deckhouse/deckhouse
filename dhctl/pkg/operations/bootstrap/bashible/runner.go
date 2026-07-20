@@ -42,6 +42,9 @@ const (
 	// bundleStepsStatusDir must match STEPS_STATUS_DIR set up in bashible.sh.tpl.
 	bundleStepsStatusDir = "/var/lib/bashible/bundle_steps_status"
 
+	// bundleStepsDir must match BUNDLE_STEPS_DIR set up in bashible.sh.tpl.
+	bundleStepsDir = "/var/lib/bashible/bundle_steps"
+
 	stepsStatusPollInterval = 15 * time.Second
 )
 
@@ -334,6 +337,17 @@ func (r *Runner) attemptExecuteBundle(
 	stopStepsStatusPolling := r.startStepsStatusPolling(ctx, params.OnStepsStatus)
 	defer stopStepsStatusPolling()
 
+	// The uploaded tar is only ever extracted on top of whatever is already
+	// on the node ("tar x" adds/overwrites, it never deletes) and bashible.sh
+	// itself only clears this directory on the non-local (converge) path.
+	// Without this, a step removed from the current build (e.g. renamed,
+	// deleted, or reordered) keeps lingering in bundle_steps and keeps
+	// getting executed on every future attempt, forever out of sync with
+	// what dhctl actually built.
+	if err := r.clearBundleStepsDir(ctx); err != nil {
+		return err
+	}
+
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
@@ -351,6 +365,21 @@ func (r *Runner) attemptExecuteBundle(
 
 		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 	}
+	return nil
+}
+
+// clearBundleStepsDir removes any step files left over from a previous
+// bundle upload, so the directory ends up containing exactly what the
+// current build produced once the fresh tar is extracted on top of it.
+func (r *Runner) clearBundleStepsDir(ctx context.Context) error {
+	cmd := r.nodeInterface.Command("rm", "-rf", bundleStepsDir)
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(10 * time.Second)
+
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("clear bundle steps dir: %w", err)
+	}
+
 	return nil
 }
 

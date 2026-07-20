@@ -731,7 +731,16 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 	return out, nil
 }
 
-func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP string) (map[string]interface{}, error) {
+// ConfigForBashibleBundleTemplate builds the template data map for rendering
+// bashible bundle steps. pkiProvider supplies the registry CA/user PKI; pass
+// nil to generate a fresh one each call (e.g. one-off preview/debug
+// rendering). Callers that need PKI stable across repeated calls (resumed
+// bootstrap attempts) should pass a provider that caches its result.
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP string, pkiProvider registry.PKIProvider) (map[string]interface{}, error) {
+	if pkiProvider == nil {
+		pkiProvider = registry.GeneratePKI
+	}
+
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -798,7 +807,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 	// Registry
 	registryContext, err := m.Registry.
 		Manifest().
-		BashibleContext(registry.GeneratePKI)
+		BashibleContext(pkiProvider)
 	if err != nil {
 		return nil, fmt.Errorf("create registry bashible context: %s", err)
 	}
