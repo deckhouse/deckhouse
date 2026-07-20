@@ -84,7 +84,7 @@ spec:
 ---
 # Pure L4 route for the apiserver: matches by port only (no SNI), so it serves both external
 # kubelet traffic (api.<vcp>:6443) and in-cluster clients that dial the ClusterIP by IP.
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: TCPRoute
 metadata:
   name: ${VCP_NAME}-api
