@@ -9,7 +9,7 @@
 changelog-update:
   stage: .post
   image:
-    name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/changelog-generator:967d8ee7
+    name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/changelog-generator:17272f72
   extends:
     - .rules:on_release_branch
   resource_group: changelog-update
