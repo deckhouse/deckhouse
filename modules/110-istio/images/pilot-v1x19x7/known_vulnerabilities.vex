@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-084a7487582aa7ad96f78596487d12d0e4a107351cb796d2f0d93f3deea1ca4e",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Компонент Istio Pilot (istiod) использует gRPC в составе control-plane. Уязвимость проявляется только на gRPC-серверах с авторизацией на основе псевдо-заголовка :path (включая google.golang.org/grpc/authz), когда политика содержит явные deny для канонических путей и по умолчанию разрешает прочие запросы — тогда неканонический :path без ведущего «/» может не сопоставиться с deny. В данном образе такая комбинация path-based interceptors и политики не используется, поэтому описанный сценарий обхода авторизации на исполняемом пути недоступен.",
+      "impact_statement": "CVE-2026-33186 requires a gRPC server with path-based authz interceptors (deny rules + fallback allow). This component does not configure grpc-go authz that way; the vulnerable execute path is unused.",
       "timestamp": "2026-03-25T08:24:25.865706119Z"
     },
     {
@@ -29,7 +29,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Компонент Istio Pilot (istiod) использует библиотеку go.opentelemetry.io/otel/sdk как зависимость. Уязвимость CVE-2026-39883 связана с детектированием ресурсов в SDK: на платформах BSD и Solaris вызывается утилита kenv без абсолютного пути, что теоретически допускает подмену через PATH (CWE-426), см. GHSA-hfvc-g4fc-pqhx. Образ pilot собран и выполняется в контейнере на Linux; указанный путь исполнения относится к BSD/Solaris и на типовом рабочем окружении Deckhouse не задействован, поэтому эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "CVE-2026-39883 affects OpenTelemetry SDK resource detection that invokes BSD/Solaris kenv without an absolute path. This component runs on Linux in Kubernetes; that code path is unused.",
       "timestamp": "2026-04-13T11:00:41.218374056Z"
     },
     {
@@ -43,7 +43,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Prometheus stored XSS in web UI (CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79) — Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (Graph, Metric Explorer и др.) при отображении имён метрик и значений лейблов, в т.ч. после приёма данных через remote write или OTLP receiver. Бинарник Istio Pilot (istiod) не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.45.0 (Istio 1.19.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory (актуальные затронутые версии — ветка 3.x сервера). Эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "Prometheus stored XSS in the web UI does not apply: this binary does not run the Prometheus server or its UI. github.com/prometheus/prometheus is a library dependency only.",
       "timestamp": "2026-04-22T15:23:14.529183647Z"
     },
     {
@@ -57,7 +57,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Prometheus remote read endpoint DoS via crafted snappy payload (CVE-2026-42154, GHSA-8rm2-7qqf-34qm, CWE-400) — Уязвимость относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: некорректная валидация длины snappy-payload может привести к исчерпанию памяти и отказу в обслуживании. Бинарник Istio Pilot (istiod) не запускает сервер Prometheus и не обрабатывает запросы к /api/v1/read; зависимость github.com/prometheus/prometheus v0.45.0 (Istio 1.19.x) подтягивается как библиотека. Эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "Prometheus remote-read DoS via crafted snappy payload does not apply: this binary does not run the Prometheus server or handle /api/v1/read.",
       "timestamp": "2026-05-20T15:18:01.529183647Z"
     },
     {
@@ -71,9 +71,24 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Prometheus stored XSS in legacy web UI heatmap (CVE-2026-44903, GHSA-fw8g-cg8f-9j28, CWE-79) — Уязвимость относится к отображению heatmap в устаревшем веб-UI сервера Prometheus (histogram bucket label values, флаг --enable-feature=old-ui). Бинарник Istio Pilot (istiod) не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.45.0 (Istio 1.19.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "Prometheus stored XSS in the legacy heatmap UI does not apply: this binary does not run the Prometheus server or its UI.",
       "timestamp": "2026-05-20T15:18:22.529183647Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 applies to the golang.org/x/crypto/openpgp package, which is marked as unmaintained and unsafe by design. In this component, golang.org/x/crypto is a transitive dependency and crypto/openpgp is not imported and is not on the binary execute path. Exploitation in the context of this component is not possible.",
+      "timestamp": "2026-07-20T16:15:00Z"
     }
   ],
-  "timestamp": "2026-05-20T15:18:44Z"
+  "timestamp": "2026-05-20T15:18:44Z",
+  "last_updated": "2026-07-20T16:15:00Z"
 }

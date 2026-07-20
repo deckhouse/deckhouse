@@ -260,3 +260,5 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
 ---
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

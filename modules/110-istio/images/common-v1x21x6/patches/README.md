@@ -6,7 +6,7 @@ Fix Istio Operator healt status
 
 ## 002-istio-gomod_gosum.patch
 
-Fix CVE
+Fix CVE (bump `golang.org/x/{crypto,net,sys,text}`).
 
 ## 003-istio-server_fmtText.patch
 
@@ -17,4 +17,4 @@ Fix use expfmt library in pilot-agent. This library used for format metrics.
 
 ## 001-kiali-go-mod.patch
 
-Fix CVE
+Fix CVE (bump `golang.org/x/{crypto,net,sys,text}`).

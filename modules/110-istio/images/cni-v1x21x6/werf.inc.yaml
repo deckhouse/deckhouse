@@ -95,3 +95,5 @@ shell:
         done
       done
     done
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

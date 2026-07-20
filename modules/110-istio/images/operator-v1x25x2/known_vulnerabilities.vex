@@ -1,23 +1,9 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-66e96be7a37a2401f73b2b4101609d939e0e295634605433389159f40bf70b22",
+  "@id": "https://openvex.dev/docs/public/vex-istio-operator-v1x25x2",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 1,
   "statements": [
-    {
-      "vulnerability": {
-        "name": "CVE-2024-28180"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Compressed JWE payloads are not processed in this component; exploitation of the go-jose decompression issue is not possible.",
-      "timestamp": "2025-10-10T15:25:19.178028674Z"
-    },
     {
       "vulnerability": {
         "name": "GO-2026-5932"
@@ -33,6 +19,6 @@
       "timestamp": "2026-07-20T16:15:00Z"
     }
   ],
-  "timestamp": "2025-10-10T15:25:19Z",
+  "timestamp": "2026-07-20T16:15:00Z",
   "last_updated": "2026-07-20T16:15:00Z"
 }
