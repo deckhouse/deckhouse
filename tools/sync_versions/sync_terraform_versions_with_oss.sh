@@ -239,7 +239,15 @@ sync_tf_versions() {
   VERSIONS_LIST="$(yq e ".[] | select(.id == \"$FULL_ID\") | .versions[].version" "$OSS_FILE")"
   CONDITIONS_COUNT="$(yq e ".[] | select(.id == \"$FULL_ID\") | [.versions[]? | select(has(\"condition\"))] | length" "$OSS_FILE")"
 
-  update_yaml_version "$GLOBAL_TF_YAML_FILE"
+  # The module file is always synced — it ships in the provider's OCI bundle.
+  # The global file is synced only when it already lists the provider: an
+  # external provider (e.g. DVP) carries no entry there and must not have one
+  # created, or `make generate` would re-add it.
+  if yq e -e ".${PROVIDER_ID}" "$GLOBAL_TF_YAML_FILE" >/dev/null 2>&1; then
+    update_yaml_version "$GLOBAL_TF_YAML_FILE"
+  else
+    log_info "provider $PROVIDER_ID absent from global versions file, syncing module file only"
+  fi
   update_yaml_version "$MODULE_TF_YAML_FILE"
 
   if [[ -n "$SINGLE_VERSION" ]]; then

@@ -40,7 +40,6 @@ var terraformProviders = []string{
 
 var tofuProviders = []string{
 	yandex.ProviderName,
-	"dvp",
 	"dynamix",
 	"zvirt",
 	"vsphere",
