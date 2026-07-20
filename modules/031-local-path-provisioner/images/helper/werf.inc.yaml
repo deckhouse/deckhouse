@@ -1,7 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
