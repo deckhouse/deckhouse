@@ -25,7 +25,6 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,30 +43,17 @@ func (r *reconciler) reconcileJoinScript(
 	joinToken string,
 	albVIP string,
 ) (reconcile.Result, error) {
-	host, port := externalAPIEndpoint(vcp)
 	if joinToken == "" {
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
 	if albVIP == "" {
-		// ALB LoadBalancer address not assigned yet, waiting — the join.sh /etc/hosts entry needs it.
+		// ALB LoadBalancer address not assigned yet — the /etc/hosts entry needs it.
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
-	endpoint := fmt.Sprintf("https://%s:%d", host, port)
 
-	caPEM := pkiSecret.Data["ca.crt"]
-	bootstrapKubeconfig, err := kubeconfig.BuildBootstrapKubeletConfig(caPEM, endpoint, joinToken)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("build bootstrap kubeconfig: %w", err)
-	}
-
-	table, err := parseImagesTable(configSecret.Data)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	rp, ok := table.RegistryPackages.Versioned[vcp.Spec.KubernetesVersion]
-	if !ok || rp.Kubelet == "" {
-		// registrypackages digests not available (e.g. partial build) — skip, retry later.
-		return reconcile.Result{RequeueAfter: requeueInterval}, nil
+	tpl, ok := configSecret.Data["bootstrap.sh.tpl"]
+	if !ok {
+		return reconcile.Result{}, fmt.Errorf("config secret missing bootstrap.sh.tpl")
 	}
 
 	rppToken, err := r.registryPackagesProxyToken(ctx)
@@ -76,27 +62,15 @@ func (r *reconciler) reconcileJoinScript(
 		return reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
 	}
 
-	tpl, ok := configSecret.Data["join.sh.tpl"]
-	if !ok {
-		return reconcile.Result{}, fmt.Errorf("config secret missing join.sh.tpl")
-	}
-
+	caPEM := pkiSecret.Data["ca.crt"]
 	replacer := strings.NewReplacer(
-		"${VCP_RPP_TOKEN}", rppToken,
-		"${VCP_MINGET_B64}", string(configSecret.Data["minget"]),
-		"${VCP_CLUSTER_UUID}", string(configSecret.Data["cluster-uuid"]),
-		"${VCP_RPP_GET_DIGEST}", table.RegistryPackages.Fixed.RppGet,
-		"${VCP_CONTAINERD_DIGEST}", table.RegistryPackages.Fixed.Containerd,
-		"${VCP_CRICTL_DIGEST}", rp.Crictl,
-		"${VCP_KUBELET_DIGEST}", rp.Kubelet,
-		"${VCP_CA_CRT_B64}", base64.StdEncoding.EncodeToString(caPEM),
-		"${VCP_BOOTSTRAP_KUBECONFIG}", string(bootstrapKubeconfig),
-		"${VCP_CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
-		"${VCP_CLUSTER_DNS}", constants.DefaultTenantClusterDNS,
-		"${VCP_ALB_VIP}", albVIP,
-		"${VCP_API_HOST}", host,
-		"${VCP_KONN_HOST}", konnExposeHost(vcp),
+		"${VCP_API_HOST}", apiExposeHost(vcp),
 		"${VCP_PKG_HOST}", packagesExposeHost(vcp),
+		"${VCP_KONN_HOST}", konnExposeHost(vcp),
+		"${VCP_ALB_VIP}", albVIP,
+		"${VCP_JOIN_TOKEN}", joinToken,
+		"${VCP_CA_CRT_B64}", base64.StdEncoding.EncodeToString(caPEM),
+		"${VCP_RPP_TOKEN}", rppToken,
 	)
 	rendered := replacer.Replace(string(tpl))
 
@@ -108,7 +82,7 @@ func (r *reconciler) reconcileJoinScript(
 			Labels:    map[string]string{constants.HeritageLabelKey: constants.HeritageLabelValue},
 		},
 		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{"join.sh": []byte(rendered)},
+		Data: map[string][]byte{"bootstrap.sh": []byte(rendered)},
 	}
 
 	current, err := r.getSecret(ctx, ns, target.Name)

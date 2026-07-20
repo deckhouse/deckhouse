@@ -111,14 +111,11 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 		},
 		ClusterMasterEndpoints: []contextMasterEndpoint{
 			{
-				Address:                p.APIHost,
-				KubeAPIPort:            6443,
-				RPPServerPort:          vcpPackagesProxyPort,
-				RPPBootstrapServerPort: vcpPackagesProxyBootstrapPort,
+				Address:     p.APIHost,
+				KubeAPIPort: 6443,
 			},
 			{
 				Address:                p.PackagesHost,
-				KubeAPIPort:            6443,
 				RPPServerPort:          vcpPackagesProxyPort,
 				RPPBootstrapServerPort: vcpPackagesProxyBootstrapPort,
 			},
