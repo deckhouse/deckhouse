@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,45 +50,49 @@ type SettingsProvider struct {
 	store settingsStore
 }
 
-// storeCacheKey identifies a memoized settings store. Bundles in the download
-// dir contribute their own providers, so the same versions file yields
-// different stores under different download dirs — both fields are part of the
-// key.
-type storeCacheKey struct {
-	infraVersionsFile string
-	downloadDir       string
-}
-
 var (
-	fileSettingsStoreMutex sync.Mutex
-	fileToSettingsStore    = make(map[storeCacheKey]settingsStore)
+	candiStoreMutex sync.Mutex
+	candiStoreCache = make(map[string]versionsFile)
 )
 
+// loadOrGetStore builds the provider settings store: the providers from the
+// candi versions file plus those an external bundle delivers into downloadDir.
+//
+// Only the candi file is cached — it is fixed for the process. The bundles are
+// merged fresh on every call: a long-lived process (dhctl-server, converge
+// exporter) can have a bundle delivered after the first store was built, and a
+// whole-store cache would keep returning the pre-bundle map, leaving the
+// provider unavailable until restart.
 func loadOrGetStore(ctx context.Context, infraVersionsFile, downloadDir string) (settingsStore, error) {
-	fileSettingsStoreMutex.Lock()
-	defer fileSettingsStoreMutex.Unlock()
+	candi, err := loadCandiVersions(ctx, infraVersionsFile)
+	if err != nil {
+		return nil, err
+	}
 
-	cacheKey := storeCacheKey{infraVersionsFile: infraVersionsFile, downloadDir: downloadDir}
+	store := maps.Clone(candi.providers)
+	mergeBundleSettings(ctx, store, downloadDir, candi.tools)
 
-	store, ok := fileToSettingsStore[cacheKey]
-	if ok {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Providers settings store for terraform versions file %s loaded from cache", infraVersionsFile))
-		return store, nil
+	return store, nil
+}
+
+func loadCandiVersions(ctx context.Context, infraVersionsFile string) (versionsFile, error) {
+	candiStoreMutex.Lock()
+	defer candiStoreMutex.Unlock()
+
+	if candi, ok := candiStoreCache[infraVersionsFile]; ok {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Candi provider settings for terraform versions file %s loaded from cache", infraVersionsFile))
+		return candi, nil
 	}
 
 	candi, err := loadVersionsFile(ctx, infraVersionsFile, toolVersions{})
 	if err != nil {
-		return nil, err
+		return versionsFile{}, err
 	}
-	store = candi.providers
 
-	mergeBundleSettings(ctx, store, downloadDir, candi.tools)
+	candiStoreCache[infraVersionsFile] = candi
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Candi provider settings for terraform versions file %s loaded from file and cached", infraVersionsFile))
 
-	fileToSettingsStore[cacheKey] = store
-
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Providers settings store for terraform versions file %s loaded from file and added to cache", infraVersionsFile))
-
-	return store, nil
+	return candi, nil
 }
 
 func newSettingsProvider(ctx context.Context, infraVersionsFile, downloadDir string, loader loader) *SettingsProvider {

@@ -101,7 +101,7 @@ func TestProviderSettingsLoadError(t *testing.T) {
 	})
 	require.Error(t, sFailed.initError)
 	require.Nil(t, sFailed.store)
-	require.Len(t, fileToSettingsStore, 0)
+	require.NotContains(t, candiStoreCache, "/not/exists/file-aakjdiejfuefuefjej")
 
 	// failed store returns init error due getting
 	_, err := sFailed.GetSettings(t.Context(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
@@ -111,25 +111,24 @@ func TestProviderSettingsLoadError(t *testing.T) {
 func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 	file := options.DefaultInfrastructureVersions
 
-	assertOneStoreInCache := func(t *testing.T, store *SettingsProvider) {
+	assertCandiCached := func(t *testing.T, store *SettingsProvider) {
 		require.NoError(t, store.initError)
 		require.NotNil(t, store)
-		require.Len(t, fileToSettingsStore, 1)
-		require.Contains(t, fileToSettingsStore, storeCacheKey{infraVersionsFile: file})
+		require.Contains(t, candiStoreCache, file)
 	}
 
 	allProviders := append(make([]string, 0), tofuProviders...)
 	allProviders = append(allProviders, terraformProviders...)
 	assertGettingDoesNotAffectStores := func(t *testing.T, store *SettingsProvider) {
-		require.Len(t, fileToSettingsStore, 1)
+		require.Contains(t, candiStoreCache, file)
 		require.Len(t, store.store, len(allProviders))
 	}
 
 	sFirst := newSettingsProvider(t.Context(), file, "", loadOrGetStore)
-	assertOneStoreInCache(t, sFirst)
+	assertCandiCached(t, sFirst)
 
 	sSecond := newSettingsProvider(t.Context(), file, "", loadOrGetStore)
-	assertOneStoreInCache(t, sSecond)
+	assertCandiCached(t, sSecond)
 
 	require.Equal(t, sFirst.store, sSecond.store)
 
@@ -160,7 +159,35 @@ func TestBundleSettingsMergedFromDownloadDir(t *testing.T) {
 
 	set, ok := store["dvp"]
 	require.True(t, ok, "provider settings must come from the unpacked bundle")
-	require.Equal(t, "kubernetes_manifest", set.VMResource().Type)
+
+	// The precise rule from the bundle's plan_rules.yml — not the coarse
+	// type-only fallback — so a converge only calls a VirtualMachine delete a VM
+	// change, not every kubernetes_manifest (disks, IPs) delete.
+	rule := set.VMResource()
+	require.NotNil(t, rule)
+	require.Equal(t, "kubernetes_manifest", rule.Type)
+	require.NotNil(t, rule.FieldEquals)
+	require.Equal(t, "manifest.kind", rule.FieldEquals.Path)
+	require.Equal(t, "VirtualMachine", rule.FieldEquals.Value)
+}
+
+// A bundle delivered after the store was first built (long-lived dhctl-server,
+// converge exporter) must be picked up: the store caches only the candi file,
+// so the second call re-merges the now-present bundle instead of returning the
+// pre-bundle map.
+func TestBundleDeliveredAfterFirstBuildIsPickedUp(t *testing.T) {
+	candiFile := writeCandiVersions(t)
+	downloadDir := t.TempDir()
+
+	before, err := loadOrGetStore(t.Context(), candiFile, downloadDir)
+	require.NoError(t, err)
+	require.NotContains(t, before, "dvp", "bundle not delivered yet")
+
+	installDVPBundle(t, downloadDir, "dvp")
+
+	after, err := loadOrGetStore(t.Context(), candiFile, downloadDir)
+	require.NoError(t, err)
+	require.Contains(t, after, "dvp", "store must reflect a bundle delivered after the first build")
 }
 
 // writeCandiVersions stands in for the candi versions file, so the bundle tests
