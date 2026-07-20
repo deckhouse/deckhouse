@@ -4476,7 +4476,7 @@ alerts:
         dashboard, or run:
 
         ```prometheus
-        kube_verticalpodautoscaler_spec_updatepolicy_updatemode{update_mode="Auto"} == 1
+        kube_verticalpodautoscaler_spec_updatepolicy_updatemode{source="deckhouse", update_mode="Auto"} == 1
         ```
       summary: |
         VerticalPodAutoscaler objects use the deprecated Auto update mode.
