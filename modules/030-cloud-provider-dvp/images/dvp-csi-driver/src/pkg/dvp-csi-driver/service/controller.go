@@ -190,6 +190,12 @@ func (c *ControllerService) waitDiskReadyAndGetCapacity(ctx context.Context, dis
 		if errors.Is(err, dvpapi.ErrQuotaExceeded) {
 			return 0, status.Errorf(codes.ResourceExhausted, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
 		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return 0, status.Errorf(codes.DeadlineExceeded, "disk %s provisioning timed out in parent DVP cluster: %v", diskName, err)
+		}
+		if errors.Is(err, context.Canceled) {
+			return 0, status.Errorf(codes.Aborted, "disk %s provisioning canceled in parent DVP cluster: %v", diskName, err)
+		}
 		return 0, status.Errorf(codes.Internal, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
 	}
 
@@ -269,7 +275,7 @@ func (c *ControllerService) ControllerPublishVolume(
 		waitErr := c.dvpCloudAPI.ComputeService.WaitDiskAttaching(waitCtx, vmBDAName)
 		if waitErr != nil {
 			if errors.Is(waitErr, context.DeadlineExceeded) {
-				return nil, status.Errorf(codes.DeadlineExceeded,
+				return nil, status.Errorf(codes.Internal,
 					"Publish: timeout waiting for vmBDA attachment: disk=%s vm=%s",
 					diskName, vmHostname,
 				)
@@ -299,7 +305,7 @@ func (c *ControllerService) ControllerPublishVolume(
 
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, status.Errorf(
-				codes.DeadlineExceeded,
+				codes.Internal,
 				"Publish: timeout while attaching disk (Kubernetes will retry): disk=%s vm=%s exists=%t attached=%t: %v",
 				diskName, vmHostname, sExists, sAttached, err,
 			)

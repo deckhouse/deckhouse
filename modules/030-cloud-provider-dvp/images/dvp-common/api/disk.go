@@ -276,19 +276,8 @@ func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) erro
 			return true, nil
 		}
 
-		for _, cond := range vmd.Status.Conditions {
-			if cond.Type == vdcondition.ReadyType.String() && cond.Status == metav1.ConditionFalse {
-				if isTerminalDiskErrorReason(vdcondition.ReadyReason(cond.Reason)) {
-					if cond.Reason == vdcondition.QuotaExceeded.String() {
-						return false, fmt.Errorf("%w: %s", ErrQuotaExceeded, cond.Message)
-					}
-					return false, errors.New(cond.Message)
-				}
-			}
-		}
-
-		if vmd.Status.Phase == v1alpha2.DiskFailed {
-			return false, fmt.Errorf("disk %q is in Failed phase", vmdName)
+		if err := TerminalDiskError(vmd); err != nil {
+			return false, err
 		}
 
 		return false, nil
