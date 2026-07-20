@@ -242,3 +242,18 @@ index 54db593f0bf..b4c86c0c961 100644
  	"k8s.io/kubernetes/test/e2e_node/criproxy"
  )
  
+diff --git a/test/images/agnhost/grpc-health-checking/grpc-health-checking.go b/test/images/agnhost/grpc-health-checking/grpc-health-checking.go
+index 0ec9dd3e8cd..80611de3c3c 100644
+--- a/test/images/agnhost/grpc-health-checking/grpc-health-checking.go
++++ b/test/images/agnhost/grpc-health-checking/grpc-health-checking.go
+@@ -93,6 +93,10 @@ func (s *HealthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, server grp
+ 	return status.Error(codes.Unimplemented, "unimplemented")
+ }
+ 
++func (s *HealthChecker) List(ctx context.Context, request *grpc_health_v1.HealthListRequest) (*grpc_health_v1.HealthListResponse, error) {
++	return nil, status.Error(codes.Unimplemented, "unimplemented")
++}
++
+ func NewHealthChecker(started time.Time) *HealthChecker {
+ 	return &HealthChecker{
+ 		started: started,
