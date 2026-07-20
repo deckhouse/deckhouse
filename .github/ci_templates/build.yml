@@ -36,7 +36,7 @@ runs-on: [self-hosted, large]
 {!{- end }!}
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-{!{- if eq $buildType "dev" }!}
+{!{- if and (eq $buildType "dev") (eq $werfEnv "FE") }!}
   changed_count:    ${{ steps.diff.outputs.changed_count }}
   matrix:           ${{ steps.diff.outputs.matrix }}
   changed_compact:  ${{ steps.diff.outputs.changed_compact }}
@@ -368,7 +368,7 @@ steps:
     with:
       name: build_report_${{ env.WERF_ENV }}
       path: images_tags_werf.json
-{!{- if eq $buildType "dev" }!}
+{!{- if and (eq $buildType "dev") (eq $werfEnv "FE") }!}
   - name: Extract images_digests.json
     env:
       DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}

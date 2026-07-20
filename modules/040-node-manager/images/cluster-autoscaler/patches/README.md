@@ -1,5 +1,27 @@
 # Patches
 
+## Go module updates (CVE remediation)
+
+`001-go-mod.patch` bumps Go module dependencies to remediate CVEs reported by
+Trivy for the cluster-autoscaler binary. The vulnerabilities live in
+indirect/build dependencies that are linked into the binary (`x/crypto/ssh`,
+`x/net`, and the `k8s.io/*` staging modules), not in cluster-autoscaler logic,
+so the fix is a pure `go.mod`/`go.sum` bump — the gardener source tag is not
+changed. The patch touches both `cluster-autoscaler/go.mod` and
+`cluster-autoscaler/apis/go.mod`.
+
+Typical bumps: `golang.org/x/net` -> `v0.55.0`, `golang.org/x/sys` -> `v0.45.0`,
+`golang.org/x/crypto` -> `v0.51.0`, and `k8s.io/kubernetes` (plus all `k8s.io/*`
+require/replace directives) to the latest fix patch of the matching minor
+(for example `v1.32.10` / `v1.33.6` / `v1.34.2`).
+
+Because the patch is generated against a specific gardener tag, it must be
+recreated from a clean checkout of that tag; applying a patch made from a
+different base fails in CI with `patch does not apply`. Per-version target
+versions and the exact recreate commands are documented in each
+`<k8s-minor>/README.md`. Note that the `1.34/` patch is also used for the
+1.35 and 1.36 images (`werf.inc.yaml` clamps `$maxVersion = "1.34"`).
+
 ## Scale from zero
 
 We want to scale a node group from zero but our MCM revision does not support generic MachineClass CRs. 
