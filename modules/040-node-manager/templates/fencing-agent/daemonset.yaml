@@ -76,12 +76,14 @@ spec:
           env:
             - name: LOG_LEVEL
               value: info
-            - name: FENCING_MODE
-              value: {{ (($ng.fencing).mode) | default "Watchdog" }}
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
             - name: WATCHDOG_TIMEOUT
-              value: {{ ((($ng.fencing).watchdog).timeout) | default 60 | toString | quote }}
+              value: "{{ ((($ng.fencing).watchdog).timeout) | default 60 }}s"
+            - name: PROFILE_REF_NAME
+              value: {{ dig "fencing" "profile" "medium" $ng | toString | lower | quote }}
+            - name: API_SOCKET_PATH
+              value: /var/run/fencing-agent/fencing-agent.sock
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -114,7 +116,7 @@ spec:
             - name: watchdog
               mountPath: /dev/watchdog
             - name: socket
-              mountPath: /tmp
+              mountPath: /var/run/fencing-agent
       terminationGracePeriodSeconds: 10
       volumes:
         - name: watchdog
@@ -123,6 +125,7 @@ spec:
             type: CharDevice
         - name: socket
           hostPath:
-            path: /tmp
+            path: /var/run/fencing-agent
+            type: DirectoryOrCreate
   {{- end }}
 {{- end }}

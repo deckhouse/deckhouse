@@ -14,9 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package domain
+package agent
 
-type NodeGroupState struct {
-	TotalNodes int   `json:"total_nodes"`
-	Timestamp  int64 `json:"timestamp"`
+import (
+	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+type Deps struct {
+	K8sClient     kubernetes.Interface
+	FencingClient client.Client
 }

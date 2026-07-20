@@ -14,27 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package usecase
+package domain
 
-import (
-	"context"
+import "slices"
 
-	"fencing-agent/internal/domain"
+type ProfileName string
+
+const (
+	ProfileCritical ProfileName = "critical"
+	ProfileMedium   ProfileName = "medium"
+	ProfileModerate ProfileName = "moderate"
+	ProfileSlow     ProfileName = "slow"
 )
 
-type NodesGetter interface {
-	GetNodes(ctx context.Context) (domain.Nodes, error)
+func ProfileNames() []ProfileName {
+	return []ProfileName{ProfileCritical, ProfileMedium, ProfileModerate, ProfileSlow}
 }
 
-type GetNodes struct {
-	nodesGetter NodesGetter
-}
-
-func NewGetNodes(ng NodesGetter) *GetNodes {
-	return &GetNodes{nodesGetter: ng}
-}
-
-func (gn *GetNodes) GetNodes(ctx context.Context) (domain.Nodes, error) {
-	nodes, err := gn.nodesGetter.GetNodes(ctx)
-	return nodes, err
+func (p ProfileName) IsValid() bool {
+	return slices.Contains(ProfileNames(), p)
 }
