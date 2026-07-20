@@ -10,6 +10,10 @@ cilium-hubble:
   fixes:
     - summary: Gateway API certificate manifest is updated to support any cluster issuer.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+cloud-provider-dvp:
+  fixes:
+    - summary: fix dvp kubernetes dependency mismatch
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21367
 cloud-provider-huaweicloud:
   fixes:
     - summary: Adds patches to the upstream version to make it ignore static nodes
