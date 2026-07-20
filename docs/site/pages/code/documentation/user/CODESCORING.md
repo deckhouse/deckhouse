@@ -42,9 +42,9 @@ You do **not** need to install the Johnny agent manually: the scan job downloads
 CodeScoring connection parameters are configured in project (or group) settings.
 
 1. Open the project in Deckhouse Code.
-2. Navigate to **Settings** → **Integrations**.
-3. Find the **CodeScoring** section and open it.
-4. Fill in the connection parameters:
+1. Navigate to **Settings** → **Integrations**.
+1. Find the **CodeScoring** section and open it.
+1. Fill in the connection parameters:
 
 | Parameter | Description |
 |-----------|-------------|
@@ -55,7 +55,7 @@ CodeScoring connection parameters are configured in project (or group) settings.
 | **Project name** | Project name in CodeScoring (defaults to the repository slug) |
 | **Scan stage** | Stage used to associate results on the platform side (default: `build`) |
 
-5. Click **Save**.
+1. Click **Save**.
 
 The integration automatically injects the CI variables `FE_SCANS_CODESCORING_URL`, `FE_SCANS_CODESCORING_TOKEN`, `FE_SCANS_CODESCORING_CA_CERT`, `FE_SCANS_CODESCORING_PROJECT`, and `FE_SCANS_CODESCORING_SCAN_STAGE` — you do not set them manually in `.gitlab-ci.yml`.
 
@@ -76,7 +76,7 @@ The scanner is injected into the pipeline through a **scan-execution policy**, n
      - scan: codescoring
    ```
 
-2. Link the policy project to the target project: **Settings** → **Security policy**.
+1. Link the policy project to the target project: **Settings** → **Security policy**.
 
 After that, every pipeline automatically gains a **`codescoring_scan`** job (stage `fe-security-scanner`) that:
 
