@@ -29,7 +29,7 @@ import (
 
 // componentDependencies holds the dependencies for control plane component as runtime configuration files.
 type componentDependencies struct {
-	CertTree            map[pki.RootCertName][]pki.LeafCertName
+	CertTree            map[pki.RootCertBaseName][]pki.LeafCertBaseName
 	CAFiles             []string
 	SignatureFiles      []string
 	KubeconfigFiles     []kubeconfig.File
@@ -39,38 +39,38 @@ type componentDependencies struct {
 
 var componentDepsRegistry = map[controlplanev1alpha1.OperationComponent]componentDependencies{
 	controlplanev1alpha1.OperationComponentEtcd: {
-		CertTree: map[pki.RootCertName][]pki.LeafCertName{
-			pki.EtcdCACertName: {
-				pki.EtcdServerCertName,
-				pki.EtcdPeerCertName,
-				pki.EtcdHealthcheckClientCertName,
-				pki.ApiserverEtcdClientCertName,
+		CertTree: map[pki.RootCertBaseName][]pki.LeafCertBaseName{
+			pki.EtcdCACertBaseName: {
+				pki.EtcdServerCertBaseName,
+				pki.EtcdPeerCertBaseName,
+				pki.EtcdHealthcheckClientCertBaseName,
+				pki.ApiserverEtcdClientCertBaseName,
 			},
 		},
 		// TODO: remove this when we have a way to get the CA files from CertTree (pki.RootCertName)
 		CAFiles: []string{
-			string(pki.EtcdCACertName) + ".crt",
-			string(pki.EtcdCACertName) + ".key",
+			string(pki.EtcdCACertBaseName) + ".crt",
+			string(pki.EtcdCACertBaseName) + ".key",
 		},
 		ExtraFileKeys: checksum.ExtraFileKeysForPodComponent(controlplanev1alpha1.OperationComponentEtcd.PodComponentName()),
 	},
 	controlplanev1alpha1.OperationComponentKubeAPIServer: {
-		CertTree: map[pki.RootCertName][]pki.LeafCertName{
-			pki.CACertName: {
-				pki.ApiserverCertName,
-				pki.ApiserverKubeletClientCertName,
+		CertTree: map[pki.RootCertBaseName][]pki.LeafCertBaseName{
+			pki.CACertBaseName: {
+				pki.ApiserverCertBaseName,
+				pki.ApiserverKubeletClientCertBaseName,
 			},
-			pki.FrontProxyCACertName: {
-				pki.FrontProxyClientCertName,
+			pki.FrontProxyCACertBaseName: {
+				pki.FrontProxyClientCertBaseName,
 			},
 		},
 		CAFiles: []string{
-			string(pki.CACertName) + ".crt",
-			string(pki.CACertName) + ".key",
-			string(pki.FrontProxyCACertName) + ".crt",
-			string(pki.FrontProxyCACertName) + ".key",
-			"sa.pub",
-			"sa.key",
+			string(pki.CACertBaseName) + ".crt",
+			string(pki.CACertBaseName) + ".key",
+			string(pki.FrontProxyCACertBaseName) + ".crt",
+			string(pki.FrontProxyCACertBaseName) + ".key",
+			pki.SAPublicKeyFileName,
+			pki.SAPrivateKeyFileName,
 		},
 		SignatureFiles: []string{
 			signature.SignaturePrivateJWK,
@@ -94,7 +94,7 @@ func componentDeps(component controlplanev1alpha1.OperationComponent) componentD
 	return componentDepsRegistry[component]
 }
 
-func (d componentDependencies) leafCertFiles() []pki.LeafCertName {
+func (d componentDependencies) leafCertFiles() []pki.LeafCertBaseName {
 	if len(d.CertTree) == 0 {
 		return nil
 	}
@@ -105,9 +105,9 @@ func (d componentDependencies) leafCertFiles() []pki.LeafCertName {
 	}
 	sort.Strings(roots)
 
-	out := make([]pki.LeafCertName, 0)
+	out := make([]pki.LeafCertBaseName, 0)
 	for _, root := range roots {
-		out = append(out, d.CertTree[pki.RootCertName(root)]...)
+		out = append(out, d.CertTree[pki.RootCertBaseName(root)]...)
 	}
 	return out
 }
