@@ -80,14 +80,17 @@ kubectl_run() {
       i=$((i + 1))
       continue
     fi
+    # Avoid bash arrays: Chainsaw runs scripts with /usr/bin/sh (dash on Ubuntu).
     if _kubectl_has_request_timeout "$@"; then
-      kubectl_cmd=(kubectl "$@")
+      if output=$(kubectl "$@" 2>&1); then
+        printf '%s' "$output"
+        return 0
+      fi
     else
-      kubectl_cmd=(kubectl --request-timeout="$CPM_E2E_KUBECTL_REQUEST_TIMEOUT" "$@")
-    fi
-    if output=$("${kubectl_cmd[@]}" 2>&1); then
-      printf '%s' "$output"
-      return 0
+      if output=$(kubectl --request-timeout="$CPM_E2E_KUBECTL_REQUEST_TIMEOUT" "$@" 2>&1); then
+        printf '%s' "$output"
+        return 0
+      fi
     fi
     if _kubectl_not_found_error "$output"; then
       e2e_log "kubectl NotFound (no retry): $*"

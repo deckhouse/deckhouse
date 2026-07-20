@@ -6,9 +6,9 @@ End-to-end tests for the **control-plane-manager** module, using [Kyverno Chains
 
 These tests verify that control-plane-manager reconciles `ModuleConfig` changes into `ControlPlaneOperation` resources, completes the expected operation pipeline on control-plane nodes, and applies the resulting configuration to static pod manifests.
 
-Each scenario lives in `tests/<name>/` and is executed via Task wrappers that call `chainsaw test` with JUnit reports in `./reports/`.
+Each scenario lives in `tests/<name>/`. The recommended way to run them against a real cluster is over **SSH** with `make` and `.env` (tests execute on the remote host where `kubectl` already talks to the cluster). Locally you can still use Task wrappers that call `chainsaw test`.
 
-Both scenarios modify the cluster `control-plane-manager` `ModuleConfig` and restore the original configuration in cleanup. They use `namespace: default` (no ephemeral test namespace) because apiserver restarts can interfere with Chainsaw namespace deletion.
+Scenarios modify the cluster `control-plane-manager` `ModuleConfig` and restore the original configuration in cleanup. They use `namespace: default` (no ephemeral test namespace) because apiserver restarts can interfere with Chainsaw namespace deletion.
 
 ## Chainsaw
 
@@ -21,11 +21,53 @@ Both scenarios modify the cluster `control-plane-manager` `ModuleConfig` and res
 - `cleanup` — runs at test end in reverse step order (used to restore `ModuleConfig`)
 - `assert` — polls a resource until it matches or times out
 
-Shared Chainsaw settings are in `chainsaw-config.yaml` at the suite root (`failFast: true`, `parallel: 1`, `delayBeforeCleanup: 15s`, test discovery via `chainsaw-test.yaml`).
+Shared Chainsaw settings are in `chainsaw-config.yaml` at the suite root (`parallel: 1`, `delayBeforeCleanup: 15s`, test discovery via `chainsaw-test.yaml`).
 
-## Prerequisites
+## Running over SSH (recommended)
 
-### Tools
+All `make install` / `make test` commands run on a **remote host** configured in `.env`.
+
+### Setup
+
+```bash
+cd modules/040-control-plane-manager/e2e/control-plane-manager
+cp .env.example .env
+# edit .env: set CLUSTER_SSH_HOST (and user/port if needed)
+```
+
+`.env` variables:
+
+| Variable | Description |
+| -------- | ----------- |
+| `CLUSTER_SSH_USER` | SSH user on the target host (default `ubuntu`) |
+| `CLUSTER_SSH_HOST` | Target host (required) |
+| `CLUSTER_SSH_PORT` | Target SSH port (default `22`) |
+| `JUMPHOST_SSH_USER` | SSH user on the jumphost (default `ubuntu`) |
+| `JUMPHOST_SSH_HOST` | Optional jumphost; when set, connections use `ProxyJump` |
+| `JUMPHOST_SSH_PORT` | Jumphost SSH port (default `22`) |
+| `REMOTE_TEST_DIR` | Working directory on the remote host |
+
+### Commands
+
+```bash
+make install                 # install chainsaw, jq, yq on the remote host if missing
+make test                    # run all scenarios over SSH
+make test TEST=basic-audit-policy   # run a single scenario
+```
+
+What `make test` does:
+
+1. Opens one multiplexed SSH session to the remote host (single ssh-agent approval)
+2. Stages and copies `chainsaw-config.yaml`, `functions.sh`, and the selected `tests/<name>/` trees in one rsync
+3. Runs `chainsaw test` for each scenario in that same session (sequentially)
+4. Removes `${REMOTE_TEST_DIR}` when finished
+5. Closes the SSH master connection
+
+The remote host must already have working `kubectl` access for root (typical for a Deckhouse master; same environment as interactive `sudo -i`). The `feature-gates` test reads `/deckhouse/candi/feature_gates_map.yml` on that host.
+
+## Local run (Task)
+
+### Prerequisites
 
 | Tool | Purpose |
 | ---- | ------- |
@@ -68,27 +110,72 @@ yq --version
 - RBAC permissions to read/write `ModuleConfig`, read `ControlPlaneOperation`, and read control-plane-manager logs
 - Control-plane nodes with running static pods for the components under test (kube-apiserver; for `feature-gates` also kube-controller-manager and kube-scheduler)
 
+### Validate without a cluster
+
+```bash
+cd modules/040-control-plane-manager/e2e/control-plane-manager
+task dry-run
+```
+
+### Run scenarios locally
+
+```bash
+cd modules/040-control-plane-manager/e2e/control-plane-manager
+
+task basic-audit-policy:run
+task basic-audit-policy-maintenance:run
+task feature-gates:run
+task run   # all scenarios sequentially
+```
+
+From a scenario directory:
+
+```bash
+cd modules/040-control-plane-manager/e2e/control-plane-manager/tests/basic-audit-policy
+
+task run          # full output + JUnit in ./reports/
+task run:verbose  # verbose chainsaw output
+task run:debug    # pause on failure + fail-fast
+task lint:test    # validate chainsaw-test.yaml
+```
+
+### kubectl context
+
+Chainsaw uses the current `kubectl` context. Before a local run:
+
+```bash
+kubectl config current-context
+kubectl get moduleconfig control-plane-manager
+kubectl get controlplaneoperations -n kube-system
+```
+
 ## Directory Structure
 
 ```text
 control-plane-manager/
-├── Taskfile.yaml              # includes all scenarios
+├── Makefile                   # SSH entrypoint (make install / make test)
+├── .env.example               # SSH / remote path settings
+├── Taskfile.yaml              # local Task includes for all scenarios
 ├── chainsaw-config.yaml       # shared timeouts and execution settings
 ├── functions.sh               # shared kubectl/CPO helpers
+├── scripts/
+│   ├── install-binary.sh      # install chainsaw/jq/yq on remote host
+│   ├── run-tests.sh           # rsync tests and run chainsaw over SSH
+│   └── ssh-opts.sh            # shared SSH / ProxyJump helpers
 └── tests/
     ├── basic-audit-policy/
     │   ├── chainsaw-test.yaml
-    │   ├── basic_audit_policy.md
     │   ├── manifests/
     │   ├── scripts/
-    │   │   └── functions.sh   # symlink to ../../functions.sh
+    │   │   └── functions.sh   # symlink to ../../../functions.sh
     │   └── Taskfile.yml
+    ├── basic-audit-policy-maintenance/
+    ├── basic-audit-policy-simple/
     └── feature-gates/
         ├── chainsaw-test.yaml
-        ├── feature_gates.md
         ├── manifests/         # example only; runtime manifest is generated
         ├── scripts/
-        │   ├── functions.sh   # symlink to ../../functions.sh
+        │   ├── functions.sh   # symlink to ../../../functions.sh
         │   └── feature-gates.sh
         └── Taskfile.yml
 ```
@@ -104,86 +191,18 @@ Per-scenario details: `tests/<name>/<name>.md`.
 - `backup_moduleconfig_spec` / `restore_moduleconfig` — backup and restore `ModuleConfig` spec (JSON patch replace)
 - `snapshot_component_cpos`, `wait_for_new_component_cpo`, `wait_for_new_control_plane_cpos` — ControlPlaneOperation tracking
 - `apply_or_patch_moduleconfig`, `is_flag_in_component`, `kubernetes_version`
+- `snapshot_flag_state`, `assert_flag_state_matches`, `assert_no_new_component_cpo`, `remove_moduleconfig_maintenance` — maintenance-mode scenarios
 
 The `feature-gates` scenario adds `scripts/feature-gates.sh` for reading `candi/feature_gates_map.yml` and building `enabledFeatureGates` dynamically.
 
 ## Available Tests
 
-| Task command | Test directory | Description |
-| ------------ | -------------- | ----------- |
-| `task basic-audit-policy:run` | `tests/basic-audit-policy/` | Sets `basicAuditPolicyEnabled: false`, verifies a new kube-apiserver `ControlPlaneOperation` completes and audit policy is removed from manifests |
-| `task feature-gates:run` | `tests/feature-gates/` | Enables all supported feature gates for the cluster Kubernetes version, verifies CPOs on apiserver/controller-manager/scheduler complete and gates appear in manifests |
-
-## Running Tests
-
-### Validate without a cluster
-
-From a scenario directory:
-
-```bash
-cd modules/040-control-plane-manager/e2e/control-plane-manager/tests/basic-audit-policy
-task dry-run
-```
-
-From the suite root:
-
-```bash
-cd modules/040-control-plane-manager/e2e/control-plane-manager
-task dry-run
-```
-
-### Run a single scenario
-
-From a scenario directory:
-
-```bash
-cd modules/040-control-plane-manager/e2e/control-plane-manager/tests/basic-audit-policy
-
-task run          # full output + JUnit in ./reports/
-task run:verbose  # verbose chainsaw output
-task run:debug    # pause on failure + fail-fast
-task lint:test    # validate chainsaw-test.yaml
-```
-
-From the suite root via includes:
-
-```bash
-cd modules/040-control-plane-manager/e2e/control-plane-manager
-task basic-audit-policy:run
-task feature-gates:run
-```
-
-### Run all scenarios
-
-```bash
-cd modules/040-control-plane-manager/e2e/control-plane-manager
-task run
-```
-
-Scenarios run sequentially (`parallel: 1`) because they both modify the same cluster `ModuleConfig`.
-
-### Direct Chainsaw invocation
-
-```bash
-cd modules/040-control-plane-manager/e2e/control-plane-manager/tests/basic-audit-policy
-
-mkdir -p reports
-chainsaw test --test-dir . \
-  --config ../../chainsaw-config.yaml \
-  --parallel 1 \
-  --report-format JUNIT-STEP \
-  --report-path ./reports/
-```
-
-### kubectl context
-
-Chainsaw uses the current `kubectl` context. Before running:
-
-```bash
-kubectl config current-context
-kubectl get moduleconfig control-plane-manager
-kubectl get controlplaneoperations -n kube-system
-```
+| Make / Task | Test directory | Description |
+| ----------- | -------------- | ----------- |
+| `make test TEST=basic-audit-policy` / `task basic-audit-policy:run` | `tests/basic-audit-policy/` | Sets `basicAuditPolicyEnabled: false`, verifies a new kube-apiserver `ControlPlaneOperation` completes and audit policy is removed from manifests |
+| `make test TEST=basic-audit-policy-maintenance` / `task basic-audit-policy-maintenance:run` | `tests/basic-audit-policy-maintenance/` | Applies the same setting with `maintenance: NoResourceReconciliation`, verifies no reconciliation until maintenance is cleared, then verifies normal reconciliation |
+| `make test TEST=feature-gates` / `task feature-gates:run` | `tests/feature-gates/` | Enables all supported feature gates for the cluster Kubernetes version, verifies CPOs on apiserver/controller-manager/scheduler complete and gates appear in manifests |
+| `make test TEST=basic-audit-policy-simple` / `task basic-audit-policy-simple:run` | `tests/basic-audit-policy-simple/` | Simplified basic-audit-policy variant |
 
 ## Timeouts
 
@@ -202,7 +221,7 @@ Individual script steps may define their own timeouts (for example 5–15 minute
 
 ## Reports and Debugging
 
-- JUnit reports: `tests/<name>/reports/chainsaw-report.xml` (`reports/` is gitignored)
+- Local Task runs write JUnit reports to `tests/<name>/reports/chainsaw-report.xml` (`reports/` is gitignored)
 - Useful manual checks:
 
 ```bash
