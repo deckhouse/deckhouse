@@ -16,11 +16,8 @@ limitations under the License.
 
 package domain
 
-type Node struct {
+type NodeIdentity struct {
 	Name string
-	Addr string
-}
-
-type Nodes struct {
-	Nodes []Node
+	UID  string
+	IP   string
 }

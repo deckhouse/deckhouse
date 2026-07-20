@@ -1,6 +1,5 @@
 .env
-test-watchdog-device
+bin/
+coverage.*
 .vscode/
 .idea/
-coverage.*
-../.env
