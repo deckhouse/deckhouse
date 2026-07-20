@@ -360,7 +360,7 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](../../../admin/configuration/#advanced-scheduling).</code>
+      automatically.</code>
 ```
 
 An example of the `/openapi/doc-ru-config-values.yaml` file:
@@ -387,7 +387,7 @@ When using these validation rules, keep the following features in mind:
 
 ##### Examples of rules
 
-Below are examples of complex validation rules described in Common Expression Language (`CEL`):
+Below are examples of complex validation rules described in CEL:
 
 - Checking whether the parameter value falls within the range:
   
@@ -511,7 +511,7 @@ The `/templates` directory contains [Helm templates](https://helm.sh/docs/chart_
 
 * To facilitate working with templates, use [lib-helm](https://github.com/deckhouse/lib-helm), which is a set of extra functions that make it easier to work with global and module values.
 
-* Accesses to the registry from the ModuleSource resource are available at the `.Values.<moduleName>.registry` path.
+* Accesses to the registry from the ModuleSource resource are available at the `.Values.<moduleName>.registry.dockercfg` path.
 
 * To use these functions to pull image pools in controllers, create a secret and add it to the corresponding parameter: `"imagePullSecrets": [{"name":"registry-creds"}]`.
 
@@ -564,8 +564,8 @@ Parameters that can be used in `module.yaml`:
 | `namespace` | String | Namespace where the module components will be deployed |
 | `subsystems` | Array of strings | List of subsystems the module belongs to |
 | `accessibility` | Object | Module accessibility settings |
-| `accessibility.editions` | Object | Module operation settings in Deckhouse editions |
-| `accessibility.editions.available` | Boolean | Defines whether the module is available in a Deckhouse edition |
+| `accessibility.editions` | Object | Module operation settings in DKP editions |
+| `accessibility.editions.available` | Boolean | Defines whether the module is available in a DKP edition |
 | `accessibility.editions.enabledInBundles` | Array of strings | List of module bundles in which the module should be enabled by default |
 | `descriptions` | Object | Arbitrary text description of the module's purpose |
 | `descriptions.en` | String | Description in English |
@@ -586,19 +586,10 @@ Other `module.yaml` parameters:
 | `requirements.deckhouse` | String | Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with |
 | `requirements.kubernetes` | String | Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with |
 | `requirements.modules` | Object | Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules) |
-| `stage` | String | [Module lifecycle stage](../versioning/#definition-of-module-stability). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated` |
-
-If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [corresponding parameter](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) to `true`.
-
-Additional parameters:
-
-- `tags` — *Array of strings.* Additional module tags. Tags are converted to labels of the [Module](../../../reference/api/global.html#parameters-modules) object using the template `module.deckhouse.io/<TAG>=""`.
-
-  For example, if you specify two tags `test` and `example`, the Module object will get the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/example=""`.
-- `weight` — *Number.* Module weight. Affects the module startup order: modules with a lower `weight` start earlier. Default: `900`.
-
-  The startup order is also affected by [module dependencies](../dependencies/).
-- `critical` — *Boolean.* Marks the module as critical for the initial cluster bootstrap. Such modules (if used in the cluster) start during the initial cluster boot, before the cluster is considered fully ready. Other modules (non-critical) start only after the cluster is fully ready. Default: `false`.
+| `stage` | String | [Module lifecycle stage](../versioning/#definition-of-module-stability). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`. If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [corresponding parameter](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) to `true` |
+| `tags` | Array of strings | Additional module tags. Tags are converted to labels of the [Module](../../../reference/api/global.html#parameters-modules) object using the template `module.deckhouse.io/<TAG>=""`. For example, if you specify two tags `test` and `example`, the Module object will get the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/example=""` |
+| `weight` | Number | Module weight. Affects the module startup order: modules with a lower `weight` start earlier. Default: `900`. The startup order is also affected by [module dependencies](../dependencies/) |
+| `critical` | Boolean | Marks the module as critical for the initial cluster bootstrap. Such modules (if used in the cluster) start during the initial cluster boot, before the cluster is considered fully ready. Other modules (non-critical) start only after the cluster is fully ready. Default: `false` |
 
 Example of metadata description for the `hello-world` module:
 
@@ -663,9 +654,12 @@ Parameter description:
     Includes monitoring, authorization control, networking, and other essential components.
   - `Managed`: Set of modules for clusters managed by cloud providers (for example, Google Kubernetes Engine).
   - `Minimal`: Minimal set that includes only the current module.
-    > Note that basic modules (such as the CNI module) are not included in this set.
-    > Without basic modules, Deckhouse can only operate in an already deployed cluster.
-    > The list of modules that must be enabled manually during installation is given in [Things to keep in mind when working with the Minimal module set](../../../admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
+
+    {% alert level="warning" %}
+    Note that basic modules (such as the CNI module) are not included in this set.
+    Without basic modules, DKP can only operate in an already deployed cluster.
+    The list of modules that must be enabled manually during installation is given in [Things to keep in mind when working with the Minimal module set](../../../admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
+    {% endalert %}
 - Sections containing edition names. Define module behavior in specified editions.
   Possible values: `be`, `ce`, `ee`, `se`, `se-plus`.
 
