@@ -343,6 +343,7 @@ function main() {
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
   export BUNDLE_STEPS_STATUS_DIR="$BOOTSTRAP_DIR/bundle_steps_status"
+  export BUNDLE_STEPS_CONFLICT_FILE="$BOOTSTRAP_DIR/bundle_steps_conflict"
   export CONFIGURATION_CHECKSUM_FILE="$BOOTSTRAP_DIR/configuration_checksum"
   export UPTIME_FILE="$BOOTSTRAP_DIR/uptime"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
@@ -572,6 +573,11 @@ function main() {
         >&2 echo "ERROR: Recorded checksum: ${step_recorded_checksum}, current checksum: ${step_checksum}."
         >&2 echo "ERROR: Resuming would re-run it against a node that may already reflect its old version, which is unsafe."
         >&2 echo "ERROR: Please run 'dhctl bootstrap-phase abort' to clean up, then start a fresh bootstrap."
+        # dhctl reads this back over SSH to tell apart this fatal, unresolvable
+        # condition from an ordinary transient failure, so it can stop
+        # retrying the whole bundle immediately instead of burning through
+        # its retry budget on a mismatch that will never fix itself.
+        printf '%s\n' "$step_base" >> "$BUNDLE_STEPS_CONFLICT_FILE"
         bb-bashible-ready-steps-failed "$step_base"
         return 1
       fi

@@ -15,6 +15,7 @@
 package bashible
 
 import (
+	"errors"
 	"log/slog"
 	"strings"
 	"testing"
@@ -151,5 +152,30 @@ func TestRunner_ClearBundleStepsDir(t *testing.T) {
 
 	require.NoError(t, r.clearBundleStepsDir(t.Context()))
 	require.Len(t, captured, 1)
-	require.Equal(t, "rm -rf "+bundleStepsDir, captured[0])
+	require.Equal(t, "rm -rf "+bundleStepsDir+" "+bundleStepsConflictFile, captured[0])
+}
+
+func TestRunner_CheckStepsConflict_None(t *testing.T) {
+	node := newTestNode(t, nil, nil, nil)
+
+	r := NewRunner(node, slog.Default())
+
+	steps, err := r.checkStepsConflict(t.Context())
+	require.NoError(t, err)
+	require.Empty(t, steps)
+}
+
+func TestRunner_CheckStepsConflict_Found(t *testing.T) {
+	node := newTestNode(t, []byte("075_add_failure.sh\n"), nil, nil)
+
+	r := NewRunner(node, slog.Default())
+
+	steps, err := r.checkStepsConflict(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, []string{"075_add_failure.sh"}, steps)
+}
+
+func TestStepsConflictBreakPredicate(t *testing.T) {
+	require.True(t, stepsConflictBreakPredicate(newStepsConflictError([]string{"075_add_failure.sh"})))
+	require.False(t, stepsConflictBreakPredicate(errors.New("some transient error")))
 }
