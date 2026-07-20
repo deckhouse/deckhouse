@@ -46,6 +46,7 @@ shell:
   - apk add --no-cache bash git binutils
   install:
   - cd /src/istio/
+  - pwd
   - echo {{ $istioVersion }} > version
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
