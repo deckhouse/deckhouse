@@ -5,6 +5,7 @@
 # Based on https://github.com/istio/istio/blob/1.19.7/cni/deployments/kubernetes/Dockerfile.install-cni
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: {{ $istioVersion }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/istio-cni
@@ -46,7 +47,6 @@ shell:
   - apk add --no-cache bash git binutils
   install:
   - cd /src/istio/
-  - pwd
   - echo {{ $istioVersion }} > version
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'

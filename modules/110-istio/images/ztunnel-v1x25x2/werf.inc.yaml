@@ -2,6 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
+fromCacheVersion: {{ $istioVersion }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/ztunnel/bin/ztunnel

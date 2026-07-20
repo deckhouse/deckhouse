@@ -6,6 +6,7 @@
 # Based on https://github.com/kiali/kiali/blob/v1.67.2/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
+fromCacheVersion: {{ $istioVersion }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
