@@ -119,9 +119,8 @@ osDistributions:
       - version: '18.04'
         editions: [ce, be, se, se-plus, ee]
         note_content:
-          ru: <b>Ubuntu 18.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
-ru: <b>Ubuntu 18.04</b> и <b>20.04</b> более не поддерживаются разработчиками дистрибутива Ubuntu
-en: <b>Ubuntu 18.04</b> and <b>20.04</b> are no longer supported by Ubuntu developers
+          ru: <b>Ubuntu 18.04</b> и <b>20.04</b> более не поддерживаются разработчиками дистрибутива Ubuntu
+          en: <b>Ubuntu 18.04</b> and <b>20.04</b> are no longer supported by Ubuntu developers
       - version: '20.04'
         editions: [ce, be, se, se-plus, ee]
       - version: '22.04'
