@@ -53,7 +53,8 @@ var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`
 // into installer, candi or terraform-manager images. Keep in sync with the
 // external-provider list in .werf/defines/installer.tmpl.
 var externalCloudProviders = map[string]struct{}{
-	"dvp": {},
+	"dvp":    {},
+	"metal3": {},
 }
 
 var workDir = cwd()
@@ -158,6 +159,10 @@ func writeSections(settings writeSettings) {
 		log.Fatalf("globbing: %v", err)
 	}
 	addNewFileEntry := func(file string) {
+		if strings.HasPrefix(filepath.Base(file), ".") {
+			return
+		}
+
 		if strings.Contains(file, "ee/modules/000-common") {
 			return
 		}
@@ -290,6 +295,14 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 	var addEntries []addEntry
 
 	addNewFileEntry := func(file string) {
+		cloudProviderName := extractCloudProviderName(file)
+
+		// External providers are downloaded by dhctl at runtime, not baked.
+		// They may not have a candi/ directory in the main repository.
+		if _, external := externalCloudProviders[cloudProviderName]; external {
+			return
+		}
+
 		candiPath := filepath.Join(file, "candi")
 		info, err := os.Lstat(candiPath)
 		if err != nil {
@@ -297,13 +310,6 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 		}
 
 		if info.Mode()&os.ModeSymlink != 0 {
-			return
-		}
-
-		cloudProviderName := extractCloudProviderName(file)
-
-		// External providers are downloaded by dhctl at runtime, not baked.
-		if _, external := externalCloudProviders[cloudProviderName]; external {
 			return
 		}
 

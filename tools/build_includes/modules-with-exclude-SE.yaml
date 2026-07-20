@@ -151,8 +151,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/030-cloud-provider-metal3
-  to: /deckhouse/modules/030-cloud-provider-metal3
+- add: /modules/030-cloud-provider-gcp
+  to: /deckhouse/modules/030-cloud-provider-gcp
   excludePaths:
     - docs
     - README.md
@@ -165,13 +165,13 @@
     - hack
     - template_tests
     - .namespace
-    - webhooks
-    - crds
+    - values_matrix_test.yaml
+    - .build.yaml
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/030-cloud-provider-gcp
-  to: /deckhouse/modules/030-cloud-provider-gcp
+- add: /modules/030-cloud-provider-metal3
+  to: /deckhouse/modules/030-cloud-provider-metal3
   excludePaths:
     - docs
     - README.md
