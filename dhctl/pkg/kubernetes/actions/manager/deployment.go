@@ -25,10 +25,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx, deploymentName string) error {

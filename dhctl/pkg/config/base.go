@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
@@ -43,7 +44,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var (
@@ -54,6 +54,11 @@ var (
 	Edition                  = "FE"
 	CommaSeparatedEEEditions = "EE,FE,CSE"
 )
+
+// errParseConfigTransient marks a transport/API-level failure while reading the cluster
+// configuration secret, as opposed to a permanent parse/schema-validation failure of the
+// secret's own content that will fail identically on every attempt.
+var errParseConfigTransient = errors.New("parse cluster config: transient error, may succeed on retry")
 
 func LoadConfigFromFile(
 	ctx context.Context,
@@ -180,8 +185,15 @@ func ParseConfigFromCluster(
 	var metaConfig *MetaConfig
 	var err error
 
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Get cluster configuration from Kubernetes cluster"),
+		retry.WithAttempts(50),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errParseConfigTransient, registrydata.ErrRegistryDataTransient),
+	)
+
 	return metaConfig, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Get cluster configuration", func(ctx context.Context) error {
-		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 50, 1*time.Second).
+		return retry.NewLoopWithParams(loopParams).
 			RunContext(ctx, func() error {
 				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions, operation)
 				return err
@@ -201,7 +213,14 @@ func ParseConfigInCluster(
 		err        error
 	)
 
-	err = retry.NewSilentLoop("Get cluster configuration from inside Kubernetes cluster", 25, 1*time.Second).
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Get cluster configuration from inside Kubernetes cluster"),
+		retry.WithAttempts(25),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errParseConfigTransient, registrydata.ErrRegistryDataTransient),
+	)
+
+	err = retry.NewSilentLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions, operation)
 			return err

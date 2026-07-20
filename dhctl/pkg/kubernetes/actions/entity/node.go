@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -41,7 +42,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
@@ -147,11 +147,23 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 	})
 }
 
+// errCreateNodeGroupTransient marks a Create/Patch failure that may succeed on retry (e.g. a
+// resource-version conflict or a transient API error), as opposed to a permanent
+// authorization or admission-webhook rejection of the NodeGroup spec.
+var errCreateNodeGroupTransient = fmt.Errorf("create NodeGroup: transient error, may succeed on retry")
+
 func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, data map[string]any) error {
 	doc := unstructured.Unstructured{}
 	doc.SetUnstructuredContent(data)
 
-	return retry.NewLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 600, 1*time.Second).
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Create NodeGroup %q", nodeGroupName),
+		retry.WithAttempts(600),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errCreateNodeGroupTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			res, err := kubeCl.Dynamic().
 				Resource(nodeGroupResource).
@@ -171,13 +183,19 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 					Resource(nodeGroupResource).
 					Patch(ctx, doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 				if err != nil {
-					return err
+					if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
+						return err
+					}
+					return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)
 				}
 				dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
 				return nil
 			}
 
-			return err
+			if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
+				return err
+			}
+			return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)
 		})
 }
 
@@ -466,7 +484,7 @@ func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientPr
 	var nodes *corev1.NodeList
 
 	loopParams = retry.SafeCloneOrNewParams(loopParams, getMasterNodesIPsDefaultOpts...).
-		WithName("Get control plane nodes IPs from Kubernetes cluster")
+		Clone(retry.WithName("Get control plane nodes IPs from Kubernetes cluster"))
 
 	err = retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		var err error

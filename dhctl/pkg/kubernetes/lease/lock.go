@@ -17,6 +17,7 @@ package lease
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -31,10 +32,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 const lockUserInfoAnnotKey = "dhctl.deckhouse.io/lock-user-info"
@@ -205,9 +206,11 @@ func (l *LeaseLock) startAutoRenew(ctx context.Context) {
 func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1.Lease, error) {
 	var lease *coordinationv1.Lease
 
-	prefix := "Can't acquire lease lock."
+	// cannotRenew only breaks the loop for the specific, identity-scoped condition that won't
+	// clear up by retrying immediately (someone else holds a live lease); any other failure
+	// (e.g. a transient error re-reading the lease) keeps retrying.
 	cannotRenew := func(err error) bool {
-		return strings.HasPrefix(err.Error(), prefix)
+		return stderrors.Is(err, ErrLeaseHeldByAnotherIdentity)
 	}
 
 	kubeClient, err := l.getter.KubeClientCtx(ctx)
@@ -226,12 +229,12 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 		if errors.IsAlreadyExists(err) {
 			lease, err = kubeClient.CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
 			if err != nil {
-				return fmt.Errorf("%s Can't get current lease: %v", prefix, err)
+				return fmt.Errorf("Can't acquire lease lock. Can't get current lease: %w", err)
 			}
 
 			lease, err = l.tryRenew(ctx, lease, force)
 			if err != nil {
-				return fmt.Errorf("%s \n%v", prefix, err)
+				return fmt.Errorf("Can't acquire lease lock. \n%w", err)
 			}
 		}
 
@@ -344,9 +347,14 @@ func now() *metav1.MicroTime {
 	return &metav1.MicroTime{Time: time.Now()}
 }
 
+// ErrLeaseHeldByAnotherIdentity marks the case where the lease is currently held by a
+// different, live identity: retrying immediately will not change that until the holder's
+// lease expires, so acquire loops should stop instead of exhausting all attempts.
+var ErrLeaseHeldByAnotherIdentity = stderrors.New("lease is held by another identity")
+
 func getCurrentLockerError(lease *coordinationv1.Lease) error {
 	info, _ := LockInfo(lease)
-	return fmt.Errorf("%s", info)
+	return fmt.Errorf("%w: %s", ErrLeaseHeldByAnotherIdentity, info)
 }
 
 func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
