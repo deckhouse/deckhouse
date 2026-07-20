@@ -19,7 +19,7 @@ description: Архитектура модуля cni-cilium в Deckhouse Kuberne
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`cni-cilium`](/modules/cni-cilium/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующих диаграммах:
+Архитектура модуля [`cni-cilium`](/modules/cni-cilium/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображена на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля cni-cilium](../../../images/architecture/network/c4-l2-cni-cilium.ru.svg)
