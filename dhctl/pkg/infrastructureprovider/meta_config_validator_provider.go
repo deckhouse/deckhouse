@@ -65,7 +65,7 @@ func selectValidator(ctx context.Context, provider, downloadRootDir string) conf
 		// cluster is already a fact).
 		return yandex.NewMetaConfigValidator(true).Validate
 	case vcd.ProviderName:
-		return vcd.ValidateMetaConfig
+		return vcd.NewMetaConfigValidator(true).Validate
 	default:
 		if binaryPath := findExternalValidatorBinary(downloadRootDir, provider); binaryPath != "" {
 			return external.NewBinaryValidator(binaryPath).Validate

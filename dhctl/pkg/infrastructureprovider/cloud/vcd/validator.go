@@ -26,12 +26,24 @@ import (
 
 type clientProvider func(pcc map[string]json.RawMessage) (cloudClient, error)
 
-// ValidateMetaConfig checks the cluster prefix and the provider.server format.
-// Validation never mutates the config; the legacyMode rewrite lives separately
-// in PatchProviderClusterConfig.
-func ValidateMetaConfig(_ context.Context, input config.ProviderInput) error {
-	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
-		return fmt.Errorf("%v for provider %s", err, ProviderName)
+// MetaConfigValidator checks the provider.server format and, when
+// validatePrefix is set, the cluster prefix. The in-cluster hook validates with
+// validatePrefix=false (no prefix there, same as before the module-config
+// migration); dhctl operations validate with true. Validation never mutates the
+// config; the legacyMode rewrite lives separately in EnsureLegacyMode.
+type MetaConfigValidator struct {
+	validatePrefix bool
+}
+
+func NewMetaConfigValidator(validatePrefix bool) *MetaConfigValidator {
+	return &MetaConfigValidator{validatePrefix: validatePrefix}
+}
+
+func (p *MetaConfigValidator) Validate(_ context.Context, input config.ProviderInput) error {
+	if p.validatePrefix {
+		if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
+			return fmt.Errorf("%v for provider %s", err, ProviderName)
+		}
 	}
 
 	raw, ok := input.ProviderClusterConfig["provider"]

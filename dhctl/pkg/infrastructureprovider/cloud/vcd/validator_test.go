@@ -67,7 +67,7 @@ func TestValidateMetaConfig(t *testing.T) {
 	}
 
 	assertPrefix := func(t *testing.T, prefix string, hasError bool) {
-		err := ValidateMetaConfig(t.Context(), makeInput(validServer, prefix))
+		err := NewMetaConfigValidator(true).Validate(t.Context(), makeInput(validServer, prefix))
 		if hasError {
 			require.Error(t, err)
 		} else {
@@ -79,6 +79,12 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "1abc", false)
 	assertPrefix(t, "abc-abc", false)
 
-	err := ValidateMetaConfig(t.Context(), makeInput("https://myserver:8080/api/", "test"))
+	// Trailing slash on provider.server is rejected regardless of prefix validation.
+	err := NewMetaConfigValidator(true).Validate(t.Context(), makeInput("https://myserver:8080/api/", "test"))
 	require.Error(t, err)
+
+	// The in-cluster hook validates with validatePrefix=false: an empty prefix is
+	// fine there, but the trailing slash is still caught.
+	require.NoError(t, NewMetaConfigValidator(false).Validate(t.Context(), makeInput(validServer, "")))
+	require.Error(t, NewMetaConfigValidator(false).Validate(t.Context(), makeInput("https://myserver:8080/api/", "")))
 }
