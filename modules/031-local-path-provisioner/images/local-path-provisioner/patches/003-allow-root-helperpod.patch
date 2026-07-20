@@ -1,0 +1,24 @@
+diff --git a/util.go b/util.go
+index 84c311f..8902530 100644
+--- a/util.go
++++ b/util.go
+@@ -90,14 +90,12 @@ func validateHelperPodTemplate(p *v1.Pod, allowUnsafe bool) error {
+ 	}
+ 
+ 	// Validate pod securityContext: block dangerous fields,
+-	// but allow hardening fields (runAsNonRoot, fsGroup, seccompProfile, etc.)
++	// but allow hardening fields (runAsNonRoot, fsGroup, seccompProfile, etc.).
++	//
++	// Deckhouse-specific deviation: RunAsUser=0 and RunAsGroup=0 are intentionally
++	// permitted, because the helper container manages host-path directories that
++	// were originally created by root and therefore must run as root itself.
+ 	if psc := p.Spec.SecurityContext; psc != nil {
+-		if err := forbid(psc.RunAsUser != nil && *psc.RunAsUser == 0, "set pod runAsUser to 0 (root)"); err != nil {
+-			return err
+-		}
+-		if err := forbid(psc.RunAsGroup != nil && *psc.RunAsGroup == 0, "set pod runAsGroup to 0 (root)"); err != nil {
+-			return err
+-		}
+ 		if err := forbid(len(psc.Sysctls) > 0, "define sysctls"); err != nil {
+ 			return err
+ 		}
