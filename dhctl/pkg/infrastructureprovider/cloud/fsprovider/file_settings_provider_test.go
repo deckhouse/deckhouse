@@ -115,9 +115,7 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 		require.NoError(t, store.initError)
 		require.NotNil(t, store)
 		require.Len(t, fileToSettingsStore, 1)
-		// The store is keyed by the versions file plus the bundle download dir,
-		// since bundles contribute their own provider settings.
-		require.Contains(t, fileToSettingsStore, file+"\x00")
+		require.Contains(t, fileToSettingsStore, storeCacheKey{infraVersionsFile: file})
 	}
 
 	allProviders := append(make([]string, 0), tofuProviders...)

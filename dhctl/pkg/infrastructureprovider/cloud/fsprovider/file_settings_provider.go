@@ -30,7 +30,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
 )
 
 const (
@@ -50,16 +49,25 @@ type SettingsProvider struct {
 	store settingsStore
 }
 
+// storeCacheKey identifies a memoized settings store. Bundles in the download
+// dir contribute their own providers, so the same versions file yields
+// different stores under different download dirs — both fields are part of the
+// key.
+type storeCacheKey struct {
+	infraVersionsFile string
+	downloadDir       string
+}
+
 var (
 	fileSettingsStoreMutex sync.Mutex
-	fileToSettingsStore    = make(map[string]settingsStore)
+	fileToSettingsStore    = make(map[storeCacheKey]settingsStore)
 )
 
 func loadOrGetStore(ctx context.Context, infraVersionsFile, downloadDir string) (settingsStore, error) {
 	fileSettingsStoreMutex.Lock()
 	defer fileSettingsStoreMutex.Unlock()
 
-	cacheKey := infraVersionsFile + "\x00" + downloadDir
+	cacheKey := storeCacheKey{infraVersionsFile: infraVersionsFile, downloadDir: downloadDir}
 
 	store, ok := fileToSettingsStore[cacheKey]
 	if ok {
@@ -134,10 +142,15 @@ type versionsDoc struct {
 	providers map[string]json.RawMessage
 }
 
-// loadVersionsFile parses a terraform_versions.yml. A provider bundle ships
-// only the fragment describing itself and omits the tool versions it does not
-// use, so it inherits them from the candi file it extends; the candi file
-// itself is parsed with no inherited versions and must carry both.
+// loadVersionsFile parses the providers and tool versions from a
+// terraform_versions.yml. A provider bundle ships only the fragment describing
+// itself and omits the tool versions it does not use, so it inherits them from
+// the candi file it extends; the candi file itself is parsed with no inherited
+// versions and must carry both.
+//
+// plan_rules.yml is not read here: it belongs to a single-provider bundle, and
+// the bundle loader attaches it (see attachBundlePlanRules). The multi-provider
+// candi file has no plan rules, so nothing looks for them next to it.
 func loadVersionsFile(ctx context.Context, filename string, inherited toolVersions) (versionsFile, error) {
 	doc, err := readVersionsDoc(filename)
 	if err != nil {
@@ -161,14 +174,6 @@ func loadVersionsFile(ctx context.Context, filename string, inherited toolVersio
 
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found provider settings for %s: %s", name, set.CloudName()))
 		providers[set.CloudName()] = set
-	}
-
-	planRule, err := loadPlanRules(filename)
-	if err != nil {
-		return versionsFile{}, err
-	}
-	if err := attachPlanRules(filename, providers, planRule); err != nil {
-		return versionsFile{}, err
 	}
 
 	return versionsFile{tools: tools, providers: providers}, nil
@@ -211,28 +216,27 @@ func parseProvider(entry json.RawMessage, tools toolVersions) (*settings.Simple,
 	return &set, nil
 }
 
-// attachPlanRules attaches the plan rules that sit next to a single-provider
-// bundle's versions file. Such a bundle must carry them (they say which
-// resource a VM is), and a multi-provider file must not: the rules describe one
-// provider, so finding them there means the two files got out of sync.
-func attachPlanRules(filename string, providers settingsStore, planRule *vmresource.Rule) error {
+// attachBundlePlanRules folds a bundle's plan_rules.yml into its single
+// provider's settings. The rules (which manifest a VM change touches) live next
+// to the bundle's terraform_versions.yml, and every external bundle must carry
+// them; a bundle describing more than one provider is malformed.
+func attachBundlePlanRules(filename string, providers settingsStore) error {
 	if len(providers) != 1 {
-		if planRule != nil {
-			return fmt.Errorf("plan_rules.yml next to %s requires a single-provider bundle, got %d providers", filename, len(providers))
-		}
-		return nil
+		return fmt.Errorf("provider bundle %s must describe exactly one provider, got %d", filename, len(providers))
+	}
+
+	planRule, err := loadPlanRules(filename)
+	if err != nil {
+		return err
+	}
+	if planRule == nil {
+		return fmt.Errorf("provider bundle %s is missing plan_rules.yml with vmResource", filename)
 	}
 
 	for cloudName, set := range providers {
-		if planRule != nil {
-			set.VMResourceVal = planRule
-			if err := set.Validate(false); err != nil {
-				return fmt.Errorf("validate provider %s after plan_rules merge: %w", cloudName, err)
-			}
-		}
-
-		if set.VMResourceVal == nil {
-			return fmt.Errorf("single-provider bundle %q requires plan_rules.yml with vmResource next to %s", cloudName, filename)
+		set.VMResourceVal = planRule
+		if err := set.Validate(false); err != nil {
+			return fmt.Errorf("validate provider %s after plan_rules merge: %w", cloudName, err)
 		}
 	}
 
@@ -276,6 +280,10 @@ func mergeBundleSettings(ctx context.Context, store settingsStore, downloadDir s
 
 		bundle, err := loadVersionsFile(ctx, match, inherited)
 		if err != nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Skipping provider bundle settings %s: %v", match, err))
+			continue
+		}
+		if err := attachBundlePlanRules(match, bundle.providers); err != nil {
 			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Skipping provider bundle settings %s: %v", match, err))
 			continue
 		}

@@ -28,7 +28,6 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	otattribute "go.opentelemetry.io/otel/attribute"
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -40,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
@@ -106,34 +104,13 @@ const (
 )
 
 func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigValidatorProvider, m *MetaConfig) (*MetaConfig, error) {
-	ctx, span := telemetry.StartSpan(ctx, "validateProviderConfig")
-	defer span.End()
-
 	validate := validatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
-	providerInput := m.buildProviderInput()
-
-	span.SetAttributes(
-		otattribute.String("provider.name", m.ProviderName),
-		otattribute.String("provider.layout", m.Layout),
-		otattribute.String("provider.clusterPrefix", m.ClusterPrefix),
-		otattribute.String("provider.operation", m.Operation),
-		otattribute.String("provider.downloadRootDir", m.DownloadRootDir),
-		otattribute.Int("provider.input.providerClusterConfigKeys", len(providerInput.ProviderClusterConfig)),
-	)
-	if cv := providerInput.CloudProviderVars; cv != nil {
-		span.SetAttributes(
-			otattribute.Int("provider.input.settingsKeys", len(cv.Settings)),
-			otattribute.Int("provider.input.nodeGroupsCount", len(cv.NodeGroups)),
-			otattribute.Int("provider.input.instanceClassesCount", len(cv.InstanceClasses)),
-			otattribute.Int("provider.input.secretsCount", len(cv.Secrets)),
-		)
+	if validate == nil {
+		return m, nil
 	}
 
-	if validate != nil {
-		if err := validate(ctx, providerInput); err != nil {
-			return nil, err
-		}
-		span.AddEvent("provider validated")
+	if err := validate(ctx, m.buildProviderInput()); err != nil {
+		return nil, err
 	}
 
 	return m, nil
