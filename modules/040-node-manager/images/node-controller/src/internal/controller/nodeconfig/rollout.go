@@ -67,7 +67,11 @@ func applied(nc *internalv1alpha1.NodeConfig) bool {
 	if disruptionRequested(nc) {
 		return false
 	}
-	return nc.Status.ObservedGeneration == nc.Generation && nc.Status.Phase == phaseReady
+	// AppliedGeneration, not ObservedGeneration: a held node has *observed* the
+	// current generation (observedGeneration == generation) but is still running
+	// the previous one. What frees a rollout slot is the node actually running
+	// the published config, which is what AppliedGeneration reports.
+	return nc.Status.AppliedGeneration == nc.Generation && nc.Status.Phase == phaseReady
 }
 
 func maxConcurrent(ng *v1.NodeGroup) *intstr.IntOrString {

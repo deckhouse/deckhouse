@@ -47,14 +47,27 @@ type NodeConfig struct {
 
 // NodeConfigStatus is the observed state reported by the node agent.
 type NodeConfigStatus struct {
-	// ObservedGeneration is the generation of the spec this status reflects.
+	// ObservedGeneration is the latest spec generation the node has processed —
+	// seen and decided what to do about. It reaches the newest generation as
+	// soon as the node has looked at it, even while that generation is still
+	// held for approval and not yet running (see AppliedGeneration).
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// Phase summarises the conditions: Ready when all are True, else Degraded.
+	// AppliedGeneration is the spec generation the node is actually running. It
+	// lags ObservedGeneration while a disruptive config is held. The rollout's
+	// "this node has converged" test is AppliedGeneration == metadata.generation,
+	// not ObservedGeneration.
 	// +optional
-	// +kubebuilder:validation:Enum=Ready;Degraded
+	AppliedGeneration int64 `json:"appliedGeneration,omitempty"`
+	// Phase summarises the node. Ready: running the published config, healthy.
+	// Pending: healthy but not yet running the published config (held for
+	// approval). Degraded: a subsystem failed, the config was rejected, or the
+	// node rolled back.
+	// +optional
+	// +kubebuilder:validation:Enum=Ready;Pending;Degraded
 	Phase string `json:"phase,omitempty"`
-	// Conditions are per-subsystem reconcile outcomes.
+	// Conditions are per-subsystem reconcile outcomes plus the node-level
+	// ConfigurationApplied and DisruptionRequired.
 	// +optional
 	// +listType=map
 	// +listMapKey=type

@@ -511,15 +511,28 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               observedGeneration:
-                description: ObservedGeneration is the generation of the spec this
-                  status reflects.
+                description: |-
+                  ObservedGeneration is the latest spec generation the node has processed —
+                  seen and decided what to do about. It reaches the newest generation as soon
+                  as the node has looked at it, even while that generation is still held for
+                  approval and not yet running (see AppliedGeneration).
+                format: int64
+                type: integer
+              appliedGeneration:
+                description: |-
+                  AppliedGeneration is the spec generation the node is actually running. It
+                  lags ObservedGeneration while a disruptive config is held. The rollout's
+                  "this node has converged" test is AppliedGeneration == metadata.generation.
                 format: int64
                 type: integer
               phase:
-                description: 'Phase summarises the conditions: Ready when all are
-                  True, else Degraded.'
+                description: |-
+                  Phase summarises the node. Ready: running the published config, healthy.
+                  Pending: healthy but not yet running the published config (held for approval).
+                  Degraded: a subsystem failed, the config was rejected, or the node rolled back.
                 enum:
                 - Ready
+                - Pending
                 - Degraded
                 type: string
             type: object

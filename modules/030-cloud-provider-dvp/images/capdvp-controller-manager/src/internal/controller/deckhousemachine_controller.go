@@ -652,6 +652,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 	if err != nil {
 		return nil, err
 	}
+	cloudInitScript = resolveNodeName(cloudInitScript, dvpMachine.Name)
 
 	vm, err := r.ensureVM(ctx, machine, dvpMachine)
 	if err != nil {
@@ -673,6 +674,26 @@ func (r *DeckhouseMachineReconciler) createVM(
 	}
 
 	return vm, nil
+}
+
+// nodeNamePlaceholder is what the bootstrap secret of a NodeGroup carries in
+// place of the node's name. That secret is rendered once for the whole group,
+// before any machine exists, so the name cannot be in it.
+const nodeNamePlaceholder = "__NODE_NAME__"
+
+// resolveNodeName fills the node's name into the userdata handed to one machine.
+// The VM is created with this name, and the platform reports it to the guest as
+// the hostname, so this is the name the node registers under.
+//
+// It is substituted here rather than on the node: the per-machine copy of the
+// userdata is made at a point where the name is already known, and a node that
+// had to work the name out for itself would depend on the platform publishing
+// it — which is not something every provider does.
+//
+// Userdata without the placeholder is returned untouched: a config written for
+// a single node names it outright.
+func resolveNodeName(cloudInitScript []byte, nodeName string) []byte {
+	return bytes.ReplaceAll(cloudInitScript, []byte(nodeNamePlaceholder), []byte(nodeName))
 }
 
 func (r *DeckhouseMachineReconciler) getBootstrapScript(

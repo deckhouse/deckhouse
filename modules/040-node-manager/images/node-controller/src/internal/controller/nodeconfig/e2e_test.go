@@ -644,11 +644,12 @@ func reportHeld(ctx context.Context, name string, heldGeneration int64) {
 			Message:            "applying this config restarts kubelet",
 			ObservedGeneration: heldGeneration,
 		})
-		// Deliberately the held generation with a Ready phase — an agent that
-		// overstates what it has applied. The rollout must not take a node's
-		// word for it while that same status says the node is still waiting to
-		// be interrupted.
+		// Deliberately claim the held generation is applied, with a Ready phase —
+		// an agent that overstates what it is running. The rollout must not take
+		// a node's word for it while that same status says the node is still
+		// waiting to be interrupted (disruptionRequested wins).
 		nc.Status.ObservedGeneration = heldGeneration
+		nc.Status.AppliedGeneration = heldGeneration
 		nc.Status.Phase = phaseReady
 		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -719,6 +720,7 @@ func clearDisruption(ctx context.Context, name string) {
 			ObservedGeneration: nc.Generation,
 		})
 		nc.Status.ObservedGeneration = nc.Generation
+		nc.Status.AppliedGeneration = nc.Generation
 		nc.Status.Phase = phaseReady
 		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -732,6 +734,7 @@ func reportApplied(ctx context.Context, name string) {
 	Eventually(func(g Gomega) {
 		nc := getNodeConfig(ctx, g, name)
 		nc.Status.ObservedGeneration = nc.Generation
+		nc.Status.AppliedGeneration = nc.Generation
 		nc.Status.Phase = phaseReady
 		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
