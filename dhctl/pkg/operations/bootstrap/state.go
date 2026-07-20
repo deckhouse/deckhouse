@@ -88,7 +88,7 @@ func (s *State) SaveRegistryPKI(ctx context.Context, pki registry.PKI) error {
 
 // RegistryPKI loads the previously saved registry PKI. ok is false, with no
 // error, if nothing has been saved yet.
-func (s *State) RegistryPKI(ctx context.Context) (pki registry.PKI, ok bool, err error) {
+func (s *State) RegistryPKI(ctx context.Context) (registry.PKI, bool, error) {
 	inCache, err := s.cache.InCache(ctx, RegistryPKICacheKey)
 	if err != nil {
 		return registry.PKI{}, false, err
@@ -97,6 +97,7 @@ func (s *State) RegistryPKI(ctx context.Context) (pki registry.PKI, ok bool, err
 		return registry.PKI{}, false, nil
 	}
 
+	var pki registry.PKI
 	if err := s.cache.LoadStruct(ctx, RegistryPKICacheKey, &pki); err != nil {
 		return registry.PKI{}, false, err
 	}
