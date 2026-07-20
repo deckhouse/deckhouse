@@ -28,13 +28,13 @@ import (
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"gopkg.in/yaml.v3"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
+
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/metrics"
-
-	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
