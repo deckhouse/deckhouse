@@ -515,7 +515,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
 				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
 				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
 				f.HelmRender()
 			})
