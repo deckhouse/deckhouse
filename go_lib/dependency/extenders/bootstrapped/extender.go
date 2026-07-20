@@ -30,6 +30,14 @@ const (
 	Name extenders.ExtenderName = "Bootstrapped"
 )
 
+type IExtender interface {
+	extenders.Extender
+
+	AddFunctionalModule(moduleName string)
+}
+
+var _ IExtender = &Extender{}
+
 type Extender struct {
 	// check if the cluster bootstrapped
 	isBootstrapped func() (bool, error)

@@ -24,13 +24,13 @@ type ImagesDigests = map[string]map[string]any
 func GetAllDigests() (ImagesDigests, error) {
 	content, err := imagesDigestsContent()
 	if err != nil {
-		return nil, fmt.Errorf("Could not load images digests: %w", err)
+		return nil, fmt.Errorf("Could not load image digests: %w", err)
 	}
 
 	var digests ImagesDigests
 
 	if err := json.Unmarshal(content, &digests); err != nil {
-		return nil, fmt.Errorf("Could not unmarshal images digests: %w", err)
+		return nil, fmt.Errorf("Could not unmarshal image digests: %w", err)
 	}
 
 	return digests, nil
@@ -44,17 +44,17 @@ func GetImage(section, name string) (string, error) {
 
 	sec, ok := digests[section]
 	if !ok || len(sec) == 0 {
-		return "", fmt.Errorf("Not found images digests section '%s' or empty", section)
+		return "", fmt.Errorf("Image digests section '%s' not found or empty", section)
 	}
 
 	imgRaw, ok := sec[name]
 	if !ok {
-		return "", fmt.Errorf("Not found image '%s' in section '%s'", name, section)
+		return "", fmt.Errorf("Image '%s' not found in section '%s'", name, section)
 	}
 
 	img, ok := imgRaw.(string)
 	if !ok {
-		return "", fmt.Errorf("Image '%s' in section '%s' is not string. It is %T", name, section, imgRaw)
+		return "", fmt.Errorf("Image '%s' in section '%s' is not a string. It is %T", name, section, imgRaw)
 	}
 
 	return img, nil

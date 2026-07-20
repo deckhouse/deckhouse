@@ -197,39 +197,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/200-operator-prometheus
-  to: /deckhouse/modules/200-operator-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/300-prometheus
-  to: /deckhouse/modules/300-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/301-prometheus-metrics-adapter
-  to: /deckhouse/modules/301-prometheus-metrics-adapter
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler
   to: /deckhouse/modules/302-vertical-pod-autoscaler
   excludePaths:
@@ -241,107 +208,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/340-extended-monitoring
-  to: /deckhouse/modules/340-extended-monitoring
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-custom
-  to: /deckhouse/modules/340-monitoring-custom
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-deckhouse
-  to: /deckhouse/modules/340-monitoring-deckhouse
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-kubernetes
-  to: /deckhouse/modules/340-monitoring-kubernetes
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-kubernetes-control-plane
-  to: /deckhouse/modules/340-monitoring-kubernetes-control-plane
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-ping
-  to: /deckhouse/modules/340-monitoring-ping
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/402-ingress-nginx
-  to: /deckhouse/modules/402-ingress-nginx
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/460-log-shipper
-  to: /deckhouse/modules/460-log-shipper
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/462-loki
-  to: /deckhouse/modules/462-loki
   excludePaths:
     - docs
     - README.md
@@ -364,17 +232,6 @@
         - '**/*'
 - add: /modules/500-cilium-hubble
   to: /deckhouse/modules/500-cilium-hubble
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/500-upmeter
-  to: /deckhouse/modules/500-upmeter
   excludePaths:
     - docs
     - README.md
@@ -430,11 +287,6 @@
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/be/modules/040-node-manager/openapi/values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
   stageDependencies:
     install:
         - '**/*'
@@ -725,6 +577,28 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/templates/waypoint-controller
+  to: /deckhouse/modules/110-istio/templates/waypoint-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/ztunnel
+  to: /deckhouse/modules/110-istio/templates/ztunnel
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   excludePaths:
@@ -746,6 +620,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/crds/istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
   stageDependencies:
@@ -756,8 +635,23 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/crds/waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/waypointinstance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
   stageDependencies:
     install:
         - '**/*'
@@ -788,26 +682,6 @@
         - '**/*'
 - add: /ee/modules/150-user-authn/hooks/custom_logo_test.go
   to: /deckhouse/modules/150-user-authn/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/common_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/common_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
-  to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/_helper.tpl
-  to: /deckhouse/modules/380-metallb/templates/_helper.tpl
   stageDependencies:
     install:
         - '**/*'
@@ -854,16 +728,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
-  to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/cse/modules/015-admission-policy-engine/openapi/config-values.yaml
   to: /deckhouse/modules/015-admission-policy-engine/openapi/config-values.yaml
   stageDependencies:
@@ -885,8 +749,28 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/containerdintegritypolicies.yaml
+  to: /deckhouse/modules/040-node-manager/crds/containerdintegritypolicies.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/doc-ru-containerdintegritypolicies.yaml
+  to: /deckhouse/modules/040-node-manager/crds/doc-ru-containerdintegritypolicies.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/040-node-manager/crds/mcm.yaml
   to: /deckhouse/modules/040-node-manager/crds/mcm.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
   stageDependencies:
     install:
         - '**/*'
@@ -900,13 +784,19 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+- add: /ee/cse/modules/040-node-manager/templates/integrity-containerd-configurator
+  to: /deckhouse/modules/040-node-manager/templates/integrity-containerd-configurator
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
-- add: /ee/cse/modules/040-node-manager/templates/early-oom
-  to: /deckhouse/modules/040-node-manager/templates/early-oom
+- add: /ee/cse/modules/040-node-manager/templates/integrity-controller
+  to: /deckhouse/modules/040-node-manager/templates/integrity-controller
   excludePaths:
     - docs
     - README.md
@@ -938,6 +828,33 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/cse/modules/040-node-manager/images/integrity-containerd-configurator
+  to: /deckhouse/modules/040-node-manager/images/integrity-containerd-configurator
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/images/integrity-controller
+  to: /deckhouse/modules/040-node-manager/images/integrity-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/openapi/values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/101-cert-manager/openapi/config-values.yaml
   to: /deckhouse/modules/101-cert-manager/openapi/config-values.yaml
   stageDependencies:
@@ -968,20 +885,4 @@
   to: /deckhouse/modules/150-user-authn/openapi/values.yaml
   stageDependencies:
     install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/openapi/config-values.yaml
-  to: /deckhouse/modules/462-loki/openapi/config-values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/500-upmeter/templates/webui
-  to: /deckhouse/modules/500-upmeter/templates/webui
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
         - '**/*'

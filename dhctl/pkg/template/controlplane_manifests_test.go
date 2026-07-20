@@ -23,22 +23,32 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
 )
 
 func TestControlplaneRendering(t *testing.T) {
+	tests := map[string]func(t *testing.T){
+		"Version Selection":             testVersionSelection,
+		"Feature Gates":                 testFeatureGates,
+		"API Server Configuration":      testAPIServerConfiguration,
+		"Cluster Types":                 testClusterTypes,
+		"Run Types":                     testRunTypes,
+		"Service Account Configuration": testServiceAccountConfiguration,
+		"ETCD Configuration":            testETCDConfiguration,
+		"Optional Arguments":            testOptionalArguments,
+		"Patches Rendering":             testPatchesRendering,
+		"Edge Cases":                    testEdgeCases,
+		"Missing Coverage":              testMissingCoverage,
+		"Full Manifests Rendering":      testManifestsRendering,
+		"Encryption API Server args":    testSignatureArgsAPIServerRender,
+	}
 
-	t.Run("Version Selection", testVersionSelection)
-	t.Run("Feature Gates", testFeatureGates)
-	t.Run("API Server Configuration", testAPIServerConfiguration)
-	t.Run("Cluster Types", testClusterTypes)
-	t.Run("Run Types", testRunTypes)
-	t.Run("Service Account Configuration", testServiceAccountConfiguration)
-	t.Run("ETCD Configuration", testETCDConfiguration)
-	t.Run("Optional Arguments", testOptionalArguments)
-	t.Run("Patches Rendering", testPatchesRendering)
-	t.Run("Edge Cases", testEdgeCases)
-	t.Run("Missing Coverage", testMissingCoverage)
-	t.Run("Full Manifests Rendering", testManifestsRendering)
+	for name, doTest := range tests {
+		t.Run(name, doTest)
+	}
 }
 
 func testVersionSelection(t *testing.T) {
@@ -49,14 +59,14 @@ func testVersionSelection(t *testing.T) {
 		expectedKind string
 	}{
 		{
-			name:         "Kubernetes 1.31 should generate pod manifests",
-			k8sVersion:   "1.31",
+			name:         "Kubernetes 1.32 should generate pod manifests",
+			k8sVersion:   "1.32",
 			expectedAPI:  "apiVersion: v1",
 			expectedKind: "kind: Pod",
 		},
 		{
-			name:         "Kubernetes 1.32 should generate pod manifests",
-			k8sVersion:   "1.32",
+			name:         "Kubernetes 1.33 should generate pod manifests",
+			k8sVersion:   "1.33",
 			expectedAPI:  "apiVersion: v1",
 			expectedKind: "kind: Pod",
 		},
@@ -83,36 +93,45 @@ func testVersionSelection(t *testing.T) {
 	}
 }
 
+func getDataForFullManifestRendering(version string) map[string]any {
+	data := getBaseTemplateData(version)
+	data["apiserver"] = map[string]interface{}{
+		"webhookURL":        "https://webhook.example.com",
+		"oidcIssuerURL":     "https://oidc.example.com",
+		"oidcIssuerAddress": "192.168.1.100",
+	}
+	data["images"] = map[string]interface{}{
+		"controlPlaneManager": map[string]interface{}{
+			"etcd":                     "sha256:62c84f",
+			"kubeApiserver131":         "sha256:5db2b9",
+			"kubeApiserver132":         "sha256:b4b2b5",
+			"kubeControllerManager131": "sha256:acb28d",
+			"kubeControllerManager132": "sha256:177438",
+			"kubeScheduler131":         "sha256:2e366b",
+			"kubeScheduler132":         "sha256:268cf6",
+		},
+	}
+	data["registry"] = map[string]interface{}{
+		"address": "registry.example.com",
+		"path":    "/deckhouse",
+	}
+	data["settings"] = map[string]interface{}{
+		"resourcesRequests": map[string]interface{}{
+			"milliCPU":    int64(1000),
+			"memoryBytes": int64(1073741824),
+		},
+	}
+
+	return data
+}
+
 func testManifestsRendering(t *testing.T) {
 	t.Run("All Control Plane Pod Manifests Render Successfully", func(t *testing.T) {
-		versions := []string{"1.31", "1.32"}
+		versions := []string{"1.32", "1.33"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
-				data := getBaseTemplateData(version)
-				data["apiserver"] = map[string]interface{}{
-					"webhookURL":        "https://webhook.example.com",
-					"oidcIssuerURL":     "https://oidc.example.com",
-					"oidcIssuerAddress": "192.168.1.100",
-				}
-				data["images"] = map[string]interface{}{
-					"controlPlaneManager": map[string]interface{}{
-						"etcd":                     "sha256:62c84f",
-						"kubeApiserver131":         "sha256:5db2b9",
-						"kubeApiserver132":         "sha256:b4b2b5",
-						"kubeControllerManager131": "sha256:acb28d",
-						"kubeControllerManager132": "sha256:177438",
-						"kubeScheduler131":         "sha256:2e366b",
-						"kubeScheduler132":         "sha256:268cf6",
-					},
-				}
-				data["registry"] = map[string]interface{}{
-					"address": "registry.example.com",
-					"path":    "/deckhouse",
-				}
-				data["resourcesRequestsMilliCpuControlPlane"] = 1000
-				data["resourcesRequestsMemoryControlPlane"] = 1073741824
-
+				data := getDataForFullManifestRendering(version)
 				manifests, err := renderFullManifests(data)
 				if err != nil {
 					t.Fatalf("Failed to render control plane pod manifests: %v", err)
@@ -142,8 +161,8 @@ func testFeatureGates(t *testing.T) {
 		expectedFeatures []string
 	}{
 		{
-			name:       "Kubernetes 1.31 should not include legacy feature gates",
-			k8sVersion: "1.31",
+			name:       "Kubernetes 1.32 should not include legacy feature gates",
+			k8sVersion: "1.32",
 			expectedFeatures: []string{
 				"TopologyAwareHints=true",
 				"RotateKubeletServerCertificate=true",
@@ -206,7 +225,7 @@ func testAPIServerConfiguration(t *testing.T) {
 	}{
 		{
 			name:       "authentication configuration",
-			k8sVersion: "1.31",
+			k8sVersion: "1.32",
 		},
 	}
 
@@ -214,7 +233,7 @@ func testAPIServerConfiguration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Run("Webhook Configuration", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"webhookURL": "https://webhook.example.com",
 				}
 
@@ -246,7 +265,7 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("Authentication Webhook", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"authnWebhookURL":      "https://authn.example.com",
 					"authnWebhookCacheTTL": "10m",
 				}
@@ -270,9 +289,9 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("Audit Configuration - File Output", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"auditPolicy": "some-policy",
-					"auditLog": map[string]interface{}{
+					"auditLog": map[string]any{
 						"output": "File",
 						"path":   "/var/log/audit",
 					},
@@ -300,9 +319,9 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("Audit Configuration - Stdout Output", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"auditPolicy": "some-policy",
-					"auditLog": map[string]interface{}{
+					"auditLog": map[string]any{
 						"output": "Stdout",
 					},
 				}
@@ -321,7 +340,7 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("Audit Webhook", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"auditWebhookURL": "https://audit.example.com",
 				}
 
@@ -338,7 +357,7 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("OIDC Configuration", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"oidcIssuerURL": "https://oidc.example.com",
 				}
 
@@ -356,26 +375,26 @@ func testAPIServerConfiguration(t *testing.T) {
 			t.Run("Bind Address Configuration", func(t *testing.T) {
 				bindTests := []struct {
 					name         string
-					apiserver    map[string]interface{}
+					apiserver    map[string]any
 					nodeIP       string
 					expectedAddr string
 				}{
 					{
 						name: "Bind to wildcard",
-						apiserver: map[string]interface{}{
+						apiserver: map[string]any{
 							"bindToWildcard": true,
 						},
 						expectedAddr: "0.0.0.0",
 					},
 					{
 						name:         "Bind to nodeIP",
-						apiserver:    map[string]interface{}{},
+						apiserver:    map[string]any{},
 						nodeIP:       "192.168.1.100",
 						expectedAddr: "192.168.1.100",
 					},
 					{
 						name:         "Default bind address",
-						apiserver:    map[string]interface{}{},
+						apiserver:    map[string]any{},
 						expectedAddr: "127.0.0.1",
 					},
 				}
@@ -409,7 +428,7 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("ETCD Servers Configuration", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"etcdServers": []string{
 						"https://etcd1.example.com:2379",
 						"https://etcd2.example.com:2379",
@@ -439,7 +458,7 @@ func testAPIServerConfiguration(t *testing.T) {
 			t.Run("Secret Encryption", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
 				data["runType"] = "Runtime" // encryption is only added in runtime mode
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"secretEncryptionKey": "some-key",
 				}
 
@@ -476,13 +495,13 @@ func testClusterTypes(t *testing.T) {
 		},
 	}
 
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		for _, tt := range tests {
 			t.Run(fmt.Sprintf("%s (v%s)", tt.name, version), func(t *testing.T) {
 				data := getBaseTemplateData(version)
-				data["clusterConfiguration"].(map[string]interface{})["clusterType"] = tt.clusterType
+				data["clusterConfiguration"].(map[string]any)["clusterType"] = tt.clusterType
 
 				result, err := renderFullManifests(data, "kube-controller-manager")
 				if err != nil {
@@ -526,7 +545,7 @@ func testRunTypes(t *testing.T) {
 		},
 	}
 
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		for _, tt := range tests {
@@ -572,7 +591,7 @@ func testRunTypes(t *testing.T) {
 }
 
 func testServiceAccountConfiguration(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Default Service Account (v%s)", version), func(t *testing.T) {
@@ -594,8 +613,8 @@ func testServiceAccountConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Custom Service Account Issuer (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
-				"serviceAccount": map[string]interface{}{
+			data["apiserver"] = map[string]any{
+				"serviceAccount": map[string]any{
 					"issuer": "https://custom.issuer.com",
 				},
 			}
@@ -618,8 +637,8 @@ func testServiceAccountConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Additional API Issuers (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
-				"serviceAccount": map[string]interface{}{
+			data["apiserver"] = map[string]any{
+				"serviceAccount": map[string]any{
 					"issuer": "https://primary.issuer.com",
 					"additionalAPIIssuers": []string{
 						"https://additional1.issuer.com",
@@ -656,8 +675,8 @@ func testServiceAccountConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Additional API Audiences (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
-				"serviceAccount": map[string]interface{}{
+			data["apiserver"] = map[string]any{
+				"serviceAccount": map[string]any{
 					"issuer": "https://primary.issuer.com",
 					"additionalAPIAudiences": []string{
 						"https://audience1.com",
@@ -690,7 +709,7 @@ func testServiceAccountConfiguration(t *testing.T) {
 }
 
 func testETCDConfiguration(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("No ETCD Configuration (v%s)", version), func(t *testing.T) {
@@ -711,7 +730,7 @@ func testETCDConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Existing Cluster ETCD (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["etcd"] = map[string]interface{}{
+			data["etcd"] = map[string]any{
 				"existingCluster": true,
 			}
 
@@ -736,7 +755,7 @@ func testETCDConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("ETCD with Quota (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["etcd"] = map[string]interface{}{
+			data["etcd"] = map[string]any{
 				"existingCluster":   true,
 				"quotaBackendBytes": "8589934592",
 			}
@@ -755,12 +774,12 @@ func testETCDConfiguration(t *testing.T) {
 }
 
 func testOptionalArguments(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Node Monitor Arguments (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["arguments"] = map[string]interface{}{
+			data["arguments"] = map[string]any{
 				"nodeMonitorPeriod":      30,
 				"nodeMonitorGracePeriod": 60,
 			}
@@ -783,7 +802,7 @@ func testOptionalArguments(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Pod Eviction Timeout (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["arguments"] = map[string]interface{}{
+			data["arguments"] = map[string]any{
 				"podEvictionTimeout":                  120,
 				"defaultUnreachableTolerationSeconds": 300,
 			}
@@ -806,30 +825,34 @@ func testOptionalArguments(t *testing.T) {
 
 func testPatchesRendering(t *testing.T) {
 	t.Run("All Patches Render Successfully", func(t *testing.T) {
-		versions := []string{"1.31", "1.32"}
+		versions := []string{"1.32", "1.33"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
 				data := getBaseTemplateData(version)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"webhookURL":        "https://webhook.example.com",
 					"oidcIssuerURL":     "https://oidc.example.com",
 					"oidcIssuerAddress": "192.168.1.100",
 				}
-				data["images"] = map[string]interface{}{
-					"controlPlaneManager": map[string]interface{}{
+				data["images"] = map[string]any{
+					"controlPlaneManager": map[string]any{
 						"kubeApiserverHealthcheck": "sha256:abcd1234",
 						"kubeApiserver131":         "sha256:efgh5678",
 						"kubeApiserver130":         "sha256:ijkl9012",
 						"kubeApiserver129":         "sha256:mnop3456",
 					},
 				}
-				data["registry"] = map[string]interface{}{
+				data["registry"] = map[string]any{
 					"address": "registry.example.com",
 					"path":    "/deckhouse",
 				}
-				data["resourcesRequestsMilliCpuControlPlane"] = 1000
-				data["resourcesRequestsMemoryControlPlane"] = 1073741824
+				data["settings"] = map[string]any{
+					"resourcesRequests": map[string]any{
+						"milliCPU":    int64(1000),
+						"memoryBytes": int64(1073741824),
+					},
+				}
 
 				manifests, err := renderFullManifests(data)
 				if err != nil {
@@ -854,14 +877,14 @@ func testPatchesRendering(t *testing.T) {
 }
 
 func testEdgeCases(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Complex Configuration Combination (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
 			data["runType"] = "Runtime"
 			data["nodeIP"] = "192.168.1.100"
-			data["apiserver"] = map[string]interface{}{
+			data["apiserver"] = map[string]any{
 				"webhookURL":          "https://webhook.example.com",
 				"authnWebhookURL":     "https://authn.example.com",
 				"auditWebhookURL":     "https://audit.example.com",
@@ -874,23 +897,23 @@ func testEdgeCases(t *testing.T) {
 				"admissionPlugins": []string{
 					"CustomAdmissionPlugin",
 				},
-				"serviceAccount": map[string]interface{}{
+				"serviceAccount": map[string]any{
 					"issuer": "https://custom.issuer.com",
 					"additionalAPIIssuers": []string{
 						"https://additional.issuer.com",
 					},
 				},
 				"auditPolicy": "complex-policy",
-				"auditLog": map[string]interface{}{
+				"auditLog": map[string]any{
 					"output": "File",
 					"path":   "/var/log/audit",
 				},
 			}
-			data["etcd"] = map[string]interface{}{
+			data["etcd"] = map[string]any{
 				"existingCluster":   true,
 				"quotaBackendBytes": "8589934592",
 			}
-			data["arguments"] = map[string]interface{}{
+			data["arguments"] = map[string]any{
 				"nodeMonitorPeriod":                   45,
 				"nodeMonitorGracePeriod":              90,
 				"podEvictionTimeout":                  180,
@@ -976,11 +999,11 @@ func testEdgeCases(t *testing.T) {
 	}
 }
 
-func getBaseTemplateData(k8sVersion string) map[string]interface{} {
-	return map[string]interface{}{
+func getBaseTemplateData(k8sVersion string) map[string]any {
+	return map[string]any{
 		"nodeIP":  "127.0.0.1",
 		"runType": "ClusterBootstrap",
-		"clusterConfiguration": map[string]interface{}{
+		"clusterConfiguration": map[string]any{
 			"kubernetesVersion":       k8sVersion,
 			"clusterType":             "Static",
 			"serviceSubnetCIDR":       "10.222.0.0/16",
@@ -989,21 +1012,21 @@ func getBaseTemplateData(k8sVersion string) map[string]interface{} {
 			"clusterDomain":           "cluster.local",
 			"encryptionAlgorithm":     "ECDSA-P256",
 		},
-		"k8s": map[string]interface{}{
-			k8sVersion: map[string]interface{}{
+		"k8s": map[string]any{
+			k8sVersion: map[string]any{
 				"patch": 1,
 			},
 		},
-		"registry": map[string]interface{}{
+		"registry": map[string]any{
 			"address": "registry.deckhouse.io",
 			"path":    "/deckhouse/ce",
 		},
-		"images": map[string]interface{}{},
+		"images": map[string]any{},
 	}
 }
 
 // Don't pass requestedManifests to get all manifests
-func renderFullManifests(data map[string]interface{}, requestedManifests ...string) (map[string]string, error) {
+func renderFullManifests(data map[string]any, requestedManifests ...string) (map[string]string, error) {
 	templatesPath := "/deckhouse/candi/control-plane"
 	manifests := make(map[string]string)
 
@@ -1047,8 +1070,87 @@ func renderFullManifests(data map[string]interface{}, requestedManifests ...stri
 	return manifests, nil
 }
 
+func testSignatureArgsAPIServerRender(t *testing.T) {
+	renderAPIServerManifest := func(t *testing.T, data map[string]any) *corev1.Pod {
+		manifests, err := renderFullManifests(data, "kube-apiserver")
+		require.NoError(t, err, "Manifests should rendered")
+		require.Contains(t, manifests, "kube-apiserver.yaml", "should contains kube api server manifest")
+
+		podManifest := manifests["kube-apiserver.yaml"]
+		pod := corev1.Pod{}
+		err = yaml.Unmarshal([]byte(podManifest), &pod)
+		require.NoError(t, err, "kube apiserver pod should be unmarshal")
+		return &pod
+	}
+
+	assertEncryptionArgs := func(t *testing.T, pod *corev1.Pod, shouldPresent bool) {
+		var container *corev1.Container
+		for _, c := range pod.Spec.Containers {
+			if c.Name == "kube-apiserver" {
+				container = &c
+				break
+			}
+		}
+		require.NotNil(t, container, "api server container not found")
+
+		presentsArgs := map[string]bool{
+			"--encryption-provider-config=/etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml": false,
+			"--encryption-provider-config-automatic-reload=true":                                               false,
+		}
+
+		for argToCheck := range presentsArgs {
+			for _, arg := range container.Command {
+				if argToCheck == arg {
+					presentsArgs[argToCheck] = true
+				}
+			}
+		}
+
+		assert := require.False
+		msg := "not present"
+		if shouldPresent {
+			assert = require.True
+			msg = "present"
+		}
+
+		for arg, isPresent := range presentsArgs {
+			assert(t, isPresent, "argument %s %s", arg, msg)
+		}
+	}
+
+	tests := []struct {
+		name          string
+		shouldPresent bool
+		changeData    func(map[string]any)
+	}{
+		{
+			name:          "not provided",
+			shouldPresent: false,
+		},
+		{
+			name:          "provided",
+			shouldPresent: true,
+			changeData: func(data map[string]any) {
+				apiserver := data["apiserver"].(map[string]any)
+				apiserver["signature"] = "enforce"
+			},
+		},
+	}
+
+	for _, tst := range tests {
+		t.Run(fmt.Sprintf("Signature mode %s", tst.name), func(t *testing.T) {
+			data := getDataForFullManifestRendering("1.33")
+			if tst.changeData != nil {
+				tst.changeData(data)
+			}
+			pod := renderAPIServerManifest(t, data)
+			assertEncryptionArgs(t, pod, tst.shouldPresent)
+		})
+	}
+}
+
 func testMissingCoverage(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Runtime Config Version Condition (v%s)", version), func(t *testing.T) {
@@ -1072,7 +1174,7 @@ func testMissingCoverage(t *testing.T) {
 		t.Run(fmt.Sprintf("No NodeIP Configuration (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
 			delete(data, "nodeIP")
-			data["registry"] = map[string]interface{}{
+			data["registry"] = map[string]any{
 				"address": "registry.example.com",
 				"path":    "/deckhouse",
 			}
@@ -1100,12 +1202,12 @@ func testMissingCoverage(t *testing.T) {
 		t.Run(fmt.Sprintf("Manifests Without NodeIP (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
 			delete(data, "nodeIP")
-			data["images"] = map[string]interface{}{
-				"controlPlaneManager": map[string]interface{}{
+			data["images"] = map[string]any{
+				"controlPlaneManager": map[string]any{
 					"kubeApiserverHealthcheck": "sha256:abcd1234",
 				},
 			}
-			data["registry"] = map[string]interface{}{
+			data["registry"] = map[string]any{
 				"address": "registry.example.com",
 				"path":    "/deckhouse",
 			}
@@ -1129,8 +1231,8 @@ func testMissingCoverage(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Service Account Edge Cases (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
-				"serviceAccount": map[string]interface{}{
+			data["apiserver"] = map[string]any{
+				"serviceAccount": map[string]any{
 					"additionalAPIIssuers": []string{
 						"https://external.issuer.com",
 					},
@@ -1152,7 +1254,7 @@ func testMissingCoverage(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("ETCD Without Existing Cluster (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["etcd"] = map[string]interface{}{
+			data["etcd"] = map[string]any{
 				"existingCluster": false,
 			}
 
@@ -1171,7 +1273,7 @@ func testMissingCoverage(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Audit Volume Mount Edge Cases (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
+			data["apiserver"] = map[string]any{
 				"auditPolicy": "some-policy",
 			}
 
@@ -1188,8 +1290,8 @@ func testMissingCoverage(t *testing.T) {
 	}
 
 	t.Run("Feature Gates Version Boundaries", func(t *testing.T) {
-		// Test exactly version 1.31 boundary
-		data := getBaseTemplateData("1.31")
+		// Test exactly version 1.32 boundary
+		data := getBaseTemplateData("1.32")
 		result, err := renderFullManifests(data, "kube-apiserver", "kube-controller-manager", "kube-scheduler")
 		if err != nil {
 			t.Fatalf("Failed to render control-plane config: %v", err)
@@ -1201,13 +1303,13 @@ func testMissingCoverage(t *testing.T) {
 			if len(matches) >= 2 {
 				featureGates := matches[1]
 				if strings.Contains(featureGates, "ValidatingAdmissionPolicy=true") {
-					t.Errorf("Unexpected legacy feature gate found for Kubernetes 1.31 in %s", name)
+					t.Errorf("Unexpected legacy feature gate found for Kubernetes 1.32 in %s", name)
 				}
-				if !strings.Contains(featureGates, "AnonymousAuthConfigurableEndpoints=true") {
-					t.Errorf("Expected feature gate not found for Kubernetes 1.31 in %s", name)
+				if !strings.Contains(featureGates, "DynamicResourceAllocation=true") {
+					t.Errorf("Expected feature gate not found for Kubernetes 1.32 in %s", name)
 				}
 				if name == "kube-apiserver.yaml" && !strings.Contains(featureGates, "CRDSensitiveData=true") {
-					t.Errorf("Expected CRDSensitiveData=true for Kubernetes 1.31 in %s", name)
+					t.Errorf("Expected CRDSensitiveData=true for Kubernetes 1.32 in %s", name)
 				}
 			}
 		}
@@ -1217,7 +1319,7 @@ func testMissingCoverage(t *testing.T) {
 		t.Run(fmt.Sprintf("Bind Address Configuration (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
 			data["runType"] = "Runtime"
-			data["apiserver"] = map[string]interface{}{
+			data["apiserver"] = map[string]any{
 				"bindToWildcard": true,
 			}
 

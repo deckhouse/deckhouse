@@ -163,6 +163,28 @@ func createDisabledModuleConfig(name string) *v1alpha1.ModuleConfig {
 	}
 }
 
+func createModuleReleaseWithPhase(moduleName, phase string) *v1alpha1.ModuleRelease {
+	return &v1alpha1.ModuleRelease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: moduleName + "-v1.0.0",
+			Labels: map[string]string{
+				v1alpha1.ModuleReleaseLabelModule: moduleName,
+			},
+		},
+		Spec: v1alpha1.ModuleReleaseSpec{
+			ModuleName: moduleName,
+			Version:    "1.0.0",
+		},
+		Status: v1alpha1.ModuleReleaseStatus{
+			Phase: phase,
+		},
+	}
+}
+
+func createDeployedModuleRelease(moduleName string) *v1alpha1.ModuleRelease {
+	return createModuleReleaseWithPhase(moduleName, v1alpha1.ModuleReleasePhaseDeployed)
+}
+
 func createAdmissionReview(operation string, obj, oldObj interface{}) *admissionv1.AdmissionReview {
 	review := &admissionv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{
@@ -410,6 +432,35 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			wantAllowed: true,
 			wantMessage: "",
 			description: "Absent ModuleConfig and absence in ModuleSource allows",
+		},
+		{
+			name:           "allow when enabled migrated module has a Deployed ModuleRelease",
+			enabledModules: []string{"staged-module"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("staged-module"),
+				createModule("staged-module"),
+				createDeployedModuleRelease("staged-module"),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "staged-module"}),
+			wantAllowed: true,
+			description: "Enabled migrated module pre-staged on the filesystem (Deployed ModuleRelease) should be allowed",
+		},
+		{
+			name:           "reject when enabled migrated module has only a Pending ModuleRelease",
+			enabledModules: []string{"pending-module"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("pending-module"),
+				createModule("pending-module"),
+				createModuleReleaseWithPhase("pending-module", v1alpha1.ModuleReleasePhasePending),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "pending-module"}),
+			wantAllowed: false,
+			wantMessage: "requirements not met",
+			description: "Enabled migrated module not yet downloaded (no Deployed ModuleRelease) should be rejected",
 		},
 	}
 

@@ -15,7 +15,7 @@
 package destroy
 
 import (
-	"context"
+	"bytes"
 	"testing"
 
 	"github.com/google/uuid"
@@ -26,12 +26,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func TestInitStateLoader(t *testing.T) {
@@ -109,8 +109,8 @@ func TestInitStateLoader(t *testing.T) {
 				kubeProvider: createKubeProvider(),
 				before: func(t *testing.T, tst *testInitStateLoader) {
 					testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
-					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider())
-					ctx := context.TODO()
+					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, "")
+					ctx := t.Context()
 					_, err := loader.PopulateMetaConfig(ctx, nil)
 					require.NoError(t, err, "populate metaconfig before test")
 					_, _, err = loader.PopulateClusterState(ctx)
@@ -152,6 +152,7 @@ func TestInitStateLoader(t *testing.T) {
 					CommanderModeParams: commander.NewCommanderModeParams(
 						[]byte(cloudClusterGenericConfigYAML),
 						[]byte(providerConfigYAML),
+						nil,
 					),
 				},
 				kubeProvider: commanderKubeProvider,
@@ -176,6 +177,7 @@ func TestInitStateLoader(t *testing.T) {
 					CommanderModeParams: commander.NewCommanderModeParams(
 						[]byte(cloudClusterGenericConfigYAML),
 						[]byte(providerConfigYAML),
+						nil,
 					),
 				},
 				kubeProvider: commanderKubeProvider,
@@ -200,6 +202,7 @@ func TestInitStateLoader(t *testing.T) {
 					CommanderModeParams: commander.NewCommanderModeParams(
 						[]byte(cloudClusterGenericConfigYAML),
 						[]byte(providerConfigYAML),
+						nil,
 					),
 				},
 				kubeProvider: commanderKubeProvider,
@@ -224,6 +227,7 @@ func TestInitStateLoader(t *testing.T) {
 					CommanderModeParams: commander.NewCommanderModeParams(
 						[]byte(`{"a": "b"}`),
 						[]byte(`{"c": "d"}`),
+						nil,
 					),
 				},
 				kubeProvider: commanderKubeProvider,
@@ -270,17 +274,18 @@ type testInitStateLoader struct {
 
 func newTestInitStateLoader(tst *testInitStateLoader) *testInitStateLoader {
 	stateCache := cache.NewTestCache()
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
+	var logBuf bytes.Buffer
+	logger := dhlog.NewBufferLogger(&logBuf)
 
 	tst.baseTest = &baseTest{
 		stateCache:   stateCache,
 		tmpDir:       "",
 		logger:       logger,
+		logBuf:       &logBuf,
 		kubeProvider: tst.kubeProvider,
 	}
 
 	tst.params.StateCache = stateCache
-	tst.params.LoggerProvider = log.SimpleLoggerProvider(logger)
 
 	return tst
 }
@@ -288,10 +293,9 @@ func newTestInitStateLoader(tst *testInitStateLoader) *testInitStateLoader {
 func (ts *testInitStateLoader) do(t *testing.T) {
 	ts.before(t, ts)
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	initParams := ts.params.getStateLoaderParams()
-	require.False(t, govalue.IsNil(initParams.logger))
 	require.False(t, initParams.forceFromCache)
 	initParams.forceFromCache = true
 
@@ -309,7 +313,7 @@ func (ts *testInitStateLoader) do(t *testing.T) {
 	require.IsType(t, ts.expectedStateLoaderType, stateLoader, "incorrect state loader type")
 
 	if ts.hasInitError && govalue.IsNil(stateLoader) {
-		log.SafeProvideLogger(ts.params.LoggerProvider).LogInfoLn("Has init error and state loader is nil. Skip")
+		dhlog.Discard().Info("Has init error and state loader is nil. Skip")
 		return
 	}
 
@@ -352,7 +356,7 @@ func testCreateMetaConfigForInitLoaderTestInCluster(t *testing.T, tst *testInitS
 	require.False(t, govalue.IsNil(tst.kubeProvider))
 	require.NotEmpty(t, tst.clusterUUID, "cluster UUID should not be empty")
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	client, err := tst.kubeProvider.KubeClientCtx(ctx)
 	require.NoError(t, err, "kube client should returned")
@@ -360,6 +364,10 @@ func testCreateMetaConfigForInitLoaderTestInCluster(t *testing.T, tst *testInitS
 	testCreateProviderClusterConfigSecret(t, client, providerConfigYAML)
 
 	testCreateClusterConfigSecret(t, client, cloudClusterGenericConfigYAML)
+
+	// Cloud-cluster parseConfigFromCluster fetches d8-system/deckhouse-registry
+	// unconditionally; seed it so the retry-loop doesn't trip the test timeout.
+	testCreateDeckhouseRegistrySecret(t, client)
 
 	testCreateClusterUUIDCM(t, client, tst.clusterUUID)
 

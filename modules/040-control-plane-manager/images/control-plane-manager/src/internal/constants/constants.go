@@ -82,8 +82,20 @@ const (
 	// Cert renewal
 	CertRenewalIDAnnotationKey       = "control-plane.deckhouse.io/cert-renewal-id"
 	KubeconfigRenewalIDAnnotationKey = "control-plane.deckhouse.io/kubeconfig-renewal-id"
+	SignatureRenewalIDAnnotationKey  = "control-plane.deckhouse.io/signature-renewal-id"
+	SignatureExpirationKey           = "signature"
+	SignatureRenewalDays             = 60
+	SignatureRenewalThreshold        = SignatureRenewalDays * 24 * time.Hour
 	CertRenewalThreshold             = 30 * 24 * time.Hour
 )
+
+var SignatureBuildEnabled = "false"
+
+// SignatureEnabled reports whether the signature feature is built into this binary (CSE only).
+// Flag is overridden by an ldflag in the CSE build (see werf.inc.yaml).
+func SignatureEnabled() bool {
+	return strings.ToLower(SignatureBuildEnabled) == "true"
+}
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync
 func ToRelativePath(absolutePath string) string {

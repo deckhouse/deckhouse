@@ -21,11 +21,13 @@ rewrite ^/(.+)/modules/400-descheduler/usage.html$ /$1/modules/descheduler/examp
 rewrite ^/(.+)/modules/402-ingress-nginx/usage.html$ /$1/modules/ingress-nginx/examples.html redirect;
 rewrite ^/(.+)/modules/450-keepalived/usage.html$ /$1/modules/keepalived/examples.html redirect;
 rewrite ^/(.+)/modules/460-log-shipper/usage.html$ /$1/modules/log-shipper/examples.html redirect;
+rewrite ^/(.+)/modules/log-shipper/usage.html$ /$1/modules/log-shipper/examples.html redirect;
 rewrite ^/(.+)/modules/500-basic-auth/usage.html$ /$1/modules/basic-auth/examples.html redirect;
 rewrite ^/(.+)/modules/500-dashboard/usage.html$ /$1/modules/dashboard/examples.html redirect;
 rewrite ^/(.+)/modules/500-okmeter/usage.html$ /$1/modules/okmeter/examples.html redirect;
 rewrite ^/(.+)/modules/500-openvpn/usage.html$ /$1/modules/openvpn/examples.html redirect;
 rewrite ^/(.+)/modules/500-upmeter/usage.html$ /$1/modules/upmeter/examples.html redirect;
+rewrite ^/(.+)/modules/upmeter/usage.html$ /$1/modules/upmeter/examples.html redirect;
 rewrite ^/(.+)/modules/600-namespace-configurator/usage.html$ /$1/modules/namespace-configurator/examples.html redirect;
 rewrite ^/(.+)/modules/810-deckhouse-web/(.*)$ /$1/modules/documentation/$2 redirect;
 {{- end }}

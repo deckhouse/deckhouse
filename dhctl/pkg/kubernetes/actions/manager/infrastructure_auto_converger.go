@@ -17,12 +17,13 @@ package manager
 import (
 	"context"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func RestartAutoConverger(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx) error {
-	return log.Process("default", "Restart auto converger", func() error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Restart auto converger", func(ctx context.Context) error {
 		return checkAndRestartDeployment(ctx, kubeClProvider, "terraform-auto-converger")
 	})
 }

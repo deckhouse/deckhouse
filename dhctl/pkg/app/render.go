@@ -22,7 +22,7 @@ import (
 
 // DefineRenderConfigFlags registers --bundle-dir.
 func DefineRenderConfigFlags(cmd *kingpin.CmdClause, o *options.RenderOptions) {
-	cmd.Flag("bundle-dir", "Directory to render bashible bundle.").
+	cmd.Flag("bundle-dir", "Directory to render the bashible bundle into.").
 		Envar(configEnvName("BUNDLE_DIR")).
 		StringVar(&o.BashibleBundleDir)
 }

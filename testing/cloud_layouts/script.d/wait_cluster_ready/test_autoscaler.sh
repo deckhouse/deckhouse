@@ -61,7 +61,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: registry.deckhouse.io/base_images@sha256:05fb7868d518fe6c562233e1ee1c9304f6d5142920959e7b2d51acdc49cce0c3
+        image: registry.deckhouse.ru/base_images@sha256:05fb7868d518fe6c562233e1ee1c9304f6d5142920959e7b2d51acdc49cce0c3
         command: ["python3"]
         args: ["-m", "http.server", "8080"]
         imagePullPolicy: IfNotPresent

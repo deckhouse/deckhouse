@@ -42,6 +42,10 @@ message CheckStart {
   string provider_specific_cluster_config = 3;
   string state = 4;
   CheckStartOptions options = 5;
+  // registry_config carries an InitConfiguration document and/or the deckhouse
+  // ModuleConfig so the server can resolve registry access for the external
+  // provider bundle download.
+  string registry_config = 6;
 }
 
 message CheckCancel {}

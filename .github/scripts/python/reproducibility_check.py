@@ -55,22 +55,6 @@ def entry_lines(entry: dict) -> list:
 # a global meta-image, not a module (e.g. 'dev/install', 'base/vex').
 _NON_MODULE_PREFIXES = {"dev", "base"}
 
-# Images whose content is intentionally non-reproducible across runs and must
-# be skipped from the digest comparison:
-#
-# * release-channel-version / release-channel-version-prebuild
-#   .werf/werf-release-channel.yaml bakes the current Deckhouse version
-#   string, the per-tag CHANGELOG snippet, and the kubernetesVersions list
-#   into version.json/changelog.yaml. Even on the same commit these inputs
-#   can shift between runs (CHANGELOG additions on other branches, k8s
-#   version bumps), making the manifest digest unstable. The image is a
-#   pure metadata payload (no code), so it does not represent a build
-#   reproducibility risk and is excluded from the check.
-_IGNORED_IMAGES = {
-    "release-channel-version",
-    "release-channel-version-prebuild",
-}
-
 
 def split_module(image_name: str) -> tuple:
     """Return (module, image_subname) for table display.
@@ -97,13 +81,8 @@ def main(argv: list) -> int:
     baseline_images = load_report(baseline_path).get("Images") or {}
     rerun_images    = load_report(rerun_path).get("Images") or {}
 
-    all_names = sorted(set(baseline_images) | set(rerun_images))
-    ignored = sorted(n for n in all_names if n in _IGNORED_IMAGES)
-
     mismatched = []
-    for name in all_names:
-        if name in _IGNORED_IMAGES:
-            continue
+    for name in sorted(set(baseline_images) | set(rerun_images)):
         b_digest = baseline_images.get(name, {}).get("DockerImageDigest", "")
         r_digest = rerun_images.get(name, {}).get("DockerImageDigest", "")
         if b_digest != r_digest:
@@ -114,13 +93,10 @@ def main(argv: list) -> int:
     print(f"Baseline: {baseline_path}")
     print(f"Rerun:    {rerun_path}")
     print(f"Images in baseline: {len(baseline_images)}; in rerun: {len(rerun_images)}")
-    if ignored:
-        print(f"Ignored (non-reproducible by design): {', '.join(ignored)}")
     print()
 
-    compared = len(all_names) - len(ignored)
     if not mismatched:
-        print(f"OK: all {compared} compared image digests match. Build is reproducible.")
+        print(f"OK: all {len(baseline_images)} image digests match. Build is reproducible.")
         return 0
 
     print(f"Digest mismatch: {len(mismatched)} image(s) differ.")

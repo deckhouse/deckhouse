@@ -46,6 +46,7 @@ service Validation {
   rpc ValidateProviderSpecificClusterConfig (ValidateProviderSpecificClusterConfigRequest) returns (ValidateProviderSpecificClusterConfigResponse) {}
   rpc ValidateChanges (ValidateChangesRequest) returns (ValidateChangesResponse) {}
   rpc ParseConnectionConfig (ParseConnectionConfigRequest) returns (ParseConnectionConfigResponse) {}
+  rpc ConfigExtender (ConfigExtenderRequest) returns (ConfigExtenderResponse) {}
 }
 
 service Status {

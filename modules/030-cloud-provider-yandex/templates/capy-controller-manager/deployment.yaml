@@ -1,0 +1,59 @@
+{{- define "capy_controller_manager_pod_annotations" -}}
+checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/capy-controller-manager/secret.yaml") . | toString) (include (print $.Template.BasePath "/capy-controller-manager/secret-tls.yaml") . | toString) | sha256sum }}
+{{- end -}}
+
+{{- define "capy_controller_manager_pod_labels" -}}
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+security.deckhouse.io/security-policy-exception: capy-controller-manager
+{{- end }}
+{{- end -}}
+
+{{- define "capy_controller_manager_envs" -}}
+- name: YC_SA_KEY
+  valueFrom:
+    secretKeyRef:
+      name: yandex-credentials-capy
+      key: key
+{{- if not .Values.global.clusterIsBootstrapped }}
+- name: KUBERNETES_SERVICE_HOST
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: status.hostIP
+- name: KUBERNETES_SERVICE_PORT
+  value: "6443"
+{{- end }}
+- name: CAPY_CONTROL_PLANE_ENDPOINT_MANAGEMENT_MODE
+  value: External
+{{- end -}}
+
+{{- define "capy_controller_manager_volume_mounts" -}}
+- name: cert
+  mountPath: /tmp/k8s-webhook-server/serving-certs
+  readOnly: true
+{{- end -}}
+
+{{- define "capy_controller_manager_volumes" -}}
+- name: cert
+  secret:
+    secretName: capy-controller-manager-webhook-tls
+    defaultMode: 420
+{{- end -}}
+
+{{- $capiConfig := dict -}}
+{{- $_ := set $capiConfig "fullname" "capy-controller-manager" -}}
+{{- $_ := set $capiConfig "namespace" "d8-cloud-provider-yandex" -}}
+{{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "capyControllerManager")) -}}
+{{- $_ := set $capiConfig "capiProviderName" "infrastructure-yandex" -}}
+{{- $_ := set $capiConfig "resources" (dict "cpu" "25m" "memory" "64Mi") -}}
+{{- $_ := set $capiConfig "vpaMaxAllowed" (dict "cpu" "100m" "memory" "128Mi") -}}
+{{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
+{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
+{{- $_ := set $capiConfig "additionalEnv" (include "capy_controller_manager_envs" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumeMounts" (include "capy_controller_manager_volume_mounts" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumes" (include "capy_controller_manager_volumes" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalPodAnnotations" (include "capy_controller_manager_pod_annotations" . | fromYaml) -}}
+{{- $_ := set $capiConfig "additionalPodLabels" (include "capy_controller_manager_pod_labels" . | fromYaml) -}}
+{{- $_ := set $capiConfig "vpaEnabled" true -}}
+
+{{- include "helm_lib_capi_controller_manager_manifests" (list . $capiConfig) }}

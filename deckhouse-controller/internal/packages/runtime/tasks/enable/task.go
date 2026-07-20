@@ -45,7 +45,7 @@ type packageI interface {
 	HooksInitialized() bool
 	// InitializeHooks creates hook controllers and binds them to events.
 	InitializeHooks()
-	GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook
+	GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 	RunHookByName(ctx context.Context, hook string, bctx []bctx.BindingContext) error
 	// UnlockKubernetesMonitors allows events to flow after initial sync.

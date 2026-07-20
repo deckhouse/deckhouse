@@ -1,0 +1,12 @@
+diff --git a/cmd/ccm/main.go b/cmd/ccm/main.go
+index d71e16c9..4055ca6a 100644
+--- a/cmd/ccm/main.go
++++ b/cmd/ccm/main.go
+@@ -48,6 +48,7 @@ func main() {
+ 		opts,
+ 		vcdCCMInitializer,
+ 		app.DefaultInitFuncConstructors,
++		map[string]string{}, // empty feature gates map for k8s.io v0.34.3+
+ 		flag.NamedFlagSets{},
+ 		wait.NeverStop,
+ 	)

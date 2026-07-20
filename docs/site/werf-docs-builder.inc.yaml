@@ -38,7 +38,7 @@ git:
 
 ---
 image: d8-docs-artifacts
-from: {{ .Images.BASE_ALPINE }}
+from: {{ index $.Images "builder/alpine" }}
 final: false
 shell:
   setup:

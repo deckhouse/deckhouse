@@ -2,7 +2,6 @@ project: deckhouse
 configVersion: 1
 cleanup:
   # All date calculations are based on the dates of the last commits in the branches.
-  keepImagesBuiltWithinLastNHours: 24 # don't touch fresh builds for 24h
   disableKubernetesBasedPolicy: true
   keepPolicies:
   # keep 6 days dev builds
@@ -12,11 +11,11 @@ cleanup:
         in: 144h
     imagesPerReference:
       last: 1
-  # keep 3 pre-release builds
+  # keep 7 pre-release builds
   - references:
       branch: /release-[0-9]\.[0-9]+/
       limit:
-        last: 3
+        last: 7
     imagesPerReference:
       last: 1
   # keep 5 release builds

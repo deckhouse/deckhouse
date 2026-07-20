@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(45, 10*time.Second)
+var createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(450, 1*time.Second)
 
 func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser, loopParams retry.Params) error {
 	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
@@ -67,7 +67,7 @@ func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeCli
 
 func DeleteNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, name string) error {
 	processName := fmt.Sprintf("Delete NodeUser %s", name)
-	return retry.NewLoop(processName, 45, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(processName, 450, 1*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
@@ -95,8 +95,8 @@ func NodeUserExists(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 
 	err = libretry.NewSilentLoopWithParamsOpts(
 		libretry.WithName("Check NodeUser %q exists", name),
-		libretry.WithAttempts(10),
-		libretry.WithWait(2*time.Second),
+		libretry.WithAttempts(20),
+		libretry.WithWait(1*time.Second),
 	).RunContext(ctx, func() error {
 		timeoutCtx, cancel := defaultTimeoutCtx(ctx)
 		defer cancel()
@@ -132,8 +132,8 @@ type NodeUserPresentsWaiter struct {
 
 func NewNodeUserExistsWaiter(checker NodeUserPresentsChecker, kubeProvider kubernetes.KubeClientProviderWithCtx) *NodeUserPresentsWaiter {
 	params := retry.NewEmptyParams().
-		WithAttempts(50).
-		WithWait(5 * time.Second)
+		WithAttempts(250).
+		WithWait(1 * time.Second)
 
 	return &NodeUserPresentsWaiter{
 		params:       params,
@@ -184,7 +184,7 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 
 			if len(nodesForClient.Items) == 0 {
 				return fmt.Errorf(
-					"NodeUser '%s' is not present on nodes yet. No any node found for selector '%s'",
+					"NodeUser '%s' is not present on nodes yet. No node found for selector '%s'",
 					nodeUserName,
 					listOpts.LabelSelector,
 				)

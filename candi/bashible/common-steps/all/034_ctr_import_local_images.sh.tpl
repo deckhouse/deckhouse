@@ -29,7 +29,7 @@ ctr_import_image() {
 
 
 post-install-import() {
-  bb-log-info "start crt images import"
+  bb-log-info "Importing local images via ctr"
   local PACKAGE="$1"
 
   if [[ "${PACKAGE}" == "pause" ]]; then

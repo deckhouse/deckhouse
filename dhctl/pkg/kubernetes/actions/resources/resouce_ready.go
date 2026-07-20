@@ -21,6 +21,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources/readiness"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -50,8 +52,6 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("Internal error. API resources getter not provided")
 	}
 
-	logger := c.params.loggerProvider()
-
 	defer func() {
 		c.attempt++
 	}()
@@ -60,7 +60,7 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 
 	// wait some attempts for set statuses in the resources
 	if c.attempt < c.resourceChecker.WaitAttemptsBeforeCheck() {
-		logger.LogDebugF("Skip resource %s readiness checking for waiting set status\n", c.resourceName)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skip resource %s readiness checking for waiting set status", c.resourceName))
 		return false, nil
 	}
 
@@ -68,7 +68,7 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 
 	apiRes, err := c.getAPIResources(kubeCl, c.resource.GVK.Group+"/"+c.resource.GVK.Version, kind)
 	if err != nil {
-		logger.LogDebugF("Could not get APIResource %s with Kind %s: %s\n", c.resource.GVK.Group+"/"+c.resource.GVK.Version, kind, err.Error())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Could not get APIResource %s with Kind %s: %s", c.resource.GVK.Group+"/"+c.resource.GVK.Version, kind, err.Error()))
 		return false, nil
 	}
 
@@ -81,13 +81,13 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 		Namespace(doc.GetNamespace()).
 		Get(ctx, doc.GetName(), metav1.GetOptions{})
 	if err != nil {
-		logger.LogDebugF("Getting resource %s from cluster failed: %s\n", c.resourceName, err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Getting resource %s from cluster failed: %s", c.resourceName, err))
 		return false, nil
 	}
 
 	ready, err := c.resourceChecker.IsReady(ctx, objectInCluster, c.resourceName)
 	if err != nil {
-		logger.LogInfoF("Readiness check for resource %s returns error: %v\n", c.resourceName, err)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Readiness check for resource %s returns error: %v", c.resourceName, err))
 		return false, nil
 	}
 
@@ -107,9 +107,7 @@ func (c *resourceReadinessChecker) Single() bool {
 }
 
 func newResourceIsReadyChecker(r *template.Resource, params constructorParams) (*resourceReadinessChecker, error) {
-	resourceChecker, err := readiness.GetCheckerByGvk(&r.GVK, readiness.GetCheckerParams{
-		LoggerProvider: params.loggerProvider,
-	})
+	resourceChecker, err := readiness.GetCheckerByGvk(&r.GVK, readiness.GetCheckerParams{})
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +130,6 @@ func newResourceIsReadyChecker(r *template.Resource, params constructorParams) (
 	}, nil
 }
 
-func tryToGetResourceIsReadyChecker(r *template.Resource, params constructorParams) (Checker, error) {
+func tryToGetResourceIsReadyChecker(_ context.Context, r *template.Resource, params constructorParams) (Checker, error) {
 	return newResourceIsReadyChecker(r, params)
 }

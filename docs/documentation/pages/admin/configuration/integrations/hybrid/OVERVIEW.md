@@ -1,321 +1,61 @@
 ---
-title: Hybrid integrations
+title: Hybrid clusters
 permalink: en/admin/integrations/hybrid/overview.html
+lang: en
+search: hybrid, hybrid cluster, hybrid integration
+description: General principles of hybrid integration in Deckhouse Kubernetes Platform.
 ---
 
-Deckhouse Kubernetes Platform (DKP) can use cloud provider resources to expand the capacity of static clusters.
-Currently, integration is supported with [OpenStack](../public/openstack/connection-and-authorization.html), [Yandex Cloud](../public/yandex/authorization.html), and [VMware vCloud Director (VCD)](../virtualization/vcd/connection-and-authorization.html).
+A hybrid cluster is a static Deckhouse Kubernetes Platform (DKP) cluster extended with nodes placed in the infrastructure of a supported provider, such as Yandex Cloud, VMware Cloud Director or VMware vSphere.
 
-A hybrid cluster is a Kubernetes cluster that combines bare-metal nodes with nodes running on vSphere or OpenStack.
-To create such a cluster, an L2 network must be available between all nodes.
+In this scenario, the control plane and the initial cluster nodes remain part of the static DKP cluster, while additional nodes are added through the corresponding provider module. These nodes can be created automatically through the provider API or connected manually if the virtual machines were created in advance.
 
-{% alert level="info" %}
-The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
-To do this, use the [`instancePrefix`](/modules/node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
-{% endalert %}
+This approach allows you to expand an existing static cluster without creating a separate Kubernetes cluster: increase compute capacity, place some workloads in another infrastructure, or gradually migrate services there. Applications still use a single Kubernetes control plane: the same API, shared resources, and unified mechanisms for scheduling, monitoring, updates, and operations.
 
-## Hybrid cluster with Yandex Cloud
+Hybrid integration is performed on top of an already deployed static DKP cluster ([`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype)). Then the corresponding cloud provider module is enabled, allowing DKP to obtain information about the external infrastructure and create or connect additional nodes.
 
-The following section describes how to create a hybrid cluster that combines static (bare-metal) nodes and cloud nodes in Yandex Cloud using Deckhouse Kubernetes Platform (DKP).
+Depending on the provider, nodes can be added automatically through the provider API or connected manually by running a bootstrap script on pre-created virtual machines.
 
-### Prerequisites for Yandex Cloud
+The general principles of hybrid integration are described on this page. The procedure for preparing the infrastructure and adding nodes depends on the provider being used and is described in separate guides:
 
-- A working cluster with the parameter `clusterType: Static`.
-- The CNI controller switched to VXLAN mode. For details, refer to the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) parameter.
-- Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/configuration.html)).
+- [Yandex Cloud](./yandex-hybrid.html);
+- [VMware Cloud Director](./vcd-hybrid.html);
+- [VMware vSphere](./vsphere-hybrid.html).
 
-### Adding automatically created nodes in Yandex Cloud
+## NodeGroup types
 
-1. Create a Service Account in the required Yandex Cloud folder:
+In a hybrid scenario, DKP uses the following NodeGroup types:
 
-   - Assign the `editor` role.
-   - Provide access to the used VPC with the `vpc.admin` role.
+- [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) — nodes that DKP creates and deletes automatically through the configured cloud provider API.
+- [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) — nodes that are created manually by the user or by external tools in the same cloud infrastructure for which cloud provider integration is configured. CSI runs on such nodes, and the Node object is managed by cloud-controller-manager: it is automatically enriched with zone and region information based on provider data.
 
-1. Create the `d8-provider-cluster-configuration` secret with the required data. Example `cloud-provider-cluster-configuration.yaml`:
+## Ways to add nodes
 
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: YandexClusterConfiguration
-   layout: WithoutNAT
-   masterNodeGroup:
-     replicas: 1
-     instanceClass:
-       cores: 4
-       memory: 8192
-       imageID: fd80bm0rh4rkepi5ksdi
-       diskSizeGB: 100
-       platform: standard-v3
-       externalIPAddresses:
-       - "Auto"
-   nodeNetworkCIDR: 10.160.0.0/16
-   existingNetworkID: empty
-   provider:
-     cloudID: CLOUD_ID
-     folderID: FOLDER_ID
-     serviceAccountJSON: '{"id":"ajevk1dp8f9...--END PRIVATE KEY-----\n"}'
-   sshPublicKey: <SSH_PUBLIC_KEY>
-   ```
+Nodes from the provider infrastructure can be connected in the following ways:
 
-   Parameter descriptions:
-   - `nodeNetworkCIDR` — CIDR of the network covering all node subnets in Yandex Cloud.
-   - `cloudID` — Your cloud ID.
-   - `folderID` — Your folder ID.
-   - `serviceAccountJSON` — The Service Account in JSON format.
-   - `sshPublicKey` — Public SSH key for deployed machines.
+- **Automatic creation of cloud nodes**. DKP creates virtual machines through the provider API. VM parameters are described by the `*InstanceClass` resource, while the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the `CloudEphemeral` type.
+- **Connecting manually created cloud nodes using a bootstrap script**. A virtual machine is created in advance by the user in the provider infrastructure, after which a DKP bootstrap script is run on it to connect the node to the cluster. This scenario uses a [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the `CloudStatic` type. Such a node is managed by the corresponding provider's cloud-controller-manager.
 
-     Values in `masterNodeGroup` are irrelevant since master nodes are not created.
+This section describes the general network requirements for hybrid clusters. Provider-specific requirements, including network parameters, virtual machine templates, credentials, placement parameters, and ways to add nodes, are described in separate guides for [Yandex Cloud](./yandex-hybrid.html), [VCD](./vcd-hybrid.html), and [vSphere](./vsphere-hybrid.html).
 
-1. Fill in `data.cloud-provider-discovery-data.json` in the same secret. Example:
+## General network requirements
 
-   ```yaml
-   {
-     "apiVersion": "deckhouse.io/v1",
-     "defaultLbTargetGroupNetworkId": "empty",
-     "internalNetworkIDs": [
-       "<NETWORK-ID>"
-     ],
-     "kind": "YandexCloudDiscoveryData",
-     "monitoringAPIKey": "",
-     "region": "ru-central1",
-     "routeTableID": "empty",
-     "shouldAssignPublicIPAddress": false,
-     "zoneToSubnetIdMap": {
-       "ru-central1-a": "<A-SUBNET-ID>",
-       "ru-central1-b": "<B-SUBNET-ID>", 
-       "ru-central1-d": "<D-SUBNET-ID>"
-     },
-     "zones": [
-       "ru-central1-a",
-       "ru-central1-b",
-      "ru-central1-d"
-     ]
-   }
-   ```
+Two-way network connectivity sufficient for DKP and Kubernetes components must be configured between the nodes of the initial static cluster and the connected nodes placed in the provider infrastructure.
 
-    Parameter descriptions:
-    - `internalNetworkIDs` — List of network IDs in Yandex Cloud providing internal node connectivity.
-    - `zoneToSubnetIdMap` — Zone-to-subnet mapping (one subnet per zone).
-    - `shouldAssignPublicIPAddress: true` — Assigns public IPs to created nodes if required. For zones without subnets, can be set to `empty`.
+Connectivity must provide:
 
-1. Encode the above files (YandexClusterConfiguration and YandexCloudDiscoveryData) in Base64, then insert them into the `cloud-provider-cluster-configuration.yaml` and `cloud-provider-discovery-data.json` fields in the secret.
+- access from connected nodes to the Kubernetes API of the initial cluster;
+- access from connected nodes to DNS servers;
+- access from connected nodes to the container image registry and other external services required to download images and packages;
+- access from the control plane and system components to the connected nodes for kubelet, networking components, monitoring, and Kubernetes service operations;
+- access from DKP components that interact with the provider infrastructure to the corresponding provider API.
 
-   ```yaml
-   apiVersion: v1
-   data:
-     cloud-provider-cluster-configuration.yaml: <YANDEXCLUSTERCONFIGURATION_BASE64_ENCODED>
-     cloud-provider-discovery-data.json: <YANDEXCLOUDDISCOVERYDATA-BASE64-ENCODED>
-   kind: Secret
-   metadata:
-     labels:
-       heritage: deckhouse
-       name: d8-provider-cluster-configuration
-     name: d8-provider-cluster-configuration
-     namespace: kube-system
-   type: Opaque
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: cloud-provider-yandex
-   spec:
-     version: 1
-     enabled: true
-     settings:
-       storageClass:
-         default: network-ssd
-   ```
+The full list of required connections is provided in the [Network interaction](../../../../reference/network_interaction.html) section, and access restriction recommendations are provided in the [Configuring network policies](../../configuration/network/policy/configuration.html) section.
 
-1. Remove the `ValidatingAdmissionPolicyBinding` object to avoid conflicts:
+Additionally, it is recommended to check:
 
-   ```shell
-   d8 k delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
-   ```
+- routing between the networks of the initial static cluster and the connected nodes in both directions;
+- consistent MTU values across the entire network path, especially when tunnels are used;
+- traffic encapsulation parameters when using Cilium, including [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), if traffic filtering is applied between sites.
 
-1. Apply the manifests in the cluster.
-
-1. Wait for the `cloud-provider-yandex` module activation and CRD creation:
-
-   ```shell
-   d8 k get mc cloud-provider-yandex
-   d8 k get crd yandexinstanceclasses
-   ```
-
-1. Create and apply NodeGroup and YandexInstanceClass manifests:
-
-   ```yaml
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroup
-   metadata:
-     name: worker
-   spec:
-     nodeType: Cloud
-     cloudInstances:
-       classReference:
-         kind: YandexInstanceClass
-         name: worker
-       minPerZone: 1
-       maxPerZone: 3
-       zones:
-         - ru-central1-d
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: YandexInstanceClass
-   metadata:
-     name: worker
-   spec:
-     cores: 4
-     memory: 8192
-     diskSizeGB: 50
-     diskType: network-ssd
-     mainSubnet: <YOUR-SUBNET-ID>
-   ```
-
-   The `mainSubnet` parameter must contain the subnet ID from Yandex Cloud that is used for interconnection with your infrastructure (L2 connectivity with static node groups).
-
-   After applying the manifests, the provisioning of virtual machines in Yandex Cloud managed by the `node-manager` module will begin.
-
-1. Check the `machine-controller-manager` logs for troubleshooting:
-
-   ```shell
-   d8 k -n d8-cloud-provider-yandex get machine
-   d8 k -n d8-cloud-provider-yandex get machineset
-   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager
-   ```
-
-## Hybrid cluster with VCD
-
-This section describes the process of creating a hybrid cluster that combines static (bare-metal) nodes and cloud nodes in VMware vCloud Director (VCD) using Deckhouse Kubernetes Platform (DKP).
-
-### Prerequisites for VCD
-
-Before you begin, ensure the following conditions are met:
-
-- **Infrastructure**:
-  - A bare-metal DKP cluster is installed.
-  - A tenant is configured in VCD [with allocated resources](../virtualization/vcd/connection-and-authorization.html).
-  - Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/configuration.html)).
-  - A working network is configured in VCD with DHCP enabled.
-  - A user with a static password and VCD administrator privileges has been created.
-
-- **Software settings**:
-  - The CNI controller is switched to VXLAN mode. More details — [`tunnelMode` configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
-  - A [list of required VCD resources](../virtualization/vcd/connection-and-authorization.html) is prepared (VDC, VAPP, templates, policies, etc.).
-
-### Adding automatically created nodes in VCD
-
-1. 1. Create a file, for example `cloud-provider-vcd-mc.yaml`, with a ModuleConfig resource:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: cloud-provider-vcd
-   spec:
-     version: 1
-     enabled: true
-     settings:
-       mainNetwork: <NETWORK_NAME>
-       organization: <ORGANIZATION>
-       virtualDataCenter: <VDC_NAME>
-       virtualApplicationName: <VAPP_NAME>
-       sshPublicKey: <SSH_PUBLIC_KEY>
-       provider:
-         server: <API_URL>
-         username: <USER_NAME>
-         password: <PASSWORD>
-         apiToken: <API_TOKEN>
-         insecure: false
-   ```
-
-   Where:
-   - `mainNetwork` — the name of the network where cloud nodes will be deployed in your VCD cluster.
-   - `organization` — the name of your VCD organization.
-   - `virtualDataCenter` — the name of the virtual data center.
-   - `virtualApplicationName` — the name of the vApp where nodes will be created (e.g., `dkp-vcd-app`).
-   - `sshPublicKey` — the SSH public key for node access.
-   - `provider.server` — the API URL of your VCD instance.
-   - `provider.username` — the name of the static user that will be used to interact with VCD.
-   - `provider.password` — the password of a user with administrator privileges in VCD.
-   - `provider.insecure` — set to `true` if VCD uses a self-signed TLS certificate.
-
-   If a token is used for authentication, specify `apiToken` instead of `username` and `password`:
-
-   ```yaml
-   provider:
-     server: <API_URL>
-     apiToken: <API_TOKEN>
-     username: ""
-     password: ""
-     insecure: false
-   ```
-
-1. Apply the ModuleConfig:
-
-   ```shell
-   d8 k apply -f cloud-provider-vcd-mc.yaml
-   d8 k get mc cloud-provider-vcd
-   ```
-
-1. Make sure all pods in the `d8-cloud-provider-vcd` namespace are in the `Running` state:
-
-   ```shell
-   d8 k get pods -n d8-cloud-provider-vcd
-   ```
-
-1. Make sure StorageClasses for VCD have been created in the cluster:
-
-   ```shell
-   d8 k get sc
-   ```
-
-1. Create a file, for example `vcd-instanceclass-nodegroup.yaml` with the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: VCDInstanceClass
-   metadata:
-     name: worker
-   spec:
-     rootDiskSizeGb: 50
-     sizingPolicy: <SIZING_POLICY>
-     storageProfile: <STORAGE_PROFILE>
-     template: <VAPP_TEMPLATE>
-   ---
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: worker
-   spec:
-     nodeType: CloudEphemeral
-     cloudInstances:
-       classReference:
-         kind: VCDInstanceClass
-         name: worker
-       maxPerZone: 2
-       minPerZone: 1
-     nodeTemplate:
-       labels:
-         node-role/worker: ""
-   ```
-
-1. Apply the manifest:
-
-   ```shell
-   d8 k apply -f vcd-instanceclass-nodegroup.yaml
-   ```
-
-   After the manifest is applied, DKP will start creating virtual machines in VCD managed by the `node-manager` module.
-
-1. Make sure the required number of nodes has appeared in the cluster:
-
-   ```shell
-   d8 k get nodes -o wide
-   ```
-
-1. If VM creation fails, check the Machine and MachineSet objects and the machine-controller-manager logs:
-
-   ```shell
-   d8 k -n d8-cloud-instance-manager get machinesets,machines -o wide
-   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
-   ```
+Specific requirements for networks, subnets, virtual machine templates, credentials, and additional parameters depend on the infrastructure provider being used and are described in the "Prerequisites" section for the corresponding provider.

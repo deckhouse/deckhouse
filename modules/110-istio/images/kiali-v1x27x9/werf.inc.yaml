@@ -23,7 +23,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -31,13 +31,16 @@ import:
   add: /src/kiali
   to: /src/kiali
   before: install
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-kiali-frontend-build-artifact
+  add: /src/kiali/frontend/build
+  to: /src/kiali/frontend/build
+  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
+  - pm install git binutils
   install:
   - cd /src/kiali/
   # build

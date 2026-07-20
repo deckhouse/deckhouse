@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -57,6 +58,19 @@ const (
 	conditionReasonApplyManifestsFailed   status.ConditionReason = "ApplyManifestsFailed"
 )
 
+// MaintenanceState is the reconciliation mode requested for a package. The zero
+// value (Managed) reconciles normally; it mirrors ModuleConfig maintenance.
+type MaintenanceState string
+
+const (
+	// Managed reconciles the package's resources normally.
+	Managed MaintenanceState = ""
+	// NoResourceReconciliation stops reconciling the package's resources: the Helm
+	// release is left untouched, resource monitoring is disabled, and resources are
+	// labeled so they can be edited by hand.
+	NoResourceReconciliation MaintenanceState = "NoResourceReconciliation"
+)
+
 var ErrPackageNotHelm = errors.New("package not helm")
 
 // Package provides access to package data needed for Helm operations.
@@ -65,6 +79,9 @@ type Package interface {
 	GetPath() string
 	GetRuntimeValues() string
 	GetValues() addonutils.Values
+	// GetMaintenance reports the package's maintenance mode; the package itself
+	// decides whether its resources must be reconciled.
+	GetMaintenance() MaintenanceState
 }
 
 // Service manages Helm release lifecycle via nelm client.
@@ -211,10 +228,19 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 //  6. Install/upgrade release if needed
 //  7. Start or verify resource monitoring
 //
+// Maintenance (state == NoResourceReconciliation): once the release is marked as
+// under maintenance the upgrade is skipped and resource monitoring is dropped, so
+// config/hook changes are not reconciled and deleted resources are not restored.
+// Resources are stamped with the maintenance label so the deckhouse admission
+// policy stops guarding them against manual edits.
+//
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
 func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) error {
 	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
+
+	// The package owns its maintenance mode and decides whether it reconciles.
+	state := pkg.GetMaintenance()
 
 	span.SetAttributes(attribute.String("name", pkg.GetName()))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -232,12 +258,38 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		return ErrPackageNotHelm
 	}
 
+	// Once the release is marked as under maintenance, stop reconciling: skip the
+	// upgrade and drop monitoring so deleted resources are not restored.
+	if state == NoResourceReconciliation {
+		marked, err := s.isReleaseUnderMaintenance(ctx, namespace, pkg.GetName())
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return status.NewError(conditionReasonCheckReleaseFailed, err)
+		}
+
+		if marked {
+			s.monitorManager.RemoveMonitor(pkg.GetName())
+			s.logger.Debug("release under maintenance, skip upgrade", slog.String("name", pkg.GetName()))
+
+			return nil
+		}
+	}
+
 	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return status.NewError(conditionReasonCreateValuesFileFailed, err)
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
+
+	// The maintenance marker lives on the resources, so toggling it changes the
+	// rendered-manifest checksum and forces exactly one upgrade on enter/leave.
+	resourcesLabels := map[string]string{
+		health.LabelKey: pkg.GetName(),
+	}
+	if state == NoResourceReconciliation {
+		resourcesLabels[nelm.ReleaseLabelMaintenance] = ""
+	}
 
 	s.logger.Debug("render nelm chart",
 		slog.String("path", pkg.GetPath()),
@@ -246,17 +298,20 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 
 	// Render chart to get manifests for checksum calculation
 	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
-		Path:        pkg.GetPath(),
-		ValuesPaths: []string{valuesPath},
-		RootValues:  pkg.GetRuntimeValues(),
-		ResourcesLabels: map[string]string{
-			health.LabelKey: pkg.GetName(),
-		},
+		Path:            pkg.GetPath(),
+		ValuesPaths:     []string{valuesPath},
+		RootValues:      pkg.GetRuntimeValues(),
+		ResourcesLabels: resourcesLabels,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return status.NewError(conditionReasonRenderFailed, err)
 	}
+
+	// Collect application endpoint URLs from the rendered manifests. Done
+	// before the shouldUpgrade check so URLs are refreshed even when the
+	// upgrade itself is skipped.
+	s.status.UpdateURLs(pkg.GetName(), extractEndpointURLs(renderedManifests))
 
 	// Calculate checksum to detect changes in rendered manifests
 	checksum := addonutils.CalculateStringsChecksum(renderedManifests)
@@ -269,7 +324,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	}
 
 	if !shouldUpgrade {
-		s.monitorManager.AddMonitor(namespace, pkg.GetName(), renderedManifests)
+		s.updateMonitor(state, namespace, pkg.GetName(), renderedManifests)
 		s.logger.Debug("no need to upgrade", slog.String("name", pkg.GetName()))
 
 		return nil
@@ -283,19 +338,58 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{
 			nelm.ReleaseLabelPackageChecksum: checksum,
+			nelm.ReleaseLabelMaintenance:     strconv.FormatBool(state == NoResourceReconciliation),
 		},
-		ResourcesLabels: map[string]string{
-			health.LabelKey: pkg.GetName(),
-		},
+		ResourcesLabels: resourcesLabels,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return status.NewError(conditionReasonApplyManifestsFailed, err)
 	}
 
-	s.monitorManager.AddMonitor(namespace, pkg.GetName(), renderedManifests)
+	s.updateMonitor(state, namespace, pkg.GetName(), renderedManifests)
 
 	return nil
+}
+
+// isReleaseUnderMaintenance reports whether the release is deployed and already
+// marked as under maintenance. A missing, failed, or pending release — or a missing
+// label — means "not (successfully) marked", so the caller must (re)apply to stamp
+// it. The deployed check matters because nelm writes the maintenance storage label
+// at pending time: without it a failed enter-maintenance install would be frozen
+// and falsely reported as applied until maintenance is turned off.
+func (s *Service) isReleaseUnderMaintenance(ctx context.Context, namespace, name string) (bool, error) {
+	_, releaseStatus, err := s.client.LastStatus(ctx, namespace, name)
+	if err != nil {
+		return false, fmt.Errorf("get release status: %w", err)
+	}
+
+	if strings.ToLower(releaseStatus) != "deployed" {
+		return false, nil
+	}
+
+	value, err := s.client.GetReleaseLabel(ctx, namespace, name, nelm.ReleaseLabelMaintenance)
+	if err != nil {
+		if errors.Is(err, nelm.ErrReleaseNotFound) || errors.Is(err, nelm.ErrLabelNotFound) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("get maintenance label: %w", err)
+	}
+
+	// Pairs with strconv.FormatBool written on install.
+	return value == "true", nil
+}
+
+// updateMonitor keeps resource monitoring on for managed packages and off for
+// packages under maintenance, so their deleted resources are not restored.
+func (s *Service) updateMonitor(state MaintenanceState, namespace, name, manifests string) {
+	if state == NoResourceReconciliation {
+		s.monitorManager.RemoveMonitor(name)
+		return
+	}
+
+	s.monitorManager.AddMonitor(namespace, name, manifests)
 }
 
 // Cleanup uninstalls releases owned by this service (carrying the managed-by

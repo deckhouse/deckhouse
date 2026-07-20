@@ -30,7 +30,7 @@ jobs:
         github.actor == 'dependabot-preview[bot]' ||
         github.actor == 'dependabot-preview'
       )
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     permissions:
       pull-requests: write
       contents: read

@@ -60,22 +60,9 @@ Recommended quotas for a new cluster:
 ## Yandex Cloud integration
 
 {% alert level="warning" %}
-Starting with DKP version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters.
+Starting with DKP version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
 
-When using CentOS 8, you must explicitly enable the `cni-simple-bridge` module in the `config.yml` file.
-
-{% offtopic title="Example configuration for CentOS 8 in Yandex Cloud..." %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-simple-bridge
-spec:
-  enabled: true
-```
-
-{% endofftopic %}
+New clusters require Linux kernel version 5.8 or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
 {% endalert %}
 
 ### Configuring security groups
@@ -87,6 +74,8 @@ Do not delete the default rules that allow for traffic to pass in any direction 
 {% endalert %}
 
 This section provides general guidelines for setting up a security group. Incorrect configuration of security groups may affect the performance of the cluster. Please consult [security group usage details](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud before using it in production environments.
+
+If the cluster uses `cilium` in VXLAN mode, make sure security groups allow inter-node UDP traffic on the ports required for Cilium. For details, see [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
 
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
@@ -277,7 +266,7 @@ This integration lets you use [the Yandex Managed Service for Prometheus](https:
    - `<URL_TO_WRITE_METRICS>` — URL from the Yandex Monitoring/Prometheus/Writing Metrics page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJRSrfo9jU3aopsXrJyfq_UHs********`.
 
-   You may also specify additional parameters; refer to [the documentation](../../modules/prometheus/cr.html#prometheusremotewrite).
+   You may also specify additional parameters; refer to [the documentation](/modules/prometheus/cr.html#prometheusremotewrite).
 
 More details about this feature can be found [in Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
@@ -312,6 +301,6 @@ More details about this feature can be found [in Yandex Cloud documentation](htt
    - `<URL_READING_METRICS_WITH_GRAFANA>` — URL from the Yandex Monitoring/Prometheus/Reading Metrics with Grafana page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   You may also specify additional parameters; refer to [the documentation](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
+   You may also specify additional parameters; refer to [the documentation](/modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 More details about this feature can be found [in Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/querying/grafana).

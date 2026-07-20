@@ -27,9 +27,9 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type KubeProxyChecker struct {
@@ -94,23 +94,25 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	if len(c.nodesExternalIPs) > 0 {
 		ip, ok := c.nodesExternalIPs[nodeName]
 		if !ok {
-			return false, fmt.Errorf("Not found external ip for node %s", nodeName)
+			return false, fmt.Errorf("No external IP found for node %s", nodeName)
 		}
 
 		sshClient.Session().SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
 	kubeCl := kube.NewKubernetesClient(c.baseProviderSettings).WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient, c.baseProviderSettings))
-	params := &kube.Config{
-		KubeConfig:          c.initParams.KubeConfig,
-		KubeConfigContext:   c.initParams.KubeConfigContext,
-		KubeConfigInCluster: c.initParams.KubeConfigInCluster,
-		RestConfig:          c.initParams.RestConfig,
+	// initParams is optional: the converge controlplane path does not wire it.
+	params := &kube.Config{}
+	if c.initParams != nil {
+		params.KubeConfig = c.initParams.KubeConfig
+		params.KubeConfigContext = c.initParams.KubeConfigContext
+		params.KubeConfigInCluster = c.initParams.KubeConfigInCluster
+		params.RestConfig = c.initParams.RestConfig
 	}
 
 	err = kubeCl.InitContext(ctx, params)
 	if err != nil {
-		return false, fmt.Errorf("open kubernetes connection: %v", err)
+		return false, fmt.Errorf("failed to open kubernetes connection: %v", err)
 	}
 
 	defer func() {
@@ -133,11 +135,11 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		return false, err
 	}
 
-	c.printNs(ns)
+	c.printNs(ctx, ns)
 
 	uuidInCluster := ns.Data["cluster-uuid"]
 	if c.clusterUUID != "" && c.clusterUUID != uuidInCluster {
-		return false, fmt.Errorf("Incorrect cluster uuid. In cluster %s != %s passed.", uuidInCluster, c.clusterUUID)
+		return false, fmt.Errorf("Incorrect cluster UUID: cluster has %s, but %s was passed.", uuidInCluster, c.clusterUUID)
 	}
 
 	return true, nil
@@ -147,16 +149,16 @@ func (c *KubeProxyChecker) Name() string {
 	return "SSH access and kube-proxy availability"
 }
 
-func (c *KubeProxyChecker) printNs(cm *corev1.ConfigMap) {
+func (c *KubeProxyChecker) printNs(ctx context.Context, cm *corev1.ConfigMap) {
 	if !c.logCheckResult {
 		return
 	}
 
 	yamlRepr, err := yaml.Marshal(cm)
 	if err != nil {
-		log.ErrorF("ConfigMap marshal error %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("ConfigMap marshal error %v", err))
 		return
 	}
 
-	log.InfoF("Cluster UUID ConfigMap:\n%s\n", string(yamlRepr))
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cluster UUID ConfigMap:\n%s", string(yamlRepr)))
 }

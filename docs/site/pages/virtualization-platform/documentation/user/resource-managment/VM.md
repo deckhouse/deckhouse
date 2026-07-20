@@ -9,7 +9,7 @@ This guide is intended for users of Deckhouse Virtualization Platform (DVP) and 
 
 ## Quick start on creating a VM
 
-Example of creating a virtual machine with Ubuntu 22.04.
+Example of creating a virtual machine with Ubuntu 24.04.
 
 1. Create a virtual machine image from an external source:
 
@@ -237,7 +237,7 @@ The full description of virtual machine configuration parameters can be found at
 
 ### Creating a virtual machine
 
-Below is an example of a simple virtual machine configuration running Ubuntu OS 22.04. The example uses the initial virtual machine initialization script (cloud-init), which installs the `qemu-guest-agent` guest agent and the `nginx` service, and creates the `cloud` user with the `cloud` password:
+Below is an example of a simple virtual machine configuration running Ubuntu OS 24.04. The example uses the initial virtual machine initialization script (cloud-init), which installs the `qemu-guest-agent` guest agent and the `nginx` service, and creates the `cloud` user with the `cloud` password:
 
 The password in the example was generated using the command `mkpasswd --method=SHA-512 --rounds=4096 -S saltsalt` and you can change it to your own if necessary:
 
@@ -559,7 +559,7 @@ Next, the system automatically determines the topology depending on the specifie
   - 8 sockets are used.
   - Cores are evenly distributed among the sockets.
   - Step change: 8 (the total number of cores must be a multiple of 8).
-  - Valid values: 72, 80, 88, 88, 96, and so on up to 248
+  - Valid values: 72, 80, 88, 96, and so on up to 248.
   - Limitations: minimum 9 cores per socket.
   - Example: If `.spec.cpu.cores` = 80, topology: 8 sockets with 10 cores each.
 
@@ -1196,6 +1196,48 @@ Limitations:
 - If the change requires CPU topology reconfiguration, a VM restart is required.
 - When decreasing CPU count within the current topology, CPU distribution across sockets may become uneven.
 
+### Memory hotplug
+
+Memory hotplug lets you increase `spec.memory.size` for a running VM without restart when the change can be applied through live migration. Decreasing memory always requires a VM restart.
+
+This functionality is disabled by default.
+
+To enable this functionality, add `HotplugMemoryWithLiveMigration` to `.spec.settings.featureGates` array in the ModuleConfig `virtualization`:
+
+```yaml
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  settings:
+    featureGates:
+    - HotplugMemoryWithLiveMigration
+```
+
+If the new `spec.memory.size` is greater than the current value and the VM is migratable, the change is applied through live migration. If you need to shrink memory, the VM originally had less than 1 GiB of memory, or the VM cannot be migrated, a VM restart is required. The need for restart is reflected by the `AwaitingRestartToApplyConfiguration` condition.
+
+Guest OS specifics:
+
+- After live migration, newly added memory blocks may require explicit activation inside the guest OS; memory configured at VM creation does not require extra activation.
+- On Linux, added memory can be enabled through sysfs (see device names in `ls /sys/bus/memory/devices/`):
+
+  ```bash
+  echo 1 > /sys/bus/memory/devices/memoryXXX/online
+  ```
+
+- To automatically enable added memory on Linux, configure a `udev` rule. After that, added memory becomes visible in `free` and `lsmem`:
+
+  ```bash
+  cat <<'EOF' > /etc/udev/rules.d/99-hotplug-memory.rules
+  SUBSYSTEM=="memory",ACTION=="add",DEVPATH=="/devices/system/memory/memory[0-9]*", TEST=="state", ATTR{state}!="online", ATTR{state}="online"
+  EOF
+  ```
+
+Limitations:
+
+- Increasing memory without restart is possible only if the VM memory size is at least 1 GiB. If the VM was created with less than 1 GiB, any memory size change requires a restart.
+- In the current module version, the maximum VM memory size is limited to 256 GiB.
+
 ### Placement of VMs by nodes
 
 The following methods can be used to manage the placement of virtual machines (placement parameters) across nodes:
@@ -1482,7 +1524,7 @@ After creation, `VirtualMachineBlockDeviceAttachment` can be in the following st
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block
 
-Check the state of your resource::
+Check the state of your resource:
 
 ```bash
 d8 k get vmbda attach-blank-disk
@@ -1636,6 +1678,10 @@ Predictable interface order works only on guest OS with systemd (e.g. Ubuntu, De
 ### Organizing interaction with virtual machines
 
 Virtual machines can be accessed directly via their fixed IP addresses. However, this approach has limitations: direct use of IP addresses requires manual management, complicates scaling, and makes the infrastructure less flexible. An alternative is services—a mechanism that abstracts access to VMs by providing logical entry points instead of binding to physical addresses.
+
+{% alert level="info" %}
+If connecting to a VM from a cluster node does not work, check `NetworkPolicy` in the project. Project network policies can restrict access to the VM, including connections from cluster nodes.
+{% endalert %}
 
 Services simplify interaction with both individual VMs and groups of similar VMs. For example, the ClusterIP service type creates a fixed internal address that can be used to access both a single VM and a group of VMs, regardless of their actual IP addresses. This allows other system components to interact with resources through a stable name or IP, automatically directing traffic to the right machines.
 

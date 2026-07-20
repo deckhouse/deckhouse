@@ -34,6 +34,14 @@ for local user accounts. The following features are added:
 3. Password reuse prevention
 4. Account lockout after failed attempts
 
+Password complexity supports both predefined levels (`None`, `Low`, `Fair`,
+`Good`, `Excellent`) and a `Custom` level. When `Custom` is selected, the
+individual checks (`minLength`, `specialCharacters`, `numbers`, `capitalized`,
+`repeatedChars`) are wired through the new `WithCustomComplexity`
+`PasswordPolicy` option. The login handler enforces the policy via
+`Complexity.Validate(password)` so the same code path works for both predefined
+and custom levels.
+
 ### 006-fix-render-error.patch
 
 This patch changes the Internal Error message to a human-readable 'Access Denied' when login with a local user is restricted by group or email.

@@ -21,6 +21,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +35,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 type UserOperation struct {
@@ -40,6 +44,15 @@ type UserOperation struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              UserOperationSpec   `json:"spec"`
 	Status            UserOperationStatus `json:"status"`
+
+	// FilterError carries the error produced by applyUserOperationFilter when
+	// the raw object could not be decoded into this struct. It is NOT part of
+	// the CRD: it travels only inside the hook snapshot (hence a plain json tag
+	// so it survives the snapshot round-trip) so getUserOperations can mark this
+	// specific object Failed with the exact reason instead of silently dropping
+	// it — all without the FilterFunc ever returning an error and locking the
+	// queue. It never reaches the API: status patches send only the status field.
+	FilterError string `json:"filterError,omitempty"`
 }
 
 type UserOperationSpec struct {
@@ -67,7 +80,59 @@ type UserOperationResetPasswordSpec struct {
 }
 
 type UserOperationLockSpec struct {
-	For metav1.Duration `json:"for"`
+	// For is either a Go-style duration string accepted by time.ParseDuration
+	// (e.g. "30m", "1h", "2h30m"), or the sentinel userOperationLockForever
+	// ("permanent") for an indefinite lock. We use a plain string rather than
+	// metav1.Duration so the sentinel can travel through (un)marshalling
+	// without colliding with time.ParseDuration's grammar.
+	For string `json:"for"`
+}
+
+// userOperationLockForever is the sentinel value accepted by
+// UserOperationLockSpec.For to request a permanent lock.
+const userOperationLockForever = "permanent"
+
+// lockDaysSegment matches one "<number>d" piece inside a Go-style duration
+// string. The CRD pattern guarantees the surrounding shape, so we don't
+// re-validate it here.
+var lockDaysSegment = regexp.MustCompile(`([0-9]+(?:\.[0-9]+)?)d`)
+
+// expandLockDuration rewrites every "<num>d" segment in a Go-style duration
+// string into the equivalent "<num*24>h" so time.ParseDuration — which has
+// no "d" unit — can consume the result. We surface days in the API for
+// admin ergonomics ("7d" reads better than "168h") while keeping a single,
+// trusted parser on the read side.
+func expandLockDuration(s string) string {
+	return lockDaysSegment.ReplaceAllStringFunc(s, func(seg string) string {
+		days, err := strconv.ParseFloat(seg[:len(seg)-1], 64)
+		if err != nil {
+			// CRD pattern should make this unreachable; bail out unchanged and
+			// let time.ParseDuration produce the canonical error message.
+			return seg
+		}
+		return strconv.FormatFloat(days*24, 'f', -1, 64) + "h"
+	})
+}
+
+// resolveLockUntil maps UserOperationLockSpec.For to an absolute expiry.
+//
+// Shape and positivity of forValue are enforced at the API boundary by the
+// UserOperation CRD (`pattern` + `x-kubernetes-validations`), so anything
+// reaching here is either the "permanent" sentinel or a positive duration.
+// The error paths below are kept as a defensive guard for hand-crafted
+// objects in tests or clusters where CRD validation is somehow bypassed.
+func resolveLockUntil(forValue string, now time.Time) (time.Time, error) {
+	if forValue == userOperationLockForever {
+		return userOperationForeverTime, nil
+	}
+	d, err := time.ParseDuration(expandLockDuration(forValue))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid lock.for %q: %w", forValue, err)
+	}
+	if d <= 0 {
+		return time.Time{}, fmt.Errorf("lock.for %q must be a positive duration", forValue)
+	}
+	return now.Add(d), nil
 }
 
 type UserOperationSpecType string
@@ -116,8 +181,28 @@ type RefreshTokenSnapshot struct {
 
 const userOperationRetentionPeriod = 24 * time.Hour
 
+// userOperationAnnotationInitiator carries the email of the admin who
+// triggered a UserOperation from the Console UI. Stored as an annotation
+// because Kubernetes label values forbid '@' (and dots after '@'), which
+// disqualifies the vast majority of real email addresses. Surfaced in the
+// hook's structured logs as the "initiator" key so audit trails record
+// *who* did what, not just *what role* (initiatorType) did it.
+const userOperationAnnotationInitiator = "deckhouse.io/initiator"
+
+// userOperationForeverTime is the lockedUntil value the hook writes for a
+// permanent lock (lock.for == userOperationLockForever). Year 9999 keeps
+// the value inside time.Time's safe range and RFC3339 grammar while sitting
+// far beyond any realistic clock skew or planned expiry. Both Dex's
+// Password.lockedUntil and OfflineSessions.lockedUntil are compared with
+// time.Now(), so any far-future stamp blocks logins indefinitely.
+var userOperationForeverTime = time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/user-authn",
+	// Dedicated sub-queue so admin-triggered UserOperation processing (which is
+	// event-driven on a user-facing CR and fans out into cascading Password /
+	// OfflineSessions / RefreshToken patches and deletes) cannot delay the core
+	// user-authn reconciliation hooks that share "/modules/user-authn".
+	Queue: "/modules/user-authn/user-operation",
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "*/5 * * * *"},
 	},
@@ -151,7 +236,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents: ptr.To(false),
 		},
 	},
-}, getUserOperations)
+}, dependency.WithExternalDependencies(getUserOperations))
 
 func applyOfflineSessionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	snap := &OfflineSessionSnapshot{
@@ -232,21 +317,86 @@ func applyRefreshTokenFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func applyUserOperationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var userOperation = &UserOperation{}
-	err := sdk.FromUnstructured(obj, userOperation)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+	userOperation := &UserOperation{}
+	if err := sdk.FromUnstructured(obj, userOperation); err != nil {
+		// A FilterFunc must never return an error. addon-operator runs it while
+		// loading existing objects to enable the hook's kubernetes bindings, and
+		// a returned error aborts that step and *locks the whole hook queue* — a
+		// single malformed UserOperation (e.g. an unparsable field) would wedge
+		// the entire feature for every other operation. So instead of failing
+		// the load, capture the conversion error in the snapshot: getUserOperations
+		// surfaces it by marking this specific object Failed with the exact
+		// reason, and the queue keeps draining.
+		return userOperationFromRawObject(obj, err), nil
 	}
 
 	return userOperation, nil
 }
 
-func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
+// userOperationFromRawObject builds a UserOperation snapshot directly from the
+// unstructured object when full conversion fails. It records the conversion
+// error in FilterError and preserves only the lifecycle fields the reconcile
+// loop needs — name (for the status patch, cleanup and logging), creation
+// timestamp (for retention) and the current status.phase. Spec is left empty on
+// purpose: the object is not executed, it is reported Failed with FilterError.
+func userOperationFromRawObject(obj *unstructured.Unstructured, filterErr error) *UserOperation {
+	op := &UserOperation{}
+	op.Name = obj.GetName()
+	op.Namespace = obj.GetNamespace()
+	op.CreationTimestamp = obj.GetCreationTimestamp()
+	op.Annotations = obj.GetAnnotations()
+	op.FilterError = filterErr.Error()
+	// Preserve the current phase so an already-completed but now-undecodable
+	// object is not reprocessed and is left to the normal retention cleanup.
+	if phase, found, _ := unstructured.NestedString(obj.Object, "status", "phase"); found {
+		op.Status.Phase = UserOperationStatusPhase(phase)
+	}
+	return op
+}
+
+// userOperationLogFields returns slog-style key/value pairs describing a
+// UserOperation: who initiated it (initiator = admin email from the UI,
+// initiatorType = the role-level marker the UI already sets), what type of
+// operation it is, and which user it targets — either a local username or
+// an external (connectorID, email) pair. Empty fields are omitted so log
+// lines stay terse for the common case.
+func userOperationLogFields(op UserOperation) []any {
+	fields := []any{
+		"operation", op.Name,
+		"namespace", op.Namespace,
+		"type", op.Spec.Type,
+		"initiatorType", op.Spec.InitiatorType,
+		"createdAt", op.GetObjectMeta().GetCreationTimestamp().Time.Format(time.RFC3339),
+	}
+	if initiator := op.GetAnnotations()[userOperationAnnotationInitiator]; initiator != "" {
+		fields = append(fields, "initiator", initiator)
+	}
+	if op.Spec.User != "" {
+		fields = append(fields, "targetKind", "local", "targetUser", op.Spec.User)
+	}
+	if op.Spec.Target != nil {
+		fields = append(fields,
+			"targetKind", "external",
+			"targetConnector", op.Spec.Target.ConnectorID,
+			"targetEmail", op.Spec.Target.Email,
+		)
+	}
+	return fields
+}
+
+func getUserOperations(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	// Single "now" for the whole reconciliation: every time-derived field
+	// (lockedUntil, status.completedAt) and the retention cut-off share one
+	// instant. Sourced from the dependency container's clock so production uses
+	// the real clock while tests drive a deterministic FakeClock — no wall-clock
+	// jitter, no dependence on how busy the CI runner is.
+	now := dc.GetClock().Now()
+
 	operationsToExecute := make([]UserOperation, 0)
 	operationsToCleanUp := make([]UserOperation, 0)
 	for userOperation, err := range sdkobjectpatch.SnapshotIter[UserOperation](input.Snapshots.Get("useroperations")) {
 		if err != nil {
-			return fmt.Errorf("cannot map userOperation: cannot iterate over 'useroperations' snapshot: %v", err)
+			return fmt.Errorf("iterate over 'useroperations' snapshot: %w", err)
 		}
 
 		if userOperation.Status.Phase == "" {
@@ -254,50 +404,92 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		if time.Since(userOperation.GetObjectMeta().GetCreationTimestamp().Time) >= userOperationRetentionPeriod {
+		if now.Sub(userOperation.GetObjectMeta().GetCreationTimestamp().Time) >= userOperationRetentionPeriod {
 			operationsToCleanUp = append(operationsToCleanUp, userOperation)
 		}
 	}
 
-	input.Logger.Info("Operations to execute", "count", len(operationsToExecute))
-	input.Logger.Info("Operations to clean up", "count", len(operationsToCleanUp))
+	if len(operationsToExecute) > 0 {
+		input.Logger.Info("Processing pending UserOperations", "count", len(operationsToExecute))
+	}
+	if len(operationsToCleanUp) > 0 {
+		input.Logger.Info("Cleaning up expired UserOperations", "count", len(operationsToCleanUp))
+	}
 
 	for _, operation := range operationsToExecute {
-		input.Logger.Info("Executing UserOperation", "name", operation.Name, "type", operation.Spec.Type)
-		err := executeUserOperation(input, operation)
+		logFields := userOperationLogFields(operation)
+		input.Logger.Info("Executing UserOperation", logFields...)
+		err := executeUserOperation(input, operation, now)
 		if err != nil {
-			input.Logger.Error(fmt.Sprintf("Failed to execute UserOperation %s: %v", operation.Name, err))
+			input.Logger.Error("Failed to execute UserOperation", append(logFields, "error", err.Error())...)
 			operation.Status.Phase = UserOperationStatusPhaseFailed
 			operation.Status.Message = err.Error()
 		} else {
-			input.Logger.Info("UserOperation succeeded", "name", operation.Name)
+			input.Logger.Info("UserOperation succeeded", logFields...)
 			operation.Status.Phase = UserOperationStatusPhaseSucceeded
 			operation.Status.Message = ""
 		}
-		operation.Status.CompletedAt = ptr.To(metav1.Now())
+		operation.Status.CompletedAt = ptr.To(metav1.NewTime(now))
 
+		// UserOperation is cluster-scoped; namespace is always empty.
 		input.PatchCollector.PatchWithMerge(
 			map[string]any{"status": operation.Status},
-			"deckhouse.io/v1", "UserOperation", operation.Namespace, operation.Name,
+			"deckhouse.io/v1", "UserOperation", "", operation.Name,
 			object_patch.WithSubresource("status"),
 		)
+
+		// Wipe the bcrypt hash from spec.resetPassword as soon as the
+		// operation reaches a terminal phase (Succeeded or Failed). The hook
+		// never reprocesses a terminal operation (Status.Phase != "" skips
+		// the execute branch), so the payload has no remaining purpose and
+		// only widens the window during which a hash sits in etcd. JSON
+		// merge patch with nil deletes the whole resetPassword block; the
+		// CRD schema does not require it for type=ResetPassword.
+		if operation.Spec.Type == UserOperationTypeResetPass && operation.Spec.ResetPassword != nil {
+			input.PatchCollector.PatchWithMerge(
+				map[string]any{"spec": map[string]any{"resetPassword": nil}},
+				"deckhouse.io/v1", "UserOperation", "", operation.Name,
+			)
+		}
 	}
 
 	for _, operation := range operationsToCleanUp {
-		input.Logger.Info("Deleting old UserOperation", "name", operation.Name)
-		input.PatchCollector.Delete("deckhouse.io/v1", "UserOperation", operation.Namespace, operation.Name)
+		input.Logger.Info("Deleting old UserOperation", userOperationLogFields(operation)...)
+		input.PatchCollector.Delete("deckhouse.io/v1", "UserOperation", "", operation.Name)
 	}
 	return nil
 }
 
-func executeUserOperation(input *go_hook.HookInput, operation UserOperation) error {
+// findLocalPassword returns the Dex Password object for a local username from
+// the "passwords" snapshot, or an error if none matches. Lock, Unlock and
+// ResetPassword all need the same lookup.
+func findLocalPassword(input *go_hook.HookInput, username string) (*Password, error) {
+	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
+		if err != nil {
+			return nil, fmt.Errorf("iterate over passwords snapshot: %w", err)
+		}
+		if password.Username == username {
+			return &password, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find password for user: %s", username)
+}
+
+func executeUserOperation(input *go_hook.HookInput, operation UserOperation, now time.Time) error {
+	// The object could not be decoded by applyUserOperationFilter (a returned
+	// error there would have locked the queue). Surface the exact conversion
+	// error now so the operation ends up Failed with a precise status.message.
+	if operation.FilterError != "" {
+		return fmt.Errorf("cannot decode UserOperation object: %s", operation.FilterError)
+	}
+
 	switch operation.Spec.Type {
 	case UserOperationTypeResetPass:
 		return executeResetPassword(input, operation)
 	case UserOperationTypeReset2FA:
 		return executeReset2FA(input, operation)
 	case UserOperationTypeLock:
-		return executeLock(input, operation)
+		return executeLock(input, operation, now)
 	case UserOperationTypeUnlock:
 		return executeUnlock(input, operation)
 	default:
@@ -305,40 +497,41 @@ func executeUserOperation(input *go_hook.HookInput, operation UserOperation) err
 	}
 }
 
-func executeLock(input *go_hook.HookInput, operation UserOperation) error {
+func executeLock(input *go_hook.HookInput, operation UserOperation, now time.Time) error {
 	if operation.Spec.Lock == nil {
-		input.Logger.Error("Lock spec is nil", "userOperation", operation.Name)
+		input.Logger.Error("Lock spec is nil", userOperationLogFields(operation)...)
 		return errors.New("lock spec is nil")
+	}
+
+	lockedUntil, err := resolveLockUntil(operation.Spec.Lock.For, now)
+	if err != nil {
+		return err
 	}
 
 	// Non-local users (LDAP, Crowd, ...): lock state lives in OfflineSessions
 	// indexed by (email, connID).
 	if operation.Spec.Target != nil {
-		return lockOfflineSession(input, operation, operation.Spec.Lock.For.Duration)
+		return lockOfflineSession(input, operation, lockedUntil)
 	}
 
-	var userPassword *Password
-	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
-		if err != nil {
-			return fmt.Errorf("cannot iter over password: %v", err)
-		}
-		if password.Username == operation.Spec.User {
-			userPassword = &password
-			break
-		}
-	}
-	if userPassword == nil {
-		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
+	userPassword, err := findLocalPassword(input, operation.Spec.User)
+	if err != nil {
+		return err
 	}
 
-	input.Logger.Info("Locking user password", "user", userPassword.Username, "duration", operation.Spec.Lock.For.Duration)
+	input.Logger.Info("Locking local user password",
+		append(userOperationLogFields(operation),
+			"user", userPassword.Username,
+			"for", operation.Spec.Lock.For,
+			"lockedUntil", lockedUntil.UTC().Format(time.RFC3339),
+		)...)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var pass Password
 		if err := sdk.FromUnstructured(obj, &pass); err != nil {
 			input.Logger.Error("Failed to convert Password object", "error", err)
 			return nil, err
 		}
-		pass.LockedUntil = ptr.To(time.Now().Add(operation.Spec.Lock.For.Duration))
+		pass.LockedUntil = ptr.To(lockedUntil)
 		u, err := sdk.ToUnstructured(&pass)
 		if err != nil {
 			return nil, err
@@ -370,21 +563,13 @@ func executeUnlock(input *go_hook.HookInput, operation UserOperation) error {
 		return unlockOfflineSession(input, operation)
 	}
 
-	var userPassword *Password
-	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
-		if err != nil {
-			return fmt.Errorf("cannot iter over password: %v", err)
-		}
-		if password.Username == operation.Spec.User {
-			userPassword = &password
-			break
-		}
-	}
-	if userPassword == nil {
-		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
+	userPassword, err := findLocalPassword(input, operation.Spec.User)
+	if err != nil {
+		return err
 	}
 
-	input.Logger.Info("Unlocking user password", "user", userPassword.Username)
+	input.Logger.Info("Unlocking local user password",
+		append(userOperationLogFields(operation), "user", userPassword.Username)...)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var pass Password
 		if err := sdk.FromUnstructured(obj, &pass); err != nil {
@@ -425,21 +610,13 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 		return fmt.Errorf("resetPassword.newPasswordHash must be a valid bcrypt hash: %v", err)
 	}
 
-	var userPassword *Password
-	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
-		if err != nil {
-			return fmt.Errorf("cannot iter over password: %v", err)
-		}
-		if password.Username == operation.Spec.User {
-			userPassword = &password
-			break
-		}
-	}
-	if userPassword == nil {
-		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
+	userPassword, err := findLocalPassword(input, operation.Spec.User)
+	if err != nil {
+		return err
 	}
 
-	input.Logger.Info("Resetting user password", "user", userPassword.Username)
+	input.Logger.Info("Resetting local user password",
+		append(userOperationLogFields(operation), "user", userPassword.Username)...)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var pass Password
 		if err := sdk.FromUnstructured(obj, &pass); err != nil {
@@ -464,12 +641,25 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 }
 
 func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
+	// Reset2FA is a local-user operation: it matches Dex sessions by username.
+	// An external target (LDAP/Crowd) has no local 2FA to reset, and an empty
+	// user would make invalidateLocalUserSessions match sessions/tokens with
+	// empty claims. The CRD's CEL rule already forbids target on Reset2FA; this
+	// guard is the safety net for hand-crafted objects that bypass it.
+	if operation.Spec.User == "" {
+		return errors.New("Reset2FA requires spec.user; it is only supported for local users")
+	}
+	if operation.Spec.Target != nil {
+		return errors.New("Reset2FA does not support an external target; it is only supported for local users")
+	}
+
 	anyDeleted, err := invalidateLocalUserSessions(input, operation.Spec.User, "Resetting user 2FA")
 	if err != nil {
 		return err
 	}
 	if !anyDeleted {
-		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete", "user", operation.Spec.User)
+		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete",
+			append(userOperationLogFields(operation), "user", operation.Spec.User)...)
 	}
 	return nil
 }
@@ -493,7 +683,7 @@ func invalidateLocalUserSessions(input *go_hook.HookInput, username, logPrefix s
 	refreshTokensByID := make(map[string]RefreshTokenSnapshot, len(input.Snapshots.Get("refreshtokens")))
 	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
 		if err != nil {
-			return false, fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+			return false, fmt.Errorf("iterate over refreshtokens snapshot: %w", err)
 		}
 		refreshTokensByID[rt.Name] = rt
 	}
@@ -502,7 +692,7 @@ func invalidateLocalUserSessions(input *go_hook.HookInput, username, logPrefix s
 
 	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSessionSnapshot](input.Snapshots.Get("offlinesessions")) {
 		if err != nil {
-			return anyDeleted, fmt.Errorf("cannot iter over OfflineSessions: %v", err)
+			return anyDeleted, fmt.Errorf("iterate over offlinesessions snapshot: %w", err)
 		}
 
 		matchesUser := false
@@ -532,7 +722,7 @@ func invalidateLocalUserSessions(input *go_hook.HookInput, username, logPrefix s
 
 	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
 		if err != nil {
-			return anyDeleted, fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+			return anyDeleted, fmt.Errorf("iterate over refreshtokens snapshot: %w", err)
 		}
 		if rt.ClaimsUsername == username || rt.ClaimsUserID == username || rt.ClaimsPreferred == username {
 			input.Logger.Info(logPrefix+": deleting RefreshToken", "user", username, "refreshtoken", rt.Name)
@@ -559,7 +749,7 @@ func findOfflineSessionByTarget(input *go_hook.HookInput, target *UserOperationT
 	wantEmail := strings.ToLower(target.Email)
 	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSessionSnapshot](input.Snapshots.Get("offlinesessions")) {
 		if err != nil {
-			return nil, fmt.Errorf("cannot iter over OfflineSessions: %v", err)
+			return nil, fmt.Errorf("iterate over offlinesessions snapshot: %w", err)
 		}
 		if sess.ConnID != target.ConnectorID {
 			continue
@@ -585,20 +775,20 @@ func findOfflineSessionByTarget(input *go_hook.HookInput, target *UserOperationT
 // annotation slot did. Sending the desired values explicitly is the only
 // reliable way to set top-level fields on a CR with
 // x-kubernetes-preserve-unknown-fields. This mirrors unlockOfflineSession.
-func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockFor time.Duration) error {
+func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockedUntil time.Time) error {
 	sess, err := findOfflineSessionByTarget(input, operation.Spec.Target)
 	if err != nil {
 		return err
 	}
 
+	until := lockedUntil.UTC().Format(time.RFC3339)
 	input.Logger.Info("Locking external user via OfflineSessions",
-		"connector", operation.Spec.Target.ConnectorID,
-		"email", operation.Spec.Target.Email,
-		"offlinesession", sess.Name,
-		"duration", lockFor,
-	)
+		append(userOperationLogFields(operation),
+			"offlinesession", sess.Name,
+			"for", operation.Spec.Lock.For,
+			"lockedUntil", until,
+		)...)
 
-	until := time.Now().Add(lockFor).UTC().Format(time.RFC3339)
 	patch := map[string]any{
 		"lockedUntil":                    until,
 		"incorrectPasswordLoginAttempts": int64(0),
@@ -634,10 +824,7 @@ func unlockOfflineSession(input *go_hook.HookInput, operation UserOperation) err
 	}
 
 	input.Logger.Info("Unlocking external user via OfflineSessions",
-		"connector", operation.Spec.Target.ConnectorID,
-		"email", operation.Spec.Target.Email,
-		"offlinesession", sess.Name,
-	)
+		append(userOperationLogFields(operation), "offlinesession", sess.Name)...)
 
 	patch := map[string]any{
 		"lockedUntil":                    nil,

@@ -92,7 +92,7 @@ func (suite *ControllerTestSuite) reconcile() {
 
 func (suite *ControllerTestSuite) getControlPlaneNode() *controlplanev1alpha1.ControlPlaneNode {
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
-	err := suite.client.Get(suite.ctx, client.ObjectKey{Name: testNodeName}, cpn)
+	err := suite.client.Get(suite.ctx, client.ObjectKey{Name: testNodeName, Namespace: constants.KubeSystemNamespace}, cpn)
 	require.NoError(suite.T(), err, "ControlPlaneNode should exist")
 	return cpn
 }

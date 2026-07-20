@@ -40,7 +40,8 @@ const (
 	// /Managed can stay True while UpdateInstalled reports a problem with the new
 	// version. False means the update is blocked or has failed.
 	// Possible reasons: Pending, DownloadFailed, LoadFromFilesystemFailed,
-	// SettingsInvalid, HookInitializationFailed, HookFailed, ManifestsApplyFailed.
+	// SettingsInvalid, HookInitializationFailed, HookFailed, ManifestsApplyFailed,
+	// ApplyingManifests (the new version's manifests are still being applied).
 	ConditionUpdateInstalled = "UpdateInstalled"
 
 	// ConditionReady reflects user-facing readiness of the application.
@@ -51,7 +52,8 @@ const (
 	// not affect Ready because the running version's settings are unchanged.
 	// Possible reasons: Pending, RequirementsUnmet, DownloadFailed,
 	// LoadFromFilesystemFailed, SettingsInvalid, HookInitializationFailed,
-	// HookFailed, ManifestsApplyFailed, Ready (when True).
+	// HookFailed, ManifestsApplyFailed, ApplyingManifests (mid-apply over a
+	// non-serving previous version), Ready (when True).
 	ConditionReady = "Ready"
 
 	// ConditionScaled reflects the runtime scaling state of the application.
@@ -70,7 +72,8 @@ const (
 	// is disabled under the running app — managing is meaningless until the
 	// dependency returns, but the cause is external rather than a controller failure.
 	// Possible reasons: RequirementsUnmet, DownloadFailed, HookInitializationFailed,
-	// HookFailed, ManifestsApplyFailed, Managed (when True).
+	// HookFailed, ManifestsApplyFailed, ApplyingManifests (mid-apply over a
+	// non-managed previous version), Managed (when True).
 	ConditionManaged = "Managed"
 
 	// ConditionConfigurationApplied reflects whether the desired configuration —
@@ -81,6 +84,7 @@ const (
 	// also forces Unknown — the desired configuration is no longer being maintained.
 	// Possible reasons: RequirementsUnmet, DownloadFailed, SettingsInvalid,
 	// HookInitializationFailed, HookFailed, ManifestsApplyFailed,
+	// ApplyingManifests (the new version's manifests are still being applied),
 	// ConfigurationApplied (when True).
 	ConditionConfigurationApplied = "ConfigurationApplied"
 )
@@ -240,6 +244,24 @@ func isApplyingManifests(state condmap.State, cond string) bool {
 	return reason == string(intstatus.ConditionReasonApplyingManifests)
 }
 
+// applyingProgress refreshes a mapped condition during an update's manifest-apply
+// window. While manifests apply, the True gate is unmet and the update mappers
+// return empty, leaving the condition as-is — right when it is already True (the
+// previous version still serves, don't flap it), wrong when it carries a stale
+// failure from an earlier attempt. In that case emit False/ApplyingManifests so it
+// tracks the apply, matching summaryUpdating. Returns false outside the window or
+// when the condition is already True.
+func applyingProgress(state condmap.State, ext string) (metav1.Condition, bool) {
+	if !isApplyingManifests(state, intManifestsApplied) {
+		return metav1.Condition{}, false
+	}
+	if state.ExtEqual(ext, metav1.ConditionTrue) {
+		return metav1.Condition{}, false
+	}
+
+	return emit(state, ext, metav1.ConditionFalse, intManifestsApplied), true
+}
+
 // pipelineBlocker returns the highest-priority blocker for an install or
 // update flow: Pending=True wins over any False condition in chain.
 func pipelineBlocker(state condmap.State, chain []string) (string, bool) {
@@ -326,6 +348,11 @@ func mapUpdateInstalled(state condmap.State) metav1.Condition {
 	if state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
 		return emit(state, ConditionUpdateInstalled, metav1.ConditionTrue, intManifestsApplied)
 	}
+	if updating {
+		if cond, ok := applyingProgress(state, ConditionUpdateInstalled); ok {
+			return cond
+		}
+	}
 
 	return metav1.Condition{}
 }
@@ -342,10 +369,12 @@ func mapReady(state condmap.State) metav1.Condition {
 		return emit(state, ConditionReady, metav1.ConditionFalse, intRequirementsMet)
 	}
 
+	ph := phaseOf(state)
+
 	var blocker string
 	var ok bool
 
-	switch phaseOf(state) {
+	switch ph {
 	case phaseInstall:
 		blocker, ok = pipelineBlocker(state, installPipeline)
 	case phaseUpdate:
@@ -359,6 +388,11 @@ func mapReady(state condmap.State) metav1.Condition {
 	}
 	if state.IntEqual(intScaled, metav1.ConditionTrue) {
 		return emit(state, ConditionReady, metav1.ConditionTrue, intScaled)
+	}
+	if ph == phaseUpdate {
+		if cond, ok := applyingProgress(state, ConditionReady); ok {
+			return cond
+		}
 	}
 
 	return metav1.Condition{}
@@ -429,8 +463,10 @@ func mapManaged(state condmap.State) metav1.Condition {
 		return emit(state, ConditionManaged, metav1.ConditionUnknown, intRequirementsMet)
 	}
 
+	ph := phaseOf(state)
+
 	chain := lateStage
-	switch phaseOf(state) {
+	switch ph {
 	case phaseInstall:
 		// why: during the first install a HookInitializationFailed means we
 		// never started managing the workload — there is nothing to "stop
@@ -454,6 +490,11 @@ func mapManaged(state condmap.State) metav1.Condition {
 	if state.AllIntEqual(metav1.ConditionTrue, intLoaded, intScaled, intHooksProcessed, intManifestsApplied) {
 		return emit(state, ConditionManaged, metav1.ConditionTrue, intLoaded)
 	}
+	if ph == phaseUpdate {
+		if cond, ok := applyingProgress(state, ConditionManaged); ok {
+			return cond
+		}
+	}
 
 	return metav1.Condition{}
 }
@@ -469,7 +510,9 @@ func mapConfigurationApplied(state condmap.State) metav1.Condition {
 		return emit(state, ConditionConfigurationApplied, metav1.ConditionUnknown, intRequirementsMet)
 	}
 
-	switch phaseOf(state) {
+	ph := phaseOf(state)
+
+	switch ph {
 	case phaseInstall:
 		if cond, ok := firstFalse(state, configPipeline); ok {
 			return emit(state, ConditionConfigurationApplied, metav1.ConditionFalse, cond)
@@ -489,6 +532,11 @@ func mapConfigurationApplied(state condmap.State) metav1.Condition {
 
 	if state.AllIntEqual(metav1.ConditionTrue, intConfigured, intHooksProcessed, intManifestsApplied) {
 		return emit(state, ConditionConfigurationApplied, metav1.ConditionTrue, intConfigured)
+	}
+	if ph == phaseUpdate {
+		if cond, ok := applyingProgress(state, ConditionConfigurationApplied); ok {
+			return cond
+		}
 	}
 
 	return metav1.Condition{}

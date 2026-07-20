@@ -21,7 +21,6 @@ description: Архитектура модуля csi-hpe в Deckhouse Kubernetes
 
 Архитектура модуля [`csi-hpe`](/modules/csi-hpe/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля csi-hpe](../../../images/architecture/storage/c4-l2-csi-hpe.ru.png)
 
 ## Компоненты модуля
@@ -42,7 +41,7 @@ description: Архитектура модуля csi-hpe в Deckhouse Kubernetes
     * **controller** — основной контейнер;
     * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки StorageClass.
 
-1. **CSI-драйвер (hpe)** — реализация CSI-драйвера, использующего provisioner `csi.hpe.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в описании архитектуры CSI-драйвера](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI-драйвер (hpe)** — реализация CSI-драйвера, использующего provisioner `csi.hpe.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в описании архитектуры CSI-драйвера](../csi-drivers/csi-driver.html).
 
 1. **Primera3par-csp** — сервисный контейнер-провайдер (Container Storage Provider, CSP), обеспечивающий интеграцию CSI-драйвера с системами хранения данных HPE Primera и 3PAR. Выполняет функции взаимодействия между Kubernetes и СХД, а также управляет сессиями и репликацией путей.
 

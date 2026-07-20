@@ -4,7 +4,7 @@ memory: 50Mi
 {{- end }}
 
 {{- if include "capi_controller_manager_enabled" . }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -48,7 +48,8 @@ metadata:
   name: capi-controller-manager
   namespace: d8-cloud-instance-manager
   annotations:
-    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback  
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
@@ -96,10 +97,9 @@ spec:
         - --leader-elect-retry-period=5s
         - --diagnostics-address=127.0.0.1:4211
         - --insecure-diagnostics
-        - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false
+        - --feature-gates=MachinePool=true,ClusterTopology=false,RuntimeSDK=false
         - --health-addr=127.0.0.1:9442
         - --webhook-port=4200
-        - --skip-crd-migration-phases=StorageVersionMigration,CleanupManagedFields # disabled for now
         - -v=3
         livenessProbe:
           httpGet:
@@ -114,9 +114,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "capi_controller_resources" . | nindent 12 }}
-  {{- end }}
         env:
       # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CAPI work without kube-proxy
   {{- if not .Values.global.clusterIsBootstrapped }}
@@ -199,9 +197,7 @@ spec:
         resources:
           requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
-  {{- end }}
       volumes:
       - name: cert
         secret:

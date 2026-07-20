@@ -1,0 +1,84 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: capy-controller-manager
+  namespace: d8-cloud-provider-yandex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capy-controller-manager")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cloud-provider-yandex:capy-controller-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capy-controller-manager")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch", "patch"]
+- apiGroups: [""]
+  resources: ["secrets/finalizers"]
+  verbs: ["update"]
+- apiGroups: ["cluster.x-k8s.io"]
+  resources: ["clusters", "machines", "clusters/status", "machines/status"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["cluster.x-k8s.io"]
+  resources: ["machines/finalizers"]
+  verbs: ["update"]
+- apiGroups: ["events.k8s.io"]
+  resources: ["events"]
+  verbs: ["create"]
+- apiGroups: ["infrastructure.cluster.x-k8s.io"]
+  resources: ["yandexclusters", "yandexmachines", "yandexidentities"]
+  verbs: ["create", "delete", "get", "list", "watch", "patch", "update"]
+- apiGroups: ["infrastructure.cluster.x-k8s.io"]
+  resources: ["yandexclusters/status", "yandexmachines/status", "yandexidentities/status"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: ["infrastructure.cluster.x-k8s.io"]
+  resources: ["yandexclusters/finalizers", "yandexmachines/finalizers", "yandexidentities/finalizers"]
+  verbs: ["update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-yandex:capy-controller-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capy-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-yandex:capy-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: capy-controller-manager
+  namespace: d8-cloud-provider-yandex
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: capy-controller-manager-leader-election-role
+  namespace: d8-cloud-provider-yandex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capy-controller-manager")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: capy-controller-manager-leader-election-role
+  namespace: d8-cloud-provider-yandex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capy-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: capy-controller-manager-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: capy-controller-manager
+  namespace: d8-cloud-provider-yandex

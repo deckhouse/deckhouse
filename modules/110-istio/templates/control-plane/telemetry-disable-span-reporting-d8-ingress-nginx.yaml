@@ -1,0 +1,13 @@
+{{- if (($.Values.global.enabledModules | has "ingress-nginx")) }}
+{{- /* Istio Telemetry API: ingress-nginx sidecars should not spam the tracing backend while still participating in routing/mTLS when enabled via IngressNginxController. */}}
+---
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: ingress-nginx-disable-span-reporting
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  tracing:
+  - disableSpanReporting: true
+{{- end }}

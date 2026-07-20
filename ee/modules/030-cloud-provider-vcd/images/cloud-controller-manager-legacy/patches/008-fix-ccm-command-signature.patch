@@ -1,0 +1,13 @@
+diff --git a/cmd/ccm/main.go b/cmd/ccm/main.go
+index d71e16c9..3d935a18 100644
+--- a/cmd/ccm/main.go
++++ b/cmd/ccm/main.go
+@@ -46,7 +46,7 @@ func main() {
+ 
+ 	command := app.NewCloudControllerManagerCommand(
+ 		opts,
+-		vcdCCMInitializer,
++		app.InitCloudFunc(vcdCCMInitializer),
+ 		app.DefaultInitFuncConstructors,
+ 		flag.NamedFlagSets{},
+ 		wait.NeverStop,

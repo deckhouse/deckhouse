@@ -45,7 +45,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
@@ -58,11 +58,22 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
+  - pm install git binutils
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
+  - export VERSION={{ $istioVersion }}
+  - export BUILDINFO=$(mktemp)
+  - |
+    cat > "${BUILDINFO}" <<EOF
+    istio.io/istio/pkg/version.buildVersion={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildGitRevision={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildStatus=Clean
+    istio.io/istio/pkg/version.buildTag={{ $istioVersion }}
+    istio.io/istio/pkg/version.buildHub=docker.io/istio
+    istio.io/istio/pkg/version.buildOS=linux
+    istio.io/istio/pkg/version.buildArch=amd64
+    EOF
   - export GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
@@ -74,7 +85,7 @@ shell:
   - chown 1337:1337 /src/istio/out/istio-cni
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   install:

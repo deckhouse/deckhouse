@@ -1,0 +1,19 @@
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- if not (get $versionInfo "supportsOperator") }}
+  {{- $revision := get $versionInfo "revision" }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: istiod-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+  selector:
+    matchLabels:
+      app: istiod
+      istio.io/rev: {{ $revision }}
+  {{- end }}
+{{- end }}

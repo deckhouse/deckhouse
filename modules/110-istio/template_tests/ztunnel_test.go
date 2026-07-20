@@ -30,7 +30,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
@@ -61,7 +61,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.21.6")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
@@ -81,7 +81,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", false)
 			f.HelmRender()

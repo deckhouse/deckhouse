@@ -8,7 +8,6 @@ metadata:
     release.deckhouse.io/current-restored: "true"
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   labels:
     heritage: deckhouse
   name: v1.15.0
@@ -17,7 +16,6 @@ spec:
   version: v1.15.0
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
@@ -29,7 +27,6 @@ metadata:
     release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   name: v1.16.0
   resourceVersion: "1"
 spec:
@@ -39,5 +36,4 @@ spec:
   version: v1.16.0
 status:
   approved: false
-  message: ""
   transitionTime: null

@@ -132,10 +132,12 @@ formatters:
         - standard
         - default
         - prefix(github.com/deckhouse/)
+        - prefix(dvp-common)
         - localmodule
     goimports:
       local-prefixes:
         - github.com/deckhouse/
+        - dvp-common
   exclusions:
     generated: lax
     paths:

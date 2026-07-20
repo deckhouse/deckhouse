@@ -15,7 +15,7 @@
 package entity
 
 import (
-	"context"
+	"maps"
 	"testing"
 	"time"
 
@@ -260,7 +260,7 @@ func TestWaitNodeUserPresentOnNode(t *testing.T) {
 		t.Run(tstParams.name, func(t *testing.T) {
 			tst := testCreateWaiterTest(t, tstParams)
 
-			err := tst.waiter.WaitPresentOnNodes(context.TODO(), tst.params.nodeUser.nodeUser)
+			err := tst.waiter.WaitPresentOnNodes(t.Context(), tst.params.nodeUser.nodeUser)
 
 			if tstParams.hasErr {
 				require.Error(t, err)
@@ -289,7 +289,7 @@ func TestWaitNodeUserPresentOnNodeWithParams(t *testing.T) {
 	}
 
 	assertDefaultParams := func(t *testing.T, w *NodeUserPresentsWaiter) {
-		assertParams(t, w, 50, 5*time.Second)
+		assertParams(t, w, 250, 1*time.Second)
 	}
 
 	t.Run("nil params", func(t *testing.T) {
@@ -359,7 +359,7 @@ func testCreateWaiterTest(t *testing.T, test testNodeUserWaiterParams) testNodeU
 	require.False(t, govalue.IsNil(test.nodeUser.checker))
 
 	kubeCl := client.NewFakeKubernetesClient()
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	for _, node := range test.nodes {
 		obj := corev1.Node{
@@ -470,9 +470,7 @@ func testCreateTestControlPlaneNodeWithAdditionalLabels(name string, labels map[
 		"some-annotation": "test",
 	})
 
-	for k, v := range labels {
-		n.labels[k] = v
-	}
+	maps.Copy(n.labels, labels)
 
 	return n
 }
@@ -482,9 +480,7 @@ func testCreateTestWorkerNodeWithAdditionalLabels(name string, labels map[string
 		"some-annotation-worker": "test",
 	})
 
-	for k, v := range labels {
-		n.labels[k] = v
-	}
+	maps.Copy(n.labels, labels)
 
 	return n
 }

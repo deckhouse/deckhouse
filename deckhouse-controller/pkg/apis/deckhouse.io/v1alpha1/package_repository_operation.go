@@ -74,6 +74,8 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +kubebuilder:printcolumn:name=Completed,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].status
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].message
 // +kubebuilder:printcolumn:name=CompletionTime,type=date,JSONPath=.status.completionTime
+// +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)"
+// +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
 
 // PackageRepositoryOperation represents an operation to scan/update a package repository.
 type PackageRepositoryOperation struct {
@@ -83,15 +85,16 @@ type PackageRepositoryOperation struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of a PackageRepositoryOperation.
+	// Defines parameters for the package repository operation.
 	Spec PackageRepositoryOperationSpec `json:"spec"`
 
-	// Status of a PackageRepositoryOperation.
+	// Package repository operation status.
 	Status PackageRepositoryOperationStatus `json:"status,omitempty"`
 }
 
 type PackageRepositoryOperationSpec struct {
 	// Name of the package repository to operate on.
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName"`
 
 	// Type of operation to perform.
@@ -112,6 +115,7 @@ type PackageRepositoryOperationUpdate struct {
 
 	// Timeout for the operation.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=5m
 	Timeout string `json:"timeout,omitempty"`
 }
 
@@ -128,12 +132,16 @@ type PackageRepositoryOperationStatus struct {
 	// +optional
 	Packages *PackageRepositoryOperationStatusPackages `json:"packages,omitempty"`
 
-	// Conditions represent the latest available observations of the operation's state.
+	// Conditions reflecting the latest observations of the operation state.
+	// The operation phase is determined by the `Completed` condition: while its status is `False`,
+	// the operation is in one of the intermediate phases (`Discover`, `Processing`);
+	// when the status is `True`, the operation has finished with reason `Succeeded` or `Failed`.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
+	// +crd-enricher:raw:items.properties.reason.x-doc-examples=[Discover, Processing, Succeeded, Failed]
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
@@ -159,6 +167,7 @@ type PackageRepositoryOperationStatusPackages struct {
 	Total int `json:"total,omitempty"`
 
 	// Total number of newly found versions across all packages in this operation.
+	//
 	// A version is counted as new if its ApplicationPackageVersion or
 	// ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
 	// only) existed with the "not in registry" mark and its image was found in the
@@ -201,6 +210,7 @@ type PackageRepositoryOperationStatusPackage struct {
 	FoundVersions int `json:"foundVersions,omitempty"`
 
 	// Number of newly found versions during this operation.
+	//
 	// A version is counted as new if its ApplicationPackageVersion or
 	// ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
 	// only) existed with the "not in registry" mark and its image was found in the

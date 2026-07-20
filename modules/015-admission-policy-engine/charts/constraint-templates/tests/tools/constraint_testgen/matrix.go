@@ -152,7 +152,8 @@ func generateFromMatrix(matrixPath, testsRoot string) error {
 		if err != nil {
 			return fmt.Errorf("block %q constraint: %w", gbn, err)
 		}
-		templatePath, err := resolveRenderedTemplatePath(baseDir, matrixDir, testsRoot, b.Template, b.Constraint)
+		hasExternalData := doc.Spec.ExternalData != nil && len(doc.Spec.ExternalData.Providers) > 0
+		templatePath, err := resolveRenderedTemplatePath(baseDir, matrixDir, testsRoot, b.Template, b.Constraint, hasExternalData)
 		if err != nil {
 			return fmt.Errorf("block %q template: %w", gbn, err)
 		}
@@ -287,7 +288,7 @@ func matrixExternalDataProvidersToMap(cfg *matrixExternalData) (map[string]inter
 	return result, nil
 }
 
-func resolveRenderedTemplatePath(renderedDir, sourceDir, testsRoot, relPath, constraintRelPath string) (string, error) {
+func resolveRenderedTemplatePath(renderedDir, sourceDir, testsRoot, relPath, constraintRelPath string, hasExternalData bool) (string, error) {
 	target := filepath.Join(renderedDir, "constraint-template.yaml")
 	if err := renderConstraintTemplateFromHelm(target, renderedDir, sourceDir, testsRoot, constraintRelPath); err != nil {
 		if copyErr := copyIntoRendered(target, renderedDir, sourceDir, testsRoot, relPath); copyErr != nil {
@@ -297,7 +298,85 @@ func resolveRenderedTemplatePath(renderedDir, sourceDir, testsRoot, relPath, con
 	if err := applyGatorTemplateOverride(target, sourceDir); err != nil {
 		return "", err
 	}
+	// When the test matrix declares externalData providers, automatically rewrite
+	// external_data() calls in the rendered Rego to use the inventory-based mock.
+	// This allows the runtime template to keep the real external_data() builtin
+	// while gator tests use data.inventory-based mocks transparently.
+	if hasExternalData {
+		if err := rewriteExternalDataCalls(target); err != nil {
+			return "", fmt.Errorf("rewrite external_data calls: %w", err)
+		}
+	}
 	return "constraint-template.yaml", nil
+}
+
+// rewriteExternalDataCalls replaces occurrences of the Gatekeeper external_data()
+// builtin with external_data_from_inventory() in the rendered constraint template.
+// It handles two forms:
+//
+//  1. external_data({"provider": "X", "keys": Y}) → external_data_from_inventory("X", Y)
+//     This is the standard Gatekeeper external_data call with an object argument.
+//
+//  2. external_data(<other>) → external_data_from_inventory(<other>)
+//     Fallback: simple rename for any other call pattern.
+//
+// This is safe because:
+//   - external_data( is a unique Gatekeeper builtin name
+//   - external_data_from_inventory( is already defined in the Rego template
+//   - The replacement only happens in rendered test artifacts, never in the source template
+//
+// If the template already uses external_data_from_inventory exclusively (e.g. via a
+// constraint-template.gator.yaml override), this function is a no-op.
+func rewriteExternalDataCalls(target string) error {
+	data, err := os.ReadFile(target)
+	if err != nil {
+		return err
+	}
+	content := string(data)
+
+	// Check if there are any bare external_data( calls (not external_data_from_inventory).
+	// Use a negative lookbehind equivalent: find external_data( that is NOT preceded by _from_inventory.
+	hasBareCalls := false
+	for i := strings.Index(content, "external_data("); i >= 0; i = strings.Index(content[i+1:], "external_data(") {
+		// Adjust index for substring offset
+		if i > 0 {
+			i += 1
+		}
+		// Check this is not part of external_data_from_inventory(
+		prefix := ""
+		if i >= len("_from_inventory") {
+			prefix = content[i-len("_from_inventory") : i]
+		}
+		if !strings.HasSuffix(prefix, "_from_inventory") {
+			hasBareCalls = true
+			break
+		}
+	}
+	if !hasBareCalls {
+		return nil
+	}
+
+	// Phase 1: Rewrite structured calls: external_data({"provider": "X", "keys": Y})
+	// The regex matches the Gatekeeper external_data call with an inline object literal.
+	// It captures the provider string and the keys expression.
+	reStructured := regexp.MustCompile(
+		`external_data\(\{` +
+			`"provider"\s*:\s*"([^"]+)"` + // capture group 1: provider name
+			`\s*,\s*` +
+			`"keys"\s*:\s*` +
+			`([^}]+)` + // capture group 2: keys expression
+			`\}\)`,
+	)
+	content = reStructured.ReplaceAllString(content, `external_data_from_inventory("$1", $2)`)
+
+	// Phase 2: Rewrite any remaining bare external_data( calls (simple rename).
+	// Protect existing external_data_from_inventory( first.
+	const placeholder = "\x00EDFI_PLACEHOLDER\x00"
+	content = strings.ReplaceAll(content, "external_data_from_inventory(", placeholder)
+	content = strings.ReplaceAll(content, "external_data(", "external_data_from_inventory(")
+	content = strings.ReplaceAll(content, placeholder, "external_data_from_inventory(")
+
+	return os.WriteFile(target, []byte(content), 0o644)
 }
 
 func applyGatorTemplateOverride(target, sourceDir string) error {

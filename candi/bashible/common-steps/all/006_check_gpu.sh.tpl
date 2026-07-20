@@ -17,12 +17,12 @@
   {{ if .nodeGroup.gpu }}
 
 if ! command -v /usr/bin/nvidia-container-runtime >/dev/null 2>&1; then
-    bb-log-error "'/usr/bin/nvidia-container-runtime' doesn't exist. It's require for Nvdia GPU nodes."
+    bb-log-error "/usr/bin/nvidia-container-runtime is not installed. It is required on NVIDIA GPU nodes."
     exit 1
 fi
 
 if ! command -v /usr/bin/nvidia-smi; then
-    bb-log-error "'/usr/bin/nvidia-smi' doesn't exist. It's require for Nvdia GPU nodes."
+    bb-log-error "/usr/bin/nvidia-smi is not installed. It is required on NVIDIA GPU nodes."
     exit 1
 fi
 
@@ -33,7 +33,7 @@ function compare() {
   lower_version=$(echo -e "$2\n$1" | sort -V | head -n1)
   if [[ "$lower_version" != "$2" ]]
   then
-    bb-log-error "The installed drivers version $1 doesn't meet the requirements. Update it to at least $2."
+    bb-log-error "NVIDIA driver version $1 is below the required minimum $2, please update the driver"
     exit 1
   fi
 }
@@ -63,15 +63,15 @@ compare $version $required_version
 
 got_capabilities=$(nvidia-smi --query-gpu="compute_cap" --format=csv,noheader | tr -d ' ' | sed '/^$/d')
 if [[ -z "$got_capabilities" ]]; then
-    echo "compute_cap is empty"
+    bb-log-error "nvidia-smi returned an empty compute capability list"
     exit 1
 fi
 
 while IFS= read -r got_capability; do
     if is_valid_greater_than "$got_capability" "6.0"; then
-        echo "compute_cap ${got_capability} is valid"
+        bb-log-info "GPU compute capability $got_capability is supported"
     else
-        echo "compute_cap ${got_capability} is invalid"
+        bb-log-error "GPU compute capability $got_capability is below the required minimum 6.0"
         exit 1
     fi
 done <<< "$got_capabilities"

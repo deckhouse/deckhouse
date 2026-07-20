@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
 const (
@@ -47,6 +48,7 @@ type Definition struct {
 
 	Descriptions   Descriptions   `yaml:"descriptions" json:"descriptions"`
 	Requirements   Requirements   `yaml:"requirements" json:"requirements"`
+	Licensing      Licensing      `yaml:"licensing" json:"licensing"`
 	DisableOptions DisableOptions `yaml:"disable" json:"disable"`
 }
 
@@ -63,6 +65,17 @@ type ModuleDefinition struct {
 
 	Weight   int  `yaml:"weight" json:"weight"`
 	Critical bool `yaml:"critical,omitempty" json:"critical,omitempty"`
+}
+
+// Licensing describes package availability and default bundle enablement by edition.
+type Licensing struct {
+	Editions map[string]Edition `json:"editions" yaml:"editions"`
+}
+
+// Edition describes a single edition's package availability and enabled bundles.
+type Edition struct {
+	Available        bool     `json:"available" yaml:"available"`
+	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
 }
 
 // Descriptions holds localized description text for the package.
@@ -123,8 +136,14 @@ type ModuleGroup struct {
 
 // DisableOptions configures package disablement behavior.
 type DisableOptions struct {
-	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
-	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
+	Confirmation bool            `json:"confirmation" yaml:"confirmation"`             // Whether confirmation is required to disable
+	Messages     DisableMessages `json:"messages,omitempty" yaml:"messages,omitempty"` // Localized messages to display when disabling
+}
+
+// DisableMessages holds localized disable confirmation text for the package.
+type DisableMessages struct {
+	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
+	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
 // Convert converts application definition to application domain model.
@@ -169,7 +188,10 @@ func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 		Stage:   d.Stage,
 		DisableOptions: apps.DisableOptions{
 			Confirmation: d.DisableOptions.Confirmation,
-			Message:      d.DisableOptions.Message,
+			Messages: apps.DisableMessages{
+				Ru: d.DisableOptions.Messages.Ru,
+				En: d.DisableOptions.Messages.En,
+			},
 		},
 		Requirements: apps.Requirements{
 			Kubernetes: kubernetesConstraint,
@@ -181,6 +203,7 @@ func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 				NoneOf:      toAppGroups(noneOf),
 			},
 		},
+		Licensing: toEditionLicensing(d.Licensing),
 	}, nil
 }
 
@@ -240,7 +263,10 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 		Stage:    d.Stage,
 		DisableOptions: modules.DisableOptions{
 			Confirmation: d.DisableOptions.Confirmation,
-			Message:      d.DisableOptions.Message,
+			Messages: modules.DisableMessages{
+				Ru: d.DisableOptions.Messages.Ru,
+				En: d.DisableOptions.Messages.En,
+			},
 		},
 		Requirements: modules.Requirements{
 			Kubernetes: kubernetesConstraint,
@@ -252,7 +278,26 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 				NoneOf:      toModuleGroups(noneOf),
 			},
 		},
+		Licensing: toEditionLicensing(d.Licensing),
 	}, nil
+}
+
+// toEditionLicensing maps the parsed licensing onto the shared edition.Licensing
+// shape, carrying both per-edition availability and bundle membership.
+func toEditionLicensing(l Licensing) edition.Licensing {
+	if len(l.Editions) == 0 {
+		return edition.Licensing{}
+	}
+
+	editions := make(map[string]edition.EditionLicense, len(l.Editions))
+	for name, e := range l.Editions {
+		editions[name] = edition.EditionLicense{
+			Available:        e.Available,
+			EnabledInBundles: e.EnabledInBundles,
+		}
+	}
+
+	return edition.Licensing{Editions: editions}
 }
 
 // toModuleGroups widens the parser-internal parsedGroup into modules.ModuleGroup,

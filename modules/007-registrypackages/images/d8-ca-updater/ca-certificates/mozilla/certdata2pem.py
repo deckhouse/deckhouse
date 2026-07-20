@@ -118,16 +118,19 @@ for obj in objects:
               (obj['CKA_LABEL'], obj['CKA_TRUST_SERVER_AUTH'],
                obj['CKA_TRUST_EMAIL_PROTECTION']))
 
+expired_trusted_certificates = []
+
 for obj in objects:
     if obj['CKA_CLASS'] == 'CKO_CERTIFICATE':
         if not obj['CKA_LABEL'] in trust or not trust[obj['CKA_LABEL']]:
             continue
 
         cert = x509.load_der_x509_certificate(bytes(obj['CKA_VALUE']))
-        if cert.not_valid_after < datetime.datetime.utcnow():
+        if cert.not_valid_after_utc < datetime.datetime.now(datetime.timezone.utc):
             print('!'*74)
             print('Trusted but expired certificate found: %s' % obj['CKA_LABEL'])
             print('!'*74)
+            expired_trusted_certificates.append(obj['CKA_LABEL'])
 
         bname = obj['CKA_LABEL'][1:-1].replace('/', '_')\
                                       .replace(' ', '_')\
@@ -162,3 +165,7 @@ for obj in objects:
         encoded = base64.b64encode(obj['CKA_VALUE']).decode('utf-8')
         f.write("\n".join(textwrap.wrap(encoded, 64)))
         f.write("\n-----END CERTIFICATE-----\n")
+
+if expired_trusted_certificates:
+    print("ERROR: trusted expired certificates found: %s" % ", ".join(expired_trusted_certificates))
+    sys.exit(1)

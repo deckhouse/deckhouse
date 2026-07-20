@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
   finalizers:
   - modulepackageversion.deckhouse.io/used-by-module
   labels:
@@ -30,12 +29,16 @@ status:
       - Fixed a bug
     description:
       en: Test module
+    disableOptions:
+      confirmation: true
+      messages:
+        en: EN disable message
+        ru: RU disable message
     stage: GA
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -44,6 +47,4 @@ spec:
     dockerCfg: test-docker-cfg
     repo: registry.example.com/test
     scheme: https
-status:
-  lastNewVersions: 0
-  partialScanAvailable: false
+status: {}

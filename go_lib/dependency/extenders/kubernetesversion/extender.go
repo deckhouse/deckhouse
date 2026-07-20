@@ -43,7 +43,16 @@ var (
 	kubernetesOnce sync.Once
 )
 
-var _ extenders.Extender = &Extender{}
+type IExtender interface {
+	extenders.Extender
+
+	AddConstraint(name, rawConstraint string) error
+	DeleteConstraint(name string)
+	ValidateBaseVersion(baseVersion string) (string, error)
+	ValidateRelease(releaseName, rawConstraint string) error
+}
+
+var _ IExtender = &Extender{}
 
 type Extender struct {
 	logger         *log.Logger

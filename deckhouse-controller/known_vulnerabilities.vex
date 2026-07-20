@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 15,
+  "version": 16,
   "statements": [
     {
       "vulnerability": {
@@ -101,8 +101,140 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Docker Engine (Moby) 28.2.0–28.3.2 — экспозиция портов контейнеров после перезагрузки firewalld. В проекте используется github.com/docker/docker v28.3.3 (версия с исправлением). Библиотека применяется только как зависимость для работы с registry (oras-go, go-containerregistry); демон Docker Engine не запускается в составе deckhouse-controller, уязвимый код не в пути выполнения.",
       "timestamp": "2026-03-16T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker v28.3.3 поступает транзитивно через werf/nelm (deckhouse-controller/internal/nelm → docker/pkg/homedir) и go-containerregistry/oras-go — только для работы с OCI-registry. Демон Docker Engine в составе deckhouse-controller не запускается, Docker Engine API не вызывается, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker v28.3.3 поступает транзитивно через werf/nelm (deckhouse-controller/internal/nelm → docker/pkg/homedir) и go-containerregistry/oras-go — только для работы с OCI-registry. Демон Docker Engine в составе deckhouse-controller не запускается, Docker Engine API не вызывается, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker v28.3.3 поступает транзитивно через werf/nelm (deckhouse-controller/internal/nelm → docker/pkg/homedir) и go-containerregistry/oras-go — только для работы с OCI-registry. Демон Docker Engine в составе deckhouse-controller не запускается, Docker Engine API не вызывается, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker v28.3.3 поступает транзитивно через werf/nelm (deckhouse-controller/internal/nelm → docker/pkg/homedir) и go-containerregistry/oras-go — только для работы с OCI-registry. Демон Docker Engine в составе deckhouse-controller не запускается, Docker Engine API не вызывается, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46680"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd v1.7.29 поступает транзитивно через werf/nelm (helm/pkg/registry → containerd/remotes) и используется только на чтение OCI-артефактов из registry. CRI/runtime-функционал containerd, к которому относится уязвимость, в deckhouse-controller не используется.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35206"
+      },
+      "products": [
+        {"@id": "pkg:golang/helm.sh/helm/v3@v3.17.4"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "helm.sh/helm/v3 v3.17.4 в рантайме deckhouse-controller не используется для распаковки чартов из недоверенных источников: рантайм-операции с чартами выполняет werf/nelm, а helm.sh/helm/v3 задействован только в тестовом коде (testing/library/helm). Path-traversal при распаковке чарт-архивов не достижим.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39882"
+      },
+      "products": [
+        {"@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.33.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "otlptracehttp v1.33.0 используется телеметрией dhctl (deckhouse-controller/internal/dhctlcli → dhctl/pkg/telemetry) для отправки трейсов на OTLP-коллектор. DoS через неограниченное чтение тела HTTP-ответа достижим только от вредоносного коллектора, а коллектор задаётся администратором (доверенный) — подача вредоносного ответа нарушителем исключена.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-26007"
+      },
+      "products": [
+        {"@id": "pkg:pypi/cryptography@44.0.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал, связанный с шифрованием и криптографическими операциями pypi/cryptography версии 44.0.1, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все криптографические операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34073"
+      },
+      "products": [
+        {"@id": "pkg:pypi/cryptography@44.0.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал, связанный с шифрованием и криптографическими операциями pypi/cryptography версии 44.0.1, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все криптографические операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27459"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pyOpenSSL@24.3.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал pyOpenSSL версии 24.3.0 не используется напрямую в рамках текущих функциональных спецификаций и эксплуатационных процессов системы; криптографические и TLS-операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду. Версия Python и её пакеты не обновляются по политике совместимости.",
+      "timestamp": "2026-06-08T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27448"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pyOpenSSL@24.3.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал pyOpenSSL версии 24.3.0 не используется напрямую в рамках текущих функциональных спецификаций и эксплуатационных процессов системы; криптографические и TLS-операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду. Версия Python и её пакеты не обновляются по политике совместимости.",
+      "timestamp": "2026-06-08T12:00:00Z"
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2026-03-16T00:00:00Z"
+  "last_updated": "2026-06-08T12:00:00Z"
 }

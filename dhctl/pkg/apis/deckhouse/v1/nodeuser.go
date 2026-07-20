@@ -45,7 +45,7 @@ const NodeUserList = "NodeUserList"
 // NodeUser is an system user on nodes.
 type NodeUser struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 	Spec              NodeUserSpec `json:"spec"`
 }
 

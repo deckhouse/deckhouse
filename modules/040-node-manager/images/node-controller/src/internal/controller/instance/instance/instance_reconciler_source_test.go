@@ -18,7 +18,6 @@ package instance
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -36,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 type fakeMachineFactory struct {
@@ -268,141 +266,6 @@ func TestReconcileLinkedSourceExistenceDeletes(t *testing.T) {
 			require.True(t, apierrors.IsNotFound(err), "instance %q should be deleted", tc.instance.Name)
 		})
 	}
-}
-
-func TestReconcileLinkedSourceExistenceErrors(t *testing.T) {
-	t.Parallel()
-
-	scheme := newTestScheme(t)
-	errBoom := errors.New("boom")
-
-	testCases := []struct {
-		name           string
-		instance       *deckhousev1alpha2.Instance
-		initialObjects []client.Object
-		clientBuilder  func() *fake.ClientBuilder
-		machineFactory machine.MachineFactory
-		errorContains  string
-	}{
-		{
-			name: "machine factory error",
-			instance: &deckhousev1alpha2.Instance{
-				ObjectMeta: v1.ObjectMeta{Name: "machine-source-error"},
-				Spec: deckhousev1alpha2.InstanceSpec{
-					MachineRef: &deckhousev1alpha2.MachineRef{
-						Kind:       "Machine",
-						APIVersion: capi.GroupVersion.String(),
-						Name:       "broken-machine",
-						Namespace:  machine.MachineNamespace,
-					},
-				},
-			},
-			clientBuilder: func() *fake.ClientBuilder {
-				return fake.NewClientBuilder().WithScheme(scheme)
-			},
-			machineFactory: &fakeMachineFactory{err: errBoom},
-			errorContains:  "get machine \"broken-machine\": boom",
-		},
-		{
-			name: "node get error",
-			instance: &deckhousev1alpha2.Instance{
-				ObjectMeta: v1.ObjectMeta{Name: "node-source-error"},
-				Spec: deckhousev1alpha2.InstanceSpec{
-					NodeRef: deckhousev1alpha2.NodeRef{Name: "broken-node"},
-				},
-			},
-			clientBuilder: func() *fake.ClientBuilder {
-				return fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
-					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-						if _, ok := obj.(*corev1.Node); ok {
-							return errBoom
-						}
-						return c.Get(ctx, key, obj, opts...)
-					},
-				})
-			},
-			machineFactory: machine.NewMachineFactory(),
-			errorContains:  "get node \"broken-node\": boom",
-		},
-		{
-			name: "delete error after missing source confirmed",
-			instance: &deckhousev1alpha2.Instance{
-				ObjectMeta: v1.ObjectMeta{Name: "delete-error"},
-				Spec: deckhousev1alpha2.InstanceSpec{
-					NodeRef: deckhousev1alpha2.NodeRef{Name: "missing-node"},
-				},
-			},
-			initialObjects: []client.Object{
-				&deckhousev1alpha2.Instance{
-					ObjectMeta: v1.ObjectMeta{Name: "delete-error"},
-					Spec: deckhousev1alpha2.InstanceSpec{
-						NodeRef: deckhousev1alpha2.NodeRef{Name: "missing-node"},
-					},
-				},
-			},
-			clientBuilder: func() *fake.ClientBuilder {
-				return fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
-					Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-						if _, ok := obj.(*deckhousev1alpha2.Instance); ok {
-							return errBoom
-						}
-						return c.Delete(ctx, obj, opts...)
-					},
-				})
-			},
-			machineFactory: machine.NewMachineFactory(),
-			errorContains:  "delete instance \"delete-error\" with missing source: boom",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			builder := tc.clientBuilder()
-			if len(tc.initialObjects) > 0 {
-				builder = builder.WithObjects(tc.initialObjects...)
-			}
-			fakeClient := builder.Build()
-
-			svc := &InstanceService{client: fakeClient, machineFactory: tc.machineFactory}
-
-			result, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
-			require.Error(t, err)
-			require.ErrorContains(t, err, tc.errorContains)
-			require.False(t, result.InstanceDeleted)
-		})
-	}
-
-	t.Run("delete error keeps instance", func(t *testing.T) {
-		t.Parallel()
-
-		instance := &deckhousev1alpha2.Instance{
-			ObjectMeta: v1.ObjectMeta{Name: "delete-error-persisted"},
-			Spec: deckhousev1alpha2.InstanceSpec{
-				NodeRef: deckhousev1alpha2.NodeRef{Name: "missing-node"},
-			},
-		}
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(scheme).
-			WithObjects(instance.DeepCopy()).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Delete: func(context.Context, client.WithWatch, client.Object, ...client.DeleteOption) error {
-					return errBoom
-				},
-			}).
-			Build()
-
-		svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
-
-		result, err := svc.ReconcileSourceExistence(context.Background(), instance)
-		require.Error(t, err)
-		require.False(t, result.InstanceDeleted)
-
-		persisted := &deckhousev1alpha2.Instance{}
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: instance.Name}, persisted)
-		require.NoError(t, err)
-	})
 }
 
 func TestMachineRefName(t *testing.T) {

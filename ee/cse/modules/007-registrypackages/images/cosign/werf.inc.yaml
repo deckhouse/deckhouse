@@ -1,0 +1,37 @@
+{{- $version := "v2.4.3" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - cosign
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "cosign": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /
+import:
+- image: {{ index $.Images "tools/cosign" }} 
+  add: /usr/bin/cosign
+  to: /cosign
+  before: install
+# usage after update to cosign 3
+#shell:
+#  install:
+#   - pm install cosign

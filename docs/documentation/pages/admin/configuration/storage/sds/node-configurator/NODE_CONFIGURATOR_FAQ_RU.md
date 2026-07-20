@@ -5,6 +5,10 @@ lang: ru
 ---
 
 {% alert level="info" %}
+Систематизированные ответы на типовые сценарии администрирования подробно разобраны в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+{% endalert %}
+
+{% alert level="info" %}
 Работоспособность гарантируется только при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](../../../../../supported_versions.html#linux). При использовании нестандартных ядер или дистрибутивов поведение может быть непредсказуемым.
 {% endalert %}
 

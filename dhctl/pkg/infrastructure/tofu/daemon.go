@@ -15,6 +15,7 @@
 package tofu
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,7 +25,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // Persistent kubernetes provider daemon.
@@ -75,6 +76,7 @@ func EnableProviderDaemon(pluginsDir string) {
 // Safe to call from every tofu invocation — auto-restarts a dead daemon and is
 // otherwise an O(1) liveness check.
 func EnsureProviderDaemon() string {
+	ctx := context.Background()
 	daemonMu.Lock()
 	defer daemonMu.Unlock()
 
@@ -83,7 +85,7 @@ func EnsureProviderDaemon() string {
 	}
 	if v := os.Getenv("DHCTL_PROVIDER_DAEMON"); v == "off" || v == "0" || v == "false" {
 		daemonDisabled = true
-		log.DebugF("provider daemon disabled via DHCTL_PROVIDER_DAEMON=%q\n", v)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("provider daemon disabled via DHCTL_PROVIDER_DAEMON=%q", v))
 		return ""
 	}
 	if daemonPluginsDir == "" {
@@ -96,25 +98,26 @@ func EnsureProviderDaemon() string {
 		return daemonEnv
 	}
 	if daemonCmd != nil {
-		log.DebugF("provider daemon pid=%d died, restarting\n", daemonCmd.Process.Pid)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("provider daemon pid=%d died, restarting", daemonCmd.Process.Pid))
 		go func(c *exec.Cmd) { _, _ = c.Process.Wait() }(daemonCmd)
 		daemonCmd = nil
 		daemonEnv = ""
 	}
 	env, cmd, err := startProviderDaemon(daemonPluginsDir)
 	if err != nil {
-		log.DebugF("provider daemon disabled: %v\n", err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("provider daemon disabled: %v", err))
 		return ""
 	}
 	daemonEnv = env
 	daemonCmd = cmd
-	log.DebugF("provider daemon ready pid=%d\n", cmd.Process.Pid)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("provider daemon ready pid=%d", cmd.Process.Pid))
 	return daemonEnv
 }
 
 // StopProviderDaemon kills the daemon if running. Safe to call multiple times
 // and from a defer in main(). Container/process exit will also clean up.
 func StopProviderDaemon() {
+	ctx := context.Background()
 	daemonMu.Lock()
 	cmd := daemonCmd
 	daemonCmd = nil
@@ -124,7 +127,7 @@ func StopProviderDaemon() {
 	if cmd == nil || cmd.Process == nil {
 		return
 	}
-	log.DebugF("stopping provider daemon pid=%d\n", cmd.Process.Pid)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("stopping provider daemon pid=%d", cmd.Process.Pid))
 	_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
 	done := make(chan struct{})
 	go func() {
@@ -182,13 +185,16 @@ func startProviderDaemon(pluginsDir string) (string, *exec.Cmd, error) {
 	// (registered in dhctl's onShutdown handlers).
 	cmd := exec.Command(binary, "-reattach-file="+reattachFile)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	// Forward stdout/stderr so panics & misconfig are visible in the dhctl debug log.
-	logger, err := log.NewLogToFile("daemon")
+	// Forward stdout/stderr so panics & misconfig are visible in a debug log file. The daemon
+	// emits raw subprocess output (not slog records), so we write straight to the file; it
+	// lives for the daemon's lifetime and is reclaimed on process exit.
+	logFile := filepath.Join(os.TempDir(), fmt.Sprintf("dhctl-tpk-daemon-%d-%s.log", os.Getpid(), time.Now().Format("20060102150405")))
+	daemonLog, err := os.Create(logFile)
 	if err != nil {
 		return "", nil, err
 	}
-	cmd.Stdout = logger
-	cmd.Stderr = logger
+	cmd.Stdout = daemonLog
+	cmd.Stderr = daemonLog
 	cmd.Env = os.Environ()
 
 	if err := cmd.Start(); err != nil {

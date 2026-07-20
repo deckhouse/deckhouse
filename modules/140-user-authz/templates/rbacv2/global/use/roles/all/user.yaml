@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
+    rbac.deckhouse.io/delegatable: "true"
     rbac.deckhouse.io/kind: use
 aggregationRule:
   clusterRoleSelectors:

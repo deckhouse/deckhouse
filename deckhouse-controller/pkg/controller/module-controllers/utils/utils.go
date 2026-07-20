@@ -16,6 +16,7 @@ package utils //nolint:revive
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -29,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -36,13 +38,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
-)
-
-const (
-	deckhouseNamespace = "d8-system"
-
-	deckhouseDiscoverySecret = "deckhouse-discovery"
 )
 
 // GenerateRegistryOptionsFromModuleSource fetches settings from ModuleSource and generate registry options from them
@@ -250,7 +247,7 @@ func ModulePullOverrideExists(ctx context.Context, cli client.Client, moduleName
 func GetClusterUUID(ctx context.Context, cli client.Client) string {
 	// attempt to read the cluster UUID from a secret
 	secret := new(corev1.Secret)
-	if err := cli.Get(ctx, client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDiscoverySecret}, secret); err != nil {
+	if err := cli.Get(ctx, client.ObjectKey{Namespace: app.NamespaceDeckhouse, Name: app.SecretDiscovery}, secret); err != nil {
 		return uuid.Must(uuid.NewV4()).String()
 	}
 
@@ -318,10 +315,47 @@ func EnsureModuleDocumentation(
 	return nil
 }
 
+// DeleteModuleDocumentation deletes module documentation, ignoring NotFound
+func DeleteModuleDocumentation(ctx context.Context, cli client.Client, moduleName string) error {
+	md := &v1alpha1.ModuleDocumentation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: moduleName,
+		},
+	}
+
+	if err := cli.Delete(ctx, md); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete the '%s' module documentation: %w", moduleName, err)
+	}
+
+	return nil
+}
+
+// EnsureModuleDocumentationForRelease ensures module documentation from a deployed release
+func EnsureModuleDocumentationForRelease(ctx context.Context, cli client.Client, release *v1alpha1.ModuleRelease) error {
+	// mount point path: /modules/<module>
+	modulePath := fmt.Sprintf("/modules/%s", release.GetModuleName())
+	moduleVersion := "v" + release.GetVersion().String()
+
+	moduleChecksum := release.Labels[v1alpha1.ModuleReleaseLabelReleaseChecksum]
+	if moduleChecksum == "" {
+		moduleChecksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
+	}
+
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
+		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
+		Name:       release.GetName(),
+		UID:        release.GetUID(),
+		Controller: ptr.To(true),
+	}
+
+	return EnsureModuleDocumentation(ctx, cli, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef)
+}
+
 // GetNotificationConfig gets config from discovery secret
 func GetNotificationConfig(ctx context.Context, cli client.Client) (releaseUpdater.NotificationConfig, error) {
 	secret := new(corev1.Secret)
-	if err := cli.Get(ctx, client.ObjectKey{Name: deckhouseDiscoverySecret, Namespace: deckhouseNamespace}, secret); err != nil {
+	if err := cli.Get(ctx, client.ObjectKey{Name: app.SecretDiscovery, Namespace: app.NamespaceDeckhouse}, secret); err != nil {
 		return releaseUpdater.NotificationConfig{}, fmt.Errorf("get secret: %w", err)
 	}
 

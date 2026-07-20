@@ -1,11 +1,32 @@
-{{- range $ipaddressPool := .Values.metallb.addressPools }}
-  {{- if eq $ipaddressPool.protocol "bgp" }}
-    {{- if index $ipaddressPool "bgp-advertisements" }}
-      {{- range $key, $bgpAdvertisement := (index $ipaddressPool "bgp-advertisements") }}
-        {{- include "bgpadvertisement_template" (list $ $ipaddressPool $key $bgpAdvertisement ) }}
-      {{- end }}
-    {{- else }}
-      {{- include "bgpadvertisement_template" (list $ $ipaddressPool "0" (dict)) }}
+{{- range $bgpAdvertisement := .Values.metallb.internal.bgpAdvertisements }}
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement
+metadata:
+  name: {{ $bgpAdvertisement.name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "speaker")) | nindent 2 }}
+spec:
+  {{- if not (kindIs "invalid" $bgpAdvertisement.aggregationLength) }}
+  aggregationLength: {{ $bgpAdvertisement.aggregationLength }}
+  {{- end }}
+  {{- if not (kindIs "invalid" $bgpAdvertisement.localPref) }}
+  localPref: {{ $bgpAdvertisement.localPref }}
+  {{- end }}
+  {{- if $bgpAdvertisement.communities }}
+  communities:
+    {{- range $v := $bgpAdvertisement.communities }}
+  - {{ $v }}
     {{- end }}
   {{- end }}
+  {{- if $bgpAdvertisement.peers }}
+  peers:
+  {{- $bgpAdvertisement.peers | toYaml | nindent 2 }}
+  {{- end }}
+  {{- if $bgpAdvertisement.nodeSelectors }}
+  nodeSelectors:
+  {{- $bgpAdvertisement.nodeSelectors | toYaml | nindent 2 }}
+  {{- end }}
+  ipAddressPools:
+  {{- $bgpAdvertisement.ipAddressPools | toYaml | nindent 2 }}
 {{- end }}

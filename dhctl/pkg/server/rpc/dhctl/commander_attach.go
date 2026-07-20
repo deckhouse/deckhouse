@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -68,7 +69,7 @@ func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
 	f := fsm.New("initial", s.commanderAttachServerTransitions())
 
 	doneCh := make(chan struct{})
-	internalErrCh := make(chan error)
+	internalErrCh := make(chan error, internalErrChBufferSize)
 	receiveCh := make(chan *pb.CommanderAttachRequest)
 	sendCh := make(chan *pb.CommanderAttachResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.CommanderAttachResponse, attach.PhaseData]{
@@ -112,10 +113,10 @@ connectionProcessor:
 					result := s.commanderAttachSafe(ctx, &attachParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
-						sendProgress: pt.sendProgress(),
+						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
-					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
+					_ = sendResponse(server.Context(), sendCh, &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}})
 				}()
 
 			case *pb.CommanderAttachRequest_Continue:
@@ -127,13 +128,13 @@ connectionProcessor:
 				}
 				switch message.Continue.Continue {
 				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New("bad continue message"))
 				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
+					sendPhaseSwitch(ctx, phaseSwitcher.next, nil)
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.ErrStopOperationCondition
+					sendPhaseSwitch(ctx, phaseSwitcher.next, phases.ErrStopOperationCondition)
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
+					sendPhaseSwitch(ctx, phaseSwitcher.next, errors.New(message.Continue.Err))
 				}
 
 			case *pb.CommanderAttachRequest_Cancel:
@@ -168,7 +169,7 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	loggerFor := initDhctlLogger(ctx, p)
+	ctx = initDhctlLoggerCtx(ctx, p)
 
 	opts := newRequestOptions(
 		s.params.CacheDir,
@@ -177,15 +178,15 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
 
-	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
 
 	var sshProvider libcon.SSHProvider
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
 		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
@@ -224,7 +225,6 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 		},
 		ScanOnly: p.request.ScanOnly,
 		TmpDir:   s.params.TmpDir,
-		Logger:   loggerFor,
 		IsDebug:  s.params.IsDebug,
 		Options:  opts,
 	})

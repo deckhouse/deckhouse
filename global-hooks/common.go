@@ -50,7 +50,8 @@ func moduleEnabledByModuleConfig(mc *unstructured.Unstructured) (*moduleConfigEn
 }
 
 func moduleConfigSettingFullPath(path ...string) []string {
-	fullPath := []string{"spec", "settings"}
+	fullPath := make([]string, 0, len(path)+2)
+	fullPath = append(fullPath, "spec", "settings")
 	return append(fullPath, path...)
 }
 

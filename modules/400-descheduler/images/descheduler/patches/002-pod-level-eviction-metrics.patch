@@ -1,0 +1,402 @@
+diff --git a/metrics/metrics.go b/metrics/metrics.go
+index 2b8884939..c94568fed 100644
+--- a/metrics/metrics.go
++++ b/metrics/metrics.go
+@@ -46,6 +46,14 @@ var (
+ 			StabilityLevel: metrics.ALPHA,
+ 		}, []string{"result", "strategy", "profile", "namespace", "node"})
+ 
++	PodEvictionsTotal = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem:      DeschedulerSubsystem,
++			Name:           "pod_evictions_total",
++			Help:           "Number of pod-level descheduler eviction attempts and results, resolved to the owning workload. The 'result' label is one of success, error or blocked.",
++			StabilityLevel: metrics.ALPHA,
++		}, []string{"namespace", "workload_kind", "workload_name", "node", "strategy", "profile", "result", "reason"})
++
+ 	buildInfo = metrics.NewGauge(
+ 		&metrics.GaugeOpts{
+ 			Subsystem:      DeschedulerSubsystem,
+@@ -95,6 +103,7 @@ var (
+ 	metricsList = []metrics.Registerable{
+ 		PodsEvicted,
+ 		PodsEvictedTotal,
++		PodEvictionsTotal,
+ 		buildInfo,
+ 		DeschedulerLoopDuration,
+ 		DeschedulerStrategyDuration,
+diff --git a/pkg/descheduler/descheduler.go b/pkg/descheduler/descheduler.go
+index d73b50e01..72464abc6 100644
+--- a/pkg/descheduler/descheduler.go
++++ b/pkg/descheduler/descheduler.go
+@@ -127,6 +127,13 @@ func newDescheduler(ctx context.Context, rs *options.DeschedulerServer, deschedu
+ 	// the descheduling cycle, where informer registration is ignored.
+ 	_ = sharedInformerFactory.Core().V1().PersistentVolumeClaims().Informer()
+ 
++	// ReplicaSets are watched so the pod-level eviction metric can resolve a pod's
++	// owning workload (pod -> ReplicaSet -> Deployment). The informer must be requested
++	// before the shared informer factory is started.
++	replicaSetInformer := sharedInformerFactory.Apps().V1().ReplicaSets()
++	_ = replicaSetInformer.Informer()
++	replicaSetLister := replicaSetInformer.Lister()
++
+ 	getPodsAssignedToNode, err := podutil.BuildGetPodsAssignedToNodeFunc(podInformer)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("build get pods assigned to node function error: %v", err)
+@@ -146,7 +153,8 @@ func newDescheduler(ctx context.Context, rs *options.DeschedulerServer, deschedu
+ 			WithEvictionFailureEventNotification(deschedulerPolicy.EvictionFailureEventNotification).
+ 			WithGracePeriodSeconds(deschedulerPolicy.GracePeriodSeconds).
+ 			WithDryRun(rs.DryRun).
+-			WithMetricsEnabled(!rs.DisableMetrics),
++			WithMetricsEnabled(!rs.DisableMetrics).
++			WithReplicaSetLister(replicaSetLister),
+ 	)
+ 	if err != nil {
+ 		return nil, err
+diff --git a/pkg/descheduler/evictions/evictions.go b/pkg/descheduler/evictions/evictions.go
+index d0c2c36bb..01c50bafa 100644
+--- a/pkg/descheduler/evictions/evictions.go
++++ b/pkg/descheduler/evictions/evictions.go
+@@ -31,6 +31,7 @@ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	clientset "k8s.io/client-go/kubernetes"
++	appsv1listers "k8s.io/client-go/listers/apps/v1"
+ 	"k8s.io/client-go/tools/cache"
+ 	"k8s.io/client-go/tools/events"
+ 	"k8s.io/component-base/featuregate"
+@@ -228,6 +229,7 @@ type PodEvictor struct {
+ 	eventRecorder                    events.EventRecorder
+ 	erCache                          *evictionRequestsCache
+ 	featureGates                     featuregate.FeatureGate
++	replicaSetLister                 appsv1listers.ReplicaSetLister
+ 
+ 	// registeredHandlers contains the registrations of all handlers. It's used to check if all handlers have finished syncing before the scheduling cycles start.
+ 	registeredHandlers []cache.ResourceEventHandlerRegistration
+@@ -259,6 +261,7 @@ func NewPodEvictor(
+ 		nodePodCount:                     make(nodePodEvictedCount),
+ 		namespacePodCount:                make(namespacePodEvictCount),
+ 		featureGates:                     featureGates,
++		replicaSetLister:                 options.replicaSetLister,
+ 	}
+ 
+ 	if featureGates.Enabled(features.EvictionsInBackground) {
+@@ -471,6 +474,11 @@ func (pe *PodEvictor) EvictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
+ 		}
+ 	}
+ 
++	var workloadKind, workloadName string
++	if pe.metricsEnabled {
++		workloadKind, workloadName = resolveWorkload(pod, pe.replicaSetLister)
++	}
++
+ 	pe.mu.Lock()
+ 	defer pe.mu.Unlock()
+ 
+@@ -483,6 +491,7 @@ func (pe *PodEvictor) EvictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
+ 		if pe.metricsEnabled {
+ 			metrics.PodsEvicted.With(map[string]string{"result": err.Error(), "strategy": opts.StrategyName, "namespace": pod.Namespace, "node": pod.Spec.NodeName, "profile": opts.ProfileName}).Inc()
+ 			metrics.PodsEvictedTotal.With(map[string]string{"result": err.Error(), "strategy": opts.StrategyName, "namespace": pod.Namespace, "node": pod.Spec.NodeName, "profile": opts.ProfileName}).Inc()
++			observePodEviction(pod, opts, workloadKind, workloadName, "blocked", "total_limit_reached")
+ 		}
+ 		span.AddEvent("Eviction Failed", trace.WithAttributes(attribute.String("node", pod.Spec.NodeName), attribute.String("err", err.Error())))
+ 		klog.ErrorS(err, "Error evicting pod", "limit", *pe.maxPodsToEvictTotal)
+@@ -498,6 +507,7 @@ func (pe *PodEvictor) EvictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
+ 			if pe.metricsEnabled {
+ 				metrics.PodsEvicted.With(map[string]string{"result": err.Error(), "strategy": opts.StrategyName, "namespace": pod.Namespace, "node": pod.Spec.NodeName, "profile": opts.ProfileName}).Inc()
+ 				metrics.PodsEvictedTotal.With(map[string]string{"result": err.Error(), "strategy": opts.StrategyName, "namespace": pod.Namespace, "node": pod.Spec.NodeName, "profile": opts.ProfileName}).Inc()
++				observePodEviction(pod, opts, workloadKind, workloadName, "blocked", "node_limit_reached")
+ 			}
+ 			span.AddEvent("Eviction Failed", trace.WithAttributes(attribute.String("node", pod.Spec.NodeName), attribute.String("err", err.Error())))
+ 			klog.ErrorS(err, "Error evicting pod", "limit", *pe.maxPodsToEvictPerNode, "node", pod.Spec.NodeName)
+@@ -513,6 +523,7 @@ func (pe *PodEvictor) EvictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
+ 		if pe.metricsEnabled {
+ 			metrics.PodsEvicted.With(map[string]string{"result": err.Error(), "strategy": opts.StrategyName, "namespace": pod.Namespace, "node": pod.Spec.NodeName, "profile": opts.ProfileName}).Inc()
+ 			metrics.PodsEvictedTotal.With(map[string]string{"result": err.Error(), "strategy": opts.StrategyName, "namespace": pod.Namespace, "node": pod.Spec.NodeName, "profile": opts.ProfileName}).Inc()
++			observePodEviction(pod, opts, workloadKind, workloadName, "blocked", "namespace_limit_reached")
+ 		}
+ 		span.AddEvent("Eviction Failed", trace.WithAttributes(attribute.String("node", pod.Spec.NodeName), attribute.String("err", err.Error())))
+ 		klog.ErrorS(err, "Error evicting pod", "limit", *pe.maxPodsToEvictPerNamespace, "namespace", pod.Namespace, "pod", klog.KObj(pod))
+@@ -530,6 +541,7 @@ func (pe *PodEvictor) EvictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
+ 		if pe.metricsEnabled {
+ 			metrics.PodsEvicted.With(map[string]string{"result": "error", "strategy": opts.StrategyName, "namespace": pod.Namespace, "node": pod.Spec.NodeName, "profile": opts.ProfileName}).Inc()
+ 			metrics.PodsEvictedTotal.With(map[string]string{"result": "error", "strategy": opts.StrategyName, "namespace": pod.Namespace, "node": pod.Spec.NodeName, "profile": opts.ProfileName}).Inc()
++			observePodEviction(pod, opts, workloadKind, workloadName, "error", evictionErrorReason(err))
+ 		}
+ 		if pe.evictionFailureEventNotification {
+ 			pe.eventRecorder.Eventf(pod, nil, v1.EventTypeWarning, "EvictionFailed", "Descheduled", "pod eviction from %v node by sigs.k8s.io/descheduler failed: %v", pod.Spec.NodeName, err.Error())
+@@ -556,6 +568,9 @@ func (pe *PodEvictor) EvictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
+ 		klog.V(1).InfoS("Evicted pod in dry run mode", "pod", klog.KObj(pod), "reason", opts.Reason, "strategy", opts.StrategyName, "node", pod.Spec.NodeName, "profile", opts.ProfileName)
+ 	} else {
+ 		klog.V(1).InfoS("Evicted pod", "pod", klog.KObj(pod), "reason", opts.Reason, "strategy", opts.StrategyName, "node", pod.Spec.NodeName, "profile", opts.ProfileName)
++		if pe.metricsEnabled {
++			observePodEviction(pod, opts, workloadKind, workloadName, "success", "")
++		}
+ 		reason := opts.Reason
+ 		if len(reason) == 0 {
+ 			reason = opts.StrategyName
+@@ -615,10 +630,10 @@ func (pe *PodEvictor) evictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
+ 	}
+ 
+ 	if apierrors.IsTooManyRequests(err) {
+-		return false, fmt.Errorf("error when evicting pod (ignoring) %q: %v", pod.Name, err)
++		return false, fmt.Errorf("error when evicting pod (ignoring) %q: %w", pod.Name, err)
+ 	}
+ 	if apierrors.IsNotFound(err) {
+-		return false, fmt.Errorf("pod not found when evicting %q: %v", pod.Name, err)
++		return false, fmt.Errorf("pod not found when evicting %q: %w", pod.Name, err)
+ 	}
+ 	return false, err
+ }
+diff --git a/pkg/descheduler/evictions/options.go b/pkg/descheduler/evictions/options.go
+index 2646966d2..4df3b94d5 100644
+--- a/pkg/descheduler/evictions/options.go
++++ b/pkg/descheduler/evictions/options.go
+@@ -2,6 +2,7 @@ package evictions
+ 
+ import (
+ 	policy "k8s.io/api/policy/v1"
++	appsv1listers "k8s.io/client-go/listers/apps/v1"
+ )
+ 
+ type Options struct {
+@@ -13,6 +14,7 @@ type Options struct {
+ 	evictionFailureEventNotification bool
+ 	metricsEnabled                   bool
+ 	gracePeriodSeconds               *int64
++	replicaSetLister                 appsv1listers.ReplicaSetLister
+ }
+ 
+ // NewOptions returns an Options with default values.
+@@ -63,3 +65,8 @@ func (o *Options) WithEvictionFailureEventNotification(evictionFailureEventNotif
+ 	}
+ 	return o
+ }
++
++func (o *Options) WithReplicaSetLister(replicaSetLister appsv1listers.ReplicaSetLister) *Options {
++	o.replicaSetLister = replicaSetLister
++	return o
++}
+diff --git a/pkg/descheduler/evictions/workload.go b/pkg/descheduler/evictions/workload.go
+new file mode 100644
+index 000000000..97e55ce4f
+--- /dev/null
++++ b/pkg/descheduler/evictions/workload.go
+@@ -0,0 +1,87 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package evictions
++
++import (
++	v1 "k8s.io/api/core/v1"
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	appsv1listers "k8s.io/client-go/listers/apps/v1"
++
++	"sigs.k8s.io/descheduler/metrics"
++)
++
++// workloadNone is the workload kind/name reported for pods that have no
++// controlling owner (bare pods). A constant placeholder is used instead of the
++// pod name to keep the metric label cardinality bounded.
++const workloadNone = "<none>"
++
++// resolveWorkload returns the stable owning workload (kind, name) for a pod.
++//
++// The pod's controller ownerRef is used directly for workloads that own pods
++// themselves (StatefulSet, DaemonSet, Job, custom controllers). For a pod owned
++// by a ReplicaSet the chain is followed one more hop (ReplicaSet to Deployment)
++// using the cached ReplicaSet lister, because a ReplicaSet name changes on every
++// rollout and is therefore not a stable identity. If the ReplicaSet cannot be
++// resolved (cache miss or orphan ReplicaSet) the ReplicaSet itself is reported.
++// Bare pods (no controller) resolve to workloadNone to avoid unbounded
++// cardinality from per-pod names.
++func resolveWorkload(pod *v1.Pod, rsLister appsv1listers.ReplicaSetLister) (string, string) {
++	ref := metav1.GetControllerOf(pod)
++	if ref == nil {
++		return workloadNone, workloadNone
++	}
++
++	if ref.Kind == "ReplicaSet" && rsLister != nil {
++		rs, err := rsLister.ReplicaSets(pod.Namespace).Get(ref.Name)
++		if err == nil {
++			if owner := metav1.GetControllerOf(rs); owner != nil {
++				return owner.Kind, owner.Name
++			}
++		}
++	}
++
++	return ref.Kind, ref.Name
++}
++
++// observePodEviction records a single pod-level eviction attempt against the
++// workload-scoped descheduler_pod_evictions_total metric.
++func observePodEviction(pod *v1.Pod, opts EvictOptions, workloadKind, workloadName, result, reason string) {
++	metrics.PodEvictionsTotal.With(map[string]string{
++		"namespace":     pod.Namespace,
++		"workload_kind": workloadKind,
++		"workload_name": workloadName,
++		"node":          pod.Spec.NodeName,
++		"strategy":      opts.StrategyName,
++		"profile":       opts.ProfileName,
++		"result":        result,
++		"reason":        reason,
++	}).Inc()
++}
++
++// evictionErrorReason maps an eviction error to a bounded reason label value so
++// that the metric never carries arbitrary error text.
++func evictionErrorReason(err error) string {
++	switch {
++	case apierrors.IsTooManyRequests(err):
++		return "too_many_requests"
++	case apierrors.IsNotFound(err):
++		return "not_found"
++	default:
++		return "api_error"
++	}
++}
+diff --git a/pkg/descheduler/evictions/workload_test.go b/pkg/descheduler/evictions/workload_test.go
+new file mode 100644
+index 000000000..66c9dc981
+--- /dev/null
++++ b/pkg/descheduler/evictions/workload_test.go
+@@ -0,0 +1,124 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package evictions
++
++import (
++	"testing"
++
++	appsv1 "k8s.io/api/apps/v1"
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	appsv1listers "k8s.io/client-go/listers/apps/v1"
++	"k8s.io/client-go/tools/cache"
++)
++
++func controllerRef(kind, name string) metav1.OwnerReference {
++	isController := true
++	return metav1.OwnerReference{
++		APIVersion: "apps/v1",
++		Kind:       kind,
++		Name:       name,
++		Controller: &isController,
++	}
++}
++
++func podWithOwners(ns, name string, owners ...metav1.OwnerReference) *v1.Pod {
++	return &v1.Pod{
++		ObjectMeta: metav1.ObjectMeta{
++			Namespace:       ns,
++			Name:            name,
++			OwnerReferences: owners,
++		},
++	}
++}
++
++func replicaSetWithOwners(ns, name string, owners ...metav1.OwnerReference) *appsv1.ReplicaSet {
++	return &appsv1.ReplicaSet{
++		ObjectMeta: metav1.ObjectMeta{
++			Namespace:       ns,
++			Name:            name,
++			OwnerReferences: owners,
++		},
++	}
++}
++
++func newReplicaSetLister(rss ...*appsv1.ReplicaSet) appsv1listers.ReplicaSetLister {
++	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
++	for _, rs := range rss {
++		_ = indexer.Add(rs)
++	}
++	return appsv1listers.NewReplicaSetLister(indexer)
++}
++
++func TestResolveWorkload(t *testing.T) {
++	tests := []struct {
++		name         string
++		pod          *v1.Pod
++		replicaSets  []*appsv1.ReplicaSet
++		expectedKind string
++		expectedName string
++	}{
++		{
++			name:         "deployment resolved through replicaset",
++			pod:          podWithOwners("default", "web-abc123-xyz", controllerRef("ReplicaSet", "web-abc123")),
++			replicaSets:  []*appsv1.ReplicaSet{replicaSetWithOwners("default", "web-abc123", controllerRef("Deployment", "web"))},
++			expectedKind: "Deployment",
++			expectedName: "web",
++		},
++		{
++			name:         "statefulset owns pod directly",
++			pod:          podWithOwners("default", "db-0", controllerRef("StatefulSet", "db")),
++			expectedKind: "StatefulSet",
++			expectedName: "db",
++		},
++		{
++			name:         "daemonset owns pod directly",
++			pod:          podWithOwners("kube-system", "node-exporter-9f2", controllerRef("DaemonSet", "node-exporter")),
++			expectedKind: "DaemonSet",
++			expectedName: "node-exporter",
++		},
++		{
++			name:         "bare pod with no controller",
++			pod:          podWithOwners("default", "lonely-pod"),
++			expectedKind: "<none>",
++			expectedName: "<none>",
++		},
++		{
++			name:         "replicaset missing from cache falls back to replicaset",
++			pod:          podWithOwners("default", "web-abc123-xyz", controllerRef("ReplicaSet", "web-abc123")),
++			replicaSets:  nil,
++			expectedKind: "ReplicaSet",
++			expectedName: "web-abc123",
++		},
++		{
++			name:         "orphan replicaset without controller falls back to replicaset",
++			pod:          podWithOwners("default", "web-abc123-xyz", controllerRef("ReplicaSet", "web-abc123")),
++			replicaSets:  []*appsv1.ReplicaSet{replicaSetWithOwners("default", "web-abc123")},
++			expectedKind: "ReplicaSet",
++			expectedName: "web-abc123",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			kind, name := resolveWorkload(tt.pod, newReplicaSetLister(tt.replicaSets...))
++			if kind != tt.expectedKind || name != tt.expectedName {
++				t.Errorf("resolveWorkload() = (%q, %q), want (%q, %q)", kind, name, tt.expectedKind, tt.expectedName)
++			}
++		})
++	}
++}

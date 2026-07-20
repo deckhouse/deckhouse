@@ -60,6 +60,7 @@ spec:
             {{- if .Values.serviceWithHealthchecks.debug }}
             - --debugging=true
             {{- end }}
+            - --verbose-status={{ .Values.serviceWithHealthchecks.verboseStatus }}
           env:
             - name: NODE_NAME
               valueFrom:

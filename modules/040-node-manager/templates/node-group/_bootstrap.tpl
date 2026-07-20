@@ -29,7 +29,7 @@
   {{- $_ := set $tpl_context "clusterMasterKubeAPIEndpoints" $clusterMasterKubeAPIEndpoints }}
   {{- $_ := set $tpl_context "clusterMasterRPPAddresses" $clusterMasterRPPAddresses }}
   {{- $_ := set $tpl_context "clusterMasterRPPBootstrapAddresses" $clusterMasterRPPBootstrapAddresses }}
-  {{- $_ := set $tpl_context "clusterUUID" ($context.Values.global.discovery.clusterUUID | default "") }}
+  {{- $_ := set $tpl_context "clusterUUID" ($context.Values.global.discovery.clusterUUID | required "global.discovery.clusterUUID is required to render the node bootstrap script: an empty UUID makes rpp-get query registry-packages-proxy at the prefix-less \"/rpp-get\" path, which the proxy rejects with 404, so the node stalls the whole StaticInstanceBootstrapTimeout (~20m) before CAPS retries") }}
   {{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests }}
   {{- $packagesProxy := $context.Values.nodeManager.internal.packagesProxy | default (dict) }}
   {{- $_ := set $tpl_context "packagesProxy" $packagesProxy }}

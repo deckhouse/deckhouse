@@ -84,17 +84,17 @@ func UnaryParallelTasksLimiter(sem chan struct{}, prefix string) grpc.UnaryServe
 		}
 
 		log := logger.L(ctx)
-		log.Info("limiter tries to start operation", slog.Int("concurrent_operation", len(sem)))
+		log.Info("limiter trying to start an operation", slog.Int("concurrent_operation", len(sem)))
 		timeout := time.After(5 * time.Minute)
 		select {
 		case <-timeout:
-			log.Info("limiter couldn't start operation due to timeout", slog.Int("concurrent_operation", len(sem)))
-			return nil, status.Error(codes.ResourceExhausted, "too many dhctl operation has already started")
+			log.Info("limiter couldn't start an operation due to timeout", slog.Int("concurrent_operation", len(sem)))
+			return nil, status.Error(codes.ResourceExhausted, "too many dhctl operations have already started")
 		case sem <- struct{}{}:
-			log.Info("limiter started operation", slog.Int("concurrent_operation", len(sem)))
+			log.Info("limiter started an operation", slog.Int("concurrent_operation", len(sem)))
 			defer func() {
 				<-sem
-				log.Info("limiter finished operation", slog.Int("concurrent_operation", len(sem)))
+				log.Info("limiter finished an operation", slog.Int("concurrent_operation", len(sem)))
 			}()
 
 			return handler(ctx, req)
@@ -103,23 +103,23 @@ func UnaryParallelTasksLimiter(sem chan struct{}, prefix string) grpc.UnaryServe
 }
 
 func StreamParallelTasksLimiter(sem chan struct{}, prefix string) grpc.StreamServerInterceptor {
-	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		if !strings.HasPrefix(info.FullMethod, prefix) {
 			return handler(srv, ss)
 		}
 
 		log := logger.L(ss.Context())
-		log.Info("limiter tries to start operation", slog.Int("concurrent_operation", len(sem)))
+		log.Info("limiter trying to start an operation", slog.Int("concurrent_operation", len(sem)))
 		timeout := time.After(resourceExhaustedTimeout)
 		select {
 		case <-timeout:
-			log.Info("limiter couldn't start operation due to timeout", slog.Int("concurrent_operation", len(sem)))
-			return status.Error(codes.ResourceExhausted, "too many dhctl operations has already started")
+			log.Info("limiter couldn't start an operation due to timeout", slog.Int("concurrent_operation", len(sem)))
+			return status.Error(codes.ResourceExhausted, "too many dhctl operations have already started")
 		case sem <- struct{}{}:
-			log.Info("limiter started operation", slog.Int("concurrent_operation", len(sem)))
+			log.Info("limiter started an operation", slog.Int("concurrent_operation", len(sem)))
 			defer func() {
 				<-sem
-				log.Info("limiter finished operation", slog.Int("concurrent_operation", len(sem)))
+				log.Info("limiter finished an operation", slog.Int("concurrent_operation", len(sem)))
 			}()
 
 			return handler(srv, ss)

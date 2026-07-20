@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: applicationpackageversions.deckhouse.io
 spec:
   group: deckhouse.io
@@ -46,7 +46,8 @@ spec:
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)
             type: string
           kind:
             description: |-
@@ -54,28 +55,36 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
             type: string
           metadata:
             type: object
           spec:
+            description: Defines the application package version parameters.
             properties:
               packageName:
                 description: Name of the application package.
                 type: string
+                x-doc-examples:
+                - console
               packageRepositoryName:
-                description: The name of the repository containing the package.
+                description: Name of the package repository containing the package.
                 type: string
+                x-doc-examples:
+                - deckhouse
               packageVersion:
                 description: Version of the application package.
                 type: string
+                x-doc-examples:
+                - v1.0.0
             type: object
           status:
-            description: Status of an ApplicationPackageVersion.
+            description: Application package version status.
             properties:
               conditions:
-                description: Conditions represent the latest available observations
-                  of the package version's state.
+                description: Conditions reflecting the latest observations of the
+                  package version state.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -165,15 +174,46 @@ spec:
                         description: Russian description of the package.
                         type: string
                     type: object
+                  disableOptions:
+                    description: Parameters of package disable protection.
+                    properties:
+                      confirmation:
+                        description: Whether confirmation is required to disable the
+                          package.
+                        type: boolean
+                      messages:
+                        description: Localized disable confirmation messages.
+                        properties:
+                          en:
+                            description: English disable confirmation message.
+                            type: string
+                          ru:
+                            description: Russian disable confirmation message.
+                            type: string
+                        type: object
+                    required:
+                    - messages
+                    type: object
                   licensing:
                     description: Licensing information for different editions.
                     properties:
                       editions:
                         additionalProperties:
+                          description: |-
+                            PackageEditionLicense is a single edition's licensing, shared by applications
+                            and modules: whether the edition is available and which bundles enable the
+                            package by default. Bundle membership is meaningful for modules; applications
+                            have no bundles and typically leave EnabledInBundles empty.
                           properties:
                             available:
                               description: Whether this edition is available for use.
                               type: boolean
+                            enabledInBundles:
+                              description: Bundles that enable the module by default
+                                in this edition.
+                              items:
+                                type: string
+                              type: array
                           type: object
                         description: Licensing information for different package editions.
                         type: object
@@ -182,7 +222,7 @@ spec:
                     description: The system requirements for this package.
                     properties:
                       deckhouse:
-                        description: Required Deckhouse version.
+                        description: Required Deckhouse Kubernetes Platform version.
                         properties:
                           constraint:
                             description: Semver constraint expression.
@@ -329,9 +369,14 @@ spec:
                         type: object
                     type: object
                   stage:
-                    description: The development stage of the package (e.g., alpha,
-                      beta, stable).
+                    description: The development stage of the package (e.g., Experimental,
+                      Preview, General Availability, Deprecated).
                     type: string
+                    x-doc-examples:
+                    - Experimental
+                    - Preview
+                    - General Availability
+                    - Deprecated
                   versionCompatibilityRules:
                     description: Version compatibility rules for upgrades and downgrades.
                     properties:
@@ -425,6 +470,15 @@ spec:
                 type: integer
             type: object
         type: object
+        x-doc-examples:
+        - apiVersion: deckhouse.io/v1alpha1
+          kind: ApplicationPackageVersion
+          metadata:
+            name: example
+          spec:
+            packageName: console
+            packageRepositoryName: deckhouse
+            packageVersion: v1.0.0
     served: true
     storage: true
     subresources:

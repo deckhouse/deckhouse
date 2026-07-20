@@ -45,6 +45,10 @@ message DestroyStart {
   string provider_specific_cluster_config = 4;
   string state = 5;
   DestroyStartOptions options = 6;
+  // registry_config carries an InitConfiguration document and/or the deckhouse
+  // ModuleConfig so the server can resolve registry access for the external
+  // provider bundle download.
+  string registry_config = 7;
 }
 
 message DestroyPhaseEnd {

@@ -41,7 +41,7 @@ func TestSaverWithEmptyDestNotStartWatcher(t *testing.T) {
 			require.NotNil(t, saver)
 			require.Len(t, saver.saversDestinations, 0)
 
-			err := saver.Start(newTestRunnerWithChanges())
+			err := saver.Start(t.Context(), newTestRunnerWithChanges())
 
 			require.NoError(t, err)
 			require.False(t, saver.IsStarted())

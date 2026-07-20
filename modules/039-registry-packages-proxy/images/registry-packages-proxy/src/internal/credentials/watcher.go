@@ -106,7 +106,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 		})
 	}
 
-	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	secretWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch secrets: %v", err)
 		return
@@ -137,7 +137,6 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 
 	switch secretEvent.Type {
 	case watch.Added, watch.Modified:
-
 		var input registrySecretData
 
 		input.FromSecretData(secret.Data)
@@ -147,15 +146,40 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 			return err
 		}
 
+		repoHost := strings.Split(registryConfig.Repository, "/")[0]
+
 		w.Lock()
-		w.logger.Info("added registry config for main repo")
+		w.logger.Info(
+			"added registry config for main repo",
+			slog.String("repo", registryConfig.Repository),
+			slog.String("repo_host", repoHost),
+		)
 		w.registryClientConfigs[registry.DefaultRepository] = registryConfig
+		w.registryClientConfigs[registryConfig.Repository] = registryConfig
+		w.registryClientConfigs[repoHost] = registryConfig
 		w.Unlock()
 
 	case watch.Deleted:
+		var input registrySecretData
+
+		input.FromSecretData(secret.Data)
+
+		registryConfig, err := input.toClientConfig()
+		if err != nil {
+			return err
+		}
+
+		repoHost := strings.Split(registryConfig.Repository, "/")[0]
+
 		w.Lock()
-		w.logger.Info("deleted registry config for main repo")
+		w.logger.Info(
+			"deleted registry config for main repo",
+			slog.String("repo", registryConfig.Repository),
+			slog.String("repo_host", repoHost),
+		)
 		delete(w.registryClientConfigs, registry.DefaultRepository)
+		delete(w.registryClientConfigs, registryConfig.Repository)
+		delete(w.registryClientConfigs, repoHost)
 		w.Unlock()
 	}
 
@@ -168,7 +192,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{})
 	}
 
-	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch module sources: %v", err)
 		return
@@ -202,7 +226,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
 
-	w.logger.Info("event from module source received", slog.String("event", string(moduleSourceEvent.Type)), slog.String("module source", moduleSource.Name))
+	w.logger.Info("event from module source received", slog.String("event", string(moduleSourceEvent.Type)), slog.String("module_source", moduleSource.Name))
 
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:

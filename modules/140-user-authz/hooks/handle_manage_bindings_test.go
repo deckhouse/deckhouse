@@ -82,6 +82,33 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 		})
 	})
 
+	Context("A namespace drops out of a manage binding", func() {
+		BeforeEach(func() {
+			resources := []string{
+				// Binding "test" now resolves to a single namespace (test-ns).
+				manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+				manageRole("d8:manage:others:manager", "subsystem", "others"),
+				manageBinding("test", "d8:manage:others:manager"),
+				// Leftover use RoleBinding from test2-ns, which no longer
+				// contributes to the binding (its module role lost the
+				// rbac.deckhouse.io/namespace label or was removed).
+				existingUseBinding("d8:use:admin:binding:test", "test2-ns"),
+			}
+			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
+			f.RunHook()
+		})
+
+		It("keeps the still-valid binding and deletes the orphan in the dropped namespace", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
+
+			orphan := f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test")
+			Expect(orphan).To(BeEmpty())
+		})
+	})
+
 	Context("There`s UseBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
@@ -178,6 +205,37 @@ func manageBinding(name, role string) string {
 			APIGroup: "rbac.authorization.k8s.io/v1",
 			Kind:     "ClusterRole",
 			Name:     role,
+		},
+	}
+	marshaled, _ := yaml.Marshal(&binding)
+	return string(marshaled)
+}
+
+func existingUseBinding(name, namespace string) string {
+	binding := rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "RoleBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"heritage":                    "deckhouse",
+				"rbac.deckhouse.io/automated": "true",
+			},
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:     "User",
+				APIGroup: "rbac.authorization.k8s.io",
+				Name:     "test",
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "d8:use:role:admin",
 		},
 	}
 	marshaled, _ := yaml.Marshal(&binding)

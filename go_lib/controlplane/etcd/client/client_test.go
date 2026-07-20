@@ -35,6 +35,7 @@ import (
 // the production 1-minute default.
 func TestMain(m *testing.M) {
 	constants.KubernetesAPICallTimeout = 200 * time.Millisecond
+	constants.EtcdAPICallTimeout = 200 * time.Millisecond
 	os.Exit(m.Run())
 }
 
@@ -73,6 +74,14 @@ func (f *fakeClient) MemberAddAsLearner(_ context.Context, _ string) (*clientv3.
 func (f *fakeClient) MemberPromote(_ context.Context, id uint64) (*clientv3.MemberPromoteResponse, error) {
 	f.promotedMemberIDs = append(f.promotedMemberIDs, id)
 	return &clientv3.MemberPromoteResponse{}, nil
+}
+
+func (f *fakeClient) CheckClusterHealthy(_ context.Context, _ time.Duration) error {
+	return nil
+}
+
+func (f *fakeClient) Defragment(_ context.Context, _ string) error {
+	return nil
 }
 
 func (f *fakeClient) Raw() *clientv3.Client {

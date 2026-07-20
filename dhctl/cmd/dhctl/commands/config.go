@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,14 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -39,13 +41,12 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
-		logger := log.GetDefaultLogger()
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		l := logger.FromContext(ctx)
 
 		// Registry shoud run before LoadConfigFromFile
 		registryStop, err := registry.InitFromConfig(
 			ctx,
-			loggerProvider(),
+			l,
 			opts.Global.ConfigPaths,
 			opts.Registry.ImgBundlePath,
 		)
@@ -58,7 +59,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			ctx,
 			opts.Global.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(logger),
+				infrastructureprovider.NewPreparatorProviderParams(),
 			),
 			&opts.Global,
 		)
@@ -66,13 +67,13 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			return err
 		}
 
-		templateData, err := metaConfig.ConfigForBashibleBundleTemplate("$MY_IP")
+		templateData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, "$MY_IP")
 		if err != nil {
 			return err
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		l.Info(fmt.Sprintf("Bundle Dir: %q", templateController.TmpDir))
 
 		return template.PrepareBashibleBundle(
 			ctx,
@@ -86,8 +87,9 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
-		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
+		return logger.RunProcess(ctx, l, "Prepare Bashible Bundle", runFunc)
 	})
 }
 
@@ -97,13 +99,12 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
-		logger := log.GetDefaultLogger()
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		l := logger.FromContext(ctx)
 
 		// Registry shoud run before LoadConfigFromFile
 		registryStop, err := registry.InitFromConfig(
 			ctx,
-			loggerProvider(),
+			l,
 			opts.Global.ConfigPaths,
 			opts.Registry.ImgBundlePath,
 		)
@@ -116,7 +117,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 			ctx,
 			opts.Global.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(logger),
+				infrastructureprovider.NewPreparatorProviderParams(),
 			),
 			&opts.Global,
 		)
@@ -125,15 +126,16 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		l.Info(fmt.Sprintf("Bundle Dir: %q", templateController.TmpDir))
 
 		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, &opts.Global)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
-		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
+		return logger.RunProcess(ctx, l, "Prepare Bashible Bundle", runFunc)
 	})
 }
 
@@ -143,13 +145,12 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
-		logger := log.GetDefaultLogger()
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		l := logger.FromContext(ctx)
 
 		// Registry shoud run before LoadConfigFromFile
 		registryStop, err := registry.InitFromConfig(
 			ctx,
-			loggerProvider(),
+			l,
 			opts.Global.ConfigPaths,
 			opts.Registry.ImgBundlePath,
 		)
@@ -162,7 +163,7 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			ctx,
 			opts.Global.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(logger),
+				infrastructureprovider.NewPreparatorProviderParams(),
 			),
 			&opts.Global,
 		)
@@ -170,15 +171,22 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			return err
 		}
 
-		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
+		extractor := controlplane.NewSettingsExtractor(
+			metaConfig,
+			config.NewSchemaStore(&opts.Global),
+			config.GetEdition(),
+			l,
+		)
+
+		controlPlaneConfig, err := extractor.TemplateConfigForBootstrap("")
 		if err != nil {
 			return err
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		l.Info(fmt.Sprintf("Bundle Dir: %q", templateController.TmpDir))
 
-		if err := template.PrepareControlPlaneManifests(templateController, controlPlaneConfig, &opts.Global); err != nil {
+		if err := template.PrepareControlPlaneManifests(ctx, templateController, controlPlaneConfig, &opts.Global); err != nil {
 			return err
 		}
 		// "localhost"/"127.0.0.1" are placeholders for the render-only command;
@@ -188,8 +196,9 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
-		return log.ProcessCtx(ctx, "bootstrap", "Prepare Kubeadm Config", runFunc)
+		return logger.RunProcess(ctx, l, "Prepare Kubeadm Config", runFunc)
 	})
 }
 
@@ -202,10 +211,8 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 		var err error
 		var metaConfig *config.MetaConfig
 
-		logger := log.GetDefaultLogger()
-
 		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		)
 
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.

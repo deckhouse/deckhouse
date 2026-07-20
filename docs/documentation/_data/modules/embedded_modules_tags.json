@@ -113,10 +113,6 @@
     "web ui",
     "ssdlc"
   ],
-  "extended-monitoring": [
-    "observability",
-    "ssdlc"
-  ],
   "ingress-nginx": [
     "network",
     "balancing",
@@ -146,16 +142,6 @@
     "storage",
     "ssdlc"
   ],
-  "log-shipper": [
-    "observability",
-    "logging",
-    "ssdlc"
-  ],
-  "loki": [
-    "observability",
-    "logging",
-    "ssdlc"
-  ],
   "metallb": [
     "network",
     "balancing",
@@ -166,19 +152,7 @@
     "observability",
     "ssdlc"
   ],
-  "monitoring-custom": [
-    "observability",
-    "ssdlc"
-  ],
   "monitoring-deckhouse": [
-    "observability",
-    "ssdlc"
-  ],
-  "monitoring-kubernetes": [
-    "observability",
-    "ssdlc"
-  ],
-  "monitoring-kubernetes-control-plane": [
     "observability",
     "ssdlc"
   ],
@@ -224,16 +198,8 @@
     "security",
     "ssdlc"
   ],
-  "operator-prometheus": [
-    "observability",
-    "ssdlc"
-  ],
   "pod-reloader": [
     "core",
-    "ssdlc"
-  ],
-  "prometheus": [
-    "observability",
     "ssdlc"
   ],
   "prometheus-metrics-adapter": [
@@ -270,10 +236,6 @@
     "core",
     "cloud",
     "scaling",
-    "ssdlc"
-  ],
-  "upmeter": [
-    "observability",
     "ssdlc"
   ],
   "user-authn": [

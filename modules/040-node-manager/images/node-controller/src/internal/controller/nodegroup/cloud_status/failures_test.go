@@ -23,6 +23,30 @@ import (
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
+func TestConvertMachineFailures_EmptyReturnsNil(t *testing.T) {
+	if out := ConvertMachineFailures(nil); out != nil {
+		t.Fatalf("expected nil for empty input, got %#v", out)
+	}
+}
+
+func TestConvertMachineFailures_DefaultsStateAndType(t *testing.T) {
+	in := []ngcommon.MachineFailure{{
+		MachineName: "m1",
+		Message:     "err",
+		Time:        time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC),
+	}}
+	out := ConvertMachineFailures(in)
+	if len(out) != 1 || out[0].LastOperation == nil {
+		t.Fatalf("expected one failure with lastOperation, got %#v", out)
+	}
+	if out[0].LastOperation.State != "Failed" {
+		t.Errorf("expected default State=Failed, got %q", out[0].LastOperation.State)
+	}
+	if out[0].LastOperation.Type != "Create" {
+		t.Errorf("expected default Type=Create, got %q", out[0].LastOperation.Type)
+	}
+}
+
 func TestConvertMachineFailures(t *testing.T) {
 	in := []ngcommon.MachineFailure{{
 		MachineName: "m1",

@@ -123,10 +123,9 @@ type TCPHandler struct {
 }
 
 type HealthcheckCondition struct {
-	ObservedGeneration int64  `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
-	ActiveNodeName     string `json:"activeNodeName,omitempty" protobuf:"bytes,2,opt,name=activeNodeName"`
-	Endpoints          int32  `json:"endpoints,omitempty" protobuf:"varint,3,opt,name=endpoints"`
-	ReadyEndpoints     int32  `json:"readyEndpoints,omitempty" protobuf:"varint,4,opt,name=readyEndpoints"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
+	Endpoints          int32 `json:"endpoints,omitempty" protobuf:"varint,3,opt,name=endpoints"`
+	ReadyEndpoints     int32 `json:"readyEndpoints,omitempty" protobuf:"varint,4,opt,name=readyEndpoints"`
 }
 
 type EndpointStatus struct {
@@ -136,6 +135,9 @@ type EndpointStatus struct {
 	Ready            bool     `json:"ready,omitempty" protobuf:"varint,3,opt,name=ready"`
 	ProbesSuccessful bool     `json:"probesSuccessful,omitempty" protobuf:"varint,4,opt,name=probesSuccessful"`
 	FailedProbes     []string `json:"failedProbes,omitempty" protobuf:"bytes,5,rep,name=failedProbes"`
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Format=date-time
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty" protobuf:"bytes,7,opt,name=lastTransitionTime"`
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Format=date-time
 	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty" protobuf:"bytes,6,opt,name=lastProbeTime"`

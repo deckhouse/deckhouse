@@ -23,7 +23,6 @@ spec:
   version: v1.43.8
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: "2023-06-15T21:20:00Z"
 ---
@@ -50,7 +49,6 @@ spec:
   version: v1.44.4
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -82,7 +80,6 @@ spec:
   version: v1.45.11
 status:
   approved: true
-  message: ""
   phase: Superseded
   transitionTime: "2023-07-03T21:06:00Z"
 ---
@@ -133,6 +130,5 @@ spec:
   version: v1.46.10
 status:
   approved: true
-  message: ""
   phase: Deployed
   transitionTime: "2023-07-03T21:06:00Z"

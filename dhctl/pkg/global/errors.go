@@ -20,5 +20,5 @@ import (
 
 var (
 	ErrConvergeInterrupted = errors.New("Interrupted.")
-	ErrNodeGroupChanged    = errors.New("Node group was changed during accept diff.")
+	ErrNodeGroupChanged    = errors.New("Node group was changed during diff acceptance.")
 )

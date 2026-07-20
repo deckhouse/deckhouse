@@ -47,7 +47,7 @@ func (PythonCheck) RetryPolicy() preflight.RetryPolicy {
 func (c PythonCheck) Run(ctx context.Context) error {
 	pythonBinary, err := detectPythonBinary(ctx, c.NodeInterface)
 	if err != nil {
-		return fmt.Errorf("Detect Python binary name: %w", err)
+		return fmt.Errorf("detecting Python binary name: %w", err)
 	}
 
 	requiredPythonModules := [][]string{
@@ -63,8 +63,7 @@ func (c PythonCheck) Run(ctx context.Context) error {
 		for _, moduleName := range moduleSet {
 			cmd := c.NodeInterface.Command(pythonBinary, "-c", "import "+moduleName)
 			if err := cmd.Run(ctx); err != nil {
-				var ee *exec.ExitError
-				if errors.As(err, &ee) && ee.ExitCode() != 255 {
+				if ee, ok := errors.AsType[*exec.ExitError](err); ok && ee.ExitCode() != 255 {
 					continue
 				}
 				return fmt.Errorf("Unexpected error during python modules validation: %w", err)
@@ -88,15 +87,14 @@ func detectPythonBinary(ctx context.Context, nodeInterface libcon.Interface) (st
 		if err == nil {
 			return binary, nil
 		}
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && exitErr.ExitCode() != 255 {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() != 255 {
 			continue
 		}
 		return "", fmt.Errorf("Unexpected error during python binary lookup: %w", err)
 	}
 
 	return "", fmt.Errorf(
-		"Python was not found under any of expected names (%s), please install Python 2 or 3 on the node",
+		"Python was not found under any of the expected names (%s), please install Python 2 or 3 on the node",
 		strings.Join(possibleBinaries, ", "),
 	)
 }

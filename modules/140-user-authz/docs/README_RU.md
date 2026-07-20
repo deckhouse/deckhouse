@@ -24,12 +24,29 @@ description: "Авторизация и управление доступом п
   Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в `ClusterRoleBinding` роль `d8:manage:networking:manager`.
 - Управлять доступом к *пользовательским* ресурсам модулей в рамках пространства имён.
 
-  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](../log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](../log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
+  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
 
 Роли, создаваемые модулем, делятся на два класса:
 
 - [Use-роли](#use-роли) — для назначения прав пользователям (например, разработчикам приложений) **в конкретном пространстве имён**.
 - [Manage-роли](#manage-роли) — для назначения прав администраторам.
+
+{: #rolebinding-car .anchored}
+
+{% alert level="info" %}
+Особенности комбинированного доступа: совместное использование RoleBinding или ClusterRoleBinding с ClusterAuthorizationRule (CAR) и AuthorizationRule (AR) для одного и того же пользователя.
+
+Если в кластере включён режим мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), итоговые права пользователя — это **объединение** всех действующих для него источников прав:
+
+- уровень доступа из CAR — только внутри неймспейсов, разрешённых его параметрами `limitNamespaces` или `namespaceSelector`;
+- уровень доступа из AuthorizationRule — внутри неймспейса, в котором создан AuthorizationRule;
+- права из обычных RoleBinding — внутри их неймспейсов;
+- права из обычных ClusterRoleBinding (не созданных модулем `user-authz`) — во всём кластере.
+
+Ограничения по неймспейсам в CAR ограничивают только права, выданные этим CAR. Они не отменяют права, выданные через RoleBinding, ClusterRoleBinding или AuthorizationRule в других неймспейсах; при этом уровень доступа CAR на эти неймспейсы не распространяется. Например, если у пользователя есть CAR с `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, и RoleBinding с ролью `view` в неймспейсе `ns-b`, пользователь получит права Editor в `ns-a` и права только на чтение в `ns-b`: RoleBinding не блокируется ограничениями CAR, а уровень Editor из CAR не «протекает» в `ns-b`.
+
+В более старых версиях DKP вебхук модуля `user-authz` отклонял все запросы в неймспейсы, не указанные в CAR пользователя, даже при наличии RoleBinding на эти неймспейсы. Это ограничение снято: RoleBinding и CAR можно использовать для одного пользователя совместно.
+{% endalert %}
 
 ### Use-роли
 
@@ -90,11 +107,51 @@ Manage-роль определяет права на доступ:
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-Подсистема роли ограничивает её действие всеми системными (начинающимися с `d8-` или `kube-`) пространствами имён кластера (подсистема `all`) или теми пространствами имён, в которых работают модули подсистемы (см. таблицу состава подсистем).
+Область действия роли зависит от того, к какой подсистеме она принадлежит:
+
+- Область действия ролей из подсистемы `all` — все системные (начинающиеся с `d8-` или `kube-`) неймспейсы кластера.
+- Область действия ролей из других подсистем — неймспейсы, в которых работают модули подсистемы (подробнее — в таблице состава подсистем), а также все cluster-wide объекты модулей подсистемы.
 
 Таблица состава подсистем ролевой модели.
 
 {% include rbac/rbac-subsystems-list.liquid %}
+
+### Миграция на новые имена ролей в DKP 1.78
+
+{% alert level="warning" %}
+До DKP 1.78 роли продолжают работать под существующими именами.
+{% endalert %}
+
+В DKP 1.78 роли экспериментальной модели будут переименованы, а текущие имена (`d8:manage:<подсистема>:<уровень>`, `d8:manage:all:<уровень>` и `d8:use:role:<уровень>`) станут устаревшими. Для обратной совместимости они будут сохранены как роли-псевдонимы ровно на один релиз: существующие привязки продолжат работать и давать те же права, что и новые роли, после чего псевдонимы будут удалены.
+
+Соответствие имён:
+
+| Текущее имя (станет устаревшим) | Новое имя |
+|----------------|-----------|
+| `d8:manage:all:<уровень>` | `d8:system:<уровень>` |
+| `d8:manage:<подсистема>:<уровень>` | `d8:subsystem:<подсистема>:<уровень>` |
+| `d8:use:role:<уровень>` | `d8:namespace:<уровень>` |
+
+В новой модели также появится уровень доступа `superadmin` (например, `d8:namespace:superadmin`, `d8:system:superadmin`) — для управления системными ресурсами.
+
+{% alert level="info" %}
+Роль `d8:use:role:admin` будет соответствовать роли `d8:namespace:admin` и, как следствие, перестанет давать права на выпуск токенов для сервисных аккаунтов и выполнение impersonation — для этого понадобится уровень `superadmin`.
+{% endalert %}
+
+Capabilities (роли-кирпичики `d8:manage:permission:*` и `d8:use:capability:*`) будут переименованы **без** псевдонимов совместимости, поскольку они предназначены для агрегации в роли, а не для прямой привязки. Если у вас есть объекты RoleBinding или ClusterRoleBinding на такую capability, после обновления они перестанут давать права. Пересоздайте привязку на подходящую роль (или на собственную роль, агрегирующую новую capability).
+
+Как подготовиться к миграции:
+
+1. Найдите привязки, использующие текущие имена ролей:
+
+   ```shell
+   d8 k get clusterrolebindings,rolebindings -A -o json \
+     | jq -r '.items[] | select(.roleRef.name | test("^d8:(manage|use):")) | "\(.kind) \(.metadata.namespace // "-") \(.metadata.name) -> \(.roleRef.name)"'
+   ```
+
+1. После обновления на DKP 1.78 переведите эти объекты RoleBinding и ClusterRoleBinding на новые имена ролей в течение одного релизного цикла. Поскольку поле `roleRef` неизменяемо, привязку нужно удалить и создать заново с новым именем роли.
+
+Порядок миграции кастомных ролей описан [в разделе «FAQ»](faq.html#как-перевести-кастомные-роли-на-новую-схему-в-dkp-178).
 
 <div style="height: 0;" id="устаревшая-ролевая-модель"></div>
 
@@ -151,6 +208,7 @@ Manage-роль определяет права на доступ:
 
 ```text
 read:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -164,7 +222,6 @@ read:
     - batch/jobs
     - cert-manager.io/certificaterequests
     - cert-manager.io/certificates
-    - cert-manager.io/challenges
     - cert-manager.io/clusterissuers
     - cert-manager.io/issuers
     - cilium.io/ciliumclusterwidenetworkpolicies
@@ -178,15 +235,7 @@ read:
     - deckhouse.io/applications
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
-    - deckhouse.io/clusterdaemonsetmetrics
-    - deckhouse.io/clusterdeploymentmetrics
-    - deckhouse.io/clusteringressmetrics
-    - deckhouse.io/clusterpodmetrics
-    - deckhouse.io/clusterservicemetrics
-    - deckhouse.io/clusterstatefulsetmetrics
-    - deckhouse.io/daemonsetmetrics
     - deckhouse.io/deckhousereleases
-    - deckhouse.io/deploymentmetrics
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -195,7 +244,6 @@ read:
     - deckhouse.io/gcpinstanceclasses
     - deckhouse.io/huaweicloudinstanceclasses
     - deckhouse.io/hubblemonitoringconfigs
-    - deckhouse.io/ingressmetrics
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/localpathprovisioners
@@ -205,19 +253,15 @@ read:
     - deckhouse.io/modules
     - deckhouse.io/modulesources
     - deckhouse.io/moduleupdatepolicies
-    - deckhouse.io/namespacemetrics
     - deckhouse.io/nodegroups
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/podmetrics
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
     - deckhouse.io/securitypolicyexceptions
-    - deckhouse.io/servicemetrics
-    - deckhouse.io/statefulsetmetrics
     - deckhouse.io/vcdaffinityrules
     - deckhouse.io/vcdinstanceclasses
     - deckhouse.io/vsphereinstanceclasses
@@ -264,6 +308,7 @@ read:
     - limitranges
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
+    - multitenancy.deckhouse.io/availableclusterresources
     - mutations.gatekeeper.sh/assign
     - mutations.gatekeeper.sh/assignimage
     - mutations.gatekeeper.sh/assignmetadata
@@ -271,7 +316,10 @@ read:
     - namespaces
     - network.deckhouse.io/egressgatewaypolicies
     - network.deckhouse.io/egressgateways
+    - network.deckhouse.io/metalloadbalancerbgppeers
     - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/metalloadbalancerconfigurations
+    - network.deckhouse.io/metalloadbalancerpools
     - network.deckhouse.io/servicewithhealthchecks
     - networking.istio.io/destinationrules
     - networking.istio.io/gateways
@@ -327,14 +375,6 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
-read:
-    - deckhouse.io/clusterlogdestinations
-    - deckhouse.io/clusterloggingconfigs
-    - deckhouse.io/customprometheusrules
-    - deckhouse.io/grafanaadditionaldatasources
-    - deckhouse.io/grafanadashboarddefinitions
-read-write:
-    - deckhouse.io/podloggingconfigs
 write:
     - apps/deployments
     - apps/statefulsets
@@ -345,15 +385,8 @@ write:
     - cert-manager.io/certificates
     - cert-manager.io/issuers
     - configmaps
-    - deckhouse.io/daemonsetmetrics
-    - deckhouse.io/deploymentmetrics
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
-    - deckhouse.io/ingressmetrics
-    - deckhouse.io/namespacemetrics
-    - deckhouse.io/podmetrics
-    - deckhouse.io/servicemetrics
-    - deckhouse.io/statefulsetmetrics
     - discovery.k8s.io/endpointslices
     - endpoints
     - extensions/deployments
@@ -393,10 +426,10 @@ write:
 create,patch,update:
     - pods
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apps/replicasets
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
     - extensions/replicasets
 read:
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -428,18 +461,20 @@ write:
 
 ```text
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
 patch,update:
     - nodes
 read:
+    - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/ingressistiocontrollers
-    - deckhouse.io/ingressnginxcontrollers/status
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
     - install.istio.io/istiooperators
+    - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
+    - multitenancy.deckhouse.io/grantableclusterresourcereferences
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - sailoperator.io/istiocnis
@@ -448,12 +483,9 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
-    - apps.kruise.io/daemonsets
-    - deckhouse.io/downtimes
-    - deckhouse.io/ingressnginxcontrollers
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
-    - deckhouse.io/upmeterremotewrites
+    - multitenancy.deckhouse.io/clusterresourcegrantpolicies
 write:
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -462,18 +494,7 @@ write:
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
-    - deckhouse.io/clusterdaemonsetmetrics
-    - deckhouse.io/clusterdeploymentmetrics
-    - deckhouse.io/clusteringressmetrics
-    - deckhouse.io/clusterlogdestinations
-    - deckhouse.io/clusterloggingconfigs
-    - deckhouse.io/clusterpodmetrics
-    - deckhouse.io/clusterservicemetrics
-    - deckhouse.io/clusterstatefulsetmetrics
-    - deckhouse.io/customprometheusrules
     - deckhouse.io/deckhousereleases
-    - deckhouse.io/grafanaadditionaldatasources
-    - deckhouse.io/grafanadashboarddefinitions
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
@@ -555,6 +576,7 @@ read-write:
     - cluster.x-k8s.io/machines
     - cluster.x-k8s.io/machinesets
     - deckhouse.io/clusterauthorizationrules
+    - deckhouse.io/dexproviderchecks
     - deckhouse.io/dexproviders
     - deckhouse.io/groups
     - deckhouse.io/nodeusers
@@ -578,6 +600,7 @@ write:
     - constraints.gatekeeper.sh/*
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
+    - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/deschedulers
     - deckhouse.io/dvpinstanceclasses
     - deckhouse.io/dynamixinstanceclasses
@@ -605,7 +628,10 @@ write:
     - mutations.gatekeeper.sh/assignmetadata
     - mutations.gatekeeper.sh/modifyset
     - namespaces
+    - network.deckhouse.io/metalloadbalancerbgppeers
     - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/metalloadbalancerconfigurations
+    - network.deckhouse.io/metalloadbalancerpools
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - resourcequotas

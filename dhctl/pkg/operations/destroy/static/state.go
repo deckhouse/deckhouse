@@ -27,7 +27,7 @@ const (
 	nodeUserExistsKey = "node-user-exists"
 )
 
-var errNotFoundCredentials = errors.New("Not found node user credentials")
+var errNotFoundCredentials = errors.New("node user credentials not found")
 
 type State struct {
 	cache state.Cache

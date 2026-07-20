@@ -51,7 +51,7 @@ istio:
 
 	Context("Unknown version of istio", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.12", "1.16"]`))
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", []byte(`["1.12", "1.16"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.25.4")
 
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -83,7 +83,7 @@ istio:
 
 	Context("istio version known, but incompatible with current k8s version", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.16","1.21"]`))
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", []byte(`["1.16","1.21"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.28.4")
 
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -115,7 +115,7 @@ istio:
 
 	Context(" the istio version is known, and it is compatible with the current version of k8s", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.16","1.21"]`))
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", []byte(`["1.16","1.21"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.25.4")
 
 			f.RunHook()
@@ -136,7 +136,7 @@ istio:
 
 	Context(" the istio version is 1.21, and it is compatible with the current version of k8s 1.30", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.21"]`))
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", []byte(`["1.21"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.30.1")
 
 			f.RunHook()
@@ -151,6 +151,33 @@ istio:
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  monitoringMetricsGroup,
 				Action: operation.ActionExpireMetrics,
+			}))
+		})
+	})
+
+	Context("operator-free istio version is incompatible with current k8s version", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", []byte(`["1.27"]`))
+			f.ValuesSetFromYaml("istio.internal.istioToK8sCompatibilityMap", []byte(`{"1.27": ["1.32", "1.33", "1.34"]}`))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.31.0")
+
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully and generate metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_telemetry_istio_version_incompatible_with_k8s_version",
+				Group:  monitoringMetricsGroup,
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{
+					"istio_version": "1.27",
+					"k8s_version":   "1.31.0",
+				},
 			}))
 		})
 	})

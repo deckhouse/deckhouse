@@ -16,7 +16,6 @@ package release
 
 import (
 	"context"
-	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,6 +35,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,9 +57,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -84,7 +84,7 @@ func RegisterController(
 	mm moduleManager,
 	installer Installer,
 	dc dependency.Container,
-	exts *extenders.ExtendersStack,
+	exts extenders.IExtendersStack,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
 	ms metricsstorage.Storage,
 	logger *log.Logger,
@@ -95,8 +95,8 @@ func RegisterController(
 		log:                  logger,
 		moduleManager:        mm,
 		metricStorage:        ms,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		downloadedModulesDir: app.DownloadedModulesDir(),
+		symlinksDir:          filepath.Join(app.DownloadedModulesDir(), "modules"),
 		embeddedPolicy:       embeddedPolicy,
 		installer:            installer,
 		restartCheckTicker:   time.NewTicker(restartCheckDuration),
@@ -143,6 +143,8 @@ type MetricsUpdater interface {
 
 type Installer interface {
 	Install(ctx context.Context, moduleName string, moduleVersion, modulePath string) error
+	Stage(ctx context.Context, moduleName string, moduleVersion, modulePath string) error
+	IsEmbeddedPresent(moduleName string) bool
 	Uninstall(ctx context.Context, moduleName string) error
 	Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName string, moduleVersion string) (string, error)
 }
@@ -152,7 +154,7 @@ type reconciler struct {
 	client              client.Client
 	log                 *log.Logger
 	dependencyContainer dependency.Container
-	exts                *extenders.ExtendersStack
+	exts                extenders.IExtendersStack
 
 	installer Installer
 
@@ -622,15 +624,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, nil
 	}
 
-	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/<module>)
-	modulePath := fmt.Sprintf("/modules/%s", release.GetModuleName())
-	moduleVersion := "v" + release.GetVersion().String()
-
-	moduleChecksum := release.Labels[v1alpha1.ModuleReleaseLabelReleaseChecksum]
-	if moduleChecksum == "" {
-		moduleChecksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
-	}
-
 	ownerRef := metav1.OwnerReference{
 		APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
 		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
@@ -639,11 +632,21 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		Controller: ptr.To(true),
 	}
 
-	// mpo not found - update the docs from the module release version
-	if err = utils.EnsureModuleDocumentation(ctx, r.client, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef); err != nil {
-		r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
+	// do not (re)create documentation for a module disabled by config
+	module := new(v1alpha1.Module)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
+		r.log.Error("failed to get module", slog.String("module", release.GetModuleName()), log.Err(err))
 
-		return res, fmt.Errorf("ensure module documentation: %w", err)
+		return res, fmt.Errorf("get module: %w", err)
+	}
+
+	// ensure documentation only for a module enabled by config
+	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+		if err = utils.EnsureModuleDocumentationForRelease(ctx, r.client, release); err != nil {
+			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
+
+			return res, fmt.Errorf("ensure module documentation: %w", err)
+		}
 	}
 
 	r.log.Debug("delete outdated releases for module", slog.String("module", release.GetModuleName()))
@@ -1417,10 +1420,45 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		return fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
 
+	// While an embedded copy of the module is still shipped on the filesystem it
+	// wins the module search path, so the downloaded module must only be staged
+	// (no symlink/mount), not activated. Pre-staging guarantees the module is
+	// already on disk when the embedded copy is dropped on Deckhouse upgrade,
+	// avoiding a download race that could leave the module temporarily unavailable.
+	// The module is activated later by the moduleloader restore once the embedded
+	// copy is gone.
+	if r.installer.IsEmbeddedPresent(moduleName) {
+		logger.Info("module is still embedded, stage the release without activating it")
+
+		if err = r.installer.Stage(ctx, moduleName, moduleVersion, modulePath); err != nil {
+			r.log.Error("failed to stage module", slog.String("module", modulePath), log.Err(err))
+
+			return fmt.Errorf("stage the module '%s': %w", moduleName, err)
+		}
+
+		// the embedded copy keeps running, so its hooks must not be disabled
+		return nil
+	}
+
 	if err = r.installer.Install(ctx, moduleName, moduleVersion, modulePath); err != nil {
 		r.log.Error("failed to install module", slog.String("module", modulePath), log.Err(err))
 
 		return fmt.Errorf("install the module '%s': %w", moduleName, err)
+	}
+
+	// The module was activated (Install, not Stage), so its embedded copy is no
+	// longer shipped. Flip the active source off the "Embedded" sentinel so the
+	// controller-side view (module.IsEmbedded()) stays consistent with the on-disk
+	// reality and the module is handed over to the regular source-owned flow. This
+	// mirrors the transition done by the moduleloader restore.
+	module := &v1alpha1.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
+	if err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+		if module.Properties.Source == v1alpha1.ModuleSourceEmbedded {
+			module.Properties.Source = source.Name
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("switch the active source for the module '%s': %w", moduleName, err)
 	}
 
 	// disable target module hooks so as not to invoke them before restart

@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -68,7 +67,6 @@ func TestGetCloudApiURLFromMetaConfig(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			s := require.New(t)
 			clusterConfigYAML := `
@@ -78,7 +76,7 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
 `
-			metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfigYAML, config.DummyPreparatorProvider(), &options.New().Global)
+			metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfigYAML, config.DummyPreparatorProvider(), &options.New().Global)
 			s.NoError(err)
 			metaConfig.ProviderName = tt.providerName
 			metaConfig.ProviderClusterConfig = map[string]json.RawMessage{

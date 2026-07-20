@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Weekly build reproducibility check.
+# Build reproducibility check, runs 4 times a day.
 #
-# Trigger: schedule (Saturday 01:00 MSK = Friday 22:00 UTC) or workflow_dispatch.
+# Trigger: schedule (every 6 hours) or workflow_dispatch.
 # On schedule the latest 'main' commit is taken; on manual run the commit SHA
 # is provided as an input.
 #
@@ -29,14 +29,15 @@
 name: 'Build reproducibility check'
 
 on:
-  # Saturday 01:00 MSK (UTC+3, no DST) == Friday 22:00 UTC.
+  # 4 times a day, every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
+  # (03:00, 09:00, 15:00, 21:00 MSK, UTC+3, no DST).
   schedule:
-    - cron: '0 22 * * 5'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: 'Git commit SHA to verify reproducibility for'
-        required: true
+        description: 'PR commit SHA that already has a successful build-and-test_dev.yml run (empty = newest main commit with a successful build)'
+        required: false
         type: string
 
 env:
@@ -57,13 +58,14 @@ permissions:
 jobs:
   resolve_target:
     name: Resolve target commit and baseline
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
       baseline_run_id: ${{ steps.resolve.outputs.baseline_run_id }}
       baseline_run_url: ${{ steps.resolve.outputs.baseline_run_url }}
       baseline_workflow: ${{ steps.resolve.outputs.baseline_workflow }}
       pr_number: ${{ steps.resolve.outputs.pr_number }}
+      ci_commit_ref_name: ${{ steps.resolve.outputs.ci_commit_ref_name }}
     steps:
       - name: Resolve target SHA and locate baseline
         id: resolve
@@ -75,23 +77,56 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // Trigger fully determines which build workflow holds the baseline:
-            //   schedule          -> 'main' commit, baseline in build-and-test_main.yml
-            //   workflow_dispatch -> arbitrary commit (treated as dev/PR), baseline in build-and-test_dev.yml
+            if (eventName !== 'schedule' && eventName !== 'workflow_dispatch') {
+              return core.setFailed(`Unsupported event: ${eventName}`);
+            }
+
+            const inputSha = ((context.payload.inputs || {}).commit_sha || '').trim();
+
+            // Baseline selection:
+            //   schedule, or manual run WITHOUT a commit -> newest 'main' commit that
+            //     HAS a successful build (baseline in build-and-test_main.yml)
+            //   manual run WITH a commit                 -> that exact commit, treated
+            //     as a dev/PR build (baseline in build-and-test_dev.yml)
+            const useMainBaseline = (eventName === 'schedule') || !inputSha;
+
             let sha = '';
             let baselineKind = '';
             let baselineWorkflowId = '';
-            if (eventName === 'schedule') {
-              const r = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
-              sha = r.data.commit.sha;
+            let baseline = null;
+            if (useMainBaseline) {
               baselineKind = 'main';
               baselineWorkflowId = 'build-and-test_main.yml';
-              core.notice(`Schedule run: using latest 'main' commit ${sha}, baseline workflow=${baselineWorkflowId}`);
-            } else if (eventName === 'workflow_dispatch') {
-              sha = ((context.payload.inputs || {}).commit_sha || '').trim();
-              if (!sha) {
-                return core.setFailed(`'commit_sha' input is required for manual runs`);
+              if (eventName === 'workflow_dispatch') {
+                core.notice(`Manual run without commit_sha: falling back to newest successful 'main' build.`);
               }
+              // Do NOT pin to HEAD of 'main': the latest commit's build may still
+              // be running, may have failed, or may not be queued yet. Instead pick
+              // the most recent SUCCESSFUL build-and-test_main.yml run on 'main' and
+              // use its head commit. listWorkflowRuns returns runs newest-first, so
+              // the first success is the freshest 'main' commit with a usable
+              // build_report_FE artifact.
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo,
+                workflow_id: baselineWorkflowId,
+                branch: 'main',
+                status: 'success',
+                per_page: 30,
+              });
+              baseline = (runs.data.workflow_runs || [])[0];
+              if (!baseline) {
+                return core.setFailed(
+                  `No successful '${baselineWorkflowId}' run found on 'main'. ` +
+                  `Reproducibility check requires an existing baseline build_report_FE artifact.`
+                );
+              }
+              sha = baseline.head_sha;
+              core.notice(
+                `Using newest successful 'main' build for commit ${sha} ` +
+                `(run ${baseline.id}, ${baseline.html_url})`
+              );
+            } else {
+              sha = inputSha;
               try {
                 const r = await github.rest.repos.getCommit({ owner, repo, ref: sha });
                 sha = r.data.sha;
@@ -101,34 +136,41 @@ jobs:
               baselineKind = 'dev';
               baselineWorkflowId = 'build-and-test_dev.yml';
               core.notice(`Manual run: using commit ${sha}, baseline workflow=${baselineWorkflowId}`);
-            } else {
-              return core.setFailed(`Unsupported event: ${eventName}`);
+
+              // Locate the latest successful baseline run for this exact SHA.
+              // API supports a server-side head_sha filter, so we only fetch matching runs.
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo,
+                workflow_id: baselineWorkflowId,
+                head_sha: sha,
+                status: 'success',
+                per_page: 10,
+              });
+              // Runs are returned newest-first; pick the most recent success.
+              baseline = (runs.data.workflow_runs || [])[0];
+              if (!baseline) {
+                return core.setFailed(
+                  `No successful '${baselineWorkflowId}' run found for SHA ${sha}. ` +
+                  `Reproducibility check requires an existing baseline build_report_FE artifact. ` +
+                  `Ensure the regular build pipeline has completed for this commit first.`
+                );
+              }
             }
 
-            // Locate the latest successful baseline run for this SHA in the chosen workflow.
-            // API supports a server-side head_sha filter, so we only fetch matching runs.
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner, repo,
-              workflow_id: baselineWorkflowId,
-              head_sha: sha,
-              status: 'success',
-              per_page: 10,
-            });
-            // Runs are returned newest-first; pick the most recent success.
-            const baseline = (runs.data.workflow_runs || [])[0];
-            if (!baseline) {
-              return core.setFailed(
-                `No successful '${baselineWorkflowId}' run found for SHA ${sha}. ` +
-                `Reproducibility check requires an existing baseline build_report_FE artifact. ` +
-                `Ensure the regular build pipeline has completed for this commit first.`
-              );
-            }
-
-            // For dev mode we need the PR number to reconstruct CI_COMMIT_REF_SLUG = prN.
-            // Prefer the PR attached to the baseline run itself: it is always the exact PR
-            // on which this SHA was built. Fall back to commit-associated PRs only if the
-            // run object has no pull_requests payload (e.g. older runs, edge cases).
+            // For dev mode we reconstruct the exact CI_COMMIT_* context the baseline
+            // build-and-test_dev.yml run used, so the rerun produces identical digests:
+            //   CI_COMMIT_REF_SLUG = prN  (always)
+            //   CI_COMMIT_REF_NAME = PR head branch name for internal PRs, prN for forks
+            // (this mirrors git_info_job in ci_templates/helper_jobs.yml).
+            // CI_COMMIT_REF_NAME is baked into release-channel-version(-prebuild) via
+            // .werf/werf-release-channel.yaml, so an incorrect value makes those images
+            // look non-reproducible even on the same commit.
+            //
+            // We need the PR number first. Prefer the PR attached to the baseline run
+            // itself: it is always the exact PR this SHA was built on. Fall back to
+            // commit-associated PRs only if the run object has no pull_requests payload.
             let prNumber = '';
+            let ciCommitRefName = '';
             if (baselineKind === 'dev') {
               const runPr = (baseline.pull_requests || [])[0];
               if (runPr && runPr.number) {
@@ -148,6 +190,26 @@ jobs:
                   );
                 }
               }
+
+              // Reconstruct CI_COMMIT_REF_NAME exactly like git_info_job:
+              //   refName = (prRepo === targetRepo) ? pr.head.ref : `pr${number}`
+              const targetRepo = `${owner}/${repo}`;
+              try {
+                const pr = (await github.rest.pulls.get({
+                  owner, repo, pull_number: Number(prNumber),
+                })).data;
+                const prRepo = (pr.head && pr.head.repo) ? pr.head.repo.full_name : '';
+                const prRef  = (pr.head && pr.head.ref)  ? pr.head.ref            : '';
+                ciCommitRefName = (prRepo === targetRepo && prRef) ? prRef : `pr${prNumber}`;
+                core.notice(
+                  `dev baseline: CI_COMMIT_REF_NAME='${ciCommitRefName}' ` +
+                  `(PR head '${prRepo}:${prRef}', target '${targetRepo}')`
+                );
+              } catch (e) {
+                return core.setFailed(
+                  `Failed to fetch PR #${prNumber} to reconstruct CI_COMMIT_REF_NAME: ${e.message}`
+                );
+              }
             }
 
             core.notice(`Baseline run: ${baseline.html_url} (workflow=${baselineKind}, id=${baseline.id})`);
@@ -156,6 +218,7 @@ jobs:
             core.setOutput('baseline_run_url', baseline.html_url);
             core.setOutput('baseline_workflow', baselineKind);
             core.setOutput('pr_number', prNumber);
+            core.setOutput('ci_commit_ref_name', ciCommitRefName);
 
   # Synthetic git_info: build_template reads needs.git_info.outputs.*. We
   # construct the values from the resolved target SHA and baseline workflow kind
@@ -164,7 +227,7 @@ jobs:
     name: Get git info (synthetic)
     needs:
       - resolve_target
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       ci_commit_tag: ${{ steps.set.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.set.outputs.ci_commit_branch }}
@@ -177,20 +240,31 @@ jobs:
           SHA: ${{ needs.resolve_target.outputs.sha }}
           WF: ${{ needs.resolve_target.outputs.baseline_workflow }}
           PR_NUMBER: ${{ needs.resolve_target.outputs.pr_number }}
+          REF_NAME: ${{ needs.resolve_target.outputs.ci_commit_ref_name }}
         run: |
+          # Reproduce the baseline build's CI_COMMIT_* context. In the real builds
+          # (git_info_job, ci_templates/helper_jobs.yml):
+          #   main: ref_slug = ref_name = branch = "main"
+          #   dev:  ref_slug = "prN"; ref_name = branch = PR head branch (internal)
+          #         or "prN" (fork). ref_name is resolved upstream in resolve_target.
           if [[ "$WF" == "main" ]]; then
-            REF="main"
+            REF_SLUG="main"
+            REF_NAME="main"
           elif [[ "$WF" == "dev" ]]; then
-            REF="pr${PR_NUMBER}"
+            REF_SLUG="pr${PR_NUMBER}"
+            if [[ -z "$REF_NAME" ]]; then
+              echo "::error::ci_commit_ref_name is empty in dev mode"
+              exit 1
+            fi
           else
             echo "::error::Unknown baseline_workflow: '$WF'"
             exit 1
           fi
           {
             echo "ci_commit_tag="
-            echo "ci_commit_branch=${REF}"
-            echo "ci_commit_ref_name=${REF}"
-            echo "ci_commit_ref_slug=${REF}"
+            echo "ci_commit_branch=${REF_NAME}"
+            echo "ci_commit_ref_name=${REF_NAME}"
+            echo "ci_commit_ref_slug=${REF_SLUG}"
             echo "github_sha=${SHA}"
           } >> $GITHUB_OUTPUT
 
@@ -201,7 +275,7 @@ jobs:
     needs:
       - resolve_target
     if: needs.resolve_target.outputs.baseline_workflow == 'dev'
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       ref_slug: ${{ steps.set.outputs.ref_slug }}
     steps:
@@ -238,7 +312,7 @@ jobs:
 
   compare_reports:
     name: Compare build reports
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     needs:
       - resolve_target
       - build_fe_main
@@ -287,3 +361,110 @@ jobs:
           python3 .github/scripts/python/reproducibility_check.py \
             baseline/build_report_FE/images_tags_werf.json \
             rerun/build_report_FE/images_tags_werf.json
+
+  # Single Loop alert for the build reproducibility check. Runs on any trigger
+  # (run_attempt == 1, deckhouse/deckhouse only) and picks ONE reason to report,
+  # evaluated in priority order: a slow rebuild first (so it does not clash with
+  # the failure conditions), then a digest mismatch, then a failed FE rebuild,
+  # then a baseline-resolution error. If nothing is wrong, nothing is sent.
+  send_alert_about_workflow_problem:
+    name: Send alert about workflow problem
+    runs-on: "regular"
+    needs:
+      - resolve_target
+      - build_fe_main
+      - build_fe_dev
+      - compare_reports
+    if: ${{ always() && github.repository == 'deckhouse/deckhouse' && github.run_attempt == 1 }}
+    steps:
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "token" "LOOP_CVE_REPORTS_SEND_TOKEN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "channel_id" "LOOP_E2E_REPORT_CHANNEL_ID" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
+    - name: Measure rebuild job duration
+      id: duration
+      if: always()
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+        script: |
+          const THRESHOLD_SECONDS = 300; // 5 minutes
+
+          const jobs = await github.paginate(
+            github.rest.actions.listJobsForWorkflowRun,
+            { owner: context.repo.owner, repo: context.repo.repo, run_id: context.runId, per_page: 100 },
+          );
+          const buildJob = jobs.find(j => j.name && j.name.startsWith('Build FE'));
+          if (!buildJob || buildJob.conclusion !== 'success' || !buildJob.started_at || !buildJob.completed_at) {
+            core.info(`No completed-successful Build FE job (conclusion=${buildJob ? buildJob.conclusion : 'absent'}); slow check skipped.`);
+            core.setOutput('slow', 'false');
+            return;
+          }
+
+          const durSec = Math.round((new Date(buildJob.completed_at) - new Date(buildJob.started_at)) / 1000);
+          const durHuman = `${Math.floor(durSec / 60)}m ${durSec % 60}s`;
+          core.info(`Build FE job '${buildJob.name}' duration: ${durHuman} (${durSec}s); threshold ${THRESHOLD_SECONDS}s`);
+          if (durSec > THRESHOLD_SECONDS) {
+            core.setOutput('slow', 'true');
+            core.setOutput('duration_human', durHuman);
+            core.setOutput('job_url', buildJob.html_url);
+          } else {
+            core.setOutput('slow', 'false');
+          }
+    - name: Check loop alerting credentials
+      id: check_loop_alerting
+      if: always()
+      env:
+        LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
+      run: |
+        if [[ -n $LOOP_TOKEN ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
+    - name: Send loop alert
+      if: ${{ always() && steps.check_loop_alerting.outputs.has_credentials == 'true' }}
+      env:
+        LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
+        LOOP_CHANNEL_ID: ${{ steps.secrets.outputs.LOOP_E2E_REPORT_CHANNEL_ID }}
+        SLOW: ${{ steps.duration.outputs.slow }}
+        DURATION_HUMAN: ${{ steps.duration.outputs.duration_human }}
+        JOB_URL: ${{ steps.duration.outputs.job_url }}
+        COMPARE_RESULT: ${{ needs.compare_reports.result }}
+        BUILD_MAIN_RESULT: ${{ needs.build_fe_main.result }}
+        BUILD_DEV_RESULT: ${{ needs.build_fe_dev.result }}
+        RESOLVE_RESULT: ${{ needs.resolve_target.result }}
+        TARGET_SHA: ${{ needs.resolve_target.outputs.sha }}
+      run: |
+        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+
+        # Priority order: a slow (but successful) rebuild is checked first so it
+        # does not clash with the failure/mismatch conditions below.
+        if [[ "$SLOW" == "true" ]]; then
+          MESSAGE="🐢Build reproducibility rebuild is slow🐢\nBuild FE job took ${DURATION_HUMAN} (threshold 5m)\nSHA: ${TARGET_SHA}\n[URL](${JOB_URL})"
+        elif [[ "$COMPARE_RESULT" == "failure" ]]; then
+          MESSAGE="🛑Build reproducibility check failed🛑\nReason: digest mismatch on rebuild (build is not reproducible)\nSHA: ${TARGET_SHA}\n[URL](${WORKFLOW_URL})"
+        elif [[ "$BUILD_MAIN_RESULT" == "failure" || "$BUILD_DEV_RESULT" == "failure" ]]; then
+          MESSAGE="🛑Build reproducibility check failed🛑\nReason: FE rebuild failed\nSHA: ${TARGET_SHA}\n[URL](${WORKFLOW_URL})"
+        elif [[ "$RESOLVE_RESULT" == "failure" ]]; then
+          MESSAGE="🛑Build reproducibility check failed🛑\nReason: failed to resolve baseline / workflow error\nSHA: ${TARGET_SHA}\n[URL](${WORKFLOW_URL})"
+        else
+          echo "Nothing to alert about (build succeeded within the time budget)."
+          exit 0
+        fi
+
+        alertData=$(cat <<EOF
+        {
+        "channel_id": "${LOOP_CHANNEL_ID}",
+        "message": "${MESSAGE}"
+        }
+        EOF
+        )
+
+        for (( iter = 1; iter < 60; iter++ )); do
+          if curl -f -L -X POST "https://loop.flant.ru/api/v4/posts" -H "Content-Type: application/json" -H "Authorization: Bearer ${LOOP_TOKEN}" --data "${alertData}"; then
+            exit 0
+          fi
+
+          echo "Alert was not sent. Wait 5 seconds before next attempt"
+          sleep 5
+        done
+
+        echo "Alert was not sent. Timeout"
+        exit 1

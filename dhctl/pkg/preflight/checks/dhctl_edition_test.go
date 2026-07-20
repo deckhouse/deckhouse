@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -44,7 +43,8 @@ func TestEditionBad(t *testing.T) {
 		Registry: registryCfg,
 	}
 
-	image := installer.GetRemoteImage(true)
+	image, err := installer.GetRemoteImage(t.Context(), true)
+	require.NoError(t, err)
 	ref, err := name.ParseReference(image)
 	require.NoError(t, err)
 
@@ -63,7 +63,7 @@ func TestEditionBad(t *testing.T) {
 		descriptor: provider,
 	}
 
-	err = check.Run(context.Background())
+	err = check.Run(t.Context())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not match")
 }
@@ -84,7 +84,8 @@ func TestOk(t *testing.T) {
 		Registry: registryCfg,
 	}
 
-	image := installer.GetRemoteImage(true)
+	image, err := installer.GetRemoteImage(t.Context(), true)
+	require.NoError(t, err)
 	ref, err := name.ParseReference(image)
 	require.NoError(t, err)
 
@@ -103,7 +104,7 @@ func TestOk(t *testing.T) {
 		descriptor: provider,
 	}
 
-	err = check.Run(context.Background())
+	err = check.Run(t.Context())
 	assert.NoError(t, err)
 }
 

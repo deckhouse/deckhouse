@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"sync/atomic"
 
@@ -41,9 +42,12 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -64,13 +68,18 @@ type Module struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
-	definition Definition        // Module definition
-	digests    map[string]string // Package digests
-	repository registry.Remote   // Module repository
+	definition Definition            // Module definition
+	digests    map[string]string     // Package digests
+	repository registry.Remote       // Module repository
+	converter  *conversion.Converter // Schema version converter for settings
 
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
+
+	// maintenance is the package maintenance mode, set by the Configure task and
+	// read by the Run/nelm layer. Empty (Managed) means reconcile normally.
+	maintenance nelm.MaintenanceState
 
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -97,6 +106,7 @@ type Config struct {
 	Hooks []hooks.Hook // Discovered hooks
 
 	SettingsCheck *kind.SettingsCheck
+	Conversions   *conversion.Converter // Schema version converter
 
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
@@ -105,7 +115,7 @@ type Config struct {
 	GlobalValuesGetter GlobalValuesGetter
 }
 
-type GlobalValuesGetter func(prefix bool) addonutils.Values
+type GlobalValuesGetter func() addonutils.Values
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -122,6 +132,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.digests = cfg.Digests
 	m.repository = cfg.Repository
 	m.settingsCheck = cfg.SettingsCheck
+	m.converter = cfg.Conversions
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
@@ -143,6 +154,11 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.values, err = values.NewStorage(m.name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("build values storage: %v", err)
+	}
+
+	if cfg.Repository.Repository != "" {
+		// TODO(ipaqsa): get rid of it after migration to module v2
+		m.values.InjectRegistryValue(cfg.Repository)
 	}
 
 	return m, nil
@@ -200,9 +216,9 @@ func (m *Module) GetRuntimeValues() string {
 	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	marshalledGlobal := m.globalValuesGetter(false)
+	marshalledGlobal, _ := json.Marshal(m.globalValuesGetter())
 
-	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
+	return fmt.Sprintf("Module=%s,Platform=%s", marshalled, marshalledGlobal)
 }
 
 // GetName returns the full module identifier.
@@ -218,6 +234,23 @@ func (m *Module) GetVersion() *semver.Version {
 // GetPath returns path to the package dir
 func (m *Module) GetPath() string {
 	return m.path
+}
+
+// GetEnabledScriptDescriptor returns the enabled script descriptor for the package
+func (m *Module) GetEnabledScriptDescriptor() *script.Descriptor {
+	path := filepath.Join(m.path, "enabled")
+	if _, err := os.Stat(path); err != nil {
+		return nil
+	}
+
+	return &script.Descriptor{
+		Path:     path,
+		Settings: m.GetSettings(),
+		Values: addonutils.MergeValues(
+			addonutils.Values{"global": m.globalValuesGetter()},
+			addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): m.values.GetValues()},
+		),
+	}
 }
 
 // GetHooksQueues returns package queues from all hooks
@@ -244,7 +277,7 @@ func (m *Module) GetHooksQueues() []string {
 // GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
 // If include is provided, only hooks matching those names are included.
 func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]interface{})
+	d := make(map[string]any)
 	for _, h := range m.hooks.GetHooks() {
 		if len(include) == 0 || slices.Contains(include, h.GetName()) {
 			d[h.GetName()] = h.GetHookController().SnapshotsDump()
@@ -267,8 +300,18 @@ func (m *Module) GetSettingsChecksum() string {
 	return m.values.GetSettingsChecksum()
 }
 
-// ValidateSettings validates settings against openAPI and call setting check if exists
-func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+// ValidateSettings converts settings to the latest schema version (if a converter
+// is available and settingsVersion > 0), then validates against OpenAPI schema
+// and calls the settings check hook if defined.
+func (m *Module) ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
+	// Convert to latest schema version before validation
+	if m.converter != nil && settingsVersion > 0 {
+		var err error
+		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		if err != nil {
+			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
+		}
+	}
 	if err := m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
@@ -290,16 +333,32 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetValues returns values with hooks patches
+// GetValues returns values with hooks patches.
+//
+// Module values are exposed both flat (.Values.replicas) and under the module's
+// camelCase key (.Values.<moduleName>.replicas) so templates written for the old
+// addon-operator layout keep working.
 func (m *Module) GetValues() addonutils.Values {
+	moduleValues := m.values.GetValues()
 	return addonutils.MergeValues(
-		addonutils.Values{"global": m.globalValuesGetter(false)},
-		m.values.GetValues(),
+		addonutils.Values{"global": m.globalValuesGetter()},
+		moduleValues,
+		addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): moduleValues},
 	)
 }
 
 // ApplySettings applies settings values
-func (m *Module) ApplySettings(settings addonutils.Values) error {
+// ApplySettings converts settings to the latest schema version (if a converter
+// is available), then applies them to the values storage.
+func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) error {
+	// Convert to latest schema version before applying
+	if m.converter != nil && settingsVersion > 0 {
+		var err error
+		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		if err != nil {
+			return fmt.Errorf("convert settings: %w", err)
+		}
+	}
 	return m.values.ApplySettings(settings)
 }
 
@@ -307,6 +366,18 @@ func (m *Module) ApplySettings(settings addonutils.Values) error {
 // config-schema defaults. Same payload exposed to templates as .Module.Settings.
 func (m *Module) GetSettings() addonutils.Values {
 	return m.values.GetSettings()
+}
+
+// SetMaintenance records the module maintenance mode. Modules do not expose the
+// mode through a CR, so it stays Managed in practice.
+func (m *Module) SetMaintenance(state nelm.MaintenanceState) {
+	m.maintenance = state
+}
+
+// GetMaintenance returns the module maintenance mode. Empty (Managed) means the
+// module reconciles normally.
+func (m *Module) GetMaintenance() nelm.MaintenanceState {
+	return m.maintenance
 }
 
 // GetConstraints returns scheduler checks, their determine if an module should be enabled/disabled
@@ -377,12 +448,12 @@ func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 }
 
 // GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook {
-	return m.hooks.GetHooksByBinding(binding)
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
+	return hooks.ToControllable(m.hooks.GetHooksByBinding(binding))
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.
-// It creates a binding context with snapshots for BeforeHelm/AfterHelm/AfterDeleteHelm hooks.
+// It creates a binding context with snapshots for BeforeHelm/AfterHelm/BeforeDeleteHelm/AfterDeleteHelm hooks.
 func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error {
 	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "RunHooksByBinding")
 	defer span.End()
@@ -398,7 +469,8 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute m hook
-		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm || binding == addontypes.AfterDeleteHelm {
+		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm ||
+			binding == addontypes.BeforeDeleteHelm || binding == addontypes.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}
@@ -454,7 +526,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
 	hookConfigValues := m.values.GetSettings()
-	hookValues := m.values.GetValues()
+	hookValues := m.GetValues()
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
@@ -477,7 +549,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = m.values.ApplyValuesPatch(*valuesPatch); err != nil {
+		if err = m.values.ApplyValuesPatchWithLegacyRoot(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}

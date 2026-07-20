@@ -1,6 +1,7 @@
 # WARNING!
-# Please evaluate to add changes to ee/cse/candi/openapi/cluster_configuration.yaml
-# After change this file!
+# if you change this file please evaluate to change files
+# /candi/openapi/cluster_configuration.yaml
+# /ee/cse/candi/openapi/cluster_configuration.yaml
 
 kind: ClusterConfiguration
 apiVersions:
@@ -25,7 +26,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.31"
+      kubernetesVersion: "1.32"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -149,15 +150,20 @@ apiVersions:
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.31"
         - "1.32"
         - "1.33"
         - "1.34"
         - "1.35"
+        - "1.36"
         - "Automatic"
       encryptionAlgorithm:
         type: string
+        x-doc-deprecated: true
         description: |
+          **Deprecated.** Use `encryptionAlgorithm` in the `control-plane-manager` ModuleConfig instead.
+          
+          When the ModuleConfig field is set, it takes precedence over this field.
+
           Starting from version **1.31**, kubeadm use the specified asymmetric encryption algorithm
           when generating keys and certificates for the following control-plane components:
 
@@ -177,7 +183,6 @@ apiVersions:
         - "RSA-3072"
         - "RSA-4096"
         - "ECDSA-P256"
-        default: "RSA-2048"
       proxy:
         x-doc-d8Editions:
           - be

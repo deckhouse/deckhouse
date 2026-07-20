@@ -1,0 +1,29 @@
+# Minimal VerticalPodAutoscaler CRD for envtest. We only need apiserver to
+# recognize the kind. Spec/status are permissive.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: verticalpodautoscalers.autoscaling.k8s.io
+  annotations:
+    # Required because autoscaling.k8s.io is a kubernetes.io protected group.
+    api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/63797
+spec:
+  group: autoscaling.k8s.io
+  names:
+    kind: VerticalPodAutoscaler
+    listKind: VerticalPodAutoscalerList
+    plural: verticalpodautoscalers
+    singular: verticalpodautoscaler
+    shortNames:
+      - vpa
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-preserve-unknown-fields: true
+      subresources:
+        status: {}

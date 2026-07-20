@@ -356,6 +356,45 @@ func (s *LoaderTestSuite) TestLoadModuleConfMinimalPackage() {
 	s.Nil(cfg.ValuesSchema)
 }
 
+// TestLoadModuleConfLegacyAccessibilityAsLicensing tests loading legacy module.yaml
+// accessibility into the new package licensing field.
+func (s *LoaderTestSuite) TestLoadModuleConfLegacyAccessibilityAsLicensing() {
+	tmpDir := s.T().TempDir()
+	versionDir := filepath.Join(tmpDir, "v1.2.3")
+	packageDir := filepath.Join(tmpDir, "legacy-module")
+
+	require.NoError(s.T(), os.Mkdir(versionDir, 0o755))
+	require.NoError(s.T(), os.WriteFile(filepath.Join(versionDir, "module.yaml"), []byte(`name: legacy-module
+stage: Experimental
+weight: 900
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+    ee:
+      available: false
+      enabledInBundles:
+        - Minimal
+`), 0o600))
+	require.NoError(s.T(), os.Symlink(versionDir, packageDir))
+
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cfg)
+
+	s.Equal("v1.2.3", cfg.Definition.Version)
+
+	licensing := cfg.Definition.Licensing
+	require.NotNil(s.T(), licensing.Editions)
+	s.True(licensing.Editions["_default"].Available)
+	s.Equal([]string{"Default"}, licensing.Editions["_default"].EnabledInBundles)
+	s.False(licensing.Editions["ee"].Available)
+	s.Equal([]string{"Minimal"}, licensing.Editions["ee"].EnabledInBundles)
+}
+
 // TestLoadModuleConfWithDigests tests loading a module with image digests.
 func (s *LoaderTestSuite) TestLoadModuleConfWithDigests() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "with-digests")

@@ -70,7 +70,7 @@ func RegisterController(
 	edition *d8edition.Edition,
 	handler *confighandler.Handler,
 	ms metricsstorage.Storage,
-	exts *extenders.ExtendersStack,
+	exts extenders.IExtendersStack,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -130,7 +130,7 @@ type reconciler struct {
 	moduleManager    moduleManager
 	metricStorage    metricsstorage.Storage
 	configValidator  *configtools.Validator
-	exts             *extenders.ExtendersStack
+	exts             extenders.IExtendersStack
 	logger           *log.Logger
 }
 
@@ -317,6 +317,12 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	if moduleConfig.IsEnabled() {
 		if err := r.enableModule(ctx, module); err != nil {
 			r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+
+		// restore documentation for the re-enabled module from its deployed release
+		if err := r.ensureModuleDocumentation(ctx, module); err != nil {
+			r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
 	}
@@ -523,6 +529,12 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 
 func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
+
+	// remove module documentation immediately on disable so docs-builder drops it
+	if err := utils.DeleteModuleDocumentation(ctx, r.client, module.Name); err != nil {
+		return fmt.Errorf("delete module documentation: %w", err)
+	}
+
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
 			return false
@@ -560,4 +572,22 @@ func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) 
 
 		return true
 	})
+}
+
+func (r *reconciler) ensureModuleDocumentation(ctx context.Context, module *v1alpha1.Module) error {
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := r.client.List(ctx, releases, client.MatchingLabels{
+		v1alpha1.ModuleReleaseLabelModule: module.Name,
+		v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed,
+	}); err != nil {
+		return fmt.Errorf("list module releases: %w", err)
+	}
+
+	for i := range releases.Items {
+		if err := utils.EnsureModuleDocumentationForRelease(ctx, r.client, &releases.Items[i]); err != nil {
+			return fmt.Errorf("ensure module documentation: %w", err)
+		}
+	}
+
+	return nil
 }

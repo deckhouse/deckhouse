@@ -29,7 +29,7 @@ env:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -51,6 +51,7 @@ jobs:
       {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 
       {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 4 }!}
+      {!{ tmpl.Exec "read_werf_version_step" $ctx | strings.Indent 4 }!}
       {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 4 }!}
       {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 4 }!}
 

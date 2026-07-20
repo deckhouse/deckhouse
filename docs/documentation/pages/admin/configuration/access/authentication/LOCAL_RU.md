@@ -49,7 +49,11 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 
 ## Операции над локальным пользователем
 
-Для административных действий над локальными пользователями используйте команды [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam). Они создают ресурс [UserOperation](/modules/user-authn/cr.html#useroperation), дожидаются выполнения операции и выводят результат.
+Операции сброса пароля, сброса 2FA и блокировки пользователя выполняются через ресурс [UserOperation](/modules/user-authn/cr.html#useroperation). В поле `initiatorType` указывается, кто инициировал операцию: администратор (`admin`), система (`system`) или сам пользователь (`self`).
+
+### Административные операции
+
+Для административных действий над локальными пользователями используйте команды [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam). Они создают ресурс UserOperation с `initiatorType: admin`, дожидаются выполнения операции и выводят результат.
 
 При выполнении операций `ResetPassword`, `Reset2FA` и `Lock` удаляются объекты Dex OfflineSessions и RefreshToken, принадлежащие пользователю. Это завершает активные offline-сессии пользователя и требует повторной аутентификации.
 
@@ -99,6 +103,19 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 
 По умолчанию команды ожидают завершения операции. Чтобы только создать UserOperation и вывести его имя, используйте флаг `--wait=false`.
 
+### Сброс пароля пользователем
+
+Локальный пользователь может самостоятельно сбросить свой пароль в интерфейсе аутентификации DKP. При этом создаётся ресурс UserOperation с типом `ResetPassword` и `initiatorType: self`.
+
+Самостоятельный сброс пароля доступен только для локальных учётных записей (встроенный коннектор `Local`). Пользователи, которые входят через внешние провайдеры аутентификации, должны обращаться к администратору соответствующей системы.
+
+При сбросе пароля:
+
+- новый пароль должен соответствовать [парольной политике](#настройка-парольной-политики);
+- завершаются активные сессии пользователя — требуется повторная аутентификация.
+
+Подробнее о сценариях смены и сброса пароля с точки зрения пользователя — в разделе [Настройка аутентификации для приложений](../../../../user/access/authentication.html#смена-и-сброс-пароля-локального-пользователя).
+
 ## Добавление пользователя в группу
 
 {% alert level="warning" %}
@@ -130,7 +147,12 @@ spec:
 
 Парольная политика позволяет контролировать сложность пароля, ротацию и блокировку пользователей.
 
-Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`:
+Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`.
+
+Примеры политик:
+
+{% tabs Примеры парольных политик%}
+{% tab "Без пользовательских правил сложности" %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -151,15 +173,31 @@ spec:
         interval: "30d"
 ```
 
-Описание полей:
+{% endtab %}
+{% tab "С пользовательскими правилами сложности" %}
 
-- `complexityLevel` — уровень сложности пароля;
-- `passwordHistoryLimit` — число предыдущих паролей, которые хранит система, чтобы предотвратить их повторное использование;
-- `lockout` — настройки блокировки при превышении лимита неудачных попыток входа:
-  - `lockout.maxAttempts` — лимит неудачных попыток;
-  - `lockout.lockDuration` — длительность блокировки пользователя;
-- `rotation` — настройки ротации паролей:
-  - `rotation.interval` — период обязательной смены пароля.
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Custom
+      custom:
+        minLength: 10
+        specialCharacters: true
+        numbers: false
+        capitalized: true
+        repeatedChars: false
+      passwordHistoryLimit: 10
+```
+
+{% endtab %}
+{% endtabs %}
 
 ## Настройка двухфакторной аутентификации (2FA)
 

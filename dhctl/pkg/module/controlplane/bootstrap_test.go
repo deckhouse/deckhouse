@@ -15,7 +15,6 @@
 package controlplane
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -26,7 +25,7 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
@@ -137,7 +136,7 @@ func TestPrepare(t *testing.T) {
 		const (
 			keyPath    = "/opt/deckhouse/signature/signature-private.jwk"
 			jwksPath   = "/opt/deckhouse/signature/signature-public.jwks"
-			configPath = "/opt/deckhouse/signature/encryption-config.yaml"
+			configPath = "/opt/deckhouse/signature/secret-encryption-config.yaml"
 		)
 
 		require.Contains(t, m, keyPath, "should upload private key")
@@ -211,18 +210,16 @@ func TestPrepare(t *testing.T) {
 				assertError = require.Error
 			}
 
-			logger := log.NewInMemoryLoggerWithParent(log.NewDummyLogger(true))
-
 			s := newTestModuleSettings(tst.mode)
 
 			n := tst.node(t)
 
-			preparator := NewBootstrapPreparator(s, n, log.SimpleLoggerProvider(logger))
+			preparator := NewBootstrapPreparator(s, n, dhlog.FromContext(t.Context()))
 			preparator.WithLoopsParams(LoopsParams{
 				CreateSigDir: retry.NewEmptyParams(),
 			})
 
-			err := preparator.PrepareModule(context.TODO())
+			err := preparator.PrepareModule(t.Context())
 			assertError(t, err)
 
 			tst.assertUploads(t, tst.uploads)
@@ -292,7 +289,7 @@ func (b *bootstrapTest) node(t *testing.T) libcon.Interface {
 		}).WithErr(b.commandErr)
 	})
 
-	err := cl.Start()
+	err := cl.Start(t.Context())
 	require.NoError(t, err, "client should started")
 
 	return cl
@@ -310,4 +307,7 @@ func newTestModuleSettings(m string) *testModuleSettings {
 
 func (s *testModuleSettings) SignatureMode() (string, error) {
 	return s.mode, nil
+}
+func (s *testModuleSettings) TemplateConfigForBootstrap(nodeIP string) (*TemplateConfig, error) {
+	return nil, nil
 }

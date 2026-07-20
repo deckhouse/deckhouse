@@ -16,1109 +16,393 @@ package moduleloader
 
 import (
 	"context"
-	"flag"
-	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
+	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
+	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	values = `
-type: object
-x-extend:
-  schema: config-values.yaml
-properties:
-  registry:
-    type: object
-    default: {}
-    properties:
-      base:
-        type: string
-        default: dev-registry.deckhouse.io/deckhouse/losev/external-modules
-      dockercfg:
-        type: string
-        default: YXNiCg==
-      scheme:
-        type: string
-        default: HTTP
-      ca:
-        type: string
-        default:
-  internal:
-    default: {}
-    properties:
-      pythonVersions:
-        default: []
-        items:
-          type: string
-        type: array
-    type: object`
+	testNodeName = "dev-master-0"
+	testRepo     = "dev-registry.example.io/deckhouse/modules"
 )
 
-type ModuleLoaderTestSuite struct {
-	suite.Suite
-
-	client client.Client
-	loader *Loader
-
-	testDataFileName string
-
-	tmpDir string
+// installerCall records a single (module, version) installer invocation so a test
+// can assert which path (Restore vs StageFromRegistry) a module took.
+type installerCall struct {
+	module  string
+	version string
 }
 
-func TestModuleLoaderTestSuite(t *testing.T) {
-	suite.Run(t, new(ModuleLoaderTestSuite))
+// installerCalls captures everything the loader asked the installer to do.
+type installerCalls struct {
+	restore           []installerCall
+	stageFromRegistry []installerCall
+	uninstall         []string
 }
 
-func (suite *ModuleLoaderTestSuite) setupModuleLoader(raw string) { //nolint:revive,unused
-	manifests := releaseutil.SplitManifests(raw)
-
-	var objects = make([]client.Object, 0, len(manifests))
-	for _, manifest := range manifests {
-		obj := suite.parseKubernetesObject([]byte(manifest))
-		objects = append(objects, obj)
+// newRecordingInstaller returns a mock installer that records its calls and reports
+// the modules in embedded as having an embedded copy still shipped on the filesystem.
+func newRecordingInstaller(calls *installerCalls, embedded map[string]bool) *installermock.Installer {
+	return &installermock.Installer{
+		IsEmbeddedPresentFunc: func(module string) bool { return embedded[module] },
+		RestoreFunc: func(_ context.Context, _ *v1alpha1.ModuleSource, module, version string) error {
+			calls.restore = append(calls.restore, installerCall{module, version})
+			return nil
+		},
+		StageFromRegistryFunc: func(_ context.Context, _ *v1alpha1.ModuleSource, module, version string) error {
+			calls.stageFromRegistry = append(calls.stageFromRegistry, installerCall{module, version})
+			return nil
+		},
+		UninstallFunc: func(_ context.Context, module string) error {
+			calls.uninstall = append(calls.uninstall, module)
+			return nil
+		},
 	}
+}
 
+func newTestScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
 	sc := runtime.NewScheme()
-	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
-	_ = v1alpha2.SchemeBuilder.AddToScheme(sc)
-	_ = corev1.AddToScheme(sc)
-	suite.client = fake.NewClientBuilder().
-		WithScheme(sc).
+	require.NoError(t, v1alpha1.SchemeBuilder.AddToScheme(sc))
+	require.NoError(t, v1alpha2.SchemeBuilder.AddToScheme(sc))
+	require.NoError(t, corev1.AddToScheme(sc))
+	return sc
+}
+
+func newTestLoader(t *testing.T, inst Installer, objects ...client.Object) *Loader {
+	t.Helper()
+
+	cl := fake.NewClientBuilder().
+		WithScheme(newTestScheme(t)).
 		WithObjects(objects...).
-		WithStatusSubresource(&v1alpha1.ModuleRelease{}, &v1alpha1.ModuleSource{}, &v1alpha2.ModulePullOverride{}).
+		WithStatusSubresource(&v1alpha1.Module{}, &v1alpha1.ModuleRelease{}, &v1alpha1.ModuleSource{}, &v1alpha2.ModulePullOverride{}).
 		Build()
 
-	suite.loader = &Loader{
-		client:               suite.client,
+	tmp := t.TempDir()
+
+	return &Loader{
+		client:               cl,
 		logger:               log.NewNop(),
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
-		dependencyContainer:  dependency.NewDependencyContainer(),
+		installer:            inst,
 		registries:           make(map[string]*addonmodules.Registry),
+		dependencyContainer:  dependency.NewDependencyContainer(),
+		downloadedModulesDir: tmp,
+		symlinksDir:          tmp + "/modules",
 	}
 }
 
-func (suite *ModuleLoaderTestSuite) parseKubernetesObject(raw []byte) client.Object { //nolint:revive,unused
-	metaType := new(runtime.TypeMeta)
-	err := yaml.Unmarshal(raw, metaType)
-	require.NoError(suite.T(), err)
+// --- object builders -------------------------------------------------------
 
-	var obj client.Object
-
-	switch metaType.Kind {
-	case v1alpha1.ModuleSourceGVK.Kind:
-		source := new(v1alpha1.ModuleSource)
-		err = yaml.Unmarshal(raw, source)
-		require.NoError(suite.T(), err)
-		obj = source
-
-	case v1alpha1.ModuleReleaseGVK.Kind:
-		release := new(v1alpha1.ModuleRelease)
-		err = yaml.Unmarshal(raw, release)
-		require.NoError(suite.T(), err)
-		obj = release
-
-	case v1alpha2.ModuleUpdatePolicyGVK.Kind:
-		policy := new(v1alpha2.ModuleUpdatePolicy)
-		err = yaml.Unmarshal(raw, policy)
-		require.NoError(suite.T(), err)
-		obj = policy
-
-	case v1alpha2.ModulePullOverrideGVK.Kind:
-		mpo := new(v1alpha2.ModulePullOverride)
-		err = yaml.Unmarshal(raw, mpo)
-		require.NoError(suite.T(), err)
-		obj = mpo
-
-	case v1alpha1.ModuleGVK.Kind:
-		module := new(v1alpha1.Module)
-		err = yaml.Unmarshal(raw, module)
-		require.NoError(suite.T(), err)
-		obj = module
-	}
-
-	return obj
-}
-
-func (suite *ModuleLoaderTestSuite) SetupSuite() {
-	flag.Parse()
-	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
-	suite.T().Setenv("DECKHOUSE_NODE_NAME", "dev-master-0")
-	suite.tmpDir = suite.T().TempDir()
-	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
-	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
-}
-
-// func (suite *ModuleLoaderTestSuite) TestRestoreModulesByOverrides() {
-// 	module := moduleSuite{
-// 		name:          "echo",
-// 		version:       downloader.DefaultDevVersion,
-// 		weight:        900,
-// 		downloadedDir: suite.tmpDir,
-// 	}
-//
-// 	manifestStub := func() (*crv1.Manifest, error) {
-// 		return &crv1.Manifest{
-// 			Layers: []crv1.Descriptor{},
-// 		}, nil
-// 	}
-//
-// 	type testCase struct {
-// 		name           string
-// 		filename       string
-// 		layersStab     func() ([]crv1.Layer, error)
-// 		symlinkChanged bool
-// 		valuesChanged  bool
-// 		checkValues    bool
-// 	}
-//
-// 	testCases := []testCase{
-// 		{
-// 			// should not do anything
-// 			name:           "Ok",
-// 			filename:       "mpo.yaml",
-// 			symlinkChanged: false,
-// 			valuesChanged:  false,
-// 			checkValues:    true,
-// 		},
-// 		{
-// 			// should set default weight for module
-// 			name:     "NoWeightNoDefinition",
-// 			filename: "mpo-without-weight.yaml",
-// 			layersStab: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{
-// 					FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}}}, nil
-// 			},
-// 			symlinkChanged: false,
-// 			valuesChanged:  false,
-// 			checkValues:    true,
-// 		},
-// 		{
-// 			// should set mpo`s the weight from module.yaml
-// 			name:     "NoWeightWithDefinition",
-// 			filename: "mpo-without-weight.yaml",
-// 			layersStab: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{
-// 					FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}},
-// 					&utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
-// 			},
-// 			symlinkChanged: false,
-// 			valuesChanged:  false,
-// 			checkValues:    true,
-// 		},
-// 		{
-// 			// should update deployed-on annotation
-// 			name:     "WrongDeployedOnAnnotation",
-// 			filename: "mpo-with-old-deployed-on.yaml",
-// 			layersStab: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{
-// 					FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}},
-// 					&utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
-// 			},
-// 			symlinkChanged: true,
-// 			valuesChanged:  true,
-// 			checkValues:    false,
-// 		},
-// 	}
-//
-// 	for _, tc := range testCases {
-// 		suite.Run(tc.name, func() {
-// 			if tc.layersStab != nil {
-// 				dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 					ManifestStub: manifestStub,
-// 					LayersStub:   tc.layersStab,
-// 				}, nil)
-// 			}
-//
-// 			require.NoError(suite.T(), module.prepare(true, true))
-//
-// 			statValues, err := os.Stat(module.valuesPath)
-// 			require.NoError(suite.T(), err)
-//
-// 			statSymlink, err := os.Lstat(module.symlinkPath)
-// 			require.NoError(suite.T(), err)
-//
-// 			time.Sleep(50 * time.Millisecond)
-//
-// 			suite.setupModuleLoader(string(suite.parseTestdata("overrides", tc.filename)))
-// 			require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 			if tc.checkValues {
-// 				newStatValues, err := os.Stat(module.valuesPath)
-// 				require.NoError(suite.T(), err)
-//
-// 				if tc.valuesChanged {
-// 					assert.False(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml must be modified")
-// 				} else {
-// 					assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
-// 				}
-// 			}
-//
-// 			newStatSymlink, err := os.Lstat(module.symlinkPath)
-// 			require.NoError(suite.T(), err)
-//
-// 			if tc.symlinkChanged {
-// 				assert.False(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink must be modified")
-// 			} else {
-// 				assert.True(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink mustn't be modified")
-// 			}
-//
-// 			mpo := suite.modulePullOverride(module.name)
-// 			assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
-//
-// 			suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 		})
-// 	}
-//
-// 	// should ensure symlink
-// 	suite.Run("NoSymlink", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, false))
-//
-// 		statValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 		newStatValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
-//
-// 		_, err = os.Lstat(module.symlinkPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		mpo := suite.modulePullOverride(module.name)
-// 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// should ensure downloaded module`s dir
-// 	suite.Run("NoDownloadedModule", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(false, false))
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 		_, err := os.Lstat(module.symlinkPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		mpo := suite.modulePullOverride(module.name)
-// 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// should remove extra symlink
-// 	suite.Run("ExtraSymlinks", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, false))
-//
-// 		statValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		_, err = os.Lstat(module.symlinkPath)
-// 		assert.True(suite.T(), os.IsNotExist(err), "Module's symlink mustn't exist")
-//
-// 		symlink1 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("901-%s", module.name))
-// 		symlink2 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("902-%s", module.name))
-// 		symlink3 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("903-%s", module.name))
-//
-// 		// extra symlinks
-// 		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink1))
-// 		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink2))
-// 		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink3))
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 		newStatValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-// 		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
-//
-// 		_, err = os.Lstat(module.symlinkPath)
-// 		assert.Equal(suite.T(), err, nil, "Module's symlink must be created")
-//
-// 		_, err = os.Lstat(symlink1)
-// 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
-// 		_, err = os.Lstat(symlink2)
-// 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
-// 		_, err = os.Lstat(symlink3)
-// 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
-//
-// 		mpo := suite.modulePullOverride(module.name)
-// 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// should remove wrong symlink and ensure new
-// 	suite.Run("WrongSymlink", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, false))
-//
-// 		require.NoError(suite.T(), os.MkdirAll(filepath.Join(suite.tmpDir, "echo", "fakeVersion"), 0750))
-//
-// 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", module.name))
-// 		require.NoError(suite.T(), os.Symlink(filepath.Join(suite.tmpDir, "echo", "fakeVersion"), symlink))
-//
-// 		statValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		statSymlink, err := os.Lstat(symlink)
-// 		require.NoError(suite.T(), err)
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 		newStatValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-// 		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
-//
-// 		newStatSymlink, err := os.Lstat(symlink)
-// 		require.NoError(suite.T(), err)
-// 		assert.False(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink must be modified")
-//
-// 		mpo := suite.modulePullOverride(module.name)
-// 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
-//
-// 		suite.cleanupPaths([]string{symlink, module.downloadedPath, module.symlinkPath})
-// 	})
-// }
-
-// func (suite *ModuleLoaderTestSuite) TestRestoreModulesByOverridesWithMultipleReleases() {
-// 	module := moduleSuite{
-// 		name:          "test-module",
-// 		weight:        900,
-// 		downloadedDir: suite.tmpDir,
-// 		version:       downloader.DefaultDevVersion,
-// 	}
-//
-// 	manifestStub := func() (*crv1.Manifest, error) {
-// 		return &crv1.Manifest{
-// 			Layers: []crv1.Descriptor{},
-// 		}, nil
-// 	}
-//
-// 	// Test case 1: Multiple releases, all in Deployed status
-// 	// Expected: MPO should set module version but not change release statuses
-// 	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
-// 	// without affecting the existing ModuleRelease statuses
-// 	suite.Run("MultipleReleasesAllDeployed", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, true))
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "multiple-releases-all-deployed.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 		// Check that the module symlink was created
-// 		_, err := os.Lstat(module.symlinkPath)
-// 		require.NoError(suite.T(), err, "Module symlink should exist")
-//
-// 		// Check that the module files exist
-// 		_, err = os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err, "Module values should exist")
-//
-// 		// Verify that the module version in the Module resource is set to v1.0.2 (from MPO)
-// 		moduleObj := new(v1alpha1.Module)
-// 		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "test-module"}, moduleObj)
-// 		require.NoError(suite.T(), err)
-// 		assert.Equal(suite.T(), "v1.0.2", moduleObj.Properties.Version, "Module version should be set from MPO")
-//
-// 		// Verify the ModuleRelease statuses remain unchanged (MPO should not affect release statuses)
-// 		releases := new(v1alpha1.ModuleReleaseList)
-// 		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
-// 		require.NoError(suite.T(), err)
-// 		require.Len(suite.T(), releases.Items, 3, "Should have 3 releases")
-//
-// 		// Check specific statuses for each release to ensure MPO doesn't change them
-// 		// MPO should only affect module version, not release statuses
-// 		var deployedCount int
-// 		for _, release := range releases.Items {
-// 			switch release.GetModuleVersion() {
-// 			case "v1.0.0":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.0 should remain Deployed")
-// 				deployedCount++
-// 			case "v1.0.1":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.1 should remain Deployed")
-// 				deployedCount++
-// 			case "v1.0.2":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.2 should remain Deployed")
-// 				deployedCount++
-// 			default:
-// 				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
-// 			}
-// 		}
-// 		assert.Equal(suite.T(), 3, deployedCount, "Should have 3 deployed releases")
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// Test case 2: Multiple releases, all Superseded except last in Deployed
-// 	// Expected: MPO should set module version but not change release statuses
-// 	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
-// 	// with mixed release statuses without affecting them
-// 	suite.Run("MultipleReleasesSupersededExceptLast", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, true))
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "multiple-releases-superseded-except-last.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 		// Check that the module symlink was created
-// 		_, err := os.Lstat(module.symlinkPath)
-// 		require.NoError(suite.T(), err, "Module symlink should exist")
-//
-// 		// Check that the module files exist
-// 		_, err = os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err, "Module values should exist")
-//
-// 		// Verify that the module version in the Module resource is set to v1.0.3 (from MPO)
-// 		moduleObj := new(v1alpha1.Module)
-// 		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "test-module"}, moduleObj)
-// 		require.NoError(suite.T(), err)
-// 		assert.Equal(suite.T(), "v1.0.3", moduleObj.Properties.Version, "Module version should be set from MPO")
-//
-// 		// Verify the ModuleRelease statuses remain unchanged (MPO should not affect release statuses)
-// 		releases := new(v1alpha1.ModuleReleaseList)
-// 		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
-// 		require.NoError(suite.T(), err)
-// 		require.Len(suite.T(), releases.Items, 4, "Should have 4 releases")
-//
-// 		// Check specific statuses for each release to ensure MPO doesn't change them
-// 		var supersededCount, deployedCount int
-// 		for _, release := range releases.Items {
-// 			switch release.GetModuleVersion() {
-// 			case "v1.0.0":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should remain Superseded")
-// 				supersededCount++
-// 			case "v1.0.1":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.1 should remain Superseded")
-// 				supersededCount++
-// 			case "v1.0.2":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.2 should remain Superseded")
-// 				supersededCount++
-// 			case "v1.0.3":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.3 should remain Deployed")
-// 				deployedCount++
-// 			default:
-// 				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
-// 			}
-// 		}
-// 		assert.Equal(suite.T(), 3, supersededCount, "Should have 3 superseded releases")
-// 		assert.Equal(suite.T(), 1, deployedCount, "Should have 1 deployed release")
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// Test case 3: Multiple releases, first Superseded, several Deployed
-// 	// Expected: MPO should set module version but not change release statuses
-// 	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
-// 	// with complex release status patterns without affecting them
-// 	suite.Run("MultipleReleasesMixedStatus", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, true))
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "multiple-releases-mixed-status.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 		// Check that the module symlink was created
-// 		_, err := os.Lstat(module.symlinkPath)
-// 		require.NoError(suite.T(), err, "Module symlink should exist")
-//
-// 		// Check that the module files exist
-// 		_, err = os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err, "Module values should exist")
-//
-// 		// Verify that the module version in the Module resource is set to v1.0.2 (from MPO)
-// 		moduleObj := new(v1alpha1.Module)
-// 		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "test-module"}, moduleObj)
-// 		require.NoError(suite.T(), err)
-// 		assert.Equal(suite.T(), "v1.0.2", moduleObj.Properties.Version, "Module version should be set from MPO")
-//
-// 		// Verify the ModuleRelease statuses remain unchanged (MPO should not affect release statuses)
-// 		releases := new(v1alpha1.ModuleReleaseList)
-// 		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
-// 		require.NoError(suite.T(), err)
-// 		require.Len(suite.T(), releases.Items, 4, "Should have 4 releases")
-//
-// 		// Check specific statuses for each release to ensure MPO doesn't change them
-// 		var supersededCount, deployedCount int
-// 		for _, release := range releases.Items {
-// 			switch release.GetModuleVersion() {
-// 			case "v1.0.0":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should remain Superseded")
-// 				supersededCount++
-// 			case "v1.0.1":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.1 should remain Deployed")
-// 				deployedCount++
-// 			case "v1.0.2":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.2 should remain Deployed")
-// 				deployedCount++
-// 			case "v1.0.3":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.3 should remain Deployed")
-// 				deployedCount++
-// 			default:
-// 				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
-// 			}
-// 		}
-// 		assert.Equal(suite.T(), 1, supersededCount, "Should have 1 superseded release")
-// 		assert.Equal(suite.T(), 3, deployedCount, "Should have 3 deployed releases")
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// Test with different release statuses and ensure correct version selection
-// 	suite.Run("MultipleReleasesWithDifferentVersionPrecedence", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		// Delete the module first to start fresh
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 		require.NoError(suite.T(), module.prepare(true, true))
-//
-// 		// Test with multiple deployed releases - MPO should override all
-// 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "multiple-releases-all-deployed.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
-//
-// 		// Check symlink exists
-// 		_, err := os.Lstat(module.symlinkPath)
-// 		require.NoError(suite.T(), err, "Module symlink should exist")
-//
-// 		// MPO version should take precedence
-// 		moduleObj := new(v1alpha1.Module)
-// 		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "test-module"}, moduleObj)
-// 		require.NoError(suite.T(), err)
-// 		assert.Equal(suite.T(), "v1.0.2", moduleObj.Properties.Version, "MPO version should override any deployed release version")
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-// }
-
-// func (suite *ModuleLoaderTestSuite) TestRestoreModulesByReleases() {
-// 	module := moduleSuite{
-// 		name:          "echo",
-// 		weight:        900,
-// 		downloadedDir: suite.tmpDir,
-// 		version:       "v1.0.0",
-// 	}
-//
-// 	manifestStub := func() (*crv1.Manifest, error) {
-// 		return &crv1.Manifest{
-// 			Layers: []crv1.Descriptor{},
-// 		}, nil
-// 	}
-//
-// 	// should ensure symlink
-// 	suite.Run("NoSymlink", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, false))
-//
-// 		statValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
-//
-// 		newStatValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
-//
-// 		_, err = os.Lstat(module.symlinkPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// should ensure downloaded module`s dir
-// 	suite.Run("NoDownloadedModule", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(false, false))
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
-//
-// 		_, err := os.Lstat(module.symlinkPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// should remove extra symlink
-// 	suite.Run("ExtraSymlinks", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, false))
-//
-// 		statValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		_, err = os.Lstat(module.symlinkPath)
-// 		assert.True(suite.T(), os.IsNotExist(err), "Module's symlink mustn't exist")
-//
-// 		symlink1 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("901-%s", module.name))
-// 		symlink2 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("902-%s", module.name))
-// 		symlink3 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("903-%s", module.name))
-//
-// 		// extra symlinks
-// 		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink1))
-// 		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink2))
-// 		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink3))
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
-//
-// 		newStatValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-// 		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
-//
-// 		_, err = os.Lstat(module.symlinkPath)
-// 		assert.Equal(suite.T(), err, nil, "Module's symlink must be created")
-//
-// 		_, err = os.Lstat(symlink1)
-// 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
-// 		_, err = os.Lstat(symlink2)
-// 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
-// 		_, err = os.Lstat(symlink3)
-// 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
-//
-// 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// HA deckhouse installations could have previous version symlink on the standby masters
-// 	// have to delete it and add an actual one
-// 	suite.Run("Old version symlink", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, false))
-//
-// 		require.NoError(suite.T(), os.MkdirAll(filepath.Join(suite.tmpDir, "echo", "v0.9.0"), 0750))
-//
-// 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", module.name))
-// 		require.NoError(suite.T(), os.Symlink(filepath.Join(suite.tmpDir, "echo", "v0.9.0"), symlink))
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
-//
-// 		symlinkTarget, err := filepath.EvalSymlinks(symlink)
-// 		require.NoError(suite.T(), err)
-//
-// 		assert.True(suite.T(), strings.HasSuffix(symlinkTarget, "echo/v1.0.0"), "module have to be restored to the v1.0.0 version")
-//
-// 		suite.cleanupPaths([]string{symlink, module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	suite.Run("WrongSymlink", func() {
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), module.prepare(true, false))
-//
-// 		require.NoError(suite.T(), os.MkdirAll(filepath.Join(suite.tmpDir, "echo", "fakeVersion"), 0750))
-//
-// 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", module.name))
-// 		require.NoError(suite.T(), os.Symlink(filepath.Join(suite.tmpDir, "echo", "fakeVersion"), symlink))
-//
-// 		statValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-//
-// 		statSymlink, err := os.Lstat(symlink)
-// 		require.NoError(suite.T(), err)
-//
-// 		time.Sleep(50 * time.Millisecond)
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
-//
-// 		newStatValues, err := os.Stat(module.valuesPath)
-// 		require.NoError(suite.T(), err)
-// 		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
-//
-// 		newStatSymlink, err := os.Lstat(symlink)
-// 		require.NoError(suite.T(), err)
-// 		assert.False(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink must be modified")
-//
-// 		suite.cleanupPaths([]string{symlink, module.downloadedPath, module.symlinkPath})
-// 	})
-//
-// 	// Test case 1: Multiple releases, all in Deployed status
-// 	// Expected: only the latest version should remain deployed, older versions should become superseded
-// 	// This test verifies that restoreAbsentModulesFromReleases correctly handles multiple deployed releases
-// 	// by keeping only the latest version deployed and marking older versions as superseded
-// 	suite.Run("MultipleReleasesAllDeployed", func() {
-// 		testModule := moduleSuite{
-// 			name:          "test-module",
-// 			weight:        900,
-// 			downloadedDir: suite.tmpDir,
-// 			version:       "v1.0.2", // latest version
-// 		}
-//
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), testModule.prepare(true, false))
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "multiple-releases-all-deployed.yaml")))
-//
-// 		// Verify initial state - all releases should be Deployed
-// 		initialReleases := new(v1alpha1.ModuleReleaseList)
-// 		initialErr := suite.client.List(context.TODO(), initialReleases, client.MatchingLabels{"module": "test-module"})
-// 		require.NoError(suite.T(), initialErr)
-// 		for _, release := range initialReleases.Items {
-// 			assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase,
-// 				"Initial state: %s should be Deployed", release.GetModuleVersion())
-// 		}
-//
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
-//
-// 		// Check that the module symlink was created
-// 		_, err := os.Lstat(testModule.symlinkPath)
-// 		require.NoError(suite.T(), err, "Module symlink should exist")
-//
-// 		// Check that the module files exist
-// 		_, err = os.Stat(testModule.valuesPath)
-// 		require.NoError(suite.T(), err, "Module values should exist")
-//
-// 		// Verify that the module version is set to the latest deployed release
-// 		moduleObj := new(v1alpha1.Module)
-// 		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "test-module"}, moduleObj)
-// 		require.NoError(suite.T(), err)
-// 		assert.Equal(suite.T(), "v1.0.2", moduleObj.Properties.Version, "Module version should be set to latest deployed release")
-//
-// 		// Verify the ModuleRelease statuses were updated correctly
-// 		releases := new(v1alpha1.ModuleReleaseList)
-// 		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
-// 		require.NoError(suite.T(), err)
-// 		require.Len(suite.T(), releases.Items, 3, "Should have 3 releases")
-//
-// 		// Check specific statuses for each release to ensure the function correctly
-// 		// changed the statuses according to its logic (only latest version remains deployed)
-// 		var deployedCount, supersededCount int
-// 		for _, release := range releases.Items {
-// 			switch release.GetModuleVersion() {
-// 			case "v1.0.0":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should be superseded")
-// 				supersededCount++
-// 			case "v1.0.1":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.1 should be superseded")
-// 				supersededCount++
-// 			case "v1.0.2":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.2 should be deployed")
-// 				deployedCount++
-// 			default:
-// 				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
-// 			}
-// 		}
-// 		assert.Equal(suite.T(), 1, deployedCount, "Should have 1 deployed release")
-// 		assert.Equal(suite.T(), 2, supersededCount, "Should have 2 superseded releases")
-//
-// 		suite.cleanupPaths([]string{testModule.downloadedPath, testModule.symlinkPath})
-// 	})
-//
-// 	// Test case 2: Multiple releases, all Superseded except last in Deployed
-// 	// Expected: only the deployed release should be processed
-// 	suite.Run("MultipleReleasesSupersededExceptLast", func() {
-// 		testModule := moduleSuite{
-// 			name:          "test-module",
-// 			weight:        900,
-// 			downloadedDir: suite.tmpDir,
-// 			version:       "v1.0.3",
-// 		}
-//
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), testModule.prepare(true, false))
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "multiple-releases-superseded-except-last.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
-//
-// 		// Check that the module symlink was created
-// 		_, err := os.Lstat(testModule.symlinkPath)
-// 		require.NoError(suite.T(), err, "Module symlink should exist")
-//
-// 		// Check that the module files exist
-// 		_, err = os.Stat(testModule.valuesPath)
-// 		require.NoError(suite.T(), err, "Module values should exist")
-//
-// 		// Verify that the module version is set to v1.0.3 (the only deployed release)
-// 		moduleObj := new(v1alpha1.Module)
-// 		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "test-module"}, moduleObj)
-// 		require.NoError(suite.T(), err)
-// 		assert.Equal(suite.T(), "v1.0.3", moduleObj.Properties.Version, "Module version should be set to the deployed release")
-//
-// 		// Verify the ModuleRelease statuses remain unchanged
-// 		releases := new(v1alpha1.ModuleReleaseList)
-// 		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
-// 		require.NoError(suite.T(), err)
-// 		require.Len(suite.T(), releases.Items, 4, "Should have 4 releases")
-//
-// 		// Check specific statuses for each release
-// 		var supersededCount, deployedCount int
-// 		for _, release := range releases.Items {
-// 			switch release.GetModuleVersion() {
-// 			case "v1.0.0":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should be superseded")
-// 				supersededCount++
-// 			case "v1.0.1":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.1 should be superseded")
-// 				supersededCount++
-// 			case "v1.0.2":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.2 should be superseded")
-// 				supersededCount++
-// 			case "v1.0.3":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.3 should be deployed")
-// 				deployedCount++
-// 			default:
-// 				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
-// 			}
-// 		}
-// 		assert.Equal(suite.T(), 3, supersededCount, "Should have 3 superseded releases")
-// 		assert.Equal(suite.T(), 1, deployedCount, "Should have 1 deployed release")
-//
-// 		suite.cleanupPaths([]string{testModule.downloadedPath, testModule.symlinkPath})
-// 	})
-//
-// 	// Test case 3: Multiple releases, first Superseded, several Deployed
-// 	// Expected: only the latest deployed version should remain deployed
-// 	suite.Run("MultipleReleasesMixedStatus", func() {
-// 		testModule := moduleSuite{
-// 			name:          "test-module",
-// 			weight:        900,
-// 			downloadedDir: suite.tmpDir,
-// 			version:       "v1.0.3", // latest deployed version
-// 		}
-//
-// 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 			ManifestStub: manifestStub,
-// 			LayersStub: func() ([]crv1.Layer, error) {
-// 				return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 			},
-// 		}, nil)
-//
-// 		require.NoError(suite.T(), testModule.prepare(true, false))
-//
-// 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "multiple-releases-mixed-status.yaml")))
-// 		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
-//
-// 		// Check that the module symlink was created
-// 		_, err := os.Lstat(testModule.symlinkPath)
-// 		require.NoError(suite.T(), err, "Module symlink should exist")
-//
-// 		// Check that the module files exist
-// 		_, err = os.Stat(testModule.valuesPath)
-// 		require.NoError(suite.T(), err, "Module values should exist")
-//
-// 		// Verify that the module version is set to the latest deployed version (v1.0.3)
-// 		moduleObj := new(v1alpha1.Module)
-// 		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "test-module"}, moduleObj)
-// 		require.NoError(suite.T(), err)
-// 		assert.Equal(suite.T(), "v1.0.3", moduleObj.Properties.Version, "Module version should be set to latest deployed release")
-//
-// 		// Verify the ModuleRelease statuses were updated correctly
-// 		releases := new(v1alpha1.ModuleReleaseList)
-// 		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
-// 		require.NoError(suite.T(), err)
-// 		require.Len(suite.T(), releases.Items, 4, "Should have 4 releases")
-//
-// 		// Check specific statuses for each release
-// 		var supersededCount, deployedCount int
-// 		for _, release := range releases.Items {
-// 			switch release.GetModuleVersion() {
-// 			case "v1.0.0":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should be superseded")
-// 				supersededCount++
-// 			case "v1.0.1":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.1 should be superseded")
-// 				supersededCount++
-// 			case "v1.0.2":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.2 should be superseded")
-// 				supersededCount++
-// 			case "v1.0.3":
-// 				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.3 should be deployed")
-// 				deployedCount++
-// 			default:
-// 				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
-// 			}
-// 		}
-// 		assert.Equal(suite.T(), 3, supersededCount, "Should have 3 superseded releases")
-// 		assert.Equal(suite.T(), 1, deployedCount, "Should have 1 deployed release")
-//
-// 		suite.cleanupPaths([]string{testModule.downloadedPath, testModule.symlinkPath})
-// 	})
-// }
-
-func (suite *ModuleLoaderTestSuite) modulePullOverride(name string) *v1alpha2.ModulePullOverride { //nolint:revive,unused
-	mpo := new(v1alpha2.ModulePullOverride)
-	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, mpo)
-	require.NoError(suite.T(), err)
-
-	return mpo
-}
-
-func (suite *ModuleLoaderTestSuite) parseTestdata(scope, filename string) []byte { //nolint:revive,unused
-	data, err := os.ReadFile(filepath.Join("./testdata", scope, filename))
-	require.NoError(suite.T(), err)
-
-	suite.testDataFileName = filename
-
-	return data
-}
-
-func (suite *ModuleLoaderTestSuite) cleanupPaths(paths []string) { //nolint:revive,unused
-	for _, path := range paths {
-		require.NoError(suite.T(), os.RemoveAll(path))
+func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
+	return &v1alpha1.ModuleSource{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v1alpha1.ModuleSourceSpec{
+			Registry: v1alpha1.ModuleSourceSpecRegistry{
+				Repo:      repo,
+				DockerCFG: "YXNiCg==",
+				Scheme:    "HTTP",
+			},
+		},
 	}
 }
 
-type moduleSuite struct { //nolint:revive,unused
-	name           string
-	version        string
-	weight         int
-	valuesPath     string
-	symlinkPath    string
-	downloadedPath string
-	downloadedDir  string
+func testModule(name, source string, availableSources ...string) *v1alpha1.Module {
+	return &v1alpha1.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Properties: v1alpha1.ModuleProperties{
+			Source:           source,
+			AvailableSources: availableSources,
+			Weight:           900,
+		},
+	}
 }
 
-func (suite *moduleSuite) prepare(ensureDownloaded, ensureSymlink bool) error { //nolint:revive,unused
-	suite.downloadedPath = filepath.Join(suite.downloadedDir, suite.name, suite.version)
-	suite.symlinkPath = filepath.Join(suite.downloadedDir, "modules", fmt.Sprintf("%d-%s", suite.weight, suite.name))
-	suite.valuesPath = filepath.Join(suite.downloadedPath, "openapi", "values.yaml")
+func testDeployedRelease(module, sourceName, version string) *v1alpha1.ModuleRelease {
+	return &v1alpha1.ModuleRelease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: module + "-v" + version,
+			Labels: map[string]string{
+				"module":                          module,
+				"source":                          sourceName,
+				v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed,
+			},
+		},
+		Spec:   v1alpha1.ModuleReleaseSpec{ModuleName: module, Version: version, Weight: 900},
+		Status: v1alpha1.ModuleReleaseStatus{Phase: v1alpha1.ModuleReleasePhaseDeployed},
+	}
+}
 
-	if ensureDownloaded {
-		if err := os.MkdirAll(filepath.Join(suite.downloadedPath, "openapi"), 0750); err != nil {
-			return err
+// enabled marks the module as enabled by ModuleConfig, which restoreModulesByOverrides
+// requires before it will restore an overridden module.
+func enabled(module *v1alpha1.Module) *v1alpha1.Module {
+	module.Status.Conditions = append(module.Status.Conditions, v1alpha1.ModuleCondition{
+		Type:   v1alpha1.ModuleConditionEnabledByModuleConfig,
+		Status: corev1.ConditionTrue,
+	})
+	return module
+}
+
+func testReadyMPO(name, imageTag, deployedOn string) *v1alpha2.ModulePullOverride {
+	return &v1alpha2.ModulePullOverride{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Annotations: map[string]string{v1alpha1.ModulePullOverrideAnnotationDeployedOn: deployedOn},
+		},
+		Spec:   v1alpha2.ModulePullOverrideSpec{ImageTag: imageTag},
+		Status: v1alpha2.ModulePullOverrideStatus{Message: v1alpha1.ModulePullOverrideMessageReady},
+	}
+}
+
+func getModule(t *testing.T, l *Loader, name string) *v1alpha1.Module {
+	t.Helper()
+	module := new(v1alpha1.Module)
+	require.NoError(t, l.client.Get(context.Background(), client.ObjectKey{Name: name}, module))
+	return module
+}
+
+func getRelease(t *testing.T, l *Loader, name string) *v1alpha1.ModuleRelease {
+	t.Helper()
+	release := new(v1alpha1.ModuleRelease)
+	require.NoError(t, l.client.Get(context.Background(), client.ObjectKey{Name: name}, release))
+	return release
+}
+
+// --- restoreModulesByReleases ----------------------------------------------
+
+func TestRestoreModulesByReleases(t *testing.T) {
+	t.Run("non-embedded module is activated and pinned to its source registry", func(t *testing.T) {
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo),
+			testModule("echo", "losev-test", "losev-test"),
+			testDeployedRelease("echo", "example", "1.0.0"),
+		)
+
+		require.NoError(t, l.restoreModulesByReleases(context.Background()))
+
+		assert.Equal(t, []installerCall{{"echo", "v1.0.0"}}, calls.restore, "non-embedded module must be restored")
+		assert.Empty(t, calls.stageFromRegistry, "non-embedded module must not be staged")
+
+		reg, ok := l.registries["echo"]
+		require.True(t, ok, "registry override must be set for an activated module")
+		assert.Equal(t, testRepo, reg.Base)
+
+		assert.Equal(t, "v1.0.0", getModule(t, l, "echo").Properties.Version)
+	})
+
+	// Regression: a module whose embedded copy is still shipped must be staged
+	// (downloaded, not activated) and must NOT receive the source registry override,
+	// otherwise it renders <sourceRepo>/modules/<name>@<embeddedDigest> and fails with
+	// ImagePullBackOff. See moduleloader/sync.go restoreModulesByReleases.
+	t.Run("embedded module is staged and keeps the embedded registry", func(t *testing.T) {
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, map[string]bool{"echo": true}),
+			testModuleSource("example", testRepo),
+			testModule("echo", "losev-test", "losev-test"),
+			testDeployedRelease("echo", "example", "1.0.0"),
+		)
+
+		require.NoError(t, l.restoreModulesByReleases(context.Background()))
+
+		assert.Equal(t, []installerCall{{"echo", "v1.0.0"}}, calls.stageFromRegistry, "embedded module must be staged")
+		assert.Empty(t, calls.restore, "embedded module must not be activated")
+
+		_, ok := l.registries["echo"]
+		assert.False(t, ok, "embedded module must keep its embedded registry (no source override)")
+
+		// version is still tracked even while the module stays embedded
+		assert.Equal(t, "v1.0.0", getModule(t, l, "echo").Properties.Version)
+	})
+
+	t.Run("migrated module switches active source once the embedded copy is gone", func(t *testing.T) {
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo),
+			testModule("echo", v1alpha1.ModuleSourceEmbedded, "example"),
+			testDeployedRelease("echo", "example", "1.0.0"),
+		)
+
+		require.NoError(t, l.restoreModulesByReleases(context.Background()))
+
+		assert.Equal(t, []installerCall{{"echo", "v1.0.0"}}, calls.restore)
+		reg, ok := l.registries["echo"]
+		require.True(t, ok)
+		assert.Equal(t, testRepo, reg.Base)
+
+		// the embedded sentinel must be flipped to the real source
+		assert.Equal(t, "example", getModule(t, l, "echo").Properties.Source)
+	})
+
+	t.Run("multiple deployed releases: newest wins, older are superseded", func(t *testing.T) {
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo),
+			testModule("echo", "losev-test", "losev-test"),
+			testDeployedRelease("echo", "example", "1.0.0"),
+			testDeployedRelease("echo", "example", "1.0.2"),
+			testDeployedRelease("echo", "example", "1.0.1"),
+		)
+
+		require.NoError(t, l.restoreModulesByReleases(context.Background()))
+
+		// the module ends up pinned to the highest version
+		assert.Equal(t, "v1.0.2", getModule(t, l, "echo").Properties.Version)
+
+		assert.Equal(t, v1alpha1.ModuleReleasePhaseSuperseded, getRelease(t, l, "echo-v1.0.0").Status.Phase)
+		assert.Equal(t, v1alpha1.ModuleReleasePhaseSuperseded, getRelease(t, l, "echo-v1.0.1").Status.Phase)
+		assert.Equal(t, v1alpha1.ModuleReleasePhaseDeployed, getRelease(t, l, "echo-v1.0.2").Status.Phase)
+
+		require.Len(t, calls.restore, 3, "every deployed release is processed in version order")
+		assert.Equal(t, "v1.0.2", calls.restore[len(calls.restore)-1].version, "the last processed release is the newest")
+	})
+
+	t.Run("module with a pull override is skipped in the releases path", func(t *testing.T) {
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo),
+			testModule("echo", "losev-test", "losev-test"),
+			testDeployedRelease("echo", "example", "1.0.0"),
+			testReadyMPO("echo", "v1.0.0", testNodeName),
+		)
+
+		require.NoError(t, l.restoreModulesByReleases(context.Background()))
+
+		assert.Empty(t, calls.restore, "MPO-managed module must not be restored by the releases path")
+		assert.Empty(t, calls.stageFromRegistry)
+		_, ok := l.registries["echo"]
+		assert.False(t, ok)
+	})
+}
+
+// --- restoreModulesByOverrides ---------------------------------------------
+
+func TestRestoreModulesByOverrides(t *testing.T) {
+	t.Run("non-embedded module is restored and pinned to its source registry", func(t *testing.T) {
+		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo),
+			enabled(testModule("echo", "example", "example")),
+			testReadyMPO("echo", "v1.0.0", testNodeName),
+		)
+
+		require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+
+		assert.Equal(t, []installerCall{{"echo", "v1.0.0"}}, calls.restore)
+		assert.Empty(t, calls.uninstall, "no uninstall when deployed-on matches the current node")
+
+		reg, ok := l.registries["echo"]
+		require.True(t, ok)
+		assert.Equal(t, testRepo, reg.Base)
+	})
+
+	t.Run("embedded module is skipped", func(t *testing.T) {
+		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo),
+			testModule("echo", v1alpha1.ModuleSourceEmbedded, "example"),
+			testReadyMPO("echo", "v1.0.0", testNodeName),
+		)
+
+		require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+
+		assert.Empty(t, calls.restore, "embedded module must not be restored from a pull override")
+	})
+
+	t.Run("stale deployed-on annotation triggers a reinstall", func(t *testing.T) {
+		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo),
+			enabled(testModule("echo", "example", "example")),
+			testReadyMPO("echo", "v1.0.0", "some-old-master"),
+		)
+
+		require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+
+		assert.Equal(t, []string{"echo"}, calls.uninstall, "stale deployed-on must trigger uninstall")
+		assert.Equal(t, []installerCall{{"echo", "v1.0.0"}}, calls.restore)
+	})
+
+	t.Run("not-ready override is skipped", func(t *testing.T) {
+		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+		mpo := testReadyMPO("echo", "v1.0.0", testNodeName)
+		mpo.Status.Message = "Downloading"
+
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo),
+			testModule("echo", "example", "example"),
+			mpo,
+		)
+
+		require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+
+		assert.Empty(t, calls.restore, "an override that is not Ready must be skipped")
+	})
+}
+
+// --- deleteStaleModuleReleases ---------------------------------------------
+
+func TestDeleteStaleModuleReleases(t *testing.T) {
+	staleModule := func(name, source string) *v1alpha1.Module {
+		module := testModule(name, source, source)
+		module.Status.Conditions = []v1alpha1.ModuleCondition{
+			{
+				Type:               v1alpha1.ModuleConditionEnabledByModuleConfig,
+				Status:             corev1.ConditionFalse,
+				LastTransitionTime: metav1.NewTime(time.Now().Add(-100 * time.Hour)),
+			},
 		}
-
-		if err := os.WriteFile(suite.valuesPath, []byte(values), 0750); err != nil {
-			return err
-		}
+		return module
 	}
 
-	if ensureSymlink {
-		if err := os.Symlink(suite.downloadedPath, suite.symlinkPath); err != nil {
-			return err
-		}
-	}
+	t.Run("releases of a long-disabled non-embedded module are pruned", func(t *testing.T) {
+		l := newTestLoader(t, newRecordingInstaller(new(installerCalls), nil),
+			staleModule("echo", "example"),
+			testDeployedRelease("echo", "example", "1.0.0"),
+		)
 
-	return nil
+		require.NoError(t, l.deleteStaleModuleReleases(context.Background()))
+
+		err := l.client.Get(context.Background(), client.ObjectKey{Name: "echo-v1.0.0"}, new(v1alpha1.ModuleRelease))
+		assert.True(t, apierrors.IsNotFound(err), "stale module release must be deleted")
+
+		module := getModule(t, l, "echo")
+		assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+		assert.Empty(t, module.Properties.Source, "module properties must be cleared")
+		assert.Equal(t, []string{"example"}, module.Properties.AvailableSources, "available sources must be preserved")
+	})
+
+	t.Run("embedded module is never pruned", func(t *testing.T) {
+		l := newTestLoader(t, newRecordingInstaller(new(installerCalls), nil),
+			staleModule("echo", v1alpha1.ModuleSourceEmbedded),
+			testDeployedRelease("echo", "example", "1.0.0"),
+		)
+
+		require.NoError(t, l.deleteStaleModuleReleases(context.Background()))
+
+		err := l.client.Get(context.Background(), client.ObjectKey{Name: "echo-v1.0.0"}, new(v1alpha1.ModuleRelease))
+		assert.NoError(t, err, "embedded module release must be kept")
+	})
 }

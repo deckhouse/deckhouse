@@ -22,13 +22,11 @@ const (
 	EventSchedule EventKind = iota
 	// EventDisable is emitted when a node loses eligibility during a scheduling pass.
 	EventDisable
-	// EventGlobalDone is emitted when the global sentinel node completes,
-	// carrying the list of currently enabled package names.
-	EventGlobalDone
 )
 
 // Event represents a single lifecycle transition in the scheduling graph.
-// Name identifies the affected node; Enabled is populated only for [EventGlobalDone].
+// Name identifies the affected node; Enabled carries the current enabled module
+// set on an [EventSchedule] for [GlobalName].
 type Event struct {
 	Kind    EventKind
 	Name    string

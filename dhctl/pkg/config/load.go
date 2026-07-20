@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,29 +34,40 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+// SchemaStore is safe for concurrent use: provider schemas can be loaded with
+// LoadProviderDir while other goroutines validate. mu guards cache,
+// moduleConfigsCache, modulesCache, providerDigests and providerIndexes.
 type SchemaStore struct {
+	mu                 sync.RWMutex
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
 	modulesCache       map[string]struct{}
 	conversionsStore   *conversion.ConversionsStore
+	providerDigests    map[string]string
+	providerIndexes    map[string][]SchemaIndex
 }
 
-var once sync.Once
-
-var store *SchemaStore
+var (
+	once  sync.Once
+	store *SchemaStore
+)
 
 type validateOptions struct {
-	omitDocInError     bool
-	commanderMode      bool
-	strictUnmarshal    bool
-	validateExtensions bool
-	requiredSSHHost    bool
+	omitDocInError       bool
+	commanderMode        bool
+	strictUnmarshal      bool
+	validateExtensions   bool
+	requiredSSHHost      bool
+	collectAllErrors     bool
+	skipSchemaValidation bool
+	operation            string
+	downloadRootDir      string
 }
 
 type ValidateOption func(o *validateOptions)
@@ -93,6 +105,39 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
+// ValidateOptionCollectAllErrors makes ParseConfigFromData accumulate per-doc
+// errors into a *ValidationError instead of returning on the first one. Off
+// by default — bootstrap CLI keeps its fail-fast semantics. Validators that
+// want multi-error UX enable this.
+func ValidateOptionCollectAllErrors(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.collectAllErrors = v
+	}
+}
+
+// ValidateOptionSkipSchemaValidation makes parseDocument skip schemaStore
+// OpenAPI checks and just categorize a document by its kind. Use it for
+// "intent extraction" passes — domain analyzers (e.g. CNI mismatch) that
+// must read the user's cluster intent without re-running schema checks the
+// schema-validator pass has already done.
+func ValidateOptionSkipSchemaValidation(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.skipSchemaValidation = v
+	}
+}
+
+func ValidateOptionOperation(op string) ValidateOption {
+	return func(o *validateOptions) {
+		o.operation = op
+	}
+}
+
+func ValidateOptionDownloadRootDir(dir string) ValidateOption {
+	return func(o *validateOptions) {
+		o.downloadRootDir = dir
+	}
+}
+
 func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
 	// fallback to default value
 	candiDir := options.DefaultCandiDir
@@ -101,10 +146,30 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 	}
 	paths = append([]string{candiDir}, paths...)
 
+	// External provider images unpack into <DownloadDir>/<provider>@<digest>/
+	// with a <DownloadDir>/<provider> symlink pointing at the current digest.
+	// Scan only the real digest dirs: symlinks are skipped (their targets are
+	// listed directly), as are the bundled "deckhouse" tree and the image cache.
+	if globalOptions != nil && globalOptions.DownloadDir != "" {
+		entries, err := os.ReadDir(globalOptions.DownloadDir)
+		if err != nil && !os.IsNotExist(err) {
+			dhlog.FromContext(context.Background()).WarnContext(context.Background(), fmt.Sprintf("read download dir %s: %v", globalOptions.DownloadDir, err))
+		}
+		for _, e := range entries {
+			if !e.IsDir() || e.Type()&os.ModeSymlink != 0 {
+				continue
+			}
+			if e.Name() == "deckhouse" || e.Name() == "cache" {
+				continue
+			}
+			paths = append(paths, filepath.Join(globalOptions.DownloadDir, e.Name()))
+		}
+	}
+
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
-		pathsNoTrimmed := strings.Split(pathsStr, ",")
-		for _, p := range pathsNoTrimmed {
+		pathsNoTrimmed := strings.SplitSeq(pathsStr, ",")
+		for p := range pathsNoTrimmed {
 			paths = append(paths, strings.TrimSpace(p))
 		}
 	}
@@ -112,30 +177,33 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 	return newOnceSchemaStore(globalOptions, paths)
 }
 
+func newOnceSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
+	once.Do(func() {
+		store = newSchemaStore(globalOptions, schemasDir)
+	})
+	return store
+}
+
 func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
 		modulesCache:       make(map[string]struct{}),
+		providerDigests:    make(map[string]string),
+		providerIndexes:    make(map[string][]SchemaIndex),
 	}
 
 	st.conversionsStore = conversion.NewConversionsStore()
+
+	ctx := context.Background()
 
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return nil
 		}
 
-		switch info.Name() {
-		case "init_configuration.yaml",
-			"cluster_configuration.yaml",
-			"static_cluster_configuration.yaml",
-			"cloud_discovery_data.yaml",
-			"cloud_provider_discovery_data.yaml",
-			"ssh_configuration.yaml",
-			"ssh_host_configuration.yaml":
-			uploadError := st.UploadByPath(path)
-			if uploadError != nil {
+		if _, ok := schemaFileNames[info.Name()]; ok {
+			if uploadError := st.UploadByPath(path); uploadError != nil {
 				return uploadError
 			}
 		}
@@ -161,7 +229,7 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// autoconverger and state exporter do not contains module dir
-		log.WarnF("Modules dir %s not found\n", modulesDir)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Modules dir %s not found", modulesDir))
 		return st
 	}
 
@@ -170,7 +238,7 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 		stat, err := os.Stat(conversionPath)
 		if err == nil && stat.IsDir() {
 			err := st.conversionsStore.Add(moduleName, conversionPath)
-			log.DebugF("Found conversion for module %s. Latest version: %d\n", moduleName, st.conversionsStore.Get(moduleName).LatestVersion())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found conversion for module %s. Latest version: %d", moduleName, st.conversionsStore.Get(moduleName).LatestVersion()))
 
 			return err
 		}
@@ -204,7 +272,7 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 			st.moduleConfigsCache[moduleName] = schema
 
 		case errors.Is(err, os.ErrNotExist):
-			log.DebugF("Openapi spec not found for module %s\n", moduleName)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Openapi spec not found for module %s", moduleName))
 		default:
 			return err
 		}
@@ -224,6 +292,12 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 			// We don't expect panic here our logger does not support log.Fatal
 			panic(err)
 		}
+		candiOpenAPIDir := filepath.Join(modulesDir, name, "candi", "openapi")
+		if _, err := os.Stat(candiOpenAPIDir); err == nil {
+			if err := filepath.Walk(candiOpenAPIDir, walkFunc); err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	err = loadConfigValuesSchema(path.Join(globalHookModule, "openapi", "config-values.yaml"), "global")
@@ -235,23 +309,22 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 	return st
 }
 
-func newOnceSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
-	once.Do(func() {
-		store = newSchemaStore(globalOptions, schemasDir)
-	})
-	return store
-}
-
 func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.cache[*index]
 }
 
 func (s *SchemaStore) HasSchemaForModuleConfig(name string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	_, ok := s.moduleConfigsCache[name]
 	return ok
 }
 
 func (s *SchemaStore) GetModuleConfigSchema(name string) (*spec.Schema, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	res, ok := s.moduleConfigsCache[name]
 	if !ok {
 		return nil, fmt.Errorf("schema for %s not found", name)
@@ -261,6 +334,8 @@ func (s *SchemaStore) GetModuleConfigSchema(name string) (*spec.Schema, error) {
 }
 
 func (s *SchemaStore) GetModuleConfigVersion(name string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	schema, ok := s.moduleConfigsCache[name]
 	if ok {
 		if len(schema.VendorExtensible.Extensions) > 0 {
@@ -304,6 +379,7 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 // if schema not fount then return ErrSchemaNotFound
 // if schema not found for ModuleConfig then return ErrSchemaNotFound also
 func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
+	ctx := context.Background()
 	options := applyOptions(opts...)
 	if !index.IsValid() {
 		return fmt.Errorf(
@@ -322,15 +398,20 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return err
 		}
 		mcName := mc.GetName()
-		log.DebugF("Found module config for validate %s\n", mcName)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found module config to validate %s", mcName))
 		if mc.Spec.Enabled == nil && mcName != "global" {
 			// we need return error because on top level we want filter module configs from modulesources and move into resources
 			// global is special mc without module
-			return fmt.Errorf("Enabled field for module config %s shoud set to true or false", mcName)
+			return fmt.Errorf("Enabled field for module config %s should be set to true or false", mcName)
 		}
 
-		if _, ok := s.modulesCache[mcName]; !ok && mcName != "global" {
-			log.DebugF("Module %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+		s.mu.RLock()
+		_, moduleKnown := s.modulesCache[mcName]
+		s.mu.RUnlock()
+		if !moduleKnown && mcName != "global" {
+			dhlog.FromContext(ctx).DebugContext(ctx,
+				fmt.Sprintf("Module %s wasn't found. It is probably a module from modulesources. Skipping it", mc.GetName()),
+			)
 			return ErrSchemaNotFound
 		}
 
@@ -338,33 +419,37 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return nil
 		}
 
+		s.mu.RLock()
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
+		s.mu.RUnlock()
 		if !ok {
-			log.DebugF("Schema for module config %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Schema for module config %s wasn't found. It is probably a module from modulesources. Skipping it", mc.GetName()))
 			return fmt.Errorf("Schema for module config %s not found", mcName)
 		}
 
 		if mc.Spec.Version == 0 {
-			return fmt.Errorf("Version field for module config %s shoud set", mcName)
+			return fmt.Errorf("Version field for module config %s should be set", mcName)
 		}
 
 		var err error
 		docForValidate, err = s.applyConversions(mc)
 		if err != nil {
-			return fmt.Errorf("Setting for validation module config failed: %v", err)
+			return fmt.Errorf("Setting up validation for module config failed: %v", err)
 		}
 	} else {
 		schema = s.getV1alpha1CompatibilitySchema(index)
 	}
 
 	if schema == nil {
-		log.DebugF("No schema for index %s. Skip it\n", index.String())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("No schema for index %s. Skipping it", index.String()))
 		// we need return error because on top level we want filter documents without index and move into resources
 		return ErrSchemaNotFound
 	}
 
 	schema = transformer.TransformSchema(schema, &transformer.AdditionalPropertiesTransformer{})
+
+	warnDeprecatedFields(ctx, index, extractMetadataName(*doc), docForValidate, schema)
 
 	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {
@@ -389,26 +474,41 @@ func (s *SchemaStore) UploadByPath(path string) error {
 }
 
 func (s *SchemaStore) upload(fileContent []byte) error {
-	openAPISchema := new(OpenAPISchema)
-	if err := yaml.UnmarshalStrict(fileContent, openAPISchema); err != nil {
-		return fmt.Errorf("json unmarshal: %v", err)
+	parsed, err := parseOpenAPISchemas(fileContent)
+	if err != nil {
+		return err
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index, schema := range parsed {
+		s.cache[index] = schema
+	}
+
+	return nil
+}
+
+func parseOpenAPISchemas(fileContent []byte) (map[SchemaIndex]*spec.Schema, error) {
+	openAPISchema := new(OpenAPISchema)
+	if err := yaml.UnmarshalStrict(fileContent, openAPISchema); err != nil {
+		return nil, fmt.Errorf("json unmarshal: %v", err)
+	}
+
+	result := make(map[SchemaIndex]*spec.Schema, len(openAPISchema.Versions))
 	for _, parsedSchema := range openAPISchema.Versions {
 		schema := new(spec.Schema)
 
 		d, err := json.Marshal(parsedSchema.Schema)
 		if err != nil {
-			return fmt.Errorf("expand the schema: %v", err)
+			return nil, fmt.Errorf("expand the schema: %v", err)
 		}
 
 		if err := json.Unmarshal(d, schema); err != nil {
-			return fmt.Errorf("json marshal: %v", err)
+			return nil, fmt.Errorf("json marshal: %v", err)
 		}
 
-		err = spec.ExpandSchema(schema, schema, nil)
-		if err != nil {
-			return fmt.Errorf("expand the schema: %v", err)
+		if err := spec.ExpandSchema(schema, schema, nil); err != nil {
+			return nil, fmt.Errorf("expand the schema: %v", err)
 		}
 
 		schema = transformer.TransformSchema(
@@ -416,16 +516,98 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 			&transformer.AdditionalPropertiesTransformer{},
 		)
 
-		s.cache[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
+		result[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
 	}
 
+	return result, nil
+}
+
+// schemaFileNames lists the OpenAPI schema files dhctl loads from candi trees
+// and unpacked provider bundles.
+var schemaFileNames = map[string]struct{}{
+	"init_configuration.yaml":            {},
+	"cluster_configuration.yaml":         {},
+	"static_cluster_configuration.yaml":  {},
+	"cloud_discovery_data.yaml":          {},
+	"cloud_provider_discovery_data.yaml": {},
+	"ssh_configuration.yaml":             {},
+	"ssh_host_configuration.yaml":        {},
+}
+
+// ProviderSchemasLoaded reports whether LoadProviderDir already loaded this
+// provider at this digest.
+func (s *SchemaStore) ProviderSchemasLoaded(provider, digest string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return digest != "" && s.providerDigests[provider] == digest
+}
+
+// HasProviderSchemas reports whether any schemas for the provider were loaded
+// via LoadProviderDir into this store, regardless of digest.
+func (s *SchemaStore) HasProviderSchemas(provider string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.providerIndexes[provider]) > 0
+}
+
+// LoadProviderDir loads provider schemas from dir (an unpacked bundle root)
+// into the store, replacing schemas previously loaded for this provider. A
+// repeated call with the same digest is a no-op.
+func (s *SchemaStore) LoadProviderDir(provider, digest, dir string) error {
+	if s.ProviderSchemasLoaded(provider, digest) {
+		return nil
+	}
+
+	parsed := make(map[SchemaIndex]*spec.Schema)
+	walkFunc := func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil {
+			return err
+		}
+		if _, ok := schemaFileNames[info.Name()]; !ok {
+			return nil
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read schema file: %w", err)
+		}
+		schemas, err := parseOpenAPISchemas(content)
+		if err != nil {
+			return fmt.Errorf("parse schema file %s: %w", path, err)
+		}
+		for index, schema := range schemas {
+			parsed[index] = schema
+		}
+		return nil
+	}
+	if err := filepath.Walk(dir, walkFunc); err != nil {
+		return fmt.Errorf("walk provider schemas dir %s: %w", dir, err)
+	}
+
+	indexes := make([]SchemaIndex, 0, len(parsed))
+	for index := range parsed {
+		indexes = append(indexes, index)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if digest != "" && s.providerDigests[provider] == digest {
+		return nil
+	}
+	for _, index := range s.providerIndexes[provider] {
+		delete(s.cache, index)
+	}
+	for index, schema := range parsed {
+		s.cache[index] = schema
+	}
+	s.providerIndexes[provider] = indexes
+	s.providerDigests[provider] = digest
 	return nil
 }
 
 func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (bool, error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
-	var blank map[string]interface{}
+	var blank map[string]any
 
 	if options.strictUnmarshal {
 		err := yaml.UnmarshalStrict(*dataObj, &blank)
@@ -480,10 +662,11 @@ func applyOptions(opts ...ValidateOption) validateOptions {
 }
 
 func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
+	ctx := context.Background()
 	conversion := s.conversionsStore.Get(mc.GetName())
-	log.DebugF("Starting conversion for module %s. Latest version: %d\n", mc.GetName(), conversion.LatestVersion())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Starting conversion for module %s. Latest version: %d", mc.GetName(), conversion.LatestVersion()))
 	var err error
-	var conversed map[string]interface{}
+	var conversed map[string]any
 	if mc.Spec.Version < conversion.LatestVersion() {
 		set := &mc.Spec.Settings
 		unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(set)
@@ -494,7 +677,7 @@ func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
 		if err != nil {
 			return []byte{}, fmt.Errorf("error converting to unstructured: %w", err)
 		}
-		log.DebugF("conversion successfully applyed for ModuleConfig %s\n", mc.GetName())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("conversion successfully applied for ModuleConfig %s", mc.GetName()))
 	} else {
 		return yaml.Marshal(mc.Spec.Settings)
 	}

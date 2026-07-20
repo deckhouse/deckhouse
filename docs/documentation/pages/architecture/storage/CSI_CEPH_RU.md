@@ -21,7 +21,6 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
 
 Архитектура модуля [`csi-ceph`](/modules/csi-ceph/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля csi-ceph](../../../images/architecture/storage/c4-l2-csi-ceph.ru.png)
 
 ## Компоненты модуля
@@ -44,7 +43,7 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
 
 1. **CSI-драйвер (rbd/cephfs)** — реализация CSI-драйвера для `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` provisioner. Выбор CSI-драйвера выполняется путём задания storage-класса в кастомном ресурсе CephStorageClass.
 
-  CSI-драйвер `csi-cephfs` реализован [по типовой архитектуре CSI-драйвера, используемого в DKP](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+  CSI-драйвер `csi-cephfs` реализован [по типовой архитектуре CSI-драйвера, используемого в DKP](../csi-drivers/csi-driver.html).
 
   CSI-драйвер `csi-rbd` реализован [по отличной от типового CSI-драйвера архитектуре](../../storage/csi-drivers/csi-driver-ceph-rbd.html).
 

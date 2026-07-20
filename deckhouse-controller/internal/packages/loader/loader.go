@@ -22,8 +22,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/ettle/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -35,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -45,9 +48,17 @@ const (
 	// digestsFile is the JSON file mapping image names to their content-addressable digests.
 	digestsFile = "images_digests.json"
 
+	// embeddedDir is the directory, relative to the process working directory,
+	// that holds embedded modules and their shared images_digests.json.
+	embeddedDir = "modules"
+
 	// globalPath is the relative directory containing global hook definitions and values.
 	// LoadGlobalConf expects this path to exist relative to the process working directory.
 	globalPath = "global-hooks"
+
+	// conversionsDir is the subdirectory within a package's openapi/ directory
+	// that contains schema version conversion files (v<N>.yaml).
+	conversionsDir = "conversions"
 )
 
 // ErrPackageNotFound is returned when the requested package directory doesn't exist
@@ -186,10 +197,16 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		return nil, fmt.Errorf("convert module definition: %w", err)
 	}
 
-	digests, err := loadDigests(moduleDir)
+	digests, err := loadEmbeddedDigests(def.Name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load digests: %w", err)
+	}
+
+	conversions, err := loadConversions(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load conversions: %w", err)
 	}
 
 	return &modules.Config{
@@ -201,6 +218,8 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
+
+		Conversions: conversions,
 
 		Hooks: hooks,
 	}, nil
@@ -294,6 +313,12 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		return nil, fmt.Errorf("load digests: %w", err)
 	}
 
+	conversions, err := loadConversions(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load conversions: %w", err)
+	}
+
 	return &modules.Config{
 		Path:       moduleDir,
 		Definition: moduleDef,
@@ -303,6 +328,8 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
+
+		Conversions: conversions,
 
 		Hooks: hooks.hooks,
 
@@ -342,12 +369,20 @@ func LoadGlobalConf(ctx context.Context, logger *log.Logger) (*global.Config, er
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
+	conversions, err := loadConversions(globalPath)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load conversions: %w", err)
+	}
+
 	return &global.Config{
 		Path: globalPath,
 
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
+
+		Conversions: conversions,
 
 		Hooks: hooks,
 	}, nil
@@ -412,14 +447,6 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 		}
 	}
 
-	var disableOpts dto.DisableOptions
-	if def.DisableOptions != nil {
-		disableOpts = dto.DisableOptions{
-			Confirmation: def.DisableOptions.Confirmation,
-			Message:      def.DisableOptions.Message,
-		}
-	}
-
 	var descriptions dto.Descriptions
 	if def.Descriptions != nil {
 		descriptions = dto.Descriptions{
@@ -430,11 +457,11 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 
 	return &dto.ModuleDefinition{
 		Definition: dto.Definition{
-			Name:           def.Name,
-			Stage:          def.Stage,
-			Descriptions:   descriptions,
-			Requirements:   requirements,
-			DisableOptions: disableOpts,
+			Name:         def.Name,
+			Stage:        def.Stage,
+			Descriptions: descriptions,
+			Requirements: requirements,
+			Licensing:    legacyModuleLicensing(def.Accessibility),
 		},
 		Weight:   int(def.Weight),
 		Critical: def.Critical,
@@ -479,6 +506,23 @@ func legacyModuleRequirements(parentModules map[string]string) dto.ModulesRequir
 	}
 }
 
+// legacyModuleLicensing projects legacy module.yaml accessibility onto package licensing.
+func legacyModuleLicensing(access *moduletypes.ModuleAccessibility) dto.Licensing {
+	if access == nil || len(access.Editions) == 0 {
+		return dto.Licensing{}
+	}
+
+	editions := make(map[string]dto.Edition, len(access.Editions))
+	for name, e := range access.Editions {
+		editions[name] = dto.Edition{
+			Available:        e.Available,
+			EnabledInBundles: slices.Clone(e.EnabledInBundles),
+		}
+	}
+
+	return dto.Licensing{Editions: editions}
+}
+
 // loadModuleDefinition reads and parses the legacy module.yaml file from the package directory.
 // TODO(ipaqsa): remove when all modules are migrated to package.yaml
 func loadModuleDefinition(packageDir string) (*moduletypes.Definition, error) {
@@ -517,6 +561,47 @@ func loadDigests(packageDir string) (map[string]string, error) {
 	}
 
 	return digests, nil
+}
+
+// loadEmbeddedDigests reads the shared images_digests.json under embeddedDir and
+// returns the digest map for the given module. The embedded digests file nests
+// per-module maps keyed by the module's CamelCase name, so the lookup converts
+// packageName accordingly. Returns nil without error if the file is absent or
+// holds no entry for the module (digests are optional).
+func loadEmbeddedDigests(packageName string) (map[string]string, error) {
+	path := filepath.Join(embeddedDir, digestsFile)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("read file '%s': %w", path, err)
+	}
+
+	digests := make(map[string]map[string]string)
+	if err = json.Unmarshal(content, &digests); err != nil {
+		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
+	}
+
+	if packageDigests, ok := digests[strcase.ToCamel(packageName)]; ok {
+		return packageDigests, nil
+	}
+
+	return nil, nil
+}
+
+// loadConversions reads conversion rules from the module's openapi/conversions directory.
+// Returns nil if the directory does not exist (conversions are optional).
+func loadConversions(moduleDir string) (*conversion.Converter, error) {
+	d := filepath.Join(moduleDir, "openapi", conversionsDir)
+	if _, err := os.Stat(d); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("stat conversions dir: %w", err)
+	}
+	return conversion.NewConverterFromDir(d)
 }
 
 // getModuleVersion returns the version of the package at moduleDir.

@@ -217,6 +217,56 @@ module JSONSchemaRenderer
         result
     end
 
+    # Methods for processing `anyOf` at a depth greater than 1
+    
+    def anyof_oneof_variants(attributes)
+        return nil unless attributes.is_a?(Hash)
+
+        attributes['anyOf'] || attributes['oneOf']
+    end
+
+    def resolve_attributes_type(attributes)
+        return nil unless attributes.is_a?(Hash)
+        return attributes['type'] if attributes.key?('type')
+        return 'x-kubernetes-int-or-string' if attributes.key?('x-kubernetes-int-or-string')
+
+        variants = anyof_oneof_variants(attributes)
+        return nil unless variants.is_a?(Array) && !variants.empty?
+
+        types = variants.map { |variant| variant.is_a?(Hash) ? variant['type'] : nil }.compact.uniq
+        return nil if types.empty?
+        return 'x-kubernetes-int-or-string' if types.sort == ['integer', 'string']
+        return types[0] if types.length == 1
+
+        types.map { |type| format_type(type, nil) }.join(' or ')
+    end
+
+    def merge_anyof_schema_attributes(attributes)
+        return attributes unless attributes.is_a?(Hash)
+
+        variants = anyof_oneof_variants(attributes)
+        return attributes unless variants.is_a?(Array) && !variants.empty?
+
+        merged = attributes.dup
+        %w[pattern minimum maximum exclusiveMinimum exclusiveMaximum minLength maxLength enum default x-doc-default description example x-doc-example].each do |key|
+            next if merged.key?(key)
+
+            values = variants.map { |variant| variant.is_a?(Hash) ? variant[key] : nil }.compact
+            values.uniq! { |value| value.to_s }
+            next if values.empty?
+
+            if values.length == 1
+                merged[key] = values[0]
+            elsif key == 'pattern'
+                merged['_anyof_patterns'] = values
+            elsif %w[example x-doc-example].include?(key) && !merged.key?('x-doc-examples') && !merged.key?('x-examples')
+                merged['x-doc-examples'] = values
+            end
+        end
+
+        merged
+    end
+
     def format_examples(name, attributes)
         result = Array.new()
         exampleObject = nil
@@ -438,7 +488,13 @@ module JSONSchemaRenderer
             result.push(enum_result)
         end
 
-        if attributes.has_key?('pattern')
+        # Processing anyOf at a level deeper than 1
+        
+        if attributes.has_key?('_anyof_patterns')
+            attributes['_anyof_patterns'].each do |pattern|
+                result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <code class="resources__attrs_content">%s</code></p>), get_i18n_term("pattern").capitalize, CGI.escapeHTML(pattern)))
+            end
+        elsif attributes.has_key?('pattern')
             result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <code class="resources__attrs_content">%s</code></p>),get_i18n_term("pattern").capitalize, CGI.escapeHTML(attributes['pattern']) ))
         end
 
@@ -556,14 +612,7 @@ module JSONSchemaRenderer
                 result.push('<li>')
             end
             result.push('<div class="resources__prop_wrap">')
-            attributesType = ''
-            if attributes.is_a?(Hash)
-              if attributes.has_key?('type')
-                 attributesType = attributes["type"]
-              elsif attributes.has_key?('x-kubernetes-int-or-string')
-                 attributesType = "x-kubernetes-int-or-string"
-              end
-            end
+            attributesType = resolve_attributes_type(attributes) || ''
 
             if ( get_hash_value(attributes, 'x-doc-deprecated') or get_hash_value(attributes, 'deprecated') )
                 parameterTextContent = sprintf(%q(<div id="%s" data-anchor-id="%s" class="resources__prop_name anchored">
@@ -578,7 +627,9 @@ module JSONSchemaRenderer
             end
 
             if attributesType != ''
-                if attributes.is_a?(Hash) and attributes.has_key?("items")
+                if attributesType.include?(' or ')
+                    parameterTextContent += sprintf(%q(<span class="resources__prop_type">%s</span>), attributesType)
+                elsif attributes.is_a?(Hash) and attributes.has_key?("items")
                     parameterTextContent += sprintf(%q(<span class="resources__prop_type">%s</span>), format_type(attributesType, attributes["items"]["type"]))
                 else
                     parameterTextContent += sprintf(%q(<span class="resources__prop_type">%s</span>), format_type(attributesType, nil))
@@ -588,7 +639,10 @@ module JSONSchemaRenderer
             result.push(parameterTextContent)
         end
 
-        result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
+        if attributes.is_a?(Hash)
+            displayAttributes = merge_anyof_schema_attributes(attributes)
+            result.push(format_attribute(name, displayAttributes, parent, primaryLanguage, fallbackLanguage))
+        end
 
         if (@moduleName != '') and attributes.has_key?('x-doc-d8Revision')
           case attributes['x-doc-d8Revision']

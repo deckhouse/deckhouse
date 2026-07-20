@@ -1,5 +1,6 @@
 ---
 title: "Модуль istio: примеры"
+description: "Практические примеры использования модуля istio: маршрутизация, балансировка, авторизация, ingress, телеметрия и обновление control plane."
 ---
 
 ## Circuit Breaker
@@ -56,7 +57,7 @@ spec:
 
 ## Locality Failover
 
-> При необходимости ознакомьтесь с [основной документацией](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).
+{% alert level="info" %}При необходимости ознакомьтесь с [документацией Istio о Locality Failover](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).{% endalert %}
 
 Istio позволяет настроить приоритетный географический failover между эндпоинтами. Для определения зоны Istio использует лейблы узлов с соответствующей иерархией:
 
@@ -119,9 +120,7 @@ spec:
 
 ## Canary
 
-{% alert level="warning" %}
-Istio отвечает лишь за гибкую маршрутизацию запросов, которая опирается на спецзаголовки запросов (например, cookie) или просто на случайность. За настройку этой маршрутизации и «переключение» между канареечными версиями отвечает CI/CD-система.
-{% endalert %}
+Istio отвечает лишь за гибкую маршрутизацию запросов, которая опирается на спецзаголовки запросов (например, cookie) или просто на случайность. За настройку этой маршрутизации и переключение между канареечными версиями отвечает CI/CD-система.
 
 Подразумевается, что в одном неймспейсе развёрнуты два Deployment с разными версиями приложения. У подов разных версий разные лейблы (`version: v1` и `version: v2`).
 
@@ -202,16 +201,19 @@ spec:
 
 ### Istio Ingress Gateway
 
-Пример:
+Кастомный ресурс [IngressIstioController](cr.html#ingressistiocontroller) разворачивает выделенный прокси Istio Ingress Gateway. Каждый экземпляр контроллера получает собственный класс шлюза, и нужный экземпляр выбирается из ресурса Istio `Gateway` по соответствующему лейблу `istio.deckhouse.io/ingress-gateway-class`. Модуль управляет рабочей нагрузкой шлюза и его ресурсом `Service`, тогда как ресурсы `Gateway` и маршрутизации (`VirtualService`) остаются под вашим управлением.
+
+Начните с создания `IngressIstioController`. В примере ниже HTTP и HTTPS публикуются на выбранных frontend-узлах через host-порты:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IngressIstioController
 metadata:
- name: main
+  name: main
 spec:
-  # ingressGatewayClass содержит значение селектора лейблов, используемое при создании ресурса Gateway.
+  # Значение, которое выбирается ресурсами Gateway через лейбл istio.deckhouse.io/ingress-gateway-class.
   ingressGatewayClass: istio-hp
+  # IngressIstioController поддерживает инлеты LoadBalancer, NodePort и HostPort.
   inlet: HostPort
   hostPort:
     httpPort: 80
@@ -226,6 +228,8 @@ spec:
   resourcesRequests:
     mode: VPA
 ```
+
+Обратите внимание, что ресурс Secret с TLS для ingress gateway должен быть создан в пространстве имён `d8-ingress-istio`, а не в пространстве имён приложения — эту деталь легко упустить.
 
 ```yaml
 apiVersion: v1
@@ -274,7 +278,7 @@ spec:
 ```
 
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: vs-app
@@ -290,11 +294,106 @@ spec:
             host: app-svc
 ```
 
+Полный список настроек контроллера — аннотации балансировщика нагрузки, топология сети, планирование и управление ресурсами — приведён в [справочнике по кастомному ресурсу IngressIstioController](cr.html#ingressistiocontroller).
+
+#### Сохранение атрибутов клиента за внешними прокси
+
+Когда шлюз развёрнут за другими прокси или балансировщиками нагрузки (например, за облачным балансировщиком или обратным прокси), настройте [`spec.networkTopology`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology), чтобы шлюз мог корректно извлекать исходные атрибуты клиента, например IP-адрес источника. Подробнее — [в документации Istio о топологии сети шлюза](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/).
+
+Используйте [`numTrustedProxies`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-numtrustedproxies), когда вышестоящие прокси передают IP-адрес клиента в заголовке `X-Forwarded-For`. Укажите количество доверенных прокси, развёрнутых перед шлюзом, чтобы Istio извлекал корректный адрес клиента и заполнял заголовок `X-Envoy-External-Address` для вышестоящих сервисов. Например, если перед шлюзом находятся облачный балансировщик и обратный прокси, укажите значение `2`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+  name: main
+spec:
+  ingressGatewayClass: istio-hp
+  inlet: LoadBalancer
+  networkTopology:
+    numTrustedProxies: 2
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: VPA
+```
+
+Используйте [`proxyProtocol`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-proxyprotocol), когда вышестоящий L4/TCP-балансировщик передаёт атрибуты клиента через [PROXY-протокол](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt), а не через HTTP-заголовки. При включении этого параметра шлюз начинает разбирать заголовок PROXY-протокола во входящих TCP-соединениях:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+  name: main
+spec:
+  ingressGatewayClass: istio-hp
+  inlet: LoadBalancer
+  networkTopology:
+    proxyProtocol: true
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: VPA
+```
+
+{% alert level="info" %}
+`numTrustedProxies` и `proxyProtocol` можно использовать вместе. Если настроены оба параметра и входящий запрос содержит заголовок `X-Forwarded-For`, Istio использует доверенную цепочку `X-Forwarded-For` вместо атрибутов PROXY-протокола.
+{% endalert %}
+
+#### Управление запросами ресурсов шлюза
+
+Используйте [`spec.resourcesRequests`](cr.html#ingressistiocontroller-v1alpha1-spec-resourcesrequests) для управления запросами (requests) CPU и памяти для подов ingress gateway. Доступны два режима:
+
+- `Static` — запросы задаются напрямую и остаются фиксированными:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: IngressIstioController
+  metadata:
+    name: main
+  spec:
+    ingressGatewayClass: istio-hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    resourcesRequests:
+      mode: Static
+      static:
+        cpu: 100m
+        memory: 128Mi
+  ```
+
+- `VPA` — [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) изменяет запросы в заданных пределах `min`/`max`. Начиная с версии DKP 1.75, рекомендуемым режимом VPA является `InPlaceOrRecreate`: он изменяет ресурсы пода «на месте» (in-place), если это поддерживается кластером, и пересоздаёт под в противном случае (устаревший режим `Auto` всегда пересоздаёт под):
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: IngressIstioController
+  metadata:
+    name: main
+  spec:
+    ingressGatewayClass: istio-hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    resourcesRequests:
+      mode: VPA
+      vpa:
+        mode: InPlaceOrRecreate
+        cpu:
+          min: 100m
+          max: 1000m
+        memory:
+          min: 128Mi
+          max: 2000Mi
+  ```
+
 ### Ingress NGINX
 
 Для работы с Ingress NGINX требуется подготовить:
 
-* Ingress-контроллер, добавив к нему сайдкар от Istio. В нашем случае — включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/ingress-nginx/).
+* Ingress-контроллер, добавив к нему сайдкар от Istio. В нашем случае — включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](/modules/ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
@@ -544,7 +643,7 @@ spec:
 ### Разрешить из любого кластера (по mTLS)
 
 {% alert level="warning" %}
-Если есть запрещающие правила, у них будет приоритет. Подробнее можно посмотреть [алгоритм](#алгоритм-принятия-решения).
+Если есть запрещающие правила, у них будет приоритет. Подробнее — в разделе [«Алгоритм принятия решения»](#алгоритм-принятия-решения).
 {% endalert %}
 
 Пример:
@@ -560,7 +659,7 @@ spec:
  rules:
  - from:
    - source:
-       principals: ["*"] # To set mTLS mandatory.
+       principals: ["*"] # Принудительное использование mTLS.
 ```
 
 ### Разрешить вообще откуда угодно (в том числе без mTLS)
@@ -606,7 +705,7 @@ spec:
 
 ## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
 
-{% alert level="warning" %}Доступно только в редакции Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
 
 Cluster A:
 
@@ -630,6 +729,106 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
+## Ambient mesh
+
+{% alert level="warning" %}Доступно только в Enterprise Edition и Certified Security Edition Pro.{% endalert %}
+
+{% alert level="warning" %}Поддержка ambient mesh является экспериментальной и не рекомендуется для использования в production-окружении.{% endalert %}
+
+Упоминаемые в этом подразделе компоненты ambient mesh описаны [на странице с основным описанием модуля](./#ambient-mesh).
+
+### Включение ambient mesh
+
+Для работы режима ambient требуется режим перенаправления трафика [`CNIPlugin`](#ограничения-режима-перенаправления-прикладного-трафика-cniplugin) и Istio 1.25 или более новой версии.
+
+Пример конфигурации модуля с включенным режимом ambient:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  enabled: true
+  version: 2
+  settings:
+    dataPlane:
+      trafficRedirectionSetupMode: CNIPlugin
+    ambient:
+      enabled: true
+```
+
+После включения модуль запускает DaemonSet `ztunnel` и контроллер waypoint. Чтобы подключить рабочие нагрузки к сети ambient, выполните следующие шаги.
+
+### Подключение рабочих нагрузок к сети ambient (L4)
+
+Добавьте лейбл `istio.io/dataplane-mode=ambient` на неймспейс, чтобы захватывать трафик его подов с помощью `ztunnel`. Это позволяет использовать возможности уровня L4 (Mutual TLS, идентификация, авторизация L4) без сайдкара:
+
+```shell
+d8 k label namespace myns istio.io/dataplane-mode=ambient
+```
+
+### Добавление waypoint для возможностей L7
+
+Чтобы получить возможности уровня L7 (маршрутизация HTTP, авторизация L7, более подробная телеметрия), создайте в неймспейсе ресурс [WaypointInstance](cr.html#waypointinstance).
+
+Пример ресурса WaypointInstance, который создаёт waypoint для всех рабочих нагрузок и сервисов неймспейса:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: WaypointInstance
+metadata:
+  name: main
+  namespace: myns
+spec:
+  waypointFor: All
+  replicasManagement:
+    mode: Static
+    static:
+      replicas: 2
+  resourcesManagement:
+    mode: VPA
+    vpa:
+      mode: InPlaceOrRecreate
+      cpu:
+        min: 100m
+        max: 1000m
+      memory:
+        min: 128Mi
+        max: 2000Mi
+```
+
+Контроллер создаёт инфраструктуру waypoint (Deployment, Service, Gateway, VPA, а также PDB — если эффективное количество реплик `>= 2`). Контроллер **не** подключает рабочие нагрузки к waypoint. Для этого используйте лейбл `istio.io/use-waypoint`.
+
+Чтобы подключить все рабочие нагрузки и сервисы неймспейса к waypoint, выполните следующую команду:
+
+```shell
+d8 k label namespace myns istio.io/use-waypoint=main
+```
+
+Чтобы подключить отдельный сервис или рабочую нагрузку, выполните следующую команду:
+
+```shell
+d8 k -n myns label service myservice istio.io/use-waypoint=main
+```
+
+### Отключение ambient mesh
+
+{% alert level="warning" %}
+Перед отключением режима ambient удалите все ресурсы WaypointInstance. При отключенном режиме ambient контроллер waypoint не запускается и не может согласовывать или удалять ресурсы waypoint. Это приводит к появлению orphan-ресурсов, о чём Deckhouse Kubernetes Platform (DKP) сигнализирует алертом [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled).
+{% endalert %}
+
+Чтобы отключить режим ambient, выполните следующие шаги:
+
+1. Проверьте наличие ресурсов WaypointInstance и при необходимости удалите их с помощью следующих команд:
+
+   ```shell
+   d8 k get waypointinstance -A
+   d8 k -n myns delete waypointinstance main
+   ```
+
+2. Отключите режим, установив значение `false` для параметра [`ambient.enabled`](configuration.html#parameters-ambient-enabled) в настройках модуля.
+
 ## Управление поведением data plane
 
 ### Предотвращение завершения работы istio-proxy до завершения соединений основного приложения
@@ -645,20 +844,307 @@ annotations:
   inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
 ```
 
-## Ограничения режима перенаправления прикладного трафика `CNIPlugin`
+<span id="telemetry-api-mesh-observability"></span>
+
+## Telemetry API: метрики mesh и журналы доступа
+
+[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) —  рекомендуемый способ настройки сбора данных о работе сервисов (метрики, access log, провайдеры трассировки) в связке с `meshConfig`.
+
+Модуль поддерживает два режима, задаваемые параметром [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled):
+
+| Режим | Поведение |
+|-------|-----------|
+| `false` (по умолчанию) | Прежний режим (без Telemetry API): полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в том числе `telemetry.v2.prometheus` для Sail). Модуль всегда создаёт `Telemetry` `d8-main` в `d8-istio` только для access log; без `spec.metrics` / `spec.tracing` и без `defaultProviders.metrics` |
+| `true` | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены; тот же `Telemetry` `d8-main` дополняется `spec.metrics` (и при настроенной трассировке — `spec.tracing` через `deckhouse-tracing` из [`tracing.collector`](configuration.html#parameters-tracing-collector)). Формат журнала — [в `dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) |
+
+### Включение режима Telemetry API
+
+Пример `ModuleConfig`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    telemetryAPI:
+      enabled: true
+```
+
+Дождитесь применения манифеста `Istio` / `IstioOperator` в неймспейсе `d8-istio` и обновления конфигурации сайдкаров; при необходимости перезапустите прикладные поды после появления трафика, если метрики ещё не видны на дашбордах.
+
+### Проверка метрик и логов
+
+После генерации трафика между сервисами mesh используйте команду:
+
+```shell
+# Текст метрик Prometheus через admin API сайдкара (в istio-proxy есть pilot-agent, curl нет).
+istio_pod="$(
+  d8 k -n my-namespace get pods -l app=my-app -o jsonpath='{.items[0].metadata.name}'
+)"
+d8 k exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
+  /usr/local/bin/pilot-agent request GET stats/prometheus | head
+```
+
+Пример успешного вывода:
+
+```text
+# TYPE istio_requests_total counter
+istio_requests_total{...} 12
+istio_request_duration_milliseconds_bucket{...} 12
+istio_request_bytes_bucket{...} 12
+istio_response_bytes_bucket{...} 12
+```
+
+Если в выводе присутствуют метрики вида `istio_requests_total`, сбор настроен корректно.
+
+### Prometheus и Grafana
+
+При включённом модуле [`operator-prometheus`](/modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](/modules/prometheus/). Набор пространств имён под мониторинг вычисляется автоматически по членству в mesh (инъекция Istio); чтобы исключить пространство имён из сборщика метрик, на объект `Namespace` можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
+
+Если в Grafana пустые панели «workload», а control plane в порядке, необходимо определить причину отсутствия workload-метрик. Для этого проверьте:
+
+- у подов есть сайдкар и лейбл `service.istio.io/canonical-name`;
+- на пространстве имён приложения нет `istio.deckhouse.io/discard-metrics: "true"`.
+
+### Дополнительные политики `Telemetry` (по желанию)
+
+Дополнительные `Telemetry` удобно задавать с явным workload‑селектором или `targetRef`. Два объекта `Telemetry` в одном неймспейсе без селектора провайдеру применять нельзя: Istio выдаёт [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Модуль уже создаёт в `d8-istio` единственный объект без селектора (`d8-main`); второй там же без селектора не добавляйте без осознанной замены.
+
+Пример ограниченной политики в прикладном пространстве имён:
+
+```yaml
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: team-a-prometheus-defaults
+  namespace: team-a
+spec:
+  metrics:
+  - providers:
+    - name: prometheus
+```
+
+Тонкая настройка тегов и отключение отдельных метрик описана [в документации Istio](https://istio.io/latest/docs/tasks/observability/metrics/telemetry-api/).
+
+### Трассировка через Telemetry API
+
+[`tracing.collector`](configuration.html#parameters-tracing-collector) — единая точка настройки mesh-wide экспорта (Zipkin или OpenTelemetry).
+
+- При `telemetryAPI.enabled: false` и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — только прежний режим: `meshConfig.defaultConfig.tracing.zipkin` из [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector). OTLP требует режима Telemetry API.
+- При `telemetryAPI.enabled: true` и `tracing.enabled: true` модуль создаёт `deckhouse-tracing`, если заданы [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) `service` и `port`, или при [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (при одновременной настройке приоритет у OpenTelemetry). `defaultConfig.tracing` не заполняется; в `Telemetry` `d8-main` добавляется `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, по умолчанию `1.0`).
+
+Нестандартные провайдеры — через `Telemetry` с `selector` в неймспейсе приложения, не второй CR без селектора в `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). Подробнее о [настройке трассировки через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/) — в документации Istio.
+
+#### Пример — Telemetry API + Jaeger через Zipkin
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    telemetryAPI:
+      enabled: true
+    tracing:
+      enabled: true
+      sampling: 25
+      collector:
+        zipkin:
+          address: "jaeger-collector.observability.svc.cluster.local:9411"
+```
+
+Дождитесь применения CR `Istio`/`IstioOperator` из `d8-istio`; при проблемах с дашбордами перегенерируйте трафик и перепроверьте сайдкары.
+
+#### Kiali
+
+Для UI в Kiali задайте [`tracing.kiali`](configuration.html#parameters-tracing-kiali) (Jaeger UI + корректный gRPC endpoint для запросов Kiali из кластера).
+
+#### Пример — mesh-wide OTLP через ModuleConfig
+
+{% alert level="info" %}Экспорт OpenTelemetry в модуле соответствует [распределённой трассировке с OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) на Istio 1.25+. На Istio 1.21 используйте Zipkin/Jaeger через [`tracing.collector.zipkin`](configuration.html#parameters-tracing-collector) или обновите ревизию control plane.{% endalert %}
+
+Разверните Collector, доступный из mesh, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер `deckhouse-tracing` и `spec.tracing` в `d8-main` — не дописывайте OTLP вручную в `meshConfig` CR `Istio` / `IstioOperator`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    telemetryAPI:
+      enabled: true
+    tracing:
+      enabled: true
+      sampling: 10
+      collector:
+        opentelemetry:
+          service: opentelemetry-collector.observability.svc.cluster.local
+          port: 4317
+```
+
+Для HTTP OTLP задайте `collector.opentelemetry.http.path` (и при необходимости `timeout`) в параметре [`tracing.collector.opentelemetry.http`](configuration.html#parameters-tracing-collector-opentelemetry).
+
+Точечные настройки по workload — `Telemetry` с `selector` в неймспейсе приложения, ссылаясь на `deckhouse-tracing`. В `d8-istio` не создавайте второй `Telemetry` без селектора ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)).
+
+#### Пример — трассировка только для части приложений
+
+```yaml
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: checkout-tracing
+  namespace: shop
+spec:
+  selector:
+    matchLabels:
+      app: checkout
+  tracing:
+  - providers:
+    - name: jaeger-zipkin
+    randomSamplingPercentage: 100.0
+```
+
+#### Пример — отключить отправку спанов (например, у ingress)
+
+В DKP при включённом модуле `ingress-nginx` модуль Istio дополнительно создаёт `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx` и выставляет `tracing.disableSpanReporting`, чтобы контроллер с `istio-proxy` не отправлял спаны в бэкенд трассировки. Другие случаи — своим объектом:
+
+```yaml
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: no-tracing-example
+  namespace: my-namespace
+spec:
+  tracing:
+  - disableSpanReporting: true
+```
+
+### Возврат к прежнему режиму метрик
+
+```yaml
+spec:
+  settings:
+    telemetryAPI:
+      enabled: false
+```
+
+Управляемые модулем `Telemetry` для этого режима будут убраны при следующей синхронизации; снова включится прежний `telemetry.v2`.
+
+## Диагностика Istio с помощью istioctl из debug-контейнера
+
+В debug-контейнер DKP входят бинарные файлы `istioctl` для поддерживаемых версий Istio. Используйте их, когда нужно проверить конфигурацию Istio, запустить анализаторы или получить конфигурацию Envoy из прикладных подов.
+
+Перед запуском debug-контейнера создайте отдельный ServiceAccount и выдайте ему права, необходимые для команд `istioctl`, которые вы планируете запускать. Например, следующий манифест предоставляет права, необходимые для выполнения команды `istioctl proxy-config` для подов в одном прикладном неймспейсе:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istioctl-debug
+  namespace: <debug-namespace>
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups: [""]
+    resources:
+      - pods/portforward
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+subjects:
+  - kind: ServiceAccount
+    name: istioctl-debug
+    namespace: <debug-namespace>
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istioctl-debug
+```
+
+Замените `<debug-namespace>` на неймспейс, в котором будет создан временный debug-под, а `<target-namespace>` — на неймспейс прикладного пода, который нужно проверить. Создайте ресурсы Role и RoleBinding для каждого целевого неймспейса, где `istioctl` должен получать доступ к подам.
+
+Этот RBAC-манифест рассчитан на команды, которые обращаются к поду напрямую, например, к ресурсу вида `<pod-name>.<target-namespace>`. Если использовать имена типизированных ресурсов, например `deployment/<name>`, выдайте дополнительный доступ на чтение этих типов ресурсов, чтобы `istioctl` смог определить соответствующие поды.
+
+{% alert level="warning" %}
+Создание подов в системных неймспейсах, таких как `d8-system`, и использование системных ServiceAccount, таких как `deckhouse`, обычно требует прав уровня `cluster-admin`. Используйте отдельный ServiceAccount с минимально необходимыми правами.
+{% endalert %}
+
+Запустите временный debug-под со встроенным debug-образом:
+
+```shell
+IMG="$(d8 k -n d8-system get cm debug-container -o jsonpath='{.data.image}')"
+
+d8 k -n <debug-namespace> run istioctl-debug \
+  --rm -it \
+  --restart=Never \
+  --image="$IMG" \
+  --overrides='{"spec":{"serviceAccountName":"istioctl-debug","automountServiceAccountToken":true}}' \
+  -- bash
+```
+
+Выберите минорную версию Istio, которая используется нужным control plane:
+
+```shell
+export ISTIOCTL_VERSION=1.21
+```
+
+Доступные значения: `1.21`, `1.25` и `1.27`. Также можно запустить конкретный бинарный файл напрямую: `istioctl-1.21`, `istioctl-1.25` или `istioctl-1.27`.
+
+Пример:
+
+```shell
+istioctl pc all <pod-name>.<target-namespace>
+```
+
+Для команд `istioctl pc` у целевого пода должен быть добавлен сайдкар `istio-proxy`. Если у целевого пода нет сайдкара, административный порт Envoy `15000` будет недоступен.
+
+{% alert level="warning" %}
+Приведённого выше RBAC-манифеста недостаточно для выполнения команд `istioctl analyze` или `istioctl analyze -A`. Для них нужны дополнительные права на чтение неймспейсов, а также Kubernetes- и Istio-ресурсов, которые проверяют анализаторы. Выдавайте такие права отдельно в соответствии с вашей политикой безопасности.
+{% endalert %}
+
+## Ограничения режима перенаправления прикладного трафика CNIPlugin
 
 В отличие от режима `InitContainer`, настройка перенаправления осуществляется в момент создании пода, а не в момент срабатывания init-контейнера `istio-init`. Это значит, что прикладные init-контейнеры не смогут взаимодействовать с остальными сервисами так как весь трафик будет перенаправлен на обработку в sidecar-контейнер `istio-proxy`, который ещё не запущен. Обходные пути:
 
 * Запустить прикладной init-контейнер от пользователя с uid `1337`. Запросы данного пользователя не перехватываются под управление Istio.
 * Исключить IP-адрес или порт сервиса из-под контроля Istio с помощью аннотаций `traffic.sidecar.istio.io/excludeOutboundIPRanges` или `traffic.sidecar.istio.io/excludeOutboundPorts`.
 
-{% alert level="warning" %}Каждый из обходных вариантов выводит трафик из-под контроля Istio, что в свою очередь убирает шифрование трафика между прикладными сервисами.{% endalert %}
+{% alert level="warning" %}
+Каждый из обходных вариантов выводит трафик из-под контроля Istio и отключает шифрование между прикладными сервисами.
+
+UID `1337` зарезервирован Istio для сайдкар-контейнера `istio-proxy`. Не запускайте прикладные контейнеры с этим UID — их трафик полностью обойдёт Istio (без правил маршрутизации, mTLS и телеметрии). Используйте UID `1337` только в init-контейнерах, когда сетевые запросы нужны до запуска сайдкара.
+{% endalert %}
 
 ## Обновление Istio
 
 ### Обновление control plane Istio
 
-* Deckhouse Kubernetes Platform позволяет установить несколько версий control plane одновременно:
+* DKP позволяет установить несколько версий control plane одновременно:
   * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [`globalVersion`](configuration.html#parameters-globalversion).
   * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x21`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:

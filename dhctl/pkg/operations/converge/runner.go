@@ -15,19 +15,22 @@
 package converge
 
 import (
+	gocontext "context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manager"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
+	convergecontext "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"
@@ -48,10 +51,10 @@ type runner struct {
 	commanderUUID uuid.UUID
 
 	lockRunner *lock.InLockRunner
-	switcher   *context.KubeClientSwitcher
+	switcher   *convergecontext.KubeClientSwitcher
 }
 
-func newRunner(inLockRunner *lock.InLockRunner, switcher *context.KubeClientSwitcher) *runner {
+func newRunner(inLockRunner *lock.InLockRunner, switcher *convergecontext.KubeClientSwitcher) *runner {
 	return &runner{
 		excludedNodes: make(map[string]bool),
 		skipPhases:    make(map[phases.OperationPhase]bool),
@@ -97,7 +100,7 @@ func (r *runner) isSkip(phase phases.OperationPhase) bool {
 	return ok
 }
 
-func (r *runner) RunConverge(ctx *context.Context) error {
+func (r *runner) RunConverge(ctx *convergecontext.Context) error {
 	if r.lockRunner != nil {
 		err := r.lockRunner.Run(ctx.Ctx(), func() error {
 			return r.converge(ctx)
@@ -112,7 +115,7 @@ func (r *runner) RunConverge(ctx *context.Context) error {
 	return r.converge(ctx)
 }
 
-func (r *runner) RunConvergeMigration(ctx *context.Context, checkHasTerraformStateBeforeMigration bool) error {
+func (r *runner) RunConvergeMigration(ctx *convergecontext.Context, checkHasTerraformStateBeforeMigration bool) error {
 	if r.lockRunner != nil {
 		err := r.lockRunner.Run(ctx.Ctx(), func() error {
 			return r.convergeMigration(ctx, checkHasTerraformStateBeforeMigration)
@@ -127,7 +130,7 @@ func (r *runner) RunConvergeMigration(ctx *context.Context, checkHasTerraformSta
 	return r.convergeMigration(ctx, checkHasTerraformStateBeforeMigration)
 }
 
-func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastructureState, error) {
+func loadNodesState(ctx *convergecontext.Context) (map[string]state.NodeGroupInfrastructureState, error) {
 	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
 	if err != nil {
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
@@ -156,9 +159,9 @@ func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastruct
 	return nodesState, nil
 }
 
-func populateNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastructureState, error) {
+func populateNodesState(ctx *convergecontext.Context) (map[string]state.NodeGroupInfrastructureState, error) {
 	var nodesState map[string]state.NodeGroupInfrastructureState
-	err := log.Process("converge", "Gather Nodes infrastructure state", func() error {
+	err := dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), "Gather Nodes infrastructure state", func(gocontext.Context) error {
 		var err error
 		nodesState, err = loadNodesState(ctx)
 		return err
@@ -170,7 +173,7 @@ func populateNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrast
 	return nodesState, nil
 }
 
-func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
+func (r *runner) migrateTerraNodes(ctx *convergecontext.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
@@ -197,7 +200,7 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		ngState := nodesState[nodeGroupName]
 
-		log.DebugF("NodeGroup for converge %v\n", nodeGroupName)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("NodeGroup for converge %v", nodeGroupName))
 
 		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, true, r.switcher.GetGlobalOptions())
 		err := rr.Run(ctx)
@@ -209,7 +212,7 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
-func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
+func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
@@ -227,7 +230,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 	if len(nodesState) == 0 && desiredQuantity > 0 {
 		confirmation := input.NewConfirmation().WithYesByDefault().WithMessage(noNodesConfirmationMessage)
 		if !ctx.ChangesSettings().AutoApprove && !confirmation.Ask() {
-			log.InfoLn("Aborted")
+			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Aborted")
 			return nil
 		}
 	}
@@ -245,7 +248,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 		nodeGroupsWithoutStateInCluster = append(nodeGroupsWithoutStateInCluster, group)
 	}
 
-	log.DebugF("NodeGroups for creating %v\n", nodeGroupsWithoutStateInCluster)
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("NodeGroups for creating %v", nodeGroupsWithoutStateInCluster))
 
 	bootstrapNewNodeGroups := operations.ParallelCreateNodeGroup
 	if operations.IsSequentialNodesBootstrap(metaConfig) {
@@ -271,7 +274,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		ngState := nodesState[nodeGroupName]
 
-		log.DebugF("NodeGroup for converge %v", nodeGroupName)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), strings.TrimRight(fmt.Sprintf("NodeGroup for converge %v", nodeGroupName), "\n"))
 
 		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, false, r.switcher.GetGlobalOptions())
 		err := rr.Run(ctx)
@@ -283,7 +286,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
-func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderUUID uuid.UUID) error {
+func (r *runner) convergeDeckhouseConfiguration(ctx *convergecontext.Context, commanderUUID uuid.UUID) error {
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err
@@ -307,9 +310,9 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
-func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateBeforeMigration bool) error {
-	log.InfoF("Converge migration start\n")
-	defer log.InfoF("Converge migration finished\n")
+func (r *runner) convergeMigration(ctx *convergecontext.Context, checkHasTerraformStateBeforeMigration bool) error {
+	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Converge migration start")
+	defer dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Converge migration finished")
 
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
@@ -327,7 +330,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 	}
 
 	if !provider.NeedToUseTofu() {
-		log.InfoF("Skipping migration. Provider %s does not support opentofu now\n", metaConfig.ProviderName)
+		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprintf("Skipping migration. Provider %s does not support opentofu now", metaConfig.ProviderName))
 		return nil
 	}
 
@@ -349,29 +352,29 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		}
 
 		if !hasTerraFormState {
-			log.InfoLn("Cluster do not have terraform state. Skipping migration")
+			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Cluster does not have terraform state. Skipping migration")
 			return nil
 		}
 
 		commanderError := ""
 		if ctx.CommanderMode() {
-			commanderError = " For fix to migrate to opentofy please " +
-				"detach cluster from commander, converge on previous installer version manually and attach cluster to commander. " +
-				"Show complete guide in D8NeedMigrateStateToOpenTofu alert"
+			commanderError = " To migrate to opentofu, please " +
+				"detach the cluster from commander, converge on the previous installer version manually, and attach the cluster to commander again. " +
+				"See the complete guide in the D8NeedMigrateStateToOpenTofu alert"
 		}
 
 		if stats.Cluster.Status != check.OKStatus {
-			return fmt.Errorf("Cluster state has no ok status.%s", commanderError)
+			return fmt.Errorf("Cluster state does not have an OK status.%s", commanderError)
 		}
 
 		for _, node := range stats.Node {
 			if node.Status != check.OKStatus {
-				return fmt.Errorf("Node %s state has no ok status.%s", node.Name, commanderError)
+				return fmt.Errorf("Node %s state does not have an OK status.%s", node.Name, commanderError)
 			}
 		}
 	}
 
-	log.DebugLn("Start backup infrastructure states")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Starting backup of infrastructure states")
 
 	var commanderMode *infrastructurestate.TofuBackupCommanderMode
 	if ctx.CommanderMode() {
@@ -380,14 +383,14 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 			MetaConfig: metaConfig,
 		}
 	}
-	err = infrastructurestate.NewTofuMigrationStateBackuper(ctx.KubeProvider(), log.GetDefaultLogger()).
+	err = infrastructurestate.NewTofuMigrationStateBackuper(ctx.KubeProvider()).
 		WithCommanderMode(commanderMode).
 		BackupStates(ctx.Ctx())
 	if err != nil {
 		return err
 	}
 
-	log.DebugLn("End backup infrastructure states")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Finished backup of infrastructure states")
 
 	if err := r.updateClusterState(ctx, metaConfig); err != nil {
 		return err
@@ -402,7 +405,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		return err
 	}
 
-	log.DebugLn("Restart infrastructure manager deployments")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Restarting infrastructure manager deployments")
 
 	err = manager.RestartStateExporter(ctx.Ctx(), ctx.KubeProvider())
 	if err != nil {
@@ -415,17 +418,18 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 			return err
 		}
 	} else {
-		log.InfoF("Skip restarting autoconverger\n")
+		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Skipping restart of autoconverger")
 	}
 
-	log.DebugLn("Restarting infrastructure manager deployments finished")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Restarting infrastructure manager deployments finished")
 
 	return nil
 }
 
-func (r *runner) converge(ctx *context.Context) error {
-	log.DebugF("Converge start\n")
-	defer log.DebugF("Converge finisher\n")
+func (r *runner) converge(ctx *convergecontext.Context) error {
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Converge start")
+	defer dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Converge finished")
+
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err
@@ -438,7 +442,7 @@ func (r *runner) converge(ctx *context.Context) error {
 			return err
 		}
 	} else {
-		log.InfoLn("Skip converge base infrastructure")
+		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Skipping converge of base infrastructure")
 	}
 
 	kubeClientSwitched := false
@@ -460,7 +464,7 @@ func (r *runner) converge(ctx *context.Context) error {
 			return err
 		}
 	} else {
-		log.InfoLn("Skip converge nodes")
+		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Skipping converge of nodes")
 	}
 
 	if !r.isSkip(phases.DeckhouseConfigurationPhase) {
@@ -469,7 +473,7 @@ func (r *runner) converge(ctx *context.Context) error {
 			return err
 		}
 	} else {
-		log.InfoLn("Skip converge deckhouse configuration")
+		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Skipping converge of deckhouse configuration")
 	}
 
 	if kubeClientSwitched {
@@ -479,7 +483,7 @@ func (r *runner) converge(ctx *context.Context) error {
 	return nil
 }
 
-func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.MetaConfig) error {
+func (r *runner) updateClusterState(ctx *convergecontext.Context, metaConfig *config.MetaConfig) error {
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.BaseInfraPhase, true); err != nil {
 		return err
 	} else if shouldStop {
@@ -491,7 +495,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = log.Process("converge", "Update Cluster infrastructure state", func() error {
+	err = dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), "Update Cluster infrastructure state", func(gocontext.Context) error {
 		var clusterState []byte
 		var err error
 		// NOTE: Cluster state loaded from target kubernetes cluster in default dhctl-converge.
@@ -524,7 +528,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			return global.ErrConvergeInterrupted
 		}
 
-		return infrastructurestate.SaveClusterInfrastructureState(ctx.Ctx(), kubeCl, outputs)
+		return infrastructurestate.SaveClusterInfrastructureState(ctx.Ctx(), kubeCl, metaConfig, outputs)
 	})
 
 	if err != nil {

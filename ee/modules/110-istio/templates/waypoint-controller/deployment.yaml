@@ -1,0 +1,76 @@
+{{- if and
+  (include "istioSupportsAmbient" .)
+  (.Values.istio.ambient.enabled)
+}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waypoint-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "waypoint-controller")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  minReadySeconds: 3
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: waypoint-controller
+  template:
+    metadata:
+      labels:
+        app: waypoint-controller
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "waypoint-controller")) | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      automountServiceAccountToken: true
+      containers:
+      - name: waypoint-controller
+        image: {{ include "helm_lib_module_image" (list . "waypointController") }}
+        imagePullPolicy: IfNotPresent
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
+        args:
+        {{- if (include "helm_lib_ha_enabled" .) }}
+        - --leader-elect=true
+        {{- end }}
+        - --health-probe-bind-address=:9239
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: WAYPOINT_PROXY_IMAGE
+          value: {{ include "helm_lib_module_image" (list . (printf "proxyv2%s" (include "istioImageSuffix" .))) }}
+        - name: CLUSTER_DOMAIN
+          value: {{ .Values.global.discovery.clusterDomain }}
+        - name: ISTIO_REVISION
+          value: {{ include "istioGlobalRevision" . }}
+        - name: ISTIO_NETWORK_NAME
+          value: {{ include "istioNetworkName" . }}
+        - name: ISTIO_CLOUD_PLATFORM
+          value: {{ include "istioCloudPlatform" . }}
+        - name: ISTIO_CLUSTER_ID
+          value: {{ .Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum .Values.global.discovery.clusterUUID }}
+        - name: VPA_ENABLED
+          value: {{ if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}"true"{{ else }}"false"{{ end }}
+        ports:
+        - name: healthz
+          containerPort: 9239
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: healthz
+        resources:
+          {{- include "helm_lib_resources_management_pod_resources" (list .Values.istio.ambient.waypointController.resourcesManagement) | nindent 10 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: waypoint-controller
+{{- end }}

@@ -218,7 +218,7 @@ go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 ## Сбор логов и оповещения
 
 DVP экспортирует события аудита безопасности в формате метрик Prometheus,
-по которым можно настроить оповещения через [ресурс CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules).
+по которым можно настроить сбор логов и оповещения с помощью ресурсов модулей [`log-shipper`](/modules/log-shipper/) и [`observability`](/modules/observability/).
 Это позволяет:
 
 - подключить внешнее хранилище для сбора логов (например, Loki или Elasticsearch);
@@ -253,12 +253,21 @@ spec:
 
 ### Настройка оповещений о критических событиях
 
-Для создания оповещений о критических событиях создайте [объект CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules), следуя примеру:
+Для создания оповещений о критических событиях:
+
+1. Убедитесь, что включён [модуль `observability`](/modules/observability/).
+1. Создайте ресурс ClusterObservabilityMetricsRulesGroup или ObservabilityMetricsRulesGroup:
+
+   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) — предназначен для cluster-wide-правил, применяемых к системным неймспейсам;
+   - [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) — предназначен для правил, работающих в рамках конкретного неймспейса.
+
+Пример конфигурации:
+
 {% raw %}
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: CustomPrometheusRules
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterObservabilityMetricsRulesGroup
 metadata:
   name: falco-critical-alerts
 spec:
@@ -269,11 +278,11 @@ spec:
       for: 1m
       annotations:
         description: |
-          There is a suspicious activity on a node {{ $labels.node }}. 
-          Check you events journal for more details.
-        summary: Falco detects a critical security incident
+          There is a suspicious activity on a node {{ $labels.node }}.
+          Check your events journal for more details.
+        summary: Falco detected a critical security incident.
       expr: |
-        sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
+        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}

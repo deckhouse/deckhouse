@@ -136,10 +136,14 @@ roleRef:
 Each DVP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
 
 For example, for the `networking` subsystem, there are the following manage roles that can be used in `ClusterRoleBinding`:
+
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-The subsystem of the role restricts its action to all system namespaces of the cluster (subsystem `all`) or to those namespaces in which the area modules operate (see the table of area compositions).
+The scope of a role depends on which subsystem it belongs to:
+
+- The scope of roles from the `all` subsystem is all system namespaces (starting with `d8-` or `kube-`) in the cluster.
+- The scope of roles from other subsystems includes the namespaces in which the subsystem’s modules operate (see the subsystem composition table), as well as all cluster-wide objects of the subsystem’s modules.
 
 Role-based model subsystems composition table.
 
@@ -184,6 +188,10 @@ The module creates special aggregated cluster roles (`ClusterRole`). By using th
 - Manage access to *user* resources of modules within the namespace.
 
   For example, the `d8:use:role:manager` role in `RoleBinding` enables deleting/creating/editing the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
+
+{% alert level="warning" %}
+Pay attention to the specifics of configuring combined access and shared use of RoleBinding and ClusterAuthorizationRule (CAR) for the same user when multitenancy mode is enabled in the cluster (parameter [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
+{% endalert %}
 
 ### Default access list for each role
 

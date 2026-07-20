@@ -1,5 +1,6 @@
 ---
 title: "Модуль cert-manager: FAQ"
+description: "Ответы на часто задаваемые вопросы о модуле cert-manager."
 ---
 
 
@@ -29,8 +30,8 @@ title: "Модуль cert-manager: FAQ"
 {% endalert %}
 
 Поставляемые `ClusterIssuers`, издающие сертификаты через Let's Encrypt, делятся на два типа:
-1. `ClusterIssuer,` специфичные для используемого cloud-провайдера.  
-Добавляются автоматически, при заполнении [настроек модуля](./configuration.html) связанных с cloud-провайдером. Поддерживают метод `DNS-01`.
+1. `ClusterIssuer,` специфичные для используемого облачного провайдера.  
+Добавляются автоматически, при заполнении [настроек модуля](./configuration.html) связанных с облачным провайдером. Поддерживают метод `DNS-01`.
    * `clouddns`
    * `cloudflare`
    * `digitalocean`
@@ -51,7 +52,7 @@ title: "Модуль cert-manager: FAQ"
 У `cert-manager` есть поддержка механизмов для создания TXT-записей в некоторых популярных DNS: `AzureDNS`, `Cloudflare`, `Google Cloud DNS` и т.д.  
 Полный перечень доступен [в документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/).
 
-Модуль автоматически создает `ClusterIssuer` поддерживаемых cloud-провайдеров, при заполнении настроек модуля связанных с используемым облаком.  
+Модуль автоматически создает `ClusterIssuer` поддерживаемых облачных провайдеров, при заполнении настроек модуля связанных с используемым облаком.  
 При необходимости можно создать такие `ClusterIssuer` самостоятельно.  
 
 Пример использования AWS Route53 доступен в разделе [Как защитить учетные данные `cert-manager`](#как-защитить-учетные-данные-cert-manager).  
@@ -101,16 +102,29 @@ title: "Модуль cert-manager: FAQ"
 
 Для выпуска сертификатов с помощью HashiCorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
 
-После конфигурации PKI и [включения авторизации](../../modules/user-authz/) в Kubernetes, нужно:
-- Создать `ServiceAccount` и скопировать ссылку на его `Secret`:
+После конфигурации PKI и [включения авторизации](/modules/user-authz/) в Kubernetes выполните следующие шаги:
+
+- Создайте `ServiceAccount`:
 
   ```shell
   d8 k create serviceaccount issuer
-  
-  ISSUER_SECRET_REF=$(d8 k get serviceaccount issuer -o json | jq -r ".secrets[].name")
   ```
 
-- Создать `Issuer`:
+- Создайте `Secret` с токеном для этой учётной записи. Начиная с Kubernetes 1.24, секрет для `ServiceAccount` не создаётся автоматически:
+
+  ```shell
+  d8 k apply -f - <<EOF
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: issuer
+    annotations:
+      kubernetes.io/service-account.name: issuer
+  type: kubernetes.io/service-account-token
+  EOF
+  ```
+
+- Создайте `Issuer`:
 
   ```shell
   d8 k apply -f - <<EOF
@@ -130,7 +144,7 @@ title: "Модуль cert-manager: FAQ"
           mountPath: /v1/auth/kubernetes
           role: issuer
           secretRef:
-            name: $ISSUER_SECRET_REF
+            name: issuer
             key: token
   EOF
   ```
@@ -284,13 +298,17 @@ title: "Модуль cert-manager: FAQ"
   EOF
   ```
 
-## Работает ли старая аннотация TLS-acme?
+## Работает ли аннотация TLS-acme?
 
 Да, работает. Специальный компонент `cert-manager-ingress-shim` видит эти аннотации и на их основании автоматически создает ресурсы `Certificate` (в тех же namespaces, что и Ingress-ресурсы с аннотациями).
 
-> **Важно!** При использовании аннотации ресурс Certificate создается «прилинкованным» к существующему Ingress-ресурсу, и для прохождения Challenge НЕ создается отдельный Ingress, а вносятся дополнительные записи в существующий. Это означает, что если на основном Ingress'е настроена аутентификация или whitelist — ничего не выйдет. Лучше не использовать аннотацию и переходить на ресурс Certificate.
->
-> **Важно!** При переходе с аннотации на ресурс Certificate нужно удалить ресурс Certificate, который был создан по аннотации. Иначе по обоим ресурсам Certificate будет обновляться один Secret, и это может привести к достижению лимита запросов Let’s Encrypt.
+{% alert level="info" %}
+При использовании аннотации ресурс Certificate создаётся «прилинкованным» к существующему Ingress-ресурсу, и для прохождения Challenge не создаётся отдельный Ingress, а вносятся дополнительные записи в существующий. Это означает, что если на основном Ingress'е настроена аутентификация или whitelist — ничего не выйдет. Лучше не использовать аннотацию и переходить на ресурс Certificate.
+{% endalert %}
+
+{% alert level="warning" %}
+При переходе с аннотации на ресурс Certificate удалите ресурс Certificate, который был создан по аннотации. Иначе по обоим ресурсам Certificate будет обновляться один Secret, и это может привести к достижению лимита запросов Let’s Encrypt.
+{% endalert %}
 
 ```yaml
 apiVersion: networking.k8s.io/v1

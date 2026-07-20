@@ -13,25 +13,35 @@ spec:
   - scheme: http
     path: /stats/prometheus
     relabelings:
-    - sourceLabels: [__meta_kubernetes_pod_container_name]
+    - action: keep
       regex: istio-proxy
-      action: keep
-    - sourceLabels: [ __address__]
+      sourceLabels:
+      - __meta_kubernetes_pod_container_name
+    - action: replace
       regex: ([^:]+)(:\d+)?
-      targetLabel: __address__
       replacement: ${1}:15020
-    - regex: endpoint
-      action: labeldrop
-    - targetLabel: job
+      sourceLabels:
+      - __address__
+      targetLabel: __address__
+    - action: labeldrop
+      regex: endpoint
+    - action: replace
       replacement: istio-sidecars
-    - targetLabel: tier
+      targetLabel: job
+    - action: replace
       replacement: cluster
-    - sourceLabels: [__meta_kubernetes_pod_ready]
+      targetLabel: tier
+    - action: keep
       regex: "true"
-      action: keep
-    - sourceLabels: [__meta_kubernetes_pod_name]
+      sourceLabels:
+        - __meta_kubernetes_pod_ready
+    - action: replace
+      sourceLabels:
+      - __meta_kubernetes_pod_name
       targetLabel: pod
-    - sourceLabels: [__meta_kubernetes_namespace]
+    - action: replace
+      sourceLabels:
+      - __meta_kubernetes_namespace
       targetLabel: namespace
   selector:
     matchExpressions:

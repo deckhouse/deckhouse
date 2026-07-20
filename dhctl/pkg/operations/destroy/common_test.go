@@ -15,8 +15,10 @@
 package destroy
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -48,7 +50,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -140,7 +141,7 @@ func assertResources(t *testing.T, kubeCl *client.KubernetesClient, resources []
 }
 
 func assertResourcesDeleted(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
-	ctx := context.TODO()
+	ctx := t.Context()
 	for _, r := range resources {
 		err := r.getFunc(t, ctx, kubeCl)
 		if r.shouldExists {
@@ -154,7 +155,7 @@ func assertResourcesDeleted(t *testing.T, kubeCl *client.KubernetesClient, resou
 }
 
 func assertResourceExists(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
-	ctx := context.TODO()
+	ctx := t.Context()
 	for _, r := range resources {
 		err := r.getFunc(t, ctx, kubeCl)
 		require.NoError(t, err, r.Name(), "resource should not delete", r.Name())
@@ -179,7 +180,7 @@ func testAddDeckhouseStorageClass(t *testing.T, ctx context.Context, kubeCl *cli
 }
 
 func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) []testCreatedResource {
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	createdResources := make([]testCreatedResource, 0)
 
@@ -230,7 +231,6 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 		},
 	})
 
-	minAvailable := intstr.FromString("25%")
 	pdb := policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -242,7 +242,7 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 					"app": "test",
 				},
 			},
-			MaxUnavailable: &minAvailable,
+			MaxUnavailable: new(intstr.FromString("25%")),
 		},
 	}
 	_, err = kubeCl.PolicyV1().PodDisruptionBudgets(pdb.GetNamespace()).Create(ctx, &pdb, metav1.CreateOptions{})
@@ -460,7 +460,6 @@ spec:
 		createdResources = append(createdResources, testAddDeckhouseStorageClass(t, ctx, kubeCl, sc.gvr, sc.resourceYAML))
 	}
 
-	reclame := corev1.PersistentVolumeReclaimDelete
 	scDefault := storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "default",
@@ -470,7 +469,7 @@ spec:
 		Parameters: map[string]string{
 			"type": "__DEFAULT__",
 		},
-		ReclaimPolicy: &reclame,
+		ReclaimPolicy: new(corev1.PersistentVolumeReclaimDelete),
 	}
 
 	_, err = kubeCl.StorageV1().StorageClasses().Create(ctx, &scDefault, metav1.CreateOptions{})
@@ -643,7 +642,7 @@ spec:
       nodeDrainTimeout: 10m0s
       nodeVolumeDetachTimeout: 10m0s
 `)
-	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(context.TODO(), md, metav1.CreateOptions{})
+	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(t.Context(), md, metav1.CreateOptions{})
 	require.NoError(t, err)
 	createdResources = append(createdResources, testCreatedResource{
 		name: md.GetName(),
@@ -668,6 +667,13 @@ func testYAMLToUnstructured(t *testing.T, r string) *unstructured.Unstructured {
 func testCreateFakeKubeClient() *client.KubernetesClient {
 	kinds := map[schema.GroupVersionResource]string{
 		v1.NodeUserGVR: v1.NodeUserList,
+		// Cloud-cluster parseConfigFromCluster lists NodeGroups /
+		// InstanceClasses / ModuleConfigs via the dynamic client
+		// (CloudProviderVarsFromCluster). The fake dynamic client panics
+		// on LIST for any GVR whose list kind is not registered.
+		{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}:            "NodeGroupList",
+		{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "moduleconfigs"}:   "ModuleConfigList",
 	}
 
 	apisToAdd := []apis.ListKindToGVR{
@@ -727,7 +733,7 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -742,7 +748,7 @@ func testCreateSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -757,7 +763,7 @@ func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(context.TODO(), cm, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), cm, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -766,6 +772,29 @@ func testCreateProviderClusterConfigSecret(t *testing.T, kubeCl *client.Kubernet
 		"cloud-provider-cluster-configuration.yaml": []byte(configYAML),
 		"cloud-provider-discovery-data.json":        []byte(`{"a": "b"}`),
 	})
+}
+
+// testCreateDeckhouseRegistrySecret seeds the d8-system/deckhouse-registry
+// Secret that registrydata.GetRegistryData looks up unconditionally for
+// Cloud clusters. Without it parseConfigFromCluster retry-loops for
+// 45 × 5 s and trips the 600 s go-test timeout.
+func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesClient) {
+	t.Helper()
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse-registry",
+			Namespace: "d8-system",
+		},
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`),
+			"imagesRegistry":    []byte("registry.example.com/deckhouse"),
+			"scheme":            []byte("HTTPS"),
+		},
+	}
+
+	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
 }
 
 func testCreateClusterConfigSecret(t *testing.T, kubeCl *client.KubernetesClient, configYAML string) {
@@ -801,7 +830,8 @@ func assertClusterDestroyError(t *testing.T, shouldReturnError bool, err error) 
 type baseTest struct {
 	stateCache   dhctlstate.Cache
 	tmpDir       string
-	logger       *log.InMemoryLogger
+	logger       *slog.Logger
+	logBuf       *bytes.Buffer
 	kubeProvider kube.ClientProviderWithCleanup
 	metaConfig   *config.MetaConfig
 }
@@ -829,11 +859,11 @@ func (ts *baseTest) clean(t *testing.T) {
 
 	err := os.RemoveAll(tmpDir)
 	if err != nil {
-		logger.LogErrorF("Couldn't remove tmp dir '%s': %v\n", tmpDir, err)
+		logger.Error(fmt.Sprintf("Couldn't remove tmp dir '%s': %v\n", tmpDir, err))
 		return
 	}
 
-	logger.LogInfoF("tmp dir '%s' removed\n", tmpDir)
+	logger.Info(fmt.Sprintf("tmp dir '%s' removed\n", tmpDir))
 }
 
 func (ts *baseTest) setResourcesDestroyed(t *testing.T) {
@@ -991,7 +1021,11 @@ func assertOverDefaultBastion(t *testing.T, overBastion bool, bastion testssh.Ba
 }
 
 func testIsCleanCommand(scriptPath string) bool {
-	return strings.HasPrefix(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh")
+	return strings.Contains(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh") &&
+		strings.Contains(scriptPath, `echo "ERROR: cleanup_static_node.sh not found"`) &&
+		strings.Contains(scriptPath, "exit 1") &&
+		strings.Contains(scriptPath, "bash /var/lib/bashible/cleanup_static_node.sh") &&
+		strings.Contains(scriptPath, "--yes-i-am-sane-and-i-understand-what-i-am-doing")
 }
 
 func assertStringSliceContainsUniqVals(t *testing.T, list []string, msg string) {

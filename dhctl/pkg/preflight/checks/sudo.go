@@ -48,8 +48,7 @@ func (c SudoAllowedCheck) Run(ctx context.Context) error {
 	cmd.Sudo(ctx)
 
 	if err := cmd.Run(ctx); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && exitErr.ExitCode() != 255 {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() != 255 {
 			return errors.New("Provided SSH user is not allowed to sudo, please check that your password is correct and that this user is in the sudoers file.")
 		}
 		return fmt.Errorf("Unexpected error when checking sudoers permissions for SSH user: %v", err)

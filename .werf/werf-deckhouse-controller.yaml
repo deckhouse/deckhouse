@@ -43,8 +43,7 @@ secrets:
 shell:
   beforeInstall:
   - mkdir /deckhouse /out
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache openssh-client
+  - pm install ssh-static
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
   - |

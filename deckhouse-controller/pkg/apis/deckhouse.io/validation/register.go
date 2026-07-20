@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
@@ -44,13 +45,20 @@ type moduleStorage interface {
 }
 
 type packageManager interface {
-	ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error)
+	ValidatePackageSettings(ctx context.Context, name string, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error)
 	CheckConstraints(name string, constraints schedule.Constraints) error
 }
 
 type moduleManager interface {
 	IsModuleEnabled(name string) bool
 	GetEnabledModuleNames() []string
+}
+
+// moduleDependencyExtender validates that a module can be enabled with respect to
+// the constraints of already enabled dependent modules. It is satisfied by
+// *moduledependency.Extender (extenders.ExtendersStack.GetModuleDependency()).
+type moduleDependencyExtender interface {
+	CheckEnabling(name string) error
 }
 
 // RegisterAdmissionHandlers registers validation webhook handlers for admission server built-in in addon-operator
@@ -64,10 +72,11 @@ func RegisterAdmissionHandlers(
 	metricStorage metricsstorage.Storage,
 	schemaStore *config.SchemaStore,
 	settings *helpers.DeckhouseSettingsContainer,
-	exts *extenders.ExtendersStack,
+	exts extenders.IExtendersStack,
+	edition *d8edition.Edition,
 ) {
 	reg.RegisterHandler("/validate/v1/deckhouse-registry-secret", withInvalidReason(RegistrySecretHandler()))
-	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts)))
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency(), edition)))
 	reg.RegisterHandler("/validate/v1alpha1/modules", withInvalidReason(moduleValidationHandler()))
 	reg.RegisterHandler("/validate/v1/configuration-secret", withInvalidReason(clusterConfigurationHandler(mm, cli, schemaStore)))
 	reg.RegisterHandler("/validate/v1/provider-configuration-secret", withInvalidReason(providerConfigurationHandler(schemaStore)))

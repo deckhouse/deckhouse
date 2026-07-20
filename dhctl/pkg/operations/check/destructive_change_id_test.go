@@ -269,7 +269,6 @@ func TestDestructiveChangeID(t *testing.T) {
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			id, err := destructiveChangeID(tt.statistics)
 			require.NoError(t, err)

@@ -8,6 +8,41 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- /* Init limits = sum of main container limits when set in CR (ResourceQuota: max(init, sum(app))). */ -}}
+{{- /* Defaults 20m / 50Mi when resources are not set = sum of dex+redis default requests. */ -}}
+{{- define "dex_authenticator_init_limits" -}}
+  {{- $cpuMillicores := 20 -}}
+  {{- $memBytes := 52428800 -}} {{- /* 50Mi */ -}}
+  {{- with . }}
+    {{- $dexCpu := "" -}}
+    {{- $redisCpu := "" -}}
+    {{- $dexMem := "" -}}
+    {{- $redisMem := "" -}}
+    {{- with .limits }}
+      {{- if .cpu }}{{ $dexCpu = .cpu }}{{ end -}}
+      {{- if .memory }}{{ $dexMem = .memory }}{{ end -}}
+    {{- end -}}
+    {{- with .redis }}
+      {{- with .limits }}
+        {{- if .cpu }}{{ $redisCpu = .cpu }}{{ end -}}
+        {{- if .memory }}{{ $redisMem = .memory }}{{ end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if or $dexCpu $redisCpu }}
+      {{- $cpuMillicores = 0 -}}
+      {{- if $dexCpu }}{{ $cpuMillicores = add $cpuMillicores (include "helm_lib_resources_management_cpu_units_to_millicores" $dexCpu | int) }}{{ end -}}
+      {{- if $redisCpu }}{{ $cpuMillicores = add $cpuMillicores (include "helm_lib_resources_management_cpu_units_to_millicores" $redisCpu | int) }}{{ end -}}
+    {{- end -}}
+    {{- if or $dexMem $redisMem }}
+      {{- $memBytes = 0 -}}
+      {{- if $dexMem }}{{ $memBytes = add $memBytes (include "helm_lib_resources_management_memory_units_to_bytes" $dexMem | int) }}{{ end -}}
+      {{- if $redisMem }}{{ $memBytes = add $memBytes (include "helm_lib_resources_management_memory_units_to_bytes" $redisMem | int) }}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+cpu: {{ printf "%dm" $cpuMillicores }}
+memory: {{ div $memBytes 1048576 }}Mi
+{{- end }}
+
 {{- $context := . }}
 {{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
 {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
@@ -150,7 +185,7 @@ spec:
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
           limits:
-            memory: 10Mi
+            {{- include "dex_authenticator_init_limits" ($crd.spec.resources | default dict) | nindent 12 }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
       containers:
       - name: dex-authenticator
@@ -186,6 +221,7 @@ spec:
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
         - --skip-provider-button
         - --silence-ping-logging
+        - --logging-format=json
         - --session-store-type=redis
         - --redis-connection-url=redis://127.0.0.1/
     {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}

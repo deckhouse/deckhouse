@@ -1,0 +1,33 @@
+deckhouse:
+  fixes:
+    - summary: fix libs in the python-based images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21011
+dhctl:
+  fixes:
+    - summary: fix grpc stream cancel deadlock
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21013
+docs:
+  features:
+    - summary: Add registry module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20979
+  fixes:
+    - summary: Added the ml/ai tag to the ai-models module on the modules homepage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21015
+istio:
+  features:
+    - summary: Add deploy dependencies for Istio webhook configurations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20995
+registry:
+  fixes:
+    - summary: Missing copy_custom_certificate for Gateway API path was added.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21009
+registry-packages-proxy:
+  fixes:
+    - summary: Missing Gateway API objects were added.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21009
+vertical-pod-autoscaler:
+  fixes:
+    - summary: >-
+        Ensure VPA mutating webhook is deployed after its admission controller Deployment and Service
+        are ready.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20991

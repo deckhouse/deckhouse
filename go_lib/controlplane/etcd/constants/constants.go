@@ -50,9 +50,6 @@ const (
 	// Used as fallback during migration from kubeadm-managed to CPM-managed manifests.
 	LegacyEtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
 
-	// EtcdAPICallTimeout specifies how much time to wait for completion of requests against the etcd API.
-	EtcdAPICallTimeout = 2 * time.Minute
-
 	// EtcdAPICallRetryInterval defines how long etcd should wait before retrying a failed API operation
 	EtcdAPICallRetryInterval = 500 * time.Millisecond
 
@@ -65,6 +62,10 @@ const (
 	// AdminKubeConfigFileName defines name for the kubeconfig aimed to be used by the admin of the cluster
 	AdminKubeConfigFileName = "admin.conf"
 )
+
+// EtcdAPICallTimeout specifies how much time to wait for completion of requests against the etcd API.
+// Declared as a variable (not const) so tests can override it with a shorter duration.
+var EtcdAPICallTimeout = 2 * time.Minute
 
 // KubernetesAPICallTimeout is the maximum time to wait for a Kubernetes API call to complete.
 // Declared as a variable (not const) so tests can override it with a shorter duration.

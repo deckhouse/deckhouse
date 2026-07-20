@@ -17,19 +17,15 @@ limitations under the License.
 package controlplaneoperation
 
 import (
-	"strings"
-
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
 
 	"control-plane-manager/internal/constants"
 )
 
-var SignatureEnabled = "true"
-
 func getEtcdKeySignatureRenewer() signature.Renewer {
-	if strings.ToLower(SignatureEnabled) == "true" {
+	if constants.SignatureEnabled() {
 		return signature.NewRegularSignatureRenewer(constants.KubernetesPkiPath).
-			WithLeftDaysToRenew(60)
+			WithLeftDaysToRenew(constants.SignatureRenewalDays)
 	}
 
 	return signature.NewNoSignatureRenewer()

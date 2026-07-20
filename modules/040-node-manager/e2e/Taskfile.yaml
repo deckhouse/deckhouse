@@ -1,0 +1,22 @@
+version: '3'
+
+includes:
+  cluster-autoscaler:
+    taskfile: cluster-autoscaler/Taskfile.yaml
+    dir: cluster-autoscaler
+  fencing-agent:
+    taskfile: fencing-agent/Taskfile.yaml
+    dir: fencing-agent
+
+tasks:
+  run:
+    desc: Run all node manager e2e tests
+    cmds:
+      - task: cluster-autoscaler:run
+      - task: fencing-agent:run
+
+  dry-run:
+    desc: Dry-Run all node manager e2e tests
+    cmds:
+      - task: cluster-autoscaler:dry-run
+      - task: fencing-agent:dry-run

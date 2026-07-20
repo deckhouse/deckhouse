@@ -1,0 +1,76 @@
+diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
+index ad70ebe..f4b8412 100644
+--- a/pkg/provider/azure.go
++++ b/pkg/provider/azure.go
+@@ -347,7 +347,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *azurecon
+ 	az.Config = *config
+ 	az.Environment = env
+ 	az.ResourceRequestBackoff = resourceRequestBackoff
+-	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
++	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)
+ 	if err != nil {
+ 		return err
+ 	}
+diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
+index 15c4403..090da40 100644
+--- a/pkg/provider/azure_instance_metadata.go
++++ b/pkg/provider/azure_instance_metadata.go
+@@ -115,12 +115,12 @@ type InstanceMetadataService struct {
+ }
+ 
+ // NewInstanceMetadataService creates an instance of the InstanceMetadataService accessor object.
+-func NewInstanceMetadataService(imdsServer string) (*InstanceMetadataService, error) {
++func NewInstanceMetadataService(imdsServer string, disableAPICallCache bool) (*InstanceMetadataService, error) {
+ 	ims := &InstanceMetadataService{
+ 		imdsServer: imdsServer,
+ 	}
+ 
+-	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, false)
++	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, disableAPICallCache)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
+index 79302ce..7a98bea 100644
+--- a/pkg/provider/azure_vmss.go
++++ b/pkg/provider/azure_vmss.go
+@@ -458,6 +458,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
+ 	vmManagementType, err := ss.getVMManagementTypeByProviderID(ctx, providerID, azcache.CacheReadTypeUnsafe)
+ 	if err != nil {
+ 		logger.Error(err, "Failed to check VM management type")
++
++		if vmManagementType == ManagedByUnknownVMSet {
++			logger.V(2).Info("Failed to get VM management type, trying to get node name from availability set or vmss flex", "providerID", providerID)
++
++			nodeName, err2 := ss.availabilitySet.GetNodeNameByProviderID(ctx, providerID)
++			if err2 != nil {
++				logger.Error(err2, "Failed to get node name from availability set", "providerID", providerID)
++			} else {
++				return nodeName, nil
++			}
++
++			nodeName, err2 = ss.flexScaleSet.GetNodeNameByProviderID(ctx, providerID)
++			if err2 != nil {
++				logger.Error(err2, "Failed to get node name from vmss flex", "providerID", providerID)
++			} else {
++				return nodeName, nil
++			}
++		}
++
+ 		return "", err
+ 	}
+ 
+diff --git a/pkg/provider/config/azure.go b/pkg/provider/config/azure.go
+index d2a4258..b7c7ab7 100644
+--- a/pkg/provider/config/azure.go
++++ b/pkg/provider/config/azure.go
+@@ -172,6 +172,9 @@ type Config struct {
+ 	ClusterServiceSharedLoadBalancerHealthProbePort int32 `json:"clusterServiceSharedLoadBalancerHealthProbePort,omitempty" yaml:"clusterServiceSharedLoadBalancerHealthProbePort,omitempty"`
+ 	// ClusterServiceSharedLoadBalancerHealthProbePath defines the target path of the shared health probe. Default to `/healthz`.
+ 	ClusterServiceSharedLoadBalancerHealthProbePath string `json:"clusterServiceSharedLoadBalancerHealthProbePath,omitempty" yaml:"clusterServiceSharedLoadBalancerHealthProbePath,omitempty"`
++
++	// DisableAPICallCache disables caching of IMDS metadata responses when set to true.
++	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
+ }
+ 
+ // HasExtendedLocation returns true if extendedlocation prop are specified.

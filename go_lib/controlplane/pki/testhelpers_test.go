@@ -30,16 +30,18 @@ import (
 )
 
 // makeTestConfig returns a minimal valid config pointing to dir.
-// It uses pki2-internal symbols (newConfig, WithPKIDir) and therefore cannot
+// Extra options (e.g. WithEncryptionAlgorithmType) can be passed to override defaults.
+// It uses pki-internal symbols (newConfig, WithPKIDir) and therefore cannot
 // be placed in a shared test package.
-func makeTestConfig(t *testing.T, dir string) config {
+func makeTestConfig(t *testing.T, dir string, opts ...configOption) config {
 	t.Helper()
+	opts = append([]configOption{WithPKIDir(dir)}, opts...)
 	cfg, err := newConfig(
 		"test-node",
 		"cluster.local",
 		net.ParseIP("10.0.0.1"),
 		"10.96.0.0/12",
-		WithPKIDir(dir),
+		opts...,
 	)
 	require.NoError(t, err)
 	return *cfg

@@ -62,6 +62,34 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 	}
 
 	{
+		globalCmd := &cobra.Command{Use: "global", Short: "Global module operations."}
+		packagesCmd.AddCommand(globalCmd)
+
+		dumpCmd := &cobra.Command{
+			Use:   "dump",
+			Short: "Dump the global module state from memory.",
+			RunE: func(_ *cobra.Command, _ []string) error {
+				client, err := debug.NewClient(packagesDebugSocket)
+				if err != nil {
+					return err
+				}
+				defer client.Close()
+
+				ctx := context.Background()
+				out, err := client.Get(ctx, "packages/global/dump")
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(out))
+
+				return nil
+			},
+		}
+		definePackagesDebugSocketFlag(dumpCmd)
+		globalCmd.AddCommand(dumpCmd)
+	}
+
+	{
 		schedulerCmd := &cobra.Command{Use: "scheduler", Short: "Scheduler operations."}
 		packagesCmd.AddCommand(schedulerCmd)
 

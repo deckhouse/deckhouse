@@ -1,0 +1,288 @@
+diff --git a/oauthproxy.go b/oauthproxy.go
+index cfe0f0ec..a8bd18e0 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -727,6 +727,9 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+ 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+ 		return
+ 	}
++	if session, sErr := p.LoadCookiedSession(req); sErr == nil && session != nil {
++		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "User signed out")
++	}
+ 	err = p.ClearSessionCookie(rw, req)
+ 	if err != nil {
+ 		logger.Errorf("Error clearing session cookie: %v", err)
+diff --git a/pkg/apis/options/logging.go b/pkg/apis/options/logging.go
+index dfffd0fa..30f9d808 100644
+--- a/pkg/apis/options/logging.go
++++ b/pkg/apis/options/logging.go
+@@ -13,6 +13,7 @@ type Logging struct {
+ 	RequestFormat   string         `flag:"request-logging-format" cfg:"request_logging_format"`
+ 	StandardEnabled bool           `flag:"standard-logging" cfg:"standard_logging"`
+ 	StandardFormat  string         `flag:"standard-logging-format" cfg:"standard_logging_format"`
++	Format          string         `flag:"logging-format" cfg:"logging_format"`
+ 	ErrToInfo       bool           `flag:"errors-to-info-log" cfg:"errors_to_info_log"`
+ 	ExcludePaths    []string       `flag:"exclude-logging-path" cfg:"exclude_logging_paths"`
+ 	LocalTime       bool           `flag:"logging-local-time" cfg:"logging_local_time"`
+@@ -39,6 +40,7 @@ func loggingFlagSet() *pflag.FlagSet {
+ 	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
+ 	flagSet.Bool("request-logging", true, "Log HTTP requests")
+ 	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
++	flagSet.String("logging-format", "", `Log output format: empty or "text" renders the *-logging-format templates, "json" emits one JSON object per line (templates are ignored)`)
+ 	flagSet.Bool("errors-to-info-log", false, "Log errors to the standard logging channel instead of stderr")
+ 
+ 	flagSet.StringSlice("exclude-logging-path", []string{}, "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
+@@ -68,6 +70,7 @@ func loggingDefaults() Logging {
+ 		RequestFormat:   logger.DefaultRequestLoggingFormat,
+ 		StandardEnabled: true,
+ 		StandardFormat:  logger.DefaultStandardLoggingFormat,
++		Format:          "",
+ 		ErrToInfo:       false,
+ 		File: LogFileOptions{
+ 			Filename:   "",
+diff --git a/pkg/logger/logger.go b/pkg/logger/logger.go
+index cb1da0a4..129a4b51 100644
+--- a/pkg/logger/logger.go
++++ b/pkg/logger/logger.go
+@@ -2,6 +2,7 @@ package logger
+ 
+ import (
+ 	"bytes"
++	"encoding/json"
+ 	"fmt"
+ 	"io"
+ 	"net/http"
+@@ -89,6 +90,49 @@ type reqLogMessageData struct {
+ 	Username string
+ }
+ 
++// The *JSONLog structs back the JSON logging format. They mirror the template
++// data above but carry json tags and use native types (numbers stay numbers),
++// and — unlike the template path — hold raw, un-%q-quoted strings, leaving all
++// escaping to encoding/json so a quote or newline in any field cannot produce
++// an invalid line.
++type stdJSONLog struct {
++	Time    string `json:"time"`
++	Level   string `json:"level"`
++	File    string `json:"file,omitempty"`
++	Message string `json:"msg"`
++}
++
++type authJSONLog struct {
++	Time      string `json:"time"`
++	Level     string `json:"level"`
++	Client    string `json:"client"`
++	Host      string `json:"host"`
++	Protocol  string `json:"protocol"`
++	RequestID string `json:"request_id"`
++	Method    string `json:"method"`
++	UserAgent string `json:"user_agent"`
++	Username  string `json:"user"`
++	Status    string `json:"status"`
++	Message   string `json:"msg"`
++}
++
++type reqJSONLog struct {
++	Time            string  `json:"time"`
++	Level           string  `json:"level"`
++	Client          string  `json:"client"`
++	Host            string  `json:"host"`
++	Protocol        string  `json:"protocol"`
++	RequestID       string  `json:"request_id"`
++	RequestDuration float64 `json:"request_duration"`
++	Method          string  `json:"method"`
++	RequestURI      string  `json:"uri"`
++	ResponseSize    int     `json:"response_size"`
++	StatusCode      int     `json:"status"`
++	Upstream        string  `json:"upstream"`
++	UserAgent       string  `json:"user_agent"`
++	Username        string  `json:"user"`
++}
++
+ // Returns the apparent "real client IP" as a string.
+ type GetClientFunc = func(r *http.Request) string
+ 
+@@ -105,6 +149,7 @@ type Logger struct {
+ 	stdEnabled     bool
+ 	authEnabled    bool
+ 	reqEnabled     bool
++	jsonFormat     bool
+ 	getClientFunc  GetClientFunc
+ 	excludePaths   map[string]struct{}
+ 	stdLogTemplate *template.Template
+@@ -131,6 +176,30 @@ func New(flag int) *Logger {
+ 
+ var std = New(LstdFlags)
+ 
++// levelString maps a Level to the string used in the JSON "level" field for
++// the standard log stream. Auth and request streams use their own constant
++// labels ("auth" / "request").
++func levelString(lvl Level) string {
++	if lvl == ERROR {
++		return "error"
++	}
++	return "info"
++}
++
++// writeJSON marshals v as a single JSON line (trailing newline) to w. The
++// caller must hold l.mu. A marshal failure never drops the line silently —
++// we emit a minimal object describing the failure instead.
++func (l *Logger) writeJSON(w io.Writer, v interface{}) {
++	b, err := json.Marshal(v)
++	if err != nil {
++		b = []byte(fmt.Sprintf(`{"level":"error","msg":"log marshal failed: %v"}`, err))
++	}
++	b = append(b, '\n')
++	if _, err := w.Write(b); err != nil {
++		panic(err)
++	}
++}
++
+ func (l *Logger) formatLogMessage(calldepth int, message string) []byte {
+ 	now := time.Now()
+ 	file := "???:0"
+@@ -165,16 +234,28 @@ func (l *Logger) Output(lvl Level, calldepth int, message string) {
+ 	if !l.stdEnabled {
+ 		return
+ 	}
+-	msg := l.formatLogMessage(calldepth+1, message)
+ 
+-	var err error
+-	switch lvl {
+-	case ERROR:
+-		_, err = l.errWriter.Write(msg)
+-	default:
+-		_, err = l.writer.Write(msg)
++	w := l.writer
++	if lvl == ERROR {
++		w = l.errWriter
+ 	}
+-	if err != nil {
++
++	if l.jsonFormat {
++		file := ""
++		if l.flag&(Lshortfile|Llongfile) != 0 {
++			file = l.GetFileLineString(calldepth + 1)
++		}
++		l.writeJSON(w, stdJSONLog{
++			Time:    FormatTimestamp(time.Now()),
++			Level:   levelString(lvl),
++			File:    file,
++			Message: message,
++		})
++		return
++	}
++
++	msg := l.formatLogMessage(calldepth+1, message)
++	if _, err := w.Write(msg); err != nil {
+ 		panic(err)
+ 	}
+ }
+@@ -194,11 +275,30 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
+ 	}
+ 
+ 	client := l.getClientFunc(req)
++	message := fmt.Sprintf(format, a...)
+ 
+ 	l.mu.Lock()
+ 	defer l.mu.Unlock()
+ 
+ 	scope := middlewareapi.GetRequestScope(req)
++
++	if l.jsonFormat {
++		l.writeJSON(l.writer, authJSONLog{
++			Time:      FormatTimestamp(now),
++			Level:     "auth",
++			Client:    client,
++			Host:      requestutil.GetRequestHost(req),
++			Protocol:  req.Proto,
++			RequestID: scope.RequestID,
++			Method:    req.Method,
++			UserAgent: req.UserAgent(),
++			Username:  username,
++			Status:    string(status),
++			Message:   message,
++		})
++		return
++	}
++
+ 	err := l.authTemplate.Execute(l.writer, authLogMessageData{
+ 		Client:        client,
+ 		Host:          requestutil.GetRequestHost(req),
+@@ -209,7 +309,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
+ 		UserAgent:     fmt.Sprintf("%q", req.UserAgent()),
+ 		Username:      username,
+ 		Status:        string(status),
+-		Message:       fmt.Sprintf(format, a...),
++		Message:       message,
+ 	})
+ 	if err != nil {
+ 		panic(err)
+@@ -255,6 +355,27 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
+ 	defer l.mu.Unlock()
+ 
+ 	scope := middlewareapi.GetRequestScope(req)
++
++	if l.jsonFormat {
++		l.writeJSON(l.writer, reqJSONLog{
++			Time:            FormatTimestamp(ts),
++			Level:           "request",
++			Client:          client,
++			Host:            requestutil.GetRequestHost(req),
++			Protocol:        req.Proto,
++			RequestID:       scope.RequestID,
++			RequestDuration: duration,
++			Method:          req.Method,
++			RequestURI:      url.RequestURI(),
++			ResponseSize:    size,
++			StatusCode:      status,
++			Upstream:        upstream,
++			UserAgent:       req.UserAgent(),
++			Username:        username,
++		})
++		return
++	}
++
+ 	err := l.reqTemplate.Execute(l.writer, reqLogMessageData{
+ 		Client:          client,
+ 		Host:            requestutil.GetRequestHost(req),
+@@ -363,6 +484,14 @@ func (l *Logger) SetReqEnabled(e bool) {
+ 	l.reqEnabled = e
+ }
+ 
++// SetJSONFormat switches all three log streams between the text-template
++// renderers and one-JSON-object-per-line output.
++func (l *Logger) SetJSONFormat(e bool) {
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	l.jsonFormat = e
++}
++
+ // SetGetClientFunc sets the function which determines the apparent "real client IP".
+ func (l *Logger) SetGetClientFunc(f GetClientFunc) {
+ 	l.mu.Lock()
+@@ -456,6 +585,11 @@ func SetReqEnabled(e bool) {
+ 	std.SetReqEnabled(e)
+ }
+ 
++// SetJSONFormat enables or disables JSON log output for the standard logger.
++func SetJSONFormat(e bool) {
++	std.SetJSONFormat(e)
++}
++
+ // SetGetClientFunc sets the function which determines the apparent IP address
+ // set by a reverse proxy for the standard logger.
+ func SetGetClientFunc(f GetClientFunc) {
+diff --git a/pkg/validation/logging.go b/pkg/validation/logging.go
+index c291405c..64055dd5 100644
+--- a/pkg/validation/logging.go
++++ b/pkg/validation/logging.go
+@@ -51,6 +51,7 @@ func configureLogger(o options.Logging, msgs []string) []string {
+ 	logger.SetStandardTemplate(o.StandardFormat)
+ 	logger.SetAuthTemplate(o.AuthFormat)
+ 	logger.SetReqTemplate(o.RequestFormat)
++	logger.SetJSONFormat(o.Format == "json")
+ 
+ 	logger.SetExcludePaths(o.ExcludePaths)
+ 
+

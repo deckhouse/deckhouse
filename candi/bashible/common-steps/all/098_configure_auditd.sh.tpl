@@ -20,7 +20,7 @@ _on_audit_rules_changed() {
     augenrules --load
     bb-flag-unset auditd-need-reload
   else
-    bb-log-error "failed to reload auditd rules"
+    bb-log-error "Failed to reload auditd rules"
     exit 1
   fi
 }
@@ -49,7 +49,7 @@ EOF
 EOF
 fi
 if command -v auditctl &>/dev/null; then
-  auditctl -b 65536 || bb-log-warning "failed to configure auditctl backlog, continuing with defaults"
+  auditctl -b 65536 || bb-log-warning "Failed to configure auditctl backlog, continuing with defaults"
 else
   bb-log-info "auditctl is not installed, skipping backlog configuration"
 fi

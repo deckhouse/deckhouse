@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"os/exec"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type Step string
@@ -92,7 +93,6 @@ type Executor interface {
 	GetStatesDir() string
 	Step() Step
 
-	SetExecutorLogger(logger log.Logger)
 	Stop()
 }
 
@@ -104,7 +104,6 @@ type fakeResponse struct {
 
 type fakeExecutor struct {
 	data        map[string]fakeResponse
-	logger      log.Logger
 	outputResp  fakeResponse
 	showResp    fakeResponse
 	planResp    fakeResponse
@@ -156,99 +155,87 @@ func (e *fakeExecutor) GetActions(ctx context.Context, planPath string) ([]strin
 	return []string{}, nil
 }
 
-func (e *fakeExecutor) SetExecutorLogger(logger log.Logger) {
-	e.logger = logger
-}
-
 func (e *fakeExecutor) Stop() {}
 
-type DummyExecutor struct {
-	logger log.Logger
-}
+type DummyExecutor struct{}
 
-func NewDummyExecutor(logger log.Logger) *DummyExecutor {
-	return &DummyExecutor{
-		logger: logger,
-	}
+func NewDummyExecutor() *DummyExecutor {
+	return &DummyExecutor{}
 }
 
 func (e *DummyExecutor) IsVMChange(rc plan.ResourceChange) bool {
-	e.logger.LogWarnLn("Call IsVMChange on dummy executor")
+	ctx := context.Background()
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call IsVMChange on dummy executor")
 
 	return false
 }
 
 func (e *DummyExecutor) GetStatesDir() string {
-	e.logger.LogWarnLn("Call GetStatesDir on dummy executor")
+	ctx := context.Background()
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call GetStatesDir on dummy executor")
 	return ""
 }
 
 func (e *DummyExecutor) Step() Step {
-	e.logger.LogWarnLn("Call Step on dummy executor")
+	ctx := context.Background()
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Step on dummy executor")
 	return ""
 }
 
 func (e *DummyExecutor) Init(ctx context.Context) error {
-	e.logger.LogWarnLn("Call Init on dummy executor")
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Init on dummy executor")
 	return nil
 }
 
 func (e *DummyExecutor) Apply(ctx context.Context, opts ApplyOpts) error {
-	e.logger.LogWarnLn("Call Apply on dummy executor")
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Apply on dummy executor")
 
 	return nil
 }
 
 func (e *DummyExecutor) Plan(ctx context.Context, opts PlanOpts) (int, error) {
-	e.logger.LogWarnLn("Call Plan on dummy executor")
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Plan on dummy executor")
 
 	return 0, nil
 }
 
 func (e *DummyExecutor) Output(ctx context.Context, opts OutputOpts) ([]byte, error) {
-	e.logger.LogWarnLn("Call Output on dummy executor")
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Output on dummy executor")
 
 	return nil, nil
 }
 
 func (e *DummyExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
-	e.logger.LogWarnLn("Call Destroy on dummy executor")
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Destroy on dummy executor")
 
 	return nil
 }
 
 func (e *DummyExecutor) Show(ctx context.Context, opts ShowOpts) ([]byte, error) {
-	e.logger.LogWarnLn("Call Show on dummy executor")
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Show on dummy executor")
 
 	return nil, nil
 }
 
 func (e *DummyExecutor) GetActions(ctx context.Context, planPath string) ([]string, error) {
-	e.logger.LogWarnLn("Call GetActions on dummy executor")
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call GetActions on dummy executor")
 
 	return nil, nil
 }
 
-func (e *DummyExecutor) SetExecutorLogger(logger log.Logger) {
-	e.logger = logger
-}
-
 func (e *DummyExecutor) Stop() {
-	e.logger.LogWarnLn("Call Stop on dummy executor")
+	ctx := context.Background()
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Stop on dummy executor")
 }
 
-type DummyOutputExecutor struct {
-	logger log.Logger
-}
+type DummyOutputExecutor struct{}
 
-func NewDummyOutputExecutor(logger log.Logger) *DummyOutputExecutor {
-	return &DummyOutputExecutor{
-		logger: logger,
-	}
+func NewDummyOutputExecutor() *DummyOutputExecutor {
+	return &DummyOutputExecutor{}
 }
 
 func (e *DummyOutputExecutor) Output(ctx context.Context, opts OutputOpts) ([]byte, error) {
-	e.logger.LogWarnLn("Call Output on dummy output executor")
+	dhlog.FromContext(ctx).WarnContext(ctx, "Call Output on dummy output executor")
 
 	return nil, nil
 }

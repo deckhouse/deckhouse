@@ -83,6 +83,8 @@ func nameFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 type depRequiredNG struct {
 	Name    string
+	Engine  ngv1.NodeGroupEngine
+	UseMCM  bool
 	IsCloud bool
 }
 
@@ -96,6 +98,8 @@ func depRequiredFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	return depRequiredNG{
 		Name:    ng.Name,
+		Engine:  ng.Status.Engine,
+		UseMCM:  ng.GetAnnotations()[useMCMAnnotation] != "",
 		IsCloud: ng.Spec.NodeType == ngv1.NodeTypeCloudEphemeral,
 	}, nil
 }
@@ -114,7 +118,7 @@ func handleDeploymentRequired(_ context.Context, input *go_hook.HookInput) error
 				return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
 			}
 
-			if nodeGroup.IsCloud {
+			if isMCMEngineRequiredForNodeGroup(input, nodeGroup) {
 				totalCount++
 				break // we need at least one NG
 			}
@@ -136,4 +140,19 @@ func handleDeploymentRequired(_ context.Context, input *go_hook.HookInput) error
 	input.Values.Remove("nodeManager.internal.machineControllerManagerEnabled")
 
 	return nil
+}
+
+func isMCMEngineRequiredForNodeGroup(input *go_hook.HookInput, nodeGroup depRequiredNG) bool {
+	if !nodeGroup.IsCloud {
+		return false
+	}
+
+	switch nodeGroup.Engine {
+	case ngv1.NodeGroupEngineMCM:
+		return true
+	case ngv1.NodeGroupEngineCAPI, ngv1.NodeGroupEngineNone:
+		return false
+	default:
+		return defaultCloudEphemeralNodeGroupEngineForNewNodeGroups(input, nodeGroup.UseMCM) == ngv1.NodeGroupEngineMCM
+	}
 }

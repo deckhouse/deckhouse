@@ -24,10 +24,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/deckhouse/module-sdk/pkg/settingscheck"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
@@ -43,29 +42,15 @@ const (
 )
 
 // App represents an application instance as received from the Application controller.
-// It carries the user-specified package identity, version constraints, and settings.
+// It carries the user-specified package identity, version constraints, settings, and
+// maintenance mode.
 type App struct {
-	Name       string
-	Namespace  string
-	Definition apps.Definition
-	Settings   addonutils.Values
-}
-
-// ValidateSettings checks settings against the package's OpenAPI schema.
-// Returns valid if the package is not loaded yet (settings validated on load).
-func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
-	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidateSettings")
-	defer span.End()
-
-	r.mu.Lock()
-	app := r.apps[name]
-	if app == nil {
-		r.mu.Unlock()
-		return settingscheck.Result{Valid: true}, nil
-	}
-	r.mu.Unlock()
-
-	return app.ValidateSettings(ctx, settings)
+	Name            string
+	Namespace       string
+	Definition      apps.Definition
+	Settings        addonutils.Values
+	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
+	Maintenance     string
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -95,17 +80,17 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	version := app.Definition.Version
 	packageName := app.Definition.Name
 
-	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum()) {
+	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion, app.Maintenance) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.Settings)
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
 	}
 
-	r.status.ClearStatus(name)
+	r.status.NewStatus(name)
 
 	tasks := []queue.Task{
 		taskdeploy.NewAppTask(name, packageName, version, repo, r.appDeployer, r.status, r.logger),
@@ -141,6 +126,8 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.GrantResolver = r.grantResolver
+	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 
 	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {
@@ -180,6 +167,9 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 
 	name := apps.BuildName(namespace, instance)
 	r.scheduler.RemoveNode(name)
+
+	// A removed application no longer reconciles anything, so drop its maintenance gauge.
+	r.setMaintenanceMetric(name, nelm.Managed)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {

@@ -20,7 +20,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`csi-ceph`](/modules/csi-ceph/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![csi-ceph module architecture](../../../images/architecture/storage/c4-l2-csi-ceph.png)
 
 ## Module components
@@ -43,7 +42,7 @@ The module consists of the following components:
 
 1. **CSI driver (rbd/cephfs)**: An implementation of the CSI driver for the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` provisioner. The CSI driver is selected by setting the storage class type in the CephStorageClass custom resource.
 
-   The `csi-cephfs` CSI driver follows [the standard CSI driver architecture used in DKP](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+   The `csi-cephfs` CSI driver follows [the standard CSI driver architecture used in DKP](../csi-drivers/csi-driver.html).
 
    The `csi-rbd` CSI driver uses [an architecture that differs from the standard CSI driver architecture](../../storage/csi-drivers/csi-driver-ceph-rbd.html).
 

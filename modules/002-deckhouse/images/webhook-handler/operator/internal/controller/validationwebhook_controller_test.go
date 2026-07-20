@@ -1,37 +1,44 @@
-// Copyright 2025 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2026.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package controller
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync/atomic"
 	"testing"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/stretchr/testify/assert"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func init() {
@@ -53,15 +60,18 @@ func setupTestReconciler() (*ValidationWebhookReconciler, client.Client) {
 		panic(err)
 	}
 
-	var isReloadShellNeed atomic.Bool
-	isReloadShellNeed.Store(false)
+	reloadCalled := &atomic.Bool{}
+	reloadFn := func(_ context.Context) error {
+		reloadCalled.Store(true)
+		return nil
+	}
 
 	reconciler := NewValidationWebhookReconciler(
 		k8sClient,
 		sch,
 		log.NewLogger(log.WithLevel(slog.LevelDebug)),
 		string(tpl),
-		&isReloadShellNeed,
+		reloadFn,
 	)
 
 	return reconciler, k8sClient
@@ -220,38 +230,84 @@ func TestTemplateIncludeSnapshotsFrom(t *testing.T) {
 }
 
 func TestNoReloadIfWebhookFileNotChanged(t *testing.T) {
-	r, k8sClient := setupTestReconciler()
+	reloadCalled := &atomic.Bool{}
+	reloadFn := func(_ context.Context) error {
+		reloadCalled.Store(true)
+		return nil
+	}
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
+
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewValidationWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
 
 	vh, err := getStructFromYamlFile("testdata/validating/no-reload-if-webhook-file-not-changed.yaml")
 	assert.NoError(t, err)
 
-	err = k8sClient.Create(context.Background(), vh)
+	err = k8sClient.Create(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
 	assert.NoError(t, err)
 
-	r.isReloadShellNeed.Store(false)
+	reloadCalled.Store(false)
 
 	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
 	assert.NoError(t, err)
 
-	assert.Equal(t, false, r.isReloadShellNeed.Load())
+	assert.Equal(t, false, reloadCalled.Load())
 }
 
 func TestReloadOnWebhookFileChange(t *testing.T) {
-	r, k8sClient := setupTestReconciler()
+	reloadCalled := &atomic.Bool{}
+	reloadFn := func(_ context.Context) error {
+		reloadCalled.Store(true)
+		return nil
+	}
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
+
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewValidationWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
 
 	vh, err := getStructFromYamlFile("testdata/validating/reload-on-webhook-file-change.yaml")
 	assert.NoError(t, err)
 
-	err = k8sClient.Create(context.Background(), vh)
+	err = k8sClient.Create(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
 	assert.NoError(t, err)
 
-	r.isReloadShellNeed.Store(false)
+	reloadCalled.Store(false)
 
 	// Re-fetch so we have the latest resource version (reconcile may have added finalizer)
 	err = k8sClient.Get(context.Background(), types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}, vh)
@@ -264,5 +320,169 @@ func TestReloadOnWebhookFileChange(t *testing.T) {
 	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
 	assert.NoError(t, err)
 
-	assert.Equal(t, true, r.isReloadShellNeed.Load())
+	assert.Equal(t, true, reloadCalled.Load())
+}
+
+func TestReconcileReturnsErrorWhenReloadFails(t *testing.T) {
+	reloadErr := fmt.Errorf("simulated reload failure")
+	reloadFn := func(_ context.Context) error {
+		return reloadErr
+	}
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
+
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewValidationWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
+
+	vh, err := getStructFromYamlFile("testdata/validating/validationwebhook-sample.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.TODO(), vh)
+	assert.NoError(t, err)
+
+	// First reconcile: file is new → reloadFn is called → must propagate error.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, reloadErr)
+}
+
+func TestReloadRetriedAfterPreviousFailure(t *testing.T) {
+	// Simulate a sequence where:
+	//   1st reconcile: file written, reloadFn fails → file on disk but finalizer missing
+	//   2nd reconcile: file unchanged, finalizer missing → must retry reloadFn
+	t.Cleanup(func() { os.RemoveAll("hooks") })
+
+	var reloadCalls int
+	reloadFn := func(_ context.Context) error {
+		reloadCalls++
+		if reloadCalls == 1 {
+			return fmt.Errorf("simulated reload failure")
+		}
+		return nil
+	}
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
+
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewValidationWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
+
+	vh, err := getStructFromYamlFile("testdata/validating/reload-on-webhook-file-change.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.TODO(), vh)
+	assert.NoError(t, err)
+
+	// First reconcile: file is written, reloadFn fails, finalizer NOT added.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "simulated reload failure")
+
+	// Second reconcile: file unchanged, finalizer missing — must retry reloadFn.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.NoError(t, err)
+
+	assert.Equal(t, 2, reloadCalls, "reloadFn should be called twice (initial attempt + retry)")
+
+	// Verify finalizer was added on the successful retry.
+	err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}, vh)
+	assert.NoError(t, err)
+	assert.True(t, controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer))
+}
+
+func TestValidationFileNotRemovedOnFinalizerUpdateFailure(t *testing.T) {
+	t.Cleanup(func() { os.RemoveAll("hooks") })
+
+	reloadFn := func(_ context.Context) error { return nil }
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+
+	// Intercept Update calls: the first Update on a ValidationWebhook
+	// (adding finalizer) returns a conflict error; subsequent calls succeed.
+	var updateCalls atomic.Int32
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(sch).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				if _, ok := obj.(*deckhouseiov1alpha1.ValidationWebhook); ok {
+					if updateCalls.Add(1) == 1 {
+						return apierrors.NewConflict(
+							schema.GroupResource{Group: "deckhouse.io", Resource: "validationwebhooks"},
+							obj.GetName(),
+							fmt.Errorf("simulated conflict"),
+						)
+					}
+				}
+				return c.Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewValidationWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
+
+	vh, err := getStructFromYamlFile("testdata/validating/validationwebhook-sample.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.TODO(), vh)
+	assert.NoError(t, err)
+
+	// First reconcile: file written, reloadFn succeeds, but Update (add finalizer) conflicts.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.Error(t, err)
+	assert.True(t, apierrors.IsConflict(err), "expected conflict error, got: %v", err)
+
+	// Webhook file must still exist on disk after the failed Update.
+	webhookFile := r.webhookFilePath(vh.Name)
+	_, statErr := os.Stat(webhookFile)
+	assert.NoError(t, statErr, "webhook file must still exist after finalizer update failure")
+
+	// Second reconcile: file unchanged, finalizer missing → retry reload + Update → success.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.NoError(t, err)
+
+	// Verify finalizer was added on the successful retry.
+	err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}, vh)
+	assert.NoError(t, err)
+	assert.True(t, controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer))
 }

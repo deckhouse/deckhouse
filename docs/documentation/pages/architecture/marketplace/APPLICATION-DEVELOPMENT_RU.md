@@ -111,6 +111,46 @@ requirements:
 | `requirements.kubernetes` | Нет | Ограничение на минимальную версию Kubernetes |
 | `requirements.modules` | Нет | Зависимости от модулей (semver-ограничения) |
 
+## OpenAPI-схемы
+
+Каталог `openapi/` содержит две схемы:
+
+- `config-values.yaml` (или `settings.yaml`) — схема для `Application.spec.settings` (пользовательская конфигурация).
+- `values.yaml` — схема для полного набора Helm-значений.
+
+### Подстановка значения из грантов на ресурсы кластера (`x-deckhouse-grantable-resource`)
+
+Поле `settings` типа `type: string` можно связать с грантируемым ресурсом кластера, которым управляет
+[multitenancy-manager](../../../modules/multitenancy-manager/) (например, `StorageClass`). Когда поле связано:
+
+- если пользователь оставил его пустым, в values подставляется имя ресурса, заданное как **дефолтное** для проекта;
+- если пользователь указал значение, оно проверяется по списку имён, **доступных** проекту, и отклоняется, если в списке его нет.
+
+Добавьте к полю расширение `x-deckhouse-grantable-resource` и сошлитесь на грантируемый ресурс по имени (имя
+`AvailableClusterResource` / `GrantableClusterResourceDefinition`, например `storageclasses`). GVK
+самого ресурса принадлежит определению гранта и здесь указывать **не нужно**.
+
+```yaml
+# openapi/settings.yaml
+type: object
+properties:
+  storageClass:
+    type: string
+    x-deckhouse-grantable-resource: storageclasses
+  postgres:
+    type: object
+    properties:
+      storageClass:
+        type: string
+        x-deckhouse-grantable-resource: postgresclasses
+```
+
+Поведение:
+
+- Дефолт резолвится для каждого проекта из `AvailableClusterResource` в неймспейсе приложения, поэтому разные проекты могут получать разные дефолты.
+- Явно заданное пользователем значение всегда имеет приоритет над подставленным дефолтом.
+- Если функциональность multitenancy неактивна для ресурса (нет CRD, для проекта нет каталога или в каталоге нет дефолта), поле остаётся без изменений — ни подстановки, ни валидации.
+
 ## Локальная сборка
 
 Сборка и публикация пакета в реестр:

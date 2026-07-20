@@ -18,11 +18,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type CloudDeps struct {
-	InstallConfig *config.DeckhouseInstaller
-	MetaConfig    *config.MetaConfig
+	InstallConfig          *config.DeckhouseInstaller
+	MetaConfig             *config.MetaConfig
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 }
 
 func NewCloudSuite(deps CloudDeps) preflight.Suite {
@@ -30,5 +32,6 @@ func NewCloudSuite(deps CloudDeps) preflight.Suite {
 		checks.CloudDiskNameLength(deps.MetaConfig),
 		checks.CloudSystemRequirements(deps.InstallConfig),
 		checks.InstanceClassProvider(deps.MetaConfig),
+		checks.BastionAvailability(deps.SSHProviderInitializer),
 	)
 }

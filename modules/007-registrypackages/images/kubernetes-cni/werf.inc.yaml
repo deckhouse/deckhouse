@@ -98,3 +98,79 @@ shell:
     - make build_linux
     - mv /src/scripts/* /
     - cp -f /src/cni-plugin/dist/flannel-amd64 /flannel
+---
+
+# kubernetes-cni sysext
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+  add: /out
+  to: /
+  includePaths:
+  - '**/*'
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "olcedar", "sysext_level": "1.0", "version": "all", "kubernetes-cni": "{{ $cni_version }}", "flannel": "{{ $cni_flannel_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/distroless" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+  add: /
+  to: /sysext/opt/deckhouse/bin
+  includePaths:
+  - bandwidth
+  - bridge
+  - dhcp
+  - dummy
+  - firewall
+  - host-device
+  - host-local
+  - ipvlan
+  - loopback
+  - macvlan
+  - portmap
+  - ptp
+  - sbr
+  - static
+  - tap
+  - tuning
+  - vlan
+  - vrf
+  - flannel
+  - install
+  - uninstall
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/sysext
+  to: /scripts
+  includePaths:
+  - extension-release.kubernetes-cni
+  - sysext-kubernetes-cni.service
+  stageDependencies:
+    install:
+    - extension-release.kubernetes-cni
+    - sysext-kubernetes-cni.service
+shell:
+  beforeInstall:
+  - pm install erofs-utils coreutils cryptsetup
+  - mkdir -p /out
+  install:
+  - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
+  - cp -f /scripts/sysext-kubernetes-cni.service /sysext/usr/lib/systemd/system/kubernetes-cni.service
+  - cp -f /scripts/extension-release.kubernetes-cni /sysext/usr/lib/extension-release.d/
+  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 kubernetes-cni.erofs sysext/
+  - veritysetup format kubernetes-cni.erofs kubernetes-cni.verity > verity.txt
+  - export ROOTHASH=$(awk '/^Root hash:/ {print $3}' verity.txt)
+  - cat kubernetes-cni.erofs kubernetes-cni.verity > /out/kubernetes-cni.raw
+  - printf '%s\n' "$ROOTHASH" > /out/kubernetes-cni.raw.roothash

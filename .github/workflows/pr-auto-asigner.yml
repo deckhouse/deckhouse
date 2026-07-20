@@ -28,6 +28,6 @@ permissions:
 
 jobs:
   assign-author:
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     steps:
       - uses: toshimaru/auto-author-assign@v2.1.0

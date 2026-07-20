@@ -1,0 +1,6 @@
+version: 3
+conversions:
+  - del(.earlyOomEnabled)
+description:
+  ru: "Удалите `earlyOomEnabled`."
+  en: "Delete `earlyOomEnabled`."

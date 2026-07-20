@@ -202,6 +202,9 @@ common:
   search_context_only_product_docs:
     en: The search is performed throughout the product documentation, excluding modules.
     ru: Поиск выполняется по всей документации продукта, не включая модули.
+  modules_of_a_subsystem:
+    en: Subsystem modules
+    ru: Модули подсистемы
   module_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
@@ -214,6 +217,9 @@ common:
   parameter_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
+  subsystem:
+    en: Subsystem
+    ru: Подсистема
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -357,10 +363,10 @@ common:
     ru: пространства имен
   namespaces_used_by_modules:
     en: Namespaces in which modules of a scope operate
-    ru: Пространства имен используемых модулями области
+    ru: Неймспейсы, используемые модулями подсистемы
   all_namespaces:
     en: All namespaces
-    ru: Все пространства имен
+    ru: Все неймспейсы
   all_modules:
     en: All modules
     ru: Все модули
@@ -480,8 +486,8 @@ features:
     en: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
     ru: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
   requirements_for_alert:
-    en: "The module has [requirements](/modules/%s/configuration.html#requirements) for installation"
-    ru: "У модуля есть [требования](/modules/%s/configuration.html#требования) для установки"
+    en: "The module has [requirements](./configuration.html#requirements) for installation"
+    ru: "У модуля есть [требования](./configuration.html#требования) для установки"
   currency_sign:
     en: "&#36;"
     ru: "&#8381;"
@@ -529,7 +535,7 @@ features:
     ru: Доступно в других коммерческих редакциях.
   requiresSeparateLicense:
     en: Licensed separately, not included in the DKP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/pricing/">Условия и цены</a>.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/features/">Условия и цены</a>.
   requiresSeparateLicenseObservability:
     en: Licensed separately, not included in the DKP license cost.
     ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.

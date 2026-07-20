@@ -24,6 +24,10 @@ entries:
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
       - title:
+          en: OpenSearch API
+          ru: API OpenSearch
+        url: /code/documentation/admin/configuration/opensearch-api.html
+      - title:
           en: Service account
           ru: Сервисный аккаунт
         url: /code/documentation/admin/service-account.html
@@ -55,6 +59,10 @@ entries:
           en: Managing Git repositories
           ru: Управление репозиториями Git
         url: /code/documentation/user/repositories.html
+      - title:
+          en: Protected branches
+          ru: Защищённые ветки
+        url: /code/documentation/user/protected-branches.html
       - title:
           en: Working with the codebase and Code Review
           ru: Работа с кодовой базой и Code Review
@@ -92,6 +100,10 @@ entries:
           ru: Интеграция с внешним Vault
         url: /code/documentation/user/external-vault.html
       - title:
+          en: External status checks
+          ru: Внешние проверки статуса
+        url: /code/documentation/user/external-status-checks.html
+      - title:
           en: OmniAuth & LDAP
           ru: OmniAuth и LDAP
         url: /code/documentation/user/oauth-and-ldap.html
@@ -107,6 +119,10 @@ entries:
           en: Search
           ru: Поиск
         url: /code/documentation/user/search.html
+      - title:
+          en: Search API
+          ru: API поиска
+        url: /code/documentation/user/search-api.html
       - title:
           en: Push rules
           ru: Правила отправки изменений

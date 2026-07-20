@@ -24,13 +24,24 @@
 package dhctlcli
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/alecthomas/kingpin.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+)
+
+const (
+	clusterConfigurationSecretNS   = "kube-system"
+	clusterConfigurationSecretName = "d8-cluster-configuration"
+	clusterConfigurationSecretKey  = "cluster-configuration.yaml"
 )
 
 // RegisterCobraBridges adds cobra wrappers for the kingpin-based dhctl
@@ -43,6 +54,7 @@ func RegisterCobraBridges(rootCmd *cobra.Command, fileName string, opts *options
 		"edit",
 		"Change configuration files in Kubernetes cluster conveniently and safely.",
 		fileName,
+		nil,
 		func(kpApp *kingpin.Application) {
 			editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
 			DefineEditCommands(editCmd, opts /* wConnFlags */, true)
@@ -53,6 +65,10 @@ func RegisterCobraBridges(rootCmd *cobra.Command, fileName string, opts *options
 		"cluster-configuration",
 		"Parse configuration and print it.",
 		fileName,
+		// When invoked interactively (a TTY) with neither --file nor piped
+		// stdin, read the cluster-configuration straight from the cluster so
+		// the command prints the current config instead of blocking on stdin.
+		clusterConfigurationStdinFromCluster(opts),
 		func(kpApp *kingpin.Application) {
 			DefineCommandParseClusterConfiguration(
 				kpApp.Command("cluster-configuration", "Parse configuration and print it."),
@@ -65,6 +81,7 @@ func RegisterCobraBridges(rootCmd *cobra.Command, fileName string, opts *options
 		"cloud-discovery-data",
 		"Parse cloud discovery data and print it.",
 		fileName,
+		nil,
 		func(kpApp *kingpin.Application) {
 			DefineCommandParseCloudDiscoveryData(
 				kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it."),
@@ -80,7 +97,11 @@ func RegisterCobraBridges(rootCmd *cobra.Command, fileName string, opts *options
 // We must DisableFlagParsing so that cobra does not steal --help (kingpin
 // prints its own usage for these subcommands) or fail on dhctl-style flags
 // that cobra knows nothing about.
-func newDhctlBridge(name, short, fileName string, register func(*kingpin.Application)) *cobra.Command {
+//
+// preRun, when non-nil, runs before the kingpin Application is parsed. It is
+// used to prime stdin for commands that should read from the cluster when no
+// explicit input is given.
+func newDhctlBridge(name, short, fileName string, preRun func() error, register func(*kingpin.Application)) *cobra.Command {
 	return &cobra.Command{
 		Use:                name,
 		Short:              short,
@@ -90,6 +111,13 @@ func newDhctlBridge(name, short, fileName string, register func(*kingpin.Applica
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
+			if preRun != nil {
+				if err := preRun(); err != nil {
+					fmt.Fprintf(os.Stderr, "%s: %s\n", name, err)
+					return err
+				}
+			}
+
 			kpApp := kingpin.New(fileName, "")
 			register(kpApp)
 			if _, err := kpApp.Parse(os.Args[1:]); err != nil {
@@ -101,4 +129,102 @@ func newDhctlBridge(name, short, fileName string, register func(*kingpin.Applica
 			return nil
 		},
 	}
+}
+
+// clusterConfigurationStdinFromCluster returns a preRun that feeds the
+// in-cluster d8-cluster-configuration secret to the `cluster-configuration`
+// parse command via stdin.
+//
+// It only fires when the user provided no input source: no --file flag (or
+// DHCTL_CLI_FILE env) and stdin is an interactive terminal rather than a pipe.
+// In every other case it is a no-op, preserving the original behavior of
+// reading --file or piped stdin.
+func clusterConfigurationStdinFromCluster(opts *options.Options) func() error {
+	return func() error {
+		if parseFileFlagPresent(os.Args) || os.Getenv("DHCTL_CLI_FILE") != "" || !input.IsTerminal() {
+			return nil
+		}
+
+		// A human is viewing the config interactively, so default to YAML.
+		// An explicit -o/--output (or DHCTL_CLI_OUTPUT, applied by kingpin)
+		// still wins.
+		if !outputFlagPresent(os.Args) {
+			opts.Render.ParseOutput = "yaml"
+		}
+
+		ctx := context.Background()
+
+		kubeCl, err := newKubeClient(ctx, opts)
+		if err != nil {
+			return err
+		}
+
+		secret, err := kubeCl.CoreV1().Secrets(clusterConfigurationSecretNS).
+			Get(ctx, clusterConfigurationSecretName, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("get %s secret: %w", clusterConfigurationSecretName, err)
+		}
+
+		data, ok := secret.Data[clusterConfigurationSecretKey]
+		if !ok || len(data) == 0 {
+			return fmt.Errorf("secret %s has no %q key", clusterConfigurationSecretName, clusterConfigurationSecretKey)
+		}
+
+		// Hand the secret bytes to the parse action via stdin without touching
+		// disk (the data is sensitive). The mirrored parse function reads
+		// os.Stdin when no --file is set.
+		r, w, err := os.Pipe()
+		if err != nil {
+			return err
+		}
+		os.Stdin = r
+		go func() {
+			_, _ = w.Write(data)
+			_ = w.Close()
+		}()
+
+		return nil
+	}
+}
+
+// newKubeClient builds a Kubernetes client from the deckhouse-controller's
+// dhctl kube options. deckhouse-controller runs in-cluster
+// (DECKHOUSE_KUBE_CONFIG_IN_CLUSTER defaults to true), so this resolves to the
+// pod's service-account credentials; it also honors an explicit kubeconfig.
+// Unlike the edit commands' provider initializer, it never sets up SSH — this
+// path only needs read access to a Secret.
+func newKubeClient(ctx context.Context, opts *options.Options) (*client.KubernetesClient, error) {
+	kubeCl := client.NewKubernetesClient()
+	if err := kubeCl.InitContext(ctx, client.AppKubernetesInitParams(&opts.Kube)); err != nil {
+		return nil, fmt.Errorf("initialize kubernetes client: %w", err)
+	}
+	return kubeCl, nil
+}
+
+// parseFileFlagPresent reports whether the args contain the parse commands'
+// --file/-f flag in any of its accepted spellings.
+func parseFileFlagPresent(args []string) bool {
+	for _, a := range args {
+		switch {
+		case a == "-f", a == "--file":
+			return true
+		case strings.HasPrefix(a, "--file="), strings.HasPrefix(a, "-f="):
+			return true
+		}
+	}
+	return false
+}
+
+// outputFlagPresent reports whether the args contain the parse commands'
+// --output/-o flag in any of its accepted spellings.
+func outputFlagPresent(args []string) bool {
+	for _, a := range args {
+		switch {
+		case a == "-o", a == "--output":
+			return true
+		case strings.HasPrefix(a, "--output="), strings.HasPrefix(a, "-o="):
+			return true
+		}
+	}
+	return false
 }

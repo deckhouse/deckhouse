@@ -66,4 +66,6 @@ The following monitoring configuration options are available to DKP users:
 - **Monitoring user applications**: You can configure metrics collection from your application
   by following the [instructions](app.html).
 - **Creating custom dashboards**: You can add specialized dashboards using the [GrafanaDashboardDefinition](/modules/prometheus/faq.html#how-do-i-create-custom-grafana-dashboards) resource.
-- **Configuring custom alerts**: You can define new alerting rules using the [CustomPrometheusRules](/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) resource.
+- **Configuring custom alerts**: You can define new alerting rules in one of two ways:
+  - **Recommended**: Using the [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) and [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) resources of the `observability` module.
+  - **Outdated**: Using the [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) resource of the `prometheus` module. To see an example, refer to the [module documentation](/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).

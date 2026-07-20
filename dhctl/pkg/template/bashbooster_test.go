@@ -15,7 +15,6 @@
 package template
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,7 +28,7 @@ var clusterConfig = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 proxy:
@@ -49,7 +48,7 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), nil)
+	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyPreparatorProvider(), nil)
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}
@@ -59,7 +58,7 @@ func TestRenderBashBooster(t *testing.T) {
 	}
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(t.Context(), "10.0.0.2")
 	if err != nil {
 		t.Fatalf("ConfigForBashibleBundleTemplate error: %v", err)
 	}

@@ -29,8 +29,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -63,7 +65,7 @@ func TestGetDNSAddress(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, testCase.result, getDNSAddress(testCase.cidr))
+			require.Equal(t, testCase.result, getDNSAddress(t.Context(), testCase.cidr))
 		})
 	}
 }
@@ -77,7 +79,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:
@@ -163,7 +165,7 @@ provider:
 {{- end }}
 `
 
-func renderTestConfig(data map[string]interface{}, config string) string {
+func renderTestConfig(data map[string]any, config string) string {
 	t := template.New("testconfig_template").Funcs(sprig.TxtFuncMap())
 	t, err := t.Parse(config)
 	if err != nil {
@@ -190,9 +192,9 @@ func generateDockerCfg(host, username, password string) string {
 }
 
 func generateOldDockerCfg(host string, username, password *string) string {
-	res := map[string]interface{}{
-		"auths": map[string]interface{}{
-			host: make(map[string]interface{}),
+	res := map[string]any{
+		"auths": map[string]any{
+			host: make(map[string]any),
 		},
 	}
 
@@ -218,10 +220,10 @@ func generateOldDockerCfg(host string, username, password *string) string {
 	return string(auth)
 }
 
-func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
+func generateMetaConfig(t *testing.T, template string, data map[string]any, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
-	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), &options.New().Global)
+	cfg, err := ParseConfigFromData(t.Context(), configData, DummyPreparatorProvider(), &options.New().Global)
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -232,7 +234,7 @@ func generateMetaConfig(t *testing.T, template string, data map[string]interface
 	return cfg
 }
 
-func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface{}) *MetaConfig {
+func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]any) *MetaConfig {
 	return generateMetaConfig(t, metaConfigTestsTemplate, data, false)
 }
 
@@ -303,17 +305,17 @@ spec:
 
 func TestEnrichProxyData(t *testing.T) {
 	t.Run("proxy config is absent", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
 
-		require.Equal(t, p, map[string]interface{}(nil))
+		require.Equal(t, p, map[string]any(nil))
 	})
 
 	t.Run("proxy config is present, httpProxy is set", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"proxy": map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+			"proxy": map[string]any{
 				"httpProxy": "http://1.2.3.4",
 			},
 		})
@@ -321,15 +323,15 @@ func TestEnrichProxyData(t *testing.T) {
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
 
-		require.Equal(t, p, map[string]interface{}{
+		require.Equal(t, p, map[string]any{
 			"httpProxy": "http://1.2.3.4",
 			"noProxy":   []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
 	})
 
 	t.Run("proxy config is present, httpsProxy is set", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"proxy": map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+			"proxy": map[string]any{
 				"httpsProxy": "https://2.3.4.5",
 			},
 		})
@@ -337,15 +339,15 @@ func TestEnrichProxyData(t *testing.T) {
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
 
-		require.Equal(t, p, map[string]interface{}{
+		require.Equal(t, p, map[string]any{
 			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
 	})
 
 	t.Run("proxy config is present, all options is set", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"proxy": map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+			"proxy": map[string]any{
 				"httpProxy":  "http://1.2.3.4",
 				"httpsProxy": "https://2.3.4.5",
 				"noProxy":    []string{"example.com", ".example.com"},
@@ -355,7 +357,7 @@ func TestEnrichProxyData(t *testing.T) {
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
 
-		require.Equal(t, p, map[string]interface{}{
+		require.Equal(t, p, map[string]any{
 			"httpProxy":  "http://1.2.3.4",
 			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"example.com", ".example.com", "127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
@@ -364,7 +366,7 @@ func TestEnrichProxyData(t *testing.T) {
 }
 
 func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
-	cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+	cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
@@ -377,13 +379,13 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 		},
 	}
 
-	data, err := cfg.ConfigForBashibleBundleTemplate("10.0.0.2")
+	data, err := cfg.ConfigForBashibleBundleTemplate(t.Context(), "10.0.0.2")
 	require.NoError(t, err)
 
-	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]interface{})
+	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]any)
 	require.True(t, ok)
 	require.Len(t, endpoints, 1)
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"address":                "127.0.0.1",
 		"kubeApiPort":            6443,
 		"rppServerPort":          5444,
@@ -395,19 +397,19 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 }
 
 func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing.T) {
-	cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+	cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	expectedMingetBytes := []byte("test-minget")
 	require.NoError(t, os.WriteFile(mingetPath, expectedMingetBytes, 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	data, err := cfg.ConfigForBashibleBundleTemplate("10.0.0.2")
+	data, err := cfg.ConfigForBashibleBundleTemplate(t.Context(), "10.0.0.2")
 	require.NoError(t, err)
 
-	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]interface{})
+	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]any)
 	require.True(t, ok)
 	require.Len(t, endpoints, 1)
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"address":                "127.0.0.1",
 		"rppServerPort":          5444,
 		"rppBootstrapServerPort": defaultClusterMasterRPPBootstrapServerPort,
@@ -423,4 +425,104 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	mingetBytes, err := base64.StdEncoding.DecodeString(mingetB64)
 	require.NoError(t, err)
 	require.Equal(t, expectedMingetBytes, mingetBytes)
+}
+
+func TestMetaConfig_DeepCopy_PreservesValidateInputs(t *testing.T) {
+	src := &MetaConfig{
+		DownloadRootDir:  "/tmp/dl",
+		DownloadCacheDir: "/tmp/cache",
+		VersionFilePath:  "/tmp/v.yaml",
+		ResourcesYAML:    "kind: X\n",
+		ModuleConfigs:    []*ModuleConfig{{Spec: ModuleConfigSpec{Settings: SettingsValues{"k": "v"}}}},
+		Images:           imagesDigests{"a": map[string]interface{}{"b": "c"}},
+		VersionMap:       map[string]interface{}{"k": "v"},
+		InstallerVersion: "1.2.3",
+		ShowProgress:     true,
+	}
+	src.ModuleConfigs[0].SetName("x")
+
+	cp := src.DeepCopy()
+
+	require.Equal(t, src.DownloadRootDir, cp.DownloadRootDir)
+	require.Equal(t, src.DownloadCacheDir, cp.DownloadCacheDir)
+	require.Equal(t, src.VersionFilePath, cp.VersionFilePath)
+	require.Equal(t, src.ResourcesYAML, cp.ResourcesYAML)
+	require.Equal(t, src.InstallerVersion, cp.InstallerVersion)
+	require.True(t, cp.ShowProgress)
+	require.Len(t, cp.ModuleConfigs, 1)
+	require.Equal(t, "x", cp.ModuleConfigs[0].GetName())
+	require.Equal(t, "v", cp.VersionMap["k"])
+	require.Equal(t, "c", cp.Images["a"]["b"])
+}
+
+func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
+	src := &MetaConfig{
+		CloudProviderVars: &CloudProviderVars{
+			Settings:   map[string]interface{}{"k": "v"},
+			NodeGroups: map[string]map[string]interface{}{"ng": {"replicas": 1}},
+		},
+	}
+	cp := src.DeepCopy()
+
+	cp.CloudProviderVars.Settings["k"] = "mutated"
+	cp.CloudProviderVars.NodeGroups["ng"]["replicas"] = 99
+
+	require.Equal(t, "v", src.CloudProviderVars.Settings["k"])
+	require.Equal(t, 1, src.CloudProviderVars.NodeGroups["ng"]["replicas"])
+}
+
+type stubPreparator struct {
+	result proto.PrepareResult
+}
+
+func (s stubPreparator) Validate(_ context.Context, _ ProviderInput) error {
+	return nil
+}
+
+func (s stubPreparator) Prepare(_ context.Context, _ ProviderInput) (proto.PrepareResult, error) {
+	return s.result, nil
+}
+
+func stubPreparatorProvider(s stubPreparator) MetaConfigPreparatorProvider {
+	return func(_ context.Context, _, _ string) MetaConfigPreparator { return s }
+}
+
+func TestValidateAndPrepareMetaConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {
+	m := &MetaConfig{
+		ClusterType:           CloudClusterType,
+		ProviderName:          "dvp",
+		ProviderClusterConfig: nil,
+	}
+	prep := stubPreparator{result: proto.PrepareResult{
+		ProviderClusterConfig: map[string]interface{}{"layout": "Standard"},
+	}}
+
+	out, err := validateAndPrepareMetaConfig(context.Background(), stubPreparatorProvider(prep), m)
+	require.NoError(t, err)
+	require.NotNil(t, out.ProviderClusterConfig)
+	require.Contains(t, out.ProviderClusterConfig, "layout")
+	require.Equal(t, "standard", out.Layout)
+}
+
+func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
+	settings := SettingsValues{"masterPool": map[string]interface{}{"replicas": 3}}
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings}}
+	mc.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:  "dvp",
+		ModuleConfigs: []*ModuleConfig{mc},
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.NotNil(t, m.CloudProviderVars)
+	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
+	require.Equal(t, float64(2), spec["version"])
+	specSettings, ok := spec["settings"].(map[string]interface{})
+	require.True(t, ok)
+	masterPool, ok := specSettings["masterPool"].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, float64(3), masterPool["replicas"])
 }

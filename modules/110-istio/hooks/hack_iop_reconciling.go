@@ -33,11 +33,13 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 )
@@ -63,13 +65,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              "istio_operators",
-			ApiVersion:        "install.istio.io/v1alpha1",
-			Kind:              "IstioOperator",
-			NamespaceSelector: lib.NsSelector(),
-			FilterFunc:        applyIopFilter,
-		},
-		{
 			Name:              "istio_operator_pods",
 			ApiVersion:        "v1",
 			Kind:              "Pod",
@@ -90,7 +85,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyIstioOperatorPodFilter,
 		},
 	},
-}, hackIopReconcilingHook)
+}, dependency.WithExternalDependencies(hackIopReconcilingHook))
 
 func applyIopFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var iop crd.IstioOperator
@@ -125,7 +120,7 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return result, nil
 }
 
-func hackIopReconcilingHook(_ context.Context, input *go_hook.HookInput) error {
+func hackIopReconcilingHook(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	operatorPodMap := make(map[string]string)
 
 	for operatorPod, err := range sdkobjectpatch.SnapshotIter[IstioOperatorPodSnapshot](input.Snapshots.Get("istio_operator_pods")) {
@@ -138,17 +133,35 @@ func hackIopReconcilingHook(_ context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	for iop, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdSnapshot](input.Snapshots.Get("istio_operators")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'istio_operators' snapshot: %w", err)
-		}
+	k8sClient, err := dc.GetK8sClient()
+	if err != nil {
+		return err
+	}
 
-		if iop.NeedPunch {
-			input.Logger.Info("iop with rev needs to punch.", slog.String("rev", iop.Revision))
-			if podName, ok := operatorPodMap[iop.Revision]; ok {
-				input.Logger.Info("Pod is allowed to punch.", slog.String("name", podName))
-				input.PatchCollector.DeleteInBackground("v1", "Pod", "d8-istio", podName)
-				input.Logger.Info("Pod deleted.", slog.String("name", podName))
+	iops, err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioNamespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		// The CRD can be absent on operator-free control planes; this is expected.
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		for _, iopObj := range iops.Items {
+			iopAny, err := applyIopFilter(&iopObj)
+			if err != nil {
+				return fmt.Errorf("cannot parse IstioOperator %q: %w", iopObj.GetName(), err)
+			}
+			iop, ok := iopAny.(IstioOperatorCrdSnapshot)
+			if !ok {
+				return fmt.Errorf("unexpected IstioOperator filter result type for %q", iopObj.GetName())
+			}
+
+			if iop.NeedPunch {
+				input.Logger.Info("iop with rev needs to punch.", slog.String("rev", iop.Revision))
+				if podName, ok := operatorPodMap[iop.Revision]; ok {
+					input.Logger.Info("Pod is allowed to punch.", slog.String("name", podName))
+					input.PatchCollector.DeleteInBackground("v1", "Pod", "d8-istio", podName)
+					input.Logger.Info("Pod deleted.", slog.String("name", podName))
+				}
 			}
 		}
 	}

@@ -49,8 +49,14 @@ var _ runtime.Object = (*ModuleConfig)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
 
-// ModuleSettingsDefinition is a configuration for module or for global config values.
+// It displays module settings.
+// Defines a list of module settings versions.
 type ModuleSettingsDefinition struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -58,26 +64,38 @@ type ModuleSettingsDefinition struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Specification of the module settings.
 	Spec ModuleSettingsDefinitionSpec `json:"spec"`
 }
 
 type ModuleSettingsDefinitionSpec struct {
-	Versions []ModuleSettingsDefinitionVersion `json:"versions"`
+	// List of module settings versions. Each version includes a name and a schema.
+	Versions []ModuleSettingsDefinitionVersion `json:"versions,omitempty"`
 }
 
 type ModuleSettingsDefinitionVersion struct {
-	Name        string                                    `json:"name"`
-	Schema      *apiextensionsv1.CustomResourceValidation `json:"schema,omitempty"`
-	Conversions []ModuleSettingsConversion                `json:"conversions,omitempty"`
+	// Module settings version.
+	Name string `json:"name"`
+	// Settings schema for the given module version.
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Schema *apiextensionsv1.CustomResourceValidation `json:"schema,omitempty"`
+	// List of conversion rules for this version.
+	Conversions []ModuleSettingsConversion `json:"conversions,omitempty"`
 }
 
+// A single conversion rule with expressions and descriptions.
 type ModuleSettingsConversion struct {
-	Expr         []string                              `json:"expr"`
+	// Array of jq expressions to transform settings.
+	Expr []string `json:"expr,omitempty"`
+	// Localized descriptions of the conversion.
 	Descriptions *ModuleSettingsConversionDescriptions `json:"descriptions,omitempty"`
 }
 
 type ModuleSettingsConversionDescriptions struct {
+	// Russian description of the conversion.
 	Ru string `json:"ru,omitempty"`
+	// English description of the conversion.
 	En string `json:"en,omitempty"`
 }
 

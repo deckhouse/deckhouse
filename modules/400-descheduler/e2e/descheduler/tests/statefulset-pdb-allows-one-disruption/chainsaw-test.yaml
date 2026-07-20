@@ -1,0 +1,284 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: descheduler-statefulset-pdb-allows-one-disruption
+spec:
+  description: >-
+    StatefulSet protected by a PDB with maxUnavailable=1: the RemoveDuplicates
+    strategy evicts duplicate pods one at a time, the StatefulSet never loses
+    more than one replica at once and ends up spread across nodes.
+
+  concurrent: false
+  timeouts:
+    apply: 30s
+    assert: 120s
+    delete: 60s
+
+  bindings:
+    - name: stsTestLabel
+      value: sts-pdb-allows-one
+    - name: stsReplicas
+      value: 3
+    - name: antiTargetValue
+      value: ($stsTestLabel)
+    - name: workerNodes
+      value: >-
+        (x_k8s_list($client, 'v1', 'Node').items[?spec.unschedulable != `true`
+        && metadata.labels."node-role.kubernetes.io/control-plane" == `null`
+        && length(status.conditions[?type == 'Ready' && status == 'True']) > `0`])
+    # All StatefulSet pods are initially placed on this node.
+    - name: targetNode
+      value: ($workerNodes[0].metadata.name)
+
+  catch:
+    - description: Show pods in the test namespace on failure
+      get:
+        apiVersion: v1
+        kind: Pod
+    - description: Show events in the test namespace on failure
+      events: {}
+    - description: Show the PDB state on failure
+      get:
+        apiVersion: policy/v1
+        kind: PodDisruptionBudget
+    - description: Show descheduler pod logs on failure
+      podLogs:
+        namespace: d8-descheduler
+        selector: app=descheduler
+        container: descheduler
+        tail: 200
+
+  steps:
+    - name: assert-module-installed
+      description: Verify that the descheduler module is installed in the cluster
+      try:
+        - description: Assert the Descheduler CRD exists
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: deschedulers.deckhouse.io
+
+    - name: check-minimum-nodes
+      description: Verify that the cluster has at least 2 eligible worker nodes for the redistribution test
+      try:
+        - description: Assert at least 2 Ready, schedulable, non-control-plane worker nodes exist
+          assert:
+            resource:
+              (length($workerNodes) >= `2`): true
+
+    - name: create-statefulset
+      description: >-
+        Create a 3-replica StatefulSet placed on a single worker node via spec.nodeName
+        (kubelet admission bypasses the scheduler and ignores the pod anti-affinity),
+        producing duplicates while keeping the live pod specs free of node constraints
+      try:
+        - description: Create the StatefulSet pinned to the target node
+          create:
+            file: ../common/manifests/sts-pinned.yaml
+            template: true
+
+    - name: wait-statefulset-pinned
+      description: Wait until all 3 replicas are Running and concentrated on the target node
+      try:
+        - description: Assert pod test-sts-0 is Running on the target node
+          assert:
+            timeout: 180s
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: test-sts-0
+              spec:
+                nodeName: ($targetNode)
+              status:
+                phase: Running
+        - description: Assert pod test-sts-1 is Running on the target node
+          assert:
+            timeout: 180s
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: test-sts-1
+              spec:
+                nodeName: ($targetNode)
+              status:
+                phase: Running
+        - description: Assert pod test-sts-2 is Running on the target node
+          assert:
+            timeout: 180s
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: test-sts-2
+              spec:
+                nodeName: ($targetNode)
+              status:
+                phase: Running
+        - description: Assert the StatefulSet reports 3 ready replicas
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: test-sts
+              status:
+                readyReplicas: 3
+
+    - name: release-node-pinning
+      description: >-
+        Clear the template nodeName so that pods recreated after an eviction go through
+        the scheduler (which enforces their anti-affinity); OnDelete keeps current pods in place
+      try:
+        - description: Patch the StatefulSet pod template to stop bypassing the scheduler
+          patch:
+            file: ../common/manifests/sts-unpin-patch.yaml
+        - description: Assert the patch did not restart pods and all 3 remain on the target node
+          assert:
+            resource:
+              (x_k8s_list($client, 'v1', 'Pod', $namespace).items[?metadata.labels."e2e-test" == $stsTestLabel]):
+                (length(@) == `3`): true
+                (length([?spec.nodeName == $targetNode]) == `3`): true
+
+    - name: create-pdb
+      description: Create a PodDisruptionBudget with maxUnavailable=1 that serializes voluntary disruptions
+      try:
+        - description: Create the PDB selecting the StatefulSet pods
+          create:
+            file: manifests/pdb.yaml
+        - description: Assert the PDB tracks all 3 pods and allows exactly 1 disruption
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: policy/v1
+              kind: PodDisruptionBudget
+              metadata:
+                name: test-sts-pdb
+              status:
+                expectedPods: 3
+                currentHealthy: 3
+                disruptionsAllowed: 1
+
+    - name: apply-descheduler-cr
+      description: Enable the RemoveDuplicates strategy scoped to the test pods only
+      try:
+        - description: Apply the Descheduler CR with RemoveDuplicates and a pod label selector
+          apply:
+            file: manifests/descheduler-cr.yaml
+        - description: Assert the Descheduler CR exists
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: Descheduler
+              metadata:
+                name: e2e-sts-pdb-allows-one
+      cleanup:
+        - description: Delete the Descheduler CR
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: Descheduler
+              name: e2e-sts-pdb-allows-one
+
+    - name: assert-policy-rendered
+      description: Verify that Deckhouse reconciled the CR into the descheduler policy ConfigMap
+      try:
+        - description: Assert the policy ConfigMap contains the e2e-sts-pdb-allows-one profile
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'e2e-sts-pdb-allows-one')): true
+      catch:
+        - description: Show ConfigMap content on failure
+          get:
+            apiVersion: v1
+            kind: ConfigMap
+            name: descheduler-policy
+            namespace: d8-descheduler
+        - description: Show Descheduler CRs on failure
+          get:
+            apiVersion: deckhouse.io/v1alpha2
+            kind: Descheduler
+        - description: Show events in the descheduler namespace on failure
+          events:
+            namespace: d8-descheduler
+
+    - name: wait-descheduler-rollout
+      description: >-
+        Wait until the descheduler deployment finishes rolling out and its single pod runs
+        with the current policy checksum (the policy change triggers a rollout via the
+        checksum/config annotation; a descheduling cycle runs at pod startup)
+      try:
+        - description: Assert the rollout is complete and the running pod carries the current policy checksum
+          assert:
+            timeout: 300s
+            file: ../common/asserts/assert-descheduler-rollout-complete.yaml
+      catch:
+        - description: Describe the descheduler deployment on failure
+          describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: descheduler
+            namespace: d8-descheduler
+        - description: Show events in the descheduler namespace on failure
+          events:
+            namespace: d8-descheduler
+
+    - name: verify-pods-redistributed
+      description: >-
+        Verify the descheduler evicted duplicates within the PDB budget: the StatefulSet
+        spreads across at least 2 nodes while staying fully available
+      try:
+        - description: Assert the StatefulSet pods eventually run on at least 2 different nodes
+          assert:
+            timeout: 420s
+            resource:
+              (x_k8s_list($client, 'v1', 'Pod', $namespace).items[?metadata.labels."e2e-test" == $stsTestLabel && metadata.deletionTimestamp == `null`]):
+                (length(@) == `3`): true
+                (length([?status.phase == 'Running']) == `3`): true
+                (min([].spec.nodeName) != max([].spec.nodeName)): true
+        - description: Assert the StatefulSet returns to 3 ready replicas after the redistribution
+          assert:
+            timeout: 180s
+            resource:
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: test-sts
+              status:
+                readyReplicas: 3
+        - description: Assert the PDB recovered its full disruption budget
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: policy/v1
+              kind: PodDisruptionBudget
+              metadata:
+                name: test-sts-pdb
+              status:
+                expectedPods: 3
+                currentHealthy: 3
+                disruptionsAllowed: 1
+
+    - name: verify-eviction-events
+      description: >-
+        Verify the descheduler recorded eviction events for the StatefulSet pods
+        (event reason is the strategy name; 'Descheduled' is the event action)
+      try:
+        - description: Assert at least one RemoveDuplicates eviction event exists for a test-sts pod
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: RemoveDuplicates
+              (starts_with(involvedObject.name, 'test-sts-')): true

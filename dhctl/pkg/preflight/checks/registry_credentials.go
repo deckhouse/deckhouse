@@ -48,12 +48,15 @@ func (c RegistryCredentialsCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("metaConfig and installConfig are required")
 	}
 
-	image := c.InstallConfig.GetRemoteImage(true)
+	image, err := c.InstallConfig.GetRemoteImage(ctx, true)
+	if err != nil {
+		return err
+	}
 	if image == "registry.deckhouse.ru/deckhouse/ce" {
 		return nil
 	}
 
-	client, err := prepareAuthHTTPClient(c.MetaConfig)
+	client, err := prepareAuthHTTPClient(ctx, c.MetaConfig)
 	if err != nil {
 		return err
 	}

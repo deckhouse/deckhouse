@@ -4,7 +4,6 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   generation: 1
@@ -13,15 +12,10 @@ metadata:
   uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: ""
-  modules: null
-  modulesCount: 0
-  phase: ""
   syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -29,7 +23,6 @@ kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
@@ -50,10 +43,8 @@ spec:
   weight: 910
 status:
   approved: false
-  message: ""
   phase: Superseded
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -61,7 +52,6 @@ kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
@@ -82,10 +72,8 @@ spec:
   weight: 910
 status:
   approved: false
-  message: ""
   phase: Suspended
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -93,7 +81,6 @@ kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
@@ -114,10 +101,8 @@ spec:
   weight: 910
 status:
   approved: false
-  message: ""
   phase: Superseded
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -127,7 +112,6 @@ metadata:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -151,16 +135,13 @@ spec:
   weight: 910
 status:
   approved: false
-  message: ""
   phase: Deployed
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
-  creationTimestamp: null
   name: echo
   resourceVersion: "1000"
 properties: {}

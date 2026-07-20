@@ -38,8 +38,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
+	otattribute "go.opentelemetry.io/otel/attribute"
+	ottrace "go.opentelemetry.io/otel/trace"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
@@ -108,7 +112,7 @@ func RegistryConfigFromDockerConfig(dc *dockerConfig, scheme, registry string) (
 
 	_, ok := dc.Auths[baseRegistry]
 	if !ok {
-		return nil, fmt.Errorf("docker config doesn't contains %s registry credentials", registry)
+		return nil, fmt.Errorf("docker config doesn't contain %s registry credentials", registry)
 	}
 	rc := &RegistryConfig{
 		scheme:   scheme,
@@ -209,13 +213,13 @@ func hashFileSHA256(filePath string) (string, error) {
 	return hashString, nil
 }
 
-func getHash(digest, dstPath string) (string, error) {
-	path := filepath.Join(dstPath, "images_hashs.json")
+func getHash(digest, cacheDir string) (string, error) {
+	path := filepath.Join(cacheDir, "images_hashs.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("cannot open file %s: %w", path, err)
 	}
-	var hashs map[string]interface{}
+	var hashs map[string]any
 	err = json.Unmarshal(data, &hashs)
 	if err != nil {
 		return "", fmt.Errorf("unmarshalling json: %w", err)
@@ -228,8 +232,8 @@ func getHash(digest, dstPath string) (string, error) {
 	return "", nil
 }
 
-func saveHash(digest, hash, dstPath string) error {
-	path := filepath.Join(dstPath, "images_hashs.json")
+func saveHash(digest, hash, cacheDir string) error {
+	path := filepath.Join(cacheDir, "images_hashs.json")
 	data, err := os.ReadFile(path)
 	hashs := make(map[string]string)
 	if err != nil {
@@ -263,9 +267,14 @@ func saveHash(digest, hash, dstPath string) error {
 	return nil
 }
 
-func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, digest, dstPath, cacheDir string, showProgress bool) (v1.Image, error) {
+// pullImage caches the tarball and checksum under imgName (the key
+// tryToRestoreLocalImage reads); pass a digest for content-addressed caching.
+func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, imgName, dstPath, cacheDir string, showProgress bool) (v1.Image, error) {
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
+	}
+	if err := os.MkdirAll(dstPath, 0o755); err != nil {
+		return nil, fmt.Errorf("create destination directory %s: %w", dstPath, err)
 	}
 	layersCache := cache.NewFilesystemCache(cacheDir)
 	img, err := remote.Image(ref, opts...)
@@ -274,13 +283,13 @@ func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, di
 	}
 	cached := cache.Image(img, layersCache)
 
-	checksum, err := saveImageAsTarGz(ctx, ref.String(), filepath.Join(dstPath, digest), cached, showProgress)
+	checksum, err := saveImageAsTarGz(ctx, ref.String(), filepath.Join(dstPath, imgName), cached, showProgress)
 	if err != nil {
 		return cached, fmt.Errorf("saving tar.gz: %w", err)
 	}
 
-	log.DebugF("checksum: %s\n", checksum)
-	if err = saveHash(digest, checksum, dstPath); err != nil {
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("checksum: %s", checksum))
+	if err = saveHash(imgName, checksum, cacheDir); err != nil {
 		return cached, fmt.Errorf("saving checksum to file: %w", err)
 	}
 
@@ -352,7 +361,7 @@ func saveImageAsTarGz(_ context.Context, imageRef string, outPath string, img v1
 	return checksum, nil
 }
 
-func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remote.Option, error) {
+func getOptsFromRegistryConfig(ctx context.Context, ref name.Reference, cfg *RegistryConfig) ([]remote.Option, error) {
 	var opts []remote.Option
 	registry := ref.Context().RegistryStr()
 	auth, err := authFromRegistry(cfg, registry)
@@ -361,7 +370,7 @@ func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remot
 	}
 	opts = append(opts, remote.WithAuth(auth))
 	if cfg.ca != "" {
-		transport, err := registryutil.NewRegistryTransport(cfg.scheme, cfg.ca)
+		transport, err := registryutil.NewRegistryTransport(ctx, cfg.scheme, cfg.ca)
 		if err != nil {
 			return nil, err
 		}
@@ -372,19 +381,28 @@ func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remot
 }
 
 func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir string, regConfig RegistryConfig, showProgress bool) error {
+	ctx, span := telemetry.StartSpan(ctx, "image.DownloadAndUnpack")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("image.ref", imageRef),
+		otattribute.String("image.destDir", destDir),
+	)
+
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return fmt.Errorf("parsing image reference %q: %w", imageRef, err)
 	}
 
 	imgName := ref.Identifier()
-	img, err := tryToRestoreLocalImage(imgName, destDir)
+	img, err := tryToRestoreLocalImage(imgName, destDir, cacheDir)
 	if err == nil {
+		span.AddEvent("image.restored_from_cache")
 		return extractImage(img, destDir)
 	}
-	log.DebugF("Could not use local image. Reason: %s\n", err.Error())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Could not use local image. Reason: %s", err.Error()))
+	span.AddEvent("image.cache_miss", ottrace.WithAttributes(otattribute.String("reason", err.Error())))
 
-	opts, err := getOptsFromRegistryConfig(ref, &regConfig)
+	opts, err := getOptsFromRegistryConfig(ctx, ref, &regConfig)
 	if err != nil {
 		return err
 	}
@@ -393,12 +411,14 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	if err != nil {
 		return fmt.Errorf("getting manifest descriptor for %q: %w", ref.String(), err)
 	}
-	log.DebugF("hash: %s\n", desc.Digest.String())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("hash: %s", desc.Digest.String()))
+	span.SetAttributes(otattribute.String("image.digest", desc.Digest.String()))
 
-	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), destDir, cacheDir, showProgress)
+	img, err = pullImage(ctx, ref, opts, imgName, destDir, cacheDir, showProgress)
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", imageRef, err)
 	}
+	span.AddEvent("image.pulled")
 
 	return extractImage(img, destDir)
 }
@@ -503,7 +523,7 @@ func processLayer(r io.Reader, peek []byte, destDir string) error {
 	return nil
 }
 
-func tryToRestoreLocalImage(imgName, destDir string) (v1.Image, error) {
+func tryToRestoreLocalImage(imgName, destDir, cacheDir string) (v1.Image, error) {
 	filename := filepath.Join(destDir, imgName)
 	f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
@@ -519,7 +539,7 @@ func tryToRestoreLocalImage(imgName, destDir string) (v1.Image, error) {
 		return nil, fmt.Errorf("could not calculate file checksum %s: %w", filename, err)
 	}
 
-	storedChecksum, err := getHash(imgName, destDir)
+	storedChecksum, err := getHash(imgName, cacheDir)
 	if err != nil {
 		return nil, fmt.Errorf("could not get checksum %s from file: %w", filename, err)
 	}

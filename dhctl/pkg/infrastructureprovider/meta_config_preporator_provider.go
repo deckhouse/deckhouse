@@ -17,106 +17,125 @@ package infrastructureprovider
 import (
 	"context"
 	"fmt"
+	"os"
 
-	"github.com/name212/govalue"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 )
 
-// todo it is ugly solution because we validate some filds in providers only in bootstrap
-// need migration in cloud-provider-yandex in withNat layout
-type DhctlPhase string
+type DhctlOperation = string
 
 const (
-	DhctlPhaseBootstrap DhctlPhase = "bootstrap"
+	DhctlOperationBootstrap DhctlOperation = proto.OperationBootstrap
+	DhctlOperationConverge  DhctlOperation = proto.OperationConverge
+	DhctlOperationDestroy   DhctlOperation = proto.OperationDestroy
 )
 
-type PreflightChecks struct {
-	DVPValidateKubeAPI bool
-}
-
 type PreparatorProviderParams struct {
-	logger          log.Logger
-	phase           DhctlPhase
-	PreflightChecks PreflightChecks
 }
 
-func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
-	p.phase = phase
-}
-
-func (p *PreparatorProviderParams) WithPhaseBootstrap() {
-	p.WithPhase(DhctlPhaseBootstrap)
-}
-
-func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
-	p.PreflightChecks = checks
-}
-
-func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
-	return PreparatorProviderParams{
-		logger: logger,
-	}
+func NewPreparatorProviderParams() PreparatorProviderParams {
+	return PreparatorProviderParams{}
 }
 
 func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
-	return PreparatorProviderParams{
-		logger: log.NewSilentLogger(),
-	}
+	return PreparatorProviderParams{}
 }
 
-// looger can be nil if nil will use silent logger
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
-	logger := params.logger
+	return selectPreparator
+}
 
-	if govalue.IsNil(logger) {
-		logger = log.NewSilentLogger()
-	}
-
-	return func(provider string) config.MetaConfigPreparator {
-		switch provider {
+func selectPreparator(ctx context.Context, provider, downloadRootDir string) config.MetaConfigPreparator {
+	switch provider {
+	case "":
 		// static cluster
-		case "":
-			return config.DummyPreparatorProvider()("")
-		case yandex.ProviderName:
-			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
-			if params.phase == DhctlPhaseBootstrap {
-				yandexPreparator.EnableValidateWithNATLayout()
-			}
-			return yandexPreparator
-		case vcd.ProviderName:
-			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
-				PrepareMetaConfig:     true,
-				ValidateClusterPrefix: true,
-			}, logger)
-		case dvp.ProviderName:
-			prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
-			if params.phase != DhctlPhaseBootstrap {
-				return prep
-			}
-			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
-		default:
-			return &defaultCloudOnlyPrefixValidatorPreparator{}
+		return config.DummyPreparatorProvider()(ctx, "", "")
+	case yandex.ProviderName:
+		// Top-level dhctl path (bootstrap/converge/check): validate cluster
+		// prefix. The hook-side caller passes false.
+		return yandex.NewMetaConfigPreparator(true)
+	case vcd.ProviderName:
+		return vcd.NewMetaConfigPreparator()
+	default:
+		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
+			return external.NewBinaryPreparator(binaryPath)
 		}
+		// In-tree providers ship their schemas in the image's candi and need
+		// no external validator: keep the lightweight prefix-only preparator
+		// (mirrors main's default). Only truly external providers (not in
+		// candi) require the downloaded validator binary.
+		if providerBundledInCandi(provider) {
+			return &inTreeDefaultPreparator{}
+		}
+		searched := ""
+		if downloadRootDir != "" {
+			searched = providerdir.ValidatorPath(downloadRootDir, provider)
+		}
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("external validator for provider %q not found at %q", provider, searched))
+		return &missingExternalValidatorPreparator{provider: provider, searchedPath: searched}
 	}
 }
 
-type defaultCloudOnlyPrefixValidatorPreparator struct{}
-
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
-	err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
-	if err != nil {
-		return fmt.Errorf("%v for provider %s", err, metaConfig.ProviderName)
+func findExternalPreparatorBinary(pluginsDir, providerName string) string {
+	if pluginsDir == "" {
+		return ""
 	}
+	path := providerdir.ValidatorPath(pluginsDir, providerName)
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
+		// A non-executable file is not a usable validator; treat it as missing
+		// so the caller surfaces the proper missing-validator diagnostic.
+		return ""
+	}
+	return path
+}
 
+// missingExternalValidatorPreparator hard-fails Validate and Prepare when an
+// external provider's validator binary is absent from the unpacked OCI bundle.
+// providerBundledInCandi is a var so tests can stub the candi lookup.
+var providerBundledInCandi = func(provider string) bool {
+	return config.ProviderBundledInCandi(provider, nil)
+}
+
+// inTreeDefaultPreparator is the fallback for in-tree providers without a
+// dedicated preparator: validate the cluster prefix, prepare nothing.
+type inTreeDefaultPreparator struct{}
+
+func (p *inTreeDefaultPreparator) Validate(_ context.Context, input config.ProviderInput) error {
+	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
+		return fmt.Errorf("validate cluster prefix for provider %s: %w", input.ProviderName, err)
+	}
 	return nil
 }
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
-	return nil
+func (p *inTreeDefaultPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
+	return proto.PrepareResult{}, nil
+}
+
+type missingExternalValidatorPreparator struct {
+	provider     string
+	searchedPath string
+}
+
+func (p *missingExternalValidatorPreparator) err() error {
+	if p.searchedPath == "" {
+		return fmt.Errorf("external validator for provider %q not found: provider plugins directory was not configured", p.provider)
+	}
+	return fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", p.provider, p.searchedPath)
+}
+
+func (p *missingExternalValidatorPreparator) Validate(_ context.Context, _ config.ProviderInput) error {
+	return p.err()
+}
+
+func (p *missingExternalValidatorPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
+	return proto.PrepareResult{}, p.err()
 }

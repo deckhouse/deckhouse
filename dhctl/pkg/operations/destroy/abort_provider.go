@@ -17,6 +17,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/name212/govalue"
 
@@ -26,7 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
@@ -42,7 +42,7 @@ type GetAbortDestroyerParams struct {
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	SSHClientProvider libcon.SSHProvider
-	LoggerProvider    log.LoggerProvider
+	Logger            *slog.Logger
 
 	TmpDir        string
 	IsDebug       bool
@@ -100,8 +100,6 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 		return nil, fmt.Errorf("GetAbortDestroyer: infrastructure context is required for cloud clusters")
 	}
 
-	logger := log.SafeProvideLogger(a.params.LoggerProvider)
-
 	terraStateLoader := infrastructurestate.NewFileTerraStateLoader(a.params.StateCache, metaConfig)
 	clusterInfra := controller.NewClusterInfraWithOptions(
 		terraStateLoader, a.params.StateCache, a.params.InfrastructureContext,
@@ -109,15 +107,14 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 			PhasedExecutionContext: a.params.PhasedExecutionContext,
 			TmpDir:                 a.params.TmpDir,
 			GlobalOptions:          a.params.GlobalOptions,
-			Logger:                 logger,
 			IsDebug:                a.params.IsDebug,
 		},
 	)
 
 	return cloud.NewDestroyer(&cloud.DestroyerParams{
-		LoggerProvider: a.params.LoggerProvider,
-		KubeProvider:   a.kubeProvider(),
-		State:          cloud.NewDestroyState(a.params.StateCache),
+		Logger:       a.params.Logger,
+		KubeProvider: a.kubeProvider(),
+		State:        cloud.NewDestroyState(a.params.StateCache),
 
 		ClusterInfra: clusterInfra,
 		StateLoader:  terraStateLoader,
@@ -135,7 +132,7 @@ func (a *abortDestroyerProvider) Static(context.Context, *config.MetaConfig) (De
 		SSHClientProvider:    a.params.SSHClientProvider,
 		State:                static.NewDestroyState(a.params.StateCache),
 		KubeProvider:         a.kubeProvider(),
-		LoggerProvider:       a.params.LoggerProvider,
+		Logger:               a.params.Logger,
 		PhasedActionProvider: a.phaseProvider(),
 		Loops:                a.params.staticLoopsParams,
 

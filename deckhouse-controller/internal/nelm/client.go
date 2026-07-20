@@ -46,6 +46,12 @@ const (
 
 	// ReleaseLabelPackageChecksum stores the rendered-manifests checksum on the release storage secret.
 	ReleaseLabelPackageChecksum = "packageChecksum"
+
+	// ReleaseLabelMaintenance marks a release whose resources must not be reconciled.
+	// The value is "true" while the package is under maintenance, "false" otherwise.
+	// It doubles as a resource label key (with an empty value) so the deckhouse
+	// admission policy stops guarding those resources against manual edits.
+	ReleaseLabelMaintenance = "maintenance.deckhouse.io/no-resource-reconciliation"
 )
 
 var (
@@ -250,6 +256,31 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 	return "", ErrLabelNotFound
 }
 
+// GetReleaseLabel returns the value of a storage label on the latest release.
+// Returns ErrReleaseNotFound (wrapped) if the release doesn't exist and
+// ErrLabelNotFound if the label is absent.
+func (c *Client) GetReleaseLabel(ctx context.Context, namespace, releaseName, key string) (string, error) {
+	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "GetReleaseLabel")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("release", releaseName))
+	span.SetAttributes(attribute.String("namespace", namespace))
+
+	res, err := c.getRelease(ctx, namespace, releaseName)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", fmt.Errorf("get nelm release '%s': %w", releaseName, err)
+	}
+
+	if res.Release != nil {
+		if value, ok := res.Release.StorageLabels[key]; ok {
+			return value, nil
+		}
+	}
+
+	return "", ErrLabelNotFound
+}
+
 // InstallOptions contains options for installing a Helm chart
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
@@ -294,15 +325,27 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 
 	// reportCh receives progress reports from nelm during resource tracking.
 	// A background goroutine converts each report into a tracking event and
-	// forwards it to the caller's callback. The channel is closed when the
-	// install operation completes.
+	// forwards it to the caller's callback.
+	//
+	// We must NOT close reportCh: when a Timeout is set, nelm's ReleaseInstall
+	// returns on ctx.Done() without joining the goroutine that actually runs
+	// the install. That detached goroutine keeps sending progress reports via
+	// sendNonBlocking, so closing the channel here would panic it with
+	// "send on closed channel" and crash the process. Instead we stop the
+	// forwarder via done and let the buffered channel be garbage-collected.
 	reportCh := make(chan progrep.ProgressReport, 1)
-	defer close(reportCh)
+	done := make(chan struct{})
+	defer close(done)
 
 	go func() {
-		for report := range reportCh {
-			if opts.OnTrackingEvent != nil {
-				opts.OnTrackingEvent(releaseName, report)
+		for {
+			select {
+			case <-done:
+				return
+			case report := <-reportCh:
+				if opts.OnTrackingEvent != nil {
+					opts.OnTrackingEvent(releaseName, report)
+				}
 			}
 		}
 	}()

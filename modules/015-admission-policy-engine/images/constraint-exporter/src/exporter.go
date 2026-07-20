@@ -17,13 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
@@ -36,18 +36,19 @@ type Exporter struct {
 
 	kindTracker *kinds.KindTracker
 
-	metrics []prometheus.Metric
+	metricsMu sync.RWMutex
+	metrics   []prometheus.Metric
 }
 
 func NewExporter() *Exporter {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		klog.Fatalf("Create kubernetes config failed: %+v\n", err)
+		fatal("create kubernetes config failed", err)
 	}
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		klog.Fatalf("Create kubernetes client failed: %+v\n", err)
+		fatal("create kubernetes client failed", err)
 	}
 
 	return &Exporter{
@@ -89,7 +90,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		gatekeeper.Up, prometheus.GaugeValue, 1,
 	)
-	for _, m := range e.metrics {
+
+	e.metricsMu.RLock()
+	metrics := append(make([]prometheus.Metric, 0, len(e.metrics)), e.metrics...)
+	e.metricsMu.RUnlock()
+
+	for _, m := range metrics {
 		ch <- m
 	}
 }
@@ -99,38 +105,43 @@ func (e *Exporter) startScheduled(clientGVR controllerClient.Client, t time.Dura
 
 	for {
 		select {
-		case <-done:
+		case <-stopCh:
 			return
 		case <-ticker.C:
 			var (
-				constraints []gatekeeper.Constraint
-				mutations   []gatekeeper.Mutation
-				wg          sync.WaitGroup
+				constraints    []gatekeeper.Constraint
+				mutations      []gatekeeper.Mutation
+				constraintsErr error
+				mutationsErr   error
+				wg             sync.WaitGroup
 			)
 
 			wg.Add(1)
 			go func() {
-				var err error
-				constraints, err = e.fetchConstraints(clientGVR)
-				if err != nil {
-					klog.Warningf("Get constraints failed: %+v\n", err)
-				}
+				constraints, constraintsErr = e.fetchConstraints(clientGVR)
 				wg.Done()
 			}()
 
 			wg.Add(1)
 			go func() {
-				var err error
-				mutations, err = gatekeeper.GetMutations(clientGVR, e.client)
-				if err != nil {
-					klog.Warningf("Get mutations failed: %+v\n", err)
-				}
+				mutations, mutationsErr = gatekeeper.GetMutations(clientGVR, e.client)
 				wg.Done()
 			}()
 			wg.Wait()
 
+			if constraintsErr != nil || mutationsErr != nil {
+				if constraintsErr != nil {
+					slog.Warn("get constraints failed", "error", constraintsErr)
+				}
+				if mutationsErr != nil {
+					slog.Warn("get mutations failed", "error", mutationsErr)
+				}
+				slog.Warn("skip tracked objects update due to stale gatekeeper data")
+				continue
+			}
+
 			if e.kindTracker != nil {
-				go e.kindTracker.UpdateTrackedObjects(constraints, mutations)
+				e.kindTracker.UpdateTrackedObjects(constraints, mutations)
 			}
 		}
 	}
@@ -154,7 +165,9 @@ func (e *Exporter) fetchConstraints(clientGVR controllerClient.Client) ([]gateke
 	truncatedMetrics := gatekeeper.ExportViolationsTruncated(constraints)
 	allMetrics = append(allMetrics, truncatedMetrics...)
 
+	e.metricsMu.Lock()
 	e.metrics = allMetrics
+	e.metricsMu.Unlock()
 
 	return constraints, nil
 }

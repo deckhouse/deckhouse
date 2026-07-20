@@ -18,7 +18,7 @@ Scaling can be based on both standard and custom monitoring metrics. For example
 
 ### Configuration
 
-To simplify metric-based scaling configuration, DKP offers special resources (`Cluster*Metric` and `*Metric`). You can also configure scaling [based on custom metric calculation rules](#configuring-metrics-via-customprometheusrules).
+To simplify metric-based scaling configuration, DKP offers special resources (`Cluster*Metric` and `*Metric`). You can also configure scaling [based on custom metric calculation rules](#configuring-metrics-using-observability-module-resources).
 
 To configure scaling based on metrics, follow these steps:
 
@@ -95,31 +95,30 @@ spec:
 
 > When the metric exceeds (or falls below) the threshold `averageValue: 10`, the system will adjust the number of replicas of `myapp` within the range of 1 to 2.
 
-### Configuring metrics via CustomPrometheusRules
+### Configuring metrics using observability module resources
 
-If you need to define custom metric calculation rules without using the built-in DKP `Cluster*Metric` and `*Metric` resources, you can use the [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) resource.
+To configure custom metric calculation rules:
 
-Example:
+1. Make sure the [`observability`](/modules/observability/) module is enabled.
+1. Create a ClusterObservabilityMetricsRulesGroup or ObservabilityMetricsRulesGroup resource:
+
+   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup): Intended for cluster-wide rules applied to system namespaces.
+   - [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup): Intended for rules that operate within a specific namespace.
+
+Configuration example:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: CustomPrometheusRules
+apiVersion: observability.deckhouse.io/v1alpha1
+kind: ClusterObservabilityMetricsRulesGroup
 metadata:
-  # Recommended naming pattern for your CustomPrometheusRules.
-  name: prometheus-metrics-adapter-mymetric
+  name: custom-cluster-metrics-mymetric
 spec:
-  groups:
-  # Recommended group name pattern.
-  - name: prometheus-metrics-adapter.mymetric
-    rules:
-    # Name of your custom metric.
-    # Important! The prefix 'kube_adapter_metric_' is required.
-    - record: kube_adapter_metric_mymetric
-      # PromQL query that defines the metric. Avoid including unnecessary labels.
-      expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
+  interval: 1m
+  rules:
+    - record: kube_adapter_metric_ingress_bytes_sent
+      expr: |
+        sum(ingress_nginx_detail_sent_bytes_sum) by (namespace, ingress)
 ```
-
-> All metrics with the `kube_adapter_metric_` prefix are automatically registered in the Kubernetes API without the need to create CustomPrometheusRules. This allows you to use existing Prometheus metrics for scaling without additional configuration.
 
 ### Working with unstable metrics
 

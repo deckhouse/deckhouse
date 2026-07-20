@@ -30,6 +30,11 @@ func GetPeerURL(ip string) string {
 	return "https://" + net.JoinHostPort(ip, strconv.Itoa(constants.EtcdListenPeerPort))
 }
 
+// GetClientURL returns the HTTPS client endpoint for the given advertise IP.
+func GetClientURL(ip string) string {
+	return "https://" + net.JoinHostPort(ip, strconv.Itoa(constants.EtcdListenClientPort))
+}
+
 // GetStaticPodFilepath returns the location on the disk where the Static Pod should be present
 func GetStaticPodFilepath(componentName, manifestsDir string) string {
 	return filepath.Join(manifestsDir, componentName+".yaml")

@@ -1,0 +1,7 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс модуля multitenancy-manager: регистрирует управляемый кластерный ресурс и его базовую доступность. Пути использования описываются отдельными GrantableClusterResourceReference.

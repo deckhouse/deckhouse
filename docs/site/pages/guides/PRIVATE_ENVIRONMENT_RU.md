@@ -840,47 +840,47 @@ Feb 26 18:31:17.510 INFO  ╚ Pull Modules succeeded in 40m8.735435676s
 ```console
 $ ls -lh
 итого 51G
--rw-rw-r-- 1 zhbert zhbert  4,8K фев 26 17:19 deckhousereleases.yaml
--rw-rw-r-- 1 zhbert zhbert  4,9G фев 26 18:30 module-code.tar
--rw-rw-r-- 1 zhbert zhbert   17M фев 26 18:30 module-commander-agent.tar
--rw-rw-r-- 1 zhbert zhbert 1008M фев 26 18:30 module-commander.tar
--rw-rw-r-- 1 zhbert zhbert  172M фев 26 18:30 module-console.tar
--rw-rw-r-- 1 zhbert zhbert  225M фев 26 18:31 module-csi-ceph.tar
--rw-rw-r-- 1 zhbert zhbert  1,1G фев 26 18:30 module-csi-hpe.tar
--rw-rw-r-- 1 zhbert zhbert  1,1G фев 26 18:30 module-csi-huawei.tar
--rw-rw-r-- 1 zhbert zhbert  170M фев 26 18:30 module-csi-netapp.tar
--rw-rw-r-- 1 zhbert zhbert  188M фев 26 18:30 module-csi-nfs.tar
--rw-rw-r-- 1 zhbert zhbert  555M фев 26 18:30 module-csi-s3.tar
--rw-rw-r-- 1 zhbert zhbert  544M фев 26 18:31 module-csi-scsi-generic.tar
--rw-rw-r-- 1 zhbert zhbert  207M фев 26 18:30 module-csi-yadro-tatlin-unified.tar
--rw-rw-r-- 1 zhbert zhbert   85M фев 26 18:31 module-development-platform.tar
--rw-rw-r-- 1 zhbert zhbert  146M фев 26 18:30 module-managed-memcached.tar
--rw-rw-r-- 1 zhbert zhbert  835M фев 26 18:31 module-managed-postgres.tar
--rw-rw-r-- 1 zhbert zhbert  113M фев 26 18:31 module-managed-valkey.tar
--rw-rw-r-- 1 zhbert zhbert  1,1G фев 26 18:31 module-neuvector.tar
--rw-rw-r-- 1 zhbert zhbert  3,4G фев 26 18:31 module-observability-platform.tar
--rw-rw-r-- 1 zhbert zhbert  600M фев 26 18:31 module-observability.tar
--rw-rw-r-- 1 zhbert zhbert  194M фев 26 18:30 module-operator-argo.tar
--rw-rw-r-- 1 zhbert zhbert  418M фев 26 18:30 module-operator-ceph.tar
--rw-rw-r-- 1 zhbert zhbert  705M фев 26 18:30 module-operator-postgres.tar
--rw-rw-r-- 1 zhbert zhbert  156M фев 26 18:30 module-operator-trivy.tar
--rw-rw-r-- 1 zhbert zhbert   60M фев 26 18:30 module-payload-registry.tar
--rw-rw-r-- 1 zhbert zhbert   15M фев 26 18:30 module-pod-reloader.tar
--rw-rw-r-- 1 zhbert zhbert  183M фев 26 18:30 module-prompp.tar
--rw-rw-r-- 1 zhbert zhbert 1022M фев 26 18:30 module-runtime-audit-engine.tar
--rw-rw-r-- 1 zhbert zhbert   78M фев 26 18:31 module-sdn.tar
--rw-rw-r-- 1 zhbert zhbert  179M фев 26 18:31 module-sds-local-volume.tar
--rw-rw-r-- 1 zhbert zhbert  157M фев 26 18:30 module-sds-node-configurator.tar
--rw-rw-r-- 1 zhbert zhbert  2,8G фев 26 18:30 module-sds-replicated-volume.tar
--rw-rw-r-- 1 zhbert zhbert  157M фев 26 18:30 module-secrets-store-integration.tar
--rw-rw-r-- 1 zhbert zhbert   51M фев 26 18:30 module-snapshot-controller.tar
--rw-rw-r-- 1 zhbert zhbert   37M фев 26 18:31 module-state-snapshotter.tar
--rw-rw-r-- 1 zhbert zhbert   24M фев 26 18:31 module-static-routing-manager.tar
--rw-rw-r-- 1 zhbert zhbert   41M фев 26 18:30 module-storage-volume-data-manager.tar
--rw-rw-r-- 1 zhbert zhbert  177M фев 26 18:31 module-stronghold.tar
--rw-rw-r-- 1 zhbert zhbert  1,5G фев 26 18:30 module-virtualization.tar
--rw-rw-r-- 1 zhbert zhbert   26G фев 26 17:50 platform.tar
--rw-rw-r-- 1 zhbert zhbert  1,3G фев 26 17:51 security.tar
+-rw-rw-r-- 1 ubuntu ubuntu  4,8K фев 26 17:19 deckhousereleases.yaml
+-rw-rw-r-- 1 ubuntu ubuntu  4,9G фев 26 18:30 module-code.tar
+-rw-rw-r-- 1 ubuntu ubuntu   17M фев 26 18:30 module-commander-agent.tar
+-rw-rw-r-- 1 ubuntu ubuntu 1008M фев 26 18:30 module-commander.tar
+-rw-rw-r-- 1 ubuntu ubuntu  172M фев 26 18:30 module-console.tar
+-rw-rw-r-- 1 ubuntu ubuntu  225M фев 26 18:31 module-csi-ceph.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,1G фев 26 18:30 module-csi-hpe.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,1G фев 26 18:30 module-csi-huawei.tar
+-rw-rw-r-- 1 ubuntu ubuntu  170M фев 26 18:30 module-csi-netapp.tar
+-rw-rw-r-- 1 ubuntu ubuntu  188M фев 26 18:30 module-csi-nfs.tar
+-rw-rw-r-- 1 ubuntu ubuntu  555M фев 26 18:30 module-csi-s3.tar
+-rw-rw-r-- 1 ubuntu ubuntu  544M фев 26 18:31 module-csi-scsi-generic.tar
+-rw-rw-r-- 1 ubuntu ubuntu  207M фев 26 18:30 module-csi-yadro-tatlin-unified.tar
+-rw-rw-r-- 1 ubuntu ubuntu   85M фев 26 18:31 module-development-platform.tar
+-rw-rw-r-- 1 ubuntu ubuntu  146M фев 26 18:30 module-managed-memcached.tar
+-rw-rw-r-- 1 ubuntu ubuntu  835M фев 26 18:31 module-managed-postgres.tar
+-rw-rw-r-- 1 ubuntu ubuntu  113M фев 26 18:31 module-managed-valkey.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,1G фев 26 18:31 module-neuvector.tar
+-rw-rw-r-- 1 ubuntu ubuntu  3,4G фев 26 18:31 module-observability-platform.tar
+-rw-rw-r-- 1 ubuntu ubuntu  600M фев 26 18:31 module-observability.tar
+-rw-rw-r-- 1 ubuntu ubuntu  194M фев 26 18:30 module-operator-argo.tar
+-rw-rw-r-- 1 ubuntu ubuntu  418M фев 26 18:30 module-operator-ceph.tar
+-rw-rw-r-- 1 ubuntu ubuntu  705M фев 26 18:30 module-operator-postgres.tar
+-rw-rw-r-- 1 ubuntu ubuntu  156M фев 26 18:30 module-operator-trivy.tar
+-rw-rw-r-- 1 ubuntu ubuntu   60M фев 26 18:30 module-payload-registry.tar
+-rw-rw-r-- 1 ubuntu ubuntu   15M фев 26 18:30 module-pod-reloader.tar
+-rw-rw-r-- 1 ubuntu ubuntu  183M фев 26 18:30 module-prompp.tar
+-rw-rw-r-- 1 ubuntu ubuntu 1022M фев 26 18:30 module-runtime-audit-engine.tar
+-rw-rw-r-- 1 ubuntu ubuntu   78M фев 26 18:31 module-sdn.tar
+-rw-rw-r-- 1 ubuntu ubuntu  179M фев 26 18:31 module-sds-local-volume.tar
+-rw-rw-r-- 1 ubuntu ubuntu  157M фев 26 18:30 module-sds-node-configurator.tar
+-rw-rw-r-- 1 ubuntu ubuntu  2,8G фев 26 18:30 module-sds-replicated-volume.tar
+-rw-rw-r-- 1 ubuntu ubuntu  157M фев 26 18:30 module-secrets-store-integration.tar
+-rw-rw-r-- 1 ubuntu ubuntu   51M фев 26 18:30 module-snapshot-controller.tar
+-rw-rw-r-- 1 ubuntu ubuntu   37M фев 26 18:31 module-state-snapshotter.tar
+-rw-rw-r-- 1 ubuntu ubuntu   24M фев 26 18:31 module-static-routing-manager.tar
+-rw-rw-r-- 1 ubuntu ubuntu   41M фев 26 18:30 module-storage-volume-data-manager.tar
+-rw-rw-r-- 1 ubuntu ubuntu  177M фев 26 18:31 module-stronghold.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,5G фев 26 18:30 module-virtualization.tar
+-rw-rw-r-- 1 ubuntu ubuntu   26G фев 26 17:50 platform.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,3G фев 26 17:51 security.tar
 ```
 
 Загрузите скачанные образы в приватный registry. В команде подставьте редакцию DKP и учётные данные robot-аккаунта Harbor:
@@ -1173,30 +1173,27 @@ Status: Downloaded newer image for ubuntu/squid:latest
   Здесь указываются следующие параметры:
   * адреса HTTP и HTTPS прокси-сервера;
   * список доменов и IP-адресов, которые **не будут проксироваться** через прокси-сервер (внутренние доменные имена и внутренние IP-адреса всех серверов).
-  
-* В секции `InitConfiguration` добавьте параметры доступа к registry:
 
-  ```yaml
-  deckhouse:
-    # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
-    imagesRepo: harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>
-    # Строка с ключом для доступа к Docker registry в формате Base64.
-    registryDockerCfg: <DOCKER_CFG_BASE64>
-    # Протокол доступа к registry (HTTP или HTTPS).
-    registryScheme: HTTPS
-    # Корневой сертификат, созданный ранее.
-    # Получить его можно командой: `cat harbor/certs/ca.crt`.
-    registryCA: |
-      -----BEGIN CERTIFICATE-----
-      ...
-      -----END CERTIFICATE-----
-  ```
+* В ModuleConfig `deckhouse`:
+  * измените значение параметра [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html);
+  * в секции `spec.settings.registry` укажите параметры доступа к приватному хранилищу образов контейнеров (в данном случае Harbor):
 
-  Здесь `<DOCKER_CFG_BASE64>` — строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
+    ```yaml
+    # Настройки для доступа к хранилищу образов контейнеров с образами DKP.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Адрес хранилища.
+        imagesRepo: <IMAGES_REPO_URI>
+        # Имя пользователя для аутентификации в хранилище.
+        username: <REGISTRY_USERNAME>
+        # Пароль для аутентификации в хранилище.
+        password: <REGISTRY_PASSWORD>
+        scheme: HTTPS
+        # Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища.
+        ca: <REGISTRY_CA>
+    ```
 
-  Например, для доступа к container registry `harbor.example` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (строка `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}` в Base64).
-
-* В параметре [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) ModuleConfig `deckhouse` измените на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
 * В ModuleConfig [global](../documentation/v1/reference/api/global.html) укажите использование самоподписанных сертификатов для компонентов кластера и укажите шаблон доменного имени для системных приложений в параметре `publicDomainTemplate`:
 
   ```yaml

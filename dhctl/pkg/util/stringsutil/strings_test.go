@@ -93,7 +93,7 @@ func TestRandomStrElement(t *testing.T) {
 	const stringsSize = 10000
 	const maximumConsecutiveRepetitionsThreshold = 4 // allow for no more than 4+1 consecutive elements (can very rarely happen due to the nature of random numbers)
 	strings := make([]string, 0, stringsSize)
-	for i := 0; i < stringsSize; i++ {
+	for i := range stringsSize {
 		strings = append(strings, strconv.Itoa(i)) // this will yield a different value for each string in the array
 	}
 	// as the string size is very big, consecutive repetitions should be extremely rare
@@ -105,7 +105,7 @@ func TestRandomStrElement(t *testing.T) {
 			maximumConsecutiveRepetitions = consecutiveRepetitions
 		}
 	}
-	for i := 0; i < selectionSize; i++ {
+	for range selectionSize {
 		v, index := RandomStrElement(strings)
 		require.Equal(t, strings[index], v, "index does not agree with the value after RandomStrElement")
 		if v == previousValue {

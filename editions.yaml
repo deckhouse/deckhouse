@@ -34,7 +34,6 @@ editions:
 
   # exclude modules from templates and images
   excludeModules:
-  - openvpn
 
 - name: SE
   modulesDir: "ee/se/modules"
@@ -65,7 +64,9 @@ editions:
 - name: CSE
   versionMapFile: "ee/cse/candi/version_map.yml"
   modulesDir: "ee/cse/modules"
-  AvailableModules:
+  excludeEditions:
+  - FE
+  availableModules:
   - admission-policy-engine
   - cert-manager
   - chrony
@@ -78,27 +79,18 @@ editions:
   - deckhouse-tools
   - descheduler
   - documentation
-  - extended-monitoring
-  - ingress-nginx
   - istio
   - kube-dns
   - local-path-provisioner
   - log-shipper
-  - loki
   - metallb
   - monitoring-custom
-  - monitoring-deckhouse
   - monitoring-kubernetes
-  - monitoring-kubernetes-control-plane
-  - monitoring-ping
   - multitenancy-manager
   - namespace-configurator
   - node-local-dns
   - node-manager
-  - operator-prometheus
   - priority-class
-  - prometheus
-  - prometheus-metrics-adapter
   - registry
   - registrypackages
   - registry-packages-proxy

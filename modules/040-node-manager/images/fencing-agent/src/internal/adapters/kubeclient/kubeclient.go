@@ -229,6 +229,16 @@ func (c *Client) StartInformer(ctx context.Context) error {
 		return fmt.Errorf("failed to sync node informer cache")
 	}
 	c.Logger.Info("node informer cache synced successfully")
+
+	/* avoid race condition on maintenance annotations */
+	node, err := c.informerFactory.Core().V1().Nodes().Lister().Get(c.nodeName)
+	if err != nil {
+		c.Logger.Warn("failed to get node info while start informer")
+		return nil
+	}
+
+	c.checkMaintenanceAnnotations(node)
+
 	return nil
 }
 

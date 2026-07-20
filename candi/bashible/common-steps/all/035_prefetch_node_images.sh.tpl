@@ -29,7 +29,7 @@
 # `.deckhouseImageRef`, ~200 MiB), deckhouse/*, cniCilium/*, coredns, nodeManager (minus
 # nvidia*/nodeFeatureDiscovery/stale clusterAutoscaler), current cloudProvider/*, common
 # runtime bits, kubeProxy, csi-sidecars, common misc, then chrony/*, registryPackagesProxy/*,
-# monitoringKubernetes/* and kubeDns/*.
+# and kubeDns/*.
 #
 # Each line is "<section>/<imageKey> <ref>"; pull_one splits on the first space.
 # Fire-and-forget: failures never block bashible; kubelet fetches anything missing later.
@@ -37,20 +37,20 @@
 {{- if and (eq .nodeGroup.name "master") (or (eq .cri "Containerd") (eq .cri "ContainerdV2")) }}
 
 if ! command -v systemd-run >/dev/null 2>&1 || ! command -v systemctl >/dev/null 2>&1; then
-  bb-log-warning "systemd-run/systemctl not available; skip image prefetch"
+  bb-log-warning "systemd-run or systemctl is not available, skipping image prefetch"
   return 0 2>/dev/null || exit 0
 fi
 
 case "$(systemctl is-system-running 2>/dev/null || true)" in
   running|degraded|starting|initializing|maintenance) ;;
   *)
-    bb-log-warning "systemd not in usable state; skip image prefetch"
+    bb-log-warning "systemd is not in a usable state, skipping image prefetch"
     return 0 2>/dev/null || exit 0
     ;;
 esac
 
 if ! command -v crictl >/dev/null 2>&1; then
-  bb-log-warning "crictl not available; skip image prefetch"
+  bb-log-warning "crictl is not available, skipping image prefetch"
   return 0 2>/dev/null || exit 0
 fi
 
@@ -75,7 +75,7 @@ script_file="/run/ctr-prefetch.sh"
 {{- $base := $.registry.imagesBase }}
 {{- $caCurrent := printf "clusterAutoscaler%s" $k8s }}
 {{- $cpmNames := list "etcd" (printf "controlPlaneManager%s" $k8s) (printf "kubeApiserver%s" $k8s) (printf "kubeControllerManager%s" $k8s) (printf "kubeScheduler%s" $k8s) }}
-{{- $commonRest := list "kubeRbacProxy" "iptablesWrapper" "init" "shellOperator" "distroless" }}
+{{- $commonRest := list "kubeRbacProxy" "init" }}
 {{- $kpNames := list (printf "kubeProxy%s" $k8s) "iptablesWrapperInit" "initContainer" }}
 {{- $commonNamed := list (printf "csiExternalProvisioner%s" $k8s) (printf "csiExternalAttacher%s" $k8s) (printf "csiExternalResizer%s" $k8s) (printf "csiExternalSnapshotter%s" $k8s) (printf "csiLivenessprobe%s" $k8s) (printf "csiNodeDriverRegistrar%s" $k8s) "checkKernelVersion" "cniMigrationInitChecker" "vxlanOffloadingFixer" }}
 cat > "$script_file" <<'EOSCRIPT'
@@ -148,7 +148,7 @@ kubeProxy/{{ $name }} {{ $base }}@{{ $digest }}
 common/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}
 {{- end }}
-{{- range $section := (list "chrony" "registryPackagesProxy" "monitoringKubernetes" "kubeDns") }}
+{{- range $section := (list "chrony" "registryPackagesProxy" "kubeDns") }}
 {{- range $name, $digest := (index $.images $section | default dict) }}
 {{ $section }}/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}
@@ -168,7 +168,7 @@ crit_count=$(printf '%s\n' "$critical_images" | grep -c . || true)
 rest_count=$(printf '%s\n' "$images" | grep -c . || true)
 total_count=$((crit_count + rest_count))
 if [ "${total_count:-0}" -eq 0 ]; then
-  log "$(ts) image prefetch: empty list; nothing to do"
+  log "$(ts) image prefetch: empty list, nothing to do"
   rm -f "$script_file" "$results_file"
   exit 0
 fi
@@ -259,7 +259,7 @@ if ! systemd-run \
     --collect \
     /bin/bash "$script_file" \
     >/dev/null 2>&1; then
-  bb-log-warning "systemd-run failed to launch $unit"
+  bb-log-warning "systemd-run failed to launch $unit, skipping image prefetch"
   rm -f "$script_file"
   return 0 2>/dev/null || exit 0
 fi

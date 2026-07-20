@@ -2,6 +2,39 @@ cilium-hubble:
     - version: 2
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
+cloud-provider-dvp:
+    - version: 2
+      description:
+        en: |
+            Migration to the new ModuleConfig schema for cloud-provider-dvp.
+            Fields `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` are replaced with `provider.parameters` / `nodes.parameters`.
+            `kubeconfigDataBase64` no longer lives in ModuleConfig (moved to a cloud-provider.deckhouse.io/credentials Secret).
+            `nodes.parameters.layout` gets a default value of "Standard" — update it manually if needed.
+            `nodes.parameters.sshPublicKey` gets a placeholder value — replace it with a real SSH public key.
+        ru: |
+            Переход на новую схему ModuleConfig для cloud-provider-dvp.
+            Структура `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` заменена на `provider.parameters` / `nodes.parameters`.
+            Поле `kubeconfigDataBase64` больше нет в ModuleConfig (хранится в Secret типа cloud-provider.deckhouse.io/credentials).
+            Поле `nodes.parameters.layout` подставляется как "Standard" — заполните корректным значением вручную при необходимости.
+            Поле `nodes.parameters.sshPublicKey` получает placeholder значение — обязательно замените его реальным публичным ключом SSH.
+      conversions:
+        - if .provider == null then .provider = {} end
+        - if .provider.parameters == null then .provider.parameters = {} end
+        - if .provider.parameters.namespace == null then (if .provider.namespace != null then .provider.parameters.namespace = .provider.namespace else .provider.parameters.namespace = "default" end) end
+        - del(.provider.namespace)
+        - del(.provider.kubeconfigDataBase64)
+        - if .nodes == null then .nodes = {} end
+        - if .nodes.parameters == null then .nodes.parameters = {} end
+        - if .nodes.parameters.layout == null then .nodes.parameters.layout = "Standard" end
+        - if .nodes.parameters.sshPublicKey == null then .nodes.parameters.sshPublicKey = "ssh-rsa PLACEHOLDER_REPLACE_ME" end
+        - if .zones != null then .nodes.parameters.zones = .zones end
+        - del(.zones)
+        - if .nodes.disabled == null then .nodes.disabled = false end
+        - if .storage == null then .storage = {} end
+        - if .storage.disabled == null then .storage.disabled = false end
+        - if .ccm == null then .ccm = {} end
+        - if .ccm.disabled == null then .ccm.disabled = false end
+        - if .storage.parameters == null then .storage.parameters = {} end
 cloud-provider-vsphere:
     - version: 2
       description:
@@ -33,14 +66,6 @@ descheduler:
         ru: Удалите `settings`.
       conversions:
         - del(.)
-extended-monitoring:
-    - version: 2
-      description:
-        en: If the `.imageAvailability.skipRegistryCertVerification` field is set to `true`, add `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. Then, delete the `skipRegistryCertVerification` field from the object. If the `.imageAvailability` object becomes empty after this change, delete it.
-        ru: Если для поля `.imageAvailability.skipRegistryCertVerification` установлено значение `true`, добавьте поле `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта. Если в результате объект `.imageAvailability` становится пуст, удалите его.
-      conversions:
-        - if .imageAvailability.skipRegistryCertVerification == true then .imageAvailability.registry.tlsConfig.insecureSkipVerify=true end
-        - del(.imageAvailability.skipRegistryCertVerification) | if .imageAvailability == {} then del(.imageAvailability) end
 global:
     - version: 2
       description:
@@ -76,15 +101,21 @@ metallb:
         en: Remove all `addressPool` elements with the `layer2` protocol.
         ru: Удалите все элементы `addressPool` с протоколом `layer2`.
       conversions:
-        - .
-monitoring-kubernetes:
-    - version: 2
+        - del(.addressPools[]? | select(.protocol == "layer2"))
+    - version: 3
       description:
-        en: If the `.ebpfExporterEnabled` field is set to `true`, add `.oomKillsExporterEnabled=true`. Then, delete the `.ebpfExporterEnabled` field from the object.
-        ru: Если для поля `.ebpfExporterEnabled` установлено значение `true`, добавьте поле `.oomKillsExporterEnabled=true`. После этого удалите поле `.ebpfExporterEnabled` из объекта.
+        en: |
+            Address pools and BGP settings have been moved to separate Custom Resources. Please remove the following fields from the `metallb` `ModuleConfig`:
+              - `.settings.addressPools`
+              - `.settings.bgpPeers`
+              - `.settings.bgpCommunities`
+        ru: |
+            Настройки пулов и BGP вынесены в отдельные Custom Resources. Пожалуйста, удалите следующие поля из `ModuleConfig` `metallb`:
+              - `.settings.addressPools`
+              - `.settings.bgpPeers`
+              - `.settings.bgpCommunities`
       conversions:
-        - if .ebpfExporterEnabled == true then .oomKillsExporterEnabled=true end
-        - del(.ebpfExporterEnabled)
+        - del(.bgpPeers, .bgpCommunities, .addressPools)
 node-manager:
     - version: 2
       description:
@@ -92,26 +123,17 @@ node-manager:
         ru: Удалите `allowedKubernetesVersions` и `allowedBundles`.
       conversions:
         - del(.allowedKubernetesVersions, .allowedBundles)
+    - version: 3
+      description:
+        en: Delete `earlyOomEnabled`.
+        ru: Удалите `earlyOomEnabled`.
+      conversions:
+        - del(.earlyOomEnabled)
 openvpn:
     - version: 2
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
         - del(.storageClass)
-prometheus:
-    - version: 2
-      description:
-        en: Remove the `.auth.password` field. If the `.auth` object becomes empty after this change, delete it.
-        ru: Удалите поле `.auth.password`. Если в результате объект `.auth` становится пуст, удалите его.
-      conversions:
-        - del(.auth.password) | if .auth == {} then del(.auth) end
-upmeter:
-    - version: 2
-      conversions:
-        - del(.auth.status.password) | if .auth.status == {} then del(.auth.status) end | if .auth == {} then del(.auth) end
-        - del(.auth.webui.password) | if .auth.webui == {} then del(.auth.webui) end | if .auth == {} then del(.auth) end
-    - version: 3
-      conversions:
-        - del(.smokeMini.ingressClass) | if .smokeMini == {} then del(.smokeMini) end
 user-authn:
     - version: 2
       description:

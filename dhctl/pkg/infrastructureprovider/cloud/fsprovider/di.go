@@ -15,12 +15,12 @@
 package fsprovider
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -29,6 +29,10 @@ type DIParams struct {
 	BinariesDir       string
 	CloudProviderDir  string
 	PluginsDir        string
+	// DownloadDir is the root for OCI-unpacked provider trees (e.g. external
+	// cloud providers like DVP) — used as a fallback when modules/specs are not
+	// present under CloudProviderDir (bundled candi). May be empty.
+	DownloadDir string
 }
 
 func isDir(dir, errPrefix string) error {
@@ -37,7 +41,7 @@ func isDir(dir, errPrefix string) error {
 	}
 
 	if !fs.IsDirExists(dir) {
-		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix, dir)
+		return fmt.Errorf("%s dir '%s' is empty or does not exist", errPrefix, dir)
 	}
 
 	return nil
@@ -62,17 +66,17 @@ func isFile(file, errPrefix string) error {
 
 	stat, err := os.Stat(file)
 	if err != nil {
-		return fmt.Errorf("%s file '%s' does not exist or got another fs error: %w", errPrefix, file, err)
+		return fmt.Errorf("%s file '%s' does not exist or another fs error occurred: %w", errPrefix, file, err)
 	}
 
 	if stat.IsDir() {
-		return fmt.Errorf("%s '%s' is not file", errPrefix, file)
+		return fmt.Errorf("%s '%s' is not a file", errPrefix, file)
 	}
 
 	return nil
 }
 
-func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
+func GetDi(ctx context.Context, params *DIParams) (*cloud.ProviderDI, error) {
 	if params == nil {
 		return nil, fmt.Errorf("no fs.DI params provided")
 	}
@@ -85,18 +89,26 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 		return nil, err
 	}
 
+	// External providers ship no bundled candi/plugins in the image (e.g. the
+	// terraform-manager pods): modules and the terraform plugin are unpacked
+	// under DownloadDir at runtime, and both providers below fall back there.
+	// So when DownloadDir is set, these directories may legitimately be absent.
 	if err := isNotRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
-		return nil, err
+		if params.DownloadDir == "" {
+			return nil, err
+		}
 	}
 
 	if err := isDir(params.PluginsDir, "PluginsDir"); err != nil {
-		return nil, err
+		if params.DownloadDir == "" {
+			return nil, err
+		}
 	}
 
 	return &cloud.ProviderDI{
-		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile, loadOrGetStore),
-		InfraUtilProvider:   newInfrastructureUtilProvider(logger, params.BinariesDir),
-		InfraPluginProvider: newPluginsProvider(logger, params.PluginsDir),
-		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir),
+		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, loadOrGetStore),
+		InfraUtilProvider:   newInfrastructureUtilProvider(params.BinariesDir),
+		InfraPluginProvider: newPluginsProvider(params.PluginsDir),
+		ModulesProvider:     newModulesProvider(params.CloudProviderDir, params.DownloadDir),
 	}, nil
 }

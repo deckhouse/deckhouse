@@ -170,7 +170,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-If there are mandatory parameters in the module configuration and the module is enabled without specifying them, a configuration validation error will occur. In this case, the [`D8DeckhouseModuleValidationError`](../../../reference/alerts.html#monitoring-deckhouse-d8deckhousemodulevalidationerror) alert will appear, and the module will not be successfully activated.
+If there are mandatory parameters in the module configuration and the module is enabled without specifying them, a configuration validation error will occur. In this case, the [`D8DeckhouseModuleValidationError`](../../../reference/alerts.html#deckhouse-d8deckhousemodulevalidationerror) alert will appear, and the module will not be successfully activated.
 
 To get more details, use the following command:
 
@@ -537,16 +537,9 @@ For GitLab projects, ready-to-use templates are available and can be included in
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Build.gitlab-ci.yml
     ```
 
-   Example of template inclusion:  
-   [GitLab `.gitlab-ci.yml`, line 2](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L2)
-
 1. After adding the templates, in the same `.gitlab-ci.yml` configuration, add a step to perform the check:
 
     ```yaml
     Lint:
       extends: .lint
     ```
-
-   For an example of how to add a check step, see [GitLab `.gitlab-ci.yml`, line 48](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L48).
-
-> If your project is hosted in the [https://fox.flant.com/deckhouse](https://fox.flant.com/deckhouse) group, the metrics variables are already configured. No additional setup is required.

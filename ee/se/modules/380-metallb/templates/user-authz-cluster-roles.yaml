@@ -11,6 +11,9 @@ rules:
   - network.deckhouse.io
   resources:
   - metalloadbalancerclasses
+  - metalloadbalancerbgppeers
+  - metalloadbalancerconfigurations
+  - metalloadbalancerpools
   verbs:
   - get
   - list
@@ -28,6 +31,9 @@ rules:
   - network.deckhouse.io
   resources:
   - metalloadbalancerclasses
+  - metalloadbalancerbgppeers
+  - metalloadbalancerconfigurations
+  - metalloadbalancerpools
   verbs:
   - create
   - delete

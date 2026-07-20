@@ -1,5 +1,4 @@
-{{- range $ipaddressPool := .Values.metallb.addressPools }}
-  {{- if eq $ipaddressPool.protocol "bgp" }}
+{{- range $ipaddressPool := .Values.metallb.internal.addressPools }}
 ---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -10,7 +9,14 @@ metadata:
 spec:
   addresses:
   {{- $ipaddressPool.addresses | toYaml | nindent 4 }}
-  autoAssign: {{ index $ipaddressPool "auto-assign" }}
-  avoidBuggyIPs: {{ index $ipaddressPool "avoid-buggy-ips" }}
+  {{- if kindIs "invalid" $ipaddressPool.autoAssign }}
+  autoAssign: true
+  {{- else }}
+  autoAssign: {{ $ipaddressPool.autoAssign }}
+  {{- end }}
+  {{- if kindIs "invalid" $ipaddressPool.avoidBuggyIPs }}
+  avoidBuggyIPs: false
+  {{- else }}
+  avoidBuggyIPs: {{ $ipaddressPool.avoidBuggyIPs }}
   {{- end }}
 {{- end }}

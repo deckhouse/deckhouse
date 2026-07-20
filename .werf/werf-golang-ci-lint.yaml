@@ -1,7 +1,7 @@
 {{- if eq $.Env "FE" }}
 ---
 image: golangci-lint-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 secrets:
 - id: GOPROXY
@@ -10,7 +10,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
-  - apk add --no-cache git openssh-client
+  - pm install git ssh-static coreutils
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)

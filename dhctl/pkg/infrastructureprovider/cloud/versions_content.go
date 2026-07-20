@@ -19,11 +19,12 @@ import (
 	"fmt"
 	"sync"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/version"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var versionContentProviders = map[string]VersionContentProvider{
@@ -32,23 +33,23 @@ var versionContentProviders = map[string]VersionContentProvider{
 
 var contentProviderMutex sync.Mutex
 
-func DefaultVersionContentProvider(s settings.ProviderSettings, provider string, logger log.Logger) VersionContentProvider {
+func DefaultVersionContentProvider(ctx context.Context, s settings.ProviderSettings, provider string) VersionContentProvider {
 	contentProviderMutex.Lock()
 	defer contentProviderMutex.Unlock()
 
 	versionContentProvider, ok := versionContentProviders[provider]
 	if ok {
-		logger.LogDebugF("Found custom version choicer for provider %s\n", provider)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found custom version choicer for provider %s", provider))
 		return versionContentProvider
 	}
 
-	logger.LogDebugF("No custom version choicer for provider %s. Use default\n", provider)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("No custom version choicer for provider %s. Using default", provider))
 
-	return func(_ context.Context, settings settings.ProviderSettings, _ *config.MetaConfig, _ log.Logger) ([]byte, string, error) {
+	return func(_ context.Context, settings settings.ProviderSettings, _ *config.MetaConfig) ([]byte, string, error) {
 		versions := settings.Versions()
 		l := len(versions)
 		if l != 1 {
-			return nil, "", fmt.Errorf("No one version (%d) found for provider %s", l, provider)
+			return nil, "", fmt.Errorf("Expected exactly one version, but found %d for provider %s", l, provider)
 		}
 
 		v := versions[0]

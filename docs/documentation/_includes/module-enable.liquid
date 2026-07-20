@@ -2,7 +2,7 @@
 
 {% if page.lang == 'ru' -%}
 {% offtopic title="Как явно включить или отключить модуль..." %}
-Явно включить или выключить модуль можно одним из следующих способов:
+<span id="enable"></span>Явно включить или выключить модуль можно одним из следующих способов:
 - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `{{ moduleKebabName }}`, включите (или выключите) переключатель «Модуль включен». Сохраните изменения.
 
   Пример:
@@ -36,7 +36,7 @@
 {% endofftopic %}
 {% else %}
 {% offtopic title="How to explicitly enable the module..." %}
-You may explicitly enable or disable the module in one of the following ways:
+<span id="enable"></span>You may explicitly enable or disable the module in one of the following ways:
 - **Via [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** In the "System" → "System Management" → "Deckhouse" → "Modules" section, open the `{{ moduleKebabName }}` module and enable (or disable) the "Module enabled" toggle. Save changes.
 
   Example:

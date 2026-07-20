@@ -17,6 +17,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 
@@ -24,7 +25,6 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -35,7 +35,7 @@ import (
 type TunnelParams struct {
 	MetaConfig *config.MetaConfig
 	Node       libcon.Interface
-	Logger     log.Logger
+	Logger     *slog.Logger
 	GlobalOpts *options.GlobalOptions
 }
 
@@ -81,7 +81,7 @@ func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	}
 
 	logger := params.Logger
-	logger.DebugF("Up bundle registry tunnel...")
+	logger.DebugContext(ctx, "Starting bundle registry tunnel...")
 
 	tunnel := newTunnel(params.GlobalOpts, wrapper.Client())
 	if err := tunnel.start(ctx); err != nil {
@@ -89,9 +89,9 @@ func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	}
 
 	return func() {
-		logger.DebugF("Stopping bundle registry tunnel...")
+		logger.DebugContext(ctx, "Stopping bundle registry tunnel...")
 		tunnel.stop()
-		logger.DebugF("Bundle registry tunnel: stopped")
+		logger.DebugContext(ctx, "Bundle registry tunnel: stopped")
 	}, nil
 }
 
@@ -124,12 +124,12 @@ func (t *tunnel) start(ctx context.Context) error {
 		net.JoinHostPort(t.address, t.port),
 	)
 
-	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, t.globalOptions)
+	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(ctx, preflightURL, t.globalOptions)
 	if err != nil {
 		return fmt.Errorf("cannot render reverse tunnel checking script: %w", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(t.address, t.port, t.globalOptions)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(ctx, t.address, t.port, t.globalOptions)
 	if err != nil {
 		return fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}

@@ -92,7 +92,7 @@ func TestCheckTimeDrift(t *testing.T) {
 			tt.setupMock(mockNode, mockCmd)
 
 			check := TimeDriftCheck{NodeInterface: mockNode}
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
@@ -158,7 +158,7 @@ func TestGetRemoteTimeStamp(t *testing.T) {
 			mockCmd := &mocks.MockCommand{}
 			tt.setupMock(mockNode, mockCmd)
 
-			timestamp, err := getRemoteTimeStamp(context.Background(), mockNode)
+			timestamp, err := getRemoteTimeStamp(t.Context(), mockNode)
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

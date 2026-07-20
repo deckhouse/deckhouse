@@ -19,7 +19,7 @@ lang: ru
 
 ### Настройка
 
-Для упрощения настройки масштабирования по метрикам, DKP предлагает использовать специальные ресурсы (`Cluster*Metric` и `*Metric`). Также, можно настроить масштабирование [по собственным правилам расчета метрик](#настройка-метрик-через-customprometheusrules).
+Для упрощения настройки масштабирования по метрикам, DKP предлагает использовать специальные ресурсы (`Cluster*Metric` и `*Metric`). Также, можно настроить масштабирование [по собственным правилам расчета метрик](#настройка-метрик-через-ресурсы-модуля-observability).
 
 Для настройки масштабирования по метрикам, выполняйте следующие действия:
 
@@ -96,31 +96,30 @@ spec:
 
 > При превышении (или падении ниже) заданного порога `averageValue: 10` система изменит число реплик `myapp` в диапазоне от 1 до 2
 
-### Настройка метрик через CustomPrometheusRules
+### Настройка метрик через ресурсы модуля observability
 
-Если необходимо настроить собственные правила расчета метрик, без предлагаемых DKP ресурсов `Cluster*Metric` и `*Metric`, можно воспользоваться ресурсом [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules).
+Чтобы настроить собственные правила расчёта метрик:
 
-Пример:
+1. Убедитесь, что включён [модуль `observability`](/modules/observability/).
+1. Создайте ресурс ClusterObservabilityMetricsRulesGroup или ObservabilityMetricsRulesGroup:
+
+   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) — предназначен для cluster-wide-правил, применяемых к системным неймспейсам;
+   - [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) — предназначен для правил, работающих в рамках конкретного неймспейса.
+
+Пример конфигурации:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: CustomPrometheusRules
+apiVersion: observability.deckhouse.io/v1alpha1
+kind: ClusterObservabilityMetricsRulesGroup
 metadata:
-  # Рекомендованный шаблон для названия ваших CustomPrometheusRules.
-  name: prometheus-metrics-adapter-mymetric
+  name: custom-cluster-metrics-mymetric
 spec:
-  groups:
-  # Рекомендованный шаблон.
-  - name: prometheus-metrics-adapter.mymetric
-    rules:
-    # Название вашей новой метрики.
-    # Важно! Префикс 'kube_adapter_metric_' обязателен.
-    - record: kube_adapter_metric_mymetric
-      # Запрос, результаты которого попадут в итоговую метрику, нет смысла тащить в нее лишние лейблы.
-      expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
+  interval: 1m
+  rules:
+    - record: kube_adapter_metric_ingress_bytes_sent
+      expr: |
+        sum(ingress_nginx_detail_sent_bytes_sum) by (namespace, ingress)
 ```
-
-> Все метрики с префиксом `kube_adapter_metric_` автоматически регистрируются в Kubernetes API без необходимости создания CustomPrometheusRules. Это позволяет использовать уже существующие Prometheus-метрики для масштабирования без дополнительных конфигураций.
 
 ### Работа с нестабильными метриками
 

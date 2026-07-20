@@ -18,7 +18,7 @@ extra_files_path="/etc/kubernetes/deckhouse/extra-files"
 
 public_key_file="signature-public.jwks"
 private_key_file="signature-private.jwk"
-config_file="encryption-config.yaml"
+config_file="secret-encryption-config.yaml"
 
 if [ ! -d "$signature_path" ]; then
   bb-log-info "$signature_path is not exist. Skip prepare signatures"

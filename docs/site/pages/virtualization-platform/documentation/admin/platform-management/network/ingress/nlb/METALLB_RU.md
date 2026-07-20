@@ -112,9 +112,9 @@ lang: ru
      type: LoadBalancer
      loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
      ports:
-     - port: 8000
-       protocol: TCP
-       targetPort: 80
+       - port: 8000
+         protocol: TCP
+         targetPort: 80
      selector:
        app: nginx
    ```
@@ -137,9 +137,9 @@ spec:
   type: LoadBalancer
   loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
   ports:
-  - port: 8000
-    protocol: TCP
-    targetPort: 80
+    - port: 8000
+      protocol: TCP
+      targetPort: 80
   selector:
     app: nginx
 ```
@@ -238,21 +238,40 @@ IP-адреса сервисов анонсируются напрямую в м
      name: metallb
    spec:
      enabled: true
-     settings:
-       addressPools:
-       - addresses:
-         - 192.168.219.100-192.168.219.200
-         name: mypool
-         protocol: bgp
-       bgpPeers:
-       - hold-time: 3s
-         my-asn: 64600
-         peer-address: 172.18.18.10
-         peer-asn: 64601
-       speaker:
-         nodeSelector:
-           node-role.deckhouse.io/metallb: ""
-     version: 2
+     version: 3
+   ---
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: MetalLoadBalancerPool
+   metadata:
+     name: mypool
+   spec:
+     addresses:
+       - 192.168.219.100-192.168.219.200
+   ---
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: MetalLoadBalancerBGPPeer
+   metadata:
+     name: myrouter
+   spec:
+     peerAddress: 172.18.18.10
+     peerASN: 64601
+     myASN: 64600
+     holdTime: 3s
+   ---
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: MetalLoadBalancerConfiguration
+   metadata:
+     name: defaults
+   spec:
+     mode: BGP
+     nodeSelector:
+       node-role.deckhouse.io/metallb: ""
+     bgp:
+       peerNames:
+         - myrouter
+     advertisements:
+       - poolNames:
+           - mypool
    ```
 
 1. Настройте BGP-пиринг на сетевом оборудовании.

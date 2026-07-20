@@ -16,7 +16,6 @@ package runtime
 
 import (
 	"context"
-	"path/filepath"
 	"slices"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -34,18 +33,53 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-)
-
-const (
-	modulesNamespace = "d8-system"
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 // Module represents a module instance as received from the module controller.
 // Unlike App, modules always run in the d8-system namespace.
 type Module struct {
-	Name       string
-	Definition modules.Definition
-	Settings   addonutils.Values
+	Name            string
+	Definition      modules.Definition
+	Settings        addonutils.Values
+	SettingsVersion int // schema version from ModuleConfig.Spec.Version
+}
+
+// UpdateModulesSettings applies a settings-and-enabled change to an
+// already-tracked package without redeploying or reloading it. It is meant to be
+// wired into the packages-config-controller, which owns package settings and the
+// ModuleConfig enabled intent independently of the package version handled by
+// UpdateModule. enabled is the tri-state user intent (*true/*false set by a
+// ModuleConfig, nil when unset) consumed by the scheduler's config rule.
+//
+// Unlike UpdateModule, this never enqueues Deploy/Load tasks and never cancels
+// the package's context tree: it only stashes the new pending settings and
+// enabled intent and, if either actually changed, triggers Reschedule so the
+// scheduler re-resolves the rule chain (re-evaluating the config rule) and, when
+// the package stays enabled, re-runs the Configure → Startup → Run pipeline (see
+// schedulePackage) with the new values. Any in-flight deploy or load for the
+// package keeps running untouched.
+//
+// Settings and the enabled intent diverge when the package is not tracked yet.
+// The enabled intent is always recorded: it lives in the global module, which
+// has no notion of tracking, so the scheduler's config rule sees the user intent
+// the moment the package is registered. Pending settings, by contrast, are
+// dropped — there is no per-package store to stash them in yet; the eventual
+// UpdateModule registers the package and supplies its settings. Either way, an
+// untracked package has no node to reschedule, so no Reschedule happens here.
+func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, enabled *bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Settings live in the per-package store; the ModuleConfig enabled intent
+	// lives in the global module (thread-safe for the scheduler's enabled getter).
+	// Reschedule if either actually changed.
+	settingsChanged := r.packages.UpdateSettings(name, settingsVersion, settings)
+	enabledChanged := r.global.SetConfigEnabled(name, enabled)
+
+	if settingsChanged || enabledChanged {
+		r.scheduler.Reschedule(name)
+	}
 }
 
 // UpdateModule handles module creation and version changes from the module controller.
@@ -65,17 +99,18 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	name := module.Name
 	version := module.Definition.Version
 
-	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum()) {
+	// Modules do not support maintenance mode, so it is always empty here.
+	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, "") {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.Settings)
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, "")
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
 	}
 
-	r.status.ClearStatus(name)
+	r.status.NewStatus(name)
 
 	tasks := []queue.Task{
 		taskdeploy.NewModuleTask(name, version, repo, r.moduleDeployer, r.status, r.logger),
@@ -84,7 +119,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 
 	// If there's an existing module, disable it first
 	if pkg := r.modules[name]; pkg != nil {
-		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, modulesNamespace, true, r.nelmService, r.queueService, r.logger))
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, true, r.nelmService, r.queueService, r.logger))
 	}
 
 	for _, task := range tasks {
@@ -112,9 +147,9 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
-	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
+	conf.GlobalValuesGetter = r.global.GetValues
 
-	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)
+	module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", status.NewError("LoadFailed", err)
@@ -152,7 +187,7 @@ func (r *Runtime) RemoveModule(name string) {
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(func() {

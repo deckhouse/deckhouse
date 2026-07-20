@@ -19,11 +19,14 @@ GOFUMPT_VERSION=0.1.1
 PROTOC_VERSION = 25.2
 PROTOC_GEN_GO_VERSION = 1.32
 PROTOC_GEN_GO_GROC_VERSION = 1.3
+GOTESTSUM_VERSION = 1.13.0
 
 # Build versions
 GOARCH=amd64
 
 TEST_PACKAGES := $(shell go list ./...)
+
+GOTESTSUM = bin/gotestsum
 
 DHCTL_BIN_NAME=bin/dhctl
 MINGET_EMBED_PATH=pkg/minget/embed/minget
@@ -100,6 +103,10 @@ bin/gofumpt:
 	curl -sLo "bin/gofumpt" https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS)_$(GOARCH)
 	@chmod +x "./bin/gofumpt"
 
+bin/gotestsum:
+	@mkdir -p bin
+	GOBIN=$(abspath bin/) go install gotest.tools/gotestsum@v$(GOTESTSUM_VERSION)
+
 .PHONY: bin/protoc
 bin/protoc:
 	@mkdir -p bin
@@ -170,28 +177,28 @@ build/test: DHCTL_BIN_NAME = bin/dhctl-linux-amd64-test
 build/test: ADDITIONAL_BUILD_ARGS = -tags dev
 build/test: check-vars build/test/check-digests build
 
-test: check-vars
+test: check-vars bin/gotestsum
 	@echo "Tests that need external prerequisites (cloud-providers candi tree, /dhctl-tests, docker) auto-skip when those are missing."
 	@echo " - cloud-provider tests run only when /dhctl-tests + /deckhouse are populated; force-skip with DHCTL_SKIP_PROVIDER_TEST=true."
 	@echo " - gossh tests run only when docker is reachable; force-skip with DHCTL_SKIP_GOSSH_TEST=true."
 	@echo " - schema-driven tests (config/destroy/check/...) run only when /deckhouse/candi exists; override with DHCTL_TEST_CANDI_DIR."
-	go test -v -p 1 $(TEST_PACKAGES)
+	$(GOTESTSUM) -- -v -p 1 $(TEST_PACKAGES)
 
-test-skip-cloud-providers: check-vars
-	DHCTL_SKIP_PROVIDER_TEST=true go test -v -p 1 $(TEST_PACKAGES)
+test-skip-cloud-providers: check-vars bin/gotestsum
+	DHCTL_SKIP_PROVIDER_TEST=true $(GOTESTSUM) -- -v -p 1 $(TEST_PACKAGES)
 
-test-skip-gossh: check-vars
-	DHCTL_SKIP_DOCKER_TEST=true go test -v -p 1 $(TEST_PACKAGES)
+test-skip-gossh: check-vars bin/gotestsum
+	DHCTL_SKIP_DOCKER_TEST=true $(GOTESTSUM) -- -v -p 1 $(TEST_PACKAGES)
 
 check-cloud-providers-vars:
 	@[ "${YANDEX_CLOUD_CONFIG}" ] || ( echo "YANDEX_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with yandex without-nat layout"; exit 1 )
 	@[ "${GCP_CLOUD_CONFIG}" ] || ( echo "GCP_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with gcp without-nat layout"; exit 1 )
 
-test-cloud-providers: check-vars check-cloud-providers-vars
-	go test -v -p 1 ./pkg/infrastructureprovider/...
+test-cloud-providers: check-vars check-cloud-providers-vars bin/gotestsum
+	$(GOTESTSUM) -- -v -p 1 ./pkg/infrastructureprovider/...
 
-test-race: check-vars
-	go test -race -p 1 $(TEST_PACKAGES)
+test-race: check-vars bin/gotestsum
+	$(GOTESTSUM) -- -race -p 1 $(TEST_PACKAGES)
 
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy
@@ -208,8 +215,8 @@ fmt:
 	gofumpt -l -w -extra .
 	golangci-lint run ./... -c .golangci.yaml --fix
 
-ci:
-	./hack/coverage.sh
+ci: bin/gotestsum
+	GOTESTSUM=$(abspath $(GOTESTSUM)) ./hack/coverage.sh
 
 devenv:
 	./hack/devenv/start.sh

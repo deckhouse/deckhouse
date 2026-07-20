@@ -1,0 +1,23 @@
+- name:
+    ru: "Подготовка к production"
+    en: "Going to Production"
+  link: "production.html"
+  #minutesToRead: 20
+  description:
+    ru: Что важно учесть и подготовить при настройке кластера для работы с реальными нагрузками
+    en: What to consider and prepare when getting your cluster ready for real workloads
+  tags:
+    - baremetal
+    - cloud
+    - production
+- name:
+    ru: "Перенос ВМ из VMware в DVP"
+    en: "Migrating VMs from VMware to DVP"
+  link: "migrating-vms-from-vmware-to-dvp.html"
+  #minutesToRead: 45
+  description:
+    ru: Краткое руководство по переносу виртуальных машин из VMware (OVA/VMDK) на Deckhouse Virtualization Platform.
+    en: A short guide for migrating virtual machines from VMware (OVA/VMDK) to Deckhouse Virtualization Platform.
+  tags:
+    - baremetal
+    - production

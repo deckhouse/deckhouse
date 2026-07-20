@@ -290,6 +290,9 @@ func (suite *ControllerTestSuite) parseManifests(data string) []client.Object {
 			cpn := &controlplanev1alpha1.ControlPlaneNode{}
 			require.NoError(suite.T(), yaml.Unmarshal([]byte(manifest), cpn),
 				"failed to unmarshal ControlPlaneNode")
+			if cpn.Namespace == "" {
+				cpn.Namespace = constants.KubeSystemNamespace
+			}
 			objs = append(objs, cpn)
 		default:
 			suite.T().Logf("unknown kind: %s, skipping", metaType.Kind)
