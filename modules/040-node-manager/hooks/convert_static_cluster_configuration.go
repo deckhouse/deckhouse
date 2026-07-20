@@ -62,6 +62,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, convertStaticClusterConfigurationHandler)
 
+const internalNetworkCIDRsPath = "nodeManager.internal.static.internalNetworkCIDRs"
+
 func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hook.HookInput) error {
 	secret := input.Snapshots.Get("static_cluster_configuration")
 
@@ -80,7 +82,17 @@ func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hoo
 		return err
 	}
 
-	input.Values.Set("nodeManager.internal.static.internalNetworkCIDRs", internalNetwork)
+	if isEmptyInternalNetwork(internalNetwork) {
+		if existing := input.Values.Get(internalNetworkCIDRsPath); len(existing.Array()) > 0 {
+			return fmt.Errorf(
+				"static-cluster-configuration.yaml no longer contains 'internalNetworkCIDRs', but %q is currently set to %s; "+
+					"refusing to silently clear it, since this looks like an accidental config change that could break node network setup",
+				internalNetworkCIDRsPath, existing.String(),
+			)
+		}
+	}
+
+	input.Values.Set(internalNetworkCIDRsPath, internalNetwork)
 	return nil
 }
 
@@ -115,4 +127,17 @@ func isBlankYAMLDocument(data []byte) bool {
 		return r == '-' || unicode.IsSpace(r)
 	})
 	return trimmed == ""
+}
+
+func isEmptyInternalNetwork(v any) bool {
+	switch t := v.(type) {
+	case nil:
+		return true
+	case []any:
+		return len(t) == 0
+	case string:
+		return t == ""
+	default:
+		return false
+	}
 }

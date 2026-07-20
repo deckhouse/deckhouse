@@ -197,4 +197,78 @@ type: Opaque
 			Expect(f.ValuesGet("nodeManager.internal.static.internalNetworkCIDRs").String()).To(MatchJSON(`[]`))
 		})
 	})
+
+	Context("With a previously set internalNetworkCIDRs and a document that no longer defines it", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.static.internalNetworkCIDRs", []string{"192.168.199.0/24"})
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+data:
+  static-cluster-configuration.yaml: YXBpVmVyc2lvbjogZGVja2hvdXNlLmlvL3YxYWxwaGExCmtpbmQ6IFN0YXRpY0NsdXN0ZXJDb25maWd1cmF0aW9uCg==
+kind: Secret
+metadata:
+  labels:
+    heritage: deckhouse
+  name: d8-static-cluster-configuration
+  namespace: kube-system
+type: Opaque
+`, 0))
+			f.RunHook()
+		})
+
+		It("Should fail instead of silently clearing internalNetworkCIDRs", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("refusing to silently clear"))
+			Expect(f.ValuesGet("nodeManager.internal.static.internalNetworkCIDRs").String()).To(MatchJSON(`["192.168.199.0/24"]`))
+		})
+	})
+
+	Context("With a previously set internalNetworkCIDRs and a secret whose field becomes blank", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.static.internalNetworkCIDRs", []string{"192.168.199.0/24"})
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+data:
+  static-cluster-configuration.yaml: ""
+kind: Secret
+metadata:
+  labels:
+    heritage: deckhouse
+  name: d8-static-cluster-configuration
+  namespace: kube-system
+type: Opaque
+`, 0))
+			f.RunHook()
+		})
+
+		It("Should fail instead of silently clearing internalNetworkCIDRs", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("refusing to silently clear"))
+			Expect(f.ValuesGet("nodeManager.internal.static.internalNetworkCIDRs").String()).To(MatchJSON(`["192.168.199.0/24"]`))
+		})
+	})
+
+	Context("With a previously set internalNetworkCIDRs and a document that updates it to a new non-empty value", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.static.internalNetworkCIDRs", []string{"10.0.0.0/24"})
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+data:
+  static-cluster-configuration.yaml: YXBpVmVyc2lvbjogZGVja2hvdXNlLmlvL3YxYWxwaGExCmtpbmQ6IFN0YXRpY0NsdXN0ZXJDb25maWd1cmF0aW9uCmludGVybmFsTmV0d29ya0NJRFJzOgotIDE5Mi4xNjguMTk5LjAvMjQK
+kind: Secret
+metadata:
+  labels:
+    heritage: deckhouse
+  name: d8-static-cluster-configuration
+  namespace: kube-system
+type: Opaque
+`, 0))
+			f.RunHook()
+		})
+
+		It("Should update internalNetworkCIDRs normally", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.static.internalNetworkCIDRs").String()).To(MatchJSON(`["192.168.199.0/24"]`))
+		})
+	})
 })
