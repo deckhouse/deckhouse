@@ -9,7 +9,7 @@
 changelog-update:
   stage: .post
   image:
-    name: ${CI_REGISTRY}/deckhouse/ssdlc-tools/changelog-generator:v1.1.0
+    name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/changelog-generator:9269a914
   extends:
     - .rules:on_release_branch
   resource_group: changelog-update
@@ -17,7 +17,7 @@ changelog-update:
   variables:
     CI_DEBUG_TRACE: true
     VAULT_AUTH_PATH: fox
-    VAULT_AUTH_ROLE: deckhouse-test # переделать!!!!!
+    VAULT_AUTH_ROLE: deckhouse
     GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
   id_tokens:
