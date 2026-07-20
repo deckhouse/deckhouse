@@ -1,0 +1,31 @@
+[Unit]
+Description=Create CNI plugin symlinks in /opt/cni/bin
+ConditionPathExists=/opt/cni/bin
+Before=kubelet.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=ln -sf /opt/deckhouse/bin/bandwidth /opt/cni/bin/bandwidth
+ExecStart=ln -sf /opt/deckhouse/bin/bridge /opt/cni/bin/bridge
+ExecStart=ln -sf /opt/deckhouse/bin/dhcp /opt/cni/bin/dhcp
+ExecStart=ln -sf /opt/deckhouse/bin/dummy /opt/cni/bin/dummy
+ExecStart=ln -sf /opt/deckhouse/bin/firewall /opt/cni/bin/firewall
+ExecStart=ln -sf /opt/deckhouse/bin/host-device /opt/cni/bin/host-device
+ExecStart=ln -sf /opt/deckhouse/bin/host-local /opt/cni/bin/host-local
+ExecStart=ln -sf /opt/deckhouse/bin/ipvlan /opt/cni/bin/ipvlan
+ExecStart=ln -sf /opt/deckhouse/bin/loopback /opt/cni/bin/loopback
+ExecStart=ln -sf /opt/deckhouse/bin/macvlan /opt/cni/bin/macvlan
+ExecStart=ln -sf /opt/deckhouse/bin/portmap /opt/cni/bin/portmap
+ExecStart=ln -sf /opt/deckhouse/bin/ptp /opt/cni/bin/ptp
+ExecStart=ln -sf /opt/deckhouse/bin/sbr /opt/cni/bin/sbr
+ExecStart=ln -sf /opt/deckhouse/bin/static /opt/cni/bin/static
+ExecStart=ln -sf /opt/deckhouse/bin/tap /opt/cni/bin/tap
+ExecStart=ln -sf /opt/deckhouse/bin/tuning /opt/cni/bin/tuning
+ExecStart=ln -sf /opt/deckhouse/bin/vlan /opt/cni/bin/vlan
+ExecStart=ln -sf /opt/deckhouse/bin/vrf /opt/cni/bin/vrf
+ExecStart=ln -sf /opt/deckhouse/bin/flannel /opt/cni/bin/flannel
+ExecStop=rm -f /opt/cni/bin/bandwidth /opt/cni/bin/bridge /opt/cni/bin/dhcp /opt/cni/bin/dummy /opt/cni/bin/firewall /opt/cni/bin/host-device /opt/cni/bin/host-local /opt/cni/bin/ipvlan /opt/cni/bin/loopback /opt/cni/bin/macvlan /opt/cni/bin/portmap /opt/cni/bin/ptp /opt/cni/bin/sbr /opt/cni/bin/static /opt/cni/bin/tap /opt/cni/bin/tuning /opt/cni/bin/vlan /opt/cni/bin/vrf /opt/cni/bin/flannel
+
+[Install]
+WantedBy=node.target

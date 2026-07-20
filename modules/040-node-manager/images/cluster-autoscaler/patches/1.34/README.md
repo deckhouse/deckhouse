@@ -2,25 +2,43 @@
 
 ### 001-go-mod.patch
 
-To create this patch run commands:
+Bumps Go module dependencies to remediate CVEs reported by Trivy for the
+cluster-autoscaler binary. The vulnerabilities live in indirect/build
+dependencies that are linked into the binary (x/crypto/ssh, x/net, k8s
+staging modules), not in cluster-autoscaler logic, so the fix is a pure
+`go.mod`/`go.sum` bump. The gardener tag stays `v1.34.1`.
+
+This patch also covers the k8s 1.35 and 1.36 images: `werf.inc.yaml` clamps
+`$maxVersion = "1.34"`, so those images are built from gardener `v1.34.1`
+with `patches/1.34/`.
+
+Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
+
+- `go` directive: `1.24.0` -> `1.25.0`
+- `golang.org/x/net`: `v0.38.0` -> `v0.55.0` (HTML parser / HTTP2 / idna CVEs)
+- `golang.org/x/sys`: `v0.31.0` -> `v0.45.0`
+- `golang.org/x/crypto`: `v0.36.0` -> `v0.51.0` (x/crypto/ssh CVEs)
+- `k8s.io/kubernetes`: `v1.34.1` -> `v1.34.2`, and all `k8s.io/*` staging
+  modules (require + replace) synced to `v0.34.2` (kube-controller-manager
+  SSRF, CVE-2025-13281)
+
+To recreate this patch, check out the clean tag and re-apply the bumps:
 
 ```shell
+git clone <SOURCE_REPO>/gardener/autoscaler.git
+cd autoscaler && git checkout v1.34.1
 cd cluster-autoscaler
-go mod edit -go 1.23
-go get github.com/golang-jwt/jwt/v4@v4.5.1
-go get github.com/opencontainers/runc@v1.1.14
-go get golang.org/x/crypto@v0.31.0
-go get golang.org/x/net@v0.33.0
-
-go get k8s.io/kubernetes@v1.30.8
-go get k8s.io/kubelet@v0.30.8
-#replase all in k8s.io  v0.30.1 -> v0.30.8
-cd apis
-go get golang.org/x/net@v0.33.0
+go get golang.org/x/crypto@v0.51.0
+go get golang.org/x/net@v0.55.0
+go get golang.org/x/sys@v0.45.0
+go get k8s.io/kubernetes@v1.34.2
+# sync every k8s.io/* require and replace directive to v0.34.2
+cd apis && go get golang.org/x/net@v0.55.0 && cd ..
+go mod tidy && (cd apis && go mod tidy)
 cd ..
-go mod tidy
-git diff > patches/001-go_mod.patch
-#git apply patches/001-go_mod.patch
+git diff -- cluster-autoscaler/go.mod cluster-autoscaler/go.sum \
+            cluster-autoscaler/apis/go.mod cluster-autoscaler/apis/go.sum \
+  > 001-go-mod.patch
 ```
 
 ### 002-kruise-ads.patch
