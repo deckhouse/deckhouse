@@ -342,6 +342,7 @@ function main() {
   export HOME="/var/lib/bashible"
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
+  export BUNDLE_STEPS_STATUS_DIR="$BOOTSTRAP_DIR/bundle_steps_status"
   export CONFIGURATION_CHECKSUM_FILE="$BOOTSTRAP_DIR/configuration_checksum"
   export UPTIME_FILE="$BOOTSTRAP_DIR/uptime"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
@@ -531,6 +532,43 @@ function main() {
     # parsed by dhctl-side measurement tooling to map where bashible time goes.
     local start_ts
     start_ts=$(date +%s.%N)
+
+{{- if eq .runType "ClusterBootstrap" }}
+    # Bootstrap-only resume support: a step is skipped if it already succeeded
+    # with identical content in a previous bashible.sh run on this node (dhctl
+    # re-seeds this directory from its own state before re-executing the
+    # bundle, so this also survives the node being re-provisioned between
+    # bootstrap attempts).
+    #
+    # If a marker exists but its checksum does NOT match (the step ran before
+    # with different content, e.g. cluster config or dhctl version changed
+    # between bootstrap attempts), it is unsafe to just silently re-run it:
+    # the node may already reflect the OLD version of this step, and later
+    # steps may depend on that. Fail loudly instead of retrying blindly.
+    local step_status_file="$BUNDLE_STEPS_STATUS_DIR/$step_base"
+    local step_checksum=""
+    if [ -f "$step" ]; then
+      step_checksum="$(sha256sum "$step" | awk '{print $1}')"
+    fi
+    if [ -n "$step_checksum" ] && [ -f "$step_status_file" ]; then
+      local step_recorded_checksum
+      step_recorded_checksum="$(cat "$step_status_file")"
+      if [ "$step_recorded_checksum" == "$step_checksum" ]; then
+        echo ===
+        echo "=== Step: $step (already completed, skipping)"
+        echo ===
+        return 0
+      else
+        >&2 echo "ERROR: Step ${step_base} already completed in a previous bootstrap attempt with different content."
+        >&2 echo "ERROR: Recorded checksum: ${step_recorded_checksum}, current checksum: ${step_checksum}."
+        >&2 echo "ERROR: Resuming would re-run it against a node that may already reflect its old version, which is unsafe."
+        >&2 echo "ERROR: Please run 'dhctl bootstrap-phase abort' to clean up, then start a fresh bootstrap."
+        bb-bashible-ready-steps-failed "$step_base"
+        return 1
+      fi
+    fi
+{{- end }}
+
     echo ===
     echo === Step: $step
     echo ===
@@ -566,6 +604,13 @@ function main() {
       bb-bashible-ready-steps-failed "$step_base"
     done
     cp -f "$per_step_log" "$step_log" 2>/dev/null || true
+
+{{- if eq .runType "ClusterBootstrap" }}
+    if [ -n "$step_checksum" ]; then
+      mkdir -p "$BUNDLE_STEPS_STATUS_DIR"
+      printf '%s' "$step_checksum" > "$step_status_file"
+    fi
+{{- end }}
 
     bb-telemetry-end-span "$span_ctx" "$step_base"
 

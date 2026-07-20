@@ -57,6 +57,7 @@ type BashiblePipelineParams struct {
 	IsDebug                bool
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	GlobalOpts             *options.GlobalOptions
+	BootstrapState         *State
 }
 
 func (p *BashiblePipelineParams) Validate() error {
@@ -206,10 +207,33 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseModulesPreparation)
 
+	if params.BootstrapState != nil {
+		savedStepsStatus, err := params.BootstrapState.BashibleStepsStatus(ctx)
+		if err != nil {
+			logger.WarnContext(ctx, fmt.Sprintf("failed to load saved bashible bundle steps status: %v", err))
+		} else if len(savedStepsStatus) > 0 {
+			if err := dhbashible.VerifyStepsStatus(templateController.TmpDir, savedStepsStatus); err != nil {
+				return err
+			}
+
+			if err := bashible.PushStepsStatus(ctx, savedStepsStatus); err != nil {
+				logger.WarnContext(ctx, fmt.Sprintf("failed to push saved bashible bundle steps status: %v", err))
+			}
+		}
+	}
+
 	if err := bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
 		CommanderMode: params.CommanderMode,
 		GlobalOpts:    params.GlobalOpts,
+		OnStepsStatus: func(ctx context.Context, statuses map[string]string) {
+			if params.BootstrapState == nil {
+				return
+			}
+			if err := params.BootstrapState.SaveBashibleStepsStatus(ctx, statuses); err != nil {
+				logger.WarnContext(ctx, fmt.Sprintf("failed to save bashible bundle steps status: %v", err))
+			}
+		},
 	}); err != nil {
 		return err
 	}
