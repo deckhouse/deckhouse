@@ -182,6 +182,11 @@ properties:
       Время жизни ID-токена.
 
       Задается в виде строки с указанием часов, минут и секунд: 30m, 20s, 2h30m10s, 24h.
+
+      Задаёт нижнюю границу времени жизни пользовательской сессии (`DexAuthenticator.spec.keepUsersLoggedInFor`
+      и параметры модулей вида `auth.sessionTTL`, например в console).
+      Если TTL сессии ≤ `idTokenTTL`, фактическое время до разлогина будет `idTokenTTL + 1s`.
+      Чтобы разлогинивать раньше значения `idTokenTTL` по умолчанию (10m), уменьшите также `idTokenTTL`.
   refreshTokenAbsoluteLifetime:
     description: |
       Максимальное время жизни refresh-токенов (соответствует настройке Dex `expiry.refreshTokens.absoluteLifetime`).

@@ -279,6 +279,11 @@ properties:
       The TTL of the id token (use `s` for seconds, `m` for minutes, `h` for hours).
 
       It is specified as a string containing the time unit in hours, minutes and seconds: 30m, 20s, 2h30m10s, 24h.
+
+      Defines the lower bound for the user session lifetime (`DexAuthenticator.spec.keepUsersLoggedInFor`
+      and module parameters like `auth.sessionTTL`, e.g. in console).
+      If the session TTL is less than or equal to `idTokenTTL`, the effective logout time is `idTokenTTL + 1s`.
+      To force logout sooner than the default `idTokenTTL` (10m), decrease `idTokenTTL` as well.
   refreshTokenAbsoluteLifetime:
     type: string
     pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'

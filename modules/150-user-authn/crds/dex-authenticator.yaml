@@ -140,6 +140,10 @@ spec:
                   description: |-
                     User session will be kept for specified amount of time even if user will not log in.
                     Specified with  `s`, `m` or `h` suffix.
+
+                    Cannot be shorter than `userAuthn.idTokenTTL + 1s`: if `keepUsersLoggedInFor` ≤ `idTokenTTL`,
+                    the effective logout time is `idTokenTTL + 1s`.
+                    To force logout sooner than the default `idTokenTTL` (10m), decrease `userAuthn.idTokenTTL` as well.
                   x-doc-examples: ['24h']
                   x-doc-default: '168h'
                 allowedEmails:
@@ -441,6 +445,10 @@ spec:
                     User session will be kept for specified amount of time even if user will not log in.
 
                     Specified with  `s`, `m` or `h` suffix.
+
+                    Cannot be shorter than `userAuthn.idTokenTTL + 1s`: if `keepUsersLoggedInFor` ≤ `idTokenTTL`,
+                    the effective logout time is `idTokenTTL + 1s`.
+                    To force logout sooner than the default `idTokenTTL` (10m), decrease `userAuthn.idTokenTTL` as well.
                   x-doc-default: '168h'
                 allowedEmails:
                   type: array
