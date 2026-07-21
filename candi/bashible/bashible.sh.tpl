@@ -388,7 +388,7 @@ function main() {
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
 
 {{ if eq .runType "Normal" }}
-  {{- if .packagesProxy }}
+  {{- if and .packagesProxy (not (get $packagesProxy "direct")) }}
   rpp_addr="$(get_rpp_address)"
   if [[ -n $rpp_addr ]]; then
     export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
