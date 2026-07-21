@@ -960,10 +960,12 @@ echo "$MYRESULTSTRING"
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
-  --include-module stronghold \
-  --include-module secrets-store-integration \
+  --include-module "stronghold" \
+  --include-module "secrets-store-integration" \
   /home/user/d8-bundle
   ```
+
+  Значения в `--include-module` заключайте в кавычки, чтобы избежать перенаправление ввода или вывода.
 
   Пример команды для загрузки модуля `stronghold` с semver `^` ограничением от версии 1.2.0:
 
@@ -971,7 +973,7 @@ echo "$MYRESULTSTRING"
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
-  --include-module stronghold@1.2.0 \
+  --include-module "stronghold@1.2.0" \
   /home/user/d8-bundle
   ```
 
@@ -981,7 +983,17 @@ echo "$MYRESULTSTRING"
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
-  --include-module secrets-store-integration@~1.1.0 \
+  --include-module "secrets-store-integration@~1.1.0" \
+  /home/user/d8-bundle
+  ```
+
+  Пример команды для загрузки модуля `console` с semver-ограничением `>=` от версии 1.43.2:
+
+  ```shell
+  d8 mirror pull \
+  --license='<LICENSE_KEY>' \
+  --no-platform --no-security-db \
+  --include-module "console@>=1.43.2" \
   /home/user/d8-bundle
   ```
 
@@ -991,7 +1003,7 @@ echo "$MYRESULTSTRING"
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
-  --include-module stronghold@=v1.2.5 \
+  --include-module "stronghold@=v1.2.5" \
   /home/user/d8-bundle
   ```
 
@@ -1001,14 +1013,19 @@ echo "$MYRESULTSTRING"
 - `--no-platform` — пропустить загрузку пакета образов Deckhouse Kubernetes Platform (`platform.tar`);
 - `--no-modules` — пропустить загрузку пакетов модулей (`module-*.tar`);
 - `--no-security-db` — пропустить загрузку пакета баз данных сканера уязвимостей (`security.tar`);
+- `--include-platform` = `CONSTRAINT` — загрузить релизы Deckhouse Kubernetes Platform по semver-ограничению. Параметр нельзя использовать одновременно с `--since-version` и `--deckhouse-tag`. Значение ограничения заключайте в кавычки, например: `--include-platform ">=1.64 <=1.68"`, `--include-platform "~1.65.0"`, `--include-platform "^1.65.0"`, `--include-platform "=v1.65.3"` или `--include-platform "=v1.65.3+stable"`;
 - `--include-module` / `-i` = `name[@Major.Minor]` — загрузить определенный набор модулей по принципу белого списка (и, при необходимости, их минимальных версий). Укажите несколько раз, чтобы добавить в белый список больше модулей. Эти флаги игнорируются, если используются совместно с `--no-modules`.
 
-  Поддерживаются следующие синтаксисы для указания версий модулей:
+  Поддерживаются следующие синтаксисы для указания версий модулей. При использовании этих значений в команде заключайте значение `--include-module` в кавычки:
   - `module-name@1.3.0` — загрузка версий с semver ^ ограничением (^1.3.0), включая v1.3.0, v1.3.3, v1.4.1;
   - `module-name@~1.3.0` — загрузка версий с semver ~ ограничением (>=1.3.0 <1.4.0), включая только v1.3.0, v1.3.3;
+  - `module-name@>=1.3.0` — загрузка версий с semver-ограничением `>=`, включая явно указанную версию и более новые версии, подходящие под ограничение;
+  - `module-name@>=1.3.0 <=1.4.0` — загрузка версий в диапазоне с учетом нижней и верхней границы;
   - `module-name@=v1.3.0` — загрузка точного соответствия тегу v1.3.0, публикация во все каналы релизов;
+  - `module-name@=v1.3.0+stable` — загрузка точного соответствия тегу v1.3.0, публикация в канал релизов stable;
   - `module-name@=bobV1` — загрузка точного соответствия тегу "bobV1", публикация во все каналы релизов.
 - `--exclude-module` / `-e` = `name` — пропустить загрузку определенного набора модулей по принципу черного списка. Укажите несколько раз, чтобы добавить в черный список больше модулей. Игнорируется, если используются `--no-modules` или `--include-module`.
+- `--include-package` = `name[@version]` — загрузить определенный набор пакетов по принципу белого списка. Для указания версий и semver-ограничений используется тот же синтаксис, что и у `--include-module`; значения с ограничениями заключайте в кавычки.
 - `--modules-path-suffix` — изменить суффикс пути к репозиторию модулей в основном репозитории DKP. По умолчанию используется суффикс `/modules` (так, например, полный путь к репозиторию с модулями будет выглядеть как `registry.deckhouse.ru/deckhouse/EDITION/modules`);
 - `--since-version=X.Y` — скачать все версии DKP, начиная с указанной минорной версии. Параметр будет проигнорирован, если указанная версия выше, чем версия на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
 - `--deckhouse-tag` — скачать только конкретную версию DKP (без учета каналов обновлений). Параметр не может быть использован одновременно с параметром `--since-version`;
