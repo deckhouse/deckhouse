@@ -86,7 +86,7 @@
       * on(name) group_left(node_group) machine_deployment_node_group_info{source="deckhouse"}
     for: 20m
     labels:
-      severity_level: "8"
+      severity_level: "6"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
