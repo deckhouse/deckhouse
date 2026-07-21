@@ -225,6 +225,80 @@ const moduleValuesD = `
             tcpAppProfileName: profile1
 `
 
+const moduleValuesDCClusterFirst = `
+    internal:
+      storageClasses:
+      - name: aaa-dscluster
+        datastoreType: DatastoreCluster
+        datastoreURL: ""
+        path: /dc/datastore/aaa-dscluster
+        zones: ["zone-a"]
+      - name: bbb-datastore
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/bbb/
+        path: /dc/datastore/bbb
+        zones: ["zone-a"]
+      - name: ccc-datastore
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/ccc/
+        path: /dc/datastore/ccc
+        zones: ["zone-a"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        datacenter: X1
+        zones: ["zone-a"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+`
+
+const moduleValuesHybrid = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        datacenter: X1
+        zones: ["aaa", "bbb"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        zones: ["zone-a", "zone-b"]
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        masterNodeGroup:
+          instanceClass:
+            datastore: dev/lun_1
+            mainNetwork: k8s-msk/test_187
+            memory: 8192
+            numCPUs: 4
+            template: dev/golden_image
+          replicas: 1
+`
+
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -559,6 +633,27 @@ nodes:
   externalVmNetworkName: aaa,bbb
   internalVmNetworkName: ccc,ddd
 `))
+		})
+	})
+
+	Context("Vsphere: DatastoreCluster at index 0 is not rendered (defense-in-depth)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesDCClusterFirst)
+			f.HelmRender()
+		})
+
+		It("DatastoreCluster StorageClass is not created; Datastore StorageClasses are rendered", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			scDC := f.KubernetesGlobalResource("StorageClass", "aaa-dscluster")
+			scBbb := f.KubernetesGlobalResource("StorageClass", "bbb-datastore")
+			scCcc := f.KubernetesGlobalResource("StorageClass", "ccc-datastore")
+
+			Expect(scDC.Exists()).To(BeFalse())
+			Expect(scBbb.Exists()).To(BeTrue())
+			Expect(scCcc.Exists()).To(BeTrue())
 		})
 	})
 
