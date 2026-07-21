@@ -196,6 +196,17 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 		}
 	}
 
+	// The bootstrap template of an immutable group. Its per-machine clones and
+	// their secrets are owned by the Machines and go with them; the template is
+	// ours to remove. Deleting one the group never had is a no-op.
+	tmpl := &unstructured.Unstructured{}
+	tmpl.SetGroupVersionKind(schema.GroupVersionKind{Group: "bootstrap.deckhouse.io", Version: "v1alpha1", Kind: "NodeBootstrapConfigTemplate"})
+	tmpl.SetName(ngName)
+	tmpl.SetNamespace(common.MachineNamespace)
+	if err := r.Client.Delete(ctx, tmpl); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete NodeBootstrapConfigTemplate %s: %w", ngName, err)
+	}
+
 	return nil
 }
 

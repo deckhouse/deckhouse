@@ -192,7 +192,7 @@ var _ = Describe("Module :: node-manager :: helm template :: immutable NodeGroup
 		}
 	})
 
-	It("bootstraps the immutable group from a NodeConfig and the mutable one from bashible", func() {
+	It("renders no helm bootstrap secret for a CAPI immutable group and keeps bashible for the mutable one", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 		var manifests []string
@@ -200,35 +200,19 @@ var _ = Describe("Module :: node-manager :: helm template :: immutable NodeGroup
 			manifests = append(manifests, m)
 		}
 
-		var immutable, mutable string
+		// A CAPI immutable group boots from a per-machine NodeBootstrapConfig the
+		// node-controller bootstrap provider renders (the MachineDeployment points
+		// at it through bootstrap.configRef), so helm emits no group-wide bootstrap
+		// secret for it: none of the value: secrets carry a NodeConfig.
+		var mutable string
 		for _, v := range bootstrapValues(strings.Join(manifests, "\n")) {
-			if strings.Contains(v, "kind: NodeConfig") {
-				immutable = v
-				continue
-			}
+			Expect(v).ShouldNot(ContainSubstring("kind: NodeConfig"),
+				"a CAPI immutable group must not get a helm-rendered NodeConfig bootstrap secret")
 			mutable = v
 		}
 
-		Expect(immutable).ShouldNot(BeEmpty(), "the immutable group must get a NodeConfig userdata")
-		// The node reads the first line to decide whether it can parse the
-		// userdata at all, so nothing may precede the header.
-		Expect(immutable).Should(HavePrefix("#cloud-config\n"))
-		Expect(mutable).Should(ContainSubstring("bootstrap.sh"), "the mutable group must keep the bashible userdata")
-
-		Expect(immutable).Should(ContainSubstring("nodeName: __NODE_NAME__"))
-		// The install disk is chosen on the node: the platform decides the order
-		// the guest sees its disks in, so a group-wide userdata cannot name one.
-		Expect(immutable).Should(ContainSubstring("diskSelector: {}"))
-		Expect(immutable).Should(ContainSubstring("externalCloudProvider: true"))
-		Expect(immutable).Should(ContainSubstring("bootstrapToken: immutabletoken"))
-		Expect(immutable).Should(ContainSubstring("clusterDNS: [\"10.222.0.10\"]"))
-		Expect(immutable).Should(ContainSubstring("- \"https://10.0.0.1:6443\""))
-		// The kubelet extension must follow the effective cluster version.
-		Expect(immutable).Should(ContainSubstring("digest: " + kubeletDigest))
-		Expect(immutable).Should(ContainSubstring("digest: " + containerdDigest))
-		Expect(immutable).Should(ContainSubstring("digest: " + cniDigest))
-		Expect(immutable).ShouldNot(ContainSubstring("sha256:sha256:"))
-		Expect(immutable).Should(ContainSubstring("caCert: " + base64.StdEncoding.EncodeToString([]byte("myclusterca"))))
-		Expect(immutable).Should(ContainSubstring("registryPackagesProxyAccessTokenB64: " + base64.StdEncoding.EncodeToString([]byte("rpptoken"))))
+		// The mutable group keeps its bashible userdata.
+		Expect(mutable).ShouldNot(BeEmpty(), "the mutable group must still get a bashible bootstrap secret")
+		Expect(mutable).Should(ContainSubstring("bootstrap.sh"))
 	})
 })

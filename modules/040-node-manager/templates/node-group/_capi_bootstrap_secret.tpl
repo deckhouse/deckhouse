@@ -3,6 +3,11 @@
 {{- $ng := index . 1 }}
 {{- $zone_name := index . 2 }}
 {{- $bootstrap_secret_name := index . 3 }}
+{{- /* An immutable node boots from a per-machine NodeBootstrapConfig the
+       node-controller bootstrap provider renders (the MachineDeployment points
+       at it through bootstrap.configRef), so helm renders no bootstrap secret
+       for it. A bashible node still gets its group-wide cloud-init secret. */}}
+{{- if ne ($ng.systemType | default "Mutable") "Immutable" }}
 ---
 apiVersion: v1
 kind: Secret
@@ -17,13 +22,9 @@ metadata:
 type: Opaque
 data:
   format: {{ "cloud-config" | b64enc}}
-  {{- /* An olcedar node bootstraps from a NodeConfig file, not from bashible. */}}
   {{- $bootstrap_token := pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first }}
-  {{- if eq ($ng.systemType | default "Mutable") "Immutable" }}
-  value: {{ include "node_group_olcedar_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
-  {{- else }}
   value: {{ include "node_group_capi_cloud_init_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
-  {{- end }}
+{{- end }}
 {{- end }}
 
 {{- define "capi_infrastructure_cluster" }}

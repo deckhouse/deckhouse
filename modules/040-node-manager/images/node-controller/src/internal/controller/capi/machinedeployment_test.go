@@ -228,3 +228,46 @@ func TestApplyMachineDeploymentSpecPatchInvalidYAML(t *testing.T) {
 		t.Fatal("expected invalid patch error, got nil")
 	}
 }
+
+func TestBuildCAPIMachineDeploymentBootstrap(t *testing.T) {
+	bootstrapOf := func(ng *deckhousev1.NodeGroup) map[string]interface{} {
+		md := buildCAPIMachineDeployment(capiMDInput{
+			ng:                  ng,
+			mdName:              "worker-abc",
+			templateName:        "worker-tmpl",
+			bootstrapSecretName: "worker-secret",
+			clusterName:         "dvp",
+			infraAPIGroup:       "infrastructure.cluster.x-k8s.io",
+			infraKind:           "DeckhouseMachineTemplate",
+		})
+		return md.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})["bootstrap"].(map[string]interface{})
+	}
+
+	t.Run("mutable group keeps the group-wide data secret", func(t *testing.T) {
+		bootstrap := bootstrapOf(&deckhousev1.NodeGroup{
+			Spec: deckhousev1.NodeGroupSpec{SystemType: deckhousev1.SystemTypeMutable},
+		})
+		if got := bootstrap["dataSecretName"]; got != "worker-secret" {
+			t.Fatalf("dataSecretName=%v, want worker-secret", got)
+		}
+		if _, ok := bootstrap["configRef"]; ok {
+			t.Fatal("mutable group must not carry a configRef")
+		}
+	})
+
+	t.Run("immutable group references a NodeBootstrapConfig template", func(t *testing.T) {
+		ng := &deckhousev1.NodeGroup{Spec: deckhousev1.NodeGroupSpec{SystemType: deckhousev1.SystemTypeImmutable}}
+		ng.Name = "immutable-capi"
+		bootstrap := bootstrapOf(ng)
+		if _, ok := bootstrap["dataSecretName"]; ok {
+			t.Fatal("immutable group must not carry a dataSecretName")
+		}
+		ref, ok := bootstrap["configRef"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("immutable group must carry a configRef, got %v", bootstrap)
+		}
+		if ref["apiGroup"] != "bootstrap.deckhouse.io" || ref["kind"] != "NodeBootstrapConfigTemplate" || ref["name"] != "immutable-capi" {
+			t.Fatalf("configRef=%v, want the group's NodeBootstrapConfigTemplate", ref)
+		}
+	})
+}
