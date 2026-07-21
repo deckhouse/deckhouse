@@ -220,14 +220,23 @@ func (s *Service) Download(ctx context.Context, remote Remote, out, packageName,
 	return s.download(ctx, img, out)
 }
 
-// download copies tar to path
+// download extracts the image tar onto output atomically: the tar is unpacked into
+// a temporary sibling directory on the same filesystem and then renamed onto
+// output, so an interrupted extract can never leave a partial directory at the
+// final path that a later restore would mistake for a complete module.
 func (s *Service) download(_ context.Context, img crv1.Image, output string) error {
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
-	if err := os.MkdirAll(output, 0o700); err != nil {
-		return fmt.Errorf("create output path: %w", err)
+	if err := os.MkdirAll(filepath.Dir(output), 0o700); err != nil {
+		return fmt.Errorf("create output parent path: %w", err)
 	}
+
+	scratch, err := os.MkdirTemp(filepath.Dir(output), "."+filepath.Base(output)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create scratch dir: %w", err)
+	}
+	defer os.RemoveAll(scratch)
 
 	tr := tar.NewReader(rc)
 	for {
@@ -245,7 +254,7 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) err
 			return fmt.Errorf("path traversal detected in the package archive: malicious path %v", hdr.Name)
 		}
 
-		target := filepath.Join(output, hdr.Name)
+		target := filepath.Join(scratch, hdr.Name)
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err = os.MkdirAll(target, os.FileMode(hdr.Mode)); err != nil {
@@ -277,10 +286,19 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) err
 			}
 
 		case tar.TypeLink:
-			if err = os.Link(path.Join(output, hdr.Linkname), target); err != nil {
+			if err = os.Link(path.Join(scratch, hdr.Linkname), target); err != nil {
 				return fmt.Errorf("create hardlink: %w", err)
 			}
 		}
+	}
+
+	// os.Rename needs an empty or absent target, so drop any stale directory first,
+	// then publish the fully unpacked tree with a single atomic rename.
+	if err := os.RemoveAll(output); err != nil {
+		return fmt.Errorf("remove stale output '%s': %w", output, err)
+	}
+	if err := os.Rename(scratch, output); err != nil {
+		return fmt.Errorf("rename scratch to output '%s': %w", output, err)
 	}
 
 	return nil
