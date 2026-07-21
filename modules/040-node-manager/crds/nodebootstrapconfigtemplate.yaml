@@ -1,0 +1,70 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodebootstrapconfigtemplates.bootstrap.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    # The Cluster API contract label. Without it the Machine controller cannot
+    # resolve a bootstrap.configRef of kind NodeBootstrapConfigTemplate to a
+    # concrete apiVersion, and immutable nodes never get their bootstrap data.
+    cluster.x-k8s.io/v1beta2: v1alpha1
+spec:
+  group: bootstrap.deckhouse.io
+  names:
+    kind: NodeBootstrapConfigTemplate
+    listKind: NodeBootstrapConfigTemplateList
+    plural: nodebootstrapconfigtemplates
+    singular: nodebootstrapconfigtemplate
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        description: |-
+          NodeBootstrapConfigTemplate is the Cluster API bootstrap template a
+          MachineDeployment of an immutable NodeGroup references. The MachineSet
+          clones a NodeBootstrapConfig from spec.template for every Machine, and
+          node-controller renders that machine's bootstrap data.
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            required:
+            - template
+            properties:
+              template:
+                type: object
+                required:
+                - spec
+                properties:
+                  metadata:
+                    description: |-
+                      Labels and annotations Cluster API copies onto every cloned
+                      NodeBootstrapConfig.
+                    type: object
+                    properties:
+                      labels:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      annotations:
+                        type: object
+                        additionalProperties:
+                          type: string
+                  spec:
+                    description: |-
+                      Body of the cloned NodeBootstrapConfig. Intentionally empty
+                      in v1alpha1: the controller renders the bootstrap data from
+                      live cluster state at Machine creation, so nothing is baked
+                      into the template.
+                    type: object

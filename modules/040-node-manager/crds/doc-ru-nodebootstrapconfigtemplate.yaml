@@ -1,0 +1,31 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Шаблон первичной загрузки Cluster API, на который ссылается MachineDeployment группы узлов на базе гипервизора первого типа.
+
+            Для каждой машины MachineSet клонирует из `spec.template` объект NodeBootstrapConfig, а node-controller рендерит для него данные первичной загрузки.
+          properties:
+            spec:
+              description: |
+                Описание шаблона.
+              properties:
+                template:
+                  description: |
+                    Тело, которое копируется в каждый клонированный NodeBootstrapConfig.
+                  properties:
+                    metadata:
+                      description: |
+                        Метки и аннотации, которые Cluster API копирует в каждый клонированный NodeBootstrapConfig.
+                      properties:
+                        labels:
+                          description: |
+                            Метки, добавляемые к клону.
+                        annotations:
+                          description: |
+                            Аннотации, добавляемые к клону.
+                    spec:
+                      description: |
+                        Тело клонированного NodeBootstrapConfig. В версии `v1alpha1` намеренно пустое: контроллер рендерит данные первичной загрузки из состояния кластера в момент создания машины, поэтому в шаблон ничего не запекается.
