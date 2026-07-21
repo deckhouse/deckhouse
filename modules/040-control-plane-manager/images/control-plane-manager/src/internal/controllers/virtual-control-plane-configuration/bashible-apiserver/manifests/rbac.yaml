@@ -1,7 +1,16 @@
+# The deckhouse module's chart renders this namespace too, so it is pre-created
+# with helm adoption metadata — otherwise the tenant deckhouse fails the release
+# install with "invalid ownership metadata" (same pattern as dhctl bootstrap).
 apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: deckhouse
+    meta.helm.sh/release-namespace: d8-system
 ---
 apiVersion: v1
 kind: Namespace
@@ -117,30 +126,11 @@ subjects:
     name: bashible-apiserver
     apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: bashible-apiserver-readregsecret
-  namespace: d8-system
-rules:
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "watch", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: bashible-apiserver-readregsecret
-  namespace: d8-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: bashible-apiserver-readregsecret
-subjects:
-  - kind: User
-    name: bashible-apiserver
-    apiGroup: rbac.authorization.k8s.io
----
+# Access to registry secrets in d8-system for the bashible-apiserver User is
+# granted by the bashible-apiserver-readregsecret Role/RoleBinding of the
+# tenant's deckhouse module chart (modules/002-deckhouse/templates/rbac-for-us.yaml);
+# they must not be duplicated here, or the tenant's helm release fails with
+# "invalid ownership metadata".
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:

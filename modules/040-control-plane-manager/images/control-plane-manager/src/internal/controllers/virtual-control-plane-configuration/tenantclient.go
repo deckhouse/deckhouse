@@ -46,7 +46,7 @@ type tenantClientSet struct {
 }
 
 func (r *reconciler) tenantKubeconfigRaw(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) ([]byte, error) {
-	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	ns := vcpNamespace(vcp)
 	sec, err := r.getSecret(ctx, ns, constants.VirtualAdminKubeconfigSecretName)
 	if err != nil {
 		return nil, fmt.Errorf("get admin kubeconfig secret: %w", err)

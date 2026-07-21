@@ -1,0 +1,184 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deckhouse
+  namespace: ${NAMESPACE}
+  labels:
+    app: deckhouse
+    heritage: deckhouse
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: deckhouse
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: deckhouse
+      annotations:
+        kubectl.kubernetes.io/default-container: deckhouse
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: deckhouse-registry
+      priorityClassName: system-cluster-critical
+      initContainers:
+        # The module loader requires downloaded/modules to exist even when
+        # empty; a fresh emptyDir has neither, unlike a pre-populated hostPath.
+        - name: init-downloaded-modules
+          image: ${IMAGE_DECKHOUSE}
+          imagePullPolicy: Always
+          command:
+            - sh
+            - -c
+            - mkdir -p /deckhouse/downloaded/modules
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+          volumeMounts:
+            - name: downloaded
+              mountPath: /deckhouse/downloaded
+      containers:
+        - name: deckhouse
+          image: ${IMAGE_DECKHOUSE}
+          imagePullPolicy: Always
+          command:
+            - /usr/bin/deckhouse-controller
+            - start
+            - --kube-config
+            - /kubeconfig.yaml
+          workingDir: /deckhouse
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+          ports:
+            - name: self
+              containerPort: 4222
+            - name: webhook
+              containerPort: 4223
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 4222
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 120
+          env:
+            - name: KUBE_CONFIG
+              value: /kubeconfig.yaml
+            - name: KUBECONFIG
+              value: /kubeconfig.yaml
+            # The kubeconfig points at the tenant apiserver; these two make the
+            # in-cluster-config fallback paths land on the same apiserver (the
+            # per-VCP ALB routes :6443 to it) instead of the parent cluster's.
+            - name: KUBERNETES_SERVICE_HOST
+              value: "${VCP_API_VIP}"
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6443"
+            - name: USE_NELM
+              value: "false"
+            - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
+              value: "true"
+            - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
+              value: "false"
+            - name: DECKHOUSE_HA
+              value: "false"
+            - name: DECKHOUSE_BUNDLE
+              value: "Minimal"
+            - name: DECKHOUSE_POD
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: DECKHOUSE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            # Leases/ConfigMaps must land in the tenant's d8-system; the pod's
+            # own namespace (vcp-<name>) does not exist in the tenant cluster.
+            - name: ADDON_OPERATOR_NAMESPACE
+              value: d8-system
+            - name: ADDON_OPERATOR_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ADDON_OPERATOR_LISTEN_PORT
+              value: "4222"
+            # No in-tenant Service can back the admission webhook, so the
+            # server is disabled (validation.yaml is skipped on selfHosted=false).
+            - name: ADDON_OPERATOR_ADMISSION_SERVER_ENABLED
+              value: "false"
+            - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
+              value: "4223"
+            - name: ADDON_OPERATOR_BATCHING_ENABLED
+              value: "true"
+            - name: ADDON_OPERATOR_CONFIG_MAP
+              value: deckhouse
+            - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
+              value: deckhouse_
+            - name: ADDON_OPERATOR_CRD_EXTRA_LABELS
+              value: heritage=deckhouse
+            - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
+              value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
+            - name: HELM_HOST
+              value: "127.0.0.1:44434"
+            - name: HELM_HISTORY_MAX
+              value: "3"
+            - name: LOG_LEVEL
+              value: Info
+            - name: LOG_TYPE
+              value: json
+            - name: GOGC
+              value: "50"
+            - name: KUBE_CLIENT_QPS
+              value: "-1"
+            - name: KUBE_CLIENT_BURST
+              value: "-1"
+            - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
+              value: "-1"
+            - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
+              value: "-1"
+            - name: HELM_MONITOR_KUBE_CLIENT_QPS
+              value: "-1"
+            - name: HELM_MONITOR_KUBE_CLIENT_BURST
+              value: "-1"
+            - name: DEBUG_HTTP_SERVER_ADDR
+              value: "127.0.0.1:9652"
+            - name: DOWNLOADED_MODULES_DIR
+              value: /deckhouse/downloaded/
+            - name: EXTERNAL_MODULES_DIR
+              value: /deckhouse/downloaded/
+            - name: MODULES_DIR
+              value: "/deckhouse/modules:/deckhouse/downloaded/modules"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: tmp
+              mountPath: /run
+            - name: kube
+              mountPath: /.kube
+            - name: downloaded
+              mountPath: /deckhouse/downloaded
+            - name: kubeconfig
+              mountPath: /kubeconfig.yaml
+              subPath: super-admin.conf
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+        - name: kube
+          emptyDir:
+            medium: Memory
+        # Downloadable modules are re-fetched after a pod restart; a PVC is a follow-up.
+        - name: downloaded
+          emptyDir: {}
+        - name: kubeconfig
+          secret:
+            secretName: d8-admin-kubeconfig-virtual
