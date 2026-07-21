@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 7,
+  "version": 8,
   "statements": [
     {
       "vulnerability": {
@@ -143,8 +143,190 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T09:13:33.071362Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-25681 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: XSS в golang.org/x/net/html требует разбора и рендера недоверенного HTML в браузерный пайплайн. kube-scheduler работает только с JSON/HTTP scheduling API и не вызывает html.Parse/ParseFragment/Render; x/net/html — транзитивный модуль monorepo, не входящий в execute path cmd/kube-scheduler.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-27136 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: класс XSS при путанице дерева HTML из-за дублирующихся атрибутов на пути parse→sanitize→render. Scheduler никогда не парсит и не рендерит HTML для браузеров; уязвимый код x/net/html не задействован в пути выполнения.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33814 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: DoS в HTTP/2-клиенте требует вредоносный HTTP/2-сервер с SETTINGS_MAX_FRAME_SIZE=0. Peer scheduler — доверенный cluster apiserver (client-go) и настроенные оператором in-cluster HTTPS extenders (Service DNS с CA), а не хосты, выбираемые атакующим; adversary не контролирует peer.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39821 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: обход IDNA требует ACL-проверку hostname и последующий ToASCII/ToUnicode с трактовкой результата как другого доверенного имени. Scheduler не реализует авторизацию по hostname ACL; хосты apiserver/extender — фиксированный kubeconfig и ASCII service DNS-имена, не IDN от атакующего.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39828 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: требуется SSH-сервер с PartialSuccessError и Permissions. kube-scheduler не запускает SSH-сервер; golang.org/x/crypto/ssh в upstream Kubernetes используется только в test/e2e и не линкуется в production scheduler.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39829 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: срабатывает при разборе/проверке RSA/DSA SSH-ключей от атакующего. Scheduler не принимает SSH-соединения и не парсит SSH public keys; пакет x/crypto/ssh в бинарник не входит.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39830 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: нужна установленная SSH client/server сессия с вредоносным peer, заливающим незапрошенные ответы на global-request. В execute path scheduler нет SSH-транспорта.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39831 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: затрагивает проверку FIDO/U2F (sk-*) SSH-подписей. Scheduler не проверяет SSH security-key подписи; код x/crypto/ssh в компоненте отсутствует.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39832 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: требуется проброс ключей в удалённый SSH agent с constraint-расширениями. Scheduler не использует golang.org/x/crypto/ssh/agent (как и для ранее задокументированных SSH-agent CVE на этом образе).",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39835 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: panic в SSH-сервере CertChecker при nil authority callbacks. Scheduler не является SSH-сервером и никогда не создаёт ssh.CertChecker.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42508 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: проверка host-key / @revoked CA у SSH-клиента через ssh/knownhosts. Scheduler аутентифицирует peer через Kubernetes TLS (kubeconfig / extender tlsConfig.caData), не через OpenSSH known_hosts.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46595 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: пропуск прав VerifiedPublicKeyCallback / mixed-auth у SSH-сервера. В kube-scheduler нет конфигурации и кода SSH-сервера.",
+      "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: panic в декодере AES-GCM SSH-пакетов против вредоносного SSH-peer. У scheduler нет SSH packet path — только TLS к apiserver и extenders.",
+      "timestamp": "2026-07-21T10:22:00Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-04-10T09:13:33Z"
+  "last_updated": "2026-07-21T10:22:00Z"
 }
