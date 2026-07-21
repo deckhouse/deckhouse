@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-965feae7158c81b99d9011ec6c79e82c8b8b4a7ae9dc9ea04a3e07a5218773a2",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 4,
+  "version": 5,
   "statements": [
     {
       "vulnerability": {
@@ -87,8 +87,190 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T09:10:58.12934Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-25681 невозможно эксплуатировать в kubeadm в рамках Deckhouse: XSS требует html.Parse/Render недоверенного HTML; kubeadm — CLI для certs/init/join и не выполняет parse→sanitize→render HTML.",
+      "timestamp": "2026-07-21T14:30:01.813723Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-27136 невозможно эксплуатировать в kubeadm в рамках Deckhouse: XSS с дублирующимися атрибутами требует tree-sanitizer + html.Render; kubeadm не парсит и не рендерит HTML для браузеров.",
+      "timestamp": "2026-07-21T14:30:01.835147Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33814 невозможно эксплуатировать в kubeadm в рамках Deckhouse: HTTP/2-клиент (client-go) обращается к операторскому/кластерному apiserver при init/join/upgrade, а не к произвольному вредоносному HTTP/2-серверу с SETTINGS_MAX_FRAME_SIZE=0; peer не контролируется атакующим.",
+      "timestamp": "2026-07-21T14:30:01.859641Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39821 невозможно эксплуатировать в kubeadm в рамках Deckhouse: idna используется транзитивно для нормализации хоста, но kubeadm не реализует ACL по hostname через ToASCII/ToUnicode; доверие строится на TLS/PKI и join credentials.",
+      "timestamp": "2026-07-21T14:30:01.879342Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39828 невозможно эксплуатировать в kubeadm в рамках Deckhouse: требуется SSH-сервер с PartialSuccessError и Permissions; kubeadm не запускает SSH-сервер, bootstrap идёт через certs/HTTPS API.",
+      "timestamp": "2026-07-21T14:30:01.898963Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39829 невозможно эксплуатировать в kubeadm в рамках Deckhouse: DoS от патологических RSA/DSA ключей требует SSH peer или разбор недоверенных SSH-ключей; kubeadm не ведёт SSH-сессий.",
+      "timestamp": "2026-07-21T14:30:01.919576Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39830 невозможно эксплуатировать в kubeadm в рамках Deckhouse: deadlock от незапрошенных global request responses возможен только при SSH-соединении; SSH client/server loop в kubeadm отсутствует.",
+      "timestamp": "2026-07-21T14:30:01.93795Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39831 невозможно эксплуатировать в kubeadm в рамках Deckhouse: проверка FIDO/U2F SSH-подписей (sk-*) не находится в execute path kubeadm.",
+      "timestamp": "2026-07-21T14:30:01.956353Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39832 невозможно эксплуатировать в kubeadm в рамках Deckhouse: agent forwarding и add-key с constraint extensions не используются; Deckhouse не задействует SSH agent в kubeadm.",
+      "timestamp": "2026-07-21T14:30:01.974305Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39835 невозможно эксплуатировать в kubeadm в рамках Deckhouse: panic CertChecker требует SSH-сервер; kubeadm не поднимает SSH и не использует ssh.CertChecker.",
+      "timestamp": "2026-07-21T14:30:01.992841Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42508 невозможно эксплуатировать в kubeadm в рамках Deckhouse: проверка @revoked CA SignatureKey относится к ssh/knownhosts; kubeadm доверяет хостам через Kubernetes TLS/PKI.",
+      "timestamp": "2026-07-21T14:30:02.010837Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-46595 невозможно эксплуатировать в kubeadm в рамках Deckhouse: требуется SSH-сервер с VerifiedPublicKeyCallback; kubeadm не реализует SSH-сервер.",
+      "timestamp": "2026-07-21T14:30:02.029272Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в kubeadm в рамках Deckhouse: panic AES-GCM SSH packet decoder возможен только при SSH-сессии; транспорт kubeadm — TLS к API, не SSH.",
+      "timestamp": "2026-07-21T14:30:02.0488Z"
     }
   ],
   "timestamp": "2025-10-09T09:57:48Z",
-  "last_updated": "2026-04-28T09:10:58Z"
+  "last_updated": "2026-07-21T14:30:02Z"
 }
