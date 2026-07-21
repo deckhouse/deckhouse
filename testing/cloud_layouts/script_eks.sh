@@ -239,7 +239,7 @@ spec:
 EOF
 )
 
-  echo $mc | KUBECONFIG=$kubectl_config_file kubectl apply -f -
+  echo "$mc" | KUBECONFIG=$kubectl_config_file kubectl apply -f -
 }
 
 # update_release_channel changes the release-channel image to given tag
