@@ -519,8 +519,6 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `bashible-apiserver-host-ip` | `Pod` (`app=bashible-apiserver`, `d8-cloud-instance-manager`) | `change_host_ip.go` | Record the node host IP into `node.deckhouse.io/initial-host-ip`; delete the Pod when the live `status.hostIP` diverges so it is recreated with a certificate valid for the new address |
 | `master-node-group` | `NodeGroup` (name `master` only; startup-enqueued) | `create_master_node_group.go` | Ensure the default `master` NodeGroup exists (create-if-not-exists); nodeType `Static` for a Static cluster, else `CloudPermanent`. Never patches an existing object |
 | `bashible-apiserver-lock` | `Deployment` (`bashible-apiserver`, `d8-cloud-instance-manager`) | `lock_bashible_apiserver.go` | Toggle the `node.deckhouse.io/bashible-locked` annotation on Secret `bashible-apiserver-context` (+ metric `d8_bashible_apiserver_locked`) while the apiserver Deployment rolls out to a new image |
-| `capi-webhook-cert` | `Service` (`capi-webhook-service`, `d8-cloud-instance-manager`; +watch `Secret`/`ValidatingWebhookConfiguration`/`MutatingWebhookConfiguration`) | `generate_capi_webhook_certs.go` | Issue the self-signed CA + serving cert into Secret `capi-webhook-tls` and inject the CA into the `capi-mutating`/`capi-validating-webhook-configuration` caBundles |
-| `bashible-apiserver-cert` | `Service` (`bashible-api`, `d8-cloud-instance-manager`; +watch `Secret`/`APIService`) | `gen_bashible_apiserver_certs.go` | Issue the self-signed CA + serving cert into Secret `bashible-api-server-tls` and inject the CA into the `v1alpha1.bashible.deckhouse.io` APIService caBundle |
 | `capi-cluster-resources` (kubeconfig, cloud half) | cloud-provider `Secret` (`d8-node-manager-cloud-provider`) | `generate_capi_kubeconfig.go` (**cloud CAPI half only**) | Issue the `capi-controller-manager` client cert and write the `<capiClusterName>-kubeconfig` Secret. The `static` (CAPS) kubeconfig stays owned by the hook — CAPS is not migrated |
 
 ### node-csi-taint (`internal/controller/csitaint`)
@@ -879,98 +877,6 @@ The metric `d8_bashible_apiserver_locked` feeds the `D8BashibleApiserverLocked` 
 (fires when `== 1` for 15m). RBAC: added cluster-wide `apps/deployments`
 `get`/`list`/`watch`; the Secret patch is already covered by the namespaced
 `bashible-context` Role in `d8-cloud-instance-manager`.
-
-### capi-webhook-cert (`internal/controller/capiwebhookcert`)
-
-Issues the serving certificate for the `capi-controller-manager` admission webhook and
-injects its CA into the two CAPI webhook configurations. Replaces the OnBeforeHelm
-`tls_certificate.RegisterInternalTLSHook` `generate_capi_webhook_certs.go`.
-
-```
-Reconcile (fixed key; any watched object funnels here)
-  ├─ Service capi-webhook-service absent → no-op (CAPI disabled)
-  ├─ ensureSecret(capi-webhook-tls):
-  │     stored CA+leaf still valid (both > 6mo left AND leaf SANs == desired) → reuse
-  │     else generate self-signed CA + leaf (ecdsa P256, 10y) → write kubernetes.io/tls Secret
-  ├─ inject CA into every webhook of capi-validating/​capi-mutating-webhook-configuration
-  │     (skip a config that does not exist yet; patch only when a caBundle differs)
-  └─ RequeueAfter 12h (bound renewal latency; the hook re-checked every OnBeforeHelm run)
-
-desired SANs = capi-webhook-service.d8-cloud-instance-manager{,.svc}{,.<clusterDomain>}
-  clusterDomain read from Secret kube-system/d8-cluster-configuration (default cluster.local)
-```
-
-**Parity note.** The hook generated the CA + leaf into helm values
-(`nodeManager.internal.capiControllerManagerWebhookCert`); helm then wrote the
-`capi-webhook-tls` Secret (`secret-tls.yaml`) and stamped every `clientConfig.caBundle`
-in `webhook.yaml`. nc cannot feed helm values, so it **owns the Secret directly** and
-**patches the caBundle** into the live webhook configurations. helm no longer renders a
-`caBundle` field in `webhook.yaml` at all (and `secret-tls.yaml` is removed): omitting the
-field keeps it out of helm's fieldset, so node-controller is the sole author and a converge
-never resets it — there is no caBundle flap. The controller still watches both
-configurations and re-injects within seconds if the field is ever cleared externally. The
-reuse check mirrors the hook's `isOutdatedCA` +
-`isIrrelevantCert`, so a valid cert is left untouched (zero-disruption on rollout). CAPI
-enablement is gated on the `capi-webhook-service` Service rather than on the webhook
-configurations: the configs carry a werf dependency on the `capi-controller-manager`
-Deployment being ready, which in turn mounts `capi-webhook-tls` — gating Secret creation
-on the configs would deadlock, while the Service is created early with no such dependency.
-The crypto is raw `crypto/x509` (node-controller does not import `go_lib/certificate`); the
-leaf carries `ServerAuth` so the API server accepts it when dialing the webhook Service.
-RBAC: added cluster-wide `admissionregistration.k8s.io`
-`validating`/`mutatingwebhookconfigurations` `get`/`list`/`watch`/`update`/`patch`; the
-Secret write is covered by the namespaced secrets Role in `d8-cloud-instance-manager`, and
-the Service + `d8-cluster-configuration` reads by the existing cluster-wide
-`services`/`secrets` rules.
-
-### bashible-apiserver-cert (`internal/controller/bashibleapiservercert`)
-
-Issues the serving certificate for the aggregated `bashible-apiserver` and injects its CA
-into the `v1alpha1.bashible.deckhouse.io` APIService. Replaces the OnBeforeHelm
-`gen_bashible_apiserver_certs.go`.
-
-```
-Reconcile (fixed key; any watched object funnels here)
-  ├─ Service bashible-api absent → no-op (bashible-apiserver not deployed)
-  ├─ ensureSecret(bashible-api-server-tls):
-  │     stored CA+leaf still valid (both > 6mo left AND leaf SANs == desired) → reuse
-  │     else generate self-signed CA + leaf (ecdsa P256, 10y) → write Opaque Secret
-  │        (keys ca.crt / apiserver.crt / apiserver.key)
-  ├─ inject CA into APIService v1alpha1.bashible.deckhouse.io spec.caBundle
-  │     (skip if the APIService does not exist yet; patch only when the caBundle differs)
-  └─ RequeueAfter 12h (bound renewal latency; the hook re-checked every OnBeforeHelm run)
-
-desired SANs = 127.0.0.1 (IP) + bashible-api.d8-cloud-instance-manager.svc (DNS), fixed
-```
-
-**Parity note.** The hook generated the CA + leaf into helm values
-(`nodeManager.internal.bashibleApiServer{CA,Crt,Key}`); helm then wrote the
-`bashible-api-server-tls` Secret (`api-server-tls-secret.yaml`) and stamped the APIService
-`spec.caBundle` (`apiservice.yaml`). nc cannot feed helm values, so it **owns the Secret
-directly** and **patches the caBundle** into the live APIService. helm no longer renders a
-`caBundle` field in `apiservice.yaml` at all (and `api-server-tls-secret.yaml` is removed):
-omitting the field keeps it out of helm's fieldset, so node-controller is the sole author
-and a converge never resets it — there is no caBundle flap. The controller still watches the
-Secret and the APIService and re-injects within seconds if the field is ever cleared
-externally. The reuse check keeps a valid cert untouched
-(zero-disruption on rollout). There is no enablement gate — bashible-apiserver is a core
-component and always deployed — so the reconcile simply anchors on the always-present
-Service `bashible-api`; nc does not depend on bashible-apiserver being up, so owning its
-serving Secret introduces no bootstrap deadlock (on a fresh cluster the bashible-apiserver
-pod mount-retries until nc has created the Secret). The crypto is raw `crypto/x509`
-(node-controller does not import `go_lib/certificate`); the leaf carries **no ExtKeyUsage**,
-mirroring the hook — cfssl mapped `signing`/`key encipherment` to KeyUsage bits and silently
-ignored the unknown `requestheader-client`, so the produced serving cert has no EKU
-extension and is valid for any purpose (the kube-aggregator accepts it as it dials the
-Service as a TLS client). The APIService is patched via `unstructured` because the
-kube-aggregator apiregistration types are not part of node-controller's scheme. RBAC: added
-cluster-wide `apiregistration.k8s.io` `apiservices` `get`/`list`/`watch`/`update`/`patch`;
-the Secret write is covered by the namespaced secrets Role in `d8-cloud-instance-manager`.
-**Blast radius:** the injected caBundle governs the node bootstrap path (bashible.sh reaches
-the aggregated API through kube-apiserver). Only the very first migration converge flaps the
-caBundle once — helm removes the previously templated caBundle before nc re-injects; steady
--state converges no longer touch the field (it is no longer in helm's fieldset), so there is
-no recurring flap.
 
 ### capi-controller-manager kubeconfig, cloud half (`internal/controller/capi`, `kubeconfig.go`)
 

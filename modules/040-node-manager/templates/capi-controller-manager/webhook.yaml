@@ -15,7 +15,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -38,7 +38,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -61,7 +61,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -84,7 +84,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -107,7 +107,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -130,7 +130,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -153,7 +153,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -176,7 +176,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -199,7 +199,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -234,7 +234,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -257,7 +257,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -280,7 +280,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -303,7 +303,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -326,7 +326,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -349,7 +349,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -373,7 +373,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -397,7 +397,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -420,7 +420,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -443,7 +443,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -466,7 +466,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -489,7 +489,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -513,7 +513,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      # caBundle is injected by node-controller (capi-webhook-cert), not helm.
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager

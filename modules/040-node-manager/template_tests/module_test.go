@@ -72,6 +72,10 @@ mcmEmergencyBrake: false
 
 const nodeManagerValues = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -88,6 +92,10 @@ internal:
 
 const nodeManagerAWS = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -152,6 +160,10 @@ internal:
 
 const nodeManagerAzure = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -234,6 +246,10 @@ internal:
 
 const nodeManagerGCP = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -288,6 +304,10 @@ internal:
 
 const nodeManagerOpenstack = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -373,6 +393,10 @@ internal:
 
 const nodeManagerVsphere = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -458,6 +482,10 @@ internal:
 
 const nodeManagerYandex = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -523,6 +551,10 @@ internal:
 
 const nodeManagerStatic = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -547,6 +579,10 @@ internal:
 const (
 	nodeManagerStaticInstances = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1641,6 +1677,10 @@ internal:
   capiControllerManagerEnabled: true
   bootstrapTokens:
     worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1799,6 +1839,10 @@ internal:
   capiControllerManagerEnabled: true
   bootstrapTokens:
     worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1949,6 +1993,10 @@ internal:
   capiControllerManagerEnabled: true
   bootstrapTokens:
     worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string

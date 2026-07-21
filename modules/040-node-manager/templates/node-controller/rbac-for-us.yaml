@@ -383,38 +383,6 @@ rules:
   - create
   - patch
   - update
-# Admission webhook configurations - inject the CA bundle into the CAPI mutating/validating
-# webhook configurations (capi-webhook-cert controller, taken over from the
-# generate_capi_webhook_certs hook). The capi-webhook-tls Secret it issues in
-# d8-cloud-instance-manager is written via the namespaced secrets Role below (the same
-# Role that grants the bashible-apiserver-context write); the webhook Service and the
-# cluster-configuration Secret are read via the cluster-wide services/secrets rules above.
-- apiGroups:
-  - admissionregistration.k8s.io
-  resources:
-  - validatingwebhookconfigurations
-  - mutatingwebhookconfigurations
-  verbs:
-  - get
-  - list
-  - watch
-  - update
-  - patch
-# APIServices - inject the CA bundle into the aggregated bashible APIService
-# (bashible-apiserver-cert controller, taken over from the gen_bashible_apiserver_certs
-# hook). The bashible-api-server-tls Secret it issues in d8-cloud-instance-manager is
-# written via the namespaced secrets Role below (the same Role that grants the
-# bashible-apiserver-context write).
-- apiGroups:
-  - apiregistration.k8s.io
-  resources:
-  - apiservices
-  verbs:
-  - get
-  - list
-  - watch
-  - update
-  - patch
 # CertificateSigningRequests - issue the kubernetes-api-proxy discovery client
 # cert (apiproxycert controller, taken over from the create_rbac_and_certificate
 # _for_kubernetes_api_proxy hook): create + self-approve on the kube-apiserver

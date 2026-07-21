@@ -20,7 +20,14 @@ import (
 	"github.com/deckhouse/deckhouse/testing/helm"
 )
 
-// setBashibleAPIServerTLSValues is a no-op: node-controller (the bashible-apiserver-cert
-// controller) now owns the bashible-api-server-tls Secret and injects the APIService
-// caBundle at runtime, so helm no longer consumes any bashibleApiServer* values.
-func setBashibleAPIServerTLSValues(_ *helm.Config) {}
+const (
+	bashibleAPIServerCA  = "meapiserverca"
+	bashibleAPIServerCrt = "meapiservercrt"
+	bashibleAPIServerKey = "meapiserverprivkey"
+)
+
+func setBashibleAPIServerTLSValues(f *helm.Config) {
+	f.ValuesSet("nodeManager.internal.bashibleApiServerCA", bashibleAPIServerCA)
+	f.ValuesSet("nodeManager.internal.bashibleApiServerCrt", bashibleAPIServerCrt)
+	f.ValuesSet("nodeManager.internal.bashibleApiServerKey", bashibleAPIServerKey)
+}

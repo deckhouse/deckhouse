@@ -7,6 +7,24 @@ properties:
     default: {}
     properties:
 
+      capiControllerManagerWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       capsControllerManagerWebhookCert:
         type: object
         default: { }
@@ -174,6 +192,25 @@ properties:
                     type: string
                   value:
                     type: string
+
+      bashibleApiServerCA:
+        type: string
+        x-examples:
+          - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+        description: |
+          CA certificate for API server used by bashible.
+      bashibleApiServerCrt:
+        type: string
+        x-examples:
+          - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+        description: |
+          Certificate for API server used by bashible.
+      bashibleApiServerKey:
+        type: string
+        x-examples:
+          - LS0tcHJpdmtleS0tLSBhYWFxcXEgLS1lbmQgcHJpdmtleS0tLQo=
+        description: |
+          Private key for API server used by bashible.
 
       bootstrapTokens:
         type: object
