@@ -1,6 +1,6 @@
-{{- $containerd_versions := list "1.7.32" "2.1.8" }}
-{{- $runc_versions := list "1.3.5" }}
-{{- $containerd2runc := dict "1.7.32" "1.3.5" "2.1.8" "1.3.5" }}
+{{- $containerd_versions := list "1.7.34" "2.1.9" }}
+{{- $runc_versions := list "1.3.6" }}
+{{- $containerd2runc := dict "1.7.34" "1.3.6" "2.1.9" "1.3.6" }}
 {{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "0" }} # may be redefine in CSE
 
 # calculate additional build options for containerd
