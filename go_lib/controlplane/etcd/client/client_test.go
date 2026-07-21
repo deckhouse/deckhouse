@@ -76,6 +76,10 @@ func (f *fakeClient) MemberPromote(_ context.Context, id uint64) (*clientv3.Memb
 	return &clientv3.MemberPromoteResponse{}, nil
 }
 
+func (f *fakeClient) GetMemberID(_ context.Context, _ string) (uint64, error) {
+	return 0, nil
+}
+
 func (f *fakeClient) CheckClusterHealthy(_ context.Context, _ time.Duration) error {
 	return nil
 }

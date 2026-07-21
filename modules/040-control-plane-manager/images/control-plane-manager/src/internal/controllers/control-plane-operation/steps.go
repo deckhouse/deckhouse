@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -180,12 +181,22 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 		return StepResult{}, fmt.Errorf("ensure admin kubeconfig: %w", err)
 	}
 
-	needsJoin, err := etcdNeedsJoin(env.Node, constants.KubernetesPkiPath, kubeconfigDir)
+	cls, err := classifyEtcdState(env.Node, constants.KubernetesPkiPath, kubeconfigDir)
 	if err != nil {
-		return StepResult{}, fmt.Errorf("check etcd join need: %w", err)
+		return StepResult{}, fmt.Errorf("classify etcd state: %w", err)
 	}
-	if !needsJoin {
-		logger.Info("etcd already in cluster, syncing manifest to desired state")
+
+	switch cls.state {
+	case etcdNameConflict:
+		// Fail closed with a plain error (requeue): a member with our node name is registered under a different peer URL (node IP change?).
+		// Auto-joining would add a duplicate and strand the old voter, changing quorum.
+		// The operation stays visibly stuck with this message until an operator performs an explicit member replacement.
+		return StepResult{}, fmt.Errorf("etcd member %q already registered with a different peer URL (node IP change?): manual member replacement required", env.Node.Name)
+
+	case etcdJoined:
+		// Member registered and local etcd bootstrapped: etcd ignores --initial-cluster on restart, so the self-only manifest from syncFullManifest is safe.
+		// Promote our own member only if it is still a learner (a previous join added it but never promoted it).
+		logger.Info("etcd already in cluster, syncing manifest and ensuring promotion")
 		annotations := buildSyncManifestAnnotations(op)
 		results, err := syncFullManifest(op.Spec.Component, env.Secrets.CPMData, annotations, env.Node)
 		if err != nil {
@@ -196,13 +207,32 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 		if !hasChangedFiles(results) {
 			logger.Info("sync manifests no-op: desired content already on disk")
 		}
+		if cls.isLearner {
+			if err := etcd.PromoteMember(env.Node.AdvertiseIP, etcd.WithCertificatesDir(constants.KubernetesPkiPath)); err != nil {
+				logger.Error("failed to promote own etcd member", log.Err(err))
+				return StepResult{}, fmt.Errorf("promote own etcd member: %w", err)
+			}
+		}
 		return StepResult{Outcome: OutcomeCompleted}, nil
+
+	case etcdOrphan, etcdNeedsJoin:
+		// Orphan cleanup happens only here, for the explicitly classified state, so a concurrently starting etcd data dir is never deleted.
+		if cls.state == etcdOrphan {
+			logger.Info("etcd orphan: cleaning stale data dir before rejoin")
+			if err := cleanupEtcdDataDir(); err != nil {
+				logger.Error("failed to cleanup etcd data dir", log.Err(err))
+				return StepResult{}, fmt.Errorf("cleanup etcd data dir: %w", err)
+			}
+		}
+		logger.Info("etcd needs join, executing idempotent join flow")
+		if err := reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger); err != nil {
+			return StepResult{}, err
+		}
+		return StepResult{Outcome: OutcomeCompleted}, nil
+
+	default:
+		return StepResult{}, fmt.Errorf("unknown etcd join state: %d", cls.state)
 	}
-	logger.Info("etcd needs join, executing join flow")
-	if err := reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger); err != nil {
-		return StepResult{}, err
-	}
-	return StepResult{Outcome: OutcomeCompleted}, nil
 }
 
 // syncManifestsStep writes the static pod manifest (or patches annotations for PKI-only updates).

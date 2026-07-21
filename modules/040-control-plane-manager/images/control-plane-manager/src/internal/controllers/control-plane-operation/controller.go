@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
@@ -329,12 +328,15 @@ func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOpe
 		if err != nil || !manifestMatches {
 			return manifestMatches, err
 		}
-		peerURL := etcd.GetPeerURL(r.node.AdvertiseIP)
-		memberExists, err := checkEtcdMemberExists(r.node.Name, peerURL, constants.KubernetesPkiPath, r.node.KubeconfigDir)
+		cls, err := classifyEtcdState(r.node, constants.KubernetesPkiPath, r.node.KubeconfigDir)
 		if err != nil {
 			return false, err
 		}
-		return memberExists, nil
+		if cls.state == etcdNameConflict {
+			return false, fmt.Errorf("etcd member %q already registered with a different peer URL (node IP change?): manual member replacement required", r.node.Name)
+		}
+		// The join is committed only when our member is a voting member (not a learner) with a bootstrapped data dir. A learner/interrupted/fresh/orphan state re-runs join+promote.
+		return cls.state == etcdJoined && !cls.isLearner, nil
 	default:
 		return false, nil
 	}
