@@ -31,6 +31,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/kubeletcsrapprover"
 	_ "github.com/deckhouse/node-controller/internal/controller/machinesetrevision"
 	_ "github.com/deckhouse/node-controller/internal/controller/ngconfigmetrics"
+	_ "github.com/deckhouse/node-controller/internal/controller/nodebootstrap"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodeconfig"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"

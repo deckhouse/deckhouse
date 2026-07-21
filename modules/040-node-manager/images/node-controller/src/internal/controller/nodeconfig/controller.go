@@ -154,16 +154,9 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 	return ctrl.Result{}, r.reconcileDisruption(ctx, ng, node, existing, logger)
 }
 
-// kubernetesVersion is the version the group's kubelet must match. It is
-// derived from the cluster configuration rather than read from the group's
-// status, which is only filled once the group has bashible-managed nodes.
+// kubernetesVersion is the version the group's kubelet must match.
 func (r *Reconciler) kubernetesVersion(ctx context.Context, ng *v1.NodeGroup) string {
-	// Compute reports the version even when it fails on a later step.
-	derived, _ := r.derived.Compute(ctx, ng)
-	if derived.KubernetesVersion != "" {
-		return derived.KubernetesVersion
-	}
-	return ng.Status.KubernetesVersion
+	return resolveKubernetesVersion(ctx, r.derived, ng)
 }
 
 // apply creates the object or patches it when the rendered spec drifted. The

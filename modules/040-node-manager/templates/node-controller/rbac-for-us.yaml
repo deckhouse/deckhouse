@@ -266,6 +266,32 @@ rules:
   - patch
   - update
   - delete
+# NodeBootstrapConfigs and their templates - the CAPI bootstrap provider for
+# immutable NodeGroups. The MachineSet clones a config per Machine; the
+# node-bootstrap controller renders that machine's userdata into a Secret (create
+# is covered by the namespaced d8-cloud-instance-manager secret Role below) and
+# writes the v1beta2 bootstrap contract into status.
+- apiGroups:
+  - bootstrap.deckhouse.io
+  resources:
+  - nodebootstrapconfigs
+  - nodebootstrapconfigtemplates
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - bootstrap.deckhouse.io
+  resources:
+  - nodebootstrapconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
 # Instance lifecycle and status reconciliation
 - apiGroups:
   - deckhouse.io

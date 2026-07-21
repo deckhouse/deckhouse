@@ -35,6 +35,9 @@ const (
 	InstanceCRDFile      NodeManagerCRDFile = "instance.yaml"
 	NodeConfigCRDFile    NodeManagerCRDFile = "nodeconfig.yaml"
 	NodeOperationCRDFile NodeManagerCRDFile = "nodeoperation.yaml"
+
+	NodeBootstrapConfigCRDFile         NodeManagerCRDFile = "nodebootstrapconfig.yaml"
+	NodeBootstrapConfigTemplateCRDFile NodeManagerCRDFile = "nodebootstrapconfigtemplate.yaml"
 )
 
 func ControllerCRDPaths(crds ...ControllerCRDFile) []string {
@@ -108,6 +111,14 @@ func WithNodeConfigCRDFile() crdOpt {
 
 func WithNodeOperationCRDFile() crdOpt {
 	return WithNodeManager(NodeOperationCRDFile)
+}
+
+func WithNodeBootstrapConfigCRDFile() crdOpt {
+	return WithNodeManager(NodeBootstrapConfigCRDFile)
+}
+
+func WithNodeBootstrapConfigTemplateCRDFile() crdOpt {
+	return WithNodeManager(NodeBootstrapConfigTemplateCRDFile)
 }
 
 func CRDPaths(opts ...crdOpt) []string {
