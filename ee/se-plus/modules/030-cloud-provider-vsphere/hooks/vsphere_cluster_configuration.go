@@ -109,6 +109,13 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 		p.Provider.Insecure = m.Insecure
 	}
 
+	if m.CaBundle != nil {
+		if p.Provider == nil {
+			p.Provider = &v1.VsphereProvider{}
+		}
+		p.Provider.CaBundle = m.CaBundle
+	}
+
 	if m.RegionTagCategory != nil {
 		p.RegionTagCategory = m.RegionTagCategory
 	}

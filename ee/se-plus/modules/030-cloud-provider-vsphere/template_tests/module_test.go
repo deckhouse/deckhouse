@@ -16,6 +16,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -286,6 +287,186 @@ const moduleValuesHybrid = `
           replicas: 1
 `
 
+const caBundlePEM = `-----BEGIN CERTIFICATE-----
+dGVzdC1jYS1idW5kbGU=
+-----END CERTIFICATE-----
+`
+
+const nsxtCABundlePEM = `-----BEGIN CERTIFICATE-----
+dGVzdC1uc3h0LWNhLWJ1bmRsZQ==
+-----END CERTIFICATE-----
+`
+
+// Provider uses caBundle instead of insecure (mirrors moduleValuesA otherwise).
+const moduleValuesProviderCABundle = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        datacenter: X1
+        zones: ["aaa", "bbb"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          caBundle: |
+            -----BEGIN CERTIFICATE-----
+            dGVzdC1jYS1idW5kbGU=
+            -----END CERTIFICATE-----
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        masterNodeGroup:
+          instanceClass:
+            datastore: dev/lun_1
+            mainNetwork: k8s-msk/test_187
+            memory: 8192
+            numCPUs: 4
+            template: dev/golden_image
+          replicas: 1
+`
+
+// NSX-T uses caBundle instead of insecureFlag; provider stays on insecure.
+// Provider uses both caBundle and insecure: true (caBundle must be ignored).
+const moduleValuesProviderCABundleInsecure = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        datacenter: X1
+        zones: ["aaa", "bbb"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+          caBundle: |
+            -----BEGIN CERTIFICATE-----
+            dGVzdC1jYS1idW5kbGU=
+            -----END CERTIFICATE-----
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        masterNodeGroup:
+          instanceClass:
+            datastore: dev/lun_1
+            mainNetwork: k8s-msk/test_187
+            memory: 8192
+            numCPUs: 4
+            template: dev/golden_image
+          replicas: 1
+`
+
+const moduleValuesNsxtCABundle = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        zones: ["aaa", "bbb"]
+        datacenter: X1
+        resourcePoolPath: kubernetes-dev
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        externalNetworkNames: ["aaa", "bbb"]
+        internalNetworkNames: ["ccc", "ddd"]
+        nsxt:
+          defaultIpPoolName: main
+          defaultTcpAppProfileName: default-tcp-lb-app-profile
+          defaultUdpAppProfileName: default-udp-lb-app-profile
+          size: SMALL
+          tier1GatewayPath: /host/tier1
+          user: user
+          password: password
+          host: 1.2.3.4
+          caBundle: |
+            -----BEGIN CERTIFICATE-----
+            dGVzdC1uc3h0LWNhLWJ1bmRsZQ==
+            -----END CERTIFICATE-----
+`
+
+// NSX-T uses both caBundle and insecureFlag: true (caBundle must be ignored).
+const moduleValuesNsxtCABundleInsecure = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        zones: ["aaa", "bbb"]
+        datacenter: X1
+        resourcePoolPath: kubernetes-dev
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        externalNetworkNames: ["aaa", "bbb"]
+        internalNetworkNames: ["ccc", "ddd"]
+        nsxt:
+          defaultIpPoolName: main
+          defaultTcpAppProfileName: default-tcp-lb-app-profile
+          defaultUdpAppProfileName: default-udp-lb-app-profile
+          size: SMALL
+          tier1GatewayPath: /host/tier1
+          user: user
+          password: password
+          host: 1.2.3.4
+          insecureFlag: true
+          caBundle: |
+            -----BEGIN CERTIFICATE-----
+            dGVzdC1uc3h0LWNhLWJ1bmRsZQ==
+            -----END CERTIFICATE-----
+`
+
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -319,6 +500,26 @@ const tolerationsAnyNodeWithUninitialized = `
 - key: node.kubernetes.io/network-unavailable`
 
 const moduleNamespace = "d8-cloud-provider-vsphere"
+
+// vsphereModulesImages returns module images with the vsphere digests explicitly
+// populated for Kubernetes 1.32. Some earlier specs mutate the shared
+// library.DefaultImagesDigests map in place, so we can not rely on GetModulesImages()
+// keeping the 1.32 image keys intact.
+func vsphereModulesImages() map[string]interface{} {
+	images := GetModulesImages()
+	if images["digests"] == nil {
+		images["digests"] = make(map[string]interface{})
+	}
+	digests := images["digests"].(map[string]interface{})
+	digests["cloudProviderVsphere"] = map[string]interface{}{
+		"cloudControllerManager132": "sha256:ccm132digest",
+		"cloudDataDiscoverer":       "sha256:cdddigest",
+		"vsphereCsiPlugin132":       "sha256:csiplugin132digest",
+		"vsphereCsiPluginLegacy":    "sha256:csipluginlegacydigest",
+		"terraformManager":          "sha256:terraformdigest",
+	}
+	return images
+}
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -811,6 +1012,310 @@ vcenter:
     - X1
     server: myhost
 `))
+		})
+	})
+
+	Context("Vsphere with provider caBundle specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSet("global.modulesImages", vsphereModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesProviderCABundle)
+			f.HelmRender()
+		})
+
+		It("Creates the vsphere-ca-certs secret with the provider CA", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			caSecret := f.KubernetesResource("Secret", moduleNamespace, "vsphere-ca-certs")
+			Expect(caSecret.Exists()).To(BeTrue())
+			Expect(caSecret.Field("type").String()).To(Equal("Opaque"))
+
+			caCrt, err := base64.StdEncoding.DecodeString(caSecret.Field("data").Get("ca\\.crt").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(caCrt)).To(Equal(caBundlePEM))
+
+			// The nsxt CA key must be absent when only the provider CA is set.
+			Expect(caSecret.Field("data").Get("ca-nsxt\\.crt").Exists()).To(BeFalse())
+		})
+
+		It("Uses caFile and disables insecure in the CCM cloud-config", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmSecret.Exists()).To(BeTrue())
+
+			cloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(cloudConfig)).To(ContainSubstring(`caFile: "/etc/vsphere-certs/ca.crt"`))
+			Expect(string(cloudConfig)).To(ContainSubstring("insecureFlag: false"))
+		})
+
+		It("Uses ca-file and disables insecure-flag in the CSI cloud-config", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiSecret := f.KubernetesResource("Secret", moduleNamespace, "csi-controller")
+			Expect(csiSecret.Exists()).To(BeTrue())
+
+			cloudConfig, err := base64.StdEncoding.DecodeString(csiSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(cloudConfig)).To(ContainSubstring(`ca-file = "/etc/vsphere-certs/ca.crt"`))
+			Expect(string(cloudConfig)).To(ContainSubstring("insecure-flag = false"))
+		})
+
+		It("Mounts the CA secret into the CCM deployment", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeploy := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeploy.Exists()).To(BeTrue())
+
+			volumes := ccmDeploy.Field("spec.template.spec.volumes").String()
+			Expect(volumes).To(ContainSubstring("vsphere-ca-certs"))
+
+			podAnnotations := ccmDeploy.Field("spec.template.metadata.annotations").String()
+			Expect(podAnnotations).To(ContainSubstring("checksum/ca"))
+		})
+
+		It("Mounts the CA into the CSI controller as a file, not a directory", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiDeploy := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			Expect(csiDeploy.Exists()).To(BeTrue())
+
+			mounts := csiDeploy.Field("spec.template.spec.containers").String()
+			Expect(mounts).To(ContainSubstring("/etc/vsphere-certs/ca.crt"))
+			Expect(mounts).NotTo(MatchRegexp(`"mountPath":\s*"/etc/vsphere-certs"`))
+		})
+
+		It("Passes GOVMOMI_CA_BUNDLE to the cloud-data-discoverer and disables insecure", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cddDeploy := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddDeploy.Exists()).To(BeTrue())
+			Expect(cddDeploy.Field("spec.template.spec.containers.0.env").String()).To(ContainSubstring("GOVMOMI_CA_BUNDLE"))
+
+			cddSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddSecret.Exists()).To(BeTrue())
+			insecure, err := base64.StdEncoding.DecodeString(cddSecret.Field("data.insecure").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(insecure)).To(Equal("false"))
+		})
+
+		It("Puts caBundle and disables insecure in the node-manager registration secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// The registration secret feeds nodeManager.internal.cloudProvider.vsphere
+			// via the node-manager discover_cloud_provider hook. The caBundle must be
+			// present here, otherwise it never reaches the machine-controller-manager secret.
+			expectedProviderRegistrationJSON := fmt.Sprintf(`{
+          "server": "myhost",
+          "insecure": false,
+          "caBundle": %q,
+          "password": "myPaSsWd",
+          "region": "myreg",
+          "regionTagCategory": "myregtagcat",
+          "instanceClassDefaults": {
+            "datastore": "dev/lun_1",
+            "template": "dev/golden_image",
+            "disableTimesync": true
+          },
+          "instances": {
+            "mainNetwork": "k8s-msk/test_187"
+          },
+          "sshKey": "mysshkey1",
+          "username": "myuname",
+          "vmFolderPath": "dev/test",
+          "zoneTagCategory": "myzonetagcat"
+        }`, caBundlePEM)
+
+			for _, secretName := range []string{"d8-node-manager-cloud-provider", "d8-node-manager-cloud-provider-vsphere"} {
+				secret := f.KubernetesResource("Secret", "kube-system", secretName)
+				Expect(secret.Exists()).To(BeTrue())
+
+				data, err := base64.StdEncoding.DecodeString(secret.Field("data.vsphere").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(data)).To(MatchJSON(expectedProviderRegistrationJSON))
+			}
+		})
+
+		It("Renders the machine-controller-manager config template that consumes caBundle", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// config-for-machine-controller-manager.yaml is stored verbatim (AsSecrets does
+			// not run tpl) and rendered later by node-manager with nodeManager values. Assert
+			// the template reads caBundle/insecure from those values so the fix survives.
+			mcmSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-mcm", providerID))
+			Expect(mcmSecret.Exists()).To(BeTrue())
+
+			mcmConfig, err := base64.StdEncoding.DecodeString(
+				mcmSecret.Field("data").Get("config-for-machine-controller-manager\\.yaml").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(mcmConfig)).To(ContainSubstring(".Values.nodeManager.internal.cloudProvider.vsphere.caBundle"))
+			Expect(string(mcmConfig)).To(ContainSubstring(".Values.nodeManager.internal.cloudProvider.vsphere.insecure"))
+		})
+	})
+
+	Context("Vsphere with NSX-T caBundle specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSet("global.modulesImages", vsphereModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesNsxtCABundle)
+			f.HelmRender()
+		})
+
+		It("Creates the vsphere-ca-certs secret with the nsxt CA", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			caSecret := f.KubernetesResource("Secret", moduleNamespace, "vsphere-ca-certs")
+			Expect(caSecret.Exists()).To(BeTrue())
+
+			caNsxt, err := base64.StdEncoding.DecodeString(caSecret.Field("data").Get("ca-nsxt\\.crt").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(caNsxt)).To(Equal(nsxtCABundlePEM))
+
+			// Provider CA is not configured here, so its key must be absent.
+			Expect(caSecret.Field("data").Get("ca\\.crt").Exists()).To(BeFalse())
+		})
+
+		It("Uses nsxt caFile and disables nsxt insecureFlag in the CCM cloud-config", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+			cloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(cloudConfig)).To(ContainSubstring(`caFile: "/etc/vsphere-certs/ca-nsxt.crt"`))
+		})
+	})
+
+	Context("Vsphere without any caBundle", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSet("global.modulesImages", vsphereModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
+			f.HelmRender()
+		})
+
+		It("Does not create the vsphere-ca-certs secret and keeps insecure", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Secret", moduleNamespace, "vsphere-ca-certs").Exists()).To(BeFalse())
+
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+			cloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(cloudConfig)).To(ContainSubstring("insecureFlag: true"))
+			Expect(string(cloudConfig)).ToNot(ContainSubstring("caFile"))
+		})
+
+		It("Does not add caBundle to the node-manager registration secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Without a caBundle the blob must stay unchanged (no empty caBundle key),
+			// so existing clusters are not mutated and insecure is preserved.
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(secret.Exists()).To(BeTrue())
+
+			data, err := base64.StdEncoding.DecodeString(secret.Field("data.vsphere").String())
+			Expect(err).ShouldNot(HaveOccurred())
+
+			var blob map[string]interface{}
+			Expect(json.Unmarshal(data, &blob)).To(Succeed())
+			_, hasCABundle := blob["caBundle"]
+			Expect(hasCABundle).To(BeFalse())
+			Expect(blob["insecure"]).To(BeTrue())
+		})
+	})
+
+	Context("Vsphere with provider caBundle and insecure: true (ignores caBundle)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSet("global.modulesImages", vsphereModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesProviderCABundleInsecure)
+			f.HelmRender()
+		})
+
+		It("Does not create the vsphere-ca-certs secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Secret", moduleNamespace, "vsphere-ca-certs").Exists()).To(BeFalse())
+		})
+
+		It("Keeps insecureFlag: true and omits caFile in the CCM cloud-config", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+			cloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(cloudConfig)).To(ContainSubstring("insecureFlag: true"))
+			Expect(string(cloudConfig)).ToNot(ContainSubstring("caFile"))
+		})
+
+		It("Keeps insecure-flag and omits ca-file in the CSI cloud-config", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiSecret := f.KubernetesResource("Secret", moduleNamespace, "csi-controller")
+			cloudConfig, err := base64.StdEncoding.DecodeString(csiSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(cloudConfig)).To(ContainSubstring("insecure-flag = 1"))
+			Expect(string(cloudConfig)).ToNot(ContainSubstring("ca-file"))
+		})
+
+		It("Omits GOVMOMI_CA_BUNDLE env from the CDD deployment and keeps insecure", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cddDeploy := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddDeploy.Exists()).To(BeTrue())
+			env := cddDeploy.Field("spec.template.spec.containers.0.env").String()
+			Expect(env).To(ContainSubstring("GOVMOMI_INSECURE"))
+			Expect(env).ToNot(ContainSubstring("GOVMOMI_CA_BUNDLE"))
+
+			cddSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-data-discoverer")
+			insecure, err := base64.StdEncoding.DecodeString(cddSecret.Field("data.insecure").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(insecure)).To(Equal("true"))
+		})
+
+		It("Omits caBundle and keeps insecure in the node-manager registration secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(secret.Exists()).To(BeTrue())
+
+			data, err := base64.StdEncoding.DecodeString(secret.Field("data.vsphere").String())
+			Expect(err).ShouldNot(HaveOccurred())
+
+			var blob map[string]interface{}
+			Expect(json.Unmarshal(data, &blob)).To(Succeed())
+			_, hasCABundle := blob["caBundle"]
+			Expect(hasCABundle).To(BeFalse())
+			Expect(blob["insecure"]).To(BeTrue())
+		})
+	})
+
+	Context("Vsphere with NSX-T caBundle and insecureFlag: true (ignores caBundle)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSet("global.modulesImages", vsphereModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesNsxtCABundleInsecure)
+			f.HelmRender()
+		})
+
+		It("Does not create the vsphere-ca-certs secret (both provider and nsxt CA are ignored)", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Secret", moduleNamespace, "vsphere-ca-certs").Exists()).To(BeFalse())
+		})
+
+		It("Omits nsxt caFile and sets nsxt insecureFlag in the CCM cloud-config", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+			cloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(cloudConfig)).ToNot(ContainSubstring("nsxt caFile"))
+			Expect(string(cloudConfig)).To(ContainSubstring("insecureFlag: true"))
 		})
 	})
 })

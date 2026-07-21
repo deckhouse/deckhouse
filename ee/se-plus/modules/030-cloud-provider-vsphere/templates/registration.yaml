@@ -23,7 +23,12 @@ machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
 {{- $_ := set $vsphereValues "server" $providerClusterConfiguration.provider.server }}
 {{- $_ := set $vsphereValues "username" $providerClusterConfiguration.provider.username }}
 {{- $_ := set $vsphereValues "password" $providerClusterConfiguration.provider.password  }}
-{{- $_ := set $vsphereValues "insecure" $providerClusterConfiguration.provider.insecure }}
+{{- if eq (include "vsphere_has_provider_caBundle" $context) "true" }}
+  {{- $_ := set $vsphereValues "insecure" false }}
+  {{- $_ := set $vsphereValues "caBundle" $providerClusterConfiguration.provider.caBundle }}
+{{- else }}
+  {{- $_ := set $vsphereValues "insecure" $providerClusterConfiguration.provider.insecure }}
+{{- end }}
 {{- $_ := set $vsphereValues "regionTagCategory" $providerClusterConfiguration.regionTagCategory }}
 {{- $_ := set $vsphereValues "zoneTagCategory" $providerClusterConfiguration.zoneTagCategory }}
 {{- $_ := set $vsphereValues "region" $providerClusterConfiguration.region }}

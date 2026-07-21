@@ -47,12 +47,29 @@
 - name: vsphere-csi-config-volume
   secret:
     secretName: csi-controller
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+- name: vsphere-ca-cert
+  secret:
+    secretName: vsphere-ca-certs
+{{- end }}
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
 - mountPath: /etc/cloud
   name: vsphere-csi-config-volume
   readOnly: true
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+- mountPath: /etc/vsphere-certs/ca.crt
+  name: vsphere-ca-cert
+  readOnly: true
+  subPath: ca.crt
+{{- end }}
+{{- end }}
+
+{{- define "csi_controller_pod_annotations" }}
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+ca-bundle-checksum: {{ include (print .Template.BasePath "/ca-secret.yaml") . | sha256sum }}
+{{- end }}
 {{- end }}
 
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
@@ -70,6 +87,7 @@
 {{- $_ := set $csiControllerConfig "additionalSyncerEnvs" (include "csi_syncer_envs" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalCsiControllerPodAnnotations" (include "csi_controller_pod_annotations" . | fromYaml) }}
 {{- $_ := set $csiControllerConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
 {{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
@@ -108,12 +126,29 @@
 - name: vsphere-csi-config-volume
   secret:
     secretName: csi-controller
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+- name: vsphere-ca-cert
+  secret:
+    secretName: vsphere-ca-certs
+{{- end }}
 {{- end }}
 
 {{- define "csi_node_volume_mounts" }}
 - mountPath: /etc/cloud
   name: vsphere-csi-config-volume
   readOnly: true
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+- mountPath: /etc/vsphere-certs/ca.crt
+  name: vsphere-ca-cert
+  readOnly: true
+  subPath: ca.crt
+{{- end }}
+{{- end }}
+
+{{- define "csi_node_pod_annotations" }}
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+ca-bundle-checksum: {{ include (print .Template.BasePath "/ca-secret.yaml") . | sha256sum }}
+{{- end }}
 {{- end }}
 
 {{- define "csi_node_registrar_liveness_exec_probes_command" }}
@@ -136,6 +171,7 @@
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalCsiNodePodAnnotations" (include "csi_node_pod_annotations" . | fromYaml) }}
   {{- $_ := set $csiNodeConfig "additionalNodeLivenessProbesCmd" (include "csi_node_registrar_liveness_exec_probes_command" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 

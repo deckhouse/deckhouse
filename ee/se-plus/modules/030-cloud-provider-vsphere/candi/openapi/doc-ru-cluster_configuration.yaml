@@ -223,6 +223,11 @@ apiVersions:
               description: Пароль.
             insecure:
               description:  Установите `true`, если vCenter использует самоподписанный сертификат.
+            caBundle:
+              type: string
+              description: |
+                Цепочка сертификатов центра сертификации в формате PEM для проверки TLS-сертификата vCenter.
+                Используйте вместо `insecure`, если vCenter использует собственный/корпоративный центр сертификации.
         nsxt:
           description: |
             Поддержка cloud controller manager'ом балансировщиков (LoadBalancer) в Vsphere через NSX-T.
@@ -254,6 +259,11 @@ apiVersions:
             insecureFlag:
               description: |
                 Должен быть установлен в `true`, если NSX-T использует самоподписанный сертификат.
+            caBundle:
+              type: string
+              description: |
+                Цепочка сертификатов центра сертификации в формате PEM для проверки TLS-сертификата NSX-T.
+                Используйте вместо `insecureFlag`, если NSX-T использует собственный/корпоративный центр сертификации.
             loadBalancerClass:
               description: |
                 Дополнительная секция, определяющая классы балансировщика (LoadBalancer Class) (чтобы использовать класс, установите аннотацию `loadbalancer.vmware.io/class: <ИМЯ КЛАССА>` на SVC).
