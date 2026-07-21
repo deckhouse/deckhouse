@@ -18,6 +18,7 @@ package applicationpackageversion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
@@ -37,6 +38,66 @@ import (
 
 func TestControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(ControllerTestSuite))
+}
+
+func TestSetPackageSchemaPreservesXUI(t *testing.T) {
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	rawSchema := []byte(`
+type: object
+properties:
+  groups:
+    type: array
+    items:
+      type: string
+    x-ui:
+      label:
+        en: Groups
+        ru: Группы
+      widget:
+        name: ResourceSelect
+        foreignResources:
+          - name: groups.deckhouse.io
+            source:
+              optionValuePath: spec.name
+        props:
+          allowCreate: false
+          filterable: true
+          multiple: true
+  legacyGroup:
+    type: string
+    deprecated: true
+    x-ui:
+      display: hide-field
+`)
+
+	require.NoError(t, setPackageSchema(apv, schemaTypeSettings, rawSchema))
+	require.NotNil(t, apv.Status.PackageSchemas)
+	require.NotNil(t, apv.Status.PackageSchemas.SettingsSchema)
+	require.NotNil(t, apv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema)
+
+	groups := apv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties["groups"]
+	require.NotNil(t, groups.XUI)
+
+	var ui map[string]any
+	require.NoError(t, json.Unmarshal(groups.XUI.Raw, &ui))
+	widget, ok := ui["widget"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "ResourceSelect", widget["name"])
+	props, ok := widget["props"].(map[string]any)
+	require.True(t, ok)
+	allowCreate, ok := props["allowCreate"].(bool)
+	require.True(t, ok)
+	require.False(t, allowCreate)
+	foreignResources, ok := widget["foreignResources"].([]any)
+	require.True(t, ok)
+	require.Len(t, foreignResources, 1)
+	resource, ok := foreignResources[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "groups.deckhouse.io", resource["name"])
+
+	legacyGroup := apv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties["legacyGroup"]
+	require.True(t, legacyGroup.Deprecated)
+	require.NotNil(t, legacyGroup.XUI)
 }
 
 type ControllerTestSuite struct {
