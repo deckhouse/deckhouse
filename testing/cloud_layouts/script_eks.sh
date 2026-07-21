@@ -210,6 +210,38 @@ EOF
   cat $kubectl_config_file
 }
 
+function apply_module_configs() {
+  echo "Apply external modules"
+  mc=$(cat <<'EOF'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingress-nginx
+spec:
+  enabled: true
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: upmeter
+spec:
+  enabled: true
+  version: 3
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-custom
+spec:
+  enabled: true
+EOF
+)
+
+  echo $mc | KUBECONFIG=$kubectl_config_file kubectl apply -f -
+}
+
 # update_release_channel changes the release-channel image to given tag
 function update_release_channel() {
   crane copy "$1/release-channel:$2" "$1/release-channel:beta"
@@ -348,12 +380,12 @@ function chmod_dirs_for_cleanup() {
 
   if [ -n $USER_RUNNER_ID ]; then
     echo "Fix temp directories owner before cleanup ..."
-    chown -R $USER_RUNNER_ID "$(pwd)" || true
+    # chown -R $USER_RUNNER_ID "$(pwd)" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
   else
     echo "Fix temp directories permissions before cleanup ..."
-    chmod -f -R 777 "$(pwd)" || true
+    # chmod -f -R 777 "$(pwd)" || true
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
@@ -369,6 +401,7 @@ function main() {
   case "${1}" in
     run-test)
       run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
+      apply_module_configs || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
     ;;
 
     wait_deckhouse_ready)
