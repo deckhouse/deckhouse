@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -53,6 +54,11 @@ const (
 
 	// mdCleanupFinalizer holds the NodeGroup until its MachineDeployments are deleted.
 	mdCleanupFinalizer = "node-manager.deckhouse.io/capi-md-cleanup"
+
+	// resyncInterval bounds staleness of rendered MachineClass/MachineDeployment when an
+	// input the controller does not watch (e.g. a provider-specific InstanceClass spec)
+	// changes. The cloud-provider secret is watched directly for faster reaction.
+	resyncInterval = 10 * time.Minute
 )
 
 func init() {
@@ -74,6 +80,10 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	w.Watches(&capiv1beta2.MachineDeployment{}, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup),
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	// A change to the cloud-provider secret (provider defaults, instanceClassKind, zones)
+	// can change every rendered MachineClass/MachineDeployment, so re-enqueue all NodeGroups.
+	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodeGroups),
+		builder.WithPredicates(predicate.NewPredicateFuncs(isCloudProviderSecret)))
 }
 
 func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
@@ -82,6 +92,22 @@ func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
 		return nil
 	}
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: ng}}}
+}
+
+func isCloudProviderSecret(obj client.Object) bool {
+	return obj.GetNamespace() == cloudProviderSecretNamespace && obj.GetName() == cloudProviderSecretName
+}
+
+func (r *MachineDeploymentReconciler) enqueueAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
+	ngList := &deckhousev1.NodeGroupList{}
+	if err := r.Client.List(ctx, ngList); err != nil {
+		return nil
+	}
+	reqs := make([]reconcile.Request, 0, len(ngList.Items))
+	for i := range ngList.Items {
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: ngList.Items[i].Name}})
+	}
+	return reqs
 }
 
 func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -131,7 +157,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }
 
 func (r *MachineDeploymentReconciler) ensureFinalizer(ctx context.Context, ng *deckhousev1.NodeGroup) error {
