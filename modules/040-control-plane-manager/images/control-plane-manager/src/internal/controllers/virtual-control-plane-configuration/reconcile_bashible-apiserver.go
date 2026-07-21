@@ -59,12 +59,13 @@ const (
 	bashibleSecurePort        = 4221
 	bashibleNestedServicePort = 443
 
-	bashibleKubeconfigSecretName = "bashible-apiserver-kubeconfig"
-	bashibleContextSecretName    = "bashible-apiserver-context"
-	bashibleRegistrySecretName   = "deckhouse-registry"
-	bashibleRegistrySecretNS     = "d8-system"
-	bashibleFilesConfigMapName   = "bashible-apiserver-files"
-	bashibleTLSSecretName        = "bashible-apiserver-tls"
+	bashibleKubeconfigSecretName  = "bashible-apiserver-kubeconfig"
+	bashibleContextSecretName     = "bashible-apiserver-context"
+	bashibleRegistrySecretName    = "deckhouse-registry"
+	bashibleRegistrySecretNS      = "d8-system"
+	bashibleBashboosterSecretName = "bashible-bashbooster"
+	bashibleFilesConfigMapName    = "bashible-apiserver-files"
+	bashibleTLSSecretName         = "bashible-apiserver-tls"
 
 	bashibleAPIServiceName    = "v1alpha1.bashible.deckhouse.io"
 	bashibleAPIGroup          = "bashible.deckhouse.io"
@@ -109,6 +110,11 @@ func (r *reconciler) reconcileBashibleApiserver(
 
 	// 6. Nested: Registry Secret (must exist before context build — registrySynced gate).
 	if res, err := r.reconcileBashibleRegistrySecret(ctx, nestedClient); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	// 6a. Nested: bashbooster library secret (bootstrapping nodes fetch it with the bootstrap token).
+	if res, err := r.reconcileBashibleBashboosterSecret(ctx, nestedClient); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -292,6 +298,11 @@ func (r *reconciler) reconcileBashibleContext(
 		return reconcile.Result{}, fmt.Errorf("resolve apiserverProxyCerts: %w", err)
 	}
 
+	rppToken, err := r.registryPackagesProxyToken(ctx)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("get registry-packages-proxy token: %w", err)
+	}
+
 	contextInputYAML, err := bashibleapiserver.BuildContextInputYAML(bashibleapiserver.ContextInputParams{
 		VCP:                 vcp,
 		CA:                  pkiSecret.Data["ca.crt"],
@@ -299,6 +310,7 @@ func (r *reconciler) reconcileBashibleContext(
 		ClusterUUID:         string(configSecret.Data["cluster-uuid"]),
 		APIHost:             apiExposeHost(vcp),
 		PackagesHost:        packagesExposeHost(vcp),
+		RPPToken:            rppToken,
 		APIServerProxyCerts: proxyCerts,
 	})
 	if err != nil {
@@ -415,6 +427,49 @@ func (r *reconciler) reconcileBashibleRegistrySecret(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bashibleRegistrySecretName,
 			Namespace: bashibleRegistrySecretNS,
+		},
+		Type: parentSecret.Type,
+		Data: maps.Clone(parentSecret.Data),
+	}
+
+	current := &corev1.Secret{}
+	key := client.ObjectKeyFromObject(target)
+	err = nestedClient.Get(ctx, key, current)
+	if apierrors.IsNotFound(err) {
+		return reconcile.Result{}, nestedClient.Create(ctx, target)
+	}
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) && current.Type == target.Type {
+		return reconcile.Result{}, nil
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+	current.Type = target.Type
+	return reconcile.Result{}, nestedClient.Patch(ctx, current, client.MergeFrom(base))
+}
+
+// reconcileBashibleBashboosterSecret mirrors the parent bashible-bashbooster secret (the bashbooster shell library) into the nested cluster
+// node-manager helm does not run to create it in vcp
+func (r *reconciler) reconcileBashibleBashboosterSecret(
+	ctx context.Context,
+	nestedClient client.Client,
+) (reconcile.Result, error) {
+	parentSecret, err := r.getSecret(ctx, bashibleDeckhouseNamespace, bashibleBashboosterSecretName)
+	if apierrors.IsNotFound(err) {
+		return reconcile.Result{}, fmt.Errorf("parent secret %s/%s not found", bashibleDeckhouseNamespace, bashibleBashboosterSecretName)
+	}
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	target := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      bashibleBashboosterSecretName,
+			Namespace: bashibleDeckhouseNamespace,
 		},
 		Type: parentSecret.Type,
 		Data: maps.Clone(parentSecret.Data),

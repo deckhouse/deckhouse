@@ -169,3 +169,36 @@ subjects:
   - kind: Group
     name: system:nodes
     apiGroup: rbac.authorization.k8s.io
+---
+# Bootstrapping nodes read the bashible config secrets (bashbooster lib, bundle steps, node-users, RPP token) with the bootstrap token before kubelet.conf exists.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bashible:bootstrappers-secrets
+  namespace: d8-cloud-instance-manager
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames:
+      - bashible-bashbooster
+      - node-users
+      - registry-packages-proxy-token
+      - bashible-worker-ubuntu-lts
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bashible:bootstrappers-secrets
+  namespace: d8-cloud-instance-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bashible:bootstrappers-secrets
+subjects:
+  - kind: Group
+    name: system:bootstrappers:d8:vcp
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io

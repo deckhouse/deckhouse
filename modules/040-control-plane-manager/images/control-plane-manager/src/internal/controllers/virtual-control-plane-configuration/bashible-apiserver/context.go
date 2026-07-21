@@ -37,6 +37,7 @@ type ContextInputParams struct {
 	ClusterUUID         string
 	APIHost             string
 	PackagesHost        string
+	RPPToken            string
 	APIServerProxyCerts ContextAPIServerProxyCerts
 }
 
@@ -132,6 +133,11 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 					"type": "Containerd",
 				},
 			},
+		},
+		// direct: bypassing the kube-apiserver-proxy pod discovery that assumes an in-cluster RPP.
+		PackagesProxy: map[string]any{
+			"direct": true,
+			"token":  p.RPPToken,
 		},
 	}
 

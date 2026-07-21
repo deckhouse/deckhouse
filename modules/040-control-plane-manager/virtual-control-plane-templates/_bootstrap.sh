@@ -12,3 +12,5 @@ grep -q "${VCP_API_HOST}" /etc/hosts || \
 printf '%s' "${VCP_JOIN_TOKEN}" > "$BOOTSTRAP_DIR/bootstrap-token"
 chmod 0600 "$BOOTSTRAP_DIR/bootstrap-token"
 echo -n "${VCP_CA_CRT_B64}" | base64 -d > "$BOOTSTRAP_DIR/ca.crt"
+
+touch "$BOOTSTRAP_DIR/first_run"
