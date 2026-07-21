@@ -73,6 +73,10 @@ func checkSwitchDeckhouseEdition(ctx context.Context, input *go_hook.HookInput, 
 	}
 
 	d8Deployment, err := client.AppsV1().Deployments("d8-system").Get(ctx, "deckhouse", metav1.GetOptions{})
+	if k8serrors.IsNotFound(err) {
+		input.Logger.Warn("Deckhouse deployment not found. Probably install cluster or deckhouse runs outside the cluster. Skip")
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("cannot get deckhouse deployment: %v", err)
 	}

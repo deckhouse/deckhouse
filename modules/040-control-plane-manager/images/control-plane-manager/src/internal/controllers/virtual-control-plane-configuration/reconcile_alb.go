@@ -94,7 +94,7 @@ func patchSpecData(current, target *unstructured.Unstructured) (client.Object, b
 // The externally-reachable address is read straight off the "d8-alb-<gw>-loadbalancer"
 // Service the ALB module provisions alongside the Gateway for that inlet type.
 func (r *reconciler) albVIP(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (string, error) {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	albi := &unstructured.Unstructured{}
 	albi.SetAPIVersion("network.deckhouse.io/v1alpha1")
