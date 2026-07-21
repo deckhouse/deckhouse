@@ -21,6 +21,11 @@ properties:
     type: boolean
     description: |
       Set to `true` if vCenter has a self-signed certificate.
+  caBundle:
+    type: string
+    description: |
+      The CA certificate chain in PEM format for verifying the vCenter TLS certificate.
+      Use instead of `insecure` when vCenter uses a custom/enterprise CA.
   vmFolderPath:
     type: string
     description: |
@@ -167,6 +172,11 @@ properties:
         x-examples:
         - true
         - false
+      caBundle:
+        type: string
+        description: |
+          The CA certificate chain in PEM format for verifying the NSX-T TLS certificate.
+          Use instead of `insecureFlag` when NSX-T uses a custom/enterprise CA.
       loadBalancerClass:
         type: array
         description: |

@@ -345,6 +345,8 @@ properties:
                 type: string
               insecure:
                 type: boolean
+              caBundle:
+                type: string
           nsxt:
             type: object
             required: [ defaultIpPoolName, size, tier1GatewayPath, user, password, host, defaultTcpAppProfileName, defaultUdpAppProfileName ]
@@ -368,6 +370,8 @@ properties:
                 type: string
               insecureFlag:
                 type: boolean
+              caBundle:
+                type: string
               loadBalancerClass:
                 type: array
                 items:
