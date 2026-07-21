@@ -401,9 +401,11 @@ function main() {
   case "${1}" in
     run-test)
       run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
-      apply_module_configs || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
     ;;
 
+    apply_module_configs)
+      apply_module_configs || exitCode=$?
+    ;;
     wait_deckhouse_ready)
       wait_deckhouse_ready || exitCode=$?
     ;;

@@ -750,6 +750,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -1405,6 +1406,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -2060,6 +2062,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -2715,6 +2718,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -3370,6 +3374,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -4025,6 +4030,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -4680,6 +4686,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -5335,6 +5342,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -5990,6 +5998,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -6645,6 +6654,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -7300,6 +7310,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -7955,6 +7966,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -8610,6 +8622,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
@@ -9265,6 +9278,7 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
+          /deckhouse/testing/cloud_layouts/script_eks.sh apply_module_configs &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
           /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
