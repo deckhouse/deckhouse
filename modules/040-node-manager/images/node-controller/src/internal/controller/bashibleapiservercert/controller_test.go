@@ -159,7 +159,7 @@ func TestReconcile_LeafSANs(t *testing.T) {
 // change across a reconcile.
 func TestReconcile_ReusesValidSecret(t *testing.T) {
 	r := newReconciler(t, serviceObj())
-	bundle, err := generateBundle(certCN, desiredSANs())
+	bundle, err := generateBundle(desiredSANs())
 	if err != nil {
 		t.Fatalf("generate: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestReconcile_ReusesValidSecret(t *testing.T) {
 // A Secret whose leaf does not match the desired SANs is regenerated.
 func TestReconcile_RegeneratesOnSANsMismatch(t *testing.T) {
 	r := newReconciler(t, serviceObj())
-	stale, err := generateBundle(certCN, []string{"wrong.example.com"})
+	stale, err := generateBundle([]string{"wrong.example.com"})
 	if err != nil {
 		t.Fatalf("generate: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestDesiredSANs(t *testing.T) {
 // bundleValid accepts a fresh bundle and rejects mismatched SANs or an unparsable CA.
 func TestBundleValid(t *testing.T) {
 	sans := desiredSANs()
-	good, err := generateBundle(certCN, sans)
+	good, err := generateBundle(sans)
 	if err != nil {
 		t.Fatalf("generate: %v", err)
 	}

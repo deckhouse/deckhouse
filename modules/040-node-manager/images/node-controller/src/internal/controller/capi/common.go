@@ -48,8 +48,7 @@ func (b *BaseWithReader) Setup(mgr ctrl.Manager) error {
 	b.APIReader = mgr.GetAPIReader()
 	b.RestConfig = mgr.GetConfig()
 
-	// A typed clientset is needed for the CertificateSigningRequest issue/approve/wait
-	// flow used to mint the capi-controller-manager kubeconfig client certificate.
+	// Typed clientset for the kubeconfig CertificateSigningRequest flow.
 	cs, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err

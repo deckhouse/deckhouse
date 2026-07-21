@@ -166,7 +166,6 @@ func autoConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(in *NodeGroupSpec, out *v
 		}
 	}
 
-
 	// OperatingSystem
 	if in.OperatingSystem != nil {
 		out.OperatingSystem = &v1.OperatingSystemSpec{
@@ -248,7 +247,6 @@ func autoConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in *v1.NodeGroupSpec, out
 			Taints:      in.NodeTemplate.Taints,
 		}
 	}
-
 
 	// OperatingSystem
 	if in.OperatingSystem != nil {

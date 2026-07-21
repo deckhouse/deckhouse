@@ -87,8 +87,7 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 		},
 	})
 
-	// MCM MachineDeployment/MachineClass (machine.sapcloud.io/v1alpha1) are no longer
-	// rendered by helm after the get_crds→node-controller migration; keep them from prune.
+	// MCM MachineDeployment/MachineClass moved from helm to node-controller; keep them from prune.
 	resources := append([]keepResource(nil), capiResources...)
 	if machineClassKind := input.Values.Get("nodeManager.internal.cloudProvider.machineClassKind").String(); machineClassKind != "" {
 		resources = append(resources,

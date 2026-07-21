@@ -49,7 +49,8 @@ type certBundle struct {
 // given SANs, mirroring go_lib/certificate GenerateCA + GenerateSelfSignedCert (ecdsa
 // P256, 10-year expiry). The leaf carries ServerAuth so the API server accepts it when it
 // dials the webhook service, plus ClientAuth to match the hook's usage set.
-func generateBundle(cn string, sans []string) (certBundle, error) {
+func generateBundle(sans []string) (certBundle, error) {
+	cn := certCN
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return certBundle{}, fmt.Errorf("generate CA key: %w", err)

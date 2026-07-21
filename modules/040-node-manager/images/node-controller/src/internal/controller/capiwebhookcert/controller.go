@@ -42,14 +42,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	sigsyaml "sigs.k8s.io/yaml"
-
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -148,7 +147,7 @@ func (r *Reconciler) ensureSecret(ctx context.Context, logger logr.Logger, sans 
 	}
 
 	logger.Info("issuing capi-controller-manager webhook certificate")
-	bundle, err := generateBundle(certCN, sans)
+	bundle, err := generateBundle(sans)
 	if err != nil {
 		return nil, err
 	}

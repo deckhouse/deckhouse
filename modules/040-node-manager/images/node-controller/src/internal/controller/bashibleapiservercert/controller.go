@@ -44,9 +44,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -156,7 +155,7 @@ func (r *Reconciler) ensureSecret(ctx context.Context, logger logr.Logger, sans 
 	}
 
 	logger.Info("issuing bashible-apiserver serving certificate")
-	bundle, err := generateBundle(certCN, sans)
+	bundle, err := generateBundle(sans)
 	if err != nil {
 		return nil, err
 	}

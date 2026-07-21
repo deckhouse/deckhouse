@@ -57,7 +57,8 @@ type certBundle struct {
 // and silently ignores the unknown "requestheader-client", so the produced cert has no EKU
 // extension and is thus valid for any purpose. The kube-aggregator, which dials the
 // bashible-apiserver Service as a TLS client, accepts such a serving cert.
-func generateBundle(cn string, sans []string) (certBundle, error) {
+func generateBundle(sans []string) (certBundle, error) {
+	cn := certCN
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return certBundle{}, fmt.Errorf("generate CA key: %w", err)
@@ -152,7 +153,9 @@ func bundleValid(caPEM, certPEM []byte, sans []string) bool {
 }
 
 // splitSANs separates IP-shaped SANs from DNS SANs the same way cfssl's WithSANs does.
-func splitSANs(sans []string) (dnsNames []string, ipAddresses []net.IP) {
+func splitSANs(sans []string) ([]string, []net.IP) {
+	var dnsNames []string
+	var ipAddresses []net.IP
 	for _, s := range sans {
 		if ip := net.ParseIP(s); ip != nil {
 			ipAddresses = append(ipAddresses, ip)

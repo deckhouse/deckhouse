@@ -52,13 +52,9 @@ const (
 	kubeconfigCSRWaitTimeout = time.Minute
 )
 
-// kubeconfigCertExpirationSeconds requests a 180-day cert from the signer, matching the
-// generate_capi_kubeconfig hook this controller replaces.
 var kubeconfigCertExpirationSeconds = int32((180 * 24 * time.Hour).Seconds())
 
-// ensureKubeconfigSecret creates/refreshes the <clusterName>-kubeconfig Secret consumed by
-// capi-controller-manager to reach the management API server for the given CAPI cluster.
-// It is a no-op while the existing certificate is still fresh.
+// ensureKubeconfigSecret creates/refreshes the <clusterName>-kubeconfig Secret; no-op while fresh.
 func (r *ClusterReconciler) ensureKubeconfigSecret(ctx context.Context, clusterName string) error {
 	logger := log.FromContext(ctx)
 
@@ -92,8 +88,7 @@ func (r *ClusterReconciler) ensureKubeconfigSecret(ctx context.Context, clusterN
 	return r.writeKubeconfigSecret(ctx, secretName, clusterName, kubeconfigYAML)
 }
 
-// apiServerEndpoint returns the management API server URL and CA bundle from the manager's
-// rest config. In-cluster the CA is provided via a file, so it is loaded on demand.
+// apiServerEndpoint returns the API server URL and CA bundle from the manager's rest config.
 func (r *ClusterReconciler) apiServerEndpoint() (string, []byte, error) {
 	if r.RestConfig == nil {
 		return "", nil, fmt.Errorf("rest config is not initialised")
@@ -196,8 +191,7 @@ func (r *ClusterReconciler) writeKubeconfigSecret(ctx context.Context, secretNam
 	return nil
 }
 
-// buildKubeconfigYAML assembles a kubeconfig for capi-controller-manager, mirroring the
-// internal/kubeconfig helper the generate_capi_kubeconfig hook used.
+// buildKubeconfigYAML assembles a kubeconfig for capi-controller-manager.
 func buildKubeconfigYAML(clusterName, host string, caData, keyPEM, crtPEM []byte) ([]byte, error) {
 	userName := capiControllerManagerName
 	contextName := fmt.Sprintf("%s@%s", userName, clusterName)
@@ -227,8 +221,8 @@ func buildKubeconfigYAML(clusterName, host string, caData, keyPEM, crtPEM []byte
 	return clientcmd.Write(cfg)
 }
 
-// kubeconfigCertFresh reports whether the client certificate embedded in an existing
-// kubeconfig Secret still has more than kubeconfigCertRenewBefore of validity left.
+// kubeconfigCertFresh reports whether the embedded client cert has more than
+// kubeconfigCertRenewBefore of validity left.
 func kubeconfigCertFresh(value []byte) bool {
 	if len(value) == 0 {
 		return false
