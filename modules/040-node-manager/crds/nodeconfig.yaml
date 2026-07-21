@@ -451,7 +451,11 @@ spec:
               pass.
             properties:
               conditions:
-                description: Conditions are per-subsystem reconcile outcomes.
+                description: |-
+                  Conditions are the node-level reconcile outcomes (ConfigurationApplied,
+                  DisruptionRequired) plus the gate subsystems (APIEndpointsReachable,
+                  SysctlApplied). Per-extension and per-unit outcomes live in Extensions and
+                  Units instead, one entry each rather than a single aggregate condition.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -510,6 +514,43 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              extensions:
+                description: |-
+                  Extensions is the outcome of each configured system extension, one entry
+                  per extension, so a reader sees which one failed rather than a single
+                  aggregate ExtensionsReady.
+                items:
+                  description: ExtensionStatus is the reconcile outcome of one system
+                    extension.
+                  properties:
+                    digest:
+                      description: Digest is the image digest the node installed for
+                        it.
+                      type: string
+                    message:
+                      description: Message carries the cause when State is Failed.
+                      type: string
+                    name:
+                      description: Name is the extension name, matching spec.extensions[].name.
+                      type: string
+                    state:
+                      description: |-
+                        State is Ready when the extension is installed and merged, Pending while it
+                        is being fetched or waiting for the update window, or Failed with the cause
+                        in Message.
+                      enum:
+                      - Ready
+                      - Pending
+                      - Failed
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               observedGeneration:
                 description: |-
                   ObservedGeneration is the latest spec generation the node has processed —
@@ -535,6 +576,37 @@ spec:
                 - Pending
                 - Degraded
                 type: string
+              units:
+                description: |-
+                  Units is the outcome of each managed systemd unit (containerd, kubelet and
+                  every unit an extension ships), one entry per unit.
+                items:
+                  description: UnitStatus is the reconcile outcome of one managed
+                    systemd unit.
+                  properties:
+                    message:
+                      description: Message carries the cause when State is Failed.
+                      type: string
+                    name:
+                      description: Name is the systemd unit name (e.g. containerd.service).
+                      type: string
+                    state:
+                      description: |-
+                        State is Active when the unit is running, Pending when it is queued to be
+                        started later this pass, or Failed with the cause in Message.
+                      enum:
+                      - Active
+                      - Pending
+                      - Failed
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
             type: object
         required:
         - spec

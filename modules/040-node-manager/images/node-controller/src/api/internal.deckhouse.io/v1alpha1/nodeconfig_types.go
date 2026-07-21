@@ -66,12 +66,57 @@ type NodeConfigStatus struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Ready;Pending;Degraded
 	Phase string `json:"phase,omitempty"`
-	// Conditions are per-subsystem reconcile outcomes plus the node-level
-	// ConfigurationApplied and DisruptionRequired.
+	// Conditions are the node-level reconcile outcomes (ConfigurationApplied,
+	// DisruptionRequired) plus the gate subsystems (APIEndpointsReachable,
+	// SysctlApplied). Per-extension and per-unit outcomes live in Extensions and
+	// Units instead, one entry each rather than a single aggregate condition.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// Extensions is the outcome of each configured system extension, one entry
+	// per extension, so a reader sees which one failed rather than a single
+	// aggregate ExtensionsReady.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	Extensions []ExtensionStatus `json:"extensions,omitempty"`
+	// Units is the outcome of each managed systemd unit (containerd, kubelet and
+	// every unit an extension ships), one entry per unit.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	Units []UnitStatus `json:"units,omitempty"`
+}
+
+// ExtensionStatus is the reconcile outcome of one system extension.
+type ExtensionStatus struct {
+	// Name is the extension name, matching spec.extensions[].name.
+	Name string `json:"name"`
+	// Digest is the image digest the node installed for it.
+	// +optional
+	Digest string `json:"digest,omitempty"`
+	// State is Ready when the extension is installed and merged, Pending while it
+	// is being fetched or waiting for the update window, or Failed with the cause
+	// in Message.
+	// +kubebuilder:validation:Enum=Ready;Pending;Failed
+	State string `json:"state"`
+	// Message carries the cause when State is Failed.
+	// +optional
+	Message string `json:"message,omitempty"`
+}
+
+// UnitStatus is the reconcile outcome of one managed systemd unit.
+type UnitStatus struct {
+	// Name is the systemd unit name (e.g. containerd.service).
+	Name string `json:"name"`
+	// State is Active when the unit is running, Pending when it is queued to be
+	// started later this pass, or Failed with the cause in Message.
+	// +kubebuilder:validation:Enum=Active;Pending;Failed
+	State string `json:"state"`
+	// Message carries the cause when State is Failed.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // NodeConfigList is a list of NodeConfig objects.

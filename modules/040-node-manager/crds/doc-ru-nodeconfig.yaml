@@ -218,4 +218,39 @@ spec:
                     Проверка «узел сошёлся» на стороне кластера — `appliedGeneration == metadata.generation`.
                 conditions:
                   description: |
-                    Результаты согласования по каждой подсистеме.
+                    Результаты согласования на уровне узла (`ConfigurationApplied`, `DisruptionRequired`) и подсистем-гейтов (`APIEndpointsReachable`, `SysctlApplied`). Результаты по каждому расширению и юниту публикуются в `extensions` и `units` — по одной записи, а не единым агрегированным условием.
+                extensions:
+                  description: |
+                    Результат по каждому настроенному системному расширению (sysext) — по одной записи на расширение, чтобы было видно, какое именно расширение отказало, а не единый агрегированный статус.
+                  items:
+                    description: |
+                      Результат согласования одного системного расширения.
+                    properties:
+                      name:
+                        description: |
+                          Имя расширения, совпадает с `spec.extensions[].name`.
+                      digest:
+                        description: |
+                          Дайджест образа, установленного узлом для этого расширения.
+                      state:
+                        description: |
+                          `Ready` — расширение установлено и подключено (merge). `Pending` — расширение загружается или ожидает окна обновления. `Failed` — отказ, причина в `message`.
+                      message:
+                        description: |
+                          Причина, когда `state` равно `Failed`.
+                units:
+                  description: |
+                    Результат по каждому управляемому systemd-юниту (containerd, kubelet и каждый юнит, поставляемый расширением) — по одной записи на юнит.
+                  items:
+                    description: |
+                      Результат согласования одного управляемого systemd-юнита.
+                    properties:
+                      name:
+                        description: |
+                          Имя systemd-юнита (например, `containerd.service`).
+                      state:
+                        description: |
+                          `Active` — юнит запущен. `Pending` — юнит поставлен в очередь на запуск позже в этом цикле. `Failed` — отказ, причина в `message`.
+                      message:
+                        description: |
+                          Причина, когда `state` равно `Failed`.
