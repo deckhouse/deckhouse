@@ -58,7 +58,7 @@ func (s *Service) readEndpoints(ctx context.Context) endpoints {
 	}
 
 	slice := &discoveryv1.EndpointSlice{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: "kubernetes"}, slice); err == nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: "default", Name: "kubernetes"}, slice); err == nil {
 		var ports []int32
 		for _, port := range slice.Ports {
 			if port.Name != nil && *port.Name == "https" && port.Port != nil {
