@@ -60,6 +60,10 @@ entries:
           ru: Управление репозиториями Git
         url: /code/documentation/user/repositories.html
       - title:
+          en: Protected branches
+          ru: Защищённые ветки
+        url: /code/documentation/user/protected-branches.html
+      - title:
           en: Working with the codebase and Code Review
           ru: Работа с кодовой базой и Code Review
         url: /code/documentation/user/code-review.html

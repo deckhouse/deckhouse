@@ -1,5 +1,5 @@
 ---
-title: "Модуль istio: Custom Resources"
+title: "Модуль istio: Кастомные ресурсы"
 ---
 
 <!-- SCHEMA -->

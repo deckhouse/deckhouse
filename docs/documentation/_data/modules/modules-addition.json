@@ -588,6 +588,19 @@
     "external": "true",
     "path": "/modules/prometheus-pushgateway/"
   },
+  "prompp": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/prompp/"
+  },
   "runtime-audit-engine": {
     "editions": [
       "ee",

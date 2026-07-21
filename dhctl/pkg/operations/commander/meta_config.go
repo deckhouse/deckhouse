@@ -23,7 +23,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams) (*config.MetaConfig, error) {
+// ParseMetaConfig parses commander-mode config. operation
+// (infrastructureprovider.DhctlOperation*) reaches the provider preparator,
+// which skips bootstrap-only checks on other operations.
+func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, operation infrastructureprovider.DhctlOperation, kubeClient config.KubeClientGetter) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 	if err != nil {
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
@@ -33,17 +36,29 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: uuid is empty")
 	}
 
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
+
+	// Commander does not send registry_config, so the external provider bundle
+	// registry is unknown from the request. Read it from the target cluster and
+	// deliver the bundle before parsing; the parse below then finds it on disk
+	// and skips the registry-less download.
+	if kubeClient != nil {
+		if err := config.EnsureExternalProviderBundle(ctx, kubeClient, string(params.ClusterConfigurationData), nil); err != nil {
+			return nil, fmt.Errorf("ensure provider bundle from cluster: %w", err)
+		}
+	}
+
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
-	metaConfig, err := config.ParseConfigFromData(
+	metaConfig, err := config.ParseConfigFromDataEnsureProvider(
 		ctx,
 		configData,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		),
+		string(params.RegistryConfigurationData),
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		nil,
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),
 		config.ValidateOptionValidateExtensions(true),
+		config.ValidateOptionOperation(operation),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse config: %w", err)

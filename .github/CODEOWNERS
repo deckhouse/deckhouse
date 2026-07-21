@@ -1,4 +1,6 @@
 .github/                                                         @Nikolay1224 @himax1991
+.gitlab/                                                         @Nikolay1224 @himax1991
+.gitlab-ci.yml                                                   @Nikolay1224 @himax1991
 .gitleaks.toml                                                   @Nikolay1224 @himax1991
 000-common/                                                      @RomanenkoDenys
 **/000-common/images/alt-p11                                     @borg-z @090809
@@ -122,7 +124,7 @@ csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @borg-z @090809
 docs/                                    @z9r5
-docs/documentation/pages/architecture/   @xstayer @z9r5
+docs/documentation/pages/architecture/   @voitenkov @z9r5
 helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5

@@ -24,7 +24,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
@@ -35,17 +34,17 @@ var terraformProviders = []string{
 	"aws",
 	gcp.ProviderName,
 	"azure",
-	vcd.ProviderName,
 }
 
 var tofuProviders = []string{
 	yandex.ProviderName,
 	"dynamix",
 	"zvirt",
-	dvp.ProviderName,
+	"dvp",
 	"vsphere",
 	"huaweicloud",
 	"openstack",
+	vcd.ProviderName,
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
@@ -80,6 +79,7 @@ func TestProvidersSettings(t *testing.T) {
 		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.True(t, settings.UseOpenTofu())
 			require.Equal(t, settings.InfrastructureVersion(), "1.12.0")
+			require.Nil(t, settings.VMResource())
 		})
 	}
 
@@ -87,6 +87,7 @@ func TestProvidersSettings(t *testing.T) {
 		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.False(t, settings.UseOpenTofu())
 			require.Equal(t, settings.InfrastructureVersion(), "0.14.8")
+			require.Nil(t, settings.VMResource())
 		})
 	}
 }

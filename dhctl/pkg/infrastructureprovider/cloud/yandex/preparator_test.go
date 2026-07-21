@@ -15,41 +15,35 @@
 package yandex
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 func TestValidateClusterPrefix(t *testing.T) {
-	getMetaConfig := func(clusterPrefix string) *config.MetaConfig {
-		cfg := &config.MetaConfig{}
-
-		cfg.ClusterPrefix = clusterPrefix
-		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
-		fillTestProviderClusterConfig(cfg, master, nil)
-
-		return cfg
-	}
 	assertClusterPrefix := func(t *testing.T, clusterPrefix string, hasError bool) {
-		assertValidation(t, true, getMetaConfig(clusterPrefix), hasError)
+		input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
+		input.ClusterPrefix = clusterPrefix
+		assertValidation(t, input, hasError)
 	}
 
 	assertClusterPrefix(t, "", true)
 	assertClusterPrefix(t, "1abbbs", true)
 	assertClusterPrefix(t, strings.Repeat("a", 100), true)
 	assertClusterPrefix(t, "abc-abc", false)
-
-	assertValidation(t, false, getMetaConfig(""), false)
 }
 
 func TestValidateMasterNodeGroupSpec(t *testing.T) {
 	assertMasterNodeGroup := func(t *testing.T, replicas int, externalIPS []string, hasError bool) {
-		cfg := getTestCfgForMaster(t, replicas, externalIPS)
-		assertValidation(t, true, cfg, hasError)
+		input := getTestInputForMaster(t, replicas, externalIPS)
+		assertValidation(t, input, hasError)
 	}
 
 	assertMasterNodeGroup(t, 2, []string{"1.1.1.1"}, true)
@@ -60,14 +54,11 @@ func TestValidateMasterNodeGroupSpec(t *testing.T) {
 
 func TestValidateNodeGroupsSpec(t *testing.T) {
 	assertNodeGroups := func(t *testing.T, replicas int, externalIPS []string, hasError bool) {
-		cfg := &config.MetaConfig{}
-
-		cfg.ClusterPrefix = "valid-prefix"
+		input := config.ProviderInput{ClusterPrefix: "valid-prefix"}
 		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
 		nodeGroups := getTestNodeGroupsSpec(t, replicas, externalIPS)
-		fillTestProviderClusterConfig(cfg, master, nodeGroups)
-
-		assertValidation(t, true, cfg, hasError)
+		fillTestProviderClusterConfig(&input, master, nodeGroups)
+		assertValidation(t, input, hasError)
 	}
 
 	assertNodeGroups(t, 2, []string{"1.1.1.1"}, true)
@@ -77,72 +68,67 @@ func TestValidateNodeGroupsSpec(t *testing.T) {
 }
 
 func TestWithNATInstanceLayoutSpec(t *testing.T) {
-	getMetaConfig := func(t *testing.T, settings string, nodeGroups json.RawMessage) *config.MetaConfig {
-		cfg := &config.MetaConfig{}
-
-		cfg.ClusterPrefix = "valid-prefix"
+	getInput := func(t *testing.T, settings string, nodeGroups json.RawMessage) config.ProviderInput {
+		input := config.ProviderInput{ClusterPrefix: "valid-prefix"}
 		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
-		fillTestProviderClusterConfig(cfg, master, nodeGroups)
-		fillTestWithNatInstanceLayout(t, cfg, settings)
-
-		return cfg
+		fillTestProviderClusterConfig(&input, master, nodeGroups)
+		fillTestWithNatInstanceLayout(t, &input, settings)
+		return input
 	}
 
 	assertWithNATInstance := func(t *testing.T, settings string, hasError bool, nodeGroups json.RawMessage) {
-		cfg := getMetaConfig(t, settings, nodeGroups)
-		assertValidation(t, true, cfg, hasError)
+		input := getInput(t, settings, nodeGroups)
+		assertValidation(t, input, hasError)
 	}
 
-	// no settings
 	assertWithNATInstance(t, "", true, nil)
-	// empty settings
 	assertWithNATInstance(t, `{}`, true, nil)
-	// no required values
 	assertWithNATInstance(t, `{"exporterAPIKey": "not security key"}`, true, nil)
-	// both is correct. tofu select in our logic order
 	assertWithNATInstance(t, `{"internalSubnetID": "id", "internalSubnetCIDR": "127.0.0.1/24"}`, false, nil)
-	// only id
 	assertWithNATInstance(t, `{"internalSubnetID": "id"}`, false, nil)
-	// only cidr
 	assertWithNATInstance(t, `{"internalSubnetCIDR": "127.0.0.1/24"}`, false, nil)
-	// all in
 	assertWithNATInstance(t,
 		`{"internalSubnetCIDR": "127.0.0.1/24"}`,
 		false,
 		getTestNodeGroupsSpec(t, 1, []string{"1.1.1.1"}),
 	)
 
+	// WithNAT layout validation fires only on bootstrap; any other operation
+	// (converge here) skips it even for otherwise-invalid settings.
 	assertSkipValidationWithNATInstance := func(t *testing.T, settings string, nodeGroups json.RawMessage) {
-		cfg := getMetaConfig(t, settings, nodeGroups)
+		input := getInput(t, settings, nodeGroups)
+		input.Operation = proto.OperationConverge
 		preparator := NewMetaConfigPreparator(true)
-		require.False(t, preparator.validateWithNATLayout)
 
-		err := preparator.Validate(t.Context(), cfg)
+		err := preparator.Validate(t.Context(), input)
 		require.NoError(t, err)
 	}
 
-	// skip with-nat layout validation
-	// no settings
 	assertSkipValidationWithNATInstance(t, "", nil)
-	// empty settings
 	assertSkipValidationWithNATInstance(t, `{}`, nil)
-	// no required values
 	assertSkipValidationWithNATInstance(t, `{"exporterAPIKey": "not security key"}`, nil)
-	// all in
 	assertSkipValidationWithNATInstance(t,
 		`{"internalSubnetCIDR": "127.0.0.1/24"}`,
 		getTestNodeGroupsSpec(t, 1, []string{"1.1.1.1"}),
 	)
 }
 
-func getTestCfgForMaster(t *testing.T, replicas int, externalIPS []string) *config.MetaConfig {
-	cfg := &config.MetaConfig{}
+func TestNilLoggerDoesNotPanic(t *testing.T) {
+	input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
 
-	cfg.ClusterPrefix = "valid-prefix"
+	do := func() {
+		preparator := NewMetaConfigPreparator(true)
+		_ = preparator.Validate(context.TODO(), input)
+	}
+
+	require.NotPanics(t, do)
+}
+
+func getTestInputForMaster(t *testing.T, replicas int, externalIPS []string) config.ProviderInput {
+	input := config.ProviderInput{ClusterPrefix: "valid-prefix"}
 	master := getTestMasterNodeGroupSpec(t, replicas, externalIPS)
-	fillTestProviderClusterConfig(cfg, master, nil)
-
-	return cfg
+	fillTestProviderClusterConfig(&input, master, nil)
+	return input
 }
 
 func getTestMasterNodeGroupSpec(t *testing.T, replicas int, externalIPs []string) json.RawMessage {
@@ -152,10 +138,8 @@ func getTestMasterNodeGroupSpec(t *testing.T, replicas int, externalIPs []string
 			ExternalIPAddresses: externalIPs,
 		},
 	}
-
 	b, err := json.Marshal(spec)
 	require.NoError(t, err)
-
 	return b
 }
 
@@ -169,45 +153,37 @@ func getTestNodeGroupsSpec(t *testing.T, replicas int, externalIPs []string) jso
 			},
 		},
 	}
-
 	b, err := json.Marshal(spec)
 	require.NoError(t, err)
-
 	return b
 }
 
-func fillTestProviderClusterConfig(cfg *config.MetaConfig, master, nodeGroups json.RawMessage) {
-	cfg.ProviderClusterConfig = make(map[string]json.RawMessage)
-
-	cfg.ProviderClusterConfig["masterNodeGroup"] = master
-
+func fillTestProviderClusterConfig(input *config.ProviderInput, master json.RawMessage, nodeGroups json.RawMessage) {
+	input.ProviderClusterConfig = map[string]json.RawMessage{
+		"masterNodeGroup": master,
+	}
 	if len(nodeGroups) > 0 {
-		cfg.ProviderClusterConfig["nodeGroups"] = nodeGroups
+		input.ProviderClusterConfig["nodeGroups"] = nodeGroups
 	}
 }
 
-func fillTestWithNatInstanceLayout(t *testing.T, cfg *config.MetaConfig, settings string) {
+func fillTestWithNatInstanceLayout(t *testing.T, input *config.ProviderInput, settings string) {
 	t.Helper()
-
-	require.NotEmpty(t, cfg.ProviderClusterConfig)
-
-	cfg.Layout = "with-nat-instance"
-
+	require.NotEmpty(t, input.ProviderClusterConfig)
+	input.Layout = "with-nat-instance"
 	if settings != "" {
-		cfg.ProviderClusterConfig["withNATInstance"] = json.RawMessage([]byte(settings))
+		input.ProviderClusterConfig["withNATInstance"] = json.RawMessage(settings)
 	}
 }
 
-func assertValidation(t *testing.T, validatePrefix bool, cfg *config.MetaConfig, hasError bool) {
-	preparator := NewMetaConfigPreparator(validatePrefix).EnableValidateWithNATLayout()
+func assertValidation(t *testing.T, input config.ProviderInput, hasError bool) {
+	input.Operation = proto.OperationBootstrap
+	preparator := NewMetaConfigPreparator(true)
 
-	require.True(t, preparator.validateWithNATLayout)
-
-	err := preparator.Validate(t.Context(), cfg)
+	err := preparator.Validate(t.Context(), input)
 	if hasError {
 		require.Error(t, err)
 		return
 	}
-
 	require.NoError(t, err)
 }

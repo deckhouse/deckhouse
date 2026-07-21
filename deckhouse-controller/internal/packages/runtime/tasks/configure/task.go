@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -46,6 +47,9 @@ type packageI interface {
 	// GetSettings returns the effective settings: user config merged with
 	// config-schema defaults. Same payload exposed to templates as .Application.Settings.
 	GetSettings() addonutils.Values
+	// SetMaintenance records the package's maintenance mode so the package itself
+	// can later decide whether its resources must be reconciled.
+	SetMaintenance(state nelm.MaintenanceState)
 }
 
 // task validates and applies new settings to a package.
@@ -55,19 +59,21 @@ type task struct {
 	pkg             packageI
 	settings        addonutils.Values
 	settingsVersion int
+	maintenance     nelm.MaintenanceState
 
 	status *status.Service
 
 	logger *log.Logger
 }
 
-// NewTask creates a task that will validate and apply the given settings.
+// NewTask creates a task that will validate and apply the given settings and maintenance mode.
 // settingsVersion is the schema version from ModuleConfig.Spec.Version (0 if unset).
-func NewTask(pkg packageI, settings addonutils.Values, settingsVersion int, status *status.Service, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, settings addonutils.Values, settingsVersion int, maintenance nelm.MaintenanceState, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:             pkg,
 		settings:        settings,
 		settingsVersion: settingsVersion,
+		maintenance:     maintenance,
 		status:          status,
 		logger:          logger.Named(taskTracer).With(slog.String("name", pkg.GetName())),
 	}
@@ -84,6 +90,9 @@ func (t *task) Execute(ctx context.Context) error {
 		t.status.HandleError(t.pkg.GetName(), status.ConditionConfigured, err)
 		return fmt.Errorf("configure: %w", err)
 	}
+
+	// The package owns its maintenance mode; the run task reads it back via GetMaintenance.
+	t.pkg.SetMaintenance(t.maintenance)
 
 	// Propagate the effective settings (user config + config-schema defaults)
 	// to the internal status service. The CR status handler will later commit

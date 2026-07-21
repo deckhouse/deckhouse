@@ -38,7 +38,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: Automatic
 clusterDomain: cluster.local
 `
-	s := New(config.NewSchemaStore(nil))
+	s := New(config.NewSchemaStore(nil), nil)
 	resp, err := s.ValidateResources(t.Context(), &pb.ValidateResourcesRequest{
 		Config: cfg,
 		Opts:   &pb.ValidateOptions{CommanderMode: true},
@@ -53,7 +53,7 @@ kind: Secret
 metadata:
   name: my-secret
 `
-	s := New(config.NewSchemaStore(nil))
+	s := New(config.NewSchemaStore(nil), nil)
 	resp, err := s.ValidateResources(t.Context(), &pb.ValidateResourcesRequest{
 		Config: cfg,
 		Opts:   &pb.ValidateOptions{CommanderMode: true},
@@ -70,7 +70,7 @@ metadata:
 }
 
 func TestValidateResources_EmptyPayload_NoError(t *testing.T) {
-	s := New(config.NewSchemaStore(nil))
+	s := New(config.NewSchemaStore(nil), nil)
 	resp, err := s.ValidateResources(t.Context(), &pb.ValidateResourcesRequest{
 		Config: "",
 		Opts:   &pb.ValidateOptions{CommanderMode: true},

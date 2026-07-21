@@ -23,6 +23,7 @@
  - This update triggers a rolling update of the network-policy-engine pods.
  - Unnecessary or destructive plan updates that could occur when updating labels and annotations via OpenTofu should be prevented now. If you encounter unexpected converge plans or cluster bootstrap issues when using OpenTofu-based providers (such as DVP, DynamiX, zVirt, or Yandex), report them to Deckhouse Technical Support.
  - When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
+ - With enableMultiTenancy, effective access is now the union of CAR (within its limitNamespaces/namespaceSelector), AuthorizationRules, and plain RoleBindings/ClusterRoleBindings. Previously the webhook denied requests outside the CAR scope even when RBAC explicitly granted them: such existing bindings for subjects with a CAR silently become effective after the upgrade — review them. The CAR access level still does not apply outside its namespace limits. AccessibleNamespaces reflects the same union.
 
 ## Features
 
@@ -201,9 +202,11 @@
  - **[cloud-provider-dvp]** add labels to cloudinit secrets in the terraform [#20436](https://github.com/deckhouse/deckhouse/pull/20436)
  - **[cloud-provider-dvp]** fix CVEs in cloud-provider-dvp [#18258](https://github.com/deckhouse/deckhouse/pull/18258)
  - **[cloud-provider-dvp]** fix LoadBalancer stuck in pending state — retry on conflict when updating ServiceWithHealthchecks and propagate IP to child cluster service status [#19609](https://github.com/deckhouse/deckhouse/pull/19609)
+ - **[cloud-provider-dvp]** fix dvp kubernetes dependency mismatch [#21367](https://github.com/deckhouse/deckhouse/pull/21367)
  - **[cloud-provider-dvp]** refactored CreateVolume to improve idempotency when disk.status.capacity is not yet reported and standardized gRPC error handling [#17826](https://github.com/deckhouse/deckhouse/pull/17826)
  - **[cloud-provider-gcp]** Fixed CVEs in `cloud-provider-gcp`. [#18095](https://github.com/deckhouse/deckhouse/pull/18095)
  - **[cloud-provider-huaweicloud]** Added default values for `elb.class` and `lb-algorithm`, and fixed load balancer creation when `epid` is empty. [#19166](https://github.com/deckhouse/deckhouse/pull/19166)
+ - **[cloud-provider-huaweicloud]** Adds patches to the upstream version to make it ignore static nodes [#21388](https://github.com/deckhouse/deckhouse/pull/21388)
  - **[cloud-provider-huaweicloud]** Fixed CVEs in `cloud-provider-huaweicloud`. [#18096](https://github.com/deckhouse/deckhouse/pull/18096)
  - **[cloud-provider-huaweicloud]** fix CVEs in cloud-provider-huaweicloud [#18289](https://github.com/deckhouse/deckhouse/pull/18289)
  - **[cloud-provider-openstack]** Add loadBalancer.enabled flag to prevent CCM crashes on k8s 1.32 without Octavia service [#18228](https://github.com/deckhouse/deckhouse/pull/18228)
@@ -360,6 +363,8 @@
     Custom edits to the local-path-config ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
  - **[local-path-provisioner]** Update local-path-provisioner to v0.0.36 to pick up the upstream fix for CVE-2026-44543 (HelperPod template injection, CVSS 8.7). [#20456](https://github.com/deckhouse/deckhouse/pull/20456)
     The `local-path-provisioner` Pod is restarted during the update. Custom edits to the `local-path-config` ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
+ - **[log-shipper]** fix daemonset template [#21368](https://github.com/deckhouse/deckhouse/pull/21368)
+    log-shipper
  - **[monitoring-kubernetes]** Resolved port conflict with the runtime-audit-engine module and removed excessive pod privileges [#18868](https://github.com/deckhouse/deckhouse/pull/18868)
  - **[multitenancy-manager]** allow DNS queries for default ProjectTemplate [#18572](https://github.com/deckhouse/deckhouse/pull/18572)
  - **[network-gateway]** Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*) [#19933](https://github.com/deckhouse/deckhouse/pull/19933)
@@ -422,6 +427,8 @@
  - **[user-authn]** Restore ContinueOnConnectorFailure flag handling in Dex configuration [#18219](https://github.com/deckhouse/deckhouse/pull/18219)
  - **[user-authz]** Extend cluster-admin clusterrole  with kubelet-api-admin rights. [#19888](https://github.com/deckhouse/deckhouse/pull/19888)
  - **[user-authz]** Fix multi-tenancy namespace visibility for users without ClusterAuthorizationRules [#18689](https://github.com/deckhouse/deckhouse/pull/18689)
+ - **[user-authz]** Honor CAR-independent RBAC in webhook and permission-browser [#21373](https://github.com/deckhouse/deckhouse/pull/21373)
+    With enableMultiTenancy, effective access is now the union of CAR (within its limitNamespaces/namespaceSelector), AuthorizationRules, and plain RoleBindings/ClusterRoleBindings. Previously the webhook denied requests outside the CAR scope even when RBAC explicitly granted them: such existing bindings for subjects with a CAR silently become effective after the upgrade — review them. The CAR access level still does not apply outside its namespace limits. AccessibleNamespaces reflects the same union.
  - **[user-authz]** user-authz-webhook now uses the node-local kube-apiserver endpoint for its discovery cache and liveness check, instead of resolving the "kubernetes.default" DNS name. [#21081](https://github.com/deckhouse/deckhouse/pull/21081)
     Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
 

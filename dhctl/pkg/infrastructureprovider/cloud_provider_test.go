@@ -1058,7 +1058,7 @@ func testPrepareFakeLayoutForApply(t *testing.T, params testPrepareFakeLayoutFor
 	step := string(params.step)
 
 	fakeLayoutDir := filepath.Join(
-		cloudParams.FSDIParams.CloudProviderDir,
+		cloudProvidersDir,
 		params.provider.Name(),
 		layoutsRootDir,
 		params.layout,
@@ -1308,7 +1308,7 @@ func assertFSDIDirsAndFilesExists(t *testing.T, params CloudProviderGetterParams
 
 	assertIsNotEmptyDir(t, params.FSDIParams.PluginsDir)
 	assertIsNotEmptyDir(t, params.FSDIParams.BinariesDir)
-	assertIsNotEmptyDir(t, params.FSDIParams.CloudProviderDir)
+	assertIsNotEmptyDir(t, cloudProvidersDir)
 	assertFileExistsAndHasAnyContent(t, params.FSDIParams.InfraVersionsFile)
 }
 
@@ -1637,7 +1637,7 @@ func assertDirsNotContainsFileInFSSources(t *testing.T, params CloudProviderGett
 	require.NotNil(t, params.FSDIParams)
 
 	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.BinariesDir, file)
-	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.CloudProviderDir, file)
+	assertFileOrDirDoesNotPresentsInDir(t, cloudProvidersDir, file)
 	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.PluginsDir, file)
 }
 

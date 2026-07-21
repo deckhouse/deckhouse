@@ -1,4 +1,4 @@
-2787
+2789
 1GB
 2GB
 5XX
@@ -118,6 +118,7 @@ Changelog
 CheckFunc
 Chrony
 CiliumClusterwideNetworkPolicies
+CiliumClusterwideNetworkPolicy
 CiliumEgressGatewayPolicy
 Cirros
 Citrix
@@ -618,6 +619,7 @@ PodLogginConfig
 PodLoggingConfig
 PodMonitor
 PodMonitors
+PodNetwork
 Poly
 PostgreSQL
 PowerShell

@@ -16,23 +16,21 @@ package yandex
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
 type MetaConfigPreparator struct {
 	validatePrefix bool
-	// validateWithNATLayout
-	// todo need migration for validate everywhere not only bootstrap
-	validateWithNATLayout bool
 }
 
 func NewMetaConfigPreparator(validatePrefix bool) *MetaConfigPreparator {
@@ -41,41 +39,33 @@ func NewMetaConfigPreparator(validatePrefix bool) *MetaConfigPreparator {
 	}
 }
 
-func (p *MetaConfigPreparator) EnableValidateWithNATLayout() *MetaConfigPreparator {
-	p.validateWithNATLayout = true
-	return p
-}
-
-func (p *MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.MetaConfig) error {
-	if p.validatePrefix {
-		prefix := metaConfig.ClusterPrefix
-		if !prefixRegex.MatchString(prefix) {
-			return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, ProviderName, prefixRegex.String())
-		}
+func (p *MetaConfigPreparator) Validate(ctx context.Context, input config.ProviderInput) error {
+	if p.validatePrefix && !prefixRegex.MatchString(input.ClusterPrefix) {
+		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", input.ClusterPrefix, ProviderName, prefixRegex.String())
 	}
 
-	if err := p.validateMasterNodeGroup(metaConfig); err != nil {
+	if err := p.validateMasterNodeGroup(input); err != nil {
 		return err
 	}
 
-	if err := p.validateNodeGroups(ctx, metaConfig); err != nil {
+	if err := p.validateNodeGroups(ctx, input); err != nil {
 		return err
 	}
 
-	if err := p.validateWithNATInstanceLayout(ctx, metaConfig); err != nil {
-		return err
+	return p.validateWithNATInstanceLayout(ctx, input)
+}
+
+func (p *MetaConfigPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
+	return proto.PrepareResult{}, nil
+}
+
+func (p *MetaConfigPreparator) validateMasterNodeGroup(input config.ProviderInput) error {
+	raw, ok := input.ProviderClusterConfig["masterNodeGroup"]
+	if !ok {
+		return fmt.Errorf("Unable to unmarshal master node group from provider cluster configuration: key not found")
 	}
-
-	return nil
-}
-
-func (p *MetaConfigPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
-	return nil
-}
-
-func (p *MetaConfigPreparator) validateMasterNodeGroup(metaConfig *config.MetaConfig) error {
-	masterNodeGroup, err := dhctljson.UnmarshalToFromMessageMap[masterNodeGroupSpec](metaConfig.ProviderClusterConfig, "masterNodeGroup")
-	if err != nil {
+	var masterNodeGroup masterNodeGroupSpec
+	if err := json.Unmarshal(raw, &masterNodeGroup); err != nil {
 		return fmt.Errorf("Unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
@@ -88,18 +78,18 @@ func (p *MetaConfigPreparator) validateMasterNodeGroup(metaConfig *config.MetaCo
 	return nil
 }
 
-func (p *MetaConfigPreparator) validateNodeGroups(ctx context.Context, metaConfig *config.MetaConfig) error {
-	yandexNodeGroups, err := dhctljson.UnmarshalToFromMessageMap[[]nodeGroupSpec](metaConfig.ProviderClusterConfig, "nodeGroups")
-	if err != nil {
-		if errors.Is(err, dhctljson.ErrNotFound) {
-			dhlog.FromContext(ctx).DebugContext(ctx, "nodeGroups not found in provider cluster configuration. Skipping validation.")
-			return nil
-		}
-
+func (p *MetaConfigPreparator) validateNodeGroups(ctx context.Context, input config.ProviderInput) error {
+	raw, ok := input.ProviderClusterConfig["nodeGroups"]
+	if !ok {
+		dhlog.FromContext(ctx).DebugContext(ctx, "nodeGroups not found in provider cluster configuration. Skip validation.")
+		return nil
+	}
+	var yandexNodeGroups []nodeGroupSpec
+	if err := json.Unmarshal(raw, &yandexNodeGroups); err != nil {
 		return fmt.Errorf("Unable to unmarshal node groups from provider cluster configuration: %v", err)
 	}
 
-	for _, nodeGroup := range *yandexNodeGroups {
+	for _, nodeGroup := range yandexNodeGroups {
 		if nodeGroup.Replicas > 0 &&
 			len(nodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
 			nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
@@ -110,20 +100,23 @@ func (p *MetaConfigPreparator) validateNodeGroups(ctx context.Context, metaConfi
 	return nil
 }
 
-func (p *MetaConfigPreparator) validateWithNATInstanceLayout(ctx context.Context, metaConfig *config.MetaConfig) error {
-	// layout was prepared with strcase.ToKebab before calling preparator
-	if metaConfig.Layout != "with-nat-instance" {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skipping WithNATInstance layout validation. Got layout %v", metaConfig.Layout))
+func (p *MetaConfigPreparator) validateWithNATInstanceLayout(ctx context.Context, input config.ProviderInput) error {
+	if input.Layout != "with-nat-instance" {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skip validate WithNATInstance layout. Got layout %v", input.Layout))
 		return nil
 	}
 
-	if !p.validateWithNATLayout {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping WithNATInstance layout validation. Validation disabled")
+	if input.Operation != proto.OperationBootstrap {
+		dhlog.FromContext(ctx).DebugContext(ctx, "Skip validate WithNATInstance layout. Validation disabled")
 		return nil
 	}
 
-	spec, err := dhctljson.UnmarshalToFromMessageMap[withNatInstanceSpec](metaConfig.ProviderClusterConfig, "withNATInstance")
-	if err != nil {
+	raw, ok := input.ProviderClusterConfig["withNATInstance"]
+	if !ok {
+		return fmt.Errorf("Unable to unmarshal withNATInstance from provider cluster configuration: key not found")
+	}
+	var spec withNatInstanceSpec
+	if err := json.Unmarshal(raw, &spec); err != nil {
 		return fmt.Errorf("Unable to unmarshal withNATInstance from provider cluster configuration: %v", err)
 	}
 
