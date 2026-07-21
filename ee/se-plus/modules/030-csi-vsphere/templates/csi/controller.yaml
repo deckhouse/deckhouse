@@ -61,7 +61,7 @@
 {{- if $csiControllerImage }}
 
 {{- $syncerImageName := join "" (list "csiVsphereSyncer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-{{- $syncerImage := include "helm_lib_module_common_image_no_fail" (list . $syncerImageName) }}
+{{- $syncerImage := include "helm_lib_module_image_no_fail" (list . $syncerImageName "cloudProviderVsphere") }}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
