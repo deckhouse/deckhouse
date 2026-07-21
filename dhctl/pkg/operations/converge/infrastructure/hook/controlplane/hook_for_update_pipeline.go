@@ -77,7 +77,13 @@ func NewHookForUpdatePipeline(
 
 	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
 	checkers = append(checkers, NewStrongholdReadinessChecker(kubeGetter))
-	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
+
+	checker := NewChecker(
+		nodeToHostForChecks,
+		checkers,
+		"",
+		DefaultConfirm,
+	)
 
 	return &HookForUpdatePipeline{
 		Checker:       checker,
