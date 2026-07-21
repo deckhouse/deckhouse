@@ -17,6 +17,7 @@ package controlplane
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -25,6 +26,7 @@ import (
 type SSHChecker struct {
 	sshProvider      libcon.SSHProvider
 	nodesExternalIPs map[string]string
+	debugRetries     atomic.Int32
 }
 
 func NewSSHChecker(
@@ -104,6 +106,11 @@ func (c *SSHChecker) IsReady(ctx context.Context, nodeName string) (bool, error)
 			err,
 			string(cmd.StderrBytes()),
 		)
+	}
+
+	attempt := c.debugRetries.Add(1)
+	if attempt <= 3 {
+		return false, fmt.Errorf("SSH checker: forced retry #%d", attempt)
 	}
 
 	return true, nil

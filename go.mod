@@ -114,7 +114,7 @@ require (
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
-	github.com/deckhouse/lib-connection v0.14.0 // indirect
+	github.com/deckhouse/lib-connection v0.14.1-0.20260721101950-f1740a223550 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
@@ -398,8 +398,3 @@ replace github.com/docker/docker => github.com/docker/docker v28.3.3+incompatibl
 replace github.com/docker/cli => github.com/docker/cli v28.3.3+incompatible
 
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlplane
-
-// Image sources under this tree are built inside third-party source trees
-// (see werf.inc.yaml) and are hidden from build/lint by build tags. go mod
-// tidy inspects imports under all build tags, so ignore the tree entirely.
-ignore ./ee/modules/110-istio/images
