@@ -189,6 +189,11 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 			if !md.GetDeletionTimestamp().IsZero() {
 				continue
 			}
+			if gvk.Group == "machine.sapcloud.io" {
+				if err := r.deleteReferencedMachineClass(ctx, md); err != nil {
+					return err
+				}
+			}
 			if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("delete MachineDeployment %s: %w", md.GetName(), err)
 			}

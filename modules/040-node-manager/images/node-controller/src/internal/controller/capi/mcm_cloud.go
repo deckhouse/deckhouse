@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -111,6 +112,8 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	minReplicas, maxReplicas := getMinMax(ng)
 	awsSpot := cloudType == "aws" && blobInstanceClassSpot(blob)
 
+	desiredMDNames := make(map[string]struct{}, len(zones))
+
 	for _, zone := range zones {
 		hash := sha256Hash(clusterUUID + zone)
 		machineClassName := fmt.Sprintf("%s-%s", ng.Name, hash)
@@ -118,6 +121,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		if instancePrefix != "" {
 			mdName = fmt.Sprintf("%s-%s", instancePrefix, machineClassName)
 		}
+		desiredMDNames[mdName] = struct{}{}
 
 		renderCtx := map[string]interface{}{
 			"Chart": map[string]interface{}{"Name": "node-manager"},
@@ -175,6 +179,65 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		logger.Info("applied MCM MachineClass + MachineDeployment", "name", mdName, "zone", zone)
 	}
 
+	if err := r.pruneStaleMCMs(ctx, ng.Name, desiredMDNames); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// pruneStaleMCMs deletes MCM MachineDeployments (and their referenced MachineClasses)
+// that belong to the NodeGroup but are no longer desired, e.g. after a zone is removed.
+// MachineDeployments are the reliable anchor: both helm (pre-migration) and node-controller
+// stamp them with the node-group label, and each one references its MachineClass by name.
+func (r *MachineDeploymentReconciler) pruneStaleMCMs(ctx context.Context, ngName string, desired map[string]struct{}) error {
+	logger := log.FromContext(ctx)
+
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeploymentList",
+	})
+	if err := r.Client.List(ctx, list,
+		client.InNamespace(common.MachineNamespace),
+		client.MatchingLabels{"node-group": ngName},
+	); err != nil {
+		return fmt.Errorf("list MCM MachineDeployments for NodeGroup %s: %w", ngName, err)
+	}
+
+	for i := range list.Items {
+		md := &list.Items[i]
+		if _, ok := desired[md.GetName()]; ok {
+			continue
+		}
+		if !md.GetDeletionTimestamp().IsZero() {
+			continue
+		}
+		if err := r.deleteReferencedMachineClass(ctx, md); err != nil {
+			return err
+		}
+		if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("delete stale MCM MachineDeployment %s: %w", md.GetName(), err)
+		}
+		logger.Info("pruned stale MCM MachineDeployment", "name", md.GetName(), "ng", ngName)
+	}
+
+	return nil
+}
+
+// deleteReferencedMachineClass deletes the MCM MachineClass referenced by the given
+// MachineDeployment via spec.template.spec.class. A missing MachineClass is not an error.
+func (r *MachineDeploymentReconciler) deleteReferencedMachineClass(ctx context.Context, md *unstructured.Unstructured) error {
+	kind, _, _ := unstructured.NestedString(md.Object, "spec", "template", "spec", "class", "kind")
+	name, _, _ := unstructured.NestedString(md.Object, "spec", "template", "spec", "class", "name")
+	if kind == "" || name == "" {
+		return nil
+	}
+	mc := newUnstructured("machine.sapcloud.io", "v1alpha1", kind)
+	mc.SetName(name)
+	mc.SetNamespace(common.MachineNamespace)
+	if err := r.Client.Delete(ctx, mc); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete MachineClass %s: %w", name, err)
+	}
 	return nil
 }
 
