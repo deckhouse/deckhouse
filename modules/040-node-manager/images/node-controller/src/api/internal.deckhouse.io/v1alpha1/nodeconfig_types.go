@@ -87,6 +87,13 @@ type NodeConfigStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	Units []UnitStatus `json:"units,omitempty"`
+	// MaintenanceToken authenticates a push to the node's maintenance endpoint.
+	// The on-node agent generates it at startup and republishes it here; an
+	// operator reads it from the last status the node published while the API was
+	// reachable and presents it when pushing a config to the node's :50000
+	// endpoint after the node has lost the API.
+	// +optional
+	MaintenanceToken string `json:"maintenanceToken,omitempty"`
 }
 
 // ExtensionStatus is the reconcile outcome of one system extension.
