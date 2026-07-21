@@ -291,6 +291,43 @@ Example:
 
 Result: **3 approvals** are required.
 
+## Disabling Code Owners checks
+
+Code Owners checks can be disabled at the project level. This is useful when a project has a `CODEOWNERS` file, but approvals from code owners are not required.
+
+>**How to find it**: "Project" → "Settings" → "Merge requests" → the additional approval rule settings → the "Disable Code Owners approval checks" setting.
+
+When the setting is enabled, Code Owners checks are skipped across the whole project:
+
+- a merge request is not blocked by missing approvals from code owners;
+- code owners are not calculated for the changed files — the list of applicable entries is empty;
+- the change applies immediately to already open merge requests.
+
+Validation of the `CODEOWNERS` file syntax keeps working — the file can be validated even when the checks are disabled.
+
+The setting is disabled by default.
+
+## Automatically assigning code owners as reviewers
+
+Code owners matching the changed files can be automatically assigned as reviewers of a merge request.
+
+>**How to find it**: "Project" → "Settings" → "Merge requests" → the "Automatic reviewer assignment" section → the "Automatically assign code owners as reviewers" setting.
+
+When the setting is enabled, code owners are assigned as reviewers:
+
+- when a merge request is created as ready (not a draft);
+- when a draft merge request is marked ready.
+
+Assignment specifics:
+
+- assignment is not performed for drafts;
+- if a merge request already has reviewers, automatic assignment is skipped — manually assigned reviewers are kept;
+- the merge request author is never assigned as a reviewer;
+- only users with read access to the merge request are assigned;
+- only the first code owner is assigned unless the project allows multiple reviewers.
+
+The setting is disabled by default.
+
 ## Formatting recommendations
 
 When formatting the `CODEOWNERS` file, follow these recommendations:
