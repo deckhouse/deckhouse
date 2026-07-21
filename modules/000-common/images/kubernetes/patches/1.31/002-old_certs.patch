@@ -1,4 +1,5 @@
 diff --git a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
+index d67c5354763..d153009c95d 100644
 --- a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
 +++ b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
 @@ -21,6 +21,7 @@ import (
@@ -9,8 +10,8 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.g
  	"net/http"
  	"strings"
  	"time"
-@@ -150,6 +151,13 @@ func (a *Authenticator) AuthenticateRequest(req *http.Request) (*authenticator.R
-
+@@ -177,6 +178,13 @@ func (a *Authenticator) AuthenticateRequest(req *http.Request) (*authenticator.R
+ 
  	remaining := req.TLS.PeerCertificates[0].NotAfter.Sub(time.Now())
  	clientCertificateExpirationHistogram.WithContext(req.Context()).Observe(remaining.Seconds())
 +
