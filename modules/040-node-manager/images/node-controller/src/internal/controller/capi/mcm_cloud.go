@@ -148,7 +148,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		}
 		machineClassObj := &unstructured.Unstructured{Object: mcObject}
 
-		replicas := r.mcmDesiredReplicas(ctx, mdName, minReplicas, maxReplicas)
+		replicas, err := r.mcmDesiredReplicas(ctx, mdName, minReplicas, maxReplicas)
+		if err != nil {
+			return err
+		}
 
 		md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
 			blob:             blob,
@@ -175,14 +178,22 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	return nil
 }
 
-func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) int64 {
+func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) (int64, error) {
 	existing := newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment")
-	err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing)
-	if err != nil {
-		return int64(minReplicas)
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing); err != nil {
+		if errors.IsNotFound(err) {
+			return int64(minReplicas), nil
+		}
+		return 0, fmt.Errorf("get MCM MachineDeployment %s: %w", mdName, err)
 	}
-	current, _, _ := unstructured.NestedInt64(existing.Object, "spec", "replicas")
-	return int64(calculateReplicas(int32(current), minReplicas, maxReplicas))
+	current, found, err := unstructured.NestedInt64(existing.Object, "spec", "replicas")
+	if err != nil {
+		return 0, fmt.Errorf("read spec.replicas of MCM MachineDeployment %s: %w", mdName, err)
+	}
+	if !found {
+		return 0, fmt.Errorf("MCM MachineDeployment %s has no spec.replicas", mdName)
+	}
+	return int64(calculateReplicas(int32(current), minReplicas, maxReplicas)), nil
 }
 
 func (r *MachineDeploymentReconciler) readCloudProviderTree(ctx context.Context) (map[string]interface{}, error) {

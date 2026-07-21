@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -113,13 +114,22 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	}}
 }
 
-func (r *MachineDeploymentReconciler) capiDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) int32 {
+func (r *MachineDeploymentReconciler) capiDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) (int32, error) {
 	existing := newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment")
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing); err != nil {
-		return minReplicas
+		if errors.IsNotFound(err) {
+			return minReplicas, nil
+		}
+		return 0, fmt.Errorf("get CAPI MachineDeployment %s: %w", mdName, err)
 	}
-	replicas, _, _ := unstructured.NestedInt64(existing.Object, "spec", "replicas")
-	return calculateReplicas(int32(replicas), minReplicas, maxReplicas)
+	replicas, found, err := unstructured.NestedInt64(existing.Object, "spec", "replicas")
+	if err != nil {
+		return 0, fmt.Errorf("read spec.replicas of CAPI MachineDeployment %s: %w", mdName, err)
+	}
+	if !found {
+		return 0, fmt.Errorf("CAPI MachineDeployment %s has no spec.replicas", mdName)
+	}
+	return calculateReplicas(int32(replicas), minReplicas, maxReplicas), nil
 }
 
 func resolveCAPIZones(ng *deckhousev1.NodeGroup, defaultZones []string) []string {
@@ -202,6 +212,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		// byte-parity with helm's node-group.yaml ($bootstrap_secret_name := $template_name).
 		bootstrapSecretName := templateName
 
+		desired, err := r.capiDesiredReplicas(ctx, mdName, minReplicas, maxReplicas)
+		if err != nil {
+			return err
+		}
+
 		md := buildCAPIMachineDeployment(capiMDInput{
 			ng:                  ng,
 			mdName:              mdName,
@@ -210,7 +225,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			clusterName:         cloudConfig.capiClusterName,
 			infraAPIGroup:       infraAPIGroup,
 			infraKind:           cloudConfig.capiMachineTemplateKind,
-			desired:             r.capiDesiredReplicas(ctx, mdName, minReplicas, maxReplicas),
+			desired:             desired,
 			minReplicas:         minReplicas,
 			maxReplicas:         maxReplicas,
 			maxSurge:            int32(maxSurge),
