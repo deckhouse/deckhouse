@@ -165,7 +165,7 @@ func TestMarshalRoundtrip_allStandardFields(t *testing.T) {
 	}
 }
 
-// TestMarshalRoundtrip_xDeckhouseExtensions verifies all three x-deckhouse-*
+// TestMarshalRoundtrip_xDeckhouseExtensions verifies Deckhouse and Console
 // extensions survive JSON roundtrip.
 func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	original := &OpenAPIV3Schema{
@@ -178,7 +178,9 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 			"replicas": {
 				Type:        "integer",
 				Default:     jsonPtr("1"),
+				Deprecated:  true,
 				XUIAdvanced: true,
+				XUI:         jsonPtr(`{"label":{"en":"Replicas","ru":"Реплики"},"widget":{"name":"ResourceSelect","foreignResources":[{"name":"groups.deckhouse.io"}],"props":{"multiple":true}}}`),
 			},
 		},
 		XValidations: []ValidationRule{
@@ -210,6 +212,16 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if !rep.XUIAdvanced {
 		t.Errorf("x-deckhouse-ui-advanced: got false, want true")
+	}
+	if !rep.Deprecated {
+		t.Errorf("deprecated: got false, want true")
+	}
+	if rep.XUI == nil {
+		t.Fatal("x-ui: got nil")
+	}
+	wantUI := `{"label":{"en":"Replicas","ru":"Реплики"},"widget":{"name":"ResourceSelect","foreignResources":[{"name":"groups.deckhouse.io"}],"props":{"multiple":true}}}`
+	if string(rep.XUI.Raw) != wantUI {
+		t.Errorf("x-ui: got %s, want %s", rep.XUI.Raw, wantUI)
 	}
 	if len(restored.XValidations) != 1 || restored.XValidations[0].Rule != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
