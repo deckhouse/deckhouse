@@ -5026,20 +5026,6 @@ alerts:
         No available replicas in Deployment standby-holder-{{$labels.node_group_name}}.
       severity: "5"
       markupFormat: markdown
-    - name: StorageClassCloudManual
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/storage-class.tpl
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |-
-        A StorageClass using a `cloud-provider` provisioner shouldn't be deployed manually.
-        Such StorageClasses are managed by the `cloud-provider` module.
-
-        Instead of the manual deployment, modify the `cloud-provider` module configuration as needed.
-      summary: |
-        Manually deployed StorageClass {{ $labels.name }} found in the cluster.
-      severity: "6"
-      markupFormat: markdown
     - name: StorageClassDefaultDuplicate
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/storage-class.tpl
       moduleUrl: 340-monitoring-kubernetes
