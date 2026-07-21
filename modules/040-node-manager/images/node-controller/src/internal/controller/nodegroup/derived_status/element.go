@@ -112,7 +112,7 @@ func (s *Service) readInstanceClassNames(ctx context.Context, kind string) []str
 
 func (s *Service) readStatic(ctx context.Context) map[string]interface{} {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: staticConfigSecretNamespace, Name: staticConfigSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: staticConfigSecretNamespace, Name: staticConfigSecretName}, secret); err != nil {
 		return nil
 	}
 	raw, ok := secret.Data[staticConfigKey]

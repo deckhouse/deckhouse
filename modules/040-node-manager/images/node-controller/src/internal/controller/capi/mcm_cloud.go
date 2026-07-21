@@ -60,7 +60,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	if err != nil {
 		return err
 	}
-	ds := &derived_status.Service{Client: r.Client}
+	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
 	blob, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
 	if err != nil {
 		return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
