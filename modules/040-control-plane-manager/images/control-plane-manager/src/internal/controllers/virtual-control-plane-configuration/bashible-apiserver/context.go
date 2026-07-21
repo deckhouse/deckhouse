@@ -56,6 +56,7 @@ type contextInput struct {
 	KubernetesCA            string                     `json:"kubernetesCA"`
 	AllowedBundles          []string                   `json:"allowedBundles"`
 	NodeGroups              []map[string]interface{}   `json:"nodeGroups"`
+	PackagesProxy           map[string]interface{}     `json:"packagesProxy"`
 }
 
 type ContextAPIServerProxyCerts struct {
