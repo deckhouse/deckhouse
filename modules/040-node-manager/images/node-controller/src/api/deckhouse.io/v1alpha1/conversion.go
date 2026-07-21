@@ -166,13 +166,6 @@ func autoConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(in *NodeGroupSpec, out *v
 		}
 	}
 
-	// Chaos
-	if in.Chaos != nil {
-		out.Chaos = &v1.ChaosSpec{
-			Mode:   v1.ChaosMode(in.Chaos.Mode),
-			Period: in.Chaos.Period,
-		}
-	}
 
 	// OperatingSystem
 	if in.OperatingSystem != nil {
@@ -256,13 +249,6 @@ func autoConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in *v1.NodeGroupSpec, out
 		}
 	}
 
-	// Chaos
-	if in.Chaos != nil {
-		out.Chaos = &ChaosSpec{
-			Mode:   ChaosMode(in.Chaos.Mode),
-			Period: in.Chaos.Period,
-		}
-	}
 
 	// OperatingSystem
 	if in.OperatingSystem != nil {

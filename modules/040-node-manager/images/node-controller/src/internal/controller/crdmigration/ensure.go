@@ -36,13 +36,6 @@ const (
 
 	nodeControllerWebhookSecretName  = "node-controller-webhook-tls"
 	nodeControllerWebhookServiceName = "node-controller-webhook"
-
-	// CAPS (Cluster API Provider Static) serves the sshcredentials.deckhouse.io
-	// conversion webhook; its CA lives in a separate TLS secret/service. Taken over
-	// from the sshcredentials_crd_cabundle_injection hook.
-	capsConversionCRDName  = "sshcredentials.deckhouse.io"
-	capsWebhookSecretName  = "caps-controller-manager-webhook-tls"
-	capsWebhookServiceName = "caps-controller-manager-webhook-service"
 )
 
 var conversionCRDNames = []string{

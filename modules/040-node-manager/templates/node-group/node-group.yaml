@@ -32,7 +32,10 @@
       {{- end }}
     {{- end }}
   {{- else }}
-    {{- /* StaticMachineTemplate and MachineDeployment are rendered by node-controller (capi.reconcileStaticMDRendered). Only the manual-bootstrap Secret stays in helm. */ -}}
+    {{- /* The static MachineDeployment (cluster.x-k8s.io) is rendered by node-controller (capi.reconcileStaticMD). Helm owns the manual-bootstrap Secret and the StaticMachineTemplate (infrastructure.cluster.x-k8s.io, a CAPS provider CRD). */ -}}
     {{- include "node_group_static_or_hybrid_secret" (list $ $ng) }}
+    {{- if hasKey $ng "staticInstances" }}
+      {{- include "node_group_static_or_hybrid_machine_template" (list $ $ng) }}
+    {{- end }}
   {{- end }}
 {{- end }}

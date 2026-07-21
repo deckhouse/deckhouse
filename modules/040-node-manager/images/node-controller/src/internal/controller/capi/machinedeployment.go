@@ -125,7 +125,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	case deckhousev1.NodeTypeStatic, deckhousev1.NodeTypeCloudStatic:
 		if ng.Spec.StaticInstances != nil {
-			if err := r.reconcileStaticMDRendered(ctx, ng); err != nil {
+			if err := r.reconcileStaticMD(ctx, ng); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -200,8 +200,8 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 }
 
 // buildStaticMD renders the cluster.x-k8s.io/v1beta2 MachineDeployment for a
-// Static/CloudStatic NodeGroup. Extracted so the live reconcileStaticMD and the
-// rendered-cutover reconcileStaticMDRendered build byte-identical objects.
+// Static/CloudStatic NodeGroup. Its infrastructureRef points at a
+// StaticMachineTemplate that helm renders (a CAPS provider CRD).
 func buildStaticMD(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
 	var replicas int32
 	if ng.Spec.StaticInstances.Count != nil {

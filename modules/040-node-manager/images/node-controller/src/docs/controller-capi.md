@@ -65,7 +65,8 @@ Creates/updates one `MachineDeployment` (cluster.x-k8s.io/v1beta2) **per zone**:
 
 Creates one `MachineDeployment` named `{ng.name}`:
 
-- `spec.clusterName: static`; `infrastructureRef` → `StaticMachineTemplate`.
+- `spec.clusterName: static`; `infrastructureRef` → `StaticMachineTemplate` (that
+  `StaticMachineTemplate` is a CAPS provider CRD, rendered by helm, not node-controller).
 - `bootstrap.dataSecretName: manual-bootstrap-for-{ng.name}`.
 - `spec.replicas` = `ng.spec.staticInstances.count`.
 - `spec.rollout.strategy`: maxSurge 1, maxUnavailable 0.

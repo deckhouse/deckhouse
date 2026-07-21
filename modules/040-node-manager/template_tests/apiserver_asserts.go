@@ -22,25 +22,17 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
+// node-controller (bashible-apiserver-cert) owns the serving Secret and the APIService
+// caBundle; helm renders neither.
 func assertBashibleAPIServerTLSSecret(f *Config, namespace string) {
 	secret := f.KubernetesResource("Secret", namespace, "bashible-api-server-tls")
-
-	Expect(secret.Exists()).To(BeTrue())
-
-	ca := getDecodedSecretValue(&secret, "ca\\.crt")
-	crt := getDecodedSecretValue(&secret, "apiserver\\.crt")
-	key := getDecodedSecretValue(&secret, "apiserver\\.key")
-
-	Expect(ca).To(BeEquivalentTo(bashibleAPIServerCA))
-	Expect(crt).To(BeEquivalentTo(bashibleAPIServerCrt))
-	Expect(key).To(BeEquivalentTo(bashibleAPIServerKey))
+	Expect(secret.Exists()).To(BeFalse())
 }
 
 func assertBashibleAPIServerCaBundle(f *Config) {
 	apiService := f.KubernetesGlobalResource("APIService", "v1alpha1.bashible.deckhouse.io")
-
-	caBundle := decodeK8sObjField(&apiService, "spec.caBundle")
-	Expect(caBundle).To(BeEquivalentTo(bashibleAPIServerCA))
+	Expect(apiService.Exists()).To(BeTrue())
+	Expect(apiService.Field("spec.caBundle").Exists()).To(BeFalse())
 }
 
 func assertBashibleAPIServerTLS(f *Config) {

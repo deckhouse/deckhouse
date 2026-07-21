@@ -4,7 +4,7 @@ metadata:
   name: v1alpha1.bashible.deckhouse.io
   {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
 spec:
-  caBundle: {{ .Values.nodeManager.internal.bashibleApiServerCA | b64enc | quote }}
+  # caBundle is injected by node-controller (bashible-apiserver-cert), not helm.
   group: bashible.deckhouse.io
   groupPriorityMinimum: 1000
   versionPriority: 15

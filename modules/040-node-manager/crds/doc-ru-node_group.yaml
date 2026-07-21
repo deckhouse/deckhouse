@@ -132,20 +132,6 @@ spec:
                     internalNetworkCIDRs:
                       description: |
                         CIDR подсети.
-                chaos:
-                  description: |
-                    Настройки Chaos Monkey.
-                  properties:
-                    mode:
-                      description: |
-                        Режим работы Chaos Monkey:
-                        - `DrainAndDelete` — при срабатывании делает узлу drain, затем удаляет его.
-                        - `Disabled` — не трогает данную NodeGroup.
-                    period:
-                      description: |
-                        Интервал времени срабатывания Chaos Monkey.
-
-                        Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
                 operatingSystem:
                   description: |
                     Параметры операционной системы.
@@ -458,20 +444,6 @@ spec:
                         Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
                         > Доступны только поля `effect`, `key`, `value`.
-                chaos:
-                  description: |
-                    Настройки Chaos Monkey.
-                  properties:
-                    mode:
-                      description: |
-                        Режим работы Chaos Monkey:
-                        - `DrainAndDelete` — при срабатывании делает узлу drain, затем удаляет его.
-                        - `Disabled` — не трогает данную NodeGroup.
-                    period:
-                      description: |
-                        Интервал времени срабатывания Chaos Monkey.
-
-                        Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
                 operatingSystem:
                   description: |
                     Параметры операционной системы.
@@ -911,20 +883,6 @@ spec:
                         Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
                         > Доступны только поля `effect`, `key`, `value`.
-                chaos:
-                  description: |
-                    Настройки Chaos Monkey.
-                  properties:
-                    mode:
-                      description: |
-                        Режим работы Chaos Monkey:
-                        - `DrainAndDelete` — при срабатывании делает узлу drain, затем удаляет его.
-                        - `Disabled` — не трогает данную NodeGroup.
-                    period:
-                      description: |
-                        Интервал времени срабатывания Chaos Monkey.
-
-                        Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
                 operatingSystem:
                   description: |
                     Параметры операционной системы.

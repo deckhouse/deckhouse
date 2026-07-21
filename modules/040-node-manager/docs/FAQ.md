@@ -458,7 +458,6 @@ spec:
 
 | The NodeGroup parameter               | Disruption update          | Node provisioning | Kubelet restart |
 |---------------------------------------|----------------------------|-------------------|-----------------|
-| chaos                                 | -                          | -                 | -               |
 | cloudInstances.classReference         | -                          | +                 | -               |
 | cloudInstances.maxSurgePerZone        | -                          | -                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |

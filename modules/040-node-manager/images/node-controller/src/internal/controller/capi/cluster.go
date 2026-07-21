@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -87,7 +88,9 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, nil
+	// Periodically re-enter to rotate the capi-controller-manager kubeconfig certificate
+	// before it expires (the ensure* paths are no-ops while it is still fresh).
+	return ctrl.Result{RequeueAfter: 12 * time.Hour}, nil
 }
 
 func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
@@ -185,6 +188,10 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 		return fmt.Errorf("create MachineHealthCheck: %w", err)
 	}
 
+	if err := r.ensureKubeconfigSecret(ctx, clusterName); err != nil {
+		return fmt.Errorf("ensure %s kubeconfig: %w", clusterName, err)
+	}
+
 	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
 	return nil
 }
@@ -273,6 +280,8 @@ func (r *ClusterReconciler) ensureStaticCluster(ctx context.Context, clusterConf
 		return fmt.Errorf("create static MachineHealthCheck: %w", err)
 	}
 
+	// The static kubeconfig Secret stays owned by the generate_capi_kubeconfig hook (CAPS is
+	// not migrated); only the cloud CAPI kubeconfig is issued here (ensureCloudCluster).
 	logger.V(1).Info("ensured static CAPI cluster resources")
 	return nil
 }

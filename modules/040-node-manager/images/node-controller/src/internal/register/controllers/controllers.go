@@ -19,9 +19,11 @@ limitations under the License.
 package controllers
 
 import (
+	_ "github.com/deckhouse/node-controller/internal/controller/bashibleapiservercert"
 	_ "github.com/deckhouse/node-controller/internal/controller/bashiblecleanup"
+	_ "github.com/deckhouse/node-controller/internal/controller/bashiblelock"
 	_ "github.com/deckhouse/node-controller/internal/controller/capi"
-	_ "github.com/deckhouse/node-controller/internal/controller/chaosmonkey"
+	_ "github.com/deckhouse/node-controller/internal/controller/capiwebhookcert"
 	_ "github.com/deckhouse/node-controller/internal/controller/crdmigration"
 	_ "github.com/deckhouse/node-controller/internal/controller/csitaint"
 	_ "github.com/deckhouse/node-controller/internal/controller/draining"
@@ -30,6 +32,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/instanceclassusage"
 	_ "github.com/deckhouse/node-controller/internal/controller/kubeletcsrapprover"
 	_ "github.com/deckhouse/node-controller/internal/controller/machinesetrevision"
+	_ "github.com/deckhouse/node-controller/internal/controller/masternodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/ngconfigmetrics"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"

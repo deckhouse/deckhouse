@@ -62,6 +62,11 @@ var storedVersionPreference = []string{"v1beta1", "v1beta2"}
 
 var mcmStoredVersions = []string{"v1alpha1"}
 
+// migratedTLSSecrets moved from helm to node-controller; keep them from prune.
+var migratedTLSSecrets = []string{"capi-webhook-tls", "bashible-api-server-tls"}
+
+var secretGVR = schema.GroupVersionResource{Version: "v1", Resource: "secrets"}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager/set-keep-policy-on-capi-resources",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
@@ -139,6 +144,40 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 			if item.GetAnnotations()[helmResourcePolicyAnnotation] != "keep" {
 				return fmt.Errorf("keep policy not set on %s/%s: refusing to proceed to avoid prune", res.Resource, item.GetName())
 			}
+		}
+	}
+
+	for _, name := range migratedTLSSecrets {
+		obj, err := dynClient.Resource(secretGVR).Namespace(capiNamespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("get secret %s: %w", name, err)
+		}
+		// node-controller-created Secrets carry no Helm label and are never pruned.
+		if obj.GetLabels()["app.kubernetes.io/managed-by"] != "Helm" {
+			continue
+		}
+		if obj.GetAnnotations()[helmResourcePolicyAnnotation] != "keep" {
+			if _, err := dynClient.Resource(secretGVR).Namespace(capiNamespace).Patch(
+				context.TODO(),
+				name,
+				types.MergePatchType,
+				patch,
+				metav1.PatchOptions{},
+			); err != nil {
+				return fmt.Errorf("patch secret %s: %w", name, err)
+			}
+			input.Logger.Info("stamped keep policy", slog.String("resource", "secrets"), slog.String("name", name))
+		}
+
+		verify, err := dynClient.Resource(secretGVR).Namespace(capiNamespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("verify get secret %s: %w", name, err)
+		}
+		if verify.GetAnnotations()[helmResourcePolicyAnnotation] != "keep" {
+			return fmt.Errorf("keep policy not set on secret %s: refusing to proceed to avoid prune", name)
 		}
 	}
 

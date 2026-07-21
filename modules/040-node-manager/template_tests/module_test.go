@@ -72,10 +72,6 @@ mcmEmergencyBrake: false
 
 const nodeManagerValues = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -92,10 +88,6 @@ internal:
 
 const nodeManagerAWS = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -160,10 +152,6 @@ internal:
 
 const nodeManagerAzure = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -246,10 +234,6 @@ internal:
 
 const nodeManagerGCP = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -304,10 +288,6 @@ internal:
 
 const nodeManagerOpenstack = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -393,10 +373,6 @@ internal:
 
 const nodeManagerVsphere = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -482,10 +458,6 @@ internal:
 
 const nodeManagerYandex = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -551,10 +523,6 @@ internal:
 
 const nodeManagerStatic = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -579,10 +547,6 @@ internal:
 const (
 	nodeManagerStaticInstances = `
 internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1591,8 +1555,9 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			// StaticMachineTemplate and MachineDeployment are created by node-controller
-			// (capi.reconcileStaticMDRendered), not helm.
+			// The StaticMachineTemplate (a CAPS provider CRD) is rendered by helm.
+			// The static MachineDeployment (cluster.x-k8s.io) is created by node-controller
+			// (capi.reconcileStaticMD), not helm.
 			staticMachineTemplate := f.KubernetesResource("StaticMachineTemplate", "d8-cloud-instance-manager", "worker")
 			staticMachineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "worker")
 
@@ -1634,7 +1599,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			Expect(staticMachineTemplate.Exists()).To(BeFalse())
+			Expect(staticMachineTemplate.Exists()).To(BeTrue())
 			Expect(staticMachineDeployment.Exists()).To(BeFalse())
 
 			assertBashibleAPIServerTLS(f)
@@ -1676,10 +1641,6 @@ internal:
   capiControllerManagerEnabled: true
   bootstrapTokens:
     worker: mytoken
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1838,10 +1799,6 @@ internal:
   capiControllerManagerEnabled: true
   bootstrapTokens:
     worker: mytoken
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1992,10 +1949,6 @@ internal:
   capiControllerManagerEnabled: true
   bootstrapTokens:
     worker: mytoken
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
   capsControllerManagerWebhookCert:
     ca: string
     key: string

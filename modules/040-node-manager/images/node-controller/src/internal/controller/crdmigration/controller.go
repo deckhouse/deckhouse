@@ -93,7 +93,6 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		for _, name := range conversionCRDNames {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
 		}
-		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: capsConversionCRDName}})
 		return nil
 	}))
 
@@ -116,22 +115,9 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 					reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
 				}
 				return reqs
-			case capsWebhookSecretName:
-				return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: capsConversionCRDName}}}
 			default:
 				return nil
 			}
-		},
-	))
-
-	// Watch the CAPS webhook Service — its existence gates the sshcredentials conversion
-	// webhook patch, so react when it appears/changes (parity with the hook's binding).
-	w.Watches(&corev1.Service{}, handler.EnqueueRequestsFromMapFunc(
-		func(_ context.Context, obj client.Object) []reconcile.Request {
-			if obj.GetNamespace() != capiNamespace || obj.GetName() != capsWebhookServiceName {
-				return nil
-			}
-			return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: capsConversionCRDName}}}
 		},
 	))
 }
@@ -140,10 +126,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.FromContext(ctx)
 
 	crdName := req.Name
-
-	if crdName == capsConversionCRDName {
-		return r.reconcileCAPSConversionWebhook(ctx, logger, crdName)
-	}
 
 	if isConversionCRD(crdName) {
 		return r.reconcileConversionWebhook(ctx, logger, crdName)
@@ -319,48 +301,6 @@ func (r *Reconciler) reconcileConversionWebhook(ctx context.Context, logger logr
 	}
 
 	if err := patchConversionWebhook(ctx, r.Client, crdName, caBundle, nodeControllerWebhookServiceName); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
-}
-
-// reconcileCAPSConversionWebhook keeps the sshcredentials.deckhouse.io CRD conversion
-// webhook CA in sync with the CAPS controller's TLS secret (taken over from the
-// sshcredentials_crd_cabundle_injection hook). It gates on the webhook Service existing,
-// mirroring the hook's webhook-service binding.
-func (r *Reconciler) reconcileCAPSConversionWebhook(ctx context.Context, logger logr.Logger, crdName string) (ctrl.Result, error) {
-	svc := &corev1.Service{}
-	if err := r.apiReader.Get(ctx, types.NamespacedName{
-		Name:      capsWebhookServiceName,
-		Namespace: capiNamespace,
-	}, svc); err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("caps webhook service not found, requeue", "crd", crdName)
-			return ctrl.Result{RequeueAfter: requeuePrecondition}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("get %s service: %w", capsWebhookServiceName, err)
-	}
-
-	secret := &corev1.Secret{}
-	if err := r.apiReader.Get(ctx, types.NamespacedName{
-		Name:      capsWebhookSecretName,
-		Namespace: capiNamespace,
-	}, secret); err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("caps webhook tls secret not found, requeue", "crd", crdName)
-			return ctrl.Result{RequeueAfter: requeuePrecondition}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("get %s secret: %w", capsWebhookSecretName, err)
-	}
-
-	caBundle := secret.Data["ca.crt"]
-	if len(caBundle) == 0 {
-		logger.Info("caps webhook tls has empty ca.crt, requeue", "crd", crdName)
-		return ctrl.Result{RequeueAfter: requeuePrecondition}, nil
-	}
-
-	if err := patchConversionWebhook(ctx, r.Client, crdName, caBundle, capsWebhookServiceName); err != nil {
 		return ctrl.Result{}, err
 	}
 

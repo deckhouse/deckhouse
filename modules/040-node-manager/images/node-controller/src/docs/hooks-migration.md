@@ -515,9 +515,13 @@ same trigger and effect; the reactive watch replaces the hook's converge cadence
 | `node-instanceclass-ng-usage` | `NodeGroup` | `set_instance_class_ng_usage.go` | Record which NodeGroups consume each cloud `InstanceClass` in `status.nodeGroupConsumers` |
 | `capi-crd-migration` (CAPS path) | `CustomResourceDefinition` (+watch caps `Secret`/`Service`) | `sshcredentials_crd_cabundle_injection.go` | Keep the `sshcredentials.deckhouse.io` conversion-webhook CA in sync with the CAPS webhook TLS secret |
 | `node-group-configuration-metrics` | `NodeGroupConfiguration` | `metrics_node_group_configurations.go` | Export `d8_node_group_configurations_total{node_group}` — NGC count aggregated by targeted NodeGroup |
-| `chaos-monkey` | `NodeGroup` (schedule-driven, one-minute ticker) | `chaos_monkey.go` | Periodically drain-and-delete one random MCM `Machine` of every chaos-enabled, ready NodeGroup |
 | `yandex-preemptible-cleanup` | `NodeGroup` (schedule-driven, 15-minute ticker) | `yc_delete_preemptible_instances.go` | Rotate the oldest ~10% of preemptible Yandex MCM `Machine`s (node age > 20h) ahead of the cloud's 24h eviction, keeping each NodeGroup ≥ 0.9 ready |
 | `bashible-apiserver-host-ip` | `Pod` (`app=bashible-apiserver`, `d8-cloud-instance-manager`) | `change_host_ip.go` | Record the node host IP into `node.deckhouse.io/initial-host-ip`; delete the Pod when the live `status.hostIP` diverges so it is recreated with a certificate valid for the new address |
+| `master-node-group` | `NodeGroup` (name `master` only; startup-enqueued) | `create_master_node_group.go` | Ensure the default `master` NodeGroup exists (create-if-not-exists); nodeType `Static` for a Static cluster, else `CloudPermanent`. Never patches an existing object |
+| `bashible-apiserver-lock` | `Deployment` (`bashible-apiserver`, `d8-cloud-instance-manager`) | `lock_bashible_apiserver.go` | Toggle the `node.deckhouse.io/bashible-locked` annotation on Secret `bashible-apiserver-context` (+ metric `d8_bashible_apiserver_locked`) while the apiserver Deployment rolls out to a new image |
+| `capi-webhook-cert` | `Service` (`capi-webhook-service`, `d8-cloud-instance-manager`; +watch `Secret`/`ValidatingWebhookConfiguration`/`MutatingWebhookConfiguration`) | `generate_capi_webhook_certs.go` | Issue the self-signed CA + serving cert into Secret `capi-webhook-tls` and inject the CA into the `capi-mutating`/`capi-validating-webhook-configuration` caBundles |
+| `bashible-apiserver-cert` | `Service` (`bashible-api`, `d8-cloud-instance-manager`; +watch `Secret`/`APIService`) | `gen_bashible_apiserver_certs.go` | Issue the self-signed CA + serving cert into Secret `bashible-api-server-tls` and inject the CA into the `v1alpha1.bashible.deckhouse.io` APIService caBundle |
+| `capi-cluster-resources` (kubeconfig, cloud half) | cloud-provider `Secret` (`d8-node-manager-cloud-provider`) | `generate_capi_kubeconfig.go` (**cloud CAPI half only**) | Issue the `capi-controller-manager` client cert and write the `<capiClusterName>-kubeconfig` Secret. The `static` (CAPS) kubeconfig stays owned by the hook — CAPS is not migrated |
 
 ### node-csi-taint (`internal/controller/csitaint`)
 
@@ -729,43 +733,6 @@ NGCs gave `node_group="*" => 3`, and adding a `parity-test-ng`-targeting NGC pro
 `node_group="parity-test-ng" => 1` alongside it. RBAC: `nodegroupconfigurations`
 get/list/watch (read-only, added).
 
-### chaos-monkey (`internal/controller/chaosmonkey`)
-
-Periodically kills one random node of every NodeGroup whose `spec.chaos.mode` is
-`DrainAndDelete`, by deleting the node's MCM `Machine`
-(`machine.sapcloud.io/v1alpha1`, namespace `d8-cloud-instance-manager`); MCM then
-drains the node, deletes the VM and recreates it.
-
-```
-every minute (ticker)
-  ├─ list Machines; if ANY is already flagged victim → skip this tick (global gate)
-  ├─ list chaos-enabled, ready NodeGroups (isReadyForChaos)
-  ├─ for each NG with mode == DrainAndDelete:
-  │    ├─ periodMinutes = chaos.period in minutes (default 6h); ≤0 → skip
-  │    ├─ probability gate: rand % periodMinutes != 0 → skip
-  │    ├─ pick a random node of the NG → its Machine
-  │    └─ annotate Machine chaos-monkey-victim, then delete it
-```
-
-**Parity note:** the hook (`chaos_monkey.go`) was schedule-only — crontab
-`* * * * *` with purely passive Kubernetes bindings — so the controller uses a
-one-minute ticker raw source rather than a reactive watch. NodeGroup/Node/Machine
-events must NOT trigger it (an always-false `WithEventFilter` drops all primary
-events; raw sources bypass the filter), or the per-minute probability gate would
-fire more often and make chaos more aggressive. `isReadyForChaos` mirrors the hook:
-a `CloudEphemeral` group is ready when `status.desired > 1 && desired == ready`, any
-other group uses `status.nodes` instead. The victim gate keys on the `Machine` label
-`chaos-monkey-victim` while the flag is written as an annotation (asymmetry kept 1:1
-with the hook). The random seed is `time.Now().UnixNano()`, overridable by
-`D8_TEST_RANDOM_SEED` for tests. A sub-minute period is skipped instead of panicking
-on a zero modulus (the whole controller binary would crash, unlike the isolated hook).
-Scope is MCM only, matching the hook 1:1; CAPI-backed NodeGroups
-(`cluster.x-k8s.io`) are not handled yet (migration TODO). Baseline verified live on
-`deni-yand-main` (Yandex + MCM, NG `mcm-test`): `period: 1m` made the hook annotate a
-`Machine` with `chaos-monkey-victim` and set its `deletionTimestamp` at 15:46:00Z.
-RBAC: existing `machine.sapcloud.io/machines` get/list/watch/update/patch/delete and
-`nodes`/`nodegroups` read grants already cover it — no new grants.
-
 ### yandex-preemptible-cleanup (`internal/controller/preemptible`)
 
 Proactively rotates the oldest preemptible Yandex.Cloud nodes before the cloud
@@ -793,9 +760,9 @@ every 15 minutes (ticker)
 
 **Parity note:** the hook (`yc_delete_preemptible_instances.go`) was schedule-only —
 crontab `0/15 * * * *` with purely passive Kubernetes bindings — so the controller
-uses a 15-minute ticker raw source rather than a reactive watch (same
-`WithEventFilter`-false pattern as `chaos-monkey`); reactive triggers would rotate
-nodes more aggressively than the intended cadence. The node lookup keys on the
+uses a 15-minute ticker raw source rather than a reactive watch (an always-false
+`WithEventFilter` drops all primary events while the raw source bypasses the filter);
+reactive triggers would rotate nodes more aggressively than the intended cadence. The node lookup keys on the
 `Machine` name (MCM names the node after its Machine), matching the hook 1:1. The
 readiness guard skips NodeGroups with zero nodes, which also avoids the `0/0` NaN the
 hook's raw ratio could produce. Scope is MCM only: it reads
@@ -842,3 +809,241 @@ existing `pods` grant gained `patch` (record the annotation) alongside the pre-e
 `get`/`list`/`watch`/`delete`. Live baseline verified on deni-yand: faking the
 annotation to a stale IP made the old hook delete the Pod, which the Deployment
 recreated with `initial-host-ip` re-recorded to the real host IP.
+
+### master-node-group (`internal/controller/masternodegroup`)
+
+Ensures the default `master` NodeGroup metadata object exists. The object is metadata
+only: during bootstrap the master Node is registered directly by kubeadm via bashible,
+so it is not on the cluster's critical path.
+
+```
+Reconcile (request name must be "master", else no-op)
+  ├─ master NodeGroup exists?  → do nothing (preserve user edits)
+  └─ not found → read clusterType from Secret kube-system/d8-cluster-configuration
+                 build default spec (nodeType Static if clusterType==Static, else
+                 CloudPermanent) → Create
+```
+
+**Parity note:** replaces the `OnStartup{Order:6}` hook `create_master_node_group.go`,
+which was `CreateIfNotExists` for the `master` NodeGroup. The controller keeps the same
+build-if-absent / never-patch semantics, so user changes are preserved. The object is
+built as an **unstructured** value with exactly the hook's fields — a typed NodeGroup
+would marshal empty `cri`/`cloudInstances` structs that fail admission validation for a
+master NodeGroup. `clusterType` comes from the same Secret `d8-cluster-configuration`
+(`cluster-configuration.yaml`, base64-unwrapped) that `derived_status` already reads, so
+no new input source. The primary is `NodeGroup` with a `WithEventFilter` predicate
+narrowing to name `master` (recreate it if a user deletes it, ignore all other
+NodeGroups); a startup raw source enqueues `master` once so it is created on a fresh
+cluster where the object does not exist yet and the primary watch would never fire. The
+`Create` passes through node-controller's own validating webhook, which is up by the time
+the controller reconciles (no chicken-egg — the hook ran on its own queue only because
+the addon-operator startup phase raced the warming webhook; a running controller implies
+a running webhook). RBAC: the existing `nodegroups` grant gained `create` alongside
+`get`/`list`/`watch`/`update`/`patch`.
+
+### bashible-apiserver-lock (`internal/controller/bashiblelock`)
+
+Locks the bashible-apiserver context while its Deployment rolls out to a new image, so
+old apiserver Pods do not serve updated context (referencing step templates / image
+digests they do not yet have) to nodes. The bashible-apiserver reads the annotation
+`node.deckhouse.io/bashible-locked` on Secret `bashible-apiserver-context`
+(`images/bashible-apiserver/.../template/context.go` `secretEventHandler.lockApplied`):
+`"true"` sets `updateLocked` and freezes context publishing.
+
+```
+Reconcile (request must be Deployment bashible-apiserver / d8-cloud-instance-manager)
+  ├─ Deployment not found  → no-op (nothing to lock on)
+  ├─ rollout complete?     → UNLOCK: remove annotation, metric d8_bashible_apiserver_locked=0
+  └─ rollout in progress   → LOCK:   set annotation "true", metric=1
+
+rollout complete :=
+  Status.ObservedGeneration >= Generation   (reject stale status right after the spec bump)
+  AND UpdatedReplicas == Replicas
+  AND AvailableReplicas == Replicas
+```
+
+**Parity note:** replaces the `OnBeforeHelm{Order:20}` hook `lock_bashible_apiserver.go`.
+The hook compared the *live* Deployment image to the **helm values digest**
+`global.modulesImages.digests.nodeManager.bashibleApiserver` (the target image), so it
+could lock *before* helm applied. The controller has no access to the values digest and
+only observes the Deployment after helm patched it, so it locks on **rollout status**
+instead of a digest comparison. The window difference is milliseconds (helm patches the
+Deployment `spec` and the `images_digests.json` ConfigMap in the same apply; the
+controller reacts to the generation bump immediately), and the race the lock guards
+against — an old apiserver Pod serving new context — is still closed. The
+`ObservedGeneration` guard rejects the stale-status window right after the image bump,
+where the replica counts still reflect the previous generation and would falsely read
+"complete". The annotation is written with an idempotent merge patch (a `null` value
+removes it); a missing Secret is ignored, matching the hook's `WithIgnoreMissingObject`.
+The metric `d8_bashible_apiserver_locked` feeds the `D8BashibleApiserverLocked` alert
+(fires when `== 1` for 15m). RBAC: added cluster-wide `apps/deployments`
+`get`/`list`/`watch`; the Secret patch is already covered by the namespaced
+`bashible-context` Role in `d8-cloud-instance-manager`.
+
+### capi-webhook-cert (`internal/controller/capiwebhookcert`)
+
+Issues the serving certificate for the `capi-controller-manager` admission webhook and
+injects its CA into the two CAPI webhook configurations. Replaces the OnBeforeHelm
+`tls_certificate.RegisterInternalTLSHook` `generate_capi_webhook_certs.go`.
+
+```
+Reconcile (fixed key; any watched object funnels here)
+  ├─ Service capi-webhook-service absent → no-op (CAPI disabled)
+  ├─ ensureSecret(capi-webhook-tls):
+  │     stored CA+leaf still valid (both > 6mo left AND leaf SANs == desired) → reuse
+  │     else generate self-signed CA + leaf (ecdsa P256, 10y) → write kubernetes.io/tls Secret
+  ├─ inject CA into every webhook of capi-validating/​capi-mutating-webhook-configuration
+  │     (skip a config that does not exist yet; patch only when a caBundle differs)
+  └─ RequeueAfter 12h (bound renewal latency; the hook re-checked every OnBeforeHelm run)
+
+desired SANs = capi-webhook-service.d8-cloud-instance-manager{,.svc}{,.<clusterDomain>}
+  clusterDomain read from Secret kube-system/d8-cluster-configuration (default cluster.local)
+```
+
+**Parity note.** The hook generated the CA + leaf into helm values
+(`nodeManager.internal.capiControllerManagerWebhookCert`); helm then wrote the
+`capi-webhook-tls` Secret (`secret-tls.yaml`) and stamped every `clientConfig.caBundle`
+in `webhook.yaml`. nc cannot feed helm values, so it **owns the Secret directly** and
+**patches the caBundle** into the live webhook configurations. helm no longer renders a
+`caBundle` field in `webhook.yaml` at all (and `secret-tls.yaml` is removed): omitting the
+field keeps it out of helm's fieldset, so node-controller is the sole author and a converge
+never resets it — there is no caBundle flap. The controller still watches both
+configurations and re-injects within seconds if the field is ever cleared externally. The
+reuse check mirrors the hook's `isOutdatedCA` +
+`isIrrelevantCert`, so a valid cert is left untouched (zero-disruption on rollout). CAPI
+enablement is gated on the `capi-webhook-service` Service rather than on the webhook
+configurations: the configs carry a werf dependency on the `capi-controller-manager`
+Deployment being ready, which in turn mounts `capi-webhook-tls` — gating Secret creation
+on the configs would deadlock, while the Service is created early with no such dependency.
+The crypto is raw `crypto/x509` (node-controller does not import `go_lib/certificate`); the
+leaf carries `ServerAuth` so the API server accepts it when dialing the webhook Service.
+RBAC: added cluster-wide `admissionregistration.k8s.io`
+`validating`/`mutatingwebhookconfigurations` `get`/`list`/`watch`/`update`/`patch`; the
+Secret write is covered by the namespaced secrets Role in `d8-cloud-instance-manager`, and
+the Service + `d8-cluster-configuration` reads by the existing cluster-wide
+`services`/`secrets` rules.
+
+### bashible-apiserver-cert (`internal/controller/bashibleapiservercert`)
+
+Issues the serving certificate for the aggregated `bashible-apiserver` and injects its CA
+into the `v1alpha1.bashible.deckhouse.io` APIService. Replaces the OnBeforeHelm
+`gen_bashible_apiserver_certs.go`.
+
+```
+Reconcile (fixed key; any watched object funnels here)
+  ├─ Service bashible-api absent → no-op (bashible-apiserver not deployed)
+  ├─ ensureSecret(bashible-api-server-tls):
+  │     stored CA+leaf still valid (both > 6mo left AND leaf SANs == desired) → reuse
+  │     else generate self-signed CA + leaf (ecdsa P256, 10y) → write Opaque Secret
+  │        (keys ca.crt / apiserver.crt / apiserver.key)
+  ├─ inject CA into APIService v1alpha1.bashible.deckhouse.io spec.caBundle
+  │     (skip if the APIService does not exist yet; patch only when the caBundle differs)
+  └─ RequeueAfter 12h (bound renewal latency; the hook re-checked every OnBeforeHelm run)
+
+desired SANs = 127.0.0.1 (IP) + bashible-api.d8-cloud-instance-manager.svc (DNS), fixed
+```
+
+**Parity note.** The hook generated the CA + leaf into helm values
+(`nodeManager.internal.bashibleApiServer{CA,Crt,Key}`); helm then wrote the
+`bashible-api-server-tls` Secret (`api-server-tls-secret.yaml`) and stamped the APIService
+`spec.caBundle` (`apiservice.yaml`). nc cannot feed helm values, so it **owns the Secret
+directly** and **patches the caBundle** into the live APIService. helm no longer renders a
+`caBundle` field in `apiservice.yaml` at all (and `api-server-tls-secret.yaml` is removed):
+omitting the field keeps it out of helm's fieldset, so node-controller is the sole author
+and a converge never resets it — there is no caBundle flap. The controller still watches the
+Secret and the APIService and re-injects within seconds if the field is ever cleared
+externally. The reuse check keeps a valid cert untouched
+(zero-disruption on rollout). There is no enablement gate — bashible-apiserver is a core
+component and always deployed — so the reconcile simply anchors on the always-present
+Service `bashible-api`; nc does not depend on bashible-apiserver being up, so owning its
+serving Secret introduces no bootstrap deadlock (on a fresh cluster the bashible-apiserver
+pod mount-retries until nc has created the Secret). The crypto is raw `crypto/x509`
+(node-controller does not import `go_lib/certificate`); the leaf carries **no ExtKeyUsage**,
+mirroring the hook — cfssl mapped `signing`/`key encipherment` to KeyUsage bits and silently
+ignored the unknown `requestheader-client`, so the produced serving cert has no EKU
+extension and is valid for any purpose (the kube-aggregator accepts it as it dials the
+Service as a TLS client). The APIService is patched via `unstructured` because the
+kube-aggregator apiregistration types are not part of node-controller's scheme. RBAC: added
+cluster-wide `apiregistration.k8s.io` `apiservices` `get`/`list`/`watch`/`update`/`patch`;
+the Secret write is covered by the namespaced secrets Role in `d8-cloud-instance-manager`.
+**Blast radius:** the injected caBundle governs the node bootstrap path (bashible.sh reaches
+the aggregated API through kube-apiserver). Only the very first migration converge flaps the
+caBundle once — helm removes the previously templated caBundle before nc re-injects; steady
+-state converges no longer touch the field (it is no longer in helm's fieldset), so there is
+no recurring flap.
+
+### capi-controller-manager kubeconfig, cloud half (`internal/controller/capi`, `kubeconfig.go`)
+
+Issues the client certificate for `capi-controller-manager` and writes the
+`<capiClusterName>-kubeconfig` Secret it mounts to reach the management API server.
+Replaces the **cloud CAPI half** of `generate_capi_kubeconfig.go`. It is folded into the
+existing `capi-cluster-resources` `ClusterReconciler` (primary: the cloud-provider Secret
+`d8-node-manager-cloud-provider`), right after the cloud `Cluster`/`MachineHealthCheck` are
+ensured — reusing the same `capiClusterName != ""` gate.
+
+```
+ensureCloudCluster (clusterName from cloud-provider Secret, non-empty)
+  ├─ create Cluster + MachineHealthCheck (existing)
+  └─ ensureKubeconfigSecret(clusterName):
+        existing <clusterName>-kubeconfig cert still has > 90d left → no-op
+        else issue client cert via CSR (CN capi-controller-manager,
+             org d8:node-manager:capi-controller-manager:manager-role,
+             kube-apiserver-client signer, ClientAuth, 180d, self-approved)
+        build kubeconfig (Host + CA from the manager rest config) → write Secret
+             (type cluster.x-k8s.io/secret, key value, label cluster.x-k8s.io/cluster-name)
+Reconcile returns RequeueAfter 12h → rotate the 180d cert before expiry
+```
+
+**Split note (CAPS stays a hook).** The hook had two branches: the cloud CAPI kubeconfig
+(`<capiClusterName>-kubeconfig`) and the `static` CAPS kubeconfig (`static-kubeconfig`).
+Only the **cloud** branch is migrated. CAPS is not migrated to node-controller, so the
+`static` branch **remains in `generate_capi_kubeconfig.go`** (now CAPS-only, gated on
+`capsControllerManagerEnabled`). nc's `ensureStaticCluster` still creates the static
+`Cluster`/`MachineHealthCheck` (that predates this migration) but deliberately does **not**
+write the static kubeconfig.
+
+**Design.** The cert is minted with the same CSR issue/self-approve/wait/delete flow as the
+`apiproxycert` controller (kube-apiserver-client signer), using a typed clientset built from
+the manager rest config in `BaseWithReader.Setup`. The kubeconfig's server URL and CA come
+from that same rest config (CA loaded from `CAFile` when `CAData` is empty, as in-cluster).
+The Secret name/type/label/key are byte-identical to the hook's `internal/kubeconfig`
+helper, and no Helm template reads `<cluster>-kubeconfig` (the only runtime consumer is the
+`capi-controller-manager` Deployment mounting it), so ownership can move cleanly from helm
+patch-collector to nc. The reconcile is a no-op while the stored cert has more than half its
+180-day lifetime left, so migration does not roll the existing kubeconfig. RBAC already
+covers everything: CSR create/approve on the kube-apiserver-client signer (apiproxycert) and
+the namespaced secrets Role in `d8-cloud-instance-manager` (bashible-context) — no new rules.
+
+## Part 4: Hooks subsumed by the bashible context (deleted, no new controller)
+
+Some shell-operator hooks only read a source object and wrote a value into
+`nodeManager.internal.*` for Helm to render into the bashible `input.yaml`. After the
+bashible cutover, `input.yaml` is written by the node-controller
+(`internal/controller/nodegroup/bashiblecontext`), which reads the same source objects
+directly. When such a hook's value is **no longer read by any Helm template** (only the
+bashible context path remained), the hook is pure duplication and is deleted outright —
+no controller is added, because `bashiblecontext` already produces the field.
+
+| Deleted hook | Value it wrote | bashiblecontext reader | Remaining Helm consumer |
+|--------------|----------------|------------------------|-------------------------|
+| `control_plane_arguments.go` | `internal.nodeStatusUpdateFrequency`, `internal.allowedKubeletFeatureGates` | `readControlPlaneArguments` (`bashiblecontext/sources.go`) | none |
+
+### control_plane_arguments
+
+The hook read Secret `kube-system/d8-control-plane-manager-control-plane-arguments`
+(`arguments.json`, `featureGates.json`) and set two values:
+`nodeStatusUpdateFrequency = round(nodeMonitorGracePeriod / 4)` and
+`allowedKubeletFeatureGates`. Both fed only the bashible `input.yaml`.
+
+`bashiblecontext.readControlPlaneArguments` (`sources.go`) now reads the **same** Secret
+directly with the **same** `round(nodeMonitorGracePeriod / 4)` formula and places both
+fields into `input.yaml` (`context.go`); bashible-apiserver unmarshals them from the
+mounted context Secret (`pkg/template/context_builder.go`). A grep over the module's
+`templates/` for `nodeStatusUpdateFrequency`/`allowedKubeletFeatureGates` returns
+nothing — no Helm template consumes the values — so the hook's `input.Values.Set` had no
+reader left. Removed: the hook, its test, and both fields from `openapi/values.yaml`.
+Unlike the other value-feeding V-hooks (`discover_cloud_provider`, `order_bootstrap_token`,
+`discover_kubernetes_ca`, `get_packages_proxy_token`, `discover_apiserver_endpoints`),
+whose values are still read by the per-NodeGroup bootstrap Secrets in
+`node-group/*.tpl`, `control_plane_arguments` fed the bashible context only — which the
+controller already owns — so it can be dropped without the bootstrap-secret migration.

@@ -19,6 +19,8 @@ package capi
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -37,11 +39,22 @@ const (
 
 type BaseWithReader struct {
 	register.Base
-	APIReader client.Reader
+	APIReader  client.Reader
+	RestConfig *rest.Config
+	Clientset  kubernetes.Interface
 }
 
 func (b *BaseWithReader) Setup(mgr ctrl.Manager) error {
 	b.APIReader = mgr.GetAPIReader()
+	b.RestConfig = mgr.GetConfig()
+
+	// A typed clientset is needed for the CertificateSigningRequest issue/approve/wait
+	// flow used to mint the capi-controller-manager kubeconfig client certificate.
+	cs, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	b.Clientset = cs
 	return nil
 }
 

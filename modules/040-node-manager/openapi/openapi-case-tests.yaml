@@ -15,9 +15,6 @@ defaults:
         rppServerPort: 4219
         rppBootstrapServerPort: 4282
     kubernetesCA: myclusterca
-    bashibleApiServerCA: myapiserverca
-    bashibleApiServerCrt: myapiservercrt
-    bashibleApiServerKey: myapiserverprivkey
 
 positive:
   configValues:

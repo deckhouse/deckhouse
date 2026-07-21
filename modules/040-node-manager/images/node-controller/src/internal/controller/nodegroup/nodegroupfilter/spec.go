@@ -50,8 +50,6 @@ type NodeGroupSpec struct {
 
 	NodeTemplate NodeTemplate `json:"nodeTemplate,omitempty"`
 
-	Chaos Chaos `json:"chaos,omitempty"`
-
 	OperatingSystem OperatingSystem `json:"operatingSystem,omitempty"`
 
 	Disruptions Disruptions `json:"disruptions,omitempty"`
@@ -164,11 +162,6 @@ type Resources struct {
 type ClassReference struct {
 	Kind string `json:"kind,omitempty"`
 	Name string `json:"name,omitempty"`
-}
-
-type Chaos struct {
-	Mode   string `json:"mode,omitempty"`
-	Period string `json:"period,omitempty"`
 }
 
 type OperatingSystem struct {

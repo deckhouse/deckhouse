@@ -53,22 +53,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleCreateCAPIStaticKubeconfig))
 
+// handleCreateCAPIStaticKubeconfig generates the kubeconfig Secret for the "static" CAPS
+// cluster. The cloud CAPI half of this hook was migrated to node-controller (capi
+// ClusterReconciler); the CAPS half stays a hook because CAPS is not migrated.
 func handleCreateCAPIStaticKubeconfig(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	capiEnabledRaw := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
-
-	if capiEnabledRaw.Exists() && capiEnabledRaw.Bool() {
-		capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
-		if capiClusterName != "" {
-			err := generateKubeconfigSecret(input, dc, hookParam{
-				serviceAccount: clusterAPIServiceAccountName,
-				cluster:        capiClusterName,
-			})
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	capsEnabledRaw := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
 
 	if capsEnabledRaw.Exists() && capsEnabledRaw.Bool() {

@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -242,57 +241,14 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	return nil
 }
 
-func buildStaticMachineTemplate(ng *deckhousev1.NodeGroup) (*unstructured.Unstructured, error) {
-	labels := map[string]interface{}{
-		"heritage":   "deckhouse",
-		"module":     "node-manager",
-		"node-group": ng.Name,
-	}
-
-	templateSpec := map[string]interface{}{}
-	if ls := ng.Spec.StaticInstances.LabelSelector; ls != nil {
-		m, err := runtime.DefaultUnstructuredConverter.ToUnstructured(ls)
-		if err != nil {
-			return nil, fmt.Errorf("convert staticInstances.labelSelector for NodeGroup %s: %w", ng.Name, err)
-		}
-		templateSpec["labelSelector"] = m
-	}
-
-	return &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "infrastructure.cluster.x-k8s.io/v1alpha1",
-		"kind":       "StaticMachineTemplate",
-		"metadata": map[string]interface{}{
-			"name":      ng.Name,
-			"namespace": common.MachineNamespace,
-			"labels":    labels,
-		},
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"labels": labels,
-				},
-				"spec": templateSpec,
-			},
-		},
-	}}, nil
-}
-
-func (r *MachineDeploymentReconciler) reconcileStaticMDRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
-
-	smt, err := buildStaticMachineTemplate(ng)
-	if err != nil {
-		return err
-	}
-	if err := r.Client.Patch(ctx, smt, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
-		return fmt.Errorf("apply StaticMachineTemplate %s: %w", ng.Name, err)
-	}
 
 	md := buildStaticMD(ng)
 	if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 		return fmt.Errorf("apply static MachineDeployment %s: %w", ng.Name, err)
 	}
-	logger.Info("applied static MachineTemplate + MachineDeployment", "name", ng.Name)
+	logger.Info("applied static MachineDeployment", "name", ng.Name)
 	return nil
 }
 

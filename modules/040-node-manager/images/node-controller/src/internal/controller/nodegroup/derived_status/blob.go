@@ -31,7 +31,6 @@ var nodeGroupForValuesKeys = []string{
 	"staticInstances",
 	"cloudInstances",
 	"nodeTemplate",
-	"chaos",
 	"operatingSystem",
 	"disruptions",
 	"kubelet",

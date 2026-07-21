@@ -319,9 +319,6 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	if !nodeGroupSpec.NodeTemplate.IsEmpty() {
 		res["nodeTemplate"] = nodeGroupSpec.NodeTemplate
 	}
-	if !nodeGroupSpec.Chaos.IsEmpty() {
-		res["chaos"] = nodeGroupSpec.Chaos
-	}
 	if !nodeGroupSpec.OperatingSystem.IsEmpty() {
 		res["operatingSystem"] = nodeGroupSpec.OperatingSystem
 	}
