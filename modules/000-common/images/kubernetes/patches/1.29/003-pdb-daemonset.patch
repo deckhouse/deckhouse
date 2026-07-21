@@ -1,8 +1,8 @@
 diff --git a/cmd/kube-controller-manager/app/policy.go b/cmd/kube-controller-manager/app/policy.go
-index 001086cb8d8..6c742283324 100644
+index 0db44ba6e4a..c8893ae9c78 100644
 --- a/cmd/kube-controller-manager/app/policy.go
 +++ b/cmd/kube-controller-manager/app/policy.go
-@@ -45,6 +45,7 @@ func startDisruptionController(ctx context.Context, controllerContext Controller
+@@ -54,6 +54,7 @@ func startDisruptionController(ctx context.Context, controllerContext Controller
  		controllerContext.InformerFactory.Apps().V1().ReplicaSets(),
  		controllerContext.InformerFactory.Apps().V1().Deployments(),
  		controllerContext.InformerFactory.Apps().V1().StatefulSets(),
@@ -11,7 +11,7 @@ index 001086cb8d8..6c742283324 100644
  		controllerContext.RESTMapper,
  		scaleClient,
 diff --git a/pkg/controller/disruption/disruption.go b/pkg/controller/disruption/disruption.go
-index 2527e31480e..f7eac243e16 100644
+index 5a5ede4d3ae..c99db080b39 100644
 --- a/pkg/controller/disruption/disruption.go
 +++ b/pkg/controller/disruption/disruption.go
 @@ -102,6 +102,9 @@ type DisruptionController struct {
@@ -110,7 +110,7 @@ index 2527e31480e..f7eac243e16 100644
  	}
  
 diff --git a/pkg/controller/disruption/disruption_test.go b/pkg/controller/disruption/disruption_test.go
-index 3e9fb4e4fd3..8b57be1e1a9 100644
+index ac56f90f266..8b1ee4caea7 100644
 --- a/pkg/controller/disruption/disruption_test.go
 +++ b/pkg/controller/disruption/disruption_test.go
 @@ -134,6 +134,7 @@ type disruptionController struct {
