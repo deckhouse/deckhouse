@@ -20,13 +20,13 @@ properties:
 
       Defines the set of modules that are enabled by default:
 
-      - `Default` — the recommended set of modules for cluster operation. Includes modules for monitoring, authorization control, networking, and other basic platform needs;
-      - `Managed` — the set of modules for managed clusters from cloud providers (for example, Google Kubernetes Engine);
-      - `Minimal` — the minimum possible set, which includes a single module (this one).
+      - `Default`: Recommended set of modules for cluster operation. Includes modules for monitoring, authorization control, networking, and other basic platform needs.
+      - `Managed`: Set of modules for managed clusters from cloud providers (for example, Google Kubernetes Engine).
+      - `Minimal`: Minimum possible set, which includes a single module (this one).
 
-        > **Caution.** Several basic platform modules (for example, the CNI module) are not included in the `Minimal` module set. Without the basic modules, DKP can only operate in an already deployed cluster.
+        > **Warning.** Several basic platform modules (for example, the CNI module) are not included in the `Minimal` module set. Without the basic modules, DKP can only operate in an already deployed cluster.
         >
-        > For the list of modules that must be enabled manually during installation, see [Things to keep in mind when working with the Minimal module set](/products/kubernetes-platform/documentation/v1/admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
+        > For the list of modules that must be enabled manually during installation, see ["Things to keep in mind when working with the Minimal module set"](/products/kubernetes-platform/documentation/v1/admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
     default: "Default"
 
   releaseChannel:

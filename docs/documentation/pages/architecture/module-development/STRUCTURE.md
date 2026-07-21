@@ -658,7 +658,7 @@ Parameter description:
     {% alert level="warning" %}
     Note that basic modules (such as the CNI module) are not included in this set.
     Without basic modules, DKP can only operate in an already deployed cluster.
-    The list of modules that must be enabled manually during installation is given in [Things to keep in mind when working with the Minimal module set](../../../admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
+    The list of modules that must be enabled manually during installation is given in ["Things to keep in mind when working with the Minimal module set"](../../../admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
     {% endalert %}
 - Sections containing edition names. Define module behavior in specified editions.
   Possible values: `be`, `ce`, `ee`, `se`, `se-plus`.
