@@ -22,7 +22,7 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 
-	"go.yaml.in/yaml/v2"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -40,38 +40,38 @@ type ContextInputParams struct {
 	APIServerProxyCerts ContextAPIServerProxyCerts
 }
 
+// contextInput is serialized with sigs.k8s.io/yaml (the same library the
+// bashible-apiserver uses to read input.yaml), so only json tags matter.
 type contextInput struct {
-	Deckhouse               contextDeckhouse           `json:"deckhouse" yaml:"deckhouse"`
-	PodSubnetNodeCIDRPrefix string                     `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
-	ClusterDomain           string                     `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress       string                     `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	ClusterUUID             string                     `json:"clusterUUID" yaml:"clusterUUID"`
-	BootstrapTokens         map[string]string          `json:"bootstrapTokens" yaml:"bootstrapTokens"`
-	APIServerEndpoints      []string                   `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	ClusterMasterEndpoints  []contextMasterEndpoint    `json:"clusterMasterEndpoints" yaml:"clusterMasterEndpoints"`
-	APIServerProxyCerts     contextAPIServerProxyCerts `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
-	KubernetesCA            string                     `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles          []string                   `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups              []map[string]interface{}   `json:"nodeGroups" yaml:"nodeGroups"`
+	Deckhouse               contextDeckhouse           `json:"deckhouse"`
+	PodSubnetNodeCIDRPrefix string                     `json:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain           string                     `json:"clusterDomain"`
+	ClusterDNSAddress       string                     `json:"clusterDNSAddress"`
+	ClusterUUID             string                     `json:"clusterUUID"`
+	BootstrapTokens         map[string]string          `json:"bootstrapTokens"`
+	APIServerEndpoints      []string                   `json:"apiserverEndpoints"`
+	ClusterMasterEndpoints  []contextMasterEndpoint    `json:"clusterMasterEndpoints"`
+	APIServerProxyCerts     ContextAPIServerProxyCerts `json:"apiserverProxyCerts"`
+	KubernetesCA            string                     `json:"kubernetesCA"`
+	AllowedBundles          []string                   `json:"allowedBundles"`
+	NodeGroups              []map[string]interface{}   `json:"nodeGroups"`
 }
 
-type contextAPIServerProxyCerts struct {
-	Crt string `json:"crt" yaml:"crt"`
-	Key string `json:"key" yaml:"key"`
+type ContextAPIServerProxyCerts struct {
+	Crt string `json:"crt"`
+	Key string `json:"key"`
 }
-
-type ContextAPIServerProxyCerts = contextAPIServerProxyCerts
 
 type contextDeckhouse struct {
-	Channel string `json:"channel" yaml:"channel"`
-	Version string `json:"version" yaml:"version"`
-	Edition string `json:"edition" yaml:"edition"`
+	Channel string `json:"channel"`
+	Version string `json:"version"`
+	Edition string `json:"edition"`
 }
 type contextMasterEndpoint struct {
-	Address                string `json:"address" yaml:"address"`
-	KubeAPIPort            int    `json:"kubeApiPort" yaml:"kubeApiPort"`
-	RPPServerPort          int    `json:"rppServerPort" yaml:"rppServerPort"`
-	RPPBootstrapServerPort int    `json:"rppBootstrapServerPort" yaml:"rppBootstrapServerPort"`
+	Address                string `json:"address"`
+	KubeAPIPort            int    `json:"kubeApiPort"`
+	RPPServerPort          int    `json:"rppServerPort"`
+	RPPBootstrapServerPort int    `json:"rppBootstrapServerPort"`
 }
 
 func BuildContextInputYAML(p ContextInputParams) (string, error) {

@@ -31,12 +31,13 @@ import (
 )
 
 const (
-	namespace                = "kube-system"
+	namespace = "kube-system"
+	// alphaNumLowerCaseCharset mirrors go_lib/pwgen.AlphaNumLowerCase, copied here
+	// because pwgen lives in the root deckhouse module and this is a separate module.
 	alphaNumLowerCaseCharset = "0123456789abcdefghijklmnopqrstuvwxyz"
 	maxCreateAttempts        = 5
 )
 
-// randString mirrors go_lib/pwgen.AlphaNumLowerCase
 func randString(length int) string {
 	buf := make([]byte, length)
 	_, _ = rand.Read(buf)

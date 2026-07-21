@@ -133,7 +133,7 @@ func buildManifestReplacer(
 	apiAdvertiseAddress string,
 	clusterUUID string,
 ) *strings.Replacer {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
@@ -151,6 +151,7 @@ func buildManifestReplacer(
 		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
 		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
 		"${SERVICE_SUBNET_CIDR}", constants.DefaultTenantServiceSubnetCIDR,
+		"${POD_SUBNET_CIDR}", constants.DefaultTenantPodSubnetCIDR,
 		"${VCP_API_HOST}", apiExposeHost(vcp),
 		"${VCP_KONN_HOST}", konnExposeHost(vcp),
 		"${VCP_PKG_HOST}", packagesExposeHost(vcp),

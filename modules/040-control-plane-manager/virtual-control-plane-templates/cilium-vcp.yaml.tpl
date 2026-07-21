@@ -208,7 +208,7 @@ data:
   enable-hubble: "false"
   ipam: "cluster-pool"
   ipam-cilium-node-update-rate: "15s"
-  cluster-pool-ipv4-cidr: "10.244.0.0/16"
+  cluster-pool-ipv4-cidr: "${POD_SUBNET_CIDR}"
   cluster-pool-ipv4-mask-size: "24"
 
   default-lb-service-ipam: "lbipam"

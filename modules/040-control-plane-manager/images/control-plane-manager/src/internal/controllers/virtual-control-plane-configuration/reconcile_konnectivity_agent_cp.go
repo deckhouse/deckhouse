@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -49,7 +50,7 @@ func (r *reconciler) reconcileKonnectivityCPAgentSecret(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	pkiSecret *corev1.Secret,
 ) (reconcile.Result, error) {
-	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	ns := vcpNamespace(vcp)
 
 	if err := r.ensureKonnectivityCPAgentSecretBootstrap(ctx, vcp, pkiSecret.Data["ca.crt"]); err != nil {
 		return reconcile.Result{}, err
@@ -84,7 +85,7 @@ func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	caPEM []byte,
 ) error {
-	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	ns := vcpNamespace(vcp)
 
 	current, err := r.getSecret(ctx, ns, konnectivityAgentCPSecretName)
 	if apierrors.IsNotFound(err) {
@@ -94,6 +95,9 @@ func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
 			konnectivityAgentCPPlaceholderToken,
 			"",
 		)
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return err
+		}
 		return r.createSecret(ctx, target)
 	}
 	if err != nil {
@@ -152,7 +156,7 @@ func (r *reconciler) ensureKonnectivityCPAgentToken(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 ) (string, string, error) {
-	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	ns := vcpNamespace(vcp)
 
 	if current, err := r.getSecret(ctx, ns, konnectivityAgentCPSecretName); err == nil {
 		token := string(current.Data["token"])
@@ -196,7 +200,7 @@ func (r *reconciler) konnectivityCPAgentSecret(
 	caPEM []byte,
 	token, exp string,
 ) *corev1.Secret {
-	ns := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	ns := vcpNamespace(vcp)
 	annotations := map[string]string{}
 	if exp != "" {
 		annotations[konnectivityAgentCPTokenExpiresAt] = exp

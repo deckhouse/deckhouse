@@ -43,6 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	certutil "k8s.io/client-go/util/cert"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -159,7 +160,7 @@ func (r *reconciler) reconcileBashibleKubeconfigSecret(
 		pkiSecret,
 		bashibleKubeconfigSecretName,
 		[]kubeconfig.File{kubeconfig.BashibleApiserver},
-		fmt.Sprintf("https://%s:6443", apiserverService.Spec.ClusterIP),
+		apiServerHTTPSURL(apiserverService.Spec.ClusterIP),
 	)
 }
 
@@ -340,7 +341,7 @@ func resolveBashibleAPIServerProxyCerts(
 ) (bashibleapiserver.ContextAPIServerProxyCerts, error) {
 	if contextSecret != nil && len(contextSecret.Data["input.yaml"]) > 0 {
 		var existing struct {
-			APIServerProxyCerts bashibleapiserver.ContextAPIServerProxyCerts `yaml:"apiserverProxyCerts"`
+			APIServerProxyCerts bashibleapiserver.ContextAPIServerProxyCerts `json:"apiserverProxyCerts"`
 		}
 		if err := yaml.Unmarshal(contextSecret.Data["input.yaml"], &existing); err == nil &&
 			existing.APIServerProxyCerts.Crt != "" && existing.APIServerProxyCerts.Key != "" {
@@ -351,16 +352,32 @@ func resolveBashibleAPIServerProxyCerts(
 	return generateBashibleAPIServerProxyCerts(pkiSecret)
 }
 
-func generateBashibleAPIServerProxyCerts(pkiSecret *corev1.Secret) (bashibleapiserver.ContextAPIServerProxyCerts, error) {
+// signVCPCert signs a leaf certificate with the VCP cluster CA from pkiSecret
+// and returns the certificate and private key in PEM form.
+func signVCPCert(pkiSecret *corev1.Secret, cfg pkiutil.CertConfig) (crtPEM, keyPEM []byte, err error) {
 	caCert, err := pkiutil.ParseCertificatePEM(pkiSecret.Data["ca.crt"])
 	if err != nil {
-		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("parse VCP CA cert: %w", err)
+		return nil, nil, fmt.Errorf("parse VCP CA cert: %w", err)
 	}
 	caKey, err := pkiutil.ParsePrivateKeyPEM(pkiSecret.Data["ca.key"])
 	if err != nil {
-		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("parse VCP CA key: %w", err)
+		return nil, nil, fmt.Errorf("parse VCP CA key: %w", err)
 	}
 
+	cert, key, err := pkiutil.NewCertAndKey(caCert, caKey, cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("sign %q cert: %w", cfg.CommonName, err)
+	}
+
+	keyPEM, err = pkiutil.MarshalPrivateKeyToPEM(key)
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshal %q key: %w", cfg.CommonName, err)
+	}
+
+	return pkiutil.EncodeCertificate(cert), keyPEM, nil
+}
+
+func generateBashibleAPIServerProxyCerts(pkiSecret *corev1.Secret) (bashibleapiserver.ContextAPIServerProxyCerts, error) {
 	cfg := pkiutil.CertConfig{
 		Config: certutil.Config{
 			CommonName:   "kubernetes-api-proxy",
@@ -371,18 +388,13 @@ func generateBashibleAPIServerProxyCerts(pkiSecret *corev1.Secret) (bashibleapis
 		EncryptionAlgorithm: pkiconstants.EncryptionAlgorithmRSA2048,
 	}
 
-	cert, key, err := pkiutil.NewCertAndKey(caCert, caKey, cfg)
+	crtPEM, keyPEM, err := signVCPCert(pkiSecret, cfg)
 	if err != nil {
-		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("sign kubernetes-api-proxy client cert: %w", err)
-	}
-
-	keyPEM, err := pkiutil.MarshalPrivateKeyToPEM(key)
-	if err != nil {
-		return bashibleapiserver.ContextAPIServerProxyCerts{}, fmt.Errorf("marshal kubernetes-api-proxy key: %w", err)
+		return bashibleapiserver.ContextAPIServerProxyCerts{}, err
 	}
 
 	return bashibleapiserver.ContextAPIServerProxyCerts{
-		Crt: string(pkiutil.EncodeCertificate(cert)),
+		Crt: string(crtPEM),
 		Key: string(keyPEM),
 	}, nil
 }
@@ -443,6 +455,10 @@ func (r *reconciler) reconcileBashibleTLSSecret(
 		}
 		target.Data = data
 
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return nil, reconcile.Result{}, err
+		}
+
 		return target, reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
@@ -453,7 +469,7 @@ func (r *reconciler) reconcileBashibleTLSSecret(
 }
 
 func buildTargetBashibleTLSSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -466,15 +482,6 @@ func buildTargetBashibleTLSSecret(vcp *controlplanev1alpha1.VirtualControlPlane)
 
 func buildBashibleTLSSecretData(pkiSecret *corev1.Secret) (map[string][]byte, error) {
 	namespace := bashibleDeckhouseNamespace
-
-	caCert, err := pkiutil.ParseCertificatePEM(pkiSecret.Data["ca.crt"])
-	if err != nil {
-		return nil, fmt.Errorf("parse VCP CA cert: %w", err)
-	}
-	caKey, err := pkiutil.ParsePrivateKeyPEM(pkiSecret.Data["ca.key"])
-	if err != nil {
-		return nil, fmt.Errorf("parse VCP CA key: %w", err)
-	}
 
 	cfg := pkiutil.CertConfig{
 		Config: certutil.Config{
@@ -491,19 +498,14 @@ func buildBashibleTLSSecretData(pkiSecret *corev1.Secret) (map[string][]byte, er
 		EncryptionAlgorithm: pkiconstants.EncryptionAlgorithmRSA2048,
 	}
 
-	cert, key, err := pkiutil.NewCertAndKey(caCert, caKey, cfg)
+	crtPEM, keyPEM, err := signVCPCert(pkiSecret, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("sign bashible-apiserver serving cert: %w", err)
-	}
-
-	keyPEM, err := pkiutil.MarshalPrivateKeyToPEM(key)
-	if err != nil {
-		return nil, fmt.Errorf("marshal bashible-apiserver key: %w", err)
+		return nil, err
 	}
 
 	return map[string][]byte{
 		"ca.crt":        pkiSecret.Data["ca.crt"],
-		"apiserver.crt": pkiutil.EncodeCertificate(cert),
+		"apiserver.crt": crtPEM,
 		"apiserver.key": keyPEM,
 	}, nil
 }
@@ -512,7 +514,7 @@ func buildBashibleTLSSecretData(pkiSecret *corev1.Secret) (map[string][]byte, er
 var bashibleVersionMap string
 
 func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	bashibleImagesDigestsJSON, err := r.getImagesDigestsJSON(ctx)
 	if err != nil {
@@ -532,6 +534,9 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 
 	current, err := r.getConfigMap(ctx, namespace, bashibleFilesConfigMapName)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, r.createConfigMap(ctx, target)
 	}
 
@@ -569,6 +574,9 @@ func (r *reconciler) reconcileBashibleService(
 
 	current, err := r.getService(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return nil, reconcile.Result{}, err
+		}
 		if err := r.createService(ctx, target); err != nil {
 			return nil, reconcile.Result{}, fmt.Errorf("create bashible Service: %w", err)
 		}
@@ -593,7 +601,7 @@ func (r *reconciler) reconcileBashibleService(
 }
 
 func buildTargetBashibleService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -661,6 +669,9 @@ func (r *reconciler) reconcileBashibleDeployment(
 
 	current, err := r.getDeployment(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, r.createDeployment(ctx, target)
 	}
 	if err != nil {
@@ -689,7 +700,7 @@ func (r *reconciler) getBashibleApiserverImage(ctx context.Context) (string, err
 var bashibleDeploymentYAML string
 
 func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane, image string) (*appsv1.Deployment, error) {
-	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	namespace := vcpNamespace(vcp)
 
 	rendered := strings.NewReplacer(
 		"${NAMESPACE}", namespace,
@@ -749,6 +760,7 @@ func (r *reconciler) reconcileBashibleAPIService(
 	// Legacy Endpoints for kube-aggregator (< 1.34)
 	ep := buildNestedBashibleEndpoints(namespace, address)
 	if _, err := controllerutil.CreateOrUpdate(ctx, nested, ep, func() error {
+		// TODO: migrate to endpointslice
 		applyNestedBashibleEndpoints(ep, namespace, address)
 		return nil
 	}); err != nil {
