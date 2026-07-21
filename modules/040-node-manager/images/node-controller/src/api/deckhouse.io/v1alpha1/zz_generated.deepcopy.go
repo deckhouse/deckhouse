@@ -692,6 +692,10 @@ func (in *NodeOperationStatus) DeepCopyInto(out *NodeOperationStatus) {
 		in, out := &in.StartedAt, &out.StartedAt
 		*out = (*in).DeepCopy()
 	}
+	if in.FinishedAt != nil {
+		in, out := &in.FinishedAt, &out.FinishedAt
+		*out = (*in).DeepCopy()
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]metav1.Condition, len(*in))
