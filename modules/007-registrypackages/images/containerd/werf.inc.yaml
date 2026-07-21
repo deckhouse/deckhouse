@@ -160,7 +160,7 @@ shell:
   - rm -rf install_v1 install_v2
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/builder/golang" "builder/builder/golang" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang" "builder/golang" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -214,7 +214,7 @@ secrets:
   value: {{ $.SOURCE_REPO }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/builder/golang" "builder/builder/golang" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang" "builder/golang" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
