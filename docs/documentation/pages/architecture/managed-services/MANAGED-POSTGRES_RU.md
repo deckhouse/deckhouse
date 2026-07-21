@@ -6,7 +6,7 @@ search: managed-postgres, postgresql
 description: Архитектура модуля managed-postgres в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`managed-postgres`](/modules/managed-postgres/) управляет кластерами PostgreSQL в Kubernetes-кластерах. Он позволяет пользователям конфигурировать и масштабировать PostgreSQL-кластеры в соответствии с их потребностями, обеспечивая оптимальную производительность и безопасность. Основные возможности модуля:
+Модуль [`managed-postgres`](/modules/managed-postgres/) управляет кластерами PostgreSQL в Deckhouse Kubernetes Platform (DKP). Он позволяет пользователям конфигурировать и масштабировать PostgreSQL-кластеры в соответствии с их потребностями, обеспечивая оптимальную производительность и безопасность. Основные возможности модуля:
 
 * **Автоматическое развертывание** — разворачивает инстанс PostgreSQL при помощи простой YAML-конфигурации;
 * **Высокая доступность** — поддерживает установку отказоустойчивого кластера PostgreSQL или одиночного инстанса на выбор;
@@ -37,7 +37,7 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 
 1. **Managed-postgres-operator** — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   * согласование состояния кастомных ресурсов [Postgres](/modules/managed-postgres/stable/cr.html#postgres) во всех пользовательских пространствах имён. Ресурс Postgres определяет настройки кластера PostgreSQL, включая топологию размещения и режим репликации, конфигурацию инстансов PostgreSQL и прочие параметры, такие как список логических баз данных и внутренних пользователей;
+   * согласование состояния кастомных ресурсов [Postgres](/modules/managed-postgres/stable/cr.html#postgres) во всех пользовательских пространствах имён. Ресурс Postgres определяет настройки кластера PostgreSQL, включая топологию размещения и режим репликации, конфигурацию инстансов PostgreSQL и прочие параметры, такие как списки логических баз данных и внутренних пользователей;
 
    * согласование состояния кастомных ресурсов [PostgresSnapshot](/modules/managed-postgres/stable/cr.html#postgressnapshot). Ресурс PostgresSnapshot предназначен для [резервного копирования и восстановления инстансов PostgreSQL](https://deckhouse.ru/modules/managed-postgres/stable/snapshots.html);
 
@@ -115,7 +115,7 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 1. **Kube-apiserver**:
 
    * управляет кастомными ресурсами Postgres и PostgresSnapshot;
-   * управляет кастомными ресурсами API-группы `cnpg.internal.managed.deckhouse.io`;
+   * управляет кастомными ресурсами API-группы `cnpg.internal.managed.deckhouse.io`.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
