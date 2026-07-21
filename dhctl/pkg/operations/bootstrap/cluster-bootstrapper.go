@@ -271,11 +271,10 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	defer configSpan.End()
 
 	// first, parse and check cluster config
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		&b.Options.Global,
 		config.ValidateOptionValidateExtensions(true),
 		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationBootstrap),

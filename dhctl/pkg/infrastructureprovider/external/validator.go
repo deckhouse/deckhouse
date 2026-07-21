@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package external delegates Validate/Prepare to an external provider binary
-// via the stdin/stdout JSON protocol (see go_lib/dhctl-provider-protocol).
+// Package external delegates provider config validation to the validator
+// binary shipped in the provider's OCI bundle, over the stdin/stdout JSON
+// protocol (see go_lib/dhctl-provider-protocol). This is what runs a provider's
+// own pre-bootstrap checks (e.g. DVP's credential/NodeGroup/InstanceClass
+// preflight) before dhctl touches any infrastructure.
 package external
 
 import (
@@ -34,23 +37,23 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
-type Preparator struct {
+type Validator struct {
 	binaryPath string
 }
 
-func NewBinaryPreparator(binaryPath string) *Preparator {
-	return &Preparator{binaryPath: binaryPath}
+func NewBinaryValidator(binaryPath string) *Validator {
+	return &Validator{binaryPath: binaryPath}
 }
 
-func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) error {
-	stdout, err := p.call(ctx, "validate", input)
+func (p *Validator) Validate(ctx context.Context, input config.ProviderInput) error {
+	stdout, err := p.call(ctx, input)
 	if err != nil {
 		return err
 	}
 
 	// A conformant binary always emits a JSON object ("{}\n" on success).
 	// Empty stdout means a broken binary — fail closed instead of silently
-	// treating it as validated (matches Prepare).
+	// treating it as validated.
 	var resp proto.ValidateResponse
 	if err := json.Unmarshal(stdout, &resp); err != nil {
 		return fmt.Errorf("parse validate response: %w", err)
@@ -61,17 +64,10 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 	return nil
 }
 
-// Prepare is a no-op for external providers: the external protocol has only a
-// validate stage. Provider data collected by dhctl is used as-is, dhctl never
-// asks the binary to mutate it.
-func (p *Preparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
-	return proto.PrepareResult{}, nil
-}
+// call encodes input, runs the validator binary and returns its stdout.
+func (p *Validator) call(ctx context.Context, input config.ProviderInput) ([]byte, error) {
+	const subcommand = "validate"
 
-// call encodes input, runs the binary subcommand and returns its stdout.
-// Request/response payloads go to the span and debug log in full — deliberate
-// development-stage telemetry.
-func (p *Preparator) call(ctx context.Context, subcommand string, input config.ProviderInput) ([]byte, error) {
 	ctx, span := telemetry.StartSpan(ctx, "external."+subcommand)
 	defer span.End()
 	span.SetAttributes(
@@ -127,7 +123,7 @@ func toWireInput(input config.ProviderInput) (proto.ValidateInput, error) {
 // runTimeout caps one validator invocation so a hung binary cannot hang the caller.
 const runTimeout = 30 * time.Second
 
-func (p *Preparator) run(ctx context.Context, subcommand string, stdin []byte) ([]byte, error) {
+func (p *Validator) run(ctx context.Context, subcommand string, stdin []byte) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, runTimeout)
 	defer cancel()
 

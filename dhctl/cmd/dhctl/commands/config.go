@@ -58,9 +58,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
 			opts.Global.ConfigPaths,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(),
-			),
+			infrastructureprovider.MetaConfigValidatorProvider(),
 			&opts.Global,
 		)
 		if err != nil {
@@ -116,9 +114,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
 			opts.Global.ConfigPaths,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(),
-			),
+			infrastructureprovider.MetaConfigValidatorProvider(),
 			&opts.Global,
 		)
 		if err != nil {
@@ -162,9 +158,7 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
 			opts.Global.ConfigPaths,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(),
-			),
+			infrastructureprovider.MetaConfigValidatorProvider(),
 			&opts.Global,
 		)
 		if err != nil {
@@ -211,9 +205,7 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 		var err error
 		var metaConfig *config.MetaConfig
 
-		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		)
+		validatorProvider := infrastructureprovider.MetaConfigValidatorProvider()
 
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
 		// https://github.com/flant/kingpin/pull/1
@@ -227,7 +219,7 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 			metaConfig, err = config.ParseConfigFromData(
 				ctx,
 				string(data),
-				preparatorProvider,
+				validatorProvider,
 				&opts.Global,
 				config.ValidateOptionStrictUnmarshal(true),
 			)
@@ -235,7 +227,7 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, &opts.Global)
+			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, validatorProvider, &opts.Global)
 			if err != nil {
 				return err
 			}

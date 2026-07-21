@@ -26,6 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
 )
 
+// planRulesFilename is the plan-rules file that sits next to a single-provider
+// bundle's terraform_versions.yml.
 const planRulesFilename = "plan_rules.yml"
 
 type planRulesFile struct {

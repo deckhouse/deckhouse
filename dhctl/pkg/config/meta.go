@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"net"
@@ -29,7 +28,6 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	otattribute "go.opentelemetry.io/otel/attribute"
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -41,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
@@ -62,7 +59,7 @@ type MetaConfig struct {
 
 	CloudProviderVars *CloudProviderVars `json:"-"`
 	// Operation propagates the dhctl entry point (bootstrap/converge/destroy/
-	// check) to the provider preparator. It is intentionally serialised
+	// check) to the provider validator. It is intentionally serialised
 	// (json:"operation") so a JSON round-trip through dhctl-server RPC or a
 	// state-cache fallback preserves it. MarshalConfig clears it before
 	// emitting tfvars, since the terraform layer does not consume it.
@@ -106,90 +103,21 @@ const (
 	defaultClusterMasterRPPBootstrapServerPort = 4282
 )
 
-func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
-	ctx, span := telemetry.StartSpan(ctx, "validateAndPrepareMetaConfig")
-	defer span.End()
-
-	providerPreparator := preparatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
-	providerInput := m.buildProviderInput()
-
-	span.SetAttributes(
-		otattribute.String("provider.name", m.ProviderName),
-		otattribute.String("provider.layout", m.Layout),
-		otattribute.String("provider.clusterPrefix", m.ClusterPrefix),
-		otattribute.String("provider.operation", m.Operation),
-		otattribute.String("provider.downloadRootDir", m.DownloadRootDir),
-		otattribute.Int("provider.input.providerClusterConfigKeys", len(providerInput.ProviderClusterConfig)),
-	)
-	if cv := providerInput.CloudProviderVars; cv != nil {
-		span.SetAttributes(
-			otattribute.Int("provider.input.settingsKeys", len(cv.Settings)),
-			otattribute.Int("provider.input.nodeGroupsCount", len(cv.NodeGroups)),
-			otattribute.Int("provider.input.instanceClassesCount", len(cv.InstanceClasses)),
-			otattribute.Int("provider.input.secretsCount", len(cv.Secrets)),
-		)
+func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigValidatorProvider, m *MetaConfig) (*MetaConfig, error) {
+	validate := validatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
+	if validate == nil {
+		return m, nil
 	}
 
-	if err := providerPreparator.Validate(ctx, providerInput); err != nil {
-		return nil, err
-	}
-	span.AddEvent("provider validated")
-
-	result, err := providerPreparator.Prepare(ctx, providerInput)
-	if err != nil {
-		return nil, err
-	}
-	span.AddEvent("provider prepared")
-	span.SetAttributes(otattribute.Int("provider.output.providerClusterConfigKeys", len(result.ProviderClusterConfig)))
-
-	if len(result.ProviderClusterConfig) > 0 && m.ProviderClusterConfig == nil {
-		m.ProviderClusterConfig = make(map[string]json.RawMessage, len(result.ProviderClusterConfig))
-	}
-	for k, v := range result.ProviderClusterConfig {
-		raw, err := json.Marshal(v)
-		if err != nil {
-			return nil, fmt.Errorf("marshal provider cluster config key %q: %w", k, err)
-		}
-		m.ProviderClusterConfig[k] = raw
-	}
-
-	if len(result.ProviderClusterConfig) > 0 {
-		if err := m.validateMutatedProviderClusterConfig(); err != nil {
-			return nil, err
-		}
-	}
-
-	// Re-extract typed fields: the preparator may have mutated PCC.
-	if err := m.extractProviderClusterFields(); err != nil {
+	if err := validate(ctx, m.buildProviderInput()); err != nil {
 		return nil, err
 	}
 
 	return m, nil
 }
 
-// validateMutatedProviderClusterConfig re-validates ProviderClusterConfig
-// against the provider schema after a preparator mutated it, so a buggy
-// provider binary cannot inject an invalid configuration into tfvars.
-func (m *MetaConfig) validateMutatedProviderClusterConfig() error {
-	var index SchemaIndex
-	_ = json.Unmarshal(m.ProviderClusterConfig["kind"], &index.Kind)
-	_ = json.Unmarshal(m.ProviderClusterConfig["apiVersion"], &index.Version)
-	if !index.IsValid() {
-		return nil
-	}
-
-	doc, err := json.Marshal(m.ProviderClusterConfig)
-	if err != nil {
-		return fmt.Errorf("marshal mutated provider cluster configuration: %w", err)
-	}
-	if err := NewSchemaStore(nil).ValidateWithIndex(&index, &doc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
-		return fmt.Errorf("provider %s preparator mutated provider cluster configuration into an invalid state: %w", m.ProviderName, err)
-	}
-	return nil
-}
-
 // Prepare extracts all necessary information from raw json messages to the root structure
-func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
+func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigValidatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
@@ -218,7 +146,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	if m.ClusterType != CloudClusterType {
-		return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+		return validateProviderConfig(ctx, validatorProvider, m)
 	}
 
 	if err := m.prepareProviderName(); err != nil {
@@ -246,7 +174,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		return nil, err
 	}
 
-	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+	return validateProviderConfig(ctx, validatorProvider, m)
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
@@ -329,11 +257,11 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
 }
 
 // nodeGroupReplicas derives the replica count for a CloudPermanent NodeGroup
-// from spec.cloudInstances.minPerZone. CloudPermanent NGs always set this
-// field; spec.staticInstances.count is kept as a defensive fallback in case
-// the upstream IsCloudPermanentNodeGroup filter is ever relaxed. Returning
-// zero is interpreted by MasterNodeGroupController as "scale to zero", so
-// the caller must explicitly guard the master NG against that outcome.
+// from spec.cloudInstances.minPerZone, which CloudPermanent NGs always set
+// (they are the only kind that reaches here — see IsCloudPermanentNodeGroup).
+// Returning zero is interpreted by MasterNodeGroupController as "scale to
+// zero", so the caller must explicitly guard the master NG against that
+// outcome.
 func nodeGroupReplicas(ngs map[string]map[string]interface{}, name string) int {
 	ng, ok := ngs[name]
 	if !ok {
@@ -341,11 +269,6 @@ func nodeGroupReplicas(ngs map[string]map[string]interface{}, name string) int {
 	}
 	if ci, ok := nestedMap(ng, "spec", "cloudInstances"); ok {
 		if r := toPositiveInt(ci["minPerZone"]); r > 0 {
-			return r
-		}
-	}
-	if si, ok := nestedMap(ng, "spec", "staticInstances"); ok {
-		if r := toPositiveInt(si["count"]); r > 0 {
 			return r
 		}
 	}
@@ -404,7 +327,7 @@ type cloudProviderModuleSettings struct {
 // applyCloudProviderModuleSettings fills CloudProviderVars.Settings from the
 // cloud-provider-<name> ModuleConfig and extracts the typed Layout. Used on
 // bootstrap-from-file when <Provider>ClusterConfiguration is not supplied —
-// the external preparator and terraform-modules read settings from the MC
+// the external validator and terraform-modules read settings from the MC
 // instead.
 //
 // CloudProviderVars.Settings holds the *full* ModuleConfig object (apiVersion,
@@ -589,10 +512,10 @@ func (m *MetaConfig) IsStatic() bool {
 	return m.ClusterType == "Static"
 }
 
-// FindProviderModuleConfig returns the cloud-provider-<name> ModuleConfig
+// findProviderModuleConfig returns the cloud-provider-<name> ModuleConfig
 // when present, or nil. Used to detect whether the cluster is on the new
 // mc-flow provider format.
-func (m *MetaConfig) FindProviderModuleConfig() *ModuleConfig {
+func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
 	if m == nil || m.ProviderName == "" {
 		return nil
 	}
@@ -602,7 +525,7 @@ func (m *MetaConfig) FindProviderModuleConfig() *ModuleConfig {
 // HasProviderModuleConfig reports whether the cluster carries a
 // cloud-provider-<name> ModuleConfig (the new mc-flow provider format).
 func (m *MetaConfig) HasProviderModuleConfig() bool {
-	return m.FindProviderModuleConfig() != nil
+	return m.findProviderModuleConfig() != nil
 }
 
 // HasLegacyProviderConfig reports whether the cluster carries a non-empty

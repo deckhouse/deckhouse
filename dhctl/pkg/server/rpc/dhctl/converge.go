@@ -205,7 +205,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
-			config.DummyPreparatorProvider(),
+			config.DummyValidatorProvider(),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
@@ -273,7 +273,6 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-			[]byte(p.request.RegistryConfig),
 		),
 		Embedded:              true,
 		IsDebug:               s.params.IsDebug,
@@ -300,7 +299,6 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-			[]byte(p.request.RegistryConfig),
 		),
 		InfrastructureContext:      infrastructureContext,
 		ApproveDestructiveChangeID: p.request.ApproveDestructionChangeId,

@@ -66,7 +66,7 @@ func TestCloudSystemRequirementsCheck(t *testing.T) {
 		{
 			// mc-flow guard: with no PCC supplied (master sizing lives in
 			// NodeGroup/InstanceClass resources resolved by the external
-			// preparator) the legacy PCC-based check must short-circuit
+			// validator) the legacy PCC-based check must short-circuit
 			// instead of erroring out with "unknown provider cluster
 			// configuration kind". Regression coverage for the guard
 			// added in cloud_system_requirements.go:59.

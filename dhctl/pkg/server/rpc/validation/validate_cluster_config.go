@@ -17,7 +17,6 @@ package validation
 import (
 	"context"
 	"encoding/json"
-	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -64,29 +63,19 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 	}
 
 	// In-tree providers ship their schemas in the image's candi and are always
-	// validated. An external provider (e.g. DVP) needs its OCI bundle delivered
-	// first, and the only registry access here is registry_config: when it is
-	// absent there is nothing to validate with, so skip — the operation
-	// revalidates after reading the registry from the cluster.
+	// validated here. An external provider (e.g. DVP) validates against a schema
+	// that lives in its OCI bundle, which this stateless request cannot fetch
+	// (no cluster, no registry); skip it — the actual operation revalidates
+	// after reading the registry from the target cluster.
 	provider := clusterConfig.Cloud.Provider
-	needBundle := provider != "" && !config.ProviderBundledInCandi(provider, s.globalOptions)
-
-	if needBundle && strings.TrimSpace(request.RegistryConfig) == "" {
+	if provider != "" && !config.ProviderBundledInCandi(provider, s.globalOptions) {
 		return &pb.ValidateProviderSpecificClusterConfigResponse{}, nil
 	}
 
-	// A bundle delivery failure is reported the same way as a validation
-	// failure: in the response's Err, not as a transport error.
-	var validationErr error
-	if needBundle {
-		validationErr = s.ensureProviderBundle(ctx, provider, request.RegistryConfig)
-	}
-	if validationErr == nil {
-		validationErr = config.ValidateProviderSpecificClusterConfiguration(
-			request.Config, clusterConfig, s.schemaStore,
-			optionsFromRequest(request.Opts)...,
-		)
-	}
+	validationErr := config.ValidateProviderSpecificClusterConfiguration(
+		request.Config, clusterConfig, s.schemaStore,
+		optionsFromRequest(request.Opts)...,
+	)
 
 	errResponse, err := errorToResponse(validationErr)
 	if err != nil {

@@ -1575,7 +1575,7 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	require.NoError(t, err)
 	require.False(t, stat.IsDir())
 
-	cfg, err := config.ParseConfig(t.Context(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{}), &options.New().Global)
+	cfg, err := config.ParseConfig(t.Context(), []string{configPath}, MetaConfigValidatorProvider(), &options.New().Global)
 
 	require.NoError(t, err)
 	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)

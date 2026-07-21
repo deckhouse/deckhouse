@@ -94,9 +94,15 @@ func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
 }
 
 func (p *Params) getStateLoaderParams() *stateLoaderParams {
+	var globalOptions *options.GlobalOptions
+	if p.Options != nil {
+		globalOptions = &p.Options.Global
+	}
+
 	return &stateLoaderParams{
 		commanderMode:   p.CommanderMode,
 		commanderParams: p.CommanderModeParams,
+		globalOptions:   globalOptions,
 
 		stateCache: p.StateCache,
 
@@ -109,6 +115,7 @@ func (p *Params) getStateLoaderParams() *stateLoaderParams {
 type stateLoaderParams struct {
 	commanderMode   bool
 	commanderParams *commander.CommanderModeParams
+	globalOptions   *options.GlobalOptions
 
 	stateCache dhctlstate.Cache
 
@@ -128,7 +135,7 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		// kube client is fetched lazily, only when a bundle download is needed,
 		// so a destroy served entirely from the local state cache (in-tree
 		// provider) never dials the kube API.
-		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy, kubeProvider.KubeClientCtx)
+		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy, kubeProvider.KubeClientCtx, params.globalOptions)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
 		}

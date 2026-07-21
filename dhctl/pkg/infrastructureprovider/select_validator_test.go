@@ -23,24 +23,26 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-// In-tree providers without a dedicated preparator (gcp, aws, azure, ...)
-// must fall back to the lightweight prefix-only preparator instead of
-// demanding an external validator binary.
-func TestSelectPreparatorInTreeFallback(t *testing.T) {
+// In-tree providers without a dedicated validator (gcp, aws, azure, ...)
+// must fall back to the lightweight prefix-only check instead of demanding an
+// external validator binary.
+func TestSelectValidatorInTreeFallback(t *testing.T) {
 	orig := providerBundledInCandi
 	providerBundledInCandi = func(string) bool { return true }
 	t.Cleanup(func() { providerBundledInCandi = orig })
 
-	p := selectPreparator(context.Background(), "gcp", t.TempDir())
-	require.IsType(t, &inTreeDefaultPreparator{}, p)
-	require.NoError(t, p.Validate(context.Background(), config.ProviderInput{ClusterPrefix: "ok-prefix", ProviderName: "gcp"}))
+	validate := selectValidator(context.Background(), "gcp", t.TempDir())
+	require.NotNil(t, validate)
+	require.NoError(t, validate(context.Background(), config.ProviderInput{ClusterPrefix: "ok-prefix", ProviderName: "gcp"}))
+	require.Error(t, validate(context.Background(), config.ProviderInput{ProviderName: "gcp"}), "empty prefix must fail")
 }
 
-func TestSelectPreparatorExternalMissingValidator(t *testing.T) {
+func TestSelectValidatorExternalMissingValidator(t *testing.T) {
 	orig := providerBundledInCandi
 	providerBundledInCandi = func(string) bool { return false }
 	t.Cleanup(func() { providerBundledInCandi = orig })
 
-	p := selectPreparator(context.Background(), "dvp", t.TempDir())
-	require.IsType(t, &missingExternalValidatorPreparator{}, p)
+	validate := selectValidator(context.Background(), "dvp", t.TempDir())
+	err := validate(context.Background(), config.ProviderInput{})
+	require.ErrorContains(t, err, "external validator for provider \"dvp\" not found")
 }
