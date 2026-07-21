@@ -252,6 +252,7 @@ spec:
                             - DynamixInstanceClass
                             - HuaweiCloudInstanceClass
                             - DVPInstanceClass
+                            - Metal3InstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -915,6 +916,7 @@ spec:
                             - DynamixInstanceClass
                             - HuaweiCloudInstanceClass
                             - DVPInstanceClass
+                            - Metal3InstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1838,6 +1840,7 @@ spec:
                             - DynamixInstanceClass
                             - HuaweiCloudInstanceClass
                             - DVPInstanceClass
+                            - Metal3InstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
