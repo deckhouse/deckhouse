@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе kruise-state-metrics пакет openpgp присутствует исключительно как транзитивная зависимость модуля golang.org/x/crypto; бинарный файл kube-rbac-proxy не использует OpenPGP-функциональность. Код openpgp не входит в путь исполнения, поэтому уязвимость для образа не достижима.",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе kruise-state-metrics пакет openpgp присутствует исключительно как транзитивная зависимость модуля golang.org/x/crypto; бинарный файл kruise-state-metrics не использует OpenPGP-функциональность. Код openpgp не входит в путь исполнения, поэтому уязвимость для образа не достижима.",
       "timestamp": "2026-07-20T00:00:00Z"
     }
   ],
