@@ -86,7 +86,7 @@ k8s:
   "1.31":
     default: true
     status: available
-    patch: 13
+    patch: 14
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 1
