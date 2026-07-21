@@ -145,6 +145,7 @@ shell:
     {{- end }}
   {{- end }}
 {{- end }}
+{{- $providers = append $providers "metal3" }}
 rm /deckhouse/modules/040-node-manager/capi/* /deckhouse/modules/040-node-manager/cloud-providers/*
 for item in {{ join " " $providers }}; do
   if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then
