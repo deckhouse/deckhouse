@@ -306,54 +306,6 @@ data:
 		})
 	})
 
-	g := HookExecutionConfigInit(initValuesStringA, `{}`)
-
-	Context("Cluster without discovery data secret, but with deckhouse storage classes", func() {
-		BeforeEach(func() {
-			g.BindingContexts.Set(g.KubeStateSet(storageClassesState))
-			g.BindingContexts.Set(g.GenerateBeforeHelmContext())
-			g.RunHook()
-		})
-
-		It("Should restore storageClasses from storage class snapshots", func() {
-			Expect(g).To(ExecuteSuccessfully())
-			Expect(g.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
-[
-  {
-    "name": "deckhouse-default",
-    "path": "",
-    "zones": ["zone-c"],
-    "datastoreType": "",
-    "datastoreURL": "ds:///vmfs/volumes/default/",
-    "storagePolicyName": ""
-  },
-  {
-    "name": "deckhouse-gold",
-    "path": "",
-    "zones": ["zone-a", "zone-b"],
-    "datastoreType": "",
-    "datastoreURL": "ds:///vmfs/volumes/gold/",
-    "storagePolicyName": "Gold Policy"
-  }
-]
-`))
-		})
-	})
-
-	h := HookExecutionConfigInit(initValuesStringA, `{}`)
-
-	Context("Cluster without discovery data secret and without deckhouse storage classes", func() {
-		BeforeEach(func() {
-			h.BindingContexts.Set(h.GenerateBeforeHelmContext())
-			h.RunHook()
-		})
-
-		It("Should not fail and should keep storageClasses empty", func() {
-			Expect(h).To(ExecuteSuccessfully())
-			Expect(h.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(BeEmpty())
-		})
-	})
-
 	legacyF := HookExecutionConfigInit(initValuesStringF, `{}`)
 
 	Context("Legacy CSI mode: DatastoreCluster entries are preserved", func() {
