@@ -254,16 +254,42 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 
 		// Overlay the raw instanceClass spec so helm can recompute the CAPI bootstrap
 		// secret name via capi/<type>/instance-class.checksum (byte-parity with main).
+		// A NodeGroup with a wrong classReference.kind or a missing instanceClass must not
+		// reach helm rendering without instanceClass — provider templates require its fields
+		// and would fail the whole module converge. Fall back to the last valid values and
+		// skip the raw element; the diagnostic status is published by node-controller.
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
-			nodeGroupInstanceClassName := nodeGroup.Spec.CloudInstances.ClassReference.Name
-			if instanceClassSpec, ok := instanceClasses[nodeGroupInstanceClassName]; ok {
-				providerName := strings.ToLower(input.Values.Get("nodeManager.internal.cloudProvider.type").String())
-				updatedSpecMap, err := applyCloudSpecificDefaults(input, providerName, instanceClassSpec)
-				if err != nil {
-					return fmt.Errorf("failed to fill cloud specific defaults for %s: %w", providerName, err)
+			classRefKind := nodeGroup.Spec.CloudInstances.ClassReference.Kind
+			if classRefKind != kindInUse {
+				input.Logger.Error("invalid NodeGroup classReference.kind",
+					slog.String("name", nodeGroup.Name),
+					slog.String("kind", classRefKind),
+					slog.String("expected", kindInUse))
+				if saved, ok := lastGoodNodeGroup(input, nodeGroup.Name); ok {
+					finalNodeGroups = append(finalNodeGroups, saved)
 				}
-				ngForValues["instanceClass"] = updatedSpecMap
+				continue
 			}
+
+			nodeGroupInstanceClassName := nodeGroup.Spec.CloudInstances.ClassReference.Name
+			instanceClassSpec, ok := instanceClasses[nodeGroupInstanceClassName]
+			if !ok {
+				input.Logger.Error("NodeGroup instance class not found",
+					slog.String("name", nodeGroup.Name),
+					slog.String("instanceClass", nodeGroupInstanceClassName),
+					slog.String("kind", classRefKind))
+				if saved, ok := lastGoodNodeGroup(input, nodeGroup.Name); ok {
+					finalNodeGroups = append(finalNodeGroups, saved)
+				}
+				continue
+			}
+
+			providerName := strings.ToLower(input.Values.Get("nodeManager.internal.cloudProvider.type").String())
+			updatedSpecMap, err := applyCloudSpecificDefaults(input, providerName, instanceClassSpec)
+			if err != nil {
+				return fmt.Errorf("failed to fill cloud specific defaults for %s: %w", providerName, err)
+			}
+			ngForValues["instanceClass"] = updatedSpecMap
 		}
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeStatic {
@@ -298,6 +324,24 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
+}
+
+// lastGoodNodeGroup returns the previously stored values of a NodeGroup by name,
+// used to keep an invalid NodeGroup on its last valid configuration instead of
+// pushing a raw element without instanceClass into helm rendering.
+func lastGoodNodeGroup(input *go_hook.HookInput, name string) (map[string]interface{}, bool) {
+	if !input.Values.Exists("nodeManager.internal.nodeGroups") {
+		return nil, false
+	}
+	for _, saved := range input.Values.Get("nodeManager.internal.nodeGroups").Array() {
+		if saved.Map()["name"].String() != name {
+			continue
+		}
+		if m, ok := saved.Value().(map[string]interface{}); ok {
+			return m, true
+		}
+	}
+	return nil, false
 }
 
 func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{} {
