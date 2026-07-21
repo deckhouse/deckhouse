@@ -186,7 +186,7 @@ description: Архитектура модулей commander и commander-agent 
     * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
     * **encryption-migrator** — основной контейнер.
 
-1. **Audits-cleaner** (CronJob) — компонент запускается один раз в сутки и удаляет старые аудит-логи. 
+1. **Audits-cleaner** (CronJob) — компонент запускается один раз в сутки и удаляет старые аудит-логи.
 
    Контроллер Deckhouse модуля [`deckhouse`](/modules/deckhouse/) создаёт audits-cleaner, если параметр модуля [`.settings.featureFlags.auditsRetentionDays`](/modules/commander/alpha/admin_guide.html#срок-хранения-записей-аудита--auditsretentiondays) задан и определяет срок хранения аудит-логов.
 
@@ -198,7 +198,7 @@ description: Архитектура модулей commander и commander-agent 
 
 #### Опциональные компоненты
 
-1. **Billing-prometheus** (StatefulSet) — компонент запускает [Deckhouse Prom++](/products/prompp/) в режиме приёма метрик по `remote_write`. 
+1. **Billing-prometheus** (StatefulSet) — компонент запускает [Deckhouse Prom++](/products/prompp/) в режиме приёма метрик по `remote_write`.
 
    Модуль [`prometheus`](/modules/prometheus/), установленный в управляемом кластере DKP, отправляет метрики. Компонент хранит историю потребления ресурсов всеми управляемыми кластерами, что является важным источником данных для формирования отчётов по биллингу.
 
@@ -214,7 +214,7 @@ description: Архитектура модулей commander и commander-agent 
     * **nginx** — основной контейнер;
     * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
-1. **Billing-schedules-reporter** (Deployment) — компонент реализует планировщик запуска и контроля задач для генерации требуемых отчётов биллинга. 
+1. **Billing-schedules-reporter** (Deployment) — компонент реализует планировщик запуска и контроля задач для генерации требуемых отчётов биллинга.
 
    Компонент billing-schedules-reporter сохраняет сформированный отчёт в компоненте billing-reports по протоколу WebDAV.
 
