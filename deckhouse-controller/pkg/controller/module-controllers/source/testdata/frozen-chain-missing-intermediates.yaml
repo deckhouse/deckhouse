@@ -1,0 +1,89 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-1
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+    # checksum equals the checksum the mock registry reports for the channel image
+    # ("sha256:"), so the plain checksum guard is satisfied - the update chain must be
+    # re-derived only because it has a gap
+    - name: console
+      checksum: "sha256:"
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-alpha
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Manual
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: console
+properties:
+  version: 1.52.0
+  source: test-source-1
+  updatePolicy: test-alpha
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: console
+    modules.deckhouse.io/update-policy: test-alpha
+    release-checksum: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    source: test-source-1
+  name: console-v1.52.0
+spec:
+  moduleName: console
+  version: 1.52.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2026-07-01T00:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: console
+    modules.deckhouse.io/update-policy: test-alpha
+    # md5("sha256:") - matches the channel target checksum, so releaseExists() is true
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
+    source: test-source-1
+  name: console-v1.55.1
+spec:
+  moduleName: console
+  version: 1.55.1
+  weight: 900
+status:
+  approved: false
+  message: "minor version is greater than deployed 1.52.0 by one"
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2026-07-01T00:00:00Z"
