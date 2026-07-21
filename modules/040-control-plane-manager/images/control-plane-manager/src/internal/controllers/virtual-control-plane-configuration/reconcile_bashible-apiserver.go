@@ -571,9 +571,9 @@ var bashibleVersionMap string
 func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
 	namespace := vcpNamespace(vcp)
 
-	bashibleImagesDigestsJSON, err := r.getImagesDigestsJSON(ctx)
+	versionMap, imagesDigestsJSON, err := r.getBashibleFiles(ctx)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("get images digests JSON: %w", err)
+		return reconcile.Result{}, err
 	}
 
 	target := &corev1.ConfigMap{
@@ -582,8 +582,8 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 			Namespace: namespace,
 		},
 		Data: map[string]string{
-			"version_map.yml":     bashibleVersionMap,
-			"images_digests.json": bashibleImagesDigestsJSON,
+			"version_map.yml":     versionMap,
+			"images_digests.json": imagesDigestsJSON,
 		},
 	}
 
@@ -608,17 +608,24 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 	return reconcile.Result{}, r.patchConfigMap(ctx, base, current)
 }
 
-func (r *reconciler) getImagesDigestsJSON(ctx context.Context) (string, error) {
+// getBashibleFiles reads version_map.yml and images_digests.json from the parent bashible-apiserver-files configmap for consistency on bashible (for images and versions)
+func (r *reconciler) getBashibleFiles(ctx context.Context) (versionMap string, imagesDigestsJSON string, err error) {
 	configMap, err := r.getConfigMap(ctx, bashibleDeckhouseNamespace, bashibleFilesConfigMapName)
 	if err != nil {
-		return "", fmt.Errorf("get images digests JSON: %w", err)
+		return "", "", fmt.Errorf("get bashible-apiserver-files configmap: %w", err)
 	}
 
-	if configMap.Data["images_digests.json"] == "" {
-		return "", fmt.Errorf("images digests JSON is empty")
+	imagesDigestsJSON = configMap.Data["images_digests.json"]
+	if imagesDigestsJSON == "" {
+		return "", "", fmt.Errorf("images digests JSON is empty")
 	}
 
-	return configMap.Data["images_digests.json"], nil
+	versionMap = configMap.Data["version_map.yml"]
+	if versionMap == "" {
+		versionMap = bashibleVersionMap
+	}
+
+	return versionMap, imagesDigestsJSON, nil
 }
 
 func (r *reconciler) reconcileBashibleService(
