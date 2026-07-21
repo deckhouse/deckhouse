@@ -16,6 +16,128 @@ spec:
     singular: metal3instanceclass
   scope: Cluster
   versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+    additionalPrinterColumns:
+    - name: Node Groups
+      type: string
+      description: NodeGroups which use this instance class.
+      jsonPath: .status.nodeGroupConsumers
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        required:
+        - spec
+        properties:
+          apiVersion:
+            type: string
+            x-doc-skip: true
+          kind:
+            type: string
+            x-doc-skip: true
+          metadata:
+            type: object
+          spec:
+            type: object
+            required:
+            - image
+            properties:
+              image:
+                type: object
+                description: Image to deploy to a BareMetalHost through Ironic.
+                required:
+                - url
+                - checksum
+                - checksumType
+                properties:
+                  url:
+                    type: string
+                    description: HTTP(S) URL of the OS image.
+                    x-doc-example: http://172.22.0.10:6180/images/ubuntu-24.04.raw
+                  checksum:
+                    type: string
+                    description: Image checksum value.
+                    x-doc-example: 4571234c4f2d812d5051282b47545a2e5a7f96d02fce77e5a16f0217741e4d49
+                  checksumType:
+                    type: string
+                    description: Image checksum algorithm.
+                    enum:
+                    - md5
+                    - sha256
+                    - sha512
+                  format:
+                    type: string
+                    description: Image disk format.
+                    enum:
+                    - raw
+                    - qcow2
+                    - vdi
+                    - vmdk
+                    - live-iso
+              hostSelector:
+                type: object
+                description: BareMetalHost label selector used by CAPM3 to claim hosts.
+                properties:
+                  matchLabels:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  matchExpressions:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - key
+                      - operator
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                          enum:
+                          - In
+                          - NotIn
+                          - Exists
+                          - DoesNotExist
+                        values:
+                          type: array
+                          items:
+                            type: string
+              automatedCleaningMode:
+                type: string
+                description: Ironic automated cleaning mode for claimed BareMetalHosts.
+                enum:
+                - metadata
+                - disabled
+              nodeReuse:
+                type: boolean
+                description: Enables CAPM3 host reuse during upgrades.
+              capacity:
+                type: object
+                description: Node capacity used by cluster-autoscaler when scaling from zero.
+                required:
+                - cpu
+                - memory
+                properties:
+                  cpu:
+                    pattern: '^[0-9]+m?$'
+                    x-kubernetes-int-or-string: true
+                    x-doc-example: "4000m"
+                  memory:
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    x-kubernetes-int-or-string: true
+                    x-doc-example: "8Gi"
+          status:
+            type: object
+            properties:
+              nodeGroupConsumers:
+                type: array
+                items:
+                  type: string
   - name: v1
     served: true
     storage: true
