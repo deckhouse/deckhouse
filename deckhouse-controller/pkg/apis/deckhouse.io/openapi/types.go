@@ -23,7 +23,7 @@ type SchemaURL string
 
 // OpenAPIV3Schema is a JSON-Schema following Specification Draft 4 (http://json-schema.org/).
 // It is a forked subset of apiextensionsv1.JSONSchemaProps that drops all x-kubernetes-*
-// extensions and adds Deckhouse-specific x-deckhouse-* extensions as typed fields.
+// extensions and adds Deckhouse-specific extensions as typed fields.
 type OpenAPIV3Schema struct {
 	ID          string    `json:"id,omitempty"`
 	Schema      SchemaURL `json:"$schema,omitempty"`
@@ -77,6 +77,7 @@ type OpenAPIV3Schema struct {
 	ExternalDocs         *ExternalDocumentation     `json:"externalDocs,omitempty"`
 	Example              *apiextensionsv1.JSON      `json:"example,omitempty"`
 	Nullable             bool                       `json:"nullable,omitempty"`
+	Deprecated           bool                       `json:"deprecated,omitempty"`
 
 	// x-deckhouse-grantable-resource binds a string settings field to a grantable
 	// cluster resource (multitenancy-manager AvailableClusterResource).
@@ -95,6 +96,12 @@ type OpenAPIV3Schema struct {
 	// a toggle in the web console UI.
 	// +optional
 	XUIAdvanced bool `json:"x-deckhouse-ui-advanced,omitempty"`
+
+	// x-ui contains opaque Console form-presentation metadata. Keeping this as
+	// raw JSON lets package authors use current and future widgets without
+	// coupling deckhouse-controller to the Console widget type system.
+	// +optional
+	XUI *apiextensionsv1.JSON `json:"x-ui,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema
