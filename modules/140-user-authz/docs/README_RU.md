@@ -31,22 +31,20 @@ description: "Авторизация и управление доступом п
 - [Use-роли](#use-роли) — для назначения прав пользователям (например, разработчикам приложений) **в конкретном пространстве имён**.
 - [Manage-роли](#manage-роли) — для назначения прав администраторам.
 
-{: #rolebinding-car .anchored}
+### Совместное использование ClusterAuthorizationRule, AuthorizationRule и RBAC
 
-{% alert level="info" %}
-Особенности комбинированного доступа: совместное использование RoleBinding или ClusterRoleBinding с ClusterAuthorizationRule (CAR) и AuthorizationRule (AR) для одного и того же пользователя.
+Если в кластере включён режим мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), итоговые права пользователя представляют собой объединение прав, полученных из всех следующих источников:
 
-Если в кластере включён режим мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), итоговые права пользователя — это **объединение** всех действующих для него источников прав:
+- **права из ClusterAuthorizationRule** — применяются только внутри неймспейсов, разрешённых параметрами `limitNamespaces` или `namespaceSelector`;
+- **права из AuthorizationRule** — применяются внутри неймспейса, в котором создан ресурс AuthorizationRule;
+- **права из обычных RoleBinding** — применяются внутри неймспейса, в котором создан ресурс RoleBinding;
+- **права из обычных ClusterRoleBinding**, не созданных модулем `user-authz` — применяются во всём кластере.
 
-- уровень доступа из CAR — только внутри неймспейсов, разрешённых его параметрами `limitNamespaces` или `namespaceSelector`;
-- уровень доступа из AuthorizationRule — внутри неймспейса, в котором создан AuthorizationRule;
-- права из обычных RoleBinding — внутри их неймспейсов;
-- права из обычных ClusterRoleBinding (не созданных модулем `user-authz`) — во всём кластере.
+Ограничения по неймспейсам, заданные в ClusterAuthorizationRule, распространяются только на права, выданные этим ClusterAuthorizationRule. Они не отменяют права, выданные через RoleBinding, ClusterRoleBinding или AuthorizationRule в других неймспейсах. При этом уровень доступа ClusterAuthorizationRule на эти неймспейсы не распространяется.
 
-Ограничения по неймспейсам в CAR ограничивают только права, выданные этим CAR. Они не отменяют права, выданные через RoleBinding, ClusterRoleBinding или AuthorizationRule в других неймспейсах; при этом уровень доступа CAR на эти неймспейсы не распространяется. Например, если у пользователя есть CAR с `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, и RoleBinding с ролью `view` в неймспейсе `ns-b`, пользователь получит права Editor в `ns-a` и права только на чтение в `ns-b`: RoleBinding не блокируется ограничениями CAR, а уровень Editor из CAR не «протекает» в `ns-b`.
+Например, если у пользователя есть ClusterAuthorizationRule с уровнем доступа `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, а также RoleBinding с ролью `view` в неймспейсе `ns-b`, то он получит права уровня `Editor` в неймспейсе `ns-a` и права только на чтение в неймспейсе `ns-b`. Права, предоставленные через RoleBinding, не ограничиваются ClusterAuthorizationRule, а уровень доступа `Editor` из ClusterAuthorizationRule не распространяется на неймспейс `ns-b`.
 
-В более старых версиях DKP вебхук модуля `user-authz` отклонял все запросы в неймспейсы, не указанные в CAR пользователя, даже при наличии RoleBinding на эти неймспейсы. Это ограничение снято: RoleBinding и CAR можно использовать для одного пользователя совместно.
-{% endalert %}
+Начиная с DKP 1.76.5, RoleBinding и ClusterAuthorizationRule можно использовать совместно для одного пользователя. В более более ранних версиях DKP вебхук модуля `user-authz` отклонял все запросы в неймспейсы, не указанные в ClusterAuthorizationRule пользователя, даже при наличии соответствующих ресурсов RoleBinding.
 
 ### Use-роли
 
