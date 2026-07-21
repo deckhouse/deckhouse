@@ -1,6 +1,6 @@
 module github.com/flant/protobuf_exporter
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/fsnotify/fsnotify v1.5.4
@@ -20,7 +20,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/sirupsen/logrus v1.8.3 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 )

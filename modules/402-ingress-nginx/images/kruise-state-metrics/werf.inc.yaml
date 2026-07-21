@@ -52,3 +52,5 @@ import:
 imageSpec:
   config:
     entrypoint: ["/kruise-state-metrics"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

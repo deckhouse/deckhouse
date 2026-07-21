@@ -1,23 +1,24 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-c40f4f4051bff9ec536f80909979b4edbbe1fe5d1231cf8e1bf39d0ff815fe97",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "@id": "https://openvex.dev/docs/public/vex-alb-kube-rbac-proxy-go-2026-5932",
+  "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2024-28180"
+        "name": "GO-2026-5932"
       },
       "products": [
         {
-          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
+          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
         }
       ],
       "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "CVE-2024-28180 описывает переполнение ресурсов в go-jose, возникающее при попытке распаковать зашифрованные сообщения JWE (JSON Web Encryption - формат JOSE для шифрования полезной нагрузки). Kubernetes не создает и не обрабатывает JWE, используя библиотеку только для подписанных JWT, что подтверждено в обсуждении: https://github.com/kubernetes/kubernetes/pull/123253#issuecomment-1940379993 https://github.com/kubernetes/sig-security/issues/116#issuecomment-2197995745",
-      "timestamp": "2025-10-13T12:29:16.580589Z"
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе kube-rbac-proxy пакет openpgp присутствует исключительно как транзитивная зависимость модуля golang.org/x/crypto; бинарный файл kube-rbac-proxy не использует OpenPGP-функциональность. Код openpgp не входит в путь исполнения, поэтому уязвимость для образа не достижима.",
+      "timestamp": "2026-07-20T00:00:00Z"
     }
   ],
-  "timestamp": "2025-10-13T12:29:16Z"
+  "timestamp": "2026-07-20T00:00:00Z",
+  "last_updated": "2026-07-20T00:00:00Z"
 }

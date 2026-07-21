@@ -1,6 +1,6 @@
 module proxy-failover
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0
@@ -10,5 +10,5 @@ require (
 require (
 	github.com/ncabatoff/go-seq v0.0.0-20180805175032-b08ef85ed833 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
 )
