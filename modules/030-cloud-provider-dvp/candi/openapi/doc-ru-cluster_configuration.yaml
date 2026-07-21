@@ -37,7 +37,7 @@ apiVersions:
                 Чтобы использовать эту настройку, на узлах DVP должена быть установлен лейбл `topology.kubernetes.io/zone`.
                 [Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-                > Чтобы установить требуемый лейбл для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+                > Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             instanceClass:
               description: |
                 Параметры виртуальной машины и ее дисков для созданного master-узла.
@@ -197,7 +197,7 @@ apiVersions:
                   Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/zone`.
                   [Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-                  > Чтобы установить требуемый лейбл для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+                  > Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               nodeTemplate:
                 description: |
                   Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
@@ -257,7 +257,7 @@ apiVersions:
             Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/region`.
             [Подробнее о топологических лейблах](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-            > Чтобы установить требуемый лейбл для узла DVP, следуйте [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
           description: |
             Набор зон, в которых могут быть созданы узлы.
@@ -265,7 +265,7 @@ apiVersions:
             Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/zone`.
             [Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-            > Чтобы установить требуемый лейбл для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         provider:
           description: |
             Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
@@ -275,9 +275,9 @@ apiVersions:
                 Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке Base64.
             namespace:
               description: |
-                Пространство имён, в котором будут созданы ресурсы кластера DKP.
+                Неймспейс, в котором будут созданы ресурсы кластера DKP.
 
-                > Если не указано явно, будет использоваться пространство имён по умолчанию для kubeconfig.
+                > Если не указано явно, будет использоваться неймспейс по умолчанию для kubeconfig.
             networkPolicy:
               description: |
                 Правила управления сетевым трафиком к нагрузкам и от нагрузок, запущенных в рамках ресурса Project.

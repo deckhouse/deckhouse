@@ -31,7 +31,7 @@ package settings
 // +deckhouse:ru:description:value=
 // +deckhouse:ru:description:value="Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:"
 // +deckhouse:ru:description:value=
-// +deckhouse:ru:description:value="```shell```"
+// +deckhouse:ru:description:value="```shell"
 // +deckhouse:ru:description:value="d8 k edit moduleconfig cloud-provider-dvp"
 // +deckhouse:ru:description:value="```"
 // +deckhouse:ru:description:value=
@@ -48,29 +48,66 @@ type ModuleConfigSettings struct {
 	CCM CCM `json:"ccm"`
 }
 
+// Settings for connecting to the parent Deckhouse Virtualization Platform (DVP).
+// +deckhouse:ru:description:value="Настройки подключения к родительской платформе Deckhouse Virtualization Platform (DVP)."
 // +deckhouse:DisableAdditionalProperties=true
 type Provider struct {
 	Parameters ProviderParameters `json:"parameters"`
 }
 
+// Storage subsystem settings.
+//
+// Controls disk provisioning in the cluster.
+// +deckhouse:ru:description:value="Настройки подсистемы хранения данных."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="Управляет возможностью заказа дисков в кластере."
 // +deckhouse:DisableAdditionalProperties=true
 type Storage struct {
+	// Disables the storage subsystem.
+	//
+	// When set to `true`, disk provisioning in the cluster is unavailable.
+	// +deckhouse:ru:description:value="Отключает подсистему хранения данных."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="При значении `true` заказ дисков в кластере недоступен."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled   bool              `json:"disabled,omitempty"`
 	Parameters StorageParameters `json:"parameters"`
 }
 
+// Nodes subsystem settings.
+//
+// Controls node management in the cluster.
+// +deckhouse:ru:description:value="Настройки подсистемы управления узлами."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="Управляет узлами в кластере."
 // +deckhouse:DisableAdditionalProperties=true
 type Nodes struct {
+	// Disables the node management subsystem.
+	// +deckhouse:ru:description:value="Отключает подсистему управления узлами."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled   bool            `json:"disabled,omitempty"`
 	Parameters NodesParameters `json:"parameters"`
 }
 
+// Cloud Controller Manager (CCM) subsystem settings.
+//
+// CCM integrates the cluster with the cloud provider — for example, it manages load balancers.
+// You can enable or disable CCM independently of other subsystems. For instance, leave CCM enabled
+// if you only need load balancer management in the cluster.
+// +deckhouse:ru:description:value="Настройки подсистемы Cloud Controller Manager (CCM)."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="CCM обеспечивает интеграцию кластера с облачным провайдером — например, управляет балансировщиками нагрузки."
+// +deckhouse:ru:description:value="CCM можно включать и отключать независимо от других подсистем. Например, оставьте CCM включённым, если в кластере нужно управлять только балансировщиками нагрузки."
 // +deckhouse:DisableAdditionalProperties=true
 type CCM struct {
+	// Disables the Cloud Controller Manager.
+	//
+	// Set to `true` if CCM is not required. Leave enabled (`false`) when you need cloud load balancer management.
+	// +deckhouse:ru:description:value="Отключает Cloud Controller Manager."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Установите в `true`, если CCM не требуется. Оставьте включённым (`false`), если нужно управление облачными балансировщиками нагрузки."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled bool `json:"disabled,omitempty"`
@@ -83,9 +120,9 @@ type ProviderParameters struct {
 	// Namespace in which DKP cluster resources will be created.
 	//
 	// > If not explicitly specified, the default namespace for kubeconfig will be used.
-	// +deckhouse:ru:description:value="Пространство имён, в котором будут созданы ресурсы кластера DKP."
+	// +deckhouse:ru:description:value="Неймспейс, в котором будут созданы ресурсы кластера DKP."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="> Если не указано явно, будет использоваться пространство имён по умолчанию для kubeconfig."
+	// +deckhouse:ru:description:value="> Если не указано явно, будет использоваться неймспейс по умолчанию для kubeconfig."
 	Namespace string `json:"namespace"`
 	// Control rules for network traffic to and from workloads running in the Project resource.
 	//
@@ -100,12 +137,18 @@ type ProviderParameters struct {
 	NetworkPolicy string `json:"networkPolicy,omitempty"`
 }
 
+// Parameters of the storage subsystem.
+// +deckhouse:ru:description:value="Параметры подсистемы хранения данных."
 // +deckhouse:DisableAdditionalProperties=true
 type StorageParameters struct {
+	// A list of StorageClass names (or regex expressions for names) to exclude from creation in the cluster.
+	// +deckhouse:ru:description:value="Список имён StorageClass (или регулярных выражений для имён), которые не нужно создавать в кластере."
 	// +optional
 	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty"`
 }
 
+// Parameters of the nodes subsystem.
+// +deckhouse:ru:description:value="Параметры подсистемы управления узлами."
 // +deckhouse:DisableAdditionalProperties=true
 type NodesParameters struct {
 	// A public key for accessing nodes.
@@ -131,7 +174,7 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Чтобы использовать эту настройку, на узлах DVP должен быть установлен лейбл `topology.kubernetes.io/region`."
 	// +deckhouse:ru:description:value="[Подробнее о топологических лейблах](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)"
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="> Чтобы установить требуемый лейбл для узла DVP, следуйте [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)."
+	// +deckhouse:ru:description:value="> Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)."
 	// +optional
 	Region string `json:"region,omitempty"`
 	// A set of zones in which nodes can be created.
@@ -145,7 +188,7 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/zone`."
 	// +deckhouse:ru:description:value="[Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)"
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="> Чтобы установить требуемый лейбл для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)."
+	// +deckhouse:ru:description:value="> Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)."
 	// +kubebuilder:validation:UniqueItems=true
 	// +kubebuilder:validation:items:Type=string
 	// +optional

@@ -75,7 +75,7 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
    The zone value in ModuleConfig and NodeGroup must match. Currently, only the `default` value is available in DVP.
    {% endalert %}
 
-1. Create a file with the `cloud-provider-dvp` module configuration. For example, `cloud-provider-dvp-mc.yaml`:
+1. Create a file with the `cloud-provider-dvp` module configuration and a credentials Secret. For example, `cloud-provider-dvp-mc.yaml`:
 
    ```shell
    cat > cloud-provider-dvp-mc.yaml <<EOF
@@ -85,19 +85,33 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
      name: cloud-provider-dvp
    spec:
      enabled: true
-     version: 1
+     version: 2
      settings:
+       nodes:
+         parameters:
+           layout: Standard
+           sshPublicKey: "<SSH_PUBLIC_KEY>"
+           zones:
+             - ${DVP_ZONE}
        provider:
-         kubeconfigDataBase64: ${DVP_KUBECONFIG_B64}
-         namespace: ${DVP_NAMESPACE}
-       zones:
-         - ${DVP_ZONE}
+         parameters:
+           namespace: ${DVP_NAMESPACE}
+   ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: d8-credentials
+     namespace: d8-cloud-provider-dvp
+   type: cloud-provider.deckhouse.io/credentials
+   stringData:
+     authScheme: kubeconfig
+     secret: ${DVP_KUBECONFIG_B64}
    EOF
    ```
 
-   The manifest automatically uses the values of the environment variables set in the previous steps: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE`, and `DVP_ZONE`.
+   The manifest uses the environment variables set in the previous steps: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE`, and `DVP_ZONE`. Replace `<SSH_PUBLIC_KEY>` with the public SSH key for access to the created nodes.
 
-1. Apply ModuleConfig:
+1. Apply the manifest:
 
    ```shell
    d8 k apply -f cloud-provider-dvp-mc.yaml
