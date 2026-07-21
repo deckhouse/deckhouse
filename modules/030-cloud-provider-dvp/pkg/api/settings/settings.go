@@ -31,7 +31,7 @@ package settings
 // +deckhouse:ru:description:value=
 // +deckhouse:ru:description:value="Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:"
 // +deckhouse:ru:description:value=
-// +deckhouse:ru:description:value="```shell```"
+// +deckhouse:ru:description:value="```shell"
 // +deckhouse:ru:description:value="d8 k edit moduleconfig cloud-provider-dvp"
 // +deckhouse:ru:description:value="```"
 // +deckhouse:ru:description:value=
@@ -48,29 +48,69 @@ type ModuleConfigSettings struct {
 	CCM CCM `json:"ccm"`
 }
 
+// Settings for connecting to the parent Deckhouse Virtualization Platform (DVP).
+// +deckhouse:ru:description:value="Настройки подключения к родительской платформе Deckhouse Virtualization Platform (DVP)."
 // +deckhouse:DisableAdditionalProperties=true
 type Provider struct {
 	Parameters ProviderParameters `json:"parameters"`
 }
 
+// Storage subsystem settings.
+//
+// Controls CSI components and StorageClasses created in the cluster.
+// +deckhouse:ru:description:value="Настройки подсистемы хранения данных."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="Управляет компонентами CSI и StorageClass, создаваемыми в кластере."
 // +deckhouse:DisableAdditionalProperties=true
 type Storage struct {
+	// Disables the storage subsystem.
+	//
+	// When set to `true`, CSI components and StorageClasses are not deployed.
+	// +deckhouse:ru:description:value="Отключает подсистему хранения данных."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="При значении `true` компоненты CSI и StorageClass не разворачиваются."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled   bool              `json:"disabled,omitempty"`
 	Parameters StorageParameters `json:"parameters"`
 }
 
+// Nodes subsystem settings.
+//
+// Controls node provisioning via the Cluster API Provider DVP (capdvp).
+// +deckhouse:ru:description:value="Настройки подсистемы управления узлами."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="Управляет созданием узлов через Cluster API Provider DVP (capdvp)."
 // +deckhouse:DisableAdditionalProperties=true
 type Nodes struct {
+	// Disables the nodes subsystem.
+	//
+	// When set to `true`, the Cluster API Provider DVP (capdvp) controller is not deployed.
+	// > Disabling the nodes subsystem also prevents the Cloud Controller Manager from being deployed.
+	// +deckhouse:ru:description:value="Отключает подсистему управления узлами."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="При значении `true` контроллер Cluster API Provider DVP (capdvp) не разворачивается."
+	// +deckhouse:ru:description:value="> Отключение подсистемы узлов также предотвращает развёртывание Cloud Controller Manager."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled   bool            `json:"disabled,omitempty"`
 	Parameters NodesParameters `json:"parameters"`
 }
 
+// Cloud Controller Manager (CCM) subsystem settings.
+//
+// Manages cloud resources via the cloud-controller-manager (for example, nodes and load balancers).
+// +deckhouse:ru:description:value="Настройки подсистемы Cloud Controller Manager (CCM)."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="Управляет облачными ресурсами через cloud-controller-manager (например, узлами и балансировщиками нагрузки)."
 // +deckhouse:DisableAdditionalProperties=true
 type CCM struct {
+	// Disables the Cloud Controller Manager.
+	//
+	// When set to `true`, the CCM Deployment is not created.
+	// +deckhouse:ru:description:value="Отключает Cloud Controller Manager."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="При значении `true` Deployment CCM не создаётся."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled bool `json:"disabled,omitempty"`
@@ -100,12 +140,18 @@ type ProviderParameters struct {
 	NetworkPolicy string `json:"networkPolicy,omitempty"`
 }
 
+// Parameters of the storage subsystem.
+// +deckhouse:ru:description:value="Параметры подсистемы хранения данных."
 // +deckhouse:DisableAdditionalProperties=true
 type StorageParameters struct {
+	// A list of StorageClass names (or regex expressions for names) to exclude from creation in the cluster.
+	// +deckhouse:ru:description:value="Список имён StorageClass (или регулярных выражений для имён), которые не нужно создавать в кластере."
 	// +optional
 	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty"`
 }
 
+// Parameters of the nodes subsystem.
+// +deckhouse:ru:description:value="Параметры подсистемы управления узлами."
 // +deckhouse:DisableAdditionalProperties=true
 type NodesParameters struct {
 	// A public key for accessing nodes.

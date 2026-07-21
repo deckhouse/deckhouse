@@ -6,22 +6,41 @@ description: |
 
   Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
-  ```shell```
+  ```shell
   d8 k edit moduleconfig cloud-provider-dvp
   ```
 
   > Чтобы изменения вступили в силу, после изменения параметров узлов выполните команду `dhctl converge`.
 properties:
   ccm:
+    description: |
+      Настройки подсистемы Cloud Controller Manager (CCM).
+
+      Управляет облачными ресурсами через cloud-controller-manager (например, узлами и балансировщиками нагрузки).
     properties:
       disabled:
+        description: |
+          Отключает Cloud Controller Manager.
+
+          При значении `true` Deployment CCM не создаётся.
         type: boolean
     type: object
   nodes:
+    description: |
+      Настройки подсистемы управления узлами.
+
+      Управляет созданием узлов через Cluster API Provider DVP (capdvp).
     properties:
       disabled:
+        description: |
+          Отключает подсистему управления узлами.
+
+          При значении `true` контроллер Cluster API Provider DVP (capdvp) не разворачивается.
+          > Отключение подсистемы узлов также предотвращает развёртывание Cloud Controller Manager.
         type: boolean
       parameters:
+        description: |
+          Параметры подсистемы управления узлами.
         properties:
           ipAddresses:
             additionalProperties:
@@ -66,6 +85,8 @@ properties:
         type: object
     type: object
   provider:
+    description: |
+      Настройки подключения к родительской платформе Deckhouse Virtualization Platform (DVP).
     properties:
       parameters:
         description: |
@@ -87,12 +108,24 @@ properties:
         type: object
     type: object
   storage:
+    description: |
+      Настройки подсистемы хранения данных.
+
+      Управляет компонентами CSI и StorageClass, создаваемыми в кластере.
     properties:
       disabled:
+        description: |
+          Отключает подсистему хранения данных.
+
+          При значении `true` компоненты CSI и StorageClass не разворачиваются.
         type: boolean
       parameters:
+        description: |
+          Параметры подсистемы хранения данных.
         properties:
           excludedStorageClasses:
+            description: |
+              Список имён StorageClass (или регулярных выражений для имён), которые не нужно создавать в кластере.
             items:
               type: string
             type: array
