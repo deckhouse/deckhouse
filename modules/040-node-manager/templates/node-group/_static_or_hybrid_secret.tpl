@@ -14,12 +14,9 @@ metadata:
 type: Opaque
   {{- $bootstrap_token := pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first }}
 data:
-  {{- /* An olcedar node has no bashible: it is handed the same userdata a CAPI-provisioned one gets. */}}
-  {{- if eq ($ng.systemType | default "Mutable") "Immutable" }}
-  cloud-config: {{ include "node_group_olcedar_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
-  {{- else }}
+  {{- /* Immutable systemType is CloudEphemeral-only, provisioned through the CAPI
+         bootstrap provider; a static/hybrid node is always bashible-managed. */}}
   cloud-config: {{ include "node_group_cloud_init_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
   bootstrap.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng $bootstrap_token) | b64enc }}
-  {{- end }}
   apiserverEndpoints: {{ $context.Values.nodeManager.internal.clusterMasterAddresses | toYaml | b64enc }}
 {{- end }}
