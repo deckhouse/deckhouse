@@ -1,16 +1,9 @@
 ---
-title: Подсистема Delivery
-permalink: ru/architecture/delivery/
+title: Подсистема Managed Services
+permalink: ru/architecture/managed-services/
 lang: ru
-search: delivery
-description: Архитектура подсистемы Delivery в Deckhouse Kubernetes Platform.
-extractedLinksOnlyMax: 0
-extractedLinksMax: 0
+search: managed services
+description: Архитектура подсистемы Managed Services в Deckhouse Kubernetes Platform.
 ---
 
-В данном подразделе описывается архитектура подсистемы Delivery в Deckhouse Kubernetes Platform (DKP).
-
-В подсистему Delivery входят следующие модули:
-
-- [`operator-argo`](/modules/operator-argo/) — управляет инсталляциями ArgoCD в DKP;
-- [`operator-helm`](/modules/operator-helm/) — обеспечивает декларативное управление развертыванием Helm-чартов.
+В данном подразделе описывается архитектура подсистемы Managed Services в Deckhouse Kubernetes Platform (DKP).
