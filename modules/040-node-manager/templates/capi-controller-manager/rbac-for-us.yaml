@@ -285,6 +285,9 @@ rules:
     - huaweicloudclusters
     - huaweicloudmachines
     - huaweicloudmachinetemplates
+    - metal3clusters
+    - metal3machines
+    - metal3machinetemplates
     - yandexclusters
     - yandexmachines
     - yandexmachinetemplates

@@ -2530,6 +2530,17 @@ internal:
 				Expect(template.Field("spec.template.spec.image.format").String()).To(Equal("raw"))
 				Expect(template.Field("spec.template.spec.hostSelector.matchLabels.capm3-test").String()).To(Equal("ironic-4"))
 				Expect(template.Field("spec.template.spec.automatedCleaningMode").String()).To(Equal("disabled"))
+
+				nodeControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller")
+				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
+
+				capiControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:capi-controller-manager:manager-role")
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3clusters"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3machines"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
+
+				clusterAutoscalerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:cluster-autoscaler")
+				Expect(clusterAutoscalerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
 			})
 		})
 	})
