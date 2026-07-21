@@ -210,38 +210,6 @@ EOF
   cat $kubectl_config_file
 }
 
-function apply_module_configs() {
-  echo "Apply external modules"
-  mc=$(cat <<'EOF'
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: ingress-nginx
-spec:
-  enabled: true
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: upmeter
-spec:
-  enabled: true
-  version: 3
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: monitoring-custom
-spec:
-  enabled: true
-EOF
-)
-
-  echo "$mc" | KUBECONFIG=$kubectl_config_file kubectl apply -f -
-}
-
 # update_release_channel changes the release-channel image to given tag
 function update_release_channel() {
   crane copy "$1/release-channel:$2" "$1/release-channel:beta"
@@ -403,9 +371,6 @@ function main() {
       run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
     ;;
 
-    apply_module_configs)
-      apply_module_configs || exitCode=$?
-    ;;
     wait_deckhouse_ready)
       wait_deckhouse_ready || exitCode=$?
     ;;
