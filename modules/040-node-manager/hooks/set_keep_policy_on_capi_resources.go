@@ -50,6 +50,7 @@ var capiResources = []keepResource{
 	{Group: "cluster.x-k8s.io", Resource: "clusters"},
 	{Group: "cluster.x-k8s.io", Resource: "machinehealthchecks"},
 	{Group: "cluster.x-k8s.io", Resource: "machinedeployments"},
+	{Group: "infrastructure.cluster.x-k8s.io", Resource: "staticmachinetemplates", versionPreference: []string{"v1alpha1"}},
 }
 
 var crdGVR = schema.GroupVersionResource{
