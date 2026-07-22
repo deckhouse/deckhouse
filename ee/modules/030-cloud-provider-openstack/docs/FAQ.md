@@ -44,9 +44,9 @@ spec:
 
 There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
 
-* Allow VMs on a different subnet to connect to cluster nodes.
-* Allow connecting to the ports of the static node so that the application can work.
-* Restrict access to external resources or other VMs in the cloud for security reasons.
+- Allow VMs on a different subnet to connect to cluster nodes.
+- Allow connecting to the ports of the static node so that the application can work.
+- Restrict access to external resources or other VMs in the cloud for security reasons.
 
 For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
 
@@ -54,8 +54,8 @@ For all this, additional security groups should be used. You can only use securi
 
 This parameter can be set either in an existing cluster or when creating one. In both cases, additional security groups are declared in the `OpenStackClusterConfiguration`:
 
-* for master nodes, in the `additionalSecurityGroups` of the `masterNodeGroup` section;
-* for static nodes, in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
+- for master nodes, in the `additionalSecurityGroups` of the `masterNodeGroup` section;
+- for static nodes, in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
 
 The `additionalSecurityGroups` field contains an array of strings with security group names.
 
@@ -222,8 +222,8 @@ username = {{ nova_service_user_name }}
 
 The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (cinder storage). Nodes with local disks cannot migrate between hypervisors.
 
-* A network disk is preferred for the master node so that the node can migrate between hypervisors.
-* A local disk is preffered for the ephemeral node to save on cost. Not all cloud providers support the use of local disks. If local disks are not supported, you have to use network disks for ephemeral nodes.
+- A network disk is preferred for the master node so that the node can migrate between hypervisors.
+- A local disk is preffered for the ephemeral node to save on cost. Not all cloud providers support the use of local disks. If local disks are not supported, you have to use network disks for ephemeral nodes.
 
 | Local disk (ephemeral)        | Network disk (persistent)                    |
 | ----------------------------- | -------------------------------------------- |
@@ -243,15 +243,15 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 
 #### Network disk is recommended for master nodes and bastion host
 
-* Use flavor with a zero disk size.
-* Set the `rootDiskSize` in the `OpenStackInstanceClass`.
-* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
+- Use flavor with a zero disk size.
+- Set the `rootDiskSize` in the `OpenStackInstanceClass`.
+- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 #### Local disk is recommended for ephemeral nodes
 
-* Use flavor with the specified disk size.
-* Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
-* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
+- Use flavor with the specified disk size.
+- Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
+- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
 
 ### How do I check the disk volume in a flavor?
 
