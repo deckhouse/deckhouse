@@ -102,20 +102,28 @@ subjects:
     name: bashible-apiserver
     apiGroup: rbac.authorization.k8s.io
 ---
+# This Role is also rendered by the tenant node-manager module chart, so it is pre-created with node-manager helm adoption metadata
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: bashible-apiserver-readconfig
   namespace: d8-cloud-instance-manager
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: node-manager
+    meta.helm.sh/release-namespace: d8-system
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["create", "update", "get", "watch", "list"]
 ---
+# The tenant node-manager chart owns the RoleBinding named "bashible-apiserver-readconfig" (bound to its in-tenant ServiceAccount). 
+# We using VCP-unique RoleBinding that never collides with node-manager.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: bashible-apiserver-readconfig
+  name: d8:vcp:bashible-apiserver-readconfig
   namespace: d8-cloud-instance-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io

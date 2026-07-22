@@ -147,15 +147,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP); err != nil || !res.IsZero() {
-		return res, err
-	}
-
 	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 
 	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, apiserverService, pkiSecret, adminSecret, joinToken); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 

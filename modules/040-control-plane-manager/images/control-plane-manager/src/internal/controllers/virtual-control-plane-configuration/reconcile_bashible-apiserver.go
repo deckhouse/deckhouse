@@ -189,6 +189,15 @@ func (r *reconciler) reconcileNestedNodeCleanup(ctx context.Context, nestedClien
 	return reconcile.Result{}, nil
 }
 
+func helmOwnershipMeta(releaseName string) (labels map[string]string, annotations map[string]string) {
+	return map[string]string{
+			"app.kubernetes.io/managed-by": "Helm",
+		}, map[string]string{
+			"meta.helm.sh/release-name":      releaseName,
+			"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
+		}
+}
+
 func filterTaints(taints []corev1.Taint, dropKeys ...string) []corev1.Taint {
 	drop := make(map[string]struct{}, len(dropKeys))
 	for _, k := range dropKeys {
@@ -473,10 +482,13 @@ func (r *reconciler) reconcileBashibleRegistrySecret(
 		return reconcile.Result{}, err
 	}
 
+	registryLabels, registryAnnotations := helmOwnershipMeta("deckhouse")
 	target := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      bashibleRegistrySecretName,
-			Namespace: bashibleRegistrySecretNS,
+			Name:        bashibleRegistrySecretName,
+			Namespace:   bashibleRegistrySecretNS,
+			Labels:      registryLabels,
+			Annotations: registryAnnotations,
 		},
 		Type: parentSecret.Type,
 		Data: maps.Clone(parentSecret.Data),
@@ -516,10 +528,13 @@ func (r *reconciler) reconcileBashibleBashboosterSecret(
 		return reconcile.Result{}, err
 	}
 
+	bashboosterLabels, bashboosterAnnotations := helmOwnershipMeta("node-manager")
 	target := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      bashibleBashboosterSecretName,
-			Namespace: bashibleDeckhouseNamespace,
+			Name:        bashibleBashboosterSecretName,
+			Namespace:   bashibleDeckhouseNamespace,
+			Labels:      bashboosterLabels,
+			Annotations: bashboosterAnnotations,
 		},
 		Type: parentSecret.Type,
 		Data: maps.Clone(parentSecret.Data),
