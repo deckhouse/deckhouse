@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-18535f5e647828b3f78dcc88421cf908ef23554ac1c0c524726e13abc99b3c35",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm specially crafted chart archive causing out of memory - Функционал скачивания и распаковки helm chart архивов в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все необходимые чарты предоставляются в готовом виде, что исключает возможность эксплуатации данной уязвимости.",
+      "impact_statement": "Helm chart archive unpacking that can cause OOM is not used by this component. Required charts are provided pre-built; exploitation is not possible.",
       "timestamp": "2025-10-10T15:32:08.129204108Z"
     },
     {
@@ -29,7 +29,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm specially crafted JSON schema causing stack overflow - Функционал обработки JSON схем с произвольной глубиной вложенности в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Величина вложенности схем контролируется на этапе проверки линтером, что исключает возможность эксплуатации данной уязвимости.",
+      "impact_statement": "Helm JSON schema validation against untrusted crafted charts is not used by this component. Required charts are provided pre-built; exploitation is not possible.",
       "timestamp": "2025-10-10T15:33:13.264855875Z"
     },
     {
@@ -43,7 +43,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm Chart Code Execution - Функционал, связанный с обновлением зависимостей helm chart, в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все необходимые зависимости включаются непосредственно в состав чарта, что исключает возможность эксплуатации уязвимости.",
+      "impact_statement": "Helm chart code-execution via crafted charts is not reachable: this component does not install untrusted Helm charts from arbitrary sources at runtime.",
       "timestamp": "2025-10-10T15:29:44.644944464Z"
     },
     {
@@ -57,7 +57,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm YAML parsing panic vulnerability - Функционал разбора YAML-файлов в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы без предварительной проверки линтером. Все чарты проходят обязательную валидацию, что исключает возможность эксплуатации данной уязвимости.",
+      "impact_statement": "Helm YAML parsing panic via crafted charts is not reachable: this component does not process untrusted Helm chart YAML from arbitrary sources at runtime.",
       "timestamp": "2025-10-10T15:34:40.216094508Z"
     },
     {
@@ -71,7 +71,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm Chart JSON Schema denial of service - Функционал обработки JSON схем в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы без предварительной проверки линтером. Все чарты проходят обязательную валидацию на отсутствие ссылок , указывающих на /dev/zero, что исключает возможность эксплуатации данной уязвимости.",
+      "impact_statement": "Helm JSON schema DoS via crafted charts is not reachable: this component does not process untrusted Helm chart schemas from arbitrary sources at runtime.",
       "timestamp": "2025-10-10T15:35:45.218482198Z"
     },
     {
@@ -85,7 +85,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm pull --untar output directory confusion (CVE-2026-35206, GHSA-hr2v-4r36-88hr, CWE-22) — Функционал helm pull с распаковкой chart (флаг --untar) из произвольного URL или имени из репозитория в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов Istio Operator. Манифесты и chart-артефакты для control-plane Istio подготавливаются на этапе сборки образа и не подменяются из недоверенных источников во время работы в кластере, что исключает возможность эксплуатации данной уязвимости.",
+      "impact_statement": "Helm pull --untar path confusion is not used: Istio control-plane manifests/charts are prepared at image build time and are not pulled from untrusted sources at runtime.",
       "timestamp": "2026-04-22T13:37:28.415381647Z"
     },
     {
@@ -99,7 +99,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Prometheus stored XSS in web UI (CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79) — Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (Graph, Metric Explorer и др.) при отображении имён метрик и значений лейблов, в т.ч. после приёма данных через remote write или OTLP receiver. Бинарник Istio Operator не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.48.1 подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory (актуальные затронутые версии — ветка 3.x сервера). Эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "Prometheus stored XSS in the web UI does not apply: this binary does not run the Prometheus server or its UI. github.com/prometheus/prometheus is a library dependency only.",
       "timestamp": "2026-04-22T15:16:18.524739084Z"
     },
     {
@@ -113,7 +113,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Prometheus Azure AD remote write client_secret exposed via /-/config (CVE-2026-42151, GHSA-wg65-39gg-5wfj, CWE-312) — Уязвимость относится к раскрытию client_secret конфигурации Azure AD remote write через HTTP API /-/config сервера Prometheus 3.x. Бинарник Istio Operator не запускает сервер Prometheus и не предоставляет указанный endpoint; зависимость github.com/prometheus/prometheus v0.48.1 подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "Prometheus Azure AD client_secret disclosure via /-/config does not apply: this binary does not run the Prometheus server or expose that endpoint.",
       "timestamp": "2026-05-20T15:21:01.524739084Z"
     },
     {
@@ -127,7 +127,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Prometheus remote read endpoint DoS via crafted snappy payload (CVE-2026-42154, GHSA-8rm2-7qqf-34qm, CWE-400) — Уязвимость относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: некорректная валидация длины snappy-payload может привести к исчерпанию памяти и отказу в обслуживании. Бинарник Istio Operator не запускает сервер Prometheus и не обрабатывает запросы к /api/v1/read; зависимость github.com/prometheus/prometheus v0.48.1 подтягивается как библиотека. Эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "Prometheus remote-read DoS via crafted snappy payload does not apply: this binary does not run the Prometheus server or handle /api/v1/read.",
       "timestamp": "2026-05-20T15:21:12.524739084Z"
     },
     {
@@ -141,9 +141,24 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Prometheus stored XSS in legacy web UI heatmap (CVE-2026-44903, GHSA-fw8g-cg8f-9j28, CWE-79) — Уязвимость относится к отображению heatmap в устаревшем веб-UI сервера Prometheus (histogram bucket label values, флаг --enable-feature=old-ui). Бинарник Istio Operator не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.48.1 подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "Prometheus stored XSS in the legacy heatmap UI does not apply: this binary does not run the Prometheus server or its UI.",
       "timestamp": "2026-05-20T15:21:22.524739084Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 applies to the golang.org/x/crypto/openpgp package, which is marked as unmaintained and unsafe by design. In this component, golang.org/x/crypto is a transitive dependency and crypto/openpgp is not imported and is not on the binary execute path. Exploitation in the context of this component is not possible.",
+      "timestamp": "2026-07-20T16:15:00Z"
     }
   ],
-  "timestamp": "2026-05-20T15:21:35Z"
+  "timestamp": "2026-05-20T15:21:35Z",
+  "last_updated": "2026-07-20T16:15:00Z"
 }

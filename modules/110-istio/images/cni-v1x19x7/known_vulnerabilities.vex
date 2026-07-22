@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-3da5f51d1918129c268c4a16f32d6cfe39caa48424f56211ec11c032cd1963dd",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Образ Istio CNI включает бинарники istio-cni (/opt/cni/bin/istio-cni) и install-cni (/usr/local/bin/install-cni), собранные из исходников Istio 1.19.x; оба тянут google.golang.org/grpc указанной версии. Уязвимость CVE-2026-33186 проявляется только на gRPC-серверах с авторизацией по псевдо-заголовку :path (в т.ч. google.golang.org/grpc/authz), при политике с явными deny для канонических путей и разрешением остальных запросов по умолчанию. Указанные бинарники CNI не предоставляют такой конфигурации gRPC-сервера и path-based interceptors, поэтому описанный обход авторизации на исполняемом пути недоступен.",
+      "impact_statement": "CVE-2026-33186 requires a gRPC server with path-based authz interceptors (deny rules + fallback allow). This component does not configure grpc-go authz that way; the vulnerable execute path is unused.",
       "timestamp": "2026-03-30T10:09:47.382915604Z"
     },
     {
@@ -29,9 +29,24 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Образ Istio CNI включает бинарники istio-cni (/opt/cni/bin/istio-cni) и install-cni (/usr/local/bin/install-cni), использующие go.opentelemetry.io/otel/sdk указанной версии как зависимость. Уязвимость CVE-2026-39883 связана с детектированием ресурсов в SDK: на платформах BSD и Solaris вызывается утилита kenv без абсолютного пути, что теоретически допускает подмену через PATH (CWE-426), см. GHSA-hfvc-g4fc-pqhx. Образ выполняется в контейнере на Linux; указанный путь исполнения относится к BSD/Solaris и на типовом рабочем окружении Deckhouse не задействован, поэтому эксплуатация в контексте данного компонента недоступна.",
+      "impact_statement": "CVE-2026-39883 affects OpenTelemetry SDK resource detection that invokes BSD/Solaris kenv without an absolute path. This component runs on Linux in Kubernetes; that code path is unused.",
       "timestamp": "2026-04-13T11:15:12.594028594Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 applies to the golang.org/x/crypto/openpgp package, which is marked as unmaintained and unsafe by design. In this component, golang.org/x/crypto is a transitive dependency and crypto/openpgp is not imported and is not on the binary execute path. Exploitation in the context of this component is not possible.",
+      "timestamp": "2026-07-20T16:15:00Z"
     }
   ],
-  "timestamp": "2026-04-13T11:15Z"
+  "timestamp": "2026-04-13T11:15Z",
+  "last_updated": "2026-07-20T16:15:00Z"
 }

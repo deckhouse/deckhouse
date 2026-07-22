@@ -75,3 +75,5 @@ shell:
   - git apply --verbose /patches/001-istio-go-mod.patch
   - rm -rf /src/operator/.git
 ---
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

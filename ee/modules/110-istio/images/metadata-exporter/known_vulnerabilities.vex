@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-metadata-exporter-go-2026-5932",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 applies to the golang.org/x/crypto/openpgp package, which is marked as unmaintained and unsafe by design. In metadata-exporter, golang.org/x/crypto v0.54.0 is a transitive dependency (via github.com/go-jose/go-jose/v3) and only crypto/pbkdf2 is used. The crypto/openpgp package is not imported and is not on the binary execute path. Exploitation in the context of this component is not possible.",
+      "timestamp": "2026-07-20T15:26:00Z"
+    }
+  ],
+  "timestamp": "2026-07-20T15:26:00Z"
+}
