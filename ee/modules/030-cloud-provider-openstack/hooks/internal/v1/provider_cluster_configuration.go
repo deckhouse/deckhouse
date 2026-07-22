@@ -85,14 +85,18 @@ func (cc *OpenstackProviderClusterConfiguration) PatchWithModuleConfig(module Op
 }
 
 type provider struct {
-	AuthURL    string `json:"authURL,omitempty" yaml:"authURL,omitempty"`
-	CACert     string `json:"caCert,omitempty" yaml:"caCert,omitempty"`
-	DomainName string `json:"domainName,omitempty" yaml:"domainName,omitempty"`
-	TenantName string `json:"tenantName,omitempty" yaml:"tenantName,omitempty"`
-	TenantID   string `json:"tenantID,omitempty" yaml:"tenantID,omitempty"`
-	Username   string `json:"username,omitempty" yaml:"username,omitempty"`
-	Password   string `json:"password,omitempty" yaml:"password,omitempty"`
-	Region     string `json:"region,omitempty" yaml:"region,omitempty"`
+	AuthURL                     string `json:"authURL,omitempty" yaml:"authURL,omitempty"`
+	CACert                      string `json:"caCert,omitempty" yaml:"caCert,omitempty"`
+	DomainName                  string `json:"domainName,omitempty" yaml:"domainName,omitempty"`
+	TenantName                  string `json:"tenantName,omitempty" yaml:"tenantName,omitempty"`
+	TenantID                    string `json:"tenantID,omitempty" yaml:"tenantID,omitempty"`
+	Username                    string `json:"username,omitempty" yaml:"username,omitempty"`
+	Password                    string `json:"password,omitempty" yaml:"password,omitempty"`
+	Region                      string `json:"region,omitempty" yaml:"region,omitempty"`
+	ApplicationCredentialId     string `json:"applicationCredentialId,omitempty" yaml:"applicationCredentialId,omitempty"`
+	ApplicationCredentialName   string `json:"applicationCredentialName,omitempty" yaml:"applicationCredentialName,omitempty"`
+	ApplicationCredentialSecret string `json:"applicationCredentialSecret,omitempty" yaml:"applicationCredentialSecret,omitempty"`
+	Token                       string `json:"token,omitempty" yaml:"token,omitempty"`
 }
 
 func (p provider) IsEmpty() bool {
@@ -118,6 +122,18 @@ func (p provider) IsEmpty() bool {
 		return false
 	}
 	if p.Region != "" {
+		return false
+	}
+	if p.ApplicationCredentialId != "" {
+		return false
+	}
+	if p.ApplicationCredentialName != "" {
+		return false
+	}
+	if p.ApplicationCredentialSecret != "" {
+		return false
+	}
+	if p.Token != "" {
 		return false
 	}
 

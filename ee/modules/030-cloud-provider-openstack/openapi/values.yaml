@@ -31,9 +31,6 @@ properties:
           - { "authURL": "http://my.cloud.lalla/3/", "caCert": "mycacert", "domainName": "mydomain", "tenantName": "mytenantname", "username": "myuser", "password": "mypass", "region": "myreg" }
         x-required-for-helm:
           - authURL
-          - username
-          - password
-          - domainName
           - region
         properties:
           authURL:
@@ -51,6 +48,14 @@ properties:
           password:
             type: string
           region:
+            type: string
+          applicationCredentialId:
+            type: string
+          applicationCredentialName:
+            type: string
+          applicationCredentialSecret:
+            type: string
+          token:
             type: string
       internalNetworkNames:
         type: array

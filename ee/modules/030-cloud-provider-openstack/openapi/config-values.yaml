@@ -18,6 +18,8 @@ properties:
         type: string
         description: |
           The domain name.
+
+          Cannot be used together with `token`.
       tenantName:
         type: string
         description: |
@@ -33,14 +35,45 @@ properties:
         type: string
         description: |
           The name of the user that has full project privileges.
+
+          Cannot be used together with `applicationCredentialId` or `token`.
       password:
         type: string
         description: |
           The user's password.
+
+          Cannot be used together with `applicationCredentialSecret` or `token`.
       region:
         type: string
         description: |
           The OpenStack region where the cluster will be deployed.
+      applicationCredentialId:
+        type: string
+        description: |
+          Application credential ID.
+
+          Cannot be used together with `applicationCredentialName`.
+          Cannot be used together with `username`/`password` or `token`.
+      applicationCredentialName:
+        type: string
+        description: |
+          Application credential name.
+
+          Must be used with `username` and `domainName`.
+          Cannot be used together with `applicationCredentialId`.
+          Cannot be used together with `password` or `token`.
+      applicationCredentialSecret:
+        type: string
+        description: |
+          Application credential secret.
+
+          Cannot be used together with `password` or `token`.
+      token:
+        type: string
+        description: |
+          Authenticate using an existing token.
+
+          Cannot be used together with `domainName`, `username`/`password` or `applicationCredentialSecret`.
   internalNetworkNames:
     type: array
     description: |

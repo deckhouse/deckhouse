@@ -330,6 +330,8 @@ apiVersions:
               Имя домена.
 
               Переменная `OS_USER_DOMAIN_NAME` из файла openrc.
+
+              Не может использоваться вместе с `token`.
           tenantName:
             description: |
               Имя проекта.
@@ -343,9 +345,36 @@ apiVersions:
           username:
             description: |
               Имя пользователя с полными правами на проект.
+
+              Не может использоваться вместе с `applicationCredentialId` или `token`.
           password:
             description: |
               Пароль пользователя.
+
+              Не может использоваться вместе с `applicationCredentialSecret` или `token`.
           region:
             description: |
               Регион OpenStack, где будет развернут кластер.
+          applicationCredentialId:
+            description: |
+              ID приложения.
+
+              Не может использоваться вместе с `applicationCredentialName`.
+              Не может использоваться вместе с `username`/`password` или `token`.
+          applicationCredentialName:
+            description: |
+              Имя приложения.
+
+              Должно использоваться вместе с `username` и `domainName`.
+              Не может использоваться вместе с `applicationCredentialId`.
+              Не может использоваться вместе с `password` или `token`.
+          applicationCredentialSecret:
+            description: |
+              Секрет приложения.
+
+              Не может использоваться вместе с `password` или `token`.
+          token:
+            description: |
+              Токен.
+
+              Не может использоваться вместе с `domainName`, `username`/`password` или `applicationCredentialSecret`.

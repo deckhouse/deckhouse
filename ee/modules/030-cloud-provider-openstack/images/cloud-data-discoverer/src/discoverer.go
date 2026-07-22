@@ -43,7 +43,18 @@ type Discoverer struct {
 func NewDiscoverer(logger *log.Logger) *Discoverer {
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
-		logger.Fatal("Cannot get opts from env", "error", err)
+		if token := os.Getenv("OS_TOKEN"); token != "" {
+			authOpts = gophercloud.AuthOptions{
+				IdentityEndpoint: os.Getenv("OS_AUTH_URL"),
+				TokenID:          token,
+				AllowReauth:      false,
+			}
+		} else {
+			logger.Fatal("Cannot get opts from env", "error", err)
+		}
+	}
+	if authOpts.IdentityEndpoint == "" {
+		logger.Fatal("Cannot get OS_AUTH_URL env")
 	}
 
 	region := os.Getenv("OS_REGION")
