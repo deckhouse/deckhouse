@@ -178,6 +178,13 @@ module JSONSchemaRenderer
         input ? input.dig(*keys) : nil
     end
 
+    def format_crd_short_names(input)
+        shortNames = get_hash_value(input, 'spec', 'names', 'shortNames')
+        return '' if shortNames.nil? || shortNames.empty?
+
+        '<br/>Short names: ' + Array(shortNames).join(', ')
+    end
+
     def get_search_keywords(primaryLanguage, fallbackLanguage = nil)
       return '' if !primaryLanguage
       if get_hash_value(primaryLanguage, "x-doc-search") then
@@ -934,6 +941,7 @@ module JSONSchemaRenderer
                 fullPath = [sprintf(%q(v1beta1-%s), input["spec"]["names"]["kind"])]
                 result.push("<h2>#{resourceName}</h2>")
                 result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
+                result.push(format_crd_short_names(input))
                 if input["spec"].has_key?("version") then
                    result.push('<br/>Version: ' + input["spec"]["version"] + '</font></p>')
                 end
@@ -997,7 +1005,7 @@ module JSONSchemaRenderer
                  result.push("<h2>#{resourceName}</h2>")
 
                  if  input["spec"]["versions"].length > 1 then
-                     result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
+                     result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + format_crd_short_names(input) + '</font></p>')
                      result.push('<div class="tabs-block">')
                      result.push('<ul class="tabs__container tabs__container--title">')
                      activeStatus=" active"
@@ -1021,6 +1029,7 @@ module JSONSchemaRenderer
 
                     if input["spec"]["versions"].length == 1 then
                         result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
+                        result.push(format_crd_short_names(input))
                         result.push('<br/>Version: ' + item['name'] + '</font></p>')
                     else
                         #result.push(convert("### " + item['name'] + ' {#' + input["spec"]["names"]["kind"].downcase + '-' + item['name'].downcase + '}'))

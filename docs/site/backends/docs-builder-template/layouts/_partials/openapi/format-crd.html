@@ -4,6 +4,14 @@
 {{- $langData := .langData }}
 {{- $kind := .data.spec.names.kind }}
 {{- $kindDowncase := .data.spec.names.kind | lower }}
+{{- $shortNames := slice }}
+{{- if $data.spec.names.shortNames }}
+  {{- $shortNames = $data.spec.names.shortNames }}
+{{- end }}
+{{- $shortNamesLine := "" }}
+{{- if gt ( $shortNames | len ) 0 }}
+  {{- $shortNamesLine = printf "<br/>Short names: %s" ( delimit $shortNames ", " ) }}
+{{- end }}
 
 <h2>{{ $kind }}</h2>
 
@@ -16,7 +24,7 @@
 
 {{- if and $data.spec.versions (gt ( $data.spec.versions | len ) 0) }}
   {{- if gt ( $data.spec.versions | len ) 1 }}
-    <p><font size="-1">Scope: {{ $data.spec.scope }}</font></p>
+    <p><font size="-1">Scope: {{ $data.spec.scope }}{{ $shortNamesLine | safeHTML }}</font></p>
     <div class="tabs-block">
     <ul class="tabs__container tabs__container--title">
     {{- $status := " active" }}
@@ -34,6 +42,7 @@
 
     {{- if eq ( $data.spec.versions | len ) 1 }}
       <p><font size="-1">Scope: {{ $data.spec.scope }}
+      {{- $shortNamesLine | safeHTML }}
       <br/>Version: {{ $versionName }}</font></p>
     {{- end }}
 
