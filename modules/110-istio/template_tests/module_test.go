@@ -66,6 +66,7 @@ discovery:
 `
 
 const istioValues = `
+    registry: {}
     internal:
       applicationNamespaces: []
       globalVersion: "1.21.6"
