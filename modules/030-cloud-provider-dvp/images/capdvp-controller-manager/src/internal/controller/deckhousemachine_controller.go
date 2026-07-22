@@ -428,20 +428,35 @@ func (r *DeckhouseMachineReconciler) handleVMNotReady(
 	// due to potential conflict or unexpected actions
 	dvpMachine.Status.Initialization.Provisioned = ptr.To(false)
 
-	bootDiskName := dvpMachine.Name + "-boot"
-	if bootDisk, err := r.DVP.DiskService.GetDiskByName(ctx, bootDiskName); err == nil {
-		if termErr := dvpapi.TerminalDiskError(bootDisk); termErr != nil {
-			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.CreateMachineError))
-			dvpMachine.Status.FailureMessage = ptr.To(fmt.Sprintf("boot disk provisioning failed: %v", termErr))
-			conditions.Set(dvpMachine, metav1.Condition{
-				Type:               string(infrastructurev1a1.VMReadyCondition),
-				Status:             metav1.ConditionFalse,
-				Reason:             infrastructurev1a1.BootDiskProvisioningFailedReason,
-				Message:            fmt.Sprintf("boot disk provisioning failed: %v", termErr),
-				LastTransitionTime: metav1.Now(),
-			})
-			return ctrl.Result{}, nil
+	diskNames := make([]string, 0, 1+len(dvpMachine.Spec.AdditionalDisks))
+	diskNames = append(diskNames, dvpMachine.Name+"-boot")
+	for i := range dvpMachine.Spec.AdditionalDisks {
+		diskNames = append(diskNames, fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i))
+	}
+
+	for _, diskName := range diskNames {
+		disk, err := r.DVP.DiskService.GetDiskByName(ctx, diskName)
+		if err != nil {
+			if !errors.Is(err, dvpapi.ErrNotFound) {
+				logger.V(1).Info("cannot fetch VM disk to probe for terminal error", "disk", diskName, "error", err)
+			}
+			continue
 		}
+		termErr := dvpapi.TerminalDiskError(disk)
+		if termErr == nil {
+			continue
+		}
+		msg := fmt.Sprintf("disk %q provisioning failed: %v", diskName, termErr)
+		dvpMachine.Status.FailureReason = ptr.To(string(capierrors.CreateMachineError))
+		dvpMachine.Status.FailureMessage = ptr.To(msg)
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionFalse,
+			Reason:             infrastructurev1a1.BootDiskProvisioningFailedReason,
+			Message:            msg,
+			LastTransitionTime: metav1.Now(),
+		})
+		return ctrl.Result{}, nil
 	}
 
 	resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine)

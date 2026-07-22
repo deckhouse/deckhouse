@@ -127,8 +127,11 @@ func (c *ControllerService) CreateVolume(
 		if disk.Status.Phase == v1alpha2.DiskReady || disk.Status.Phase == v1alpha2.DiskWaitForFirstConsumer {
 			diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
 			if err != nil || diskCapacity <= 0 {
-				// WFFC disks may not have capacity populated yet; fall back to requested size.
-				diskCapacity = requiredSize
+				// WFFC disks may not have Status.Capacity populated yet;
+				// fall back to Spec.PersistentVolumeClaim.Size so the size-mismatch check below stays honest.
+				if size := disk.Spec.PersistentVolumeClaim.Size; size != nil {
+					diskCapacity = size.Value()
+				}
 			}
 			if requiredSize > 0 && diskCapacity > 0 && requiredSize > diskCapacity {
 				return nil, status.Errorf(
