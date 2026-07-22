@@ -2557,6 +2557,46 @@ alerts:
         Obsolete global control-plane resource requests need to be migrated.
       severity: "6"
       markupFormat: markdown
+    - name: D8ObsoleteKubernetesVersionInClusterConfiguration
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `kubernetesVersion` field is set to an explicit value in ClusterConfiguration but has not been migrated to ModuleConfig `control-plane-manager` yet.
+
+        Until the migration is complete, the value from ClusterConfiguration is used to control the cluster's Kubernetes version.
+
+        **To resolve this alert, migrate the setting:**
+
+        1. If ModuleConfig `control-plane-manager` does not exist, create it first:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Migrate the value from ClusterConfiguration to ModuleConfig in one command:
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
+           {"spec": {"version": 3, "settings": {"kubernetesVersion": "$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep kubernetesVersion | awk '{print $2}')"}}}
+           EOF
+           )"
+           ```
+
+        Once ModuleConfig is updated, this alert will be resolved automatically.
+
+        3. Remove `kubernetesVersion` from ClusterConfiguration:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete the `kubernetesVersion` field and save.
+      summary: |
+        Obsolete kubernetesVersion in ClusterConfiguration needs to be migrated to control-plane-manager ModuleConfig.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoletePublishAPIinUserAuthn
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager

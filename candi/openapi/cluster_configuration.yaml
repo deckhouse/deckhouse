@@ -142,7 +142,12 @@ apiVersions:
         default: "Containerd"
       kubernetesVersion:
         type: string
+        x-doc-deprecated: true
         description: |
+          **Deprecated.** Use `kubernetesVersion` in the `control-plane-manager` ModuleConfig instead.
+
+          When the ModuleConfig field is set, it takes precedence over this field.
+
           Kubernetes version (control plane components of the cluster).
 
           Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/modules/control-plane-manager/#version-control) the cluster's control plane version.
