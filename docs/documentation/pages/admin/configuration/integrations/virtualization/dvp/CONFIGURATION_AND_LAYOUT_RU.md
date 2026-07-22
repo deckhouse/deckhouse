@@ -130,3 +130,42 @@ provider:
   kubeconfigDataBase64: ZXhhbXBsZQo=
   namespace: default
 ```
+
+### Обновление образа ОС
+
+При создании узлов DKP использует образ ОС, указанный в конфигурации кластера или инстанс-класса.
+
+При обновлении ОС не изменяйте существующий образ без изменения его имени. В этом случае значение образа в конфигурации DKP не изменится, и узлы не будут автоматически переведены на обновлённый образ.
+
+Рекомендуемый порядок действий:
+
+1. Создайте новый образ ОС с новым именем.
+1. Укажите новый образ в конфигурации DKP.
+1. Пересоздайте узлы, которые должны использовать новый образ.
+1. Удалите старый образ после завершения миграции всех узлов.
+
+Например, вместо изменения образа с прежним именем:
+
+```yaml
+rootDisk:
+  image:
+    kind: ClusterVirtualImage
+    name: ubuntu-24-04
+```
+
+создайте новый образ и укажите его в конфигурации:
+
+```yaml
+rootDisk:
+  image:
+    kind: ClusterVirtualImage
+    name: ubuntu-24-04-20260204
+```
+
+**Для CloudPermanent-узлов** измените значение поля [`rootDisk.image.name`](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration-masternodegroup-instanceclass-rootdisk-image) в [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration) и выполните:
+
+```shell
+dhctl converge
+```
+
+**Для CloudEphemeral-узлов** измените значение поля [`rootDisk.image.name`](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass-v1alpha1-spec-rootdisk-image-name) в используемом ресурсе [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), после чего пересоздайте узлы соответствующей группы.
