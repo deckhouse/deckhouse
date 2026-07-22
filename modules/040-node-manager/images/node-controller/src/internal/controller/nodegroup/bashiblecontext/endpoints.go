@@ -58,7 +58,7 @@ func (s *Service) readEndpoints(ctx context.Context) (endpoints, error) {
 			if !podReady(pod) {
 				continue
 			}
-			set[fmt.Sprintf("%s:%d", pod.Status.PodIP, apiserverPort)] = struct{}{}
+			set[net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(apiserverPort))] = struct{}{}
 		}
 	}
 

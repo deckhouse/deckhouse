@@ -48,10 +48,6 @@ func (s *Service) reader() client.Reader {
 	return s.Client
 }
 
-func (s *Service) ComputeEngine(ctx context.Context, ng *v1.NodeGroup) string {
-	return s.computeEngine(ng, s.readCloudProviderData(ctx))
-}
-
 // Result holds the get_crds-derived fields destined for NodeGroup.status.
 type Result struct {
 	Engine            string
@@ -63,11 +59,6 @@ type Result struct {
 	SerializedLabels  string
 	SerializedTaints  string
 	UpdateEpoch       string
-}
-
-// Compute derives the get_crds fields for a single NodeGroup.
-func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) (Result, error) {
-	return s.compute(ctx, ng, s.readCloudProviderData(ctx))
 }
 
 // ComputeWithCloudChecks derives get_crds fields and validation diagnostics from
