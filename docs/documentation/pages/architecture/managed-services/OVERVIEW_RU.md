@@ -6,7 +6,7 @@ search: managed services
 description: Архитектура подсистемы Managed Services в Deckhouse Kubernetes Platform.
 ---
 
-В данном подразделе описывается архитектура подсистемы Managed Services в Deckhouse Kubernetes Platform (DKP). Подсистема Managed Services автоматизирует развёртывание, масштабирование, резервное копирование и обновления управляемых сервисов в DKP.
+В данном подразделе описывается архитектура подсистемы Managed Services в Deckhouse Kubernetes Platform (DKP). Подсистема Managed Services автоматизирует развёртывание, масштабирование, резервное копирование и обновление управляемых сервисов в DKP.
 
 В подсистему Managed Services входят следующие модули:
 
