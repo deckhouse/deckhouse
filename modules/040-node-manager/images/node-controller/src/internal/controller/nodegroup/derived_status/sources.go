@@ -138,15 +138,26 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) *semver.Versio
 	return min
 }
 
-func (s *Service) readDefaultZones(_ context.Context, cloudProvider map[string]interface{}) []string {
+func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string]interface{}) []string {
 	seen := make(map[string]struct{})
 	zones := make([]string, 0)
 	add := func(z string) {
+		if z == "" {
+			return
+		}
 		if _, ok := seen[z]; ok {
 			return
 		}
 		seen[z] = struct{}{}
 		zones = append(zones, z)
+	}
+
+	mdList := &unstructured.UnstructuredList{}
+	mdList.SetGroupVersionKind(ngcommon.MCMMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"))
+	if err := s.Client.List(ctx, mdList, client.InNamespace(ngcommon.MachineNamespace)); err == nil {
+		for i := range mdList.Items {
+			add(mdList.Items[i].GetAnnotations()["zone"])
+		}
 	}
 
 	switch v := cloudProvider["zones"].(type) {
