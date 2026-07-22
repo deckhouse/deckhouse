@@ -24,8 +24,7 @@ properties:
   caBundle:
     type: string
     description: |
-      The CA certificate chain in PEM format for verifying the vCenter TLS certificate.
-      Use instead of `insecure` when vCenter uses a custom/enterprise CA.
+      PEM-encoded CA certificate chain used to verify the vCenter TLS certificate. Use this parameter instead of setting `insecure: true` when the vCenter certificate is signed by a custom or enterprise CA.
   vmFolderPath:
     type: string
     description: |
@@ -175,8 +174,7 @@ properties:
       caBundle:
         type: string
         description: |
-          The CA certificate chain in PEM format for verifying the NSX-T TLS certificate.
-          Use instead of `insecureFlag` when NSX-T uses a custom/enterprise CA.
+          PEM-encoded CA certificate chain used to verify the vCenter TLS certificate. Use this parameter instead of setting `insecure: true` when the vCenter certificate is signed by a custom or enterprise CA.
       loadBalancerClass:
         type: array
         description: |
