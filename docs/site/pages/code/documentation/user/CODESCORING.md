@@ -62,8 +62,7 @@ CodeScoring connection parameters are configured in project or group settings:
    | "Active" | Toggle to enable the integration for this project |
    | "Server URL" | CodeScoring server address. For example, `https://codescoring.example.com` |
    | "API token" | Token from your CodeScoring user profile (stored encrypted and masked) |
-   | "CA certificate" | Optional PEM CA certificate for a CodeScoring server with a self-signed certificate |
-   | "Project name" | Project name in CodeScoring (defaults to the repository slug) |
+   | "Project name" | Project name in CodeScoring (optional; defaults to the `group-project` path, `CI_PROJECT_PATH_SLUG`) |
    | "Scan stage" | Stage used to associate results on the platform side (`build` by default) |
 
 1. Click "Save".
@@ -72,9 +71,10 @@ The integration automatically injects the following CI variables into the pipeli
 
 - `FE_SCANS_CODESCORING_URL`
 - `FE_SCANS_CODESCORING_TOKEN`
-- `FE_SCANS_CODESCORING_CA_CERT`
-- `FE_SCANS_CODESCORING_PROJECT`
+- `FE_SCANS_CODESCORING_PROJECT` (when "Project name" is set)
 - `FE_SCANS_CODESCORING_SCAN_STAGE`
+
+For a server with a self-signed certificate, the CA is set **manually** as a **File**-type CI variable `FE_SCANS_CODESCORING_CA_CERT` ("Settings" → "CI/CD" → "Variables"). The `codescoring_scan` job exports it to `SSL_CERT_FILE`, which both `curl` and the Johnny agent trust. This is the only variable you set by hand; the rest of the `FE_SCANS_CODESCORING_*` variables are injected by the integration.
 
 ## Running the scan
 
@@ -99,7 +99,7 @@ To configure automatic scanning, do the following:
 
 After that, every pipeline automatically gains a **`codescoring_scan`** job (stage `fe-security-scanner`) that:
 
-- Downloads the console agent Johnny from the CodeScoring server (by token; with the supplied CA certificate for self-signed servers).
+- Downloads the console agent Johnny from the CodeScoring server (by token; for a self-signed server, using the CA from the `FE_SCANS_CODESCORING_CA_CERT` variable).
 - Scans the working directory and submits native GitLab reports.
 
 A manual `include` and manual `CODESCORING_*` variables are not required. The integration and the policy provide everything required.
@@ -123,9 +123,9 @@ The "Dependency Scanning", "Dependency list", and "License compliance" pages are
 
 ## Policies and blocking
 
-The `codescoring_scan` job is non-blocking. It always completes successfully and uploads reports (including on failed attempts, via `artifacts:when: always`) without failing the pipeline.
+The `codescoring_scan` job **fails the pipeline** when a finding is at or above the `FE_SECURITY_FAIL_ON` severity threshold (`high` by default) — a severity gate. Reports are still uploaded regardless (including on failed attempts, via `artifacts:when: always`), so findings are never lost.
 
-Policy configuration (40 criteria, severity thresholds, triage) and any blocking decision are handled on the CodeScoring platform side. Hard pipeline blocking on a policy violation is a separate scan-execution-policy setup and is not enabled in the current template.
+Policy configuration (40 criteria, severity thresholds, triage) is handled on the CodeScoring platform side.
 
 ## Vulnerability triage
 
