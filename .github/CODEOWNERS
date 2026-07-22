@@ -72,6 +72,7 @@
 **/040-node-manager/templates/cluster-autoscaler                 @yalosev @ergoz
 **/040-node-manager/templates/integrity-containerd-configurator  @sprait
 **/040-node-manager/templates/integrity-controller               @sprait
+**/040-node-manager/templates/caps-controller-manager            @aleksey-su @pabateman
 **/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu     @serg-su
 **/040-node-manager/templates/nvidia-gpu                         @serg-su
 **/040-node-manager/hooks/fencing**                              @yalosev @ergoz
