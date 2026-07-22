@@ -45,6 +45,8 @@ type packageI interface {
 	GetPath() string
 	GetRuntimeValues() string
 	GetValues() addonutils.Values
+	// GetMaintenance reports the package's maintenance mode.
+	GetMaintenance() nelm.MaintenanceState
 	// RunHooksByBinding executes hooks for BeforeHelm/AfterHelm bindings.
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 }

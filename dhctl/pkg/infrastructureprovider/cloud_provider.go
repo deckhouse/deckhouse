@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 )
 
 func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudProviderGetter {
@@ -64,6 +65,15 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, metaConfig.ProviderName)
 		}
 
+		// vcd special case: old VCD APIs need legacyMode in the parsed config
+		// before any tfvars are produced. This is a config rewrite, so it lives
+		// here — at the entry to the infrastructure layer — not in validation.
+		if metaConfig.ProviderName == vcd.ProviderName {
+			if err := vcd.EnsureLegacyMode(ctx, metaConfig); err != nil {
+				return nil, fmt.Errorf("ensure vcd legacyMode: %w", err)
+			}
+		}
+
 		return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error) {
 			tmpDir, err := params.getTmpDir(ctx)
 			if err != nil {
@@ -93,7 +103,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 				UUID:             clusterUUID,
 				DI:               di,
 				TmpDir:           tmpDir,
-				IsDebug:          params.isDebug(),
+				IsDebug:          params.IsDebug,
 				Settings:         set,
 				AdditionalParams: additionalParams,
 			}

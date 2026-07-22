@@ -12,7 +12,7 @@ Features of the `cloud-provider-azure` module:
   - The CCM module creates LoadBalancers for Kubernetes Service objects that have the `LoadBalancer` type;
   - The CCM module updates the metadata of the cluster nodes according to the configuration parameters and deletes nodes that are no longer in Azure;
 - Provisioning nodes in Azure using the `CSI storage` component;
-- Enabling the necessary CNI plugin (using the [simple bridge](/modules/cni-simple-bridge/));
+- Enabling the necessary CNI plugin (using [cni-cilium](/modules/cni-cilium/));
 - Registering with the [node-manager](/modules/node-manager/) module so that [AzureInstanceClasses](cr.html#azureinstanceclass) can be used when creating the [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 {% alert level="warning" %}

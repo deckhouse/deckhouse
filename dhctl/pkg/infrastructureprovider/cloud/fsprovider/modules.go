@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 )
 
 const (
@@ -38,11 +39,17 @@ type modulesProvider struct {
 	m sync.Mutex
 
 	cloudProviderDir string
+	// downloadRootDir is the root for OCI-unpacked provider trees. When a
+	// provider's modules aren't bundled under cloudProviderDir, copyDir falls
+	// back to <downloadRootDir>/<provider>/<dir>. May be empty for setups
+	// where every provider ships in the bundle.
+	downloadRootDir string
 }
 
-func newModulesProvider(cloudProviderDir string) *modulesProvider {
+func newModulesProvider(cloudProviderDir, downloadRootDir string) *modulesProvider {
 	return &modulesProvider{
 		cloudProviderDir: cloudProviderDir,
+		downloadRootDir:  downloadRootDir,
 	}
 }
 
@@ -75,9 +82,10 @@ func (p *modulesProvider) DownloadSpecs(ctx context.Context, _ cloud.DownloadSpe
 }
 
 func (p *modulesProvider) copyDir(ctx context.Context, dir string, params cloud.DownloadModulesParams, destination string) error {
+	cloudName := strings.ToLower(params.Settings.CloudName())
 	sourceDir := path.Join(
 		p.cloudProviderDir,
-		strings.ToLower(params.Settings.CloudName()),
+		cloudName,
 		dir,
 	)
 
@@ -85,12 +93,25 @@ func (p *modulesProvider) copyDir(ctx context.Context, dir string, params cloud.
 
 	stat, err := os.Stat(sourceDir)
 	if err != nil {
-		if os.IsNotExist(err) && dir == infraModulesDir {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s skipped. Not found", dir, sourceDir, destinationDir))
-			return nil
+		if !os.IsNotExist(err) {
+			return err
 		}
-
-		return err
+		// Fall back to OCI-unpacked provider tree (external provider images
+		// extract into <downloadRootDir>/<provider>/{layouts,terraform-modules}).
+		if p.downloadRootDir != "" {
+			fallback := path.Join(providerdir.ProviderDir(p.downloadRootDir, cloudName), dir)
+			if fbStat, fbErr := os.Stat(fallback); fbErr == nil {
+				sourceDir = fallback
+				stat = fbStat
+			}
+		}
+		if stat == nil {
+			if dir == infraModulesDir {
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s skipped. Not found", dir, sourceDir, destinationDir))
+				return nil
+			}
+			return err
+		}
 	}
 
 	if !stat.IsDir() {

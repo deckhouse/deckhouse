@@ -344,7 +344,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	pkgRuntime, err := packageruntime.New(runtimeManager.GetClient(), edition, operator.ModuleManager, dc, logger)
+	pkgRuntime, err := packageruntime.New(runtimeManager.GetClient(), edition, operator.ModuleManager, dc, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -418,6 +418,7 @@ func NewDeckhouseController(
 		config.NewSchemaStore(nil),
 		settingsContainer,
 		exts,
+		edition,
 	)
 
 	return &DeckhouseController{
@@ -489,7 +490,7 @@ func (c *DeckhouseController) loadInitialConfiguration(ctx context.Context) erro
 			continue
 		}
 
-		c.packageRuntime.UpdateModulesSettings(conf.Name, conf.Spec.Settings.GetMap(), conf.Spec.Enabled)
+		c.packageRuntime.UpdateModulesSettings(conf.Name, conf.Spec.Version, conf.Spec.Settings.GetMap(), conf.Spec.Enabled)
 	}
 
 	return nil

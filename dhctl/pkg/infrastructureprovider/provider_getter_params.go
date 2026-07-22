@@ -82,6 +82,7 @@ func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context) (*fsprovi
 		BinariesDir:       filepath.Join(dhctlPath, "bin"),
 		CloudProviderDir:  filepath.Join(p.GlobalOptions.CandiDir, "cloud-providers"),
 		PluginsDir:        filepath.Join(dhctlPath, "plugins"),
+		DownloadDir:       p.GlobalOptions.DownloadDir,
 	}
 
 	if _, err := os.Stat(diDefaultParams.BinariesDir); err != nil {
@@ -132,10 +133,6 @@ func (p *CloudProviderGetterParams) getTmpDir(ctx context.Context) (string, erro
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s Before preparation: '%s', absolute path: '%s'", logMsg, tmpDir, preparedTmpDir))
 
 	return preparedTmpDir, nil
-}
-
-func (p *CloudProviderGetterParams) isDebug() bool {
-	return p.IsDebug
 }
 
 func (p *CloudProviderGetterParams) getAdditionalParams() cloud.ProviderAdditionalParams {

@@ -1665,18 +1665,18 @@ index fa3a1cbe917..40b263f2ba8 100644
  }
  
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-index d791dd228c9..7f32eb1bc27 100644
+index b1c03703446..1a290042c0d 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-@@ -46,6 +46,7 @@ import (
+@@ -47,6 +47,7 @@ import (
  	"k8s.io/apiserver/pkg/registry/rest"
  	genericapiserver "k8s.io/apiserver/pkg/server"
  	serverstorage "k8s.io/apiserver/pkg/server/storage"
 +	storagevalue "k8s.io/apiserver/pkg/storage/value"
  	"k8s.io/apiserver/pkg/util/webhook"
+ 	"k8s.io/klog/v2"
  )
- 
-@@ -85,6 +86,11 @@ type ExtraConfig struct {
+@@ -87,6 +88,11 @@ type ExtraConfig struct {
  	ServiceResolver webhook.ServiceResolver
  	// AuthResolverWrapper is used in CR webhook converters
  	AuthResolverWrapper webhook.AuthenticationInfoResolverWrapper
@@ -1688,7 +1688,7 @@ index d791dd228c9..7f32eb1bc27 100644
  }
  
  type Config struct {
-@@ -197,6 +203,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
+@@ -199,6 +205,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
  		time.Duration(c.GenericConfig.MinRequestTimeout)*time.Second,
  		apiGroupInfo.StaticOpenAPISpec,
  		c.GenericConfig.MaxRequestBodyBytes,
@@ -2366,7 +2366,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 55d31fc8eda..0059b8f2569 100644
+index 47228c4ae9a..170667686e9 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -2401,18 +2401,18 @@ index 55d31fc8eda..0059b8f2569 100644
  	"k8s.io/apiserver/pkg/authorization/authorizer"
  	"k8s.io/apiserver/pkg/endpoints/handlers"
  	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
-@@ -73,6 +77,7 @@ import (
- 	"k8s.io/apiserver/pkg/features"
+@@ -74,6 +78,7 @@ import (
  	"k8s.io/apiserver/pkg/registry/generic"
+ 	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
  	genericfilters "k8s.io/apiserver/pkg/server/filters"
 +	storagevalue "k8s.io/apiserver/pkg/storage/value"
  	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	"k8s.io/apiserver/pkg/util/webhook"
  	"k8s.io/apiserver/pkg/warning"
-@@ -128,6 +133,10 @@ type crdHandler struct {
- 	// The limit on the request size that would be accepted and decoded in a write request
- 	// 0 means no limit.
- 	maxRequestBodyBytes int64
+@@ -137,6 +142,10 @@ type crdHandler struct {
+ 	// construction, by apiserver.go from a loopback REST config; nil (no
+ 	// loopback config) leaves every CRD at vanilla behavior.
+ 	scopeResolvers *scopefilter.Resolvers
 +
 +	// sensitiveRegistrar registers CRD resources with sensitive fields for encryption at rest.
 +	// nil when encryption is not configured or CRDSensitiveData feature gate is disabled.
@@ -2420,7 +2420,7 @@ index 55d31fc8eda..0059b8f2569 100644
  }
  
  // crdInfo stores enough information to serve the storage for the custom resource
-@@ -158,6 +167,12 @@ type crdInfo struct {
+@@ -167,6 +176,12 @@ type crdInfo struct {
  	// storageVersion is the CRD version used when storing the object in etcd.
  	storageVersion string
  
@@ -2433,7 +2433,7 @@ index 55d31fc8eda..0059b8f2569 100644
  	waitGroup *utilwaitgroup.SafeWaitGroup
  }
  
-@@ -179,7 +194,9 @@ func NewCustomResourceDefinitionHandler(
+@@ -188,7 +203,9 @@ func NewCustomResourceDefinitionHandler(
  	requestTimeout time.Duration,
  	minRequestTimeout time.Duration,
  	staticOpenAPISpec map[string]*spec.Schema,
@@ -2444,7 +2444,7 @@ index 55d31fc8eda..0059b8f2569 100644
  	ret := &crdHandler{
  		versionDiscoveryHandler: versionDiscoveryHandler,
  		groupDiscoveryHandler:   groupDiscoveryHandler,
-@@ -195,6 +212,7 @@ func NewCustomResourceDefinitionHandler(
+@@ -204,6 +221,7 @@ func NewCustomResourceDefinitionHandler(
  		minRequestTimeout:       minRequestTimeout,
  		staticOpenAPISpec:       staticOpenAPISpec,
  		maxRequestBodyBytes:     maxRequestBodyBytes,
@@ -2452,7 +2452,7 @@ index 55d31fc8eda..0059b8f2569 100644
  	}
  	crdInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
  		AddFunc:    ret.createCustomResourceDefinition,
-@@ -313,6 +331,16 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+@@ -322,6 +340,16 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
  		return
  	}
  
@@ -2469,7 +2469,7 @@ index 55d31fc8eda..0059b8f2569 100644
  	deprecated := crdInfo.deprecated[requestInfo.APIVersion]
  	for _, w := range crdInfo.warnings[requestInfo.APIVersion] {
  		warning.AddWarning(req.Context(), "", w)
-@@ -367,14 +395,35 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -376,14 +404,35 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	requestScope := crdInfo.requestScopes[requestInfo.APIVersion]
  	storage := crdInfo.storages[requestInfo.APIVersion].CustomResource
  
@@ -2505,7 +2505,7 @@ index 55d31fc8eda..0059b8f2569 100644
  		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
  	case "create":
  		// we want to track recently created CRDs so that in HA environments we don't have server A allow a create and server B
-@@ -390,10 +439,23 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -399,10 +448,23 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  			responsewriters.ErrorNegotiated(err, Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
  			return nil
  		}
@@ -2529,7 +2529,7 @@ index 55d31fc8eda..0059b8f2569 100644
  		return handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
  	case "delete":
  		allowsOptions := true
-@@ -410,6 +472,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -419,6 +481,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	}
  }
  
@@ -2567,7 +2567,7 @@ index 55d31fc8eda..0059b8f2569 100644
  func (r *crdHandler) serveStatus(w http.ResponseWriter, req *http.Request, requestInfo *apirequest.RequestInfo, crdInfo *crdInfo, terminating bool, supportedTypes []string) http.HandlerFunc {
  	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
  	storage := crdInfo.storages[requestInfo.APIVersion].Status
-@@ -514,6 +607,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
+@@ -523,6 +616,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
  func (r *crdHandler) removeStorage_locked(uid types.UID) {
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	if oldInfo, ok := storageMap[uid]; ok {
@@ -2583,7 +2583,7 @@ index 55d31fc8eda..0059b8f2569 100644
  		// Copy because we cannot write to storageMap without a race
  		// as it is used without locking elsewhere.
  		storageMap2 := storageMap.clone()
-@@ -551,6 +653,14 @@ func (r *crdHandler) removeDeadStorage() {
+@@ -560,6 +662,14 @@ func (r *crdHandler) removeDeadStorage() {
  	for uid, crdInfo := range storageMap {
  		if _, ok := storageMap2[uid]; !ok {
  			klog.V(4).Infof("Removing dead CRD storage for %s/%s", crdInfo.spec.Group, crdInfo.spec.Names.Kind)
@@ -2598,7 +2598,7 @@ index 55d31fc8eda..0059b8f2569 100644
  			go r.tearDown(crdInfo)
  		}
  	}
-@@ -587,6 +697,14 @@ func (r *crdHandler) destroy() {
+@@ -601,6 +711,14 @@ func (r *crdHandler) destroy() {
  
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	for _, crdInfo := range storageMap {
@@ -2613,7 +2613,7 @@ index 55d31fc8eda..0059b8f2569 100644
  		for _, storage := range crdInfo.storages {
  			// DestroyFunc have to be implemented in idempotent way,
  			// so the potential race with r.tearDown() (being called
-@@ -679,6 +797,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -693,6 +811,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
@@ -2631,7 +2631,7 @@ index 55d31fc8eda..0059b8f2569 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1036,9 +1165,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1074,9 +1203,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,

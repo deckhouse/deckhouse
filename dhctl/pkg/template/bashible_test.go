@@ -75,7 +75,7 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 }
 
 func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.New().Global)
+	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyValidatorProvider(), &options.New().Global)
 	require.NoError(t, err)
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
