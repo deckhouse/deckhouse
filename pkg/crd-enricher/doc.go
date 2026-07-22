@@ -52,6 +52,25 @@
 //   - examples — collected into a list and rendered as x-doc-examples (the
 //     marker may be repeated, and a value that is itself a YAML list is
 //     flattened into it);
+//   - examples-name / examples-description — attach a short name and/or a
+//     description to the example introduced by the preceding examples marker. As
+//     soon as any example has a name or a description, every entry of
+//     x-doc-examples switches to the wrapper form {x-doc-name, x-doc-description,
+//     x-doc-example} (an entry missing either attribute omits its key); when no
+//     example has one the list stays a plain list of values. For example
+//
+//	// +crd-enricher:deckhouse:documentation:examples={field: value}
+//	// +crd-enricher:deckhouse:documentation:examples-name=My example
+//	// +crd-enricher:deckhouse:documentation:examples-description=A longer note
+//
+//     renders as
+//
+//	x-doc-examples:
+//	  - x-doc-name: My example
+//	    x-doc-description: A longer note
+//	    x-doc-example:
+//	      field: value
+//
 //   - deprecated — a value-less flag rendered as x-doc-deprecated: true (any
 //     value-less simple entity becomes a boolean x-doc-<entity>);
 //   - default — rendered as x-doc-default set to the parsed YAML value (any

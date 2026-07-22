@@ -1,0 +1,56 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nameds.example.io
+spec:
+  group: example.io
+  names:
+    kind: Named
+    listKind: NamedList
+    plural: nameds
+    singular: named
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                full:
+                  additionalProperties:
+                    type: string
+                  type: object
+                  x-doc-examples:
+                    - x-doc-name: First
+                      x-doc-description: the first example
+                      x-doc-example:
+                        field: a
+                    - x-doc-name: Second
+                      x-doc-description: the second example
+                      x-doc-example:
+                        field: b
+                nameOnly:
+                  type: string
+                  x-doc-examples:
+                    - x-doc-name: one hour
+                      x-doc-example: 1h
+                    - x-doc-name: one day
+                      x-doc-example: 1d
+                trigger:
+                  type: string
+                  x-doc-examples:
+                    - x-doc-name: the x
+                      x-doc-example: x
+                    - x-doc-example: "y"
+              type: object
+          type: object
+      served: true
+      storage: true

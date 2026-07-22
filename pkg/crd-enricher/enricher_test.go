@@ -35,6 +35,8 @@ func TestParseMarkerLine(t *testing.T) {
 		{"value with equals", "+crd-enricher:raw:pattern=a=b", marker{name: "raw:pattern", rawValue: "a=b", hasValue: true, enricher: true}, true},
 		{"whitespace", "  +crd-enricher:deckhouse:documentation:default = 3m  ", marker{name: "default", rawValue: "3m", hasValue: true, enricher: true}, true},
 		{"examples", "+crd-enricher:deckhouse:documentation:examples=5m", marker{name: "examples", rawValue: "5m", hasValue: true, enricher: true}, true},
+		{"examples-description", "+crd-enricher:deckhouse:documentation:examples-description=my super example", marker{name: "examples-description", rawValue: "my super example", hasValue: true, enricher: true}, true},
+		{"examples-name", "+crd-enricher:deckhouse:documentation:examples-name=My example", marker{name: "examples-name", rawValue: "My example", hasValue: true, enricher: true}, true},
 		{"crd subkey", "+crd-enricher:crd:minimal=true", marker{name: "crd:minimal", rawValue: "true", hasValue: true, enricher: true}, true},
 		{"crd subkey flag", "+crd-enricher:crd:minimal", marker{name: "crd:minimal", enricher: true}, true},
 		{"sensitive-data", "+crd-enricher:deckhouse:sensitive-data", marker{name: "sensitive-data", enricher: true}, true},
@@ -158,6 +160,131 @@ func TestApplyMarkersExampleObject(t *testing.T) {
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
 		t.Errorf("x-doc-examples = %#v, want %#v", got, want)
+	}
+}
+
+func TestApplyMarkersExamplesDescription(t *testing.T) {
+	e := &Enricher{}
+	schema := map[string]any{"type": "object"}
+
+	// Each examples marker is followed by its description; the pairs must render
+	// as {x-doc-description, x-doc-example} wrappers in the authored order.
+	e.applyMarkers(schema, []marker{
+		{name: "examples", rawValue: "{field: value}", hasValue: true, enricher: true},
+		{name: "examples-description", rawValue: "my super example", hasValue: true, enricher: true},
+		{name: "examples", rawValue: "{field: value2}", hasValue: true, enricher: true},
+		{name: "examples-description", rawValue: "my super example two", hasValue: true, enricher: true},
+	})
+
+	if !e.orderedExamples {
+		t.Error("orderedExamples flag not set for described examples")
+	}
+
+	want := []any{
+		orderedMap{
+			{key: "x-doc-description", val: "my super example"},
+			{key: "x-doc-example", val: orderedMap{{key: "field", val: "value"}}},
+		},
+		orderedMap{
+			{key: "x-doc-description", val: "my super example two"},
+			{key: "x-doc-example", val: orderedMap{{key: "field", val: "value2"}}},
+		},
+	}
+	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("x-doc-examples = %#v, want %#v", got, want)
+	}
+}
+
+func TestApplyMarkersExamplesName(t *testing.T) {
+	e := &Enricher{}
+	schema := map[string]any{"type": "object"}
+
+	// A name alone (no description) switches to the wrapper form; the wrapper
+	// carries x-doc-name and x-doc-example, and omits x-doc-description.
+	e.applyMarkers(schema, []marker{
+		{name: "examples", rawValue: "{field: value}", hasValue: true, enricher: true},
+		{name: "examples-name", rawValue: "My example", hasValue: true, enricher: true},
+	})
+
+	if !e.orderedExamples {
+		t.Error("orderedExamples flag not set for a named example")
+	}
+
+	want := []any{
+		orderedMap{
+			{key: "x-doc-name", val: "My example"},
+			{key: "x-doc-example", val: orderedMap{{key: "field", val: "value"}}},
+		},
+	}
+	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("x-doc-examples = %#v, want %#v", got, want)
+	}
+}
+
+func TestApplyMarkersExamplesNameAndDescription(t *testing.T) {
+	e := &Enricher{}
+	schema := map[string]any{"type": "string"}
+
+	// Name and description together render as {x-doc-name, x-doc-description,
+	// x-doc-example} in that order.
+	e.applyMarkers(schema, []marker{
+		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
+		{name: "examples-name", rawValue: "five minutes", hasValue: true, enricher: true},
+		{name: "examples-description", rawValue: "a short interval", hasValue: true, enricher: true},
+	})
+
+	want := []any{
+		orderedMap{
+			{key: "x-doc-name", val: "five minutes"},
+			{key: "x-doc-description", val: "a short interval"},
+			{key: "x-doc-example", val: "5m"},
+		},
+	}
+	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("x-doc-examples = %#v, want %#v", got, want)
+	}
+}
+
+func TestApplyMarkersExamplesDescriptionMixed(t *testing.T) {
+	e := &Enricher{}
+	schema := map[string]any{"type": "string"}
+
+	// Once any example has a description, every entry switches to the wrapper
+	// form; the one without a description omits the x-doc-description key.
+	e.applyMarkers(schema, []marker{
+		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
+		{name: "examples", rawValue: "1h", hasValue: true, enricher: true},
+		{name: "examples-description", rawValue: "one hour", hasValue: true, enricher: true},
+	})
+
+	want := []any{
+		orderedMap{
+			{key: "x-doc-example", val: "5m"},
+		},
+		orderedMap{
+			{key: "x-doc-description", val: "one hour"},
+			{key: "x-doc-example", val: "1h"},
+		},
+	}
+	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("x-doc-examples = %#v, want %#v", got, want)
+	}
+}
+
+func TestApplyMarkersExamplesDescriptionWithoutExample(t *testing.T) {
+	e := &Enricher{}
+	schema := map[string]any{"type": "string"}
+
+	// A dangling description with no preceding example must warn and be dropped.
+	e.applyMarkers(schema, []marker{
+		{name: "examples-description", rawValue: "orphan", hasValue: true, enricher: true},
+	})
+
+	if _, ok := schema["x-doc-examples"]; ok {
+		t.Errorf("x-doc-examples must stay unset: %#v", schema["x-doc-examples"])
+	}
+	if len(e.warnings) == 0 {
+		t.Error("expected a warning for a description without an example")
 	}
 }
 

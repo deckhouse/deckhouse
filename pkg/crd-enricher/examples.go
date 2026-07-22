@@ -131,6 +131,11 @@ func (e *Enricher) computeExample(node map[string]any) (any, bool) {
 	}
 
 	if ex, ok := node["x-doc-examples"].([]any); ok && len(ex) > 0 {
+		// A described example is wrapped as {x-doc-description, x-doc-example};
+		// aggregation needs the underlying example value, not the wrapper.
+		if value, wrapped := exampleWrapperValue(ex[0]); wrapped {
+			return value, true
+		}
 		return ex[0], true
 	}
 
@@ -170,6 +175,23 @@ func (e *Enricher) computeExample(node map[string]any) (any, bool) {
 	default:
 		return leafExample(node)
 	}
+}
+
+// exampleWrapperValue returns the underlying example carried by a wrapper (an
+// orderedMap with an x-doc-example key, optionally preceded by x-doc-description)
+// and reports whether v was such a wrapper. Wrappers are the only producers of
+// the x-doc-example key, so its presence is a reliable marker.
+func exampleWrapperValue(v any) (any, bool) {
+	om, ok := v.(orderedMap)
+	if !ok {
+		return nil, false
+	}
+	for _, entry := range om {
+		if entry.key == docExampleKey {
+			return entry.val, true
+		}
+	}
+	return nil, false
 }
 
 // leafExample returns the hard-coded fallback value for a scalar leaf. The
