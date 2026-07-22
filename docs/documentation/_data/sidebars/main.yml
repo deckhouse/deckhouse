@@ -1334,6 +1334,10 @@ entries:
                 en: Operator-argo module
                 ru: Модуль operator-argo
               url: /architecture/delivery/operator-argo.html
+            - title:
+                en: Payload-registry module
+                ru: Модуль payload-registry
+              url: /architecture/delivery/payload-registry.html
         - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
