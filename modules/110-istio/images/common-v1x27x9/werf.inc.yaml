@@ -1,4 +1,3 @@
-{{- if ne $.Env "CSE" }}
 ---
 {{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-27" $ ) }}
 {{- $kialiVersion := printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-27" $ )) }}
@@ -52,4 +51,3 @@ shell:
   - yarn install --frozen-lockfile
   - KIALI_ENV=production yarn run build
   - rm -rf node_modules
-{{- end }}
