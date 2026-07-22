@@ -91,15 +91,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		return err
 	}
 
-	machineClassTemplate, err := machineclass.ReadChecksumTemplate(
-		machineclass.DefaultTemplateBaseDirs, machineclass.FallbackTemplateBaseDir,
-		cloudType, machineclass.MCMMachineClassSubPath)
+	machineClassTemplate, err := r.readProviderTemplate(ctx, cloudType, engineMCMTemplates, "machine-class.yaml")
 	if err != nil {
 		return err
 	}
-	checksumTemplate, err := machineclass.ReadChecksumTemplate(
-		machineclass.DefaultTemplateBaseDirs, machineclass.FallbackTemplateBaseDir,
-		cloudType, machineclass.MCMChecksumSubPath)
+	checksumTemplate, err := r.readProviderTemplate(ctx, cloudType, engineMCMTemplates, "machine-class.checksum")
 	if err != nil {
 		return err
 	}

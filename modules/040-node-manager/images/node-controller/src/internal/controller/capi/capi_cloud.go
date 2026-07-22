@@ -234,9 +234,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 
 		templateName := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone+checksum))
 		desiredTemplateNames[templateName] = struct{}{}
-		// The bootstrap Secret is still rendered by helm (its cloud-init needs candi) and
-		// keeps mirroring the MachineTemplate name, so the dataSecretName stays stable.
-		bootstrapSecretName := templateName
+		// The bootstrap Secret is rendered by helm with a stable per-zone name (its content
+		// does not depend on the instance class), so mdSuffix (%s-%s of ng and sha(uuid+zone))
+		// matches helm's $ng-$zone_hash. The MachineTemplate is checksum-named and owned by
+		// node-controller; helm never computes that checksum, so there is no cross-parity to keep.
+		bootstrapSecretName := mdSuffix
 
 		if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, cloudProvider, blob, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
 			return err

@@ -1900,7 +1900,7 @@ internal:
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeFalse())
 
-					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", strings.TrimPrefix(d.name, "myprefix-"))
 					Expect(secret.Exists()).To(BeTrue())
 
 					vcdTemplate := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", d.templateName)
@@ -2021,7 +2021,7 @@ internal:
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeFalse())
 
-					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", strings.TrimPrefix(d.name, "myprefix-"))
 					Expect(secret.Exists()).To(BeTrue())
 
 					dvpTemplate := f.KubernetesResource("DeckhouseMachineTemplate", "d8-cloud-instance-manager", d.templateName)
