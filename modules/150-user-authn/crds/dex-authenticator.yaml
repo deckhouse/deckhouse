@@ -138,12 +138,13 @@ spec:
                 keepUsersLoggedInFor:
                   type: string
                   description: |-
-                    User session will be kept for specified amount of time even if user will not log in.
-                    Specified with  `s`, `m` or `h` suffix.
+                    Maximum period of user inactivity during which the user session remains active.
 
-                    Cannot be shorter than `userAuthn.idTokenTTL + 1s`: if `keepUsersLoggedInFor` ≤ `idTokenTTL`,
-                    the effective logout time is `idTokenTTL + 1s`.
-                    To force logout sooner than the default `idTokenTTL` (10m), decrease `userAuthn.idTokenTTL` as well.
+                    Set as a string specifying hours, minutes, or seconds: `30m`, `20s`, `2h30m10s`, `24h`.
+
+                    Specified value can't be shorter or equal to the [`idTokenTTL`](configuration.html#parameters-idtokenttl) value set in the module settings. If you set a value that is shorter or equal to `idTokenTTL`, the effective logout time will be `idTokenTTL + 1s`.
+
+                    To force logout sooner than the default `idTokenTTL`, decrease the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter value in the module settings as well.
                   x-doc-examples: ['24h']
                   x-doc-default: '168h'
                 allowedEmails:
