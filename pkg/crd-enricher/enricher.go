@@ -38,6 +38,12 @@ type Options struct {
 	// Dir is the working directory used to resolve the package patterns.
 	// When empty the current working directory is used.
 	Dir string
+	// GenerateExamples enables the automatic bottom-up synthesis of
+	// x-doc-examples. It is off by default: explicit examples markers are always
+	// applied, but composite examples (the synthesized root example and, under
+	// crd:exampleScope=tree, the per-node examples) are only produced when this
+	// flag is set.
+	GenerateExamples bool
 }
 
 // Enricher applies custom x-doc-* schema fields to controller-gen output based
@@ -64,6 +70,11 @@ type Enricher struct {
 	// (and "root") attaches a single synthesized example to the CRD root, while
 	// "tree" attaches a composite example to every object node as well.
 	exampleScope string
+
+	// generateExamplesEnabled turns the automatic example synthesis on. It mirrors
+	// Options.GenerateExamples and is off by default, so composite examples are
+	// only produced when the caller opts in.
+	generateExamplesEnabled bool
 }
 
 // Run loads the API packages, then walks and enriches every CRD file in the
@@ -82,8 +93,9 @@ func Run(opts Options) ([]string, error) {
 	}
 
 	enr := &Enricher{
-		pkgByPath:      pkgByPath,
-		rootsByVersion: make(map[string]map[string]*types.Named),
+		pkgByPath:               pkgByPath,
+		rootsByVersion:          make(map[string]map[string]*types.Named),
+		generateExamplesEnabled: opts.GenerateExamples,
 	}
 	for _, info := range pkgByPath {
 		for kind, named := range info.roots {
@@ -249,8 +261,11 @@ func (e *Enricher) enrichCRD(crd map[string]any) {
 		}
 
 		// Examples are generated bottom-up after every marker has been applied,
-		// so explicit examples, defaults and enums are already in place.
-		e.generateExamples(spec, names, name, openAPISchema)
+		// so explicit examples, defaults and enums are already in place. This is
+		// opt-in: without the flag only the explicit examples markers survive.
+		if e.generateExamplesEnabled {
+			e.generateExamples(spec, names, name, openAPISchema)
+		}
 	}
 }
 

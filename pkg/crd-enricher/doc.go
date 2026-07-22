@@ -78,14 +78,19 @@
 //
 // # Example generation
 //
-// Beyond the explicit examples markers, the enricher synthesizes x-doc-examples
-// from the bottom up. Every scalar leaf yields one representative value: its
-// first explicit example if present, otherwise a hard-coded fallback chosen from
-// the schema default, the documented default, the first enum value, or a
-// type-based placeholder (string, 0, false). Composite nodes (objects, arrays
-// and maps) aggregate the values of their children into a structured example.
+// Beyond the explicit examples markers, the enricher can synthesize
+// x-doc-examples from the bottom up. This synthesis is opt-in and off by
+// default: it runs only when the caller passes the "examples" flag (Options.
+// GenerateExamples). Explicit examples markers are always applied regardless of
+// the flag.
 //
-// The CRD root always receives a synthesized example carrying apiVersion, kind
+// When enabled, every scalar leaf yields one representative value: its first
+// explicit example if present, otherwise a hard-coded fallback chosen from the
+// schema default, the documented default, the first enum value, or a type-based
+// placeholder (string, 0, false). Composite nodes (objects, arrays and maps)
+// aggregate the values of their children into a structured example.
+//
+// The CRD root then receives a synthesized example carrying apiVersion, kind
 // and metadata together with the aggregated spec; the status subtree is omitted.
 // By default only the root is annotated; the crd:exampleScope=tree setting makes
 // every object node carry its own aggregated example as well. A node that
