@@ -1,0 +1,47 @@
+{{- $ironic := .Values.cloudProviderMetal3.ironic | default dict -}}
+{{- if $ironic.enabled }}
+{{- $networking := $ironic.networking | required "cloudProviderMetal3.ironic.networking is required when cloudProviderMetal3.ironic.enabled is true" -}}
+{{- $dhcp := $networking.dhcp | required "cloudProviderMetal3.ironic.networking.dhcp is required when cloudProviderMetal3.ironic.enabled is true" -}}
+---
+apiVersion: ironic.metal3.io/v1alpha1
+kind: Ironic
+metadata:
+  name: {{ $ironic.name | default "ironic" | quote }}
+  namespace: d8-cloud-provider-metal3
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  {{- if $ironic.version }}
+  version: {{ $ironic.version | quote }}
+  {{- end }}
+  {{- if $ironic.deployRamdisk }}
+  deployRamdisk:
+    {{- if $ironic.deployRamdisk.sshKey }}
+    sshKey: {{ $ironic.deployRamdisk.sshKey | quote }}
+    {{- end }}
+  {{- end }}
+  networking:
+    interface: {{ $networking.interface | quote }}
+    ipAddress: {{ $networking.ipAddress | quote }}
+    {{- if $networking.ipAddressManager }}
+    ipAddressManager: {{ $networking.ipAddressManager | quote }}
+    {{- end }}
+    {{- if $networking.apiPort }}
+    apiPort: {{ $networking.apiPort }}
+    {{- end }}
+    {{- if $networking.imageServerPort }}
+    imageServerPort: {{ $networking.imageServerPort }}
+    {{- end }}
+    dhcp:
+      networkCIDR: {{ $dhcp.networkCIDR | quote }}
+      rangeBegin: {{ $dhcp.rangeBegin | quote }}
+      rangeEnd: {{ $dhcp.rangeEnd | quote }}
+      {{- if $dhcp.dnsAddress }}
+      dnsAddress: {{ $dhcp.dnsAddress | quote }}
+      {{- end }}
+      {{- if $dhcp.gatewayAddress }}
+      gatewayAddress: {{ $dhcp.gatewayAddress | quote }}
+      {{- end }}
+      {{- if hasKey $dhcp "serveDNS" }}
+      serveDNS: {{ $dhcp.serveDNS }}
+      {{- end }}
+{{- end }}

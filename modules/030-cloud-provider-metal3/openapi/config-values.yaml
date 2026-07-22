@@ -2,4 +2,110 @@ type: object
 additionalProperties: false
 description: |
   Describes the configuration of a Metal3 cloud provider.
-properties: {}
+properties:
+  ironic:
+    type: object
+    default: {}
+    additionalProperties: false
+    description: |
+      Ironic service managed by the module.
+
+      Enable this section when Deckhouse should create and configure the Ironic CR for the Metal3 provisioning network.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enables rendering of the Ironic custom resource.
+      name:
+        type: string
+        default: ironic
+        description: |
+          Name of the Ironic custom resource.
+      version:
+        type: string
+        description: |
+          Ironic version requested from the Ironic operator.
+      deployRamdisk:
+        type: object
+        additionalProperties: false
+        description: |
+          Deploy ramdisk settings for Ironic Python Agent.
+        properties:
+          sshKey:
+            type: string
+            description: |
+              Public SSH key injected into the deploy ramdisk.
+      networking:
+        type: object
+        additionalProperties: false
+        required:
+        - interface
+        - ipAddress
+        - dhcp
+        description: |
+          Provisioning network settings used by Ironic.
+        properties:
+          interface:
+            type: string
+            description: |
+              Network interface used by Ironic for provisioning traffic.
+          ipAddress:
+            type: string
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+            description: |
+              Ironic IP address in the provisioning network.
+          ipAddressManager:
+            type: string
+            enum:
+            - keepalived
+            - disabled
+            description: |
+              Ironic IP address manager.
+          apiPort:
+            type: integer
+            description: |
+              Ironic API port.
+          imageServerPort:
+            type: integer
+            description: |
+              Ironic image server port.
+          dhcp:
+            type: object
+            additionalProperties: false
+            required:
+            - networkCIDR
+            - rangeBegin
+            - rangeEnd
+            description: |
+              DHCP settings for provisioning hosts.
+            properties:
+              networkCIDR:
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                description: |
+                  CIDR of the provisioning network.
+              rangeBegin:
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                description: |
+                  First DHCP address available to provisioning hosts.
+              rangeEnd:
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                description: |
+                  Last DHCP address available to provisioning hosts.
+              dnsAddress:
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                description: |
+                  DNS server address passed to provisioning hosts over DHCP.
+              gatewayAddress:
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                description: |
+                  Default gateway address passed to provisioning hosts over DHCP.
+              serveDNS:
+                type: boolean
+                description: |
+                  Configures Ironic to pass itself as the DNS server over DHCP.

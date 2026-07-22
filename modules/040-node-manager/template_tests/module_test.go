@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"sort"
@@ -2541,6 +2542,16 @@ internal:
 				Expect(dataTemplate.Field("spec.metaData.objectNames").String()).To(ContainSubstring("local-hostname"))
 				Expect(dataTemplate.Field("spec.metaData.objectNames").String()).To(ContainSubstring("local_hostname"))
 				Expect(dataTemplate.Field("spec.metaData.objectNames").String()).To(ContainSubstring("machine"))
+
+				bootstrapSecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-50710a9d")
+				Expect(bootstrapSecret.Exists()).To(BeTrue())
+				bootstrapUserDataBytes, err := base64.StdEncoding.DecodeString(bootstrapSecret.Field("data.value").String())
+				Expect(err).NotTo(HaveOccurred())
+				bootstrapUserData := string(bootstrapUserDataBytes)
+				Expect(bootstrapUserData).To(ContainSubstring("/var/lib/bashible/metal3-early-bootstrap.sh"))
+				Expect(bootstrapUserData).To(ContainSubstring("/var/lib/bashible/machine-name"))
+				Expect(bootstrapUserData).To(ContainSubstring("/var/lib/bashible/node-spec-provider-id"))
+				Expect(bootstrapUserData).To(ContainSubstring("metal3://{bmh_namespace}/{bmh_name}/{machine_name}"))
 
 				nodeControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller")
 				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))

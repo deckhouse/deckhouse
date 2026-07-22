@@ -18,6 +18,9 @@ package hooks
 
 import (
 	"context"
+	"net"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -116,7 +119,7 @@ func generateKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container,
 		return errors.Wrap(err, "failed to issue certificate")
 	}
 
-	config, err := kubeconfig.New(params.cluster, restConfig.Host, restConfig.CAData, []byte(cert.Key), []byte(cert.Certificate))
+	config, err := kubeconfig.New(params.cluster, resolveCAPIKubeconfigEndpoint(restConfig.Host, getClusterMasterAddresses(input)), restConfig.CAData, []byte(cert.Key), []byte(cert.Certificate))
 	if err != nil {
 		return errors.Wrap(err, "failed to generate a kubeconfig")
 	}
@@ -136,6 +139,55 @@ func generateKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container,
 	input.PatchCollector.CreateOrUpdate(secretUnstructured)
 
 	return nil
+}
+
+func getClusterMasterAddresses(input *go_hook.HookInput) []string {
+	values := input.Values.Get("nodeManager.internal.clusterMasterAddresses").Array()
+	addresses := make([]string, 0, len(values))
+	for _, value := range values {
+		addresses = append(addresses, value.String())
+	}
+	return addresses
+}
+
+func resolveCAPIKubeconfigEndpoint(endpoint string, clusterMasterAddresses []string) string {
+	if !isLoopbackEndpoint(endpoint) {
+		return endpoint
+	}
+
+	if len(clusterMasterAddresses) == 0 {
+		return endpoint
+	}
+
+	address := strings.TrimSpace(clusterMasterAddresses[0])
+	if address == "" {
+		return endpoint
+	}
+
+	if strings.HasPrefix(address, "http://") || strings.HasPrefix(address, "https://") {
+		return address
+	}
+
+	return "https://" + address
+}
+
+func isLoopbackEndpoint(endpoint string) bool {
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return false
+	}
+
+	host := parsed.Hostname()
+	if host == "" {
+		return false
+	}
+
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func createCAPIServiceAccount(k8sClient k8s.Client, saName string) error {

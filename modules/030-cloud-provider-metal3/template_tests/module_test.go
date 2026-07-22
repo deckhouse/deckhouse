@@ -81,5 +81,47 @@ var _ = Describe("Module :: cloud-provider-metal3 :: helm template ::", func() {
 		Expect(providerSpecificCAPISecret.Field("data.cluster\\.yaml").String()).NotTo(BeEmpty())
 		Expect(providerSpecificCAPISecret.Field("data.machine-template\\.yaml").String()).NotTo(BeEmpty())
 		Expect(providerSpecificCAPISecret.Field("data.instance-class\\.checksum").String()).NotTo(BeEmpty())
+
+		ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
+		Expect(ironic.Exists()).To(BeFalse())
+	})
+
+	Context("with managed Ironic enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("cloudProviderMetal3.ironic", `
+enabled: true
+version: "34.0"
+deployRamdisk:
+  sshKey: ssh-ed25519 AAAAC3Nz
+networking:
+  interface: eno3
+  ipAddress: 172.22.0.20
+  ipAddressManager: keepalived
+  dhcp:
+    networkCIDR: 172.22.0.0/24
+    rangeBegin: 172.22.0.200
+    rangeEnd: 172.22.0.210
+    dnsAddress: 10.222.0.10
+    gatewayAddress: 172.22.0.20
+`)
+			f.HelmRender()
+		})
+
+		It("renders Ironic with DHCP DNS and gateway settings", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
+			Expect(ironic.Exists()).To(BeTrue())
+			Expect(ironic.Field("spec.version").String()).To(Equal("34.0"))
+			Expect(ironic.Field("spec.deployRamdisk.sshKey").String()).To(Equal("ssh-ed25519 AAAAC3Nz"))
+			Expect(ironic.Field("spec.networking.interface").String()).To(Equal("eno3"))
+			Expect(ironic.Field("spec.networking.ipAddress").String()).To(Equal("172.22.0.20"))
+			Expect(ironic.Field("spec.networking.ipAddressManager").String()).To(Equal("keepalived"))
+			Expect(ironic.Field("spec.networking.dhcp.networkCIDR").String()).To(Equal("172.22.0.0/24"))
+			Expect(ironic.Field("spec.networking.dhcp.rangeBegin").String()).To(Equal("172.22.0.200"))
+			Expect(ironic.Field("spec.networking.dhcp.rangeEnd").String()).To(Equal("172.22.0.210"))
+			Expect(ironic.Field("spec.networking.dhcp.dnsAddress").String()).To(Equal("10.222.0.10"))
+			Expect(ironic.Field("spec.networking.dhcp.gatewayAddress").String()).To(Equal("172.22.0.20"))
+		})
 	})
 })
