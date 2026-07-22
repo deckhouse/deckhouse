@@ -32,3 +32,10 @@ spec:
                   type: string
                 channel:
                   type: string
+                registry:
+                  type: object
+                  properties:
+                    repo:
+                      type: string
+                    dockerCfg:
+                      type: string

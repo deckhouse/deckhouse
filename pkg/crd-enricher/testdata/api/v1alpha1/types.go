@@ -33,4 +33,17 @@ type FooSpec struct {
 
 	// +crd-enricher:deckhouse:documentation:examples=stable
 	Channel string `json:"channel"`
+
+	Registry Registry `json:"registry"`
+}
+
+// Registry carries an object example whose keys are authored out of alphabetical
+// order ("repo" before "dockerCfg") to exercise order preservation: the example
+// must render in the authored order even though the schema properties are
+// sorted.
+//
+// +crd-enricher:deckhouse:documentation:examples={repo: registry.example.io/x, dockerCfg: <credentials>}
+type Registry struct {
+	Repo      string `json:"repo"`
+	DockerCfg string `json:"dockerCfg"`
 }

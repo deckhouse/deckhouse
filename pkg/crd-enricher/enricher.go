@@ -75,6 +75,12 @@ type Enricher struct {
 	// Options.GenerateExamples and is off by default, so composite examples are
 	// only produced when the caller opts in.
 	generateExamplesEnabled bool
+
+	// orderedExamples is set per file when an example marker produced an
+	// order-preserving orderedMap. Such files are encoded with the
+	// order-preserving marshaller so the authored field order survives; files
+	// without ordered examples keep the default sigs.k8s.io/yaml encoding.
+	orderedExamples bool
 }
 
 // Run loads the API packages, then walks and enriches every CRD file in the
@@ -172,9 +178,18 @@ func (e *Enricher) enrichFile(path string) (bool, error) {
 
 	e.curatedStyle = false
 	e.exampleScope = ""
+	e.orderedExamples = false
 	e.enrichCRD(crd)
 
-	out, err := yaml.Marshal(crd)
+	// Documents that carry authored (ordered) examples are encoded with the
+	// order-preserving marshaller so the example fields keep their authored
+	// order; everything else keeps the default sigs.k8s.io/yaml encoding, which
+	// leaves files without markers byte for byte identical.
+	marshal := yaml.Marshal
+	if e.orderedExamples {
+		marshal = marshalOrdered
+	}
+	out, err := marshal(crd)
 	if err != nil {
 		return false, fmt.Errorf("encode yaml: %w", err)
 	}
@@ -570,10 +585,15 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 
 		switch {
 		case m.name == examplesMarker:
-			value, err := decodeValue(m.rawValue)
+			// Examples are decoded with the order-preserving decoder so an
+			// example object keeps its authored field order when rendered.
+			value, err := decodeOrderedValue(m.rawValue)
 			if err != nil {
 				e.warnings = append(e.warnings, err.Error())
 				continue
+			}
+			if containsOrdered(value) {
+				e.orderedExamples = true
 			}
 			if list, ok := value.([]any); ok {
 				examples = append(examples, list...)

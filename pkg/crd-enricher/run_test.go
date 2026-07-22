@@ -20,14 +20,15 @@ import (
 	"testing"
 
 	"sigs.k8s.io/yaml"
+	goyaml "sigs.k8s.io/yaml/goyaml.v3"
 )
 
 const testFixturePaths = "./testdata/api/v1alpha1"
 
 // runOnFixture copies the CRD fixture into a fresh temp directory (Run rewrites
 // files in place) and runs the enricher over it with the given options, then
-// returns the openAPIV3Schema of the single version.
-func runOnFixture(t *testing.T, generateExamples bool) map[string]any {
+// returns the enriched file bytes.
+func runOnFixture(t *testing.T, generateExamples bool) []byte {
 	t.Helper()
 
 	crdDir := t.TempDir()
@@ -52,11 +53,17 @@ func runOnFixture(t *testing.T, generateExamples bool) map[string]any {
 	if err != nil {
 		t.Fatalf("read enriched fixture: %v", err)
 	}
+	return out
+}
+
+// fixtureSchema parses the enriched fixture and returns the openAPIV3Schema of
+// the single version.
+func fixtureSchema(t *testing.T, out []byte) map[string]any {
+	t.Helper()
 	var crd map[string]any
 	if err := yaml.Unmarshal(out, &crd); err != nil {
 		t.Fatalf("parse enriched fixture: %v", err)
 	}
-
 	version := childMap(crd, "spec")["versions"].([]any)[0].(map[string]any)
 	return childMap(childMap(version, "schema"), "openAPIV3Schema")
 }
@@ -64,7 +71,7 @@ func runOnFixture(t *testing.T, generateExamples bool) map[string]any {
 // TestRunExamplesDisabledByDefault asserts that without the flag the root gets no
 // synthesized example, while an explicit examples marker is still applied.
 func TestRunExamplesDisabledByDefault(t *testing.T) {
-	root := runOnFixture(t, false)
+	root := fixtureSchema(t, runOnFixture(t, false))
 
 	if _, ok := root["x-doc-examples"]; ok {
 		t.Errorf("root x-doc-examples must not be synthesized by default: %#v", root["x-doc-examples"])
@@ -80,7 +87,7 @@ func TestRunExamplesDisabledByDefault(t *testing.T) {
 // TestRunExamplesEnabled asserts that with the flag the root receives a
 // synthesized example aggregating the spec fields.
 func TestRunExamplesEnabled(t *testing.T) {
-	root := runOnFixture(t, true)
+	root := fixtureSchema(t, runOnFixture(t, true))
 
 	examples, ok := root["x-doc-examples"].([]any)
 	if !ok || len(examples) != 1 {
@@ -101,4 +108,106 @@ func TestRunExamplesEnabled(t *testing.T) {
 	if spec["channel"] != "stable" {
 		t.Errorf("spec.channel example = %#v, want the explicit marker value", spec["channel"])
 	}
+}
+
+// TestRunExamplesPreserveKeyOrder asserts that an object example keeps its
+// authored key order ("repo" before "dockerCfg") in the rendered YAML, even
+// though the schema properties for the same object are sorted alphabetically.
+func TestRunExamplesPreserveKeyOrder(t *testing.T) {
+	out := runOnFixture(t, false)
+
+	var doc goyaml.Node
+	if err := goyaml.Unmarshal(out, &doc); err != nil {
+		t.Fatalf("parse enriched fixture as nodes: %v", err)
+	}
+
+	orders := exampleKeyOrders(&doc)
+	found := false
+	for _, keys := range orders {
+		if len(keys) == 2 && keys[0] == "repo" && keys[1] == "dockerCfg" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no x-doc-examples object rendered with authored order [repo dockerCfg]; got orders %v", orders)
+	}
+
+	// Guard the premise: the schema property node for the same object is sorted,
+	// so the example order is genuinely being preserved against the default.
+	if props := findMappingKeys(&doc, "registry", "properties"); props != nil {
+		if len(props) == 2 && (props[0] != "dockerCfg" || props[1] != "repo") {
+			t.Errorf("registry properties expected sorted [dockerCfg repo], got %v", props)
+		}
+	}
+}
+
+// exampleKeyOrders walks the node tree and returns the key order of every
+// mapping that is the first element of an "x-doc-examples" sequence.
+func exampleKeyOrders(n *goyaml.Node) [][]string {
+	var out [][]string
+	var walk func(*goyaml.Node)
+	walk = func(node *goyaml.Node) {
+		switch node.Kind {
+		case goyaml.MappingNode:
+			for i := 0; i+1 < len(node.Content); i += 2 {
+				key, val := node.Content[i], node.Content[i+1]
+				if key.Value == "x-doc-examples" && val.Kind == goyaml.SequenceNode &&
+					len(val.Content) > 0 && val.Content[0].Kind == goyaml.MappingNode {
+					out = append(out, mappingKeys(val.Content[0]))
+				}
+				walk(val)
+			}
+		default:
+			for _, c := range node.Content {
+				walk(c)
+			}
+		}
+	}
+	walk(n)
+	return out
+}
+
+// findMappingKeys walks to the mapping stored under parentKey.childKey and
+// returns its keys in order, or nil when the path is absent.
+func findMappingKeys(n *goyaml.Node, parentKey, childKey string) []string {
+	var found []string
+	var walk func(*goyaml.Node)
+	walk = func(node *goyaml.Node) {
+		if node.Kind == goyaml.MappingNode {
+			for i := 0; i+1 < len(node.Content); i += 2 {
+				if node.Content[i].Value == parentKey {
+					if child := childMappingNode(node.Content[i+1], childKey); child != nil {
+						found = mappingKeys(child)
+					}
+				}
+			}
+		}
+		for _, c := range node.Content {
+			walk(c)
+		}
+	}
+	walk(n)
+	return found
+}
+
+// childMappingNode returns the mapping stored under key within a mapping node.
+func childMappingNode(node *goyaml.Node, key string) *goyaml.Node {
+	if node.Kind != goyaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key && node.Content[i+1].Kind == goyaml.MappingNode {
+			return node.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// mappingKeys returns the keys of a mapping node in order.
+func mappingKeys(node *goyaml.Node) []string {
+	keys := make([]string, 0, len(node.Content)/2)
+	for i := 0; i < len(node.Content); i += 2 {
+		keys = append(keys, node.Content[i].Value)
+	}
+	return keys
 }

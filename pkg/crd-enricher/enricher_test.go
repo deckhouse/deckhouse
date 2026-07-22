@@ -135,16 +135,25 @@ func TestApplyMarkersExampleObject(t *testing.T) {
 	e := &Enricher{}
 	schema := map[string]any{"type": "object"}
 
+	// The keys are authored out of alphabetical order on purpose: an example
+	// object must keep the authored order instead of being sorted.
 	e.applyMarkers(schema, []marker{
-		{name: "examples", rawValue: "{kind: ModuleSource, spec: {registry: {repo: example.io}}}", hasValue: true, enricher: true},
+		{name: "examples", rawValue: "{kind: ModuleSource, spec: {registry: {repo: example.io, dockerCfg: secret}}}", hasValue: true, enricher: true},
 	})
 
+	if !e.orderedExamples {
+		t.Error("orderedExamples flag not set for an object example")
+	}
+
 	want := []any{
-		map[string]any{
-			"kind": "ModuleSource",
-			"spec": map[string]any{
-				"registry": map[string]any{"repo": "example.io"},
-			},
+		orderedMap{
+			{key: "kind", val: "ModuleSource"},
+			{key: "spec", val: orderedMap{
+				{key: "registry", val: orderedMap{
+					{key: "repo", val: "example.io"},
+					{key: "dockerCfg", val: "secret"},
+				}},
+			}},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
