@@ -18,7 +18,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -306,7 +305,7 @@ func TerminalDiskError(vmd *v1alpha2.VirtualDisk) error {
 				if cond.Reason == vdcondition.QuotaExceeded.String() {
 					return fmt.Errorf("%w: %s", ErrQuotaExceeded, cond.Message)
 				}
-				return errors.New(cond.Message)
+				return fmt.Errorf("%s: %s", cond.Reason, cond.Message)
 			}
 		}
 	}

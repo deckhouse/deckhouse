@@ -126,12 +126,9 @@ func (c *ControllerService) CreateVolume(
 
 		if disk.Status.Phase == v1alpha2.DiskReady || disk.Status.Phase == v1alpha2.DiskWaitForFirstConsumer {
 			diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
-			if err != nil {
-				return nil, status.Errorf(
-					codes.Internal,
-					"failed to parse existing disk capacity for %q (capacity=%q): %v",
-					disk.Name, disk.Status.Capacity, err,
-				)
+			if err != nil || diskCapacity <= 0 {
+				// WFFC disks may not have capacity populated yet; fall back to requested size.
+				diskCapacity = requiredSize
 			}
 			if requiredSize > 0 && diskCapacity > 0 && requiredSize > diskCapacity {
 				return nil, status.Errorf(
@@ -275,7 +272,7 @@ func (c *ControllerService) ControllerPublishVolume(
 		waitErr := c.dvpCloudAPI.ComputeService.WaitDiskAttaching(waitCtx, vmBDAName)
 		if waitErr != nil {
 			if errors.Is(waitErr, context.DeadlineExceeded) {
-				return nil, status.Errorf(codes.Internal,
+				return nil, status.Errorf(codes.DeadlineExceeded,
 					"Publish: timeout waiting for vmBDA attachment: disk=%s vm=%s",
 					diskName, vmHostname,
 				)
@@ -305,7 +302,7 @@ func (c *ControllerService) ControllerPublishVolume(
 
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, status.Errorf(
-				codes.Internal,
+				codes.DeadlineExceeded,
 				"Publish: timeout while attaching disk (Kubernetes will retry): disk=%s vm=%s exists=%t attached=%t: %v",
 				diskName, vmHostname, sExists, sAttached, err,
 			)
