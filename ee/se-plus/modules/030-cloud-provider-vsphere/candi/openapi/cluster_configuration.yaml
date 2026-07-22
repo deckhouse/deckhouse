@@ -431,8 +431,7 @@ apiVersions:
           caBundle:
             type: string
             description: |
-              PEM-encoded CA certificate chain to verify the vCenter TLS certificate.
-              Use instead of `insecure` when vCenter uses a custom/enterprise CA.
+              PEM-encoded CA certificate chain used to verify the vCenter TLS certificate. Use this parameter instead of setting `insecure: true` when the vCenter certificate is signed by a custom or enterprise CA.
         required:
         - server
         - username
@@ -517,8 +516,7 @@ apiVersions:
           caBundle:
             type: string
             description: |
-              PEM-encoded CA certificate chain to verify the NSX-T TLS certificate.
-              Use instead of `insecure` when NSX-T uses a custom/enterprise CA.
+              PEM-encoded CA certificate chain used to verify the vCenter TLS certificate. Use this parameter instead of setting `insecure: true` when the vCenter certificate is signed by a custom or enterprise CA.
           loadBalancerClass:
             type: array
             description: |
