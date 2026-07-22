@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-95caeb00c03a501857d0b423a0bc2296ad7048120f6cf4f12510866919a323d5",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -73,8 +73,218 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 связана с вызовом команды kenv по неабсолютному пути на операционных системах BSD и Solaris (PATH hijacking, CWE-426). Компоненты Deckhouse, включая Descheduler, собираются с GOOS=linux и выполняются в контейнерах на Linux; уязвимый путь выполнения в этой среде отсутствует.",
       "timestamp": "2026-04-16T15:43:34.356000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47913"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в SSH-клиенте golang.org/x/crypto/ssh/agent: клиент паникует при получении неожиданного ответа SSH_AGENT_SUCCESS. Descheduler не использует SSH и не работает с ssh-агентом — библиотека golang.org/x/crypto присутствует лишь как транзитивная зависимость клиентских библиотек Kubernetes, уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в SSH-сервере golang.org/x/crypto/ssh: при возврате PartialSuccessError с ненулевыми Permissions ограничения (например force-command) молча отбрасывались. Descheduler не запускает SSH-сервер и не использует golang.org/x/crypto/ssh — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в парсере публичных ключей golang.org/x/crypto/ssh: отсутствие ограничения размера параметров RSA/DSA приводит к длительному потреблению CPU при проверке подписи. Descheduler не выполняет аутентификацию по SSH и не разбирает SSH-ключи — уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: незапрошенные ответы на global request заполняют внутренний буфер и блокируют read-loop соединения, вызывая утечку горутин. Descheduler не устанавливает SSH-соединений — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh: метод Verify для аппаратных ключей FIDO/U2F (sk-ecdsa, sk-ssh-ed25519) не проверял флаг User Presence. Descheduler не использует SSH и аппаратные ключи безопасности — уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent: constraint-расширения (restrict-destination-v00@openssh.com) не сериализовались при добавлении ключа в удалённый агент, из-за чего ограничения назначения молча снимались. Descheduler не использует ssh-агент — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: CertChecker без заданных IsUserAuthority/IsHostAuthority паникует при предъявлении клиентом сертификата. Descheduler не запускает SSH-сервер и не использует CertChecker — уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/knownhosts: отозванный SignatureKey центра сертификации не проверялся на отзыв. Descheduler не использует SSH и не работает с known_hosts — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость обхода авторизации в golang.org/x/crypto/ssh: при использовании callback-ов, отличных от public key, пропускалась проверка source-address. Descheduler не запускает SSH-сервер — уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: некорректное приведение bytes→int вызывает панику на стороне сервера в декодере пакетов AES-GCM. Descheduler не запускает SSH-сервер — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: разбор произвольного HTML с последующим Render может давать неожиданное дерево HTML. Descheduler не разбирает и не рендерит HTML и не отдаёт контент в браузер — пакет golang.org/x/net/html не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: обход санитизации при разборе и повторном рендеринге HTML. Descheduler не работает с HTML и не имеет веб-интерфейса — уязвимый код golang.org/x/net/html не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость DoS в HTTP/2-транспорте golang.org/x/net: при получении SETTINGS-фрейма со значением SETTINGS_MAX_FRAME_SIZE=0 транспорт входит в бесконечный цикл записи CONTINUATION-фреймов. Хотя HTTP/2-клиент используется client-go, вредоносный SETTINGS-фрейм может прийти только от сервера, к которому подключается descheduler, — а это исключительно доверенный in-cluster kube-apiserver. Сетевой атакующий не может внедрить такой фрейм, поэтому уязвимый код не контролируется злоумышленником.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/idna: функции ToASCII/ToUnicode некорректно принимают Punycode-метки, декодируемые в ASCII-only имя, что может привести к повышению привилегий в программах, выполняющих проверки прав по имени хоста. Descheduler не выполняет авторизацию или проверки привилегий по именам хостов и подключается только к доверенному in-cluster kube-apiserver — уязвимый путь idna не задействован.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39822"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.26.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-61 (переход по символьной ссылке, symlink following) в Go stdlib v1.26.4 (API os.Root): при открытии файла внутри os.Root финальная символьная ссылка с путём, оканчивающимся на «/», может вести за пределы корня. Descheduler не использует sandbox-API os.Root и не обрабатывает произвольные пути файловой системы от недоверенных пользователей — уязвимый код не достигается. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-07-22T13:16:22.346010Z"
     }
   ],
   "timestamp": "2026-01-12T11:51:20Z",
-  "last_updated": "2026-04-16T15:43:34Z"
+  "last_updated": "2026-07-22T13:16:22Z"
 }
