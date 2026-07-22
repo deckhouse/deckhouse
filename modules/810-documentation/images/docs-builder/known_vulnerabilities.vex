@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "urn:deckhouse:vex:3a4f910385960098934503700078170889218760057250688085605068848460",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -63,7 +63,37 @@
       "justification": "component_not_present",
       "impact_statement": "Improper Certificate Validation - Приложение docs-builder используется для генерации статического контента и не выполняет исходящих TLS-соединений к недоверенным внешним ресурсам в процессе сборки. Проверка сертификатов делегирована системным механизмам среды CI/CD, что исключает влияние данной уязвимости на безопасность артефакта.",
       "timestamp": "2026-02-09T16:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-r46f-3rpw-hxrv",
+        "description": "Hugo: security.http.urls deny rules bypassed by alternate IPv4 encodings (SSRF)"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo@v0.162.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "SSRF via alternate IPv4 encodings - Обход политики security.http.urls в Hugo достижим только когда шаблон передаёт недоверенный или полученный из данных URL в функцию resources.GetRemote. Согласно самому advisory, уязвимость не затрагивает сайты, полностью доверяющие загружаемым URL. docs-builder рендерит документацию из локально загруженного доверенного контента и не использует resources.GetRemote для загрузки внешних ресурсов в процессе сборки. Уязвимый путь исполнения не задействован, поэтому SSRF для образа недостижим.",
+      "timestamp": "2026-07-22T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39822",
+        "description": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61)"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "os.Root symlink following - Уязвимость перехода по символическим ссылкам в os.Root (обход песочницы при финальном компоненте-симлинке и завершающем '/') требует использования приложением API os.Root/OpenRoot. docs-builder не использует os.Root: изоляция путей загрузки и удаления обеспечивается строгим allow-list имён модулей и каналов (регулярное выражение RFC 1123, запрещающее '/', '.' и '..') и проверкой ensureWithinBase (filepath.Rel относительно базового каталога). Уязвимый код os.Root не входит в путь исполнения, поэтому directory traversal для образа недостижим.",
+      "timestamp": "2026-07-22T00:00:00Z"
     }
   ],
-  "timestamp": "2026-02-09T16:00:00Z"
+  "timestamp": "2026-07-22T00:00:00Z"
 }
