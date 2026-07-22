@@ -13,6 +13,10 @@ spec:
   {{- end }}
   template:
     spec:
+      dataTemplate:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: Metal3DataTemplate
+        name: {{ .templateName | quote }}
       image:
         url: {{ .nodeGroup.instanceClass.image.url | quote }}
         checksum: {{ .nodeGroup.instanceClass.image.checksum | quote }}
@@ -45,3 +49,23 @@ spec:
       {{- if .nodeGroup.instanceClass.automatedCleaningMode }}
       automatedCleaningMode: {{ .nodeGroup.instanceClass.automatedCleaningMode | quote }}
       {{- end }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: Metal3DataTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  clusterName: {{ .Values.nodeManager.internal.cloudProvider.capiClusterName | quote }}
+  metaData:
+    objectNames:
+    - key: "name"
+      object: "machine"
+    - key: "local-hostname"
+      object: "machine"
+    - key: "local_hostname"
+      object: "machine"

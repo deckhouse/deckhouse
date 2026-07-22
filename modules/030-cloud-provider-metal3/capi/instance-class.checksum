@@ -1,4 +1,5 @@
 {{- $options := dict -}}
+{{- $_ := set $options "capm3DataTemplateVersion" "v1" -}}
 {{- $_ := set $options "image" .nodeGroup.instanceClass.image -}}
 {{- if .nodeGroup.instanceClass.hostSelector -}}
   {{- $_ := set $options "hostSelector" .nodeGroup.instanceClass.hostSelector -}}
