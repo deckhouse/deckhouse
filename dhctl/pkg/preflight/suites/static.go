@@ -46,7 +46,7 @@ func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, erro
 		checks.BastionAvailability(deps.SSHProviderInitializer),
 		checks.SSHCredential(deps.SSHProviderInitializer),
 		checks.SSHTunnel(deps.SSHProviderInitializer, deps.GlobalOpts),
-		checks.StaticInstancesSSHCredentials(deps.MetaConfig, deps.SSHProviderInitializer),
+		checks.StaticInstancesSSHAccess(deps.MetaConfig, deps.SSHProviderInitializer),
 		checks.DeckhouseUser(nodeInterface, deps.GlobalOpts),
 		checks.StaticSystemRequirements(deps.SSHProviderInitializer, deps.InstallConfig),
 		checks.Python(nodeInterface),
