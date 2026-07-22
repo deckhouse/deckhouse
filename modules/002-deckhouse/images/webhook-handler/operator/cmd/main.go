@@ -19,8 +19,10 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -38,6 +40,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -171,29 +174,29 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 	//
 	// HookManager.Init() above replaces every Hook (and therefore every
 	// HookController) with a brand new instance whose KubernetesController
-	// has no registered monitors. Admission/conversion hooks that pull data
-	// via 'includeSnapshotsFrom' rely on these monitors; without this step
-	// their 'snapshots' field is delivered empty and validating webhooks
-	// make decisions on missing data (e.g. always denying because a
-	// ModuleConfig snapshot looks absent).
+	// has no registered monitors, and every kubernetes binding gets a fresh
+	// random MonitorId. Admission/conversion hooks that pull data via
+	// 'includeSnapshotsFrom' resolve their snapshot through the *current*
+	// hook index, i.e. these freshly rebuilt controllers. If the monitors
+	// for this new index are not wired, the 'snapshots' field is delivered
+	// empty and validating webhooks decide on missing data (e.g. always
+	// denying because a ModuleConfig snapshot looks absent).
 	//
-	// EnableKubernetesBindings is idempotent: it adds and starts a monitor
-	// only when one is not already registered, and the initial list it
-	// performs repopulates the snapshot cache synchronously.
+	// This MUST be driven to completion here rather than relying on the
+	// reconciler to requeue on error. The shell-operator main queue enables
+	// bindings on the *startup* hook index, but every reloadHooks() call
+	// replaces that index with new MonitorIds; the main queue's monitors are
+	// then orphaned relative to the current index. If reloadHooks() returns
+	// before wiring the current index (e.g. a transient apiserver outage)
+	// and no further reload is triggered, the current index stays unwired and
+	// snapshots stay empty indefinitely. So enableKubernetesBindings retries
+	// with backoff until every hook is wired (or ctx/deadline ends).
 	kubernetesHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.OnKubernetesEvent)
 	if err != nil {
 		return fmt.Errorf("get kubernetes hooks: %w", err)
 	}
-	for _, name := range kubernetesHookNames {
-		h := shOp.HookManager.GetHook(name)
-		if h == nil {
-			continue
-		}
-		if _, err := h.HookController.EnableKubernetesBindings(); err != nil {
-			return fmt.Errorf("enable kubernetes bindings for hook %q: %w", name, err)
-		}
-		// Allow the monitors to emit events now that their caches are filled.
-		h.HookController.UnlockKubernetesEvents()
+	if err := enableKubernetesBindings(ctx, shOp, kubernetesHookNames, logger); err != nil {
+		return err
 	}
 
 	if err := syncAdmissionWebhookConfigurations(ctx, shOp, oldValidatingResources, oldMutatingResources); err != nil {
@@ -204,6 +207,104 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		return fmt.Errorf("sync conversion webhook configurations: %w", err)
 	}
 
+	return nil
+}
+
+const (
+	enableKubernetesBindingsRetryTimeout = 2 * time.Minute
+	enableKubernetesBindingsRetrySteps   = 30
+)
+
+// enableKubernetesBindings wires the monitors (snapshot caches) for every
+// kubernetes hook in the *current* hook index, retrying hooks that fail with
+// bounded backoff until all succeed or the deadline/context ends.
+func enableKubernetesBindings(
+	ctx context.Context,
+	shOp *shell_operator.ShellOperator,
+	hookNames []string,
+	logger *log.Logger,
+) error {
+	// Track hooks still needing a successful enable so each is wired exactly
+	// once regardless of how many retry passes it takes.
+	pending := make(map[string]struct{}, len(hookNames))
+	for _, name := range hookNames {
+		pending[name] = struct{}{}
+	}
+
+	// enableOne wires a single hook by name against the *current* hook index.
+	// Use the same HookController entry point as the shell-operator main
+	// queue, but pass nil to avoid creating synchronization hook-run tasks
+	// during reload.
+	enableOne := func(name string) error {
+		h := shOp.HookManager.GetHook(name)
+		if h == nil {
+			return fmt.Errorf("hook %q not found in hook manager", name)
+		}
+		if h.HookController == nil {
+			return fmt.Errorf("hook controller for hook %q is nil", name)
+		}
+
+		if err := h.HookController.HandleEnableKubernetesBindings(ctx, nil); err != nil {
+			// Leave it pending and do NOT unlock events: the cache is not
+			// filled, so emitting events would be premature.
+			return err
+		}
+
+		// Cache is filled; allow the monitors to emit future events.
+		h.HookController.UnlockKubernetesEvents()
+		return nil
+	}
+
+	var lastErr error
+	attempt := func() bool {
+		var errs []error
+		for name := range pending {
+			if err := enableOne(name); err != nil {
+				errs = append(errs, fmt.Errorf("enable kubernetes bindings for hook %q: %w", name, err))
+				continue
+			}
+			delete(pending, name)
+		}
+		lastErr = errors.Join(errs...)
+		return len(pending) == 0
+	}
+
+	// First pass: attempt every hook once. Continuing past a single failing
+	// hook ensures one transient failure cannot starve the rest.
+	if attempt() {
+		return nil
+	}
+
+	logger.Warn("some kubernetes hooks failed to enable, retrying until wired",
+		slog.Int("pending", len(pending)),
+		log.Err(lastErr))
+
+	// Retry only the still-pending hooks with capped exponential backoff until
+	// they are all wired, the per-reload deadline is reached, or ctx is done.
+	retryCtx, cancel := context.WithTimeout(ctx, enableKubernetesBindingsRetryTimeout)
+	defer cancel()
+
+	waitErr := wait.ExponentialBackoffWithContext(retryCtx, wait.Backoff{
+		Duration: 500 * time.Millisecond,
+		Factor:   2.0,
+		Jitter:   0.1,
+		Steps:    enableKubernetesBindingsRetrySteps,
+		Cap:      10 * time.Second,
+	}, func(context.Context) (bool, error) {
+		return attempt(), nil
+	})
+	if waitErr != nil {
+		// Deadline or context ended with hooks still unwired. Prefer the
+		// underlying enable errors so the reconciler requeues with the real
+		// cause; fall back to the wait error if there is no enable error.
+		if lastErr == nil {
+			lastErr = waitErr
+		}
+		return fmt.Errorf("enable kubernetes bindings (%d hook(s) still unwired after %s): %w",
+			len(pending), enableKubernetesBindingsRetryTimeout, lastErr)
+	}
+
+	logger.Info("all kubernetes hooks enabled and wired")
 	return nil
 }
 

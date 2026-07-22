@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.31.0",
+  "version": "v0.33.1",
   "aliases": null,
   "flags": {
     "help": {
@@ -27,7 +27,7 @@
           "global": false
         },
         "kubeconfig": {
-          "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+          "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
           "shorthand": "k",
           "global": false
         }
@@ -49,7 +49,7 @@
               "global": true
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             }
@@ -72,7 +72,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             },
@@ -105,7 +105,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             },
@@ -118,6 +118,179 @@
               "description": "Set start timestamp range to dump logs from Loki. (Default get max start timestamp from Loki, ex. \"2025-01-12 15:04:05\".)",
               "shorthand": "",
               "global": false
+            }
+          },
+          "subcommands": null
+        }
+      ]
+    },
+    {
+      "name": "cli",
+      "description": "Manage the deckhouse-cli (d8) binary",
+      "aliases": null,
+      "flags": {
+        "context": {
+          "description": "The name of the kubeconfig context to use",
+          "shorthand": "",
+          "global": false
+        },
+        "kubeconfig": {
+          "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+          "shorthand": "k",
+          "global": false
+        },
+        "rpp-ca-file": {
+          "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+          "shorthand": "",
+          "global": false
+        },
+        "rpp-endpoint": {
+          "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+          "shorthand": "",
+          "global": false
+        },
+        "rpp-insecure-skip-tls-verify": {
+          "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+          "shorthand": "",
+          "global": false
+        }
+      },
+      "subcommands": [
+        {
+          "name": "check",
+          "description": "Report whether a newer deckhouse-cli version is available",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-insecure-skip-tls-verify": {
+              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "update",
+          "description": "Update deckhouse-cli to the latest version",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-insecure-skip-tls-verify": {
+              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+              "shorthand": "",
+              "global": true
+            },
+            "version": {
+              "description": "Exact version to install; downgrades are allowed (default: the latest).",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "use \u003cversion\u003e",
+          "description": "Switch to a specific deckhouse-cli version (no download when it is installed locally)",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-insecure-skip-tls-verify": {
+              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "versions",
+          "description": "List deckhouse-cli versions available in the cluster registry",
+          "aliases": [
+            "list"
+          ],
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-insecure-skip-tls-verify": {
+              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
+              "shorthand": "",
+              "global": true
             }
           },
           "subcommands": null
@@ -25100,7 +25273,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": false
             }
@@ -25132,7 +25305,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25185,7 +25358,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25225,7 +25398,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": false
             }
@@ -25244,7 +25417,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25269,7 +25442,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25294,7 +25467,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25321,7 +25494,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": false
             }
@@ -25343,7 +25516,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -25366,7 +25539,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25389,7 +25562,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -25407,7 +25580,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -25427,7 +25600,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": false
             }
@@ -25446,7 +25619,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25476,7 +25649,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25516,7 +25689,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25543,7 +25716,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": false
             }
@@ -25580,7 +25753,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25633,7 +25806,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -25651,7 +25824,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25686,7 +25859,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25729,7 +25902,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -25757,7 +25930,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -39681,6 +39854,11 @@
               "shorthand": "",
               "global": true
             },
+            "scope": {
+              "description": "Cross-namespace listing scope for users without cluster-wide list/watch RBAC: accessible (everything RBAC grants you), projects, system, or project:\u003cname\u003e. Requires -A/--all-namespaces and Deckhouse platform support on the server side.",
+              "shorthand": "",
+              "global": false
+            },
             "selector": {
               "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
@@ -46492,10 +46670,15 @@
           "subcommands": null
         },
         {
-          "name": "push \u003cimages-bundle-path\u003e \u003cregistry\u003e",
+          "name": "push [images-bundle-path] \u003cregistry\u003e",
           "description": "Copy Deckhouse Kubernetes Platform distribution to the third-party registry",
           "aliases": null,
           "flags": {
+            "file": {
+              "description": "`Path` to a tar or chunked package to push. May be repeated to push multiple packages. Can be used instead of the bundle directory argument or combined with it.",
+              "shorthand": "",
+              "global": false
+            },
             "insecure": {
               "description": "Interact with registries over HTTP.",
               "shorthand": "",
@@ -46700,6 +46883,24 @@
           "subcommands": null
         },
         {
+          "name": "render",
+          "description": "Render package templates to Kubernetes manifests",
+          "aliases": null,
+          "flags": {
+            "file": {
+              "description": "Show only manifests rendered from the template with this file name",
+              "shorthand": "",
+              "global": false
+            },
+            "render-file": {
+              "description": "Write the clean render (without '# Source:' headers) to this file path",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
           "name": "verify",
           "description": "Verify a package structure and configuration",
           "aliases": null,
@@ -46740,7 +46941,7 @@
           "global": false
         },
         "kubeconfig": {
-          "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+          "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
           "shorthand": "k",
           "global": false
         }
@@ -47579,7 +47780,7 @@
           "global": false
         },
         "kubeconfig": {
-          "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+          "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
           "shorthand": "k",
           "global": false
         }
@@ -47606,7 +47807,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             },
@@ -47639,7 +47840,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             }
@@ -47661,7 +47862,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47684,7 +47885,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47707,7 +47908,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47727,7 +47928,7 @@
               "global": true
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             }
@@ -47744,7 +47945,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47762,7 +47963,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47780,7 +47981,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47805,7 +48006,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             },
@@ -47838,7 +48039,7 @@
               "global": true
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             }
@@ -47855,7 +48056,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47873,7 +48074,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47891,7 +48092,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47909,7 +48110,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47932,7 +48133,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47950,7 +48151,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -47967,7 +48168,7 @@
                       "global": true
                     },
                     "kubeconfig": {
-                      "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                      "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                       "shorthand": "k",
                       "global": true
                     }
@@ -47985,7 +48186,7 @@
                       "global": true
                     },
                     "kubeconfig": {
-                      "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                      "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                       "shorthand": "k",
                       "global": true
                     }
@@ -48005,7 +48206,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -48023,7 +48224,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 }
@@ -48043,7 +48244,7 @@
               "global": true
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             }
@@ -48065,7 +48266,7 @@
                   "global": false
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -48095,7 +48296,7 @@
               "global": true
             },
             "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "k",
               "global": true
             }
@@ -48112,7 +48313,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -48145,7 +48346,7 @@
                   "global": true
                 },
                 "kubeconfig": {
-                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
                 },
@@ -48412,7 +48613,7 @@
               "global": false
             },
             "kubeconfig": {
-              "description": "Path to the kubeconfig file to use for CLI requests. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "description": "Path to the kubeconfig file to use for CLI requests. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
               "shorthand": "",
               "global": false
             },

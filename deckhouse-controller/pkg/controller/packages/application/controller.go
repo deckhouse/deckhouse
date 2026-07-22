@@ -318,7 +318,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 			Name:    app.Spec.PackageName,
 			Version: app.Spec.PackageVersion,
 		},
-		Settings: app.Spec.Settings.GetMap(),
+		Settings:    app.Spec.Settings.GetMap(),
+		Maintenance: app.Spec.Maintenance,
 	})
 
 	// set finalizer if it is not set

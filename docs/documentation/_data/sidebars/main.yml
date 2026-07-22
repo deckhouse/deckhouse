@@ -22,25 +22,21 @@ entries:
                 ru: Описание
               url: /admin/configuration/
             - title:
-                en: Registries and editions
-                ru: Registries и редакции
+                en: DKP components registry
+                ru: Хранилище образов компонентов DKP
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: Third-party registry
-                    ru: Сторонний registry
+                    en: DKP-managed clusters
+                    ru: Кластеры, полностью управляемые DKP
+                  url: /admin/configuration/registry/managing-interaction.html
+                - title:
+                    en: Managed Kubernetes clusters
+                    ru: Managed Kubernetes-кластеры
                   url: /admin/configuration/registry/third-party.html
-                - title:
-                    en: Internal registry
-                    ru: Внутренний registry
-                  url: /admin/configuration/registry/internal.html
-                - title:
-                    en: Restoring registry access
-                    ru: Восстановление подключения к registry
-                  url: /admin/configuration/registry/restore-token.html
             - title:
                 en: IAM
                 ru: IAM
@@ -106,6 +102,10 @@ entries:
                         en: Access for CI/CD
                         ru: Доступ для CI/CD
                       url: /admin/configuration/access/authorization/ci_cd.html
+                    - title:
+                        en: Resource listing with access-based filtering
+                        ru: Листинг ресурсов с фильтрацией по правам доступа
+                      url: /admin/configuration/access/authorization/filtered-listing.html
             - title:
                 en: Integration with IaaS
                 ru: Интеграция с IaaS
@@ -408,7 +408,7 @@ entries:
                     - title:
                         en: Hybrid cluster with DVP
                         ru: Гибридный кластер с DVP
-                      url: /admin/integrations/hybrid/dvp-hybrid.html  
+                      url: /admin/integrations/hybrid/dvp-hybrid.html
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
@@ -1311,13 +1311,29 @@ entries:
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
             - title:
+                en: Deckhouse module
+                ru: Модуль deckhouse
+              url: /architecture/deckhouse/deckhouse.html
+            - title:
+                en: Queuing mechanism
+                ru: Механизм очередей
+              url: /architecture/deckhouse/queues.html
+            - title:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
+        - title:
+            en: Delivery subsystem
+            ru: Подсистема Delivery
+          folders:
             - title:
-                en: Direct mode of registry module
-                ru: Режим Direct модуля registry
-              url: /architecture/deckhouse/registry-direct-mode.html
+                en: Overview
+                ru: Обзор
+              url: /architecture/delivery/
+            - title:
+                en: Operator-argo module
+                ru: Модуль operator-argo
+              url: /architecture/delivery/operator-argo.html
         - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
@@ -1445,7 +1461,7 @@ entries:
                 - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
-                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html                
+                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1645,7 +1661,7 @@ entries:
             - title:
                 en: Observability module
                 ru: Модуль observability
-              url: /architecture/observability/observability.html                
+              url: /architecture/observability/observability.html
             - title:
                 en: Logging modules
                 ru: Модули логирования
@@ -1665,7 +1681,7 @@ entries:
             - title:
                 en: Virtualization core
                 ru: Ядро виртуализации
-              url: /architecture/virtualization/core.html              
+              url: /architecture/virtualization/core.html
             - title:
                 en: Deckhouse Virtualization Container Registry (DVCR)
                 ru: Deckhouse Virtualization Container Registry (DVCR)
@@ -1677,7 +1693,7 @@ entries:
             - title:
                 en: Auxiliary components
                 ru: Вспомогательные компоненты
-              url: /architecture/virtualization/auxiliary.html             
+              url: /architecture/virtualization/auxiliary.html
     - title:
         en: Reference
         ru: Справка

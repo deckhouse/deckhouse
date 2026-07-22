@@ -56,6 +56,11 @@ failureThreshold: 5
 periodSeconds: 10
 timeoutSeconds: 5
 {{- end }}
+{{- define "readiness_probe_moduleslibrary" }}
+failureThreshold: 60
+periodSeconds: 10
+timeoutSeconds: 5
+{{- end }}
 {{- define "liveness_probe" }}
 failureThreshold: 10
 periodSeconds: 10

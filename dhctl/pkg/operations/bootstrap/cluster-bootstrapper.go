@@ -19,15 +19,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
 	otattribute "go.opentelemetry.io/otel/attribute"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -107,8 +110,7 @@ type ClusterBootstrapper struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
-	lastState      phases.DhctlState
-	loggerProvider dhctllog.LoggerProvider
+	lastState phases.DhctlState
 }
 
 func (b *ClusterBootstrapper) applyCommanderModeConfig(cfg *config.DeckhouseInstaller) {
@@ -145,8 +147,7 @@ func NewClusterBootstrapper(ctx context.Context, params *Params) *ClusterBootstr
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		lastState:      params.InitialState,
-		loggerProvider: dhctllog.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx)),
+		lastState: params.InitialState,
 	}
 }
 
@@ -206,7 +207,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
-		b.loggerProvider(),
+		dhlog.FromContext(ctx),
 		b.Options.Global.ConfigPaths,
 		b.Options.Registry.ImgBundlePath,
 	)
@@ -270,17 +271,13 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	defer configSpan.End()
 
 	// first, parse and check cluster config
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
-	preparatorParams.WithPhaseBootstrap()
-	preparatorParams.WithPreflightChecks(infrastructureprovider.PreflightChecks{
-		DVPValidateKubeAPI: true,
-	})
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		&b.Options.Global,
 		config.ValidateOptionValidateExtensions(true),
+		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationBootstrap),
 	)
 	if err != nil {
 		return err
@@ -687,7 +684,6 @@ func (b *ClusterBootstrapper) bootstrapKubernetes(ctx context.Context, bctx *boo
 		MetaConfig:             bctx.metaConfig,
 		CommanderMode:          b.CommanderMode,
 		GlobalOpts:             &b.Options.Global,
-		LoggerProvider:         b.loggerProvider,
 		PhasedExecutionContext: b.PhasedExecutionContext,
 	})
 
@@ -1019,17 +1015,77 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
-		if annotations == nil || annotations["dhctl.deckhouse.io/bootstrap-resource-place"] != "before-deckhouse" {
+		hasBeforeAnnotation := annotations != nil && annotations["dhctl.deckhouse.io/bootstrap-resource-place"] == "before-deckhouse"
+
+		if hasBeforeAnnotation || isCloudProviderCredentialSecret(resource) {
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to after queue", resource.String(), resource.Object.GetName()))
-			after = append(after, resource)
+			before = append(before, resource)
 			continue
 		}
 
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to before queue", resource.String(), resource.Object.GetName()))
-		before = append(before, resource)
+		after = append(after, resource)
 	}
 
+	before = prependMissingNamespaces(before)
+
 	return before, after
+}
+
+// isCloudProviderCredentialSecret returns true for Secret resources carrying
+// the cloud-provider.deckhouse.io/credentials type. Such Secrets must reach
+// the cluster before the cloud-provider-<name> module rolls out, otherwise the
+// module's credentials hook sees an empty snapshot and the cloud-controller
+// boots with empty credentials.
+func isCloudProviderCredentialSecret(resource *template.Resource) bool {
+	if resource.GVK.GroupKind() != (schema.GroupKind{Group: "", Kind: "Secret"}) {
+		return false
+	}
+	secretType, _, _ := unstructured.NestedString(resource.Object.Object, "type")
+	return secretType == proto.CredentialsSecretType
+}
+
+// prependMissingNamespaces inserts a minimal Namespace stub for every distinct
+// namespace referenced by the given resources, unless a Namespace with that
+// name is already present in the slice. The cloud-provider-<name> module owns
+// the namespace via its helm chart; the stub created here gets enriched with
+// labels via merge-patch when the module rolls out.
+func prependMissingNamespaces(resources template.Resources) template.Resources {
+	needed := make(map[string]struct{})
+	present := make(map[string]struct{})
+	for _, r := range resources {
+		if r.GVK.GroupKind() == (schema.GroupKind{Group: "", Kind: "Namespace"}) {
+			present[r.Object.GetName()] = struct{}{}
+			continue
+		}
+		if ns := r.Object.GetNamespace(); ns != "" {
+			needed[ns] = struct{}{}
+		}
+	}
+
+	missing := make([]string, 0, len(needed))
+	for ns := range needed {
+		if _, ok := present[ns]; ok {
+			continue
+		}
+		missing = append(missing, ns)
+	}
+	// Deterministic order: ranging a map yields a random namespace-stub order.
+	sort.Strings(missing)
+
+	stubs := make(template.Resources, 0, len(missing))
+	for _, ns := range missing {
+		stub := unstructured.Unstructured{}
+		stub.SetAPIVersion("v1")
+		stub.SetKind("Namespace")
+		stub.SetName(ns)
+		stubs = append(stubs, &template.Resource{
+			GVK:    schema.FromAPIVersionAndKind("v1", "Namespace"),
+			Object: stub,
+		})
+	}
+
+	return append(stubs, resources...)
 }
 
 func createResources(

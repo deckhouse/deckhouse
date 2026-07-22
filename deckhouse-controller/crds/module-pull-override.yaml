@@ -43,8 +43,9 @@ spec:
                   description: "Module container image tag, which will be pulled."
                 scanInterval:
                   type: string
-                  description: "Scan interval for checking the image digest. If the digest changes, the module is updated."
+                  description: "Scan interval for checking the image digest. If the digest changes, the module is updated. Supported units: `h`, `m`, `s`."
                   default: 15s
+                  pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 rollback:
                   type: boolean
                   description: Indicates whether the module release should be rollback after deleting ModulePullOverride.
@@ -100,8 +101,9 @@ spec:
                   description: Module container image tag, which will be pulled.
                 scanInterval:
                   type: string
-                  description: Scan interval for checking the image digest. If the digest changes, the module is updated.
+                  description: "Scan interval for checking the image digest. If the digest changes, the module is updated. Supported units: `h`, `m`, `s`."
                   default: 15s
+                  pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 rollback:
                   type: boolean
                   description: Indicates whether the module release should be rollback after deleting mpo.

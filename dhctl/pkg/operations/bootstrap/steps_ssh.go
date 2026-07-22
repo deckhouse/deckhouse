@@ -38,7 +38,7 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
 			retry.WithWait(1*time.Second),
 			retry.WithAttempts(250),
-			retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
+			retry.WithLogger(dhlog.FromContext(ctx)),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}

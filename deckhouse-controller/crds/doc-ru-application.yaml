@@ -20,6 +20,18 @@ spec:
               description: |
                 Определяет конфигурацию приложения.
               properties:
+                maintenance:
+                  description: |
+                    Задаёт режим обслуживания приложения.
+
+                    - `NoResourceReconciliation` — автономный режим для разработки или отладки приложения.
+
+                      В этом режиме:
+
+                      - изменения в конфигурации или хуках приложения не синхронизируются, в результате чего ресурсы не обновляются автоматически;
+                      - отключается мониторинг ресурсов приложения, в результате чего удалённые ресурсы не восстанавливаются;
+                      - ко всем ресурсам приложения применяется лейбл `maintenance.deckhouse.io/no-resource-reconciliation`;
+                      - срабатывает [алерт `ApplicationIsInMaintenanceMode`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationisinmaintenancemode).
                 packageName:
                   description: |
                     Название пакета приложения для установки.

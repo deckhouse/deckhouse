@@ -35,7 +35,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
-		b.loggerProvider(),
+		dhlog.FromContext(ctx),
 		b.Options.Global.ConfigPaths,
 		b.Options.Registry.ImgBundlePath,
 	)
@@ -44,13 +44,12 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 	defer registryStop()
 
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
-	preparatorParams.WithPhaseBootstrap()
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		&b.Options.Global,
+		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationBootstrap),
 	)
 	if err != nil {
 		return err

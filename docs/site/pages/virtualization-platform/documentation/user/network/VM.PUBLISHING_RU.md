@@ -264,6 +264,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
      # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификацию в Dex.
      applicationDomain: "app-name.kube.my-domain.com"
      # Отправлять ли `Authorization: Bearer` header приложению. Полезно в связке с auth_request в NGINX.
+     # При значении sendAuthorizationHeader: true добавьте заголовок Authorization в аннотацию nginx.ingress.kubernetes.io/auth-response-headers Ingress приложения.
      sendAuthorizationHeader: false
      # Имя Secret'а с SSL-сертификатом.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -298,6 +299,15 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
+
+{% alert level="warning" %}
+При включении `sendAuthorizationHeader: true` в Ingress укажите все необходимые заголовки в аннотации `nginx.ingress.kubernetes.io/auth-response-headers`, поскольку заголовок `Authorization` по умолчанию не передаётся:
+
+```yaml
+nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+```
+
+{% endalert %}
 
 ### Настройка ограничений на основе CIDR
 

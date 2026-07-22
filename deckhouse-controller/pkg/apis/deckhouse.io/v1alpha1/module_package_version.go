@@ -69,6 +69,8 @@ var _ runtime.Object = (*ModulePackageVersion)(nil)
 // +kubebuilder:printcolumn:name="MetadataLoaded",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].status"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].message"
 // +kubebuilder:printcolumn:name="UsedBy",type=integer,JSONPath=`.status.usedByCount`
+// +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)"
+// +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
 
 // ModulePackageVersion represents a version of a module package.
 type ModulePackageVersion struct {
@@ -165,8 +167,9 @@ type ModulePackageVersionStatusMetadata struct {
 	// +optional
 	Category string `json:"category,omitempty"`
 
-	// The development stage of the package (e.g., alpha, beta, stable).
+	// The development stage of the package (e.g., Experimental, Preview, General Availability, Deprecated).
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=[Experimental, Preview, General Availability, Deprecated]
 	Stage string `json:"stage,omitempty"`
 
 	// The system requirements for this package.

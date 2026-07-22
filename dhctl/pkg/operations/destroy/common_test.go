@@ -141,7 +141,7 @@ func assertResources(t *testing.T, kubeCl *client.KubernetesClient, resources []
 }
 
 func assertResourcesDeleted(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
-	ctx := context.TODO()
+	ctx := t.Context()
 	for _, r := range resources {
 		err := r.getFunc(t, ctx, kubeCl)
 		if r.shouldExists {
@@ -155,7 +155,7 @@ func assertResourcesDeleted(t *testing.T, kubeCl *client.KubernetesClient, resou
 }
 
 func assertResourceExists(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
-	ctx := context.TODO()
+	ctx := t.Context()
 	for _, r := range resources {
 		err := r.getFunc(t, ctx, kubeCl)
 		require.NoError(t, err, r.Name(), "resource should not delete", r.Name())
@@ -180,7 +180,7 @@ func testAddDeckhouseStorageClass(t *testing.T, ctx context.Context, kubeCl *cli
 }
 
 func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) []testCreatedResource {
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	createdResources := make([]testCreatedResource, 0)
 
@@ -642,7 +642,7 @@ spec:
       nodeDrainTimeout: 10m0s
       nodeVolumeDetachTimeout: 10m0s
 `)
-	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(context.TODO(), md, metav1.CreateOptions{})
+	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(t.Context(), md, metav1.CreateOptions{})
 	require.NoError(t, err)
 	createdResources = append(createdResources, testCreatedResource{
 		name: md.GetName(),
@@ -667,6 +667,13 @@ func testYAMLToUnstructured(t *testing.T, r string) *unstructured.Unstructured {
 func testCreateFakeKubeClient() *client.KubernetesClient {
 	kinds := map[schema.GroupVersionResource]string{
 		v1.NodeUserGVR: v1.NodeUserList,
+		// Cloud-cluster parseConfigFromCluster lists NodeGroups /
+		// InstanceClasses / ModuleConfigs via the dynamic client
+		// (CloudProviderVarsFromCluster). The fake dynamic client panics
+		// on LIST for any GVR whose list kind is not registered.
+		{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}:            "NodeGroupList",
+		{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "moduleconfigs"}:   "ModuleConfigList",
 	}
 
 	apisToAdd := []apis.ListKindToGVR{
@@ -726,7 +733,7 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -741,7 +748,7 @@ func testCreateSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -756,7 +763,7 @@ func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(context.TODO(), cm, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), cm, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -765,6 +772,29 @@ func testCreateProviderClusterConfigSecret(t *testing.T, kubeCl *client.Kubernet
 		"cloud-provider-cluster-configuration.yaml": []byte(configYAML),
 		"cloud-provider-discovery-data.json":        []byte(`{"a": "b"}`),
 	})
+}
+
+// testCreateDeckhouseRegistrySecret seeds the d8-system/deckhouse-registry
+// Secret that registrydata.GetRegistryData looks up unconditionally for
+// Cloud clusters. Without it parseConfigFromCluster retry-loops for
+// 45 × 5 s and trips the 600 s go-test timeout.
+func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesClient) {
+	t.Helper()
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse-registry",
+			Namespace: "d8-system",
+		},
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`),
+			"imagesRegistry":    []byte("registry.example.com/deckhouse"),
+			"scheme":            []byte("HTTPS"),
+		},
+	}
+
+	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
 }
 
 func testCreateClusterConfigSecret(t *testing.T, kubeCl *client.KubernetesClient, configYAML string) {

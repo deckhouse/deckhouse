@@ -54,6 +54,8 @@ var _ runtime.Object = (*ModuleUpdatePolicy)(nil)
 // +kubebuilder:resource:scope=Cluster,shortName=mup
 // +kubebuilder:unservedversion
 // +kubebuilder:deprecatedversion
+// +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)"
+// +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
 
 // ModuleUpdatePolicy source
 type ModuleUpdatePolicy struct {

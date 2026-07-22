@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
+
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -33,9 +35,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
@@ -122,11 +125,14 @@ func (p *Provider) NeedToUseTofu() bool {
 }
 
 func (p *Provider) IsVMChange(rc plan.ResourceChange) bool {
-	if p.name == dvp.ProviderName {
-		return dvp.IsVMManifest(rc)
+	rule := p.settings.VMResource()
+	if rule == nil {
+		// Legacy bundle: no vmResource rule in plan_rules.yml. Synthesise a
+		// plain type-match rule from vmResourceType so the matcher path is
+		// uniform.
+		rule = &vmresource.Rule{Type: p.settings.VMResourceType()}
 	}
-
-	return rc.Type == p.settings.VMResourceType()
+	return vmresource.Match(rc, rule)
 }
 
 func (p *Provider) String() string {
@@ -180,6 +186,16 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step) (infr
 	p.rootDirRoutinesMutex.Lock()
 	defer p.rootDirRoutinesMutex.Unlock()
 
+	ctx, span := telemetry.StartSpan(ctx, "cloud.Executor")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("provider.name", p.name),
+		otattribute.String("provider.layout", p.layout),
+		otattribute.String("provider.step", string(step)),
+		otattribute.String("provider.uuid", p.uuid),
+		otattribute.String("provider.prefix", p.prefix),
+	)
+
 	const errPrefix = "Failed init executor"
 
 	if p.di.VersionsContentProviderGetter == nil {
@@ -230,6 +246,16 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step) (infr
 
 	stepStr := string(step)
 	stepDir := filepath.Join(modulesDir, fsproviderpath.LayoutsDir, p.layout, stepStr)
+
+	span.SetAttributes(
+		otattribute.String("provider.version", version),
+		otattribute.String("provider.infraRootDir", infraRootDir),
+		otattribute.String("provider.modulesDir", modulesDir),
+		otattribute.String("provider.stepDir", stepDir),
+		otattribute.String("provider.pluginsDir", pluginsDir),
+		otattribute.String("provider.infraUtil", infraUtilDestination),
+		otattribute.String("provider.versionContent", string(versionContent)),
+	)
 
 	err = p.fillVersionsToModulesAndLayoutStep(ctx, versionContent, infraRootDir, stepDir, modulesDir)
 	if err != nil {
@@ -452,7 +478,7 @@ func (p *Provider) downloadModules(ctx context.Context, rootDir string) (string,
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Downloading modules config %s for %s", destination, p.String()))
 
 	err = p.di.ModulesProvider.DownloadModules(ctx, DownloadModulesParams{
-		ModulesParams{
+		ModulesParams: ModulesParams{
 			Settings: p.settings,
 		},
 	}, destination)

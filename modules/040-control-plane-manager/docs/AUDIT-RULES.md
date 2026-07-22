@@ -257,6 +257,8 @@ users:
   - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
   - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
+  - system:serviceaccount:d8-cloud-instance-manager:integrity-containerd-configurator
+  - system:serviceaccount:d8-cloud-instance-manager:integrity-controller
   - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:node-controller
   - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc
@@ -277,6 +279,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-dvp:capdvp-controller-manager
   - system:serviceaccount:d8-cloud-provider-dvp:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-dvp:cloud-data-discoverer
+  - system:serviceaccount:d8-cloud-provider-dvp:validation-webhook
   - system:serviceaccount:d8-cloud-provider-dynamix:capd-controller-manager
   - system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer
@@ -326,9 +329,6 @@ users:
   - system:serviceaccount:d8-metallb:l2lb-controller
   - system:serviceaccount:d8-metallb:l2lb-speaker
   - system:serviceaccount:d8-metallb:speaker
-  - system:serviceaccount:d8-monitoring:kube-state-metrics
-  - system:serviceaccount:d8-monitoring:node-exporter
-  - system:serviceaccount:d8-monitoring:oom-kills-exporter
   - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
   - system:serviceaccount:d8-openvpn:openvpn
   - system:serviceaccount:d8-service-with-healthchecks:agent
@@ -733,6 +733,8 @@ rules:
       - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
       - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
+      - system:serviceaccount:d8-cloud-instance-manager:integrity-containerd-configurator
+      - system:serviceaccount:d8-cloud-instance-manager:integrity-controller
       - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:node-controller
       - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc
@@ -753,6 +755,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-dvp:capdvp-controller-manager
       - system:serviceaccount:d8-cloud-provider-dvp:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-dvp:cloud-data-discoverer
+      - system:serviceaccount:d8-cloud-provider-dvp:validation-webhook
       - system:serviceaccount:d8-cloud-provider-dynamix:capd-controller-manager
       - system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer
@@ -802,9 +805,6 @@ rules:
       - system:serviceaccount:d8-metallb:l2lb-controller
       - system:serviceaccount:d8-metallb:l2lb-speaker
       - system:serviceaccount:d8-metallb:speaker
-      - system:serviceaccount:d8-monitoring:kube-state-metrics
-      - system:serviceaccount:d8-monitoring:node-exporter
-      - system:serviceaccount:d8-monitoring:oom-kills-exporter
       - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
       - system:serviceaccount:d8-openvpn:openvpn
       - system:serviceaccount:d8-service-with-healthchecks:agent

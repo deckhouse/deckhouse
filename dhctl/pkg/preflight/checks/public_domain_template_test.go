@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"os/exec"
@@ -76,7 +75,7 @@ func TestCheckLocalhostDomain(t *testing.T) {
 			tt.setupMock(mockNode, mockScript)
 
 			check := LocalhostDomainCheck{NodeInterface: mockNode}
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
@@ -185,7 +184,7 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := PublicDomainTemplateCheck{MetaConfig: tt.metaConfig}
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

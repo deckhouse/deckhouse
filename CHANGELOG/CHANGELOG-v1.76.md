@@ -10,6 +10,7 @@
  - Custom edits to the local-path-config ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
  - During migration to the new Go-based implementation of apiserver-proxy, connection flaps to the API server may occur. This change exposes a new hostPort `6480` for health checks and upstreams statistics.
  - Istiod now enforces trust domain validation. Each remote root CA is now scoped to its declared trust domain in the meshConfig caCertificates. Verify that all IstioFederation resources have correct `trustDomain` values matching the remote cluster configuration.
+ - Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
  - Previously, the fencing-agent would crash with "permission denied" on /dev/watchdog
     when the node had a maintenance annotation (e.g. during Deckhouse updates).
     Now the agent skips watchdog arming during maintenance and arms it automatically
@@ -22,6 +23,7 @@
  - This update triggers a rolling update of the network-policy-engine pods.
  - Unnecessary or destructive plan updates that could occur when updating labels and annotations via OpenTofu should be prevented now. If you encounter unexpected converge plans or cluster bootstrap issues when using OpenTofu-based providers (such as DVP, DynamiX, zVirt, or Yandex), report them to Deckhouse Technical Support.
  - When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
+ - With enableMultiTenancy, effective access is now the union of CAR (within its limitNamespaces/namespaceSelector), AuthorizationRules, and plain RoleBindings/ClusterRoleBindings. Previously the webhook denied requests outside the CAR scope even when RBAC explicitly granted them: such existing bindings for subjects with a CAR silently become effective after the upgrade — review them. The CAR access level still does not apply outside its namespace limits. AccessibleNamespaces reflects the same union.
 
 ## Features
 
@@ -41,6 +43,7 @@
  - **[cloud-provider-aws]** Moved spot node drain logic from node-termination-handler to Deckhouse. [#18385](https://github.com/deckhouse/deckhouse/pull/18385)
  - **[cloud-provider-azure]** Added NVMe disk discovery support for Ubuntu 22.04 Gen2 VMs. [#18839](https://github.com/deckhouse/deckhouse/pull/18839)
  - **[cloud-provider-azure]** Added secrets with `node-manager` dependencies. [#18112](https://github.com/deckhouse/deckhouse/pull/18112)
+ - **[cloud-provider-dvp]** Add an option to disable the CCM LoadBalancer functionality via ConfigMap. [#21296](https://github.com/deckhouse/deckhouse/pull/21296)
  - **[cloud-provider-dvp]** Added ServiceWithHealthchecks support to `cloud-provider-dvp`. [#18141](https://github.com/deckhouse/deckhouse/pull/18141)
  - **[cloud-provider-dvp]** Added discovery and propagation of default StorageClass from parent cluster to child clusters in DVP. [#18295](https://github.com/deckhouse/deckhouse/pull/18295)
  - **[cloud-provider-dvp]** Added hybrid cluster support to `cloud-provider-dvp`. [#17861](https://github.com/deckhouse/deckhouse/pull/17861)
@@ -85,6 +88,7 @@
  - **[deckhouse-controller]** Added legacy (v1alpha1) PackageRepository module support with observability improvements. [#18522](https://github.com/deckhouse/deckhouse/pull/18522)
  - **[deckhouse-controller]** Added mechanism for blocking deckhouse release if cluster have alerts with high severity. [#20741](https://github.com/deckhouse/deckhouse/pull/20741)
  - **[deckhouse-controller]** Prevented enabling multiple CNI modules simultaneously. [#18479](https://github.com/deckhouse/deckhouse/pull/18479)
+ - **[deckhouse-controller]** harden migrated modules check [#21077](https://github.com/deckhouse/deckhouse/pull/21077)
  - **[deckhouse]** Add conditions summary to applications. [#20317](https://github.com/deckhouse/deckhouse/pull/20317)
  - **[deckhouse]** Add marketplace features. [#20178](https://github.com/deckhouse/deckhouse/pull/20178)
  - **[deckhouse]** Added `lastAppliedConfiguration` to Application status. [#19303](https://github.com/deckhouse/deckhouse/pull/19303)
@@ -120,10 +124,13 @@
  - **[istio]** Added validating webhooks for IstioFederation and IstioMulticluster resources. [#18406](https://github.com/deckhouse/deckhouse/pull/18406)
     Creation of IstioFederation is only allowed when Istio federation is enabled in the module configuration. Creation of IstioMulticluster is only allowed when Istio multicluster is enabled in the module configuration.
  - **[istio]** Allow custom ports in metadataEndpoint URLs for IstioFederation and IstioMulticluster CRDs. [#19247](https://github.com/deckhouse/deckhouse/pull/19247)
+ - **[istio]** Custom annotations for Ingress Controller [#21118](https://github.com/deckhouse/deckhouse/pull/21118)
+ - **[istio]** Custom extension providers [#21126](https://github.com/deckhouse/deckhouse/pull/21126)
  - **[istio]** Enabled read-only CNI-node root filesystem. [#19334](https://github.com/deckhouse/deckhouse/pull/19334)
  - **[istio]** Enabled trust domain validation in Istio control plane for federation and multicluster. [#18502](https://github.com/deckhouse/deckhouse/pull/18502)
     Istiod now enforces trust domain validation. Each remote root CA is now scoped to its declared trust domain in the meshConfig caCertificates. Verify that all IstioFederation resources have correct `trustDomain` values matching the remote cluster configuration.
  - **[istio]** Implement graceful metadata secret renewal for multiclusters. [#20202](https://github.com/deckhouse/deckhouse/pull/20202)
+ - **[istio]** JWKS extra root CA implementation [#21124](https://github.com/deckhouse/deckhouse/pull/21124)
  - **[kube-proxy]** Added a mechanism to migrate between CNI plugins (e.g., Flannel to Cilium) in a running cluster. [#16499](https://github.com/deckhouse/deckhouse/pull/16499)
     All kube-proxy agents will restart.
  - **[log-shipper]** Added new transformations and parsing features. [#18685](https://github.com/deckhouse/deckhouse/pull/18685)
@@ -172,6 +179,8 @@
  - **[candi]** fix cve node-manager and opentofu. [#19940](https://github.com/deckhouse/deckhouse/pull/19940)
  - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#18133](https://github.com/deckhouse/deckhouse/pull/18133)
  - **[candi]** fix static node cleanup to wipe data on externally mounted volumes before unmounting, preventing stale data from causing re-bootstrap failures [#20758](https://github.com/deckhouse/deckhouse/pull/20758)
+ - **[candi]** kube-apiserver no longer caches watches for `ManifestCheckpointContentChunk` resources from `state-snapshotter`. [#21223](https://github.com/deckhouse/deckhouse/pull/21223)
+    kube-apiserver static pod is reconfigured and restarts on the next control-plane sync.
  - **[cert-manager]** Disable SecurityPolicyExceptions for cert-manager namespace [#19184](https://github.com/deckhouse/deckhouse/pull/19184)
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0 [#20250](https://github.com/deckhouse/deckhouse/pull/20250)
  - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18657](https://github.com/deckhouse/deckhouse/pull/18657)
@@ -193,9 +202,11 @@
  - **[cloud-provider-dvp]** add labels to cloudinit secrets in the terraform [#20436](https://github.com/deckhouse/deckhouse/pull/20436)
  - **[cloud-provider-dvp]** fix CVEs in cloud-provider-dvp [#18258](https://github.com/deckhouse/deckhouse/pull/18258)
  - **[cloud-provider-dvp]** fix LoadBalancer stuck in pending state — retry on conflict when updating ServiceWithHealthchecks and propagate IP to child cluster service status [#19609](https://github.com/deckhouse/deckhouse/pull/19609)
+ - **[cloud-provider-dvp]** fix dvp kubernetes dependency mismatch [#21367](https://github.com/deckhouse/deckhouse/pull/21367)
  - **[cloud-provider-dvp]** refactored CreateVolume to improve idempotency when disk.status.capacity is not yet reported and standardized gRPC error handling [#17826](https://github.com/deckhouse/deckhouse/pull/17826)
  - **[cloud-provider-gcp]** Fixed CVEs in `cloud-provider-gcp`. [#18095](https://github.com/deckhouse/deckhouse/pull/18095)
  - **[cloud-provider-huaweicloud]** Added default values for `elb.class` and `lb-algorithm`, and fixed load balancer creation when `epid` is empty. [#19166](https://github.com/deckhouse/deckhouse/pull/19166)
+ - **[cloud-provider-huaweicloud]** Adds patches to the upstream version to make it ignore static nodes [#21388](https://github.com/deckhouse/deckhouse/pull/21388)
  - **[cloud-provider-huaweicloud]** Fixed CVEs in `cloud-provider-huaweicloud`. [#18096](https://github.com/deckhouse/deckhouse/pull/18096)
  - **[cloud-provider-huaweicloud]** fix CVEs in cloud-provider-huaweicloud [#18289](https://github.com/deckhouse/deckhouse/pull/18289)
  - **[cloud-provider-openstack]** Add loadBalancer.enabled flag to prevent CCM crashes on k8s 1.32 without Octavia service [#18228](https://github.com/deckhouse/deckhouse/pull/18228)
@@ -206,6 +217,7 @@
  - **[cloud-provider-vcd]** Fix LogrAdapter panic in VCD infra-controller-manager [#20148](https://github.com/deckhouse/deckhouse/pull/20148)
  - **[cloud-provider-vcd]** Fixed CVEs in `cloud-provider-vcd`. [#18113](https://github.com/deckhouse/deckhouse/pull/18113)
  - **[cloud-provider-vcd]** Fixed SecurityPolicyException for VCD components. [#19021](https://github.com/deckhouse/deckhouse/pull/19021)
+ - **[cloud-provider-vcd]** add werf deploy-dependency annotations to capcd webhook configurations to fix DMT lint and prevent race on install/upgrade [#21117](https://github.com/deckhouse/deckhouse/pull/21117)
  - **[cloud-provider-vcd]** fix vCD CCM TCP health monitors removal [#19089](https://github.com/deckhouse/deckhouse/pull/19089)
  - **[cloud-provider-vsphere]** Added filtering discovered zones and datastores by `zones` from provider configurations. [#18378](https://github.com/deckhouse/deckhouse/pull/18378)
  - **[cloud-provider-vsphere]** Enabled the vSphere CSI snapshotter. [#18263](https://github.com/deckhouse/deckhouse/pull/18263)
@@ -245,8 +257,11 @@
  - **[csi-vsphere]** Fixed the Deckhouse queue getting stuck [#20092](https://github.com/deckhouse/deckhouse/pull/20092)
  - **[deckhouse-controller]** A module that conditionally depends on another is no longer disabled when an incompatible version of that dependency is enabled; the enable is rejected instead. [#20344](https://github.com/deckhouse/deckhouse/pull/20344)
  - **[deckhouse-controller]** Fix applications charts rendering issue [#20282](https://github.com/deckhouse/deckhouse/pull/20282)
+ - **[deckhouse-controller]** Fix deckhouse-controller crash loop and hooks receiving silently empty snapshots [#21255](https://github.com/deckhouse/deckhouse/pull/21255)
  - **[deckhouse-controller]** Fix false DeckhouseUpdatingFailed alert on registries without version tags in release-channel repo [#18310](https://github.com/deckhouse/deckhouse/pull/18310)
+ - **[deckhouse-controller]** Fixed ModuleConfig validation. [#21293](https://github.com/deckhouse/deckhouse/pull/21293)
  - **[deckhouse-controller]** Fixed error logging for MPO validation. [#18698](https://github.com/deckhouse/deckhouse/pull/18698)
+ - **[deckhouse-controller]** Fixed showing warnings while errors during kubectl edit. [#21288](https://github.com/deckhouse/deckhouse/pull/21288)
  - **[deckhouse-controller]** Fixed validation for switching ClusterConfiguration kubernetesVersion from an explicit version to Automatic. [#20331](https://github.com/deckhouse/deckhouse/pull/20331)
  - **[deckhouse-controller]** add werf dependency to webhook [#20970](https://github.com/deckhouse/deckhouse/pull/20970)
  - **[deckhouse-controller]** added extra validation for kubernets version multiple downgrades scenario [#18794](https://github.com/deckhouse/deckhouse/pull/18794)
@@ -276,6 +291,7 @@
  - **[dhctl]** Fixed `LogInfoLn` behavior for external loggers. [#19234](https://github.com/deckhouse/deckhouse/pull/19234)
  - **[dhctl]** Fixed a panic in infrastructure plan processing when the destructive changes report returns an error. [#18908](https://github.com/deckhouse/deckhouse/pull/18908)
  - **[dhctl]** Fixed namespace updates during cluster bootstrap when the namespace already exists. [#19129](https://github.com/deckhouse/deckhouse/pull/19129)
+ - **[dhctl]** Preflight checks are no longer re-run on every dhctl-server restart when the cluster config is unchanged. [#21114](https://github.com/deckhouse/deckhouse/pull/21114)
  - **[dhctl]** Refactored preflight checks. [#17564](https://github.com/deckhouse/deckhouse/pull/17564)
  - **[dhctl]** Skip tmp lock for exporter and auto-converger. [#18736](https://github.com/deckhouse/deckhouse/pull/18736)
  - **[dhctl]** Switched to using the system certificate pool together with custom registry CAs for registry TLS handling. [#18978](https://github.com/deckhouse/deckhouse/pull/18978)
@@ -289,6 +305,7 @@
  - **[dhctl]** mitigate CVE-2026-33186 [#18625](https://github.com/deckhouse/deckhouse/pull/18625)
  - **[dhctl]** Аix non-strict unmarshalling for metaconfigs. [#18359](https://github.com/deckhouse/deckhouse/pull/18359)
  - **[docs]** Add info about kernel requirement for containerdv2 migration. [#19505](https://github.com/deckhouse/deckhouse/pull/19505)
+ - **[docs]** Change security events docs [#20993](https://github.com/deckhouse/deckhouse/pull/20993)
  - **[docs]** Fix vSphere privilege matrix and describe instructions for setting up environment via vSphere Client [#18725](https://github.com/deckhouse/deckhouse/pull/18725)
  - **[docs]** Updated the `d8 cni-migration` commands in the CNI migration guide to `d8 network cni-migration`. [#18547](https://github.com/deckhouse/deckhouse/pull/18547)
  - **[extended-monitoring]** fix typo in image-availability-exporter template [#18595](https://github.com/deckhouse/deckhouse/pull/18595)
@@ -314,6 +331,8 @@
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Node-specific parameters are excluded from config hash. [#18489](https://github.com/deckhouse/deckhouse/pull/18489)
     All pods of Ingress-NGINX controller will be restarted.
+ - **[ingress-nginx]** The config hashing is fixed. [#21141](https://github.com/deckhouse/deckhouse/pull/21141)
+    All ingress-nginx controllers pod will be restarted.
  - **[istio]** Added CARGO_PROXY to ztunnel image build [#20595](https://github.com/deckhouse/deckhouse/pull/20595)
  - **[istio]** CNI-node readonly root filesystem enable fix [#19920](https://github.com/deckhouse/deckhouse/pull/19920)
     When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
@@ -344,6 +363,8 @@
     Custom edits to the local-path-config ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
  - **[local-path-provisioner]** Update local-path-provisioner to v0.0.36 to pick up the upstream fix for CVE-2026-44543 (HelperPod template injection, CVSS 8.7). [#20456](https://github.com/deckhouse/deckhouse/pull/20456)
     The `local-path-provisioner` Pod is restarted during the update. Custom edits to the `local-path-config` ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
+ - **[log-shipper]** fix daemonset template [#21368](https://github.com/deckhouse/deckhouse/pull/21368)
+    log-shipper
  - **[monitoring-kubernetes]** Resolved port conflict with the runtime-audit-engine module and removed excessive pod privileges [#18868](https://github.com/deckhouse/deckhouse/pull/18868)
  - **[multitenancy-manager]** allow DNS queries for default ProjectTemplate [#18572](https://github.com/deckhouse/deckhouse/pull/18572)
  - **[network-gateway]** Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*) [#19933](https://github.com/deckhouse/deckhouse/pull/19933)
@@ -358,6 +379,7 @@
     An additional service daemonset will be added.
  - **[node-manager]** Add RBAC rules for node-manager [#19720](https://github.com/deckhouse/deckhouse/pull/19720)
  - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19655](https://github.com/deckhouse/deckhouse/pull/19655)
+ - **[node-manager]** Creating or re-applying an already-existing StaticInstance no longer fails address validation. [#21114](https://github.com/deckhouse/deckhouse/pull/21114)
  - **[node-manager]** Fencing controller no longer deletes Node objects for Notify-mode and Static/CloudStatic nodes. [#18218](https://github.com/deckhouse/deckhouse/pull/18218)
  - **[node-manager]** Fix capacity parsing logic for DVPInstanceClass and add test case for DVPSpecWorker [#17935](https://github.com/deckhouse/deckhouse/pull/17935)
     Capacity values (CPU/memory) for DVPInstanceClass are now correctly extracted according to spec shape. Nested `virtualMachine` fields are used and memory quantities like `Gi` are properly parsed.
@@ -401,9 +423,14 @@
  - **[user-authn]** Add "cache" get parameter to prevent stale caches from breaking login page [#18976](https://github.com/deckhouse/deckhouse/pull/18976)
  - **[user-authn]** Disable implicit flow due to security concerns. [#18288](https://github.com/deckhouse/deckhouse/pull/18288)
  - **[user-authn]** Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior. [#20089](https://github.com/deckhouse/deckhouse/pull/20089)
+ - **[user-authn]** Preserve Dex Password fields (notably groups) when resetting password, locking or unlocking a user, so users are no longer locked out after these operations. [#21235](https://github.com/deckhouse/deckhouse/pull/21235)
  - **[user-authn]** Restore ContinueOnConnectorFailure flag handling in Dex configuration [#18219](https://github.com/deckhouse/deckhouse/pull/18219)
  - **[user-authz]** Extend cluster-admin clusterrole  with kubelet-api-admin rights. [#19888](https://github.com/deckhouse/deckhouse/pull/19888)
  - **[user-authz]** Fix multi-tenancy namespace visibility for users without ClusterAuthorizationRules [#18689](https://github.com/deckhouse/deckhouse/pull/18689)
+ - **[user-authz]** Honor CAR-independent RBAC in webhook and permission-browser [#21373](https://github.com/deckhouse/deckhouse/pull/21373)
+    With enableMultiTenancy, effective access is now the union of CAR (within its limitNamespaces/namespaceSelector), AuthorizationRules, and plain RoleBindings/ClusterRoleBindings. Previously the webhook denied requests outside the CAR scope even when RBAC explicitly granted them: such existing bindings for subjects with a CAR silently become effective after the upgrade — review them. The CAR access level still does not apply outside its namespace limits. AccessibleNamespaces reflects the same union.
+ - **[user-authz]** user-authz-webhook now uses the node-local kube-apiserver endpoint for its discovery cache and liveness check, instead of resolving the "kubernetes.default" DNS name. [#21081](https://github.com/deckhouse/deckhouse/pull/21081)
+    Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
 
 ## Chore
 
@@ -437,6 +464,7 @@
  - **[cni-flannel]** open source components versions migrated from werf.inc.yaml to oss.yaml [#18117](https://github.com/deckhouse/deckhouse/pull/18117)
  - **[deckhouse-controller]** Convert MUP CRD v1alpha1 not served. [#18222](https://github.com/deckhouse/deckhouse/pull/18222)
  - **[deckhouse-controller]** Converted dashboard module to external source. [#17941](https://github.com/deckhouse/deckhouse/pull/17941)
+ - **[deckhouse-controller]** Updated addon-operator to v1.21.18. [#21174](https://github.com/deckhouse/deckhouse/pull/21174)
  - **[deckhouse-controller]** Updated version of shell-operator. [#18648](https://github.com/deckhouse/deckhouse/pull/18648)
  - **[deckhouse-controller]** convert MPO CRD v1alpha1 to not served. [#18010](https://github.com/deckhouse/deckhouse/pull/18010)
  - **[deckhouse]** Add settings check. [#19116](https://github.com/deckhouse/deckhouse/pull/19116)

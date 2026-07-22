@@ -33,7 +33,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
-		b.loggerProvider(),
+		dhlog.FromContext(ctx),
 		b.Options.Global.ConfigPaths,
 		b.Options.Registry.ImgBundlePath,
 	)
@@ -45,9 +45,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	metaConfig, err := config.ParseConfig(
 		ctx,
 		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		&b.Options.Global,
 	)
 	if err != nil {

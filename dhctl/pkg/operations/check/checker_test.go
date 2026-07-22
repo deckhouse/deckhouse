@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
@@ -512,7 +513,7 @@ provider:
 	for _, params := range tests {
 		tst := createTestCheckClusterConfig(t, params)
 		t.Run(tst.testName, func(t *testing.T) {
-			syncStatus, err := tst.checker.checkConfiguration(context.TODO(), tst.kubeCl, tst.commanderMetaConfig)
+			syncStatus, err := tst.checker.checkConfiguration(t.Context(), tst.kubeCl, tst.commanderMetaConfig)
 
 			if tst.isError {
 				require.Error(t, err)
@@ -563,7 +564,20 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	require.NotEmpty(t, p.expectedSyncStatus, p.testName)
 	require.NotEmpty(t, p.clusterType, p.testName)
 
-	kubeCl := client.NewFakeKubernetesClient()
+	// Cloud-cluster parseConfigFromCluster lists NodeGroups / InstanceClasses
+	// via the dynamic client (CloudProviderVarsFromCluster). The fake dynamic
+	// client panics on LIST for any GVR whose list kind is not registered, so
+	// register the ones the Yandex cloud path touches.
+	kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}:            "NodeGroupList",
+		{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+		config.ModuleConfigGVR: "ModuleConfigList",
+	})
+
+	// Cloud-cluster parseConfigFromCluster fetches d8-system/deckhouse-registry
+	// unconditionally; seed it so the retry-loop doesn't trip the 600 s
+	// go-test timeout.
+	testCreateDeckhouseRegistrySecret(t, kubeCl)
 
 	commanderMetaConfig := &config.MetaConfig{}
 	commanderMetaConfig.ClusterType = p.clusterType
@@ -582,7 +596,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 		})
 	}
 
-	_, err := config.DoByClusterType(context.TODO(), commanderMetaConfig, &testCheckSpecificClusterFiller{
+	_, err := config.DoByClusterType(t.Context(), commanderMetaConfig, &testCheckSpecificClusterFiller{
 		params: p,
 		t:      t,
 		kubeCl: kubeCl,
@@ -593,7 +607,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	require.NoError(t, err, p.testName)
 
 	opts := options.New()
-	opts.Global.NeedDownload = false
+	opts.Global.EnsureCandiAvailable = false
 	options.SetPaths("/", &opts.Global)
 
 	return &testCheckClusterConfig{
@@ -605,7 +619,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 			CommanderMode: true,
 			IsDebug:       false,
 			CommanderUUID: commanderUUID,
-			Options: opts,
+			Options:       opts,
 		}),
 	}
 }
@@ -635,7 +649,26 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesClient) {
+	t.Helper()
+
+	secret := &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse-registry",
+			Namespace: "d8-system",
+		},
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`),
+			"imagesRegistry":    []byte("registry.example.com/deckhouse"),
+			"scheme":            []byte("HTTPS"),
+		},
+	}
+
+	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
@@ -650,7 +683,7 @@ func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name 
 		Data: data,
 	}
 
-	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(context.TODO(), cm, metav1.CreateOptions{})
+	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), cm, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
