@@ -2,7 +2,7 @@
   rules:
   - alert: CertmanagerCertificateExpiredSoon
     expr: |
-     max by (name, exported_namespace) ((certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 1209600) and certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} != 0)
+     max by (name, exported_namespace) ((certmanager_certificate_expiration_timestamp_seconds{source="deckhouse", job="cert-manager"} - time() < 1209600) and certmanager_certificate_expiration_timestamp_seconds{source="deckhouse", job="cert-manager"} != 0)
     for: 1h
     labels:
       severity_level: "4"
@@ -23,9 +23,9 @@
   - alert: CertmanagerCertificateExpired
     expr: |
       max by (name, exported_namespace) (
-        (certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 0)
+        (certmanager_certificate_expiration_timestamp_seconds{source="deckhouse", job="cert-manager"} - time() < 0)
         and
-        (count_over_time(certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"}[5m]) > 5)
+        (count_over_time(certmanager_certificate_expiration_timestamp_seconds{source="deckhouse", job="cert-manager"}[5m]) > 5)
       )
     for: 1h
     labels:
@@ -47,7 +47,7 @@
     expr: |
       sum by (scheme, host, path, status) (
         rate(
-          certmanager_http_acme_client_request_count{status!~"2[0-9][0-9]"}[5m]
+          certmanager_http_acme_client_request_count{source="deckhouse", status!~"2[0-9][0-9]"}[5m]
         )
       ) > 0
     for: 30m
@@ -68,7 +68,7 @@
         ```
   - alert: CertmanagerCertificateChallengePending
     expr: |
-      certmanager_certificate_challenge_status{job="cert-manager", status="pending"} == 1
+      certmanager_certificate_challenge_status{source="deckhouse", job="cert-manager", status="pending"} == 1
     for: 10m
     labels:
       severity_level: "6"
@@ -102,7 +102,7 @@
 
   - alert: CertmanagerCertificateChallengePending
     expr: |
-      certmanager_certificate_challenge_status{job="cert-manager", status="pending"} == 1
+      certmanager_certificate_challenge_status{source="deckhouse", job="cert-manager", status="pending"} == 1
     for: 1h
     labels:
       severity_level: "4"
@@ -141,7 +141,7 @@
 
   - alert: CertmanagerCertificateChallengeStuck
     expr: |
-      certmanager_certificate_challenge_status{job="cert-manager", status=~"invalid|expired|errored"} == 1
+      certmanager_certificate_challenge_status{source="deckhouse", job="cert-manager", status=~"invalid|expired|errored"} == 1
     for: 15m
     labels:
       severity_level: "4"

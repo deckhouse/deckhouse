@@ -814,8 +814,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
 					Expect(rule.Exists()).Should(BeTrue())
-					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{job=~"cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
-					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
+					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{source="deckhouse", job=~"cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
+					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{source="deckhouse", job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
 				})
 			})
 
@@ -835,8 +835,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
 					Expect(rule.Exists()).Should(BeTrue())
-					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{job=~"cluster-autoscaler|cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
-					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 1) or absent(up{job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
+					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{source="deckhouse", job=~"cluster-autoscaler|cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
+					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{source="deckhouse", job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 1) or absent(up{source="deckhouse", job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
 				})
 			})
 		})

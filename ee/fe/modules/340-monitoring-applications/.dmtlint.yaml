@@ -2,3 +2,19 @@ linters-settings:
   module:
     oss:
       disable: true
+  templates:
+    source-label:
+      # Metrics scraped from the third-party applications this module monitors
+      # (NATS, RabbitMQ, Elasticsearch, PHP-FPM, a user's own Prometheus, etc.)
+      # via the generic base-service-monitor.yaml. They come from the monitored
+      # app itself, not from Deckhouse, so they never carry source="deckhouse" —
+      # unlike, e.g., kube_statefulset_status_replicas in rabbitmq.yaml, which is
+      # a kube-state-metrics metric and is labeled normally.
+      allowed-metrics:
+        - "up"
+        - "gnatsd_*"
+        - "nats_*"
+        - "rabbitmq_*"
+        - "elasticsearch_*"
+        - "phpfpm_*"
+        - "prometheus_*"

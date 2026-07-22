@@ -10,17 +10,17 @@
   {{- end -}}
 {{- end -}}
 {{- $clusterAutoscalerJobsRegex := join "|" $clusterAutoscalerJobs -}}
-{{- $clusterAutoscalerTargetDownExpr := printf `max by (job) (up{job=~"%s", namespace="d8-cloud-instance-manager"} == 0)` $clusterAutoscalerJobsRegex -}}
+{{- $clusterAutoscalerTargetDownExpr := printf `max by (job) (up{source="deckhouse", job=~"%s", namespace="d8-cloud-instance-manager"} == 0)` $clusterAutoscalerJobsRegex -}}
 {{- $clusterAutoscalerTargetAbsentExprs := list -}}
 {{- range $job := $clusterAutoscalerJobs -}}
-  {{- $clusterAutoscalerTargetAbsentExprs = append $clusterAutoscalerTargetAbsentExprs (printf `absent(up{job="%s", namespace="d8-cloud-instance-manager"} == 1)` $job) -}}
+  {{- $clusterAutoscalerTargetAbsentExprs = append $clusterAutoscalerTargetAbsentExprs (printf `absent(up{source="deckhouse", job="%s", namespace="d8-cloud-instance-manager"} == 1)` $job) -}}
 {{- end -}}
 {{- $clusterAutoscalerTargetAbsentExpr := join " or " $clusterAutoscalerTargetAbsentExprs -}}
 
 - name: d8.cluster-autoscaler.availability
   rules:
   - alert: D8ClusterAutoscalerManagerPodIsNotReady
-    expr: min by (pod, namespace) (kube_pod_status_ready{condition="false", namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}) > 0
+    expr: min by (pod, namespace) (kube_pod_status_ready{source="deckhouse", condition="false", namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}) > 0
     for: 10m
     labels:
       severity_level: "8"
@@ -42,7 +42,7 @@
         ```
 
   - alert: D8ClusterAutoscalerPodIsNotRunning
-    expr: absent(kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase="Running",pod=~"cluster-autoscaler-.*"})
+    expr: absent(kube_pod_status_phase{source="deckhouse", namespace="d8-cloud-instance-manager",phase="Running",pod=~"cluster-autoscaler-.*"})
     for: 10m
     labels:
       severity_level: "8"
@@ -124,7 +124,7 @@
 - name: d8.cluster-autoscaler.malfunctioning
   rules:
   - alert: D8ClusterAutoscalerPodIsRestartingTooOften
-    expr: max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}) > 5
+    expr: max by (pod) (increase(kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}[1h]) and kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}) > 5
     labels:
       severity_level: "9"
       tier: cluster
@@ -150,7 +150,7 @@
         ```
 
   - alert: D8ClusterAutoscalerTooManyErrors
-    expr: sum by(instance) (increase(cluster_autoscaler_errors_total[20m]) > 5)
+    expr: sum by(instance) (increase(cluster_autoscaler_errors_total{source="deckhouse"}[20m]) > 5)
     for: 5m
     labels:
       severity_level: "8"

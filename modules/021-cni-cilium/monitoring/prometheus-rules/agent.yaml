@@ -4,12 +4,12 @@
     # Select all current `cilium_unreachable_health_endpoints` if the condition is met:
     # no changes in pod states for the last N minutes (number of pods including changes - number of pods N minutes ago)
     expr: |
-      max by (namespace, pod) (cilium_unreachable_health_endpoints) > 0
+      max by (namespace, pod) (cilium_unreachable_health_endpoints{source="deckhouse"}) > 0
       and on()
       (
         (
-          count(changes(kube_pod_info{created_by_name="agent",namespace="d8-cni-cilium"}[2m])) -
-          count(kube_pod_info{created_by_name="agent",namespace="d8-cni-cilium"} offset 2m)
+          count(changes(kube_pod_info{source="deckhouse", created_by_name="agent",namespace="d8-cni-cilium"}[2m])) -
+          count(kube_pod_info{source="deckhouse", created_by_name="agent",namespace="d8-cni-cilium"} offset 2m)
         ) == 0
       )
     for: 5m
@@ -37,7 +37,7 @@
         d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
         ```
   - alert: CiliumAgentMetricNotFound
-    expr: (count by (namespace,pod) (cilium_unreachable_health_endpoints) OR count by (namespace,pod) (cilium_endpoint_state)) != 1
+    expr: (count by (namespace,pod) (cilium_unreachable_health_endpoints{source="deckhouse"}) OR count by (namespace,pod) (cilium_endpoint_state{source="deckhouse"})) != 1
     for: 5m
     labels:
       d8_module: cni-cilium
@@ -69,7 +69,7 @@
 
         > Note that the absence of metrics can indirectly indicate that new pods can't be created on the node due to connectivity issues with the agent.
   - alert: CiliumAgentEndpointsNotReady
-    expr: sum by (namespace, pod) (cilium_endpoint_state{endpoint_state="ready"} / cilium_endpoint_state) < 0.5
+    expr: sum by (namespace, pod) (cilium_endpoint_state{source="deckhouse", endpoint_state="ready"} / cilium_endpoint_state{source="deckhouse"}) < 0.5
     for: 5m
     labels:
       d8_module: cni-cilium
@@ -89,7 +89,7 @@
         d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
         ```
   - alert: CiliumAgentMapPressureCritical
-    expr: sum by (namespace, pod, map_name) (cilium_bpf_map_pressure > 0.9)
+    expr: sum by (namespace, pod, map_name) (cilium_bpf_map_pressure{source="deckhouse"} > 0.9)
     for: 5m
     labels:
       d8_module: cni-cilium
@@ -108,7 +108,7 @@
         
         Check with the vendor for potential remediation steps.
   - alert: CiliumAgentPolicyImportErrors
-    expr: sum by (namespace, pod) (rate(cilium_policy_import_errors_total[2m]) > 0)
+    expr: sum by (namespace, pod) (rate(cilium_policy_import_errors_total{source="deckhouse"}[2m]) > 0)
     for: 5m
     labels:
       d8_module: cni-cilium

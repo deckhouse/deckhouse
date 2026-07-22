@@ -2,7 +2,7 @@
   rules:
   - alert: ModuleConfigDeprecated
     expr: |
-      max(d8_mc_deprecated{module="documentation"}) > 0
+      max(d8_mc_deprecated{source="deckhouse", module="documentation"}) > 0
     labels:
       severity_level: "9"
       tier: cluster
