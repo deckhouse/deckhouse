@@ -22,8 +22,6 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 Для упрощения схемы приняты следующие допущения:
 
 * На схеме показано, что контейнеры разных подов взаимодействуют друг с другом напрямую. Фактически они взаимодействуют через соответствующие сервисы Kubernetes (внутренние балансировщики). Названия сервисов не указываются, если они очевидны из контекста. В остальных случаях название сервиса указано над стрелкой.
-* Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
-* На схеме изображены только основные контейнеры каждого компонента.
 {% endalert %}
 
 Архитектура модуля [`managed-postgres`](/modules/managed-postgres/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображена на следующей диаграмме:
@@ -41,7 +39,7 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 
    * согласование состояния кастомных ресурсов [PostgresSnapshot](/modules/managed-postgres/stable/cr.html#postgressnapshot). Ресурс PostgresSnapshot предназначен для [резервного копирования и восстановления инстансов PostgreSQL](https://deckhouse.ru/modules/managed-postgres/stable/snapshots.html);
 
-   * валидация кастомных ресурсов Postgres и PostgresUser, а также мутация кастомных ресурсов Postgres с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
+   * валидация кастомных ресурсов Postgres и PostgresClass, мутация кастомных ресурсов Postgres с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
    В качестве бэкенда Managed-postgres-operator использует кастомные ресурсы из API-группы `cnpg.internal.managed.deckhouse.io`, управляемые компонентом d8-cnpg-operator.
  
@@ -66,7 +64,7 @@ description: Архитектура модуля managed-postgres в Deckhouse K
    Ниже описаны компоненты для режима репликации [ConsistencyAndAvailability](/modules/managed-postgres/stable/user_guide.html#consistencyandavailability-3-%D0%B8%D0%BD%D1%81%D1%82%D0%B0%D0%BD%D1%81%D0%B0-primary--%D0%BE%D0%B4%D0%BD%D0%B0-%D1%81%D0%B8%D0%BD%D1%85%D1%80%D0%BE%D0%BD%D0%BD%D0%B0%D1%8F--%D0%BE%D0%B4%D0%BD%D0%B0-%D0%B0%D1%81%D0%B8%D0%BD%D1%85%D1%80%D0%BE%D0%BD%D0%BD%D0%B0%D1%8F-%D1%80%D0%B5%D0%BF%D0%BB%D0%B8%D0%BA%D0%B0). Два других режима репликации по составу компонентов являются частным случаем режима ConsistencyAndAvailability.
    {% endalert %}
 
-1. **d8ms-pg-\<instance name>\-1-initdb** (Job) — задание, создаваемое компонентом d8-cnpg-operator, которое запускает SQL-запросы для завершения инициализации primary инстанса PostgreSQL. Задание использует кастомный ресурс Cluster для настройки инстанса.
+1. **d8ms-pg-\<instance name>\-1-initdb** (Job) — задание, создаваемое компонентом d8-cnpg-operator, которое запускает SQL-запросы для завершения инициализации primary инстанса PostgreSQL.
 
    Состоит из следующих контейнеров:
 
@@ -92,21 +90,27 @@ description: Архитектура модуля managed-postgres в Deckhouse K
    Состоит из следующих контейнеров:
 
    * **bootstrap-controller** — init-контейнер, выполняющий установку исполняемого файла `manager` компонента D8-cnpg-operator;
-   * **postgres** — основной контейнер, в котором запускается исполняемый файл `manager`, стартующий процессы PostgreSQL, а также следящий за изменениями кастомных ресурсов Cluster, Database, Publication, Subscription.
+   * **postgres** — основной контейнер, в котором запускается исполняемый файл `manager`, который выполняет следущие операции:
+   
+     * старт процессов PostgreSQL;
+     * управление жизненным циклом экземпляра PostreSQL, включая мониторинг состояния сервера, обработку остановки и перезапуска сервера;
+     * участие в процедурах `switchover`/`failover`. `Switchover` — это плановый, контролируемый процесс, при котором активный первичный инстанс (primary) намеренно выводится из эксплуатации, а назначенный резервный инстанс (реплика) повышается до роли первичного. Его главная цель — обеспечить нулевую потерю данных: перед тем как передать роль реплике, мы ждём, пока все текущие транзакции реплицируются. `Failover` — это аварийная ситуация: первичный инстанс вышел из строя, стал недоступен или его нельзя безопасно использовать для записи. В этом случае назначенный резервный инстанс (реплика) повышается до роли первичного, при этом возможна потеря данных;
+     * взаимодействие с оператором и публикация состояния экземпляра;
+     * отслеживание изменений кастомных ресурсов Cluster, Database, Publication, Subscription.
 
 1. **d8ms-pg-\<instance name>\-2** — первая реплика PostgreSQL. Создается компонентом d8-cnpg-operator.
 
    Состоит из следующих контейнеров:
 
    * **bootstrap-controller** — init-контейнер, выполняющий установку исполняемого файла `manager` компонента D8-cnpg-operator;
-   * **postgres** — основной контейнер, в котором запускается исполняемый файл `manager`, стартующий процессы PostgreSQL, а также следящий за изменениями кастомных ресурсов Cluster, Database, Publication, Subscription.
+   * **postgres** — основной контейнер, в котором запускается исполняемый файл `manager`, выполняющий операции, описанные для primary инстанса PostgreSQL.
 
 1. **d8ms-pg-\<instance name>\-3** — вторая реплика PostgreSQL. Создается компонентом d8-cnpg-operator.
 
    Состоит из следующих контейнеров:
 
    * **bootstrap-controller** — init-контейнер, выполняющий установку исполняемого файла `manager` компонента D8-cnpg-operator;
-   * **postgres** — основной контейнер, в котором запускается исполняемый файл `manager`, стартующий процессы PostgreSQL, а также следящий за изменениями кастомных ресурсов Cluster, Database, Publication, Subscription.
+   * **postgres** — основной контейнер, в котором запускается исполняемый файл `manager`, выполняющий операции, описанные для primary инстанса PostgreSQL.
 
 ## Взаимодействия модуля
 
@@ -121,9 +125,11 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 
 1. **Kube-apiserver**:
 
-   - отправляет запросы на валидацию и мутацию кастомных ресурсов Postgres и PostgresUser;
+   - отправляет запросы на валидацию кастомных ресурсов Postgres и PostgresClass, мутацию кастомных ресурсов Postgres;
    - отправляет запросы на валидацию и мутацию кастомных ресурсов из `cnpg.internal.managed.deckhouse.io` API-группы.
 
 1. **Prometheus-main** — собирает метрики инстансов кластера PostgreSQL.
+
+1. **opAgent** — собирает метрики инстансов кластера PostgreSQL и отправляет их в prometheus-main.
 
 1. **Пользовательские приложения** — отправляют запросы к инстансам кластера PostgreSQL. Запросы на запись отправляются в primary инстанс через сервис Kubernetes **d8ms-pg-\<instance name>\-rw**. Primary инстанс реплицирует транзакции в реплики.  Запросы на чтение балансируются на инстансы PostgreSQL через сервисы Kubernetes **d8ms-pg-\<instance name>\-r** или **d8ms-pg-\<instance name>\-ro**.
