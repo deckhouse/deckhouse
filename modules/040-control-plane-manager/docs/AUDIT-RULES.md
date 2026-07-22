@@ -417,6 +417,7 @@ namespaces:
   - d8-keepalived
   - d8-local-path-provisioner
   - d8-metallb
+  - d8-monitoring
   - d8-multitenancy-manager
   - d8-network-gateway
   - d8-okmeter
@@ -884,6 +885,7 @@ rules:
       - d8-keepalived
       - d8-local-path-provisioner
       - d8-metallb
+      - d8-monitoring
       - d8-multitenancy-manager
       - d8-network-gateway
       - d8-okmeter
