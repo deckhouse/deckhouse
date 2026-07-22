@@ -1,0 +1,198 @@
+# Reusable snippets and hidden job bases for build jobs (shell executor).
+
+.scripts:
+  docker_config_isolation: |
+    set -euo pipefail
+    DOCKER_CONFIG="$(mktemp -d)"
+    export DOCKER_CONFIG
+    trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
+
+  read_werf_version: |
+    set -euo pipefail
+    WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+    if [[ ! -f "${WERF_ENVS_FILE}" ]]; then
+      echo "File ${WERF_ENVS_FILE} not found" >&2
+      exit 1
+    fi
+    WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "${WERF_ENVS_FILE}" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+    if [[ ! "${WERF_VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      echo "Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected vX.Y.Z" >&2
+      exit 1
+    fi
+    export WERF_VERSION
+    echo "Detected WERF_VERSION=${WERF_VERSION}"
+
+  install_werf: |
+    set -euo pipefail
+    if [[ -z "${WERF_VERSION:-}" ]]; then
+      echo "WERF_VERSION is not set" >&2
+      exit 1
+    fi
+    MINIMAL_DDK_VERSION="v2.62.1"
+    if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+      minimal_ddk_major=${BASH_REMATCH[1]}
+      minimal_ddk_minor=${BASH_REMATCH[2]}
+      minimal_ddk_patch=${BASH_REMATCH[3]}
+    fi
+    if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+      werf_current_major=${BASH_REMATCH[1]}
+      werf_current_minor=${BASH_REMATCH[2]}
+      werf_current_patch=${BASH_REMATCH[3]}
+    fi
+    if (( werf_current_major > minimal_ddk_major )); then
+      werf_fallback=false
+    elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+      werf_fallback=false
+    elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+      werf_fallback=false
+    else
+      werf_fallback=true
+    fi
+    WERF_PATH="${HOME}/.werf-dk/${WERF_VERSION}-dk"
+    mkdir -p "${WERF_PATH}"
+    export PATH="${WERF_PATH}:${PATH}"
+    CACHED_VERSION="$("${WERF_PATH}/werf" version 2>/dev/null | tr -d '\n' || true)"
+    if [[ "${WERF_VERSION}-dk" != "${CACHED_VERSION}" && "${werf_fallback}" == "false" ]]; then
+      echo "Current werf is ${CACHED_VERSION:-none}, downloading ${WERF_VERSION}-dk"
+      curl -Lsfo "${WERF_PATH}/werf" "https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf"
+      chmod +x "${WERF_PATH}/werf"
+    elif [[ "${WERF_VERSION}-dk" != "${CACHED_VERSION}" && "${werf_fallback}" == "true" ]]; then
+      echo "Current werf is ${CACHED_VERSION:-none}, fallback to ${WERF_VERSION}"
+      curl -Lsfo "${WERF_PATH}/werf" "https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf"
+      chmod +x "${WERF_PATH}/werf"
+    else
+      echo "Current werf is ${CACHED_VERSION}, skipping download"
+    fi
+
+  login_dev_registry: |
+    set -euo pipefail
+    if [[ -n "${DECKHOUSE_DEV_REGISTRY_HOST:-}" ]]; then
+      echo "${DECKHOUSE_DEV_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_DEV_REGISTRY_HOST}" \
+        --username "${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin
+    fi
+
+  login_stage_registry: |
+    set -euo pipefail
+    if [[ -n "${DECKHOUSE_REGISTRY_STAGE_HOST:-}" ]]; then
+      echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
+        --username "${DECKHOUSE_REGISTRY_STAGE_USER}" --password-stdin
+    fi
+
+  setup_ssh: |
+    set -euo pipefail
+    eval "$(ssh-agent -s)"
+    if [[ -n "${SOURCE_REPO_SSH_KEY:-}" ]]; then
+      printf '%s\n' "${SOURCE_REPO_SSH_KEY}" | tr -d '\r' | ssh-add -
+    fi
+    if [[ -n "${SVACE_ANALYZE_SSH_PRIVATE_KEY:-}" ]]; then
+      printf '%s\n' "${SVACE_ANALYZE_SSH_PRIVATE_KEY}" | tr -d '\r' | ssh-add - || true
+    fi
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    touch ~/.ssh/known_hosts
+    if [[ -n "${SOURCE_REPO_GIT:-}" ]]; then
+      HOST="$(grep -oE '@[^/:]+' <<<"${SOURCE_REPO_GIT}" | head -1 | tr -d '@')"
+      if [[ -n "${HOST}" ]]; then
+        ssh-keyscan -H "${HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+      fi
+    fi
+    if [[ -n "${SVACE_ANALYZE_HOST:-}" ]]; then
+      ssh-keyscan -H "${SVACE_ANALYZE_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+    fi
+
+  detect_build_mode: |
+    set -euo pipefail
+    if [[ -n "${CI_COMMIT_TAG:-}" ]]; then
+      export BUILD_MODE=release
+    elif [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+      export BUILD_MODE=dev
+    elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+      export BUILD_MODE=pre-release
+    else
+      export BUILD_MODE=main
+    fi
+    echo "BUILD_MODE=${BUILD_MODE}"
+
+.build_base:
+  stage: build
+  tags:
+    - vm-intteam-cloud-d8-ssdlc-runner
+  needs: []
+  timeout: 24h
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+    GIT_STRATEGY: fetch
+    GIT_DEPTH: "0"
+    REGISTRY_PATH: sys/deckhouse-oss
+    WERF_FINAL_IMAGES_ONLY: "true"
+    WERF_LOG_TERMINAL_WIDTH: "200"
+    WERF_LOG_TIME: "true"
+    WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+    WERF_TELEMETRY: "1"
+    WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
+    DOCKER_BUILDKIT: "1"
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    DECKHOUSE_DEV_REGISTRY_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_DEV_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_STAGE_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_REGISTRY_STAGE_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_STAGE_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_STAGE_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    SOURCE_REPO_GIT:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret/SOURCE_REPO_GIT@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    CLOUD_PROVIDERS_SOURCE_REPO:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret/CLOUD_PROVIDERS_SOURCE_REPO@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    OBSERVABILITY_SOURCE_REPO:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret/OBSERVABILITY_SOURCE_REPO@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_PRIVATE_REPO:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret/DECKHOUSE_PRIVATE_REPO@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    SOURCE_REPO_SSH_KEY:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret/SOURCE_REPO_SSH_KEY@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    SVACE_ANALYZE_SSH_PRIVATE_KEY:
+      vault: 24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI/SVACE_ANALYZE_SSH_PRIVATE_KEY@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    SVACE_ANALYZE_HOST:
+      vault: 24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI/SVACE_ANALYZE_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - !reference [.scripts, docker_config_isolation]
+    - !reference [.scripts, read_werf_version]
+    - !reference [.scripts, install_werf]
+    - !reference [.scripts, detect_build_mode]
+    - !reference [.scripts, login_dev_registry]
+    - !reference [.scripts, login_stage_registry]
+    - !reference [.scripts, setup_ssh]

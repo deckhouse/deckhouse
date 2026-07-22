@@ -36,3 +36,19 @@ workflow:
 .rules:on_schedule_cve_scans:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_CVE_SCANS_ENABLE == "true"
+
+# Manual edition builds (non-tag contexts).
+.rules:on_main_manual:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+
+.rules:on_merge_request_manual:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+
+.rules:on_release_branch_manual:
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
+      when: manual
