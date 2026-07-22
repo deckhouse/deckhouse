@@ -100,6 +100,10 @@ type OpenAPIV3Schema struct {
 	// web console UI: fields with lower values are shown first.
 	// +optional
 	XUIOrder *int64 `json:"x-deckhouse-ui-order,omitempty"`
+
+	// x-deckhouse-ui-validation-description overrides the validation error.
+	// +optional
+	XUIValidationDescription string `json:"x-deckhouse-ui-validation-description,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema
