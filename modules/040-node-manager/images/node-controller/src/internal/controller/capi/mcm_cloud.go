@@ -253,8 +253,11 @@ func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, md
 	if err != nil {
 		return 0, fmt.Errorf("read spec.replicas of MCM MachineDeployment %s: %w", mdName, err)
 	}
+	// Helm never rendered spec.replicas (the autoscaler owned it), so a pre-migration
+	// MachineDeployment can exist without the field. Treat that as scale-from-zero
+	// instead of erroring, otherwise the NodeGroup reconcile deadlocks on adoption.
 	if !found {
-		return 0, fmt.Errorf("MCM MachineDeployment %s has no spec.replicas", mdName)
+		current = 0
 	}
 	return int64(calculateReplicas(int32(current), minReplicas, maxReplicas)), nil
 }
