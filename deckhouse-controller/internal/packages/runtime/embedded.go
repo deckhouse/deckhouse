@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/pkg/app"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -89,6 +90,12 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 // managers, and stores it in the module map. When PackageSystemEnabled is
 // true the modules are also registered in the scheduler with AddNode.
 // Dummy modules (listed in dummyModules) are explicitly skipped.
+//
+// A single embedded module rejected by the scheduler (e.g. a dependency
+// cycle in its constraints) is logged and skipped rather than aborting the
+// whole load: embedded modules ship with the release binary, so one bad
+// module must not prevent the controller from starting and every other
+// module from loading and running normally.
 func (r *Runtime) loadEmbedded(ctx context.Context) error {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbedded")
 	defer span.End()
@@ -150,10 +157,20 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 				// Optimistically register before AddNode so a successful
 				// schedule can resolve it; if AddNode rejects the addition
 				// (dependency cycle), roll back the map entry.
+				//
+				// Unlike downloaded modules (see loadModule), a rejected
+				// embedded module is not a user error: it ships with the
+				// release binary and a single bad module must not abort the
+				// whole controller startup. Log and skip it instead of
+				// failing the errgroup, so every other embedded module keeps
+				// loading; the skipped module simply behaves like an entry
+				// in dummyModules for this run (not registered, not tracked).
 				if err = r.scheduler.AddNode(module); err != nil {
 					delete(r.modules, module.GetName())
 					r.mu.Unlock()
-					return fmt.Errorf("add node: %w", err)
+					r.logger.Error("skip embedded module: add node rejected",
+						slog.String("name", module.GetName()), log.Err(err))
+					return nil
 				}
 			}
 			r.mu.Unlock()

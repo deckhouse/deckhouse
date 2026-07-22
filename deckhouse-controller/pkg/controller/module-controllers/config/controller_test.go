@@ -46,6 +46,11 @@ type ControllerTestSuite struct {
 
 	r *reconciler
 
+	// handlerEventCh receives every config.Event that r.handler.HandleEvent
+	// dispatches to addon-operator, so tests can assert whether the v1 path
+	// was (not) taken. See drainHandlerEvents.
+	handlerEventCh chan config.Event
+
 	compareGolden bool
 }
 
@@ -99,11 +104,13 @@ func (suite *ControllerTestSuite) setupTestControllerRaw(raw string) {
 }
 
 func (suite *ControllerTestSuite) buildReconciler() {
+	handler, eventCh := newMockHandler()
+
 	rec := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               suite.Client(),
 		logger:               log.NewNop(),
-		handler:              newMockHandler(),
+		handler:              handler,
 		conversionsStore:     conversionsStore,
 		moduleManager:        newMockModuleManager(),
 		edition:              &d8edition.Edition{Name: "fe", Bundle: "Default"},
@@ -118,6 +125,24 @@ func (suite *ControllerTestSuite) buildReconciler() {
 	rec.init.Add(1)
 	rec.init.Done()
 	suite.r = rec
+	suite.handlerEventCh = eventCh
+}
+
+// drainHandlerEvents non-blockingly drains suite.handlerEventCh and returns how
+// many addon-operator events were dispatched via handler.HandleEvent since the
+// last drain. Used to prove the v1/v2 routing fork is exclusive (G2): the v2
+// path must never also emit an addon-operator event, and the v1 path must
+// always emit exactly one.
+func (suite *ControllerTestSuite) drainHandlerEvents() int {
+	count := 0
+	for {
+		select {
+		case <-suite.handlerEventCh:
+			count++
+		default:
+			return count
+		}
+	}
 }
 
 // clearModuleConditionTimes drops timestamp fields from Module conditions to keep
@@ -137,8 +162,13 @@ func clearModuleConditionTimes(obj client.Object) {
 // is enabled and the module is tracked by the package runtime, handleModuleConfig
 // routes settings via UpdateModulesSettings instead of the addon-operator
 // HandleEvent. Conversely, when the flag is off it always uses the v1 path.
+//
+// Each sub-test asserts both sides of the fork (G2): the v2 path must call
+// UpdateModulesSettings and must NOT dispatch an addon-operator event, and the
+// v1 path must dispatch exactly one addon-operator event and must NOT call
+// UpdateModulesSettings. A regression that dispatched both would fail here.
 func (suite *ControllerTestSuite) TestV2ModuleConfigRouting() {
-	suite.Run("v2 path: settings routed to UpdateModulesSettings", func() {
+	suite.Run("v2 path: settings routed to UpdateModulesSettings, no addon-operator event", func() {
 		suite.setupTestController("enable-module.yaml")
 
 		// Override with v2-aware mock
@@ -155,6 +185,9 @@ func (suite *ControllerTestSuite) TestV2ModuleConfigRouting() {
 		assert.Equal(suite.T(), "test-module", mockPkg.settingsCalls[0].name)
 		assert.Equal(suite.T(), config.Spec.Version, mockPkg.settingsCalls[0].settingsVersion)
 		assert.Equal(suite.T(), config.Spec.Enabled, mockPkg.settingsCalls[0].enabled)
+
+		// The v2 path must not also dispatch an addon-operator event.
+		assert.Equal(suite.T(), 0, suite.drainHandlerEvents())
 	})
 
 	suite.Run("v1 path: flag off falls back to addon-operator", func() {
@@ -170,6 +203,8 @@ func (suite *ControllerTestSuite) TestV2ModuleConfigRouting() {
 
 		// Verify UpdateModulesSettings was NOT called (v1 path)
 		assert.Empty(suite.T(), mockPkg.settingsCalls)
+		// The v1 path must dispatch exactly one addon-operator event.
+		assert.Equal(suite.T(), 1, suite.drainHandlerEvents())
 	})
 
 	suite.Run("v1 path: unknown module always goes to addon-operator", func() {
@@ -185,7 +220,121 @@ func (suite *ControllerTestSuite) TestV2ModuleConfigRouting() {
 
 		// Verify UpdateModulesSettings was NOT called (unknown to runtime)
 		assert.Empty(suite.T(), mockPkg.settingsCalls)
+		// The v1 path must dispatch exactly one addon-operator event.
+		assert.Equal(suite.T(), 1, suite.drainHandlerEvents())
 	})
+
+	suite.Run("v2 path: global always routes through the runtime even when untracked", func() {
+		suite.setupTestController("global-config.yaml")
+
+		// HasModule returns false: global is never tracked in r.modules, only
+		// the moduleConfig.Name == moduleGlobal check should route it to v2.
+		mockPkg := newMockPackageRuntime(false)
+		suite.r.packageRuntime = mockPkg
+		suite.r.packageSystemEnabled = true
+
+		config := suite.moduleConfig("global")
+		_, err := suite.r.handleModuleConfig(context.TODO(), config)
+		require.NoError(suite.T(), err)
+
+		require.Len(suite.T(), mockPkg.settingsCalls, 1)
+		assert.Equal(suite.T(), "global", mockPkg.settingsCalls[0].name)
+		assert.Equal(suite.T(), 0, suite.drainHandlerEvents())
+	})
+}
+
+// TestDeleteModuleConfigRouting mirrors TestV2ModuleConfigRouting for the
+// delete path (deleteModuleConfig), proving the same v1/v2 fork holds on
+// deletion: the v2 path resets settings via UpdateModulesSettings and must
+// not dispatch an addon-operator delete event, while the v1 path (flag off,
+// or an untracked non-global module) dispatches exactly one delete event and
+// never calls UpdateModulesSettings.
+func (suite *ControllerTestSuite) TestDeleteModuleConfigRouting() {
+	suite.Run("v2 path: settings reset via UpdateModulesSettings, no addon-operator event", func() {
+		suite.setupTestControllerRaw(deleteModuleConfigRaw("test-module"))
+
+		mockPkg := newMockPackageRuntime(true) // HasModule returns true
+		suite.r.packageRuntime = mockPkg
+		suite.r.packageSystemEnabled = true
+
+		config := suite.moduleConfig("test-module")
+		_, err := suite.r.deleteModuleConfig(context.TODO(), config)
+		require.NoError(suite.T(), err)
+
+		require.Len(suite.T(), mockPkg.settingsCalls, 1)
+		assert.Equal(suite.T(), "test-module", mockPkg.settingsCalls[0].name)
+		assert.Equal(suite.T(), 0, mockPkg.settingsCalls[0].settingsVersion)
+		// enabled must be explicitly false (not nil) so the runtime's view
+		// stays in sync with disableModule, instead of falling back to the
+		// bundle default (see controller.go deleteModuleConfig).
+		require.NotNil(suite.T(), mockPkg.settingsCalls[0].enabled)
+		assert.False(suite.T(), *mockPkg.settingsCalls[0].enabled)
+
+		assert.Equal(suite.T(), 0, suite.drainHandlerEvents())
+	})
+
+	suite.Run("v1 path: flag off falls back to addon-operator", func() {
+		suite.setupTestControllerRaw(deleteModuleConfigRaw("test-module"))
+
+		mockPkg := newMockPackageRuntime(true) // HasModule returns true
+		suite.r.packageRuntime = mockPkg
+		suite.r.packageSystemEnabled = false // flag off → v1 path
+
+		config := suite.moduleConfig("test-module")
+		_, err := suite.r.deleteModuleConfig(context.TODO(), config)
+		require.NoError(suite.T(), err)
+
+		assert.Empty(suite.T(), mockPkg.settingsCalls)
+		assert.Equal(suite.T(), 1, suite.drainHandlerEvents())
+	})
+
+	suite.Run("v1 path: unknown module always goes to addon-operator", func() {
+		suite.setupTestControllerRaw(deleteModuleConfigRaw("test-module"))
+
+		mockPkg := newMockPackageRuntime(false) // HasModule returns false
+		suite.r.packageRuntime = mockPkg
+		suite.r.packageSystemEnabled = true
+
+		config := suite.moduleConfig("test-module")
+		_, err := suite.r.deleteModuleConfig(context.TODO(), config)
+		require.NoError(suite.T(), err)
+
+		assert.Empty(suite.T(), mockPkg.settingsCalls)
+		assert.Equal(suite.T(), 1, suite.drainHandlerEvents())
+	})
+
+	suite.Run("v2 path: global always routes through the runtime even when untracked", func() {
+		suite.setupTestControllerRaw(deleteModuleConfigRaw("global"))
+
+		mockPkg := newMockPackageRuntime(false) // HasModule returns false
+		suite.r.packageRuntime = mockPkg
+		suite.r.packageSystemEnabled = true
+
+		config := suite.moduleConfig("global")
+		_, err := suite.r.deleteModuleConfig(context.TODO(), config)
+		require.NoError(suite.T(), err)
+
+		require.Len(suite.T(), mockPkg.settingsCalls, 1)
+		assert.Equal(suite.T(), "global", mockPkg.settingsCalls[0].name)
+		assert.Equal(suite.T(), 0, suite.drainHandlerEvents())
+	})
+}
+
+// deleteModuleConfigRaw returns a minimal ModuleConfig manifest with a
+// deletion timestamp and finalizer set, for exercising deleteModuleConfig
+// directly in tests.
+func deleteModuleConfigRaw(name string) string {
+	return `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ` + name + `
+  finalizers:
+  - modules.deckhouse.io/module-registered
+  deletionTimestamp: "2024-01-01T00:00:00Z"
+spec:
+  enabled: true
+`
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
@@ -310,15 +459,18 @@ func (m *mockModuleManager) GetModuleEventsChannel() chan events.ModuleEvent {
 	return make(chan events.ModuleEvent)
 }
 
-func newMockHandler() *confighandler.Handler {
-	// minimal handler for tests with dummy channels
+// newMockHandler builds a minimal confighandler.Handler wired to dummy
+// channels for tests. It also returns the config.Event channel so callers
+// can observe (drain) events dispatched via HandleEvent and assert whether
+// the v1 (addon-operator) path was taken.
+func newMockHandler() (*confighandler.Handler, chan config.Event) {
 	deckhouseConfigCh := make(chan utils.Values, 10)
 	configEventCh := make(chan config.Event, 10)
 
 	handler := confighandler.New(nil, conversionsStore, deckhouseConfigCh)
 	handler.StartInformer(context.Background(), configEventCh)
 
-	return handler
+	return handler, configEventCh
 }
 
 type mockPackageRuntime struct {

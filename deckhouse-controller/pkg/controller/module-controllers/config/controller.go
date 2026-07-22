@@ -450,8 +450,17 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		// package removal — only settings/intent are reset (G4).
 		// settingsVersion 0 signals "reset to defaults" to the runtime;
 		// the runtime treats version 0 as a no-version datum.
+		//
+		// enabled is explicitly set to false rather than nil (which would
+		// fall back to the bundle default) so the runtime's view of the
+		// module stays in sync with disableModule below, which always sets
+		// Module.ConditionEnabledByModuleConfig to False on delete for
+		// non-system modules. Without this, an enabled-by-bundle module
+		// would be reported as disabled in the Module CR while the v2
+		// scheduler kept treating it as enabled and running it.
 		r.logger.Debug("reset v2 module settings on delete", slog.String("name", moduleConfig.Name))
-		r.packageRuntime.UpdateModulesSettings(moduleConfig.Name, 0, make(addonutils.Values), nil)
+		disabled := false
+		r.packageRuntime.UpdateModulesSettings(moduleConfig.Name, 0, make(addonutils.Values), &disabled)
 	} else {
 		// v1 path: existing addon-operator event dispatch.
 		r.handler.HandleEvent(moduleConfig, config.EventDelete)
