@@ -1,0 +1,273 @@
+{{- if or (.Values.global.discovery.apiVersions | has "security.deckhouse.io/v1alpha1/PodSecurityEventShipper") (.Capabilities.APIVersions.Has "security.deckhouse.io/v1alpha1/PodSecurityEventShipper") }}
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: PodSecurityEventShipper
+metadata:
+  name: user-authn-dex
+  namespace: d8-user-authn
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  - source: dex
+    input:
+      type: KubernetesPods
+      kubernetesPods:
+        labelSelector:
+          matchLabels:
+            app: dex
+
+    parser:
+      - name: dex
+        parser:
+          type: JSON
+        drop_raw: false
+
+    producesDefaults:
+      transform:
+        - key: timestamp
+          value: time
+        - key: metadata.actor.sourceIPs
+          value: client_remote_addr
+        - key: metadata.requestID
+          value: request_id
+      enrich:
+        - target: source.component
+          source: Static
+          value: dex
+
+    produces:
+      - eventCode: DEX_USER_LOGIN_SUCCESS
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '.*"msg":"login successful".*'
+        transform:
+          - key: actor.id
+            value: username
+          - key: metadata.actor.preferredUsername
+            value: preferred_username
+          - key: metadata.actor.email
+            value: email
+          - key: metadata.actor.groups
+            value: groups
+          - key: metadata.auth.connectorID
+            value: connector_id
+        enrich:
+          - target: actor.type
+            source: Static
+            value: User
+
+      - eventCode: DEX_USER_LOGIN_FAILED
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '.*"msg":"failed login attempt: Invalid credentials\.".*'
+        transform:
+          - key: actor.id
+            value: user
+          - key: metadata.auth.connectorID
+            value: connector_id
+          - key: metadata.auth.clientID
+            value: client_id
+        enrich:
+          - target: actor.type
+            source: Static
+            value: User
+
+      - eventCode: DEX_SIGNING_KEYS_ROTATION_STARTED
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '.*"msg":"keys expired, rotating".*'
+
+      - eventCode: DEX_SIGNING_KEYS_ROTATION_COMPLETED
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '.*"msg":"keys rotated".*'
+        transform:
+          - key: metadata.auth.nextRotation
+            value: next_rotation
+
+      # Assumption: all dex startup lines with msg beginning with "config " are
+      # security-relevant runtime configuration signals for user-authn service.
+      - eventCode: DEX_SECURITY_CONFIG_APPLIED
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '.*"msg":"config (connector: local passwords enabled|response types accepted|skipping approval screen|continue on connector failure feature flag enabled|signing keys|id tokens|auth requests|refresh tokens|refresh tokens rotation)".*'
+
+      - eventCode: DEX_PUBLIC_HTTPS_LISTENING
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '.*"msg":"listening on".*"server":"https".*"address":"0\.0\.0\.0:5556".*'
+        transform:
+          - key: metadata.network.bindAddress
+            value: address
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-user-login-success
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  code: DEX_USER_LOGIN_SUCCESS
+  category: Rbac
+  severity: Low
+  description: Dex user login successful
+  metadata:
+    docs:
+      desc:
+        ru: |
+          Обнаруживает успешную аутентификацию пользователя в Dex. Событие помогает отслеживать корректные входы и аудит пользовательской активности.
+        en: |
+          Detects a successful user authentication in Dex. This event helps track valid sign-ins and audit user activity.
+  source: dex
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: actor.id
+      required: false
+    - name: metadata.actor.email
+      required: false
+    - name: metadata.actor.sourceIPs
+      required: false
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-user-login-failed
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  code: DEX_USER_LOGIN_FAILED
+  category: Rbac
+  severity: Medium
+  description: Dex failed login attempt with invalid credentials
+  metadata:
+    docs:
+      desc:
+        ru: |
+          Обнаруживает неуспешную попытку входа в Dex с неверными учетными данными. Может указывать на ошибки пользователей или попытки подбора пароля.
+        en: |
+          Detects a failed Dex login attempt with invalid credentials. This may indicate user mistakes or password-guessing attempts.
+  source: dex
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: actor.id
+      required: false
+    - name: metadata.auth.clientID
+      required: false
+    - name: metadata.actor.sourceIPs
+      required: false
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-signing-keys-rotation-started
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  code: DEX_SIGNING_KEYS_ROTATION_STARTED
+  category: Config
+  severity: Medium
+  description: Dex signing keys rotation started because keys expired
+  metadata:
+    docs:
+      desc:
+        ru: |
+          Обнаруживает начало ротации ключей подписи Dex из-за истечения срока действия. Важно для контроля непрерывности и безопасности механизма подписи токенов.
+        en: |
+          Detects the start of Dex signing key rotation due to key expiration. This is important for monitoring token-signing continuity and security.
+  source: dex
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-signing-keys-rotation-completed
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  code: DEX_SIGNING_KEYS_ROTATION_COMPLETED
+  category: Config
+  severity: Low
+  description: Dex signing keys rotation completed
+  metadata:
+    docs:
+      desc:
+        ru: |
+          Обнаруживает успешное завершение ротации ключей подписи Dex. Подтверждает применение новых ключей и обновление параметров следующей ротации.
+        en: |
+          Detects successful completion of Dex signing key rotation. It confirms that new keys are applied and next-rotation parameters are updated.
+  source: dex
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: metadata.auth.nextRotation
+      required: false
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-security-config-applied
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  code: DEX_SECURITY_CONFIG_APPLIED
+  category: Config
+  severity: Medium
+  description: Dex security-related startup configuration applied
+  metadata:
+    docs:
+      desc:
+        ru: |
+          Обнаруживает применение связанных с безопасностью параметров конфигурации Dex при запуске. Помогает фиксировать важные runtime-настройки аутентификации.
+        en: |
+          Detects application of security-related Dex configuration at startup. This helps capture important runtime authentication settings.
+  source: dex
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-public-https-listening
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  code: DEX_PUBLIC_HTTPS_LISTENING
+  category: Runtime
+  severity: Low
+  description: Dex started HTTPS listener on public interface
+  metadata:
+    docs:
+      desc:
+        ru: |
+          Обнаруживает запуск Dex с HTTPS listener на публичном интерфейсе. Событие используется для контроля сетевой экспозиции сервиса аутентификации.
+        en: |
+          Detects Dex starting an HTTPS listener on a public interface. This event is used to monitor authentication service network exposure.
+  source: dex
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: metadata.network.bindAddress
+      required: false
+{{- end }}
