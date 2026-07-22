@@ -283,8 +283,204 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CWE-61 (переход по символьной ссылке, symlink following) в Go stdlib v1.26.4 (API os.Root): при открытии файла внутри os.Root финальная символьная ссылка с путём, оканчивающимся на «/», может вести за пределы корня. Descheduler не использует sandbox-API os.Root и не обрабатывает произвольные пути файловой системы от недоверенных пользователей — уязвимый код не достигается. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
       "timestamp": "2026-07-22T13:16:22.346010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: аутентифицированный SSH-клиент, многократно открывающий отклоняемые сервером каналы, вызывал неограниченный рост памяти на сервере. Descheduler не запускает SSH-сервер и не использует golang.org/x/crypto/ssh — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent: in-memory keyring молча принимал, но не применял ограничение ConfirmBeforeUse, подписывая без запроса подтверждения. Descheduler не использует ssh-агент — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: целочисленное переполнение при записи более 4 ГБ за один вызов Write в SSH-канал приводило к бесконечному циклу отправки пустых пакетов. Descheduler не использует SSH-каналы — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh/agent: приведение некорректных wire-байтов к ed25519.PrivateKey вызывает панику при использовании ключа. Descheduler не использует ssh-агент — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47911"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: квадратичная сложность html.Parse на специально сформированном HTML. Descheduler не разбирает и не рендерит HTML — пакет golang.org/x/net/html не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58190"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: бесконечный цикл разбора в html.Parse на определённом вводе. Descheduler не разбирает и не рендерит HTML — уязвимый код golang.org/x/net/html не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: разбор произвольного HTML может потреблять чрезмерное время CPU. Descheduler не разбирает и не рендерит HTML — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: разбор произвольного HTML с последующим Render может давать неожиданное дерево HTML. Descheduler не разбирает и не рендерит HTML — уязвимый код не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: обход санитизации при разборе и повторном рендеринге HTML. Descheduler не работает с HTML и не имеет веб-интерфейса — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42505"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.26.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость раскрытия информации CWE-201 в Go stdlib v1.26.4 (crypto/tls, Encrypted Client Hello): при использовании ECH идентификаторы pre-shared key раскрываются в незашифрованном ClientHello, что позволяет пассивному наблюдателю деанонимизировать рукопожатие. Descheduler и client-go не включают ECH (требуется явная настройка EncryptedClientHelloConfigList, по умолчанию выключена), а TLS-соединения устанавливаются только к доверенному in-cluster kube-apiserver — уязвимый путь ECH не задействован. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Информационная рекомендация: пакет golang.org/x/crypto/openpgp небезопасен по своей архитектуре, не поддерживается и не должен использоваться. Descheduler не импортирует golang.org/x/crypto/openpgp: проверка графа зависимостей (go list -deps) подтверждает, что пакет не входит в сборку, а при статической компоновке (CGO_ENABLED=0) невключённые пакеты в бинарник не попадают — уязвимый код в артефакте отсутствует.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/dns/dnsmessage: разбор некорректной SVCB- или HTTPS-записи ресурса может вызвать панику из-за переполнения буфера сообщения. Descheduler не использует golang.org/x/net/dns/dnsmessage: разрешение имён выполняется штатным резолвером Go/ОС, DNS-сообщения компонент не разбирает — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/sys/windows: функция NewNTUnicodeString не проверяет переполнение длины строки и возвращает усечённую строку. Descheduler собирается с GOOS=linux; файлы golang.org/x/sys/windows исключены ограничениями сборки (//go:build windows) и не компилируются в linux-бинарник — уязвимый код в артефакте отсутствует.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость DoS в golang.org/x/text: norm.Iter может войти в бесконечный цикл при обработке ввода с некорректными байтами UTF-8. В descheduler пакет golang.org/x/text/unicode/norm задействуется лишь косвенно через golang.org/x/net/idna при нормализации имени хоста во время исходящего TLS-подключения — а это исключительно доверенный in-cluster kube-apiserver с валидным ASCII-именем. Недоверенные данные (имена и метки объектов из API) через нормализацию не проходят, поэтому уязвимый код не контролируется злоумышленником.",
+      "timestamp": "2026-07-22T14:46:22.311023Z"
     }
   ],
   "timestamp": "2026-01-12T11:51:20Z",
-  "last_updated": "2026-07-22T13:16:22Z"
+  "last_updated": "2026-07-22T14:46:22Z"
 }
