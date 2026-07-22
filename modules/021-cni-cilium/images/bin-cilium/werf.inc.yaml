@@ -66,8 +66,6 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cilium
-  # go-jose/v4 is pinned to v4.1.4 (CVE-2026-34986) directly in go.mod/go.sum via patches/000-go-mod.patch,
-  # so plain `go mod vendor` materializes the fixed version.
   - go mod vendor && go mod verify
   # Remove compile-time interface assertion in checkmate to fix newer Go versions compatibility (testing.TB interface changed).
   # This is safe because checkmate is a transitive test dependency, its *C type is not used in Cilium production code as testing.TB,

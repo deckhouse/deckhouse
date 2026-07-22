@@ -152,9 +152,6 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
-  # Forward ALTWRAP_LLVM_VERSION into bazel actions: /usr/bin/clang is an ALT altwrap wrapper that
-  # selects the LLVM version from this env var (otherwise it falls back to the newest installed, e.g. 19.1).
-  # bazel runs compile actions in a sandbox that does not inherit the shell env, so it must be passed explicitly.
 {{- if $buildWithPreparedCacheAndDeps }}
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- else }}
@@ -170,27 +167,15 @@ shell:
   - sudo -u cilium sed -i '31i \    name = "envoy",' WORKSPACE
   - sudo -u cilium sed -i '32i \    path = "/src/envoy",' WORKSPACE
   - sudo -u cilium sed -i '33i )' WORKSPACE
-  #
-  # Inject ALT-specific clang/gcc paths into the bazel cc_toolchain_config.
-  # Anchored on file content (not line numbers) because cilium/proxy reworked bazel/toolchains/BUILD
-  # (two cc_toolchain blocks: aarch64 + x86_64). The aarch64 block also gets these entries, but it is
-  # never built (target platform is //bazel:linux_x86_64), so the extra strings are harmless.
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-18.1/lib64/clang/18/include",' bazel/toolchains/BUILD
   - sudo -u cilium sed -i '\#-Wno-deprecated-builtins#a \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/13",' bazel/toolchains/BUILD
-  #
-  # Rust crate_universe (Envoy 1.36 Dynamic Modules SDK): make the crate-index repin trigger stable and tracked,
-  # so bazel treats the prepared crate index as up-to-date under --nofetch. (1) pin CARGO_BAZEL_REPIN via .bazelrc
-  # as a repo_env (stable value, recorded in the repo marker); (2) strip the Makefile's hardcoded process-env
-  # `CARGO_BAZEL_REPIN=true`, which would otherwise force a re-splice on every build and invalidate the prepared
-  # state. NB: the proxy-build-deps snapshot must be regenerated under this same setting (see its README).
+  # For building envoy in isolate env need to set Rust crate_universe and disbale CARGO_BAZEL_REPIN
   - sudo -u cilium bash -c 'printf "\ncommon --repo_env=CARGO_BAZEL_REPIN=1\n" >> .bazelrc'
   - sudo -u cilium sed -i 's/^\tCARGO_BAZEL_REPIN=true /\t/' Makefile
   #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
 {{- if $buildWithPreparedCacheAndDeps }}
-  # Pre-extracted external/ holds every external repo (including the fully materialized crate index and its
-  # markers). With --nofetch and the stable CARGO_BAZEL_REPIN pin above, bazel reuses it without any fetch.
   - sudo -u cilium PATH=${PATH} tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
 {{- else }}
   - rm -rf /tmp/bazel-deps

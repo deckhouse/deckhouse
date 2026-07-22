@@ -2,9 +2,7 @@
 
 ## 000-go-mod.patch
 
-Security: upstream Cilium v1.17.17 still ships `github.com/go-jose/go-jose/v4 v4.1.3`, vulnerable to CVE-2026-34986 (panic/DoS when decrypting a JWE with a key-wrapping algorithm and an empty `encrypted_key`). Fixed in v4.1.4.
-
-Bumps the (indirect) `go-jose/v4` require in `go.mod` to `v4.1.4` and updates the corresponding `go.sum` hashes, so `go mod vendor` materializes the fixed version. Kept as a surgical require bump (no `go get`, to avoid MVS side effects on `x/net`, `x/crypto`, etc.).
+Fixes CVE
 
 ## 001-request-ip.patch
 

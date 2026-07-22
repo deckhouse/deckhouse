@@ -52,7 +52,6 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export "GOARCH=amd64"
   - cd /src/hubble-ui/backend
-  - go mod edit -go=1.25.10
   - go mod download -x && go mod vendor && go mod verify
   - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
   - chown 64535:64535 /src/hubble-ui/backend/backend
