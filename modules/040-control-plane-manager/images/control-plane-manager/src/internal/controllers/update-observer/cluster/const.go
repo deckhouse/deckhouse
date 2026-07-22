@@ -21,6 +21,7 @@ const (
 	kubeVersionAnnotation          = "control-plane-manager.deckhouse.io/kubernetes-version"
 	clusterConfigurationYAML       = "cluster-configuration.yaml"
 	defaultKubernetesVersion       = "deckhouseDefaultKubernetesVersion"
+	moduleConfigKubernetesVersion  = "moduleConfigKubernetesVersion"
 	ControlPlaneComponentsCount    = 3
 	automaticKubernetesVersionEnv  = "AUTOMATIC_KUBERNETES_VERSION"
 	supportedKubernetesVersionsEnv = "ALLOWED_KUBERNETES_VERSIONS"

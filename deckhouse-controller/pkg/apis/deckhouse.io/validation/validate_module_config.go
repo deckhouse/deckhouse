@@ -45,7 +45,8 @@ import (
 )
 
 const (
-	globalModuleName = "global"
+	globalModuleName              = "global"
+	controlPlaneManagerModuleName = "control-plane-manager"
 
 	disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disabling=true` if you're sure that you want to disable the module."
 )
@@ -379,6 +380,12 @@ func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha
 	}
 	if result.Warning != "" {
 		warnings = append(warnings, result.Warning)
+	}
+
+	if cfg.Name == controlPlaneManagerModuleName {
+		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettings); res != nil || err != nil {
+			return res, err
+		}
 	}
 
 	v.setAllowedToDisableMetric(cfg, allowedToDisableMetricValue(cfg, v.isModuleEnabledByBundle(cfg.Name)))

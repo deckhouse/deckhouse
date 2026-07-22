@@ -178,7 +178,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kuberne
 
 		It("Hook must fail", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
-			Expect(f.GoHookError.Error()).To(BeEquivalentTo("global.clusterConfiguration.kubernetesVersion required"))
+			Expect(f.GoHookError.Error()).To(BeEquivalentTo("kubernetesVersion required (set it in ModuleConfig control-plane-manager or global.clusterConfiguration)"))
 		})
 	})
 
@@ -325,5 +325,47 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kuberne
 				},
 			),
 		)
+	})
+
+	Context("ModuleConfig kubernetesVersion override", func() {
+		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
+
+		It("MC kubernetesVersion takes precedence over ClusterConfiguration and is mirrored into the Secret", func() {
+			f.ValuesSet("controlPlaneManager.kubernetesVersion", "1.35")
+			setStateFromTestCase(f, input{
+				nodeVersions:               []string{"v1.34.3", "v1.34.1", "v1.34.5", "v1.34.2"},
+				maxUsedControlPlaneVersion: "1.34",
+				configVersion:              "1.33", // ClusterConfiguration is lower — MC must win
+				controlPlaneVersions:       []string{"1.34", "1.34", "1.34"},
+			})
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal("1.35"))
+
+			d8ClusterConfigSecret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+			decoded, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.moduleConfigKubernetesVersion").String())
+			Expect(err).To(BeNil())
+			Expect(string(decoded)).To(Equal("1.35"))
+		})
+
+		It("MC kubernetesVersion \"Automatic\" defers to ClusterConfiguration and clears the Secret override", func() {
+			f.ValuesSet("controlPlaneManager.kubernetesVersion", "Automatic")
+			setStateFromTestCase(f, input{
+				nodeVersions:               []string{"v1.34.3", "v1.34.1", "v1.34.5", "v1.34.2"},
+				maxUsedControlPlaneVersion: "1.34",
+				configVersion:              "1.34",
+				controlPlaneVersions:       []string{"1.34", "1.34", "1.34"},
+			})
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal("1.34"))
+
+			d8ClusterConfigSecret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+			decoded, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.moduleConfigKubernetesVersion").String())
+			Expect(err).To(BeNil())
+			Expect(string(decoded)).To(Equal(""))
+		})
 	})
 })

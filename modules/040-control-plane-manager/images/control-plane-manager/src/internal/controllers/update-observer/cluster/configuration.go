@@ -50,6 +50,16 @@ func GetConfiguration(secret *corev1.Secret) (*Configuration, error) {
 		return nil, fmt.Errorf("failed to unmarshal '%s': %w", clusterConfigurationYAML, err)
 	}
 
+	// ModuleConfig control-plane-manager's kubernetesVersion, if set, takes precedence over the
+	// (deprecated) ClusterConfiguration value. It's mirrored into this Secret by the
+	// effective_kubernetes_version.go hook, since this controller only watches this Secret, not
+	// ModuleConfig directly.
+	if rawMC, ok := secret.Data[moduleConfigKubernetesVersion]; ok {
+		if mc := strings.TrimSpace(string(rawMC)); mc != "" {
+			cfg.KubernetesVersion = mc
+		}
+	}
+
 	var err error
 	if cfg.KubernetesVersion == string(UpdateModeAutomatic) {
 		cfg.UpdateMode = UpdateModeAutomatic
