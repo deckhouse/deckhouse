@@ -157,20 +157,6 @@ properties:
         description: |
           kubernetes.ca content
 
-      kubernetesAPIProxyDiscoveryCert:
-        type: object
-        default: {}
-        x-required-for-helm:
-          - crt
-          - key
-        properties:
-          crt:
-            type: string
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
-          key:
-            type: string
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
-
       standbyNodeGroups:
         type: array
         description: |
@@ -226,13 +212,6 @@ properties:
         description: |
           Private key for API server used by bashible.
 
-      nodeStatusUpdateFrequency:
-        type: [integer, string]
-        description: |
-          Seconds for nodeStatusUpdateFrequency field in kubelet config. The frequency that kubelet computes node status.
-        x-examples:
-          - "10"
-
       bootstrapTokens:
         type: object
         # This is a dictionary nodeGroup name -> bootstrap token.
@@ -259,28 +238,6 @@ properties:
           - "myprefix"
         description: |
           Prefix for instance name.
-
-      machineDeployments:
-        type: object
-        description: |
-          Checksums of all EXISTING MachineClasses in the map "{MachineDeployment name}": "{name, nodeGroup, Checksum}"
-        x-examples:
-          - worker:
-              name: "myprefix-worker-02320933"
-              nodeGroup: "workers"
-              checksum: "62090f2241986a8361242e47cf541657099fdccc0c08e34cd694922bdcf31893"
-        additionalProperties:
-          type: object
-          properties:
-            name:
-              type: string
-              description: Name of the MachineDeployment.
-            nodeGroup:
-              type: string
-              description: Name of the NodeGroup.
-            checksum:
-              type: string
-              description: Checksum of the MachineClass, to be reused in MachineDeployment templates at right moments.
 
       static:
         type: object
@@ -358,18 +315,6 @@ properties:
               enum: ["None", "MCM", "CAPI"]
               description: |
                 Effective machinery selected for this NodeGroup.
-            serializedLabels:
-              type: string
-              description: |
-                Labels from node template in the format: key1=value1,key2=value2. If labels does not persist it will set
-                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
-                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
-            serializedTaints:
-              type: string
-              description: |
-                Taints from node template in the format: key1=value1:NoSchedule,key2=value2:NoExecute. If taints does not persist it will set
-                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
-                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
             static:
               type: object
               description: |
@@ -385,6 +330,18 @@ properties:
               description: |
                 Copy of the 'spec' section from WhateverInstanceClass resource. Fields are specific to used cloud provider.
               additionalProperties: true
+            serializedLabels:
+              type: string
+              description: |
+                Labels from node template in the format: key1=value1,key2=value2. If labels does not persist it will set
+                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
+                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
+            serializedTaints:
+              type: string
+              description: |
+                Taints from node template in the format: key1=value1:NoSchedule,key2=value2:NoExecute. If taints does not persist it will set
+                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
+                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
             kubernetesVersion:
               type: string
               description: |
@@ -395,26 +352,6 @@ properties:
               type: [integer, string]
               x-examples:
                 - "1624550403"
-            nodeType:
-              # See NodeGroup in candi/openapi/node_group.yaml
-              type: string
-              enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
-            gpu:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            cri:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            staticInstances:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            cloudInstances:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
             nodeCapacity:
               type: object
               properties:
@@ -435,11 +372,27 @@ properties:
                     - type: string
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                     - type: number
-            nodeTemplate:
+            nodeType:
+              # See NodeGroup in candi/openapi/node_group.yaml
+              type: string
+              enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
+            gpu:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
-            chaos:
+            cri:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            staticInstances:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            cloudInstances:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            nodeTemplate:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
@@ -479,7 +432,7 @@ properties:
               nodeType: CloudEphemeral
               kubernetesVersion: "1.32"
               cri:
-                type: "Docker"
+                type: "Containerd"
               cloudInstances:
                 classReference:
                   kind: AWSInstanceClass
@@ -504,12 +457,5 @@ properties:
           - "centos"
           - "debian"
           - "opensuse"
-        items:
-          type: string
-      allowedKubeletFeatureGates:
-        type: array
-        description: |
-          Allowed kubelet feature gates from control-plane-manager.
-        default: []
         items:
           type: string

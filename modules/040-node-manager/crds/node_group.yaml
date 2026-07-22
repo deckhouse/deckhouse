@@ -323,30 +323,6 @@ spec:
                       type: array
                       items:
                         type: string
-                chaos:
-                  description: |
-                    Chaos monkey settings.
-                  x-doc-examples:
-                  - mode: DrainAndDelete
-                    period: 24h
-                  type: object
-                  properties:
-                    mode:
-                      type: string
-                      description: |
-                        The chaos monkey mode:
-                        - `DrainAndDelete` — drains and deletes a node when triggered;
-                        - `Disabled` — leaves this NodeGroup intact.
-                      x-doc-default: Disabled
-                      enum:
-                        - Disabled
-                        - DrainAndDelete
-                    period:
-                      type: string
-                      description: |
-                        The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
-                      pattern: "^[0-9]+[mh]{1}$"
-                      x-doc-default: 6h
                 operatingSystem:
                   type: object
                   x-doc-deprecated: true
@@ -976,30 +952,6 @@ spec:
                             type: string
                           value:
                             type: string
-                chaos:
-                  description: |
-                    Chaos monkey settings.
-                  x-doc-examples:
-                  - mode: DrainAndDelete
-                    period: 24h
-                  type: object
-                  properties:
-                    mode:
-                      type: string
-                      description: |
-                        The chaos monkey mode:
-                        - `DrainAndDelete` — drains and deletes a node when triggered;
-                        - `Disabled` — leaves this NodeGroup intact.
-                      x-doc-default: Disabled
-                      enum:
-                        - Disabled
-                        - DrainAndDelete
-                    period:
-                      type: string
-                      description: |
-                        The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
-                      pattern: "^[0-9]+[mh]{1}$"
-                      x-doc-default: 6h
                 operatingSystem:
                   type: object
                   description: |
@@ -1899,32 +1851,6 @@ spec:
                             type: string
                           value:
                             type: string
-                chaos:
-                  description: |
-                    Chaos monkey settings.
-                  x-doc-examples:
-                  - mode: DrainAndDelete
-                    period: 24h
-                  type: object
-                  properties:
-                    mode:
-                      type: string
-                      description: |
-                        The chaos monkey mode:
-                        - `DrainAndDelete` — drains and deletes a node when triggered;
-                        - `Disabled` — leaves this NodeGroup intact.
-                      x-doc-default: Disabled
-                      enum:
-                        - Disabled
-                        - DrainAndDelete
-                    period:
-                      type: string
-                      description: |
-                        The time interval to use for the chaos monkey.
-
-                        It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
-                      pattern: "^([0-9]+h([0-9]+m)?|[0-9]+m)$"
-                      x-doc-default: 6h
                 operatingSystem:
                   type: object
                   description: |

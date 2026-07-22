@@ -10,7 +10,6 @@ The `node-manager` module is responsible for managing nodes and has the followin
 1. Managing multiple nodes as a related group (**NodeGroup**):
     * The ability to define metadata that are inherited by all nodes in the group.
     * Monitoring of a group as a single entity (grouping nodes on graphs by groups, grouping alerts about node unavailability, alerts about the unavailability of N or N% of nodes in a group).
-1. **Chaos monkey** — the systemic termination of nodes. This feature tests the resilience of cluster elements and running applications.
 1. Delaying the reboot or shutdown of a node while critical pods are running on it.
 1. Installing, updating, and configuring the node software (containerd, kubelet, etc.), connecting the node to the cluster:
     * Installing operating system (see the list of [supported OS](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
@@ -408,10 +407,6 @@ Useful features of some scripts:
   * `/etc/containerd/conf2.d/*.toml`: For containerd v2.
   
   Note that directories containing configuration files are not created automatically. Files must be added to these directories in scripts with a priority of less than `32`.
-
-## Chaos Monkey
-
-The instrument (you can enable it for each `NodeGroup` individually) for unexpected and random termination of nodes in a systemic manner. Chaos Monkey tests the resilience of cluster elements, applications, and infrastructure components.
 
 ## Monitoring
 

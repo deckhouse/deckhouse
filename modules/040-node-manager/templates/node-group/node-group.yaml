@@ -12,19 +12,19 @@
         {{- end }}
       {{- end }}
       {{- if eq $engine "CAPI" }}
+        {{- /* The MachineDeployment is rendered by node-controller (capi.reconcileCloudMDsRendered). Helm owns the instance-class checksum: it renders the bootstrap Secret (its content needs candi/tpl) and the infrastructure MachineTemplate (carrying the checksum/instance-class annotation). node-controller reads that annotation to name the MD's template/secret refs, so it never recomputes the checksum and existing nodes never roll. */ -}}
         {{- range $zone_name := $ng.cloudInstances.zones }}
           {{ $instance_class_checksum := include "capi_node_group_instance_class_checksum" (list $ $ng) }}
           {{ $instance_class_hash := printf "%v%v%v" $.Values.global.discovery.clusterUUID $zone_name $instance_class_checksum | sha256sum | trunc 8 }}
           {{ $template_name := printf "%s-%s" $ng.name $instance_class_hash }}
-          {{ $bootstrap_secret_name := $template_name}}
+          {{ $bootstrap_secret_name := $template_name }}
           {{- include "capi_node_group_machine_bootstrap_secret" (list $ $ng $zone_name $bootstrap_secret_name) }}
           {{- include "capi_node_group_machine_template" (list $ $ng $zone_name $template_name $instance_class_checksum) }}
         {{- end }}
       {{- else if eq $engine "MCM" }}
+        {{- /* MachineClass CR and MachineDeployment are rendered by node-controller (capi.reconcileCloudMCMs). Only the MachineClass Secret stays in helm. */ -}}
         {{- range $zone_name := $ng.cloudInstances.zones }}
-          {{- include "node_group_machine_class" (list $ $ng $zone_name) }}
           {{- include "node_group_machine_class_secret" (list $ $ng $zone_name) }}
-          {{- include "node_group_machine_deployment" (list $ $ng $zone_name) }}
         {{- end }}
       {{- else if eq $engine "None" }}
       {{- else }}
@@ -32,6 +32,7 @@
       {{- end }}
     {{- end }}
   {{- else }}
+    {{- /* The static MachineDeployment (cluster.x-k8s.io) is rendered by node-controller (capi.reconcileStaticMD). Helm owns the manual-bootstrap Secret and the StaticMachineTemplate (infrastructure.cluster.x-k8s.io, a CAPS provider CRD). */ -}}
     {{- include "node_group_static_or_hybrid_secret" (list $ $ng) }}
     {{- if hasKey $ng "staticInstances" }}
       {{- include "node_group_static_or_hybrid_machine_template" (list $ $ng) }}

@@ -80,9 +80,6 @@ type NodeGroupSpec struct {
 	// Default labels, annotations and taints for Nodes in NodeGroup. Optional.
 	NodeTemplate NodeTemplate `json:"nodeTemplate,omitempty"`
 
-	// Chaos monkey settings. Optional.
-	Chaos Chaos `json:"chaos,omitempty"`
-
 	// OperatingSystem. Optional.
 	OperatingSystem OperatingSystem `json:"operatingSystem,omitempty"`
 
@@ -261,19 +258,6 @@ type ClassReference struct {
 
 func (c ClassReference) IsEmpty() bool {
 	return c.Kind == "" && c.Name == ""
-}
-
-// Chaos is a chaos-monkey settings.
-type Chaos struct {
-	// Chaos monkey mode: DrainAndDelete or Disabled (default).
-	Mode string `json:"mode,omitempty"`
-
-	// Chaos monkey wake up period. Default is 6h.
-	Period string `json:"period,omitempty"`
-}
-
-func (c Chaos) IsEmpty() bool {
-	return c.Mode == "" && c.Period == ""
 }
 
 type OperatingSystem struct {

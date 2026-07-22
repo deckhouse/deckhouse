@@ -102,14 +102,6 @@ func (ng *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 		}
 	}
 
-	// Convert Chaos
-	if ng.Spec.Chaos != nil {
-		dst.Spec.Chaos = &v1.ChaosSpec{
-			Mode:   v1.ChaosMode(ng.Spec.Chaos.Mode),
-			Period: ng.Spec.Chaos.Period,
-		}
-	}
-
 	// Convert OperatingSystem
 	if ng.Spec.OperatingSystem != nil {
 		dst.Spec.OperatingSystem = &v1.OperatingSystemSpec{
@@ -245,14 +237,6 @@ func (ng *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 			Labels:      src.Spec.NodeTemplate.Labels,
 			Annotations: src.Spec.NodeTemplate.Annotations,
 			Taints:      src.Spec.NodeTemplate.Taints,
-		}
-	}
-
-	// Convert Chaos
-	if src.Spec.Chaos != nil {
-		ng.Spec.Chaos = &ChaosSpec{
-			Mode:   ChaosMode(src.Spec.Chaos.Mode),
-			Period: src.Spec.Chaos.Period,
 		}
 	}
 

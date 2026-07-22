@@ -456,7 +456,6 @@ spec:
 
 | Параметр NG                           | Disruption update          | Перезаказ узлов   | Рестарт kubelet |
 |---------------------------------------|----------------------------|-------------------|-----------------|
-| chaos                                 | -                          | -                 | -               |
 | cloudInstances.classReference         | -                          | +                 | -               |
 | cloudInstances.maxSurgePerZone        | -                          | -                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |

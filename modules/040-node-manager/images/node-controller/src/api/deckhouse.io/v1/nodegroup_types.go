@@ -54,15 +54,6 @@ const (
 	DisruptionApprovalModeRollingUpdate DisruptionApprovalMode = "RollingUpdate"
 )
 
-// ChaosMode defines the chaos testing mode
-// +kubebuilder:validation:Enum=DrainAndDelete;Disabled
-type ChaosMode string
-
-const (
-	ChaosModeDisabled       ChaosMode = "Disabled"
-	ChaosModeDrainAndDelete ChaosMode = "DrainAndDelete"
-)
-
 // NodeGroupSpec defines the desired state of NodeGroup
 type NodeGroupSpec struct {
 	// NodeType specifies the type of nodes in this group
@@ -84,10 +75,6 @@ type NodeGroupSpec struct {
 	// NodeTemplate specifies labels, annotations and taints for nodes
 	// +optional
 	NodeTemplate *NodeTemplate `json:"nodeTemplate,omitempty"`
-
-	// Chaos specifies chaos testing settings
-	// +optional
-	Chaos *ChaosSpec `json:"chaos,omitempty"`
 
 	// OperatingSystem specifies OS-level settings
 	// +optional
@@ -259,17 +246,6 @@ type NodeTemplate struct {
 	// Taints specifies node taints
 	// +optional
 	Taints []corev1.Taint `json:"taints,omitempty"`
-}
-
-// ChaosSpec defines chaos testing settings
-type ChaosSpec struct {
-	// Mode specifies the chaos mode
-	// +optional
-	Mode ChaosMode `json:"mode,omitempty"`
-
-	// Period specifies the chaos period
-	// +optional
-	Period string `json:"period,omitempty"`
 }
 
 // OperatingSystemSpec defines OS-level settings

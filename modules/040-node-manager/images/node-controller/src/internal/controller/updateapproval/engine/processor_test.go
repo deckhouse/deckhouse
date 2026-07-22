@@ -22,9 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
@@ -32,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
 	"github.com/deckhouse/node-controller/internal/controller/updateapproval/kubeclient"
 )
@@ -346,11 +345,12 @@ func TestApproveDisruptions_RollingUpdateDeletesInstance(t *testing.T) {
 	if err := corev1.AddToScheme(scheme); err != nil {
 		t.Fatalf("add scheme: %v", err)
 	}
+	if err := deckhousev1alpha2.AddToScheme(scheme); err != nil {
+		t.Fatalf("add deckhousev1alpha2 scheme: %v", err)
+	}
 	t.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 
-	instance := &unstructured.Unstructured{}
-	instance.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Instance"})
-	instance.SetName("n1")
+	instance := &deckhousev1alpha2.Instance{ObjectMeta: metav1.ObjectMeta{Name: "n1"}}
 
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(instance).Build()
 	p := Processor{Kube: kubeclient.Client{Client: cl}, Recorder: record.NewFakeRecorder(10)}
@@ -373,8 +373,7 @@ func TestApproveDisruptions_RollingUpdateDeletesInstance(t *testing.T) {
 	if !finished {
 		t.Fatal("expected finished = true for rolling update")
 	}
-	remaining := &unstructured.Unstructured{}
-	remaining.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Instance"})
+	remaining := &deckhousev1alpha2.Instance{}
 	err = cl.Get(context.Background(), types.NamespacedName{Name: "n1"}, remaining)
 	if err == nil {
 		t.Fatal("expected instance to be deleted")

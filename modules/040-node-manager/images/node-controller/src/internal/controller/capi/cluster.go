@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -47,18 +48,15 @@ type ClusterReconciler struct {
 }
 
 func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
-	// WithEventFilter is controller-wide, so it also covers the NodeGroup watch below.
-	// NodeGroup events must always pass — on a static cluster the cloud-provider Secret may not
-	// exist, and NodeGroup is the only trigger for ensureStaticCluster. The Secret (primary For)
-	// is filtered down to the cloud-provider one.
+	// NodeGroup events must always pass (only trigger for ensureStaticCluster); the primary
+	// Secret is filtered to the cloud-provider one.
 	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if _, ok := obj.(*deckhousev1.NodeGroup); ok {
 			return true
 		}
 		return obj.GetNamespace() == cloudProviderSecretNamespace && obj.GetName() == cloudProviderSecretName
 	}))
-	// Re-enqueue only on spec/generation changes — NodeGroup status updates must not trigger
-	// a no-op re-ensure, otherwise the createIfNotExists path logs on every status bump.
+	// Re-enqueue only on generation changes, so status bumps don't trigger no-op re-ensures.
 	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
 		func(_ context.Context, _ client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: types.NamespacedName{
@@ -87,7 +85,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, nil
+	// Periodically re-enter to rotate the kubeconfig certificate before it expires.
+	return ctrl.Result{RequeueAfter: 12 * time.Hour}, nil
 }
 
 func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
@@ -185,6 +184,10 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 		return fmt.Errorf("create MachineHealthCheck: %w", err)
 	}
 
+	if err := r.ensureKubeconfigSecret(ctx, clusterName); err != nil {
+		return fmt.Errorf("ensure %s kubeconfig: %w", clusterName, err)
+	}
+
 	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
 	return nil
 }
@@ -273,6 +276,7 @@ func (r *ClusterReconciler) ensureStaticCluster(ctx context.Context, clusterConf
 		return fmt.Errorf("create static MachineHealthCheck: %w", err)
 	}
 
+	// The static kubeconfig stays with the generate_capi_kubeconfig hook (CAPS not migrated).
 	logger.V(1).Info("ensured static CAPI cluster resources")
 	return nil
 }

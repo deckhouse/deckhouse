@@ -23,24 +23,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
-func instanceGVK() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Instance"}
-}
-
-func newInstance(name string) *unstructured.Unstructured {
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(instanceGVK())
-	obj.SetName(name)
-	return obj
+func newInstance(name string) *deckhousev1alpha2.Instance {
+	return &deckhousev1alpha2.Instance{ObjectMeta: metav1.ObjectMeta{Name: name}}
 }
 
 func newScheme(t *testing.T) *runtime.Scheme {
@@ -48,6 +40,9 @@ func newScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	if err := corev1.AddToScheme(scheme); err != nil {
 		t.Fatalf("add corev1 scheme: %v", err)
+	}
+	if err := deckhousev1alpha2.AddToScheme(scheme); err != nil {
+		t.Fatalf("add deckhousev1alpha2 scheme: %v", err)
 	}
 	return scheme
 }
@@ -143,8 +138,7 @@ func TestDeleteInstance_DeletesExisting(t *testing.T) {
 		t.Fatalf("DeleteInstance: %v", err)
 	}
 
-	remaining := &unstructured.Unstructured{}
-	remaining.SetGroupVersionKind(instanceGVK())
+	remaining := &deckhousev1alpha2.Instance{}
 	err := cl.Get(context.Background(), types.NamespacedName{Name: "n1"}, remaining)
 	if !apierrors.IsNotFound(err) {
 		t.Fatalf("expected instance to be deleted, get returned: %v", err)

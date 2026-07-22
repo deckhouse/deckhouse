@@ -484,7 +484,7 @@ webhooks:
       service:
         path: /validate-deckhouse-io-v1-nodegroup
 
-  # Policy validation (from validator.go) 
+  # Policy validation (from validator.go)
   - name: nodegroup-policy.deckhouse.io
     rules:
       - apiGroups: ["deckhouse.io"]
@@ -494,3 +494,462 @@ webhooks:
       service:
         path: /validate-nodegroup-policy
 ```
+
+## Part 3: Reconcile Hooks (k8s → k8s controllers)
+
+Besides the conversion/validation webhooks above, several shell-operator Go hooks
+were pure `k8s → k8s` reconcilers (watch objects, patch/delete other objects). These
+move to controller-runtime controllers registered via `register.RegisterController`
+and blank-imported in `internal/register/controllers/controllers.go`. Each keeps the
+same trigger and effect; the reactive watch replaces the hook's converge cadence.
+
+### Migrated controllers
+
+| Controller name | Primary | Replaces hook | Effect |
+|-----------------|---------|---------------|--------|
+| `node-csi-taint` | `Node` (+watch `CSINode`) | `remove_csi_taints.go` | Remove `node.deckhouse.io/csi-not-bootstrapped` taint once `CSINode.spec.drivers` is non-empty |
+| `node-spot-termination` | `Node` | `handle_spot_instance_deletion.go` | Delete the `Instance` of a drained spot node marked `termination-in-progress` |
+| `node-kubelet-csr-approver` | `CertificateSigningRequest` | `kubelet_csr_approver.go` | Auto-approve validated `kubernetes.io/kubelet-serving` CSRs |
+| `node-nodeuser-error-cleanup` | `NodeUser` (+watch `Node` deletes) | `clear_nodeuser_errors.go` | Drop `NodeUser.status.errors` entries keyed by nodes that no longer exist |
+| `node-machineset-revision-trim` | MCM `MachineSet` | `trim_machine_set_revision_history.go` | Cap the `deployment.kubernetes.io/revision-history` annotation to the first revision |
+| `node-instanceclass-ng-usage` | `NodeGroup` | `set_instance_class_ng_usage.go` | Record which NodeGroups consume each cloud `InstanceClass` in `status.nodeGroupConsumers` |
+| `capi-crd-migration` (CAPS path) | `CustomResourceDefinition` (+watch caps `Secret`/`Service`) | `sshcredentials_crd_cabundle_injection.go` | Keep the `sshcredentials.deckhouse.io` conversion-webhook CA in sync with the CAPS webhook TLS secret |
+| `node-group-configuration-metrics` | `NodeGroupConfiguration` | `metrics_node_group_configurations.go` | Export `d8_node_group_configurations_total{node_group}` — NGC count aggregated by targeted NodeGroup |
+| `yandex-preemptible-cleanup` | `NodeGroup` (schedule-driven, 15-minute ticker) | `yc_delete_preemptible_instances.go` | Rotate the oldest ~10% of preemptible Yandex MCM `Machine`s (node age > 20h) ahead of the cloud's 24h eviction, keeping each NodeGroup ≥ 0.9 ready |
+| `bashible-apiserver-host-ip` | `Pod` (`app=bashible-apiserver`, `d8-cloud-instance-manager`) | `change_host_ip.go` | Record the node host IP into `node.deckhouse.io/initial-host-ip`; delete the Pod when the live `status.hostIP` diverges so it is recreated with a certificate valid for the new address |
+| `master-node-group` | `NodeGroup` (name `master` only; startup-enqueued) | `create_master_node_group.go` | Ensure the default `master` NodeGroup exists (create-if-not-exists); nodeType `Static` for a Static cluster, else `CloudPermanent`. Never patches an existing object |
+| `bashible-apiserver-lock` | `Deployment` (`bashible-apiserver`, `d8-cloud-instance-manager`) | `lock_bashible_apiserver.go` | Toggle the `node.deckhouse.io/bashible-locked` annotation on Secret `bashible-apiserver-context` (+ metric `d8_bashible_apiserver_locked`) while the apiserver Deployment rolls out to a new image |
+| `capi-cluster-resources` (kubeconfig, cloud half) | cloud-provider `Secret` (`d8-node-manager-cloud-provider`) | `generate_capi_kubeconfig.go` (**cloud CAPI half only**) | Issue the `capi-controller-manager` client cert and write the `<capiClusterName>-kubeconfig` Secret. The `static` (CAPS) kubeconfig stays owned by the hook — CAPS is not migrated |
+
+### node-csi-taint (`internal/controller/csitaint`)
+
+A freshly bootstrapped node carries the `csi-not-bootstrapped` taint (`NoSchedule`)
+until its CSI driver registers, observed via the node's `CSINode` object. A CSINode is
+named after its node, so the secondary watch maps a registration event to the Node of
+the same name.
+
+```
+Node / CSINode changed
+  ├─ Node has no csi-not-bootstrapped taint?  → skip
+  ├─ CSINode not found?                       → still bootstrapping, keep taint
+  ├─ CSINode.spec.drivers empty?              → driver not registered, keep taint
+  └─ driver registered → strip only the csi-not-bootstrapped taint
+```
+
+**Parity note:** the hook's Node binding was passive (`ExecuteHookOnEvents=false`,
+`ExecuteHookOnSynchronization=false`) — it removed the taint only on the `OnBeforeHelm`
+converge or a `CSINode` filter-result change (minutes). The controller watches Node
+reactively (seconds). End state identical; only latency improves.
+RBAC: `nodes` get/list/watch/patch, `storage.k8s.io/csinodes` get/list/watch.
+
+### node-spot-termination (`internal/controller/spottermination`)
+
+A reclaimed spot/preemptible VM is labeled `node.deckhouse.io/termination-in-progress`
+by the provider. Once the node is also drained (`update.node.deckhouse.io/drained`
+annotation), the matching `Instance` CR is deleted so machine-controller-manager tears
+the machine/VM down.
+
+```
+Node changed
+  ├─ label termination-in-progress != "true"? → skip
+  ├─ no drained annotation?                    → skip
+  └─ both present → delete Instance named after the node (NotFound = ok)
+```
+
+**Fix relative to the hook:** the hook hardcoded `DeleteInBackground("deckhouse.io/v1alpha1", "Instance", ...)`.
+Instance graduated to `v1alpha2` (v1alpha1 `served: false` since PR #18795, 2026-05-07),
+so the hook's delete silently failed (`apiVersion 'deckhouse.io/v1alpha1' ... is not
+supported by cluster`) and looped in the shell-operator retry queue — the Instance was
+never removed (orphan risk on real spot reclamation). The controller deletes via the
+typed `v1alpha2` client, targeting the served version through the scheme's RESTMapper.
+The migration is parity of the *intended* behavior plus a regression fix.
+RBAC: `nodes` get/list/watch, `deckhouse.io/instances` delete (version-agnostic).
+
+### node-kubelet-csr-approver (`internal/controller/kubeletcsrapprover`)
+
+When a kubelet rotates its serving certificate it submits a CSR signed by
+`kubernetes.io/kubelet-serving` that no built-in approver handles. The controller
+validates and approves it via the `approval` subresource.
+
+```
+CSR changed
+  ├─ status.certificate already set?          → issued, skip
+  ├─ already Approved or Denied?              → skip
+  ├─ request PEM does not parse?              → skip (do not approve)
+  ├─ signer == kubernetes.io/kubelet-serving? → validate (org system:nodes, CN
+  │     system:node: prefix, exact serving usages, IP|DNS SAN, no email/URI SAN,
+  │     username == CN); fails → skip
+  └─ approve (append Approved condition, message "autoapproved by Deckhouse")
+```
+
+**Parity note (approve-on-parse quirk):** the hook approved *any* CSR whose PEM
+parses; only `kubelet-serving` CSRs got the extra validation above. The hook ran
+under the `deckhouse` ServiceAccount (bound to `cluster-admin`), so it could
+approve every signer. The controller preserves this branch logic but runs under
+the scoped node-controller ServiceAccount, whose `signers` `approve` grant is
+limited to `kubernetes.io/kube-apiserver-client` (apiproxycert) and
+`kubernetes.io/kubelet-serving` — so in practice it approves a strictly narrower
+set than the hook, and RBAC blocks approval of any other signer.
+RBAC: `certificatesigningrequests` get/list/watch, `.../approval` update,
+`signers` `approve` on `kubernetes.io/kubelet-serving` (added) and
+`kubernetes.io/kube-apiserver-client` (pre-existing).
+
+### node-nodeuser-error-cleanup (`internal/controller/nodeusercleanup`)
+
+`NodeUser.status.errors` is a map keyed by node name holding per-node provisioning
+errors. When a node is removed its entry can linger. The controller drops entries
+whose node no longer exists among the nodes carrying the `node.deckhouse.io/group`
+label.
+
+```
+NodeUser changed / Node deleted (re-enqueues every NodeUser)
+  ├─ status.errors empty?                     → skip
+  ├─ compute stale = error keys not among labeled group nodes
+  ├─ no stale keys?                           → skip
+  └─ JSON merge patch status.errors {key: null, ...} on the status subresource
+```
+
+**Parity note:** the hook ran on a 30-minute `Schedule` plus a passive Node/NodeUser
+Synchronization binding (`ExecuteHookOnEvents=false`), so a stale entry lingered until
+the next cron tick or an operator restart. The controller reconciles a NodeUser
+reactively on its own changes and re-checks every NodeUser on a Node deletion (only
+deletions can strand an entry; create/update never turns an existing entry stale), so
+stale entries clear promptly. The node set (`node.deckhouse.io/group` label), the stale
+computation and the null-valued merge patch on `/status` match the hook exactly.
+RBAC: `nodeusers` get/list/watch, `nodeusers/status` patch, `nodes` list (pre-existing).
+
+### node-machineset-revision-trim (`internal/controller/machinesetrevision`)
+
+The machine-controller-manager records every rollout revision of a MachineDeployment in
+its child MachineSet's `deployment.kubernetes.io/revision-history` annotation as an
+ever-growing comma-separated list. The controller collapses it to the first revision once
+it exceeds a small length bound, so the annotation cannot grow without limit.
+
+```
+MachineSet changed (machine.sapcloud.io/v1alpha1, ns d8-cloud-instance-manager)
+  ├─ namespace != d8-cloud-instance-manager?  → skip (hook NamespaceSelector parity)
+  ├─ revision-history length <= 16?           → skip
+  ├─ nothing before the first comma to trim?  → skip (unchanged value)
+  └─ merge-patch revision-history = first revision (other annotations preserved)
+```
+
+**Parity note:** the MachineSet type is not in the node-controller scheme, so the primary
+object is an `unstructured.Unstructured` with the MCM GVK (the same pattern the CAPI/MCM
+controllers use for MachineDeployment). The two guards (`len > 16` and "trimming actually
+changes the value", i.e. there is a comma) and the single-annotation merge patch match the
+hook exactly; a value longer than 16 chars but without a comma is left untouched. The
+hook's MachineSet binding was event-driven, so the reactive watch keeps identical latency.
+RBAC: `machine.sapcloud.io/machinesets` get/list/watch/patch (added).
+
+### node-instanceclass-ng-usage (`internal/controller/instanceclassusage`)
+
+Records the reverse reference of each cloud `InstanceClass`: the list of NodeGroups that
+consume it, written to `InstanceClass.status.nodeGroupConsumers`. The validating webhook
+refuses to delete an InstanceClass whose consumer list is non-empty, so this protects an
+in-use class from deletion.
+
+```
+NodeGroup changed
+  ├─ read active kind from Secret kube-system/d8-node-manager-cloud-provider[instanceClassKind]
+  ├─ kind empty (no cloud provider)?          → skip
+  ├─ build icName -> [ngName] from every CloudEphemeral NodeGroup whose
+  │    spec.cloudInstances.classReference.kind == active kind
+  └─ for each InstanceClass of the active kind:
+       desired = sorted consumers (or [] if unused)
+       status.nodeGroupConsumers already equal? → skip
+       merge-patch status.nodeGroupConsumers = desired (NotFound = ok)
+```
+
+**Parity note:** the hook had three bindings but only the `NodeGroup` one was active
+(its `InstanceClass` and cloud-provider-`Secret` bindings were passive,
+`ExecuteHookOnEvents=false`), so the primary `NodeGroup` watch reproduces every trigger;
+each reconcile recomputes the consumer lists for all InstanceClasses of the active kind.
+InstanceClass CRDs have **no status subresource** (verified for both `deckhouse.io/v1alpha1`
+and `deckhouse.io/v1`), so `status.nodeGroupConsumers` is a plain field patched on the main
+resource — not via `Status().Patch()`. All provider kinds serve `deckhouse.io/v1alpha1`
+(v1-only kinds also serve v1alpha1 via conversion), so a single version lists and patches
+every kind; the controller drops the hook's `kindToVersion` map and dynamic-kind
+`BindingAction` (UpdateKind/Disable) machinery, which was needed only by shell-operator's
+kind-bound snapshot mechanism. RBAC: the InstanceClass resources gain `patch` on top of the
+existing get/list/watch; NodeGroup list and the cloud-provider Secret read already exist.
+
+### sshcredentials CA injection (`internal/controller/crdmigration`, CAPS path)
+
+The `sshcredentials.deckhouse.io` CRD conversion is served by the CAPS (Cluster API Provider
+Static) webhook; its CA must be injected into the CRD's `spec.conversion.webhook.clientConfig`
+so the API server trusts the conversion webhook. This is the same "inject CA into a CRD
+conversion webhook" pattern the `crdmigration` controller already runs for CAPI CRDs and the
+deckhouse CRDs (nodegroups/instances), so it was added there as a third mapping rather than a
+new controller.
+
+```
+CRD sshcredentials.deckhouse.io / caps Secret / caps Service changed
+  ├─ caps-controller-manager-webhook-service missing?   → requeue (gate parity)
+  ├─ caps-controller-manager-webhook-tls missing/empty? → requeue
+  ├─ CRD absent?                                         → skip (no-op)
+  ├─ conversion already points at caps service with same CA? → skip (idempotent)
+  └─ patch spec.conversion = Webhook{ service caps-controller-manager-webhook-service
+       (/convert, :443), caBundle = secret ca.crt, conversionReviewVersions [v1] }
+```
+
+**Parity note:** the hook had a passive CRD binding plus active `Secret`
+(`caps-controller-manager-webhook-tls`) and `Service`
+(`caps-controller-manager-webhook-service`) bindings and an `OnAfterAll` trigger, so it
+restored the CA only on a converge (verified live: a perturbed caBundle was restored only
+after a Deckhouse restart re-ran the hook). With the CRD as the controller's **primary**
+object, the caBundle is restored the instant the CRD is perturbed — end state identical,
+latency improved. The webhook Service existence gate mirrors the hook's `webhook-service`
+binding (no point pointing the CRD at a missing service). The shared `patchConversionWebhook`
+/`isConversionWebhookCurrent` helpers were parameterised by service name; the CAPI and
+deckhouse-CRD paths are unchanged. RBAC: cluster-wide `secrets`, `services` and
+`customresourcedefinitions` access already exists — no new grants.
+
+### node-group-configuration-metrics (`internal/controller/ngconfigmetrics`)
+
+Exports `d8_node_group_configurations_total{node_group}`: the number of
+`NodeGroupConfiguration` objects that target each NodeGroup. A configuration without
+`spec.nodeGroups` targets all groups and is counted under `node_group="*"`.
+
+```
+NodeGroupConfiguration changed
+  ├─ list all NodeGroupConfigurations
+  ├─ for each: targets = spec.nodeGroups (absent → ["*"]; explicit [] → none)
+  │    countByNodeGroup[target]++
+  ├─ gauge.Reset()            (drops series for deleted/retargeted configs)
+  └─ set d8_node_group_configurations_total{node_group=target} = count
+```
+
+**Parity note:** the hook's only binding was the `NodeGroupConfiguration` watch
+(`ExecuteHookOnSynchronization=true`); on every event it called
+`MetricsCollector.Expire("node_group_configurations")` and re-emitted one series per
+`node_group`. The controller reproduces this exactly: a `NodeGroupConfiguration` primary
+watch, a full recompute via `List`, and a `GaugeVec.Reset()` before setting the current
+counts (the direct equivalent of the group `Expire`). The default-to-`*` rule fires only
+when `spec.nodeGroups` is absent — an explicit empty list yields no series, matching the
+hook's `NestedStringSlice` `ok` check. Verified live on `deni-static-master-0`: three `*`
+NGCs gave `node_group="*" => 3`, and adding a `parity-test-ng`-targeting NGC produced
+`node_group="parity-test-ng" => 1` alongside it. RBAC: `nodegroupconfigurations`
+get/list/watch (read-only, added).
+
+### yandex-preemptible-cleanup (`internal/controller/preemptible`)
+
+Proactively rotates the oldest preemptible Yandex.Cloud nodes before the cloud
+provider force-stops them. Yandex terminates preemptible VMs after at most 24h, so
+once a node's age crosses the 20h (24h-4h) window this controller deletes its MCM
+`Machine` (`machine.sapcloud.io/v1alpha1`, namespace `d8-cloud-instance-manager`);
+MCM then recreates a fresh node.
+
+```
+every 15 minutes (ticker)
+  ├─ collect preemptible YandexMachineClass names (spec.schedulingPolicy.preemptible)
+  │    none → nothing to rotate (MCM-only scope) → return
+  ├─ index Nodes by name → {group, creationTimestamp}
+  ├─ index Yandex NodeGroups (classReference.kind == YandexInstanceClass) → {nodes, ready}
+  ├─ for each Machine:
+  │    ├─ terminating (deletionTimestamp)?                 → skip
+  │    ├─ spec.class.kind != YandexMachineClass?           → skip
+  │    ├─ class not preemptible?                           → skip
+  │    ├─ no Node named after the Machine?                 → skip
+  │    ├─ node age < 20h?                                  → skip (too young)
+  │    └─ NodeGroup ready/nodes < 0.9?                     → skip (protect availability)
+  ├─ sort candidates oldest-first; batch = len/10 (min 1)
+  └─ delete the oldest `batch` Machines
+```
+
+**Parity note:** the hook (`yc_delete_preemptible_instances.go`) was schedule-only —
+crontab `0/15 * * * *` with purely passive Kubernetes bindings — so the controller
+uses a 15-minute ticker raw source rather than a reactive watch (an always-false
+`WithEventFilter` drops all primary events while the raw source bypasses the filter);
+reactive triggers would rotate nodes more aggressively than the intended cadence. The node lookup keys on the
+`Machine` name (MCM names the node after its Machine), matching the hook 1:1. The
+readiness guard skips NodeGroups with zero nodes, which also avoids the `0/0` NaN the
+hook's raw ratio could produce. Scope is MCM only: it reads
+`YandexMachineClass.spec.schedulingPolicy.preemptible`. **CAPI is a deliberate no-op,
+not a regression** — the Deckhouse CAPI `YandexMachineTemplate` does not render
+`preemptible`, and the upstream `cluster-api-provider-yandex` v0.2.0 `YandexMachineSpec`
+has no `schedulingPolicy`/`preemptible` field at all, so CAPI Yandex nodes are never
+preemptible and there is nothing to rotate. Enabling CAPI preemptible rotation is a
+separate provider feature (see the migration TODO / `preemptible-capi` plan). Baseline
+is time-gated (the hook only acts on a real >20h-old preemptible node; a node's
+`creationTimestamp` cannot be forged), so parity is covered by deterministic unit
+tests rather than a same-session live 2a. RBAC: existing
+`machine.sapcloud.io/machines` get/list/watch/delete and
+`yandexmachineclasses`/`nodes`/`nodegroups` read grants already cover it — no new grants.
+
+### bashible-apiserver-host-ip (`internal/controller/hostipchange`)
+
+Keeps the `bashible-apiserver` Pod consistent with the host IP of the node it runs
+on. bashible-apiserver serves node bootstrap data over a certificate pinned to its
+host IP; if the node reappears with a different IP (e.g. a reboot with a new DHCP
+lease) the Pod must be recreated so its certificate matches the new address.
+
+```
+Pod app=bashible-apiserver in d8-cloud-instance-manager (reactive watch)
+  ├─ status.hostIP == ""?                          → skip (not scheduled yet)
+  ├─ annotation node.deckhouse.io/initial-host-ip absent?
+  │    → merge-patch it = current status.hostIP    (record initial IP)
+  └─ initial-host-ip != status.hostIP?             → delete Pod (Deployment recreates)
+```
+
+**Parity note:** the hook (`change_host_ip.go`) is a one-liner instantiation of the
+shared `go_lib/hooks/change_host_address` library for
+`("bashible-apiserver", "d8-cloud-instance-manager")`. That library is still used by
+nine other modules (cloud-provider-\*, `002-deckhouse`, `038-registry`) for their own
+components, so **only the node-manager bashible-apiserver instance moves here** — the
+library and its other callers stay untouched. The controller is reactive: it uses
+`For(&Pod{})` with a `WithEventFilter` predicate narrowing to
+`app=bashible-apiserver` in `d8-cloud-instance-manager`, reusing the cluster-wide Pod
+informer that `bashible-context` already establishes (no extra watch cost). Pods are
+`DisableFor` the client cache, so the reconcile `Get` reads the live Pod (fresh
+`status.hostIP`) straight from the API. The three branches (skip empty IP / record /
+delete on mismatch) mirror the library's `changeHostAddressHandler` 1:1. RBAC: the
+existing `pods` grant gained `patch` (record the annotation) alongside the pre-existing
+`get`/`list`/`watch`/`delete`. Live baseline verified on deni-yand: faking the
+annotation to a stale IP made the old hook delete the Pod, which the Deployment
+recreated with `initial-host-ip` re-recorded to the real host IP.
+
+### master-node-group (`internal/controller/masternodegroup`)
+
+Ensures the default `master` NodeGroup metadata object exists. The object is metadata
+only: during bootstrap the master Node is registered directly by kubeadm via bashible,
+so it is not on the cluster's critical path.
+
+```
+Reconcile (request name must be "master", else no-op)
+  ├─ master NodeGroup exists?  → do nothing (preserve user edits)
+  └─ not found → read clusterType from Secret kube-system/d8-cluster-configuration
+                 build default spec (nodeType Static if clusterType==Static, else
+                 CloudPermanent) → Create
+```
+
+**Parity note:** replaces the `OnStartup{Order:6}` hook `create_master_node_group.go`,
+which was `CreateIfNotExists` for the `master` NodeGroup. The controller keeps the same
+build-if-absent / never-patch semantics, so user changes are preserved. The object is
+built as an **unstructured** value with exactly the hook's fields — a typed NodeGroup
+would marshal empty `cri`/`cloudInstances` structs that fail admission validation for a
+master NodeGroup. `clusterType` comes from the same Secret `d8-cluster-configuration`
+(`cluster-configuration.yaml`, base64-unwrapped) that `derived_status` already reads, so
+no new input source. The primary is `NodeGroup` with a `WithEventFilter` predicate
+narrowing to name `master` (recreate it if a user deletes it, ignore all other
+NodeGroups); a startup raw source enqueues `master` once so it is created on a fresh
+cluster where the object does not exist yet and the primary watch would never fire. The
+`Create` passes through node-controller's own validating webhook, which is up by the time
+the controller reconciles (no chicken-egg — the hook ran on its own queue only because
+the addon-operator startup phase raced the warming webhook; a running controller implies
+a running webhook). RBAC: the existing `nodegroups` grant gained `create` alongside
+`get`/`list`/`watch`/`update`/`patch`.
+
+### bashible-apiserver-lock (`internal/controller/bashiblelock`)
+
+Locks the bashible-apiserver context while its Deployment rolls out to a new image, so
+old apiserver Pods do not serve updated context (referencing step templates / image
+digests they do not yet have) to nodes. The bashible-apiserver reads the annotation
+`node.deckhouse.io/bashible-locked` on Secret `bashible-apiserver-context`
+(`images/bashible-apiserver/.../template/context.go` `secretEventHandler.lockApplied`):
+`"true"` sets `updateLocked` and freezes context publishing.
+
+```
+Reconcile (request must be Deployment bashible-apiserver / d8-cloud-instance-manager)
+  ├─ Deployment not found  → no-op (nothing to lock on)
+  ├─ rollout complete?     → UNLOCK: remove annotation, metric d8_bashible_apiserver_locked=0
+  └─ rollout in progress   → LOCK:   set annotation "true", metric=1
+
+rollout complete :=
+  Status.ObservedGeneration >= Generation   (reject stale status right after the spec bump)
+  AND UpdatedReplicas == Replicas
+  AND AvailableReplicas == Replicas
+```
+
+**Parity note:** replaces the `OnBeforeHelm{Order:20}` hook `lock_bashible_apiserver.go`.
+The hook compared the *live* Deployment image to the **helm values digest**
+`global.modulesImages.digests.nodeManager.bashibleApiserver` (the target image), so it
+could lock *before* helm applied. The controller has no access to the values digest and
+only observes the Deployment after helm patched it, so it locks on **rollout status**
+instead of a digest comparison. The window difference is milliseconds (helm patches the
+Deployment `spec` and the `images_digests.json` ConfigMap in the same apply; the
+controller reacts to the generation bump immediately), and the race the lock guards
+against — an old apiserver Pod serving new context — is still closed. The
+`ObservedGeneration` guard rejects the stale-status window right after the image bump,
+where the replica counts still reflect the previous generation and would falsely read
+"complete". The annotation is written with an idempotent merge patch (a `null` value
+removes it); a missing Secret is ignored, matching the hook's `WithIgnoreMissingObject`.
+The metric `d8_bashible_apiserver_locked` feeds the `D8BashibleApiserverLocked` alert
+(fires when `== 1` for 15m). RBAC: added cluster-wide `apps/deployments`
+`get`/`list`/`watch`; the Secret patch is already covered by the namespaced
+`bashible-context` Role in `d8-cloud-instance-manager`.
+
+### capi-controller-manager kubeconfig, cloud half (`internal/controller/capi`, `kubeconfig.go`)
+
+Issues the client certificate for `capi-controller-manager` and writes the
+`<capiClusterName>-kubeconfig` Secret it mounts to reach the management API server.
+Replaces the **cloud CAPI half** of `generate_capi_kubeconfig.go`. It is folded into the
+existing `capi-cluster-resources` `ClusterReconciler` (primary: the cloud-provider Secret
+`d8-node-manager-cloud-provider`), right after the cloud `Cluster`/`MachineHealthCheck` are
+ensured — reusing the same `capiClusterName != ""` gate.
+
+```
+ensureCloudCluster (clusterName from cloud-provider Secret, non-empty)
+  ├─ create Cluster + MachineHealthCheck (existing)
+  └─ ensureKubeconfigSecret(clusterName):
+        existing <clusterName>-kubeconfig cert still has > 90d left → no-op
+        else issue client cert via CSR (CN capi-controller-manager,
+             org d8:node-manager:capi-controller-manager:manager-role,
+             kube-apiserver-client signer, ClientAuth, 180d, self-approved)
+        build kubeconfig (Host + CA from the manager rest config) → write Secret
+             (type cluster.x-k8s.io/secret, key value, label cluster.x-k8s.io/cluster-name)
+Reconcile returns RequeueAfter 12h → rotate the 180d cert before expiry
+```
+
+**Split note (CAPS stays a hook).** The hook had two branches: the cloud CAPI kubeconfig
+(`<capiClusterName>-kubeconfig`) and the `static` CAPS kubeconfig (`static-kubeconfig`).
+Only the **cloud** branch is migrated. CAPS is not migrated to node-controller, so the
+`static` branch **remains in `generate_capi_kubeconfig.go`** (now CAPS-only, gated on
+`capsControllerManagerEnabled`). nc's `ensureStaticCluster` still creates the static
+`Cluster`/`MachineHealthCheck` (that predates this migration) but deliberately does **not**
+write the static kubeconfig.
+
+**Design.** The cert is minted with the same CSR issue/self-approve/wait/delete flow as the
+`apiproxycert` controller (kube-apiserver-client signer), using a typed clientset built from
+the manager rest config in `BaseWithReader.Setup`. The kubeconfig's server URL and CA come
+from that same rest config (CA loaded from `CAFile` when `CAData` is empty, as in-cluster).
+The Secret name/type/label/key are byte-identical to the hook's `internal/kubeconfig`
+helper, and no Helm template reads `<cluster>-kubeconfig` (the only runtime consumer is the
+`capi-controller-manager` Deployment mounting it), so ownership can move cleanly from helm
+patch-collector to nc. The reconcile is a no-op while the stored cert has more than half its
+180-day lifetime left, so migration does not roll the existing kubeconfig. RBAC already
+covers everything: CSR create/approve on the kube-apiserver-client signer (apiproxycert) and
+the namespaced secrets Role in `d8-cloud-instance-manager` (bashible-context) — no new rules.
+
+## Part 4: Hooks subsumed by the bashible context (deleted, no new controller)
+
+Some shell-operator hooks only read a source object and wrote a value into
+`nodeManager.internal.*` for Helm to render into the bashible `input.yaml`. After the
+bashible cutover, `input.yaml` is written by the node-controller
+(`internal/controller/nodegroup/bashiblecontext`), which reads the same source objects
+directly. When such a hook's value is **no longer read by any Helm template** (only the
+bashible context path remained), the hook is pure duplication and is deleted outright —
+no controller is added, because `bashiblecontext` already produces the field.
+
+| Deleted hook | Value it wrote | bashiblecontext reader | Remaining Helm consumer |
+|--------------|----------------|------------------------|-------------------------|
+| `control_plane_arguments.go` | `internal.nodeStatusUpdateFrequency`, `internal.allowedKubeletFeatureGates` | `readControlPlaneArguments` (`bashiblecontext/sources.go`) | none |
+
+### control_plane_arguments
+
+The hook read Secret `kube-system/d8-control-plane-manager-control-plane-arguments`
+(`arguments.json`, `featureGates.json`) and set two values:
+`nodeStatusUpdateFrequency = round(nodeMonitorGracePeriod / 4)` and
+`allowedKubeletFeatureGates`. Both fed only the bashible `input.yaml`.
+
+`bashiblecontext.readControlPlaneArguments` (`sources.go`) now reads the **same** Secret
+directly with the **same** `round(nodeMonitorGracePeriod / 4)` formula and places both
+fields into `input.yaml` (`context.go`); bashible-apiserver unmarshals them from the
+mounted context Secret (`pkg/template/context_builder.go`). A grep over the module's
+`templates/` for `nodeStatusUpdateFrequency`/`allowedKubeletFeatureGates` returns
+nothing — no Helm template consumes the values — so the hook's `input.Values.Set` had no
+reader left. Removed: the hook, its test, and both fields from `openapi/values.yaml`.
+Unlike the other value-feeding V-hooks (`discover_cloud_provider`, `order_bootstrap_token`,
+`discover_kubernetes_ca`, `get_packages_proxy_token`, `discover_apiserver_endpoints`),
+whose values are still read by the per-NodeGroup bootstrap Secrets in
+`node-group/*.tpl`, `control_plane_arguments` fed the bashible context only — which the
+controller already owns — so it can be dropped without the bootstrap-secret migration.

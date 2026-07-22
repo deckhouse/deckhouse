@@ -300,7 +300,7 @@ func (r *Reconciler) reconcileConversionWebhook(ctx context.Context, logger logr
 		return ctrl.Result{RequeueAfter: requeuePrecondition}, nil
 	}
 
-	if err := patchConversionWebhook(ctx, r.Client, crdName, caBundle); err != nil {
+	if err := patchConversionWebhook(ctx, r.Client, crdName, caBundle, nodeControllerWebhookServiceName); err != nil {
 		return ctrl.Result{}, err
 	}
 
