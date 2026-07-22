@@ -44,6 +44,7 @@
 021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
 030-cloud-provider-*/                                            @aleksey-su @pabateman
+**/030-cloud-provider-*/candi/                                   @aleksey-su @pabateman
 031-local-path-provisioner/                                      @AleksZimin @duckhawk @szhem
 035-cni-flannel/                                                 @AndreyPavlovFlant @apolovov
 035-cni-simple-bridge/                                           @AndreyPavlovFlant @apolovov
@@ -66,6 +67,7 @@
 **/040-node-manager/images/bashible-apiserver                    @borg-z @090809 @sprait
 **/040-node-manager/images/integrity-containerd-configurator     @sprait
 **/040-node-manager/images/integrity-controller                  @sprait
+**/040-node-manager/images/caps-controller-manager               @aleksey-su @pabateman
 **/040-node-manager/templates/fencing-agent                      @yalosev @ergoz
 **/040-node-manager/templates/cluster-autoscaler                 @yalosev @ergoz
 **/040-node-manager/templates/integrity-containerd-configurator  @sprait
