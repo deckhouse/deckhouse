@@ -128,8 +128,8 @@ description: Архитектура модуля managed-postgres в Deckhouse K
    - отправляет запросы на валидацию кастомных ресурсов Postgres и PostgresClass, мутацию кастомных ресурсов Postgres;
    - отправляет запросы на валидацию и мутацию кастомных ресурсов из `cnpg.internal.managed.deckhouse.io` API-группы.
 
-1. **Prometheus-main** — собирает метрики инстансов кластера PostgreSQL.
+1. **Prometheus-main** — собирает метрики инстансов кластера PostgreSQL (которые получает исполняемый файл `manager` компонента d8-cnpg-operator, запущенный в контейнере postgres пода инстанса PostgreSQL).
 
-1. **opAgent** — собирает метрики инстансов кластера PostgreSQL и отправляет их в prometheus-main.
+1. **opAgent** — собирает метрики инстансов кластера PostgreSQL (подключаясь к инстансам PostgreSQL напрямую) и отправляет их в prometheus-main.
 
 1. **Пользовательские приложения** — отправляют запросы к инстансам кластера PostgreSQL. Запросы на запись отправляются в primary инстанс через сервис Kubernetes **d8ms-pg-\<instance name>\-rw**. Primary инстанс реплицирует транзакции в реплики.  Запросы на чтение балансируются на инстансы PostgreSQL через сервисы Kubernetes **d8ms-pg-\<instance name>\-r** или **d8ms-pg-\<instance name>\-ro**.
