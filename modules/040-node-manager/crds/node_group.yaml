@@ -1709,9 +1709,11 @@ spec:
                       x-kubernetes-map-type: atomic
                     count:
                       description: |
-                          The desired number of existing `staticInstances` (matching the `labelSelector`) that DKP bootstraps and joins into the cluster. In a NodeGroup of type Static or CloudStatic, this parameter sets the expected number of nodes — DKP uses this value for state control and automation purposes.
+                          Target number of StaticInstance resources (matching the `labelSelector`) that DKP bootstraps and adds into the cluster.
 
-                          > **Caution.** This parameter effectively controls how many static nodes are added to the group, so it must be set explicitly. The default value is `0`, which means no `StaticInstance` is bootstrapped and no node is added to the group. To add static nodes, set `count` to the required number of nodes (greater than `0`).
+                          In a NodeGroup with Static or CloudStatic nodes, this parameter sets the expected number of nodes. DKP uses this value for state control and automation purposes.
+
+                          > **Warning.** Set this parameter explicitly. The default value is `0`, which means DKP won't bootstrap any StaticInstance resource or add any node to the group unless this value is modified. To add static nodes, specify the required number here (greater than `0`).
                       type: integer
                       minimum: 0
                       default: 0
