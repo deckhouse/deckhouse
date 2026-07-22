@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 )
 
 func createRegistryConfigSecret(t *testing.T, kubeCl *client.KubernetesClient, data map[string][]byte) {
@@ -98,7 +99,15 @@ func TestGetRegistryDataPreferUpstream(t *testing.T) {
 		conf, b64dc, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
 		require.NoError(t, err)
 		require.Equal(t, upstream, conf.GetRegistry())
-		require.NotEmpty(t, b64dc, "upstream path must build a registryDockerCfg")
+
+		// The dockercfg must key on the same host that RegistryConfigFromDockerConfig
+		// looks up, otherwise lazy image pulls out of the cluster find no credentials.
+		dockerCfg, err := image.DecodeDockerConfig(b64dc)
+		require.NoError(t, err)
+		registryConf, err := image.RegistryConfigFromDockerConfig(dockerCfg, "HTTPS", upstream)
+		require.NoError(t, err)
+		require.Equal(t, "u", registryConf.GetUsername())
+		require.Equal(t, "p", registryConf.GetPassword())
 	})
 
 	t.Run("in cluster uses the mirror", func(t *testing.T) {
@@ -120,5 +129,18 @@ func TestGetRegistryDataPreferUpstream(t *testing.T) {
 		conf, _, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
 		require.NoError(t, err)
 		require.Equal(t, mirror, conf.GetRegistry())
+	})
+
+	t.Run("out of cluster surfaces an invalid upstream instead of falling back", func(t *testing.T) {
+		kubeCl := client.NewFakeKubernetesClient()
+		createRegistryConfigSecret(t, kubeCl, map[string][]byte{
+			"mode": []byte("Direct"), "imagesRepo": []byte(upstream), "scheme": []byte("invalid"),
+		})
+		createDeckhouseRegistrySecret(t, kubeCl, mirror)
+
+		conf, b64dc, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
+		require.ErrorContains(t, err, "scheme must be HTTP or HTTPS")
+		require.Nil(t, conf)
+		require.Empty(t, b64dc)
 	})
 }

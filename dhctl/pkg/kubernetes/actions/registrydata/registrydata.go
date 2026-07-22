@@ -149,7 +149,7 @@ func getUpstreamRegistryData(ctx context.Context, kubeCl *client.KubernetesClien
 	password := string(secret.Data["password"])
 	conf, err := image.NewRegistryConfig(scheme, imagesRepo, username, password, string(secret.Data["ca"]))
 	if err != nil {
-		return nil, "", false, err
+		return nil, "", false, fmt.Errorf("build upstream registry config: %w", err)
 	}
 
 	address, _ := helpers.SplitAddressAndPath(imagesRepo)

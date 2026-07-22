@@ -1044,7 +1044,7 @@ func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, globa
 		return nil
 	}
 
-	conf, _, err := registrydata.GetRegistryData(ctx, kubeCl)
+	conf, _, err := registrydata.GetRegistryDataPreferUpstream(ctx, kubeCl, globalOptions.KubeInCluster)
 	if err != nil {
 		return err
 	}
