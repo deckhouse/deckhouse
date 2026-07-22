@@ -5,6 +5,15 @@ deckhouse:
   imagesRepo: '${IMAGES_REPO}'
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
+
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse-upstream-ee
+spec:
+  registry:
+    repo: '${DECKHOUSE_READ_RU_REGISTRY_HOST}/deckhouse/ee/modules'
+    dockerCfg: '${DECKHOUSE_E2E_MODULES_DOCKERCFG}'
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
