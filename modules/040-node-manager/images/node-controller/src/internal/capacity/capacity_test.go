@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 func TestCapacityExtractor(t *testing.T) {
@@ -34,7 +32,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(vsphereSpec), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
 		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		require.NoError(t, err)
 		assert.Equal(t, "10Gi", capac.Memory.String())
@@ -46,7 +44,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(yandexSpec), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
 		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		require.NoError(t, err)
 		assert.Equal(t, "16Gi", capac.Memory.String())
@@ -58,7 +56,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(awsSpec), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog([]v1alpha1.InstanceType{
+		catalog := NewInstanceTypesCatalog([]InstanceType{
 			{
 				Name:   "t3a.xlarge",
 				CPU:    resource.MustParse("4"),
@@ -81,7 +79,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(awsSpecWithCapacity), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
 		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		require.NoError(t, err)
 		assert.Equal(t, "32Gi", capac.Memory.String())
@@ -93,7 +91,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(gcpSpec), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog([]v1alpha1.InstanceType{
+		catalog := NewInstanceTypesCatalog([]InstanceType{
 			{
 				Name:   "t2a-standard-2",
 				CPU:    resource.MustParse("2"),
@@ -116,7 +114,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(gcpSpecWithCapacity), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
 		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		require.NoError(t, err)
 		assert.Equal(t, "64Gi", capac.Memory.String())
@@ -128,7 +126,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(azureSpec), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog([]v1alpha1.InstanceType{
+		catalog := NewInstanceTypesCatalog([]InstanceType{
 			{
 				Name:   "Standard_F4",
 				CPU:    resource.MustParse("4"),
@@ -151,7 +149,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(azureSpecWithCapacity), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
 		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		require.NoError(t, err)
 		assert.Equal(t, "4Gi", capac.Memory.String())
@@ -163,7 +161,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(openstackSpec), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog([]v1alpha1.InstanceType{
+		catalog := NewInstanceTypesCatalog([]InstanceType{
 			{
 				Name:   "m2.xlarge",
 				CPU:    resource.MustParse("8"),
@@ -186,7 +184,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(openstackSpecWithCapacity), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
 		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		require.NoError(t, err)
 		assert.Equal(t, "16Gi", capac.Memory.String())
@@ -198,7 +196,7 @@ func TestCapacityExtractor(t *testing.T) {
 		var instanceClass map[string]interface{}
 		err := yaml.Unmarshal([]byte(dvpSpec), &instanceClass)
 		require.NoError(t, err)
-		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
 		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		require.NoError(t, err)
 		assert.Equal(t, "8Gi", capac.Memory.String())
