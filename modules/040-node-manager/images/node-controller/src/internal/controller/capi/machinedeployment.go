@@ -139,8 +139,12 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	case deckhousev1.NodeTypeCloudEphemeral:
 		switch ng.Status.Engine {
 		case engineCAPI:
-			if err := r.reconcileCloudMDsRendered(ctx, ng); err != nil {
+			res, err := r.reconcileCloudMDsRendered(ctx, ng)
+			if err != nil {
 				return ctrl.Result{}, err
+			}
+			if res.RequeueAfter > 0 {
+				return res, nil
 			}
 		case engineMCM:
 			if err := r.reconcileCloudMCMs(ctx, ng); err != nil {

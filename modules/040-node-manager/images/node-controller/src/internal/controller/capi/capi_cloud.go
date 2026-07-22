@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	sigsyaml "sigs.k8s.io/yaml"
@@ -33,6 +35,12 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
 )
+
+// capiHelmWaitRequeue bounds how long a CAPI NodeGroup waits for helm to render its
+// infrastructure MachineTemplate before node-controller re-checks and creates the
+// MachineDeployment. The template is not watched, so without this the wait would fall
+// back to the 10-minute periodic resync.
+const capiHelmWaitRequeue = 10 * time.Second
 
 type capiMDInput struct {
 	ng                  *deckhousev1.NodeGroup
@@ -139,27 +147,27 @@ func resolveCAPIZones(ng *deckhousev1.NodeGroup, defaultZones []string) []string
 	return defaultZones
 }
 
-func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
 		logger.V(1).Info("skipping CAPI: no cloudInstances")
-		return nil
+		return ctrl.Result{}, nil
 	}
 
 	cloudConfig, err := r.readCloudProviderConfig(ctx)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 	if cloudConfig.capiClusterName == "" {
 		logger.V(1).Info("skipping CAPI: capiClusterName is empty")
-		return nil
+		return ctrl.Result{}, nil
 	}
 
 	zones := resolveCAPIZones(ng, cloudConfig.zones)
 	if len(zones) == 0 {
 		logger.V(1).Info("skipping CAPI: no zones")
-		return nil
+		return ctrl.Result{}, nil
 	}
 
 	// The instance-class checksum is owned by helm: it renders the infrastructure
@@ -169,20 +177,24 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	// helm and existing nodes never roll.
 	checksum, err := r.readInstanceClassChecksum(ctx, cloudConfig, ng.Name)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 	if checksum == "" {
-		logger.V(1).Info("skipping CAPI: infrastructure template not found yet, waiting for helm")
-		return nil
+		// The MachineDeployment cannot be built until helm renders the infrastructure
+		// MachineTemplate. node-controller does not watch that template, so requeue soon
+		// instead of falling back to the long periodic resync — otherwise MD creation
+		// lags helm by up to resyncInterval after the NodeGroup is created.
+		logger.V(1).Info("waiting for helm-rendered infrastructure template, requeue soon")
+		return ctrl.Result{RequeueAfter: capiHelmWaitRequeue}, nil
 	}
 
 	clusterUUID, err := r.readClusterUUID(ctx)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 	instancePrefix, err := r.readInstancePrefix(ctx)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
 	minReplicas := ng.Spec.CloudInstances.MinPerZone
@@ -214,7 +226,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 
 		desired, err := r.capiDesiredReplicas(ctx, mdName, minReplicas, maxReplicas)
 		if err != nil {
-			return err
+			return ctrl.Result{}, err
 		}
 
 		md := buildCAPIMachineDeployment(capiMDInput{
@@ -245,16 +257,16 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 				"zone":                zone,
 			},
 		); err != nil {
-			return fmt.Errorf("apply provider MachineDeployment spec patch for %s: %w", mdName, err)
+			return ctrl.Result{}, fmt.Errorf("apply provider MachineDeployment spec patch for %s: %w", mdName, err)
 		}
 
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
-			return fmt.Errorf("apply CAPI MachineDeployment %s: %w", mdName, err)
+			return ctrl.Result{}, fmt.Errorf("apply CAPI MachineDeployment %s: %w", mdName, err)
 		}
 		logger.Info("applied CAPI MachineDeployment", "name", mdName, "zone", zone)
 	}
 
-	return nil
+	return ctrl.Result{}, nil
 }
 
 func buildStaticMachineTemplate(ng *deckhousev1.NodeGroup) (*unstructured.Unstructured, error) {
