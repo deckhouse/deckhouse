@@ -15,6 +15,7 @@
 package registrydata
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -63,5 +64,61 @@ func TestGetUpstreamRegistryData(t *testing.T) {
 		_, found, err := GetUpstreamRegistryData(t.Context(), kubeCl)
 		require.NoError(t, err)
 		require.False(t, found)
+	})
+}
+
+func createDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesClient, imagesRegistry string) {
+	t.Helper()
+	host, _, _ := strings.Cut(imagesRegistry, "/")
+	_, err := kubeCl.CoreV1().Secrets(d8RppSecretNamespace).Create(t.Context(), &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: d8RppSecretName, Namespace: d8RppSecretNamespace},
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"` + host + `":{"auth":"dXNlcjpwYXNz"}}}`),
+			"imagesRegistry":    []byte(imagesRegistry),
+			"scheme":            []byte("HTTPS"),
+		},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func TestGetRegistryDataPreferUpstream(t *testing.T) {
+	const (
+		upstream = "dev-registry.deckhouse.io/sys/deckhouse-oss"
+		mirror   = "registry.d8-system.svc:5001/system/deckhouse"
+	)
+
+	t.Run("out of cluster prefers the upstream registry with a dockercfg", func(t *testing.T) {
+		kubeCl := client.NewFakeKubernetesClient()
+		createRegistryConfigSecret(t, kubeCl, map[string][]byte{
+			"mode": []byte("Direct"), "imagesRepo": []byte(upstream),
+			"scheme": []byte("HTTPS"), "username": []byte("u"), "password": []byte("p"),
+		})
+		createDeckhouseRegistrySecret(t, kubeCl, mirror)
+
+		conf, b64dc, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
+		require.NoError(t, err)
+		require.Equal(t, upstream, conf.GetRegistry())
+		require.NotEmpty(t, b64dc, "upstream path must build a registryDockerCfg")
+	})
+
+	t.Run("in cluster uses the mirror", func(t *testing.T) {
+		kubeCl := client.NewFakeKubernetesClient()
+		createRegistryConfigSecret(t, kubeCl, map[string][]byte{
+			"mode": []byte("Direct"), "imagesRepo": []byte(upstream), "scheme": []byte("HTTPS"),
+		})
+		createDeckhouseRegistrySecret(t, kubeCl, mirror)
+
+		conf, _, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, true)
+		require.NoError(t, err)
+		require.Equal(t, mirror, conf.GetRegistry())
+	})
+
+	t.Run("out of cluster falls back to the mirror when no upstream is configured", func(t *testing.T) {
+		kubeCl := client.NewFakeKubernetesClient()
+		createDeckhouseRegistrySecret(t, kubeCl, mirror)
+
+		conf, _, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
+		require.NoError(t, err)
+		require.Equal(t, mirror, conf.GetRegistry())
 	})
 }

@@ -228,7 +228,10 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	// plugins are pulled lazily and read DeckhouseConfig.RegistryDockerCfg.
 	needRegistryData := globalOptions.EnsureCandiAvailable || needProviderCandi || clusterConfig.Type == CloudClusterType
 	if needRegistryData {
-		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
+		// Out of the cluster (manual dhctl over SSH) the deckhouse-registry mirror
+		// registry.d8-system.svc is unresolvable, so prefer the upstream registry
+		// for the candi/provider-bundle download; in-cluster callers keep the mirror.
+		conf, b64dc, err := registrydata.GetRegistryDataPreferUpstream(ctx, kubeCl, globalOptions.KubeInCluster)
 		if err != nil {
 			return nil, err
 		}
