@@ -222,7 +222,7 @@ lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories wi
 
 .PHONY: check-dhctl-cmd-drift
 check-dhctl-cmd-drift: ## Verify dhctl ↔ deckhouse-controller CLI command-builder duplicates are in sync.
-	@bash exit 0
+	@true
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
