@@ -207,7 +207,7 @@ define iterateAllGoModules
 endef
 
 .PHONY: lint-all
-lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
+lint-all: golangci-lint check-dhctl-cmd-drift ## Run golangci-lint run in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: lint-changed
@@ -219,6 +219,10 @@ lint-changed: check-dhctl-cmd-drift ## Lint only Go modules touched by diff agai
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
+
+.PHONY: check-dhctl-cmd-drift
+check-dhctl-cmd-drift: ## Verify dhctl ↔ deckhouse-controller CLI command-builder duplicates are in sync.
+	@bash tools/check-dhctl-cmd-drift.sh
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
