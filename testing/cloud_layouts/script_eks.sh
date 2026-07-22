@@ -416,6 +416,7 @@ function main() {
   fi
 
   chmod_dirs_for_cleanup
+  echo exit code - $exitCode
   exit $exitCode
 }
 
