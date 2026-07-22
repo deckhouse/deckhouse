@@ -44,10 +44,13 @@ type Globals struct {
 	Proxy                   map[string]interface{}
 }
 
-func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}) map[string]interface{} {
+func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}) (map[string]interface{}, error) {
 	cpArgs := s.readControlPlaneArguments(ctx)
 	certs := s.readAPIServerProxyCerts(ctx)
-	eps := s.readEndpoints(ctx)
+	eps, err := s.readEndpoints(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read kube-apiserver endpoints: %w", err)
+	}
 
 	input := map[string]interface{}{
 		"deckhouse": map[string]interface{}{
@@ -91,7 +94,7 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 		input["allowedKubeletFeatureGates"] = cpArgs.kubeletFeatureGate
 	}
 
-	return input
+	return input, nil
 }
 
 func Marshal(input map[string]interface{}) ([]byte, error) {
@@ -102,7 +105,11 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 	logger := log.FromContext(ctx)
 
 	globals := s.ReadGlobals(ctx)
-	raw, err := Marshal(s.Build(ctx, globals, nodeGroups))
+	input, err := s.Build(ctx, globals, nodeGroups)
+	if err != nil {
+		return err
+	}
+	raw, err := Marshal(input)
 	if err != nil {
 		return fmt.Errorf("marshal input.yaml: %w", err)
 	}

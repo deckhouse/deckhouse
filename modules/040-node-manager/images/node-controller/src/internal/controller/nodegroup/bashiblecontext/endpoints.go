@@ -18,6 +18,7 @@ package bashiblecontext
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -25,6 +26,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,14 +42,17 @@ type endpoints struct {
 	clusterMasterEndpoints []map[string]interface{}
 }
 
-func (s *Service) readEndpoints(ctx context.Context) endpoints {
+func (s *Service) readEndpoints(ctx context.Context) (endpoints, error) {
 	set := make(map[string]struct{})
+	var discoveryErrs []error
 
 	pods := &corev1.PodList{}
 	if err := s.Client.List(ctx, pods,
 		client.InNamespace(kubeSystemNS),
 		client.MatchingLabels{"component": "kube-apiserver", "tier": "control-plane"},
-	); err == nil {
+	); err != nil {
+		discoveryErrs = append(discoveryErrs, fmt.Errorf("list kube-apiserver pods: %w", err))
+	} else {
 		for i := range pods.Items {
 			pod := &pods.Items[i]
 			if !podReady(pod) {
@@ -72,6 +77,8 @@ func (s *Service) readEndpoints(ctx context.Context) endpoints {
 				}
 			}
 		}
+	} else if !apierrors.IsNotFound(err) {
+		discoveryErrs = append(discoveryErrs, fmt.Errorf("get default/kubernetes EndpointSlice: %w", err))
 	}
 
 	delete(set, "")
@@ -102,7 +109,14 @@ func (s *Service) readEndpoints(ctx context.Context) endpoints {
 			"rppBootstrapServerPort": packagesProxyBootstrapPort,
 		})
 	}
-	return res
+	if len(res.apiserverEndpoints) == 0 || len(res.clusterMasterEndpoints) == 0 {
+		err := errors.Join(discoveryErrs...)
+		if err == nil {
+			err = errors.New("no kube-apiserver endpoints discovered")
+		}
+		return endpoints{}, err
+	}
+	return res, nil
 }
 
 func podReady(pod *corev1.Pod) bool {
