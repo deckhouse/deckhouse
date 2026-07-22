@@ -71,6 +71,10 @@ const (
 	bashibleAPIGroup          = "bashible.deckhouse.io"
 	bashibleAPIVersion        = "v1alpha1"
 	bashibleEndpointSliceName = "bashible-api-manual"
+
+	bashibleFirstRunFinishedLabel = "node.deckhouse.io/bashible-first-run-finished"
+	bashibleUninitializedTaintKey = "node.deckhouse.io/bashible-uninitialized"
+	nodeUninitializedTaintKey     = "node.deckhouse.io/uninitialized"
 )
 
 func (r *reconciler) reconcileBashibleApiserver(
@@ -150,7 +154,53 @@ func (r *reconciler) reconcileBashibleApiserver(
 		return res, err
 	}
 
+	// 13. Nested: node cleanup (no node-manager runs in the nested cluster to do it).
+	if res, err := r.reconcileNestedNodeCleanup(ctx, nestedClient); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	return reconcile.Result{}, nil
+}
+
+// reconcileNestedNodeCleanup ports node-controller bashiblecleanup for the nested cluster
+// once a node reports bashible-first-run-finished, drop that label and the uninitialized taints in one patch so it becomes schedulable and bashible does not re-apply the label.
+func (r *reconciler) reconcileNestedNodeCleanup(ctx context.Context, nestedClient client.Client) (reconcile.Result, error) {
+	nodes := &corev1.NodeList{}
+	if err := nestedClient.List(ctx, nodes, client.HasLabels{bashibleFirstRunFinishedLabel}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("list nested nodes: %w", err)
+	}
+
+	for i := range nodes.Items {
+		node := &nodes.Items[i]
+		base := node.DeepCopy()
+
+		delete(node.Labels, bashibleFirstRunFinishedLabel)
+		node.Spec.Taints = filterTaints(node.Spec.Taints, nodeUninitializedTaintKey, bashibleUninitializedTaintKey)
+
+		if equality.Semantic.DeepEqual(base.Labels, node.Labels) &&
+			equality.Semantic.DeepEqual(base.Spec.Taints, node.Spec.Taints) {
+			continue
+		}
+		if err := nestedClient.Patch(ctx, node, client.MergeFrom(base)); err != nil {
+			return reconcile.Result{}, fmt.Errorf("cleanup nested node %s: %w", node.Name, err)
+		}
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func filterTaints(taints []corev1.Taint, dropKeys ...string) []corev1.Taint {
+	drop := make(map[string]struct{}, len(dropKeys))
+	for _, k := range dropKeys {
+		drop[k] = struct{}{}
+	}
+	out := make([]corev1.Taint, 0, len(taints))
+	for _, t := range taints {
+		if _, ok := drop[t.Key]; !ok {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func (r *reconciler) reconcileBashibleKubeconfigSecret(
