@@ -276,9 +276,16 @@ properties:
     pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
     default: '10m'
     description: |
-      The TTL of the id token (use `s` for seconds, `m` for minutes, `h` for hours).
+      TTL of the ID token.
 
-      It is specified as a string containing the time unit in hours, minutes and seconds: 30m, 20s, 2h30m10s, 24h.
+      Set as a string specifying hours, minutes, or seconds: `30m`, `20s`, `2h30m10s`, `24h`.
+
+      Defines the minimum possible user session lifetime (via [`keepUsersLoggedInFor`](cr.html#dexauthenticator-v1-spec-keepusersloggedinfor) in the DexAuthenticator resource
+      and parameters like `auth.sessionTTL`, for example, in the [`console`](/modules/console/configuration.html#parameters-auth-sessionttl) module).
+
+      If the session TTL is less than or equal to `idTokenTTL`, the effective logout time is `idTokenTTL + 1s`.
+
+      To force logout sooner than the default `idTokenTTL`, decrease this parameter value as well.
   refreshTokenAbsoluteLifetime:
     type: string
     pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
