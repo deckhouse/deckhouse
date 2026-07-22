@@ -358,7 +358,6 @@ function chmod_dirs_for_cleanup() {
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
-  echo "True"
 }
 
 function main() {
@@ -370,11 +369,15 @@ function main() {
   exitCode=0
   case "${1}" in
     run-test)
+      echo "start bootstrap_eks"
       run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
+      echo "end bootstrap_eks"
     ;;
 
     wait_deckhouse_ready)
+      echo "start check deckhouse ready"
       wait_deckhouse_ready || exitCode=$?
+      echo "end check deckhouse ready"
     ;;
 
     wait_cluster_ready)
