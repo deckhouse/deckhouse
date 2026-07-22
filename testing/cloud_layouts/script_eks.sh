@@ -351,12 +351,14 @@ function chmod_dirs_for_cleanup() {
     # chown -R $USER_RUNNER_ID "$(pwd)" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
+
   else
     echo "Fix temp directories permissions before cleanup ..."
     # chmod -f -R 777 "$(pwd)" || true
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
+  echo "True"
 }
 
 function main() {
