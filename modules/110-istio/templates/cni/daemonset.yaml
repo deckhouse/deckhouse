@@ -85,6 +85,7 @@ spec:
             - install-cni
           {{- if not $.Values.istio.internal.enableAmbientMode }}
           securityContext:
+            allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: false
             runAsUser: 0
