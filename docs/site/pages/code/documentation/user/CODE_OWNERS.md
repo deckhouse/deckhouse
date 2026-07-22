@@ -291,42 +291,38 @@ Example:
 
 Result: **3 approvals** are required.
 
-## Disabling Code Owners checks
+## Disabling CODEOWNERS checks
 
-Code Owners checks can be disabled at the project level. This is useful when a project has a `CODEOWNERS` file, but approvals from code owners are not required.
+CODEOWNERS checks, which are enabled by default in Deckhouse Code, can be disabled at the project level. This is useful when a project has a `CODEOWNERS` file, but approvals from code owners are not required.
 
->**How to find it**: "Project" → "Settings" → "Merge requests" → the additional approval rule settings → the "Disable Code Owners approval checks" setting.
+To disable these checks, navigate to "Project" → "Settings" → "Merge requests" → the additional approval rule settings, and select "Disable Code Owners approval checks".
 
-When the setting is enabled, Code Owners checks are skipped across the whole project:
+Once the checks are disabled, CODEOWNERS are skipped across the whole project:
 
-- a merge request is not blocked by missing approvals from code owners;
-- code owners are not calculated for the changed files — the list of applicable entries is empty;
-- the change applies immediately to already open merge requests.
+- Merge requests are not blocked by missing approvals from code owners.
+- Code owners are not defined for the changed files — the list of applicable entries is empty.
+- Enabling or disabling the setting is immediately applied to already open merge requests.
 
-Validation of the `CODEOWNERS` file syntax keeps working — the file can be validated even when the checks are disabled.
-
-The setting is disabled by default.
+Validation of the `CODEOWNERS` file syntax keeps working. The file can be validated even when the checks are disabled.
 
 ## Automatically assigning code owners as reviewers
 
 Code owners matching the changed files can be automatically assigned as reviewers of a merge request.
 
->**How to find it**: "Project" → "Settings" → "Merge requests" → the "Automatic reviewer assignment" section → the "Automatically assign code owners as reviewers" setting.
+To enable that, navigate to "Project" → "Settings" → "Merge requests" → "Automatic reviewer assignment", and select "Automatically assign code owners as reviewers".
 
-When the setting is enabled, code owners are assigned as reviewers:
+This setting is disabled by default. When it is enabled, code owners are assigned as reviewers:
 
-- when a merge request is created as ready (not a draft);
-- when a draft merge request is marked ready.
+- When a merge request is created as ready (not a draft).
+- When a draft merge request is marked ready.
 
-Assignment specifics:
+Restrictions applied when the automatic assignment is enabled:
 
-- assignment is not performed for drafts;
-- if a merge request already has reviewers, automatic assignment is skipped — manually assigned reviewers are kept;
-- the merge request author is never assigned as a reviewer;
-- only users with read access to the merge request are assigned;
-- only the first code owner is assigned unless the project allows multiple reviewers.
-
-The setting is disabled by default.
+- Assignment is not performed for drafts.
+- If a merge request already has reviewers, automatic assignment is skipped — manually assigned reviewers are kept.
+- The merge request author can never be assigned as a reviewer.
+- Only users with read access to the merge request are assigned.
+- If the project forbids to assign multiple reviewers, only the first code owner is assigned.
 
 ## Formatting recommendations
 
