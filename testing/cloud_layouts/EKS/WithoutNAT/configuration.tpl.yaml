@@ -5,7 +5,7 @@ deckhouse:
   imagesRepo: '${IMAGES_REPO}'
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
-
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -37,6 +37,28 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: documentation
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingress-nginx
+spec:
+  enabled: true
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-custom
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: upmeter
 spec:
   enabled: true
 ---
