@@ -19,6 +19,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -26,7 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"fencing-agent/internal/domain"
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 type Config struct {
@@ -72,8 +73,8 @@ func (c *Config) validate() error {
 		return errors.New("NODE_GROUP is empty")
 	}
 
-	if !domain.ProfileName(c.ProfileRefName).IsValid() {
-		return fmt.Errorf("PROFILE_REF_NAME=%q is invalid, must be one of %v", c.ProfileRefName, domain.ProfileNames())
+	if !slices.Contains(v1alpha1.ProfileNames(), v1alpha1.ProfileName(c.ProfileRefName)) {
+		return fmt.Errorf("PROFILE_REF_NAME=%q is invalid, must be one of %v", c.ProfileRefName, v1alpha1.ProfileNames())
 	}
 
 	if strings.TrimSpace(c.WatchdogDevice) == "" {

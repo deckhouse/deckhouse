@@ -1,0 +1,247 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fencingnodestates.node-manager.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: node-manager.deckhouse.io
+  scope: Cluster
+  names:
+    plural: fencingnodestates
+    singular: fencingnodestate
+    kind: FencingNodeState
+    shortNames:
+      - fns
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Node
+          type: string
+          jsonPath: .metadata.name
+        - name: NodeGroup
+          type: string
+          jsonPath: .spec.nodeGroup
+        - name: Profile
+          type: string
+          jsonPath: .spec.profileRef.name
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: FailedAt
+          type: date
+          jsonPath: .status.failed.detectedAt
+        - name: FallbackAt
+          type: date
+          jsonPath: .status.fallback.lastHeartbeatAt
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Signal object describing an active fencing incident for a single node.
+
+            The resource name matches the node name, and the object carries exactly one owner reference to that node, so it is garbage collected when the node is removed. A healthy node has no `FencingNodeState` at all: the object exists only while there is an active problem.
+
+            The object is created by a fencing agent and read by the fencing controller, which decides whether the node must be evacuated. It is not intended to be created or edited manually.
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              description: |
+                Immutable description of the fenced node. It is set once at creation and cannot be changed afterwards.
+              required:
+                - nodeGroup
+                - profileRef
+              x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: spec is immutable after creation.
+              properties:
+                nodeGroup:
+                  type: string
+                  description: |
+                    Name of the NodeGroup the node belongs to.
+                profileRef:
+                  type: object
+                  description: |
+                    Reference to the SLA profile that was in force when the incident was recorded. The profile determines detection, evacuation, fallback and watchdog timings.
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      description: |
+                        Name of the SLA profile.
+                      enum:
+                        - Critical
+                        - Medium
+                        - Moderate
+                        - Slow
+            status:
+              type: object
+              description: |
+                Observed state of the incident. Three writers own disjoint parts of it: the designated writer owns `failed`, the affected node owns `fallback`, and the fencing controller owns `phase` and `conditions`.
+              properties:
+                phase:
+                  type: string
+                  description: |
+                    Current state of the fencing state machine for the node.
+
+                    `Healthy` is unreachable in practice: a healthy node has no `FencingNodeState`, so absence of the object is the healthy signal.
+                  enum:
+                    - Healthy
+                    - Suspected
+                    - FallbackAlive
+                    - ReadyToEvict
+                    - Evicting
+                    - Done
+                    - Error
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    Generation of the resource the status was calculated from.
+
+                    Kept for API consistency only. `spec` is immutable, so the generation never changes after creation and this field must not be used as a staleness guard.
+                failed:
+                  type: object
+                  description: |
+                    Failure evidence recorded by the designated writer, the single agent responsible for reporting this node as failed. It is written only while that agent holds local quorum.
+                  required:
+                    - detectedAt
+                    - detectedBy
+                    - reason
+                    - aliveCount
+                    - quorumSize
+                  properties:
+                    detectedAt:
+                      type: string
+                      format: date-time
+                      description: |
+                        Time the failure was detected. The evacuation delay of the profile is counted from this moment.
+                    detectedBy:
+                      type: string
+                      description: |
+                        Name of the node that recorded the failure.
+                    reason:
+                      type: string
+                      description: |
+                        Why the node is considered failed.
+                      enum:
+                        - MemberlistDead
+                        - MemberlistLeft
+                        - QuorumLost
+                    memberlistIncarnation:
+                      type: integer
+                      format: int64
+                      description: |
+                        Incarnation number of the failed node in the memberlist view of the writer.
+                    memberlistViewID:
+                      type: string
+                      description: |
+                        Identifier of the memberlist view the decision was based on.
+                    aliveCount:
+                      type: integer
+                      format: int32
+                      minimum: 0
+                      description: |
+                        Number of nodes the writer considered alive. Zero is a valid value and means every peer is gone.
+                    quorumSize:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                      description: |
+                        Quorum size the writer used when it made the decision.
+                fallback:
+                  type: object
+                  description: |
+                    Liveness evidence written by the affected node itself while it has lost quorum but can still reach the Kubernetes API.
+
+                    A fresh `lastHeartbeatAt` always outweighs the `failed` section: while the heartbeat is newer than the fallback TTL of the profile, evacuation is not allowed.
+                  required:
+                    - active
+                    - apiReachable
+                    - heartbeatIntervalSeconds
+                  properties:
+                    active:
+                      type: boolean
+                      description: |
+                        Whether the node is currently in fallback mode.
+                    lastHeartbeatAt:
+                      type: string
+                      format: date-time
+                      description: |
+                        Time of the last heartbeat written by the node.
+                    quorumLostAt:
+                      type: string
+                      format: date-time
+                      description: |
+                        Time the node lost quorum.
+                    apiReachable:
+                      type: boolean
+                      description: |
+                        Whether the node could reach the Kubernetes API when the heartbeat was written.
+                    heartbeatIntervalSeconds:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                      description: |
+                        Interval at which the node writes heartbeats.
+                conditions:
+                  type: array
+                  description: |
+                    Conditions describing the incident, maintained by the fencing controller.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          Condition type.
+                      status:
+                        type: string
+                        description: |
+                          Condition status.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        minimum: 0
+                        description: |
+                          Generation of the resource the condition was set from.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: |
+                          Time the condition last changed its status.
+                      reason:
+                        type: string
+                        description: |
+                          Machine-readable reason for the last transition.
+                      message:
+                        type: string
+                        description: |
+                          Human-readable description of the last transition.
