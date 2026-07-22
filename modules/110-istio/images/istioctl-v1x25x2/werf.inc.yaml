@@ -6,7 +6,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 from: {{ index $.Images "builder/golang" }}
-fromCacheVersion: 2207202602
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
