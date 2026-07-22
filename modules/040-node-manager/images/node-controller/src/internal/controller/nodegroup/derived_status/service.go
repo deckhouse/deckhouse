@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
 )
 
 func versionString(v *semver.Version) string {
@@ -66,9 +67,22 @@ type Result struct {
 
 // Compute derives the get_crds fields for a single NodeGroup.
 func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) (Result, error) {
-	logger := log.FromContext(ctx)
+	return s.compute(ctx, ng, s.readCloudProviderData(ctx))
+}
 
+// ComputeWithCloudChecks derives get_crds fields and validation diagnostics from
+// the same provider snapshot, matching the old hook's single-pass behavior.
+func (s *Service) ComputeWithCloudChecks(ctx context.Context, ng *v1.NodeGroup) (Result, CloudCheckResult, error) {
 	cloudProvider := s.readCloudProviderData(ctx)
+	result, err := s.compute(ctx, ng, cloudProvider)
+	if err != nil {
+		return result, CloudCheckResult{}, err
+	}
+	return result, s.runCloudChecks(ctx, ng, cloudProvider), nil
+}
+
+func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) (Result, error) {
+	logger := log.FromContext(ctx)
 
 	result := Result{
 		Engine:           s.computeEngine(ng, cloudProvider),
@@ -134,7 +148,7 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, clou
 	// nodeCapacity is only needed for scale-from-zero (min==0 && max>0).
 	if ng.Spec.CloudInstances.MinPerZone == 0 && ng.Spec.CloudInstances.MaxPerZone > 0 {
 		catalog := s.readInstanceTypesCatalog(ctx)
-		nodeCapacity, err := calculateNodeCapacity(kind, instanceClassSpec, catalog)
+		nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(kind, instanceClassSpec, catalog)
 		if err != nil {
 			logger.Error(err, "failed to calculate node capacity", "nodeGroup", ng.Name, "kind", kind)
 		} else if nodeCapacity != nil {

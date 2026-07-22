@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/capacity"
 )
 
 // engine values, kept in sync with hooks/internal/v1.NodeGroupEngine*.
@@ -196,11 +195,6 @@ func resolveZones(ng *v1.NodeGroup, defaultZones []string) []string {
 		return ng.Spec.CloudInstances.Zones
 	}
 	return defaultZones
-}
-
-// calculateNodeCapacity mirrors get_crds check #3 (scale-from-zero capacity).
-func calculateNodeCapacity(kind string, instanceClassSpec interface{}, catalog *capacity.InstanceTypesCatalog) (*capacity.InstanceType, error) {
-	return capacity.CalculateNodeTemplateCapacity(kind, instanceClassSpec, catalog)
 }
 
 func applyCloudSpecificDefaults(cloudProvider map[string]interface{}, instanceClassSpec interface{}) (interface{}, error) {

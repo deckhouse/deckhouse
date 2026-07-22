@@ -130,18 +130,15 @@ func cloudEphemeralNG(name string, zones []string, minPerZone, maxPerZone int32)
 
 func TestReconcile_LongErrorTruncatedAndEventEmitted(t *testing.T) {
 	setEnv(t)
-	ng := &v1.NodeGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
-	}
-	r, rec := newReconciler(t, ng)
-
 	longErr := strings.Repeat("x", 2000)
-	ngWithError := ng.DeepCopy()
-	ngWithError.Status.Error = longErr
-	if err := r.Client.Status().Update(context.Background(), ngWithError); err != nil {
-		t.Fatalf("set initial status: %v", err)
-	}
+	ng := cloudEphemeralNG("worker", []string{"a"}, 1, 3)
+	scheme := cloudScheme(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(ng, mcmMD("worker-md", "worker", 1, longErr)).
+		WithStatusSubresource(&v1.NodeGroup{}).
+		Build()
+	r := &Status{Base: register.Base{Client: cl, Recorder: record.NewFakeRecorder(10)}}
+	rec := r.Recorder.(*record.FakeRecorder)
 
 	doReconcile(t, r, "worker")
 
