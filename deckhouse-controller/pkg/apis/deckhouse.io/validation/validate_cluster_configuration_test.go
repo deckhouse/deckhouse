@@ -22,6 +22,32 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+func TestValidateDefaultCRI(t *testing.T) {
+	tests := []struct {
+		name       string
+		defaultCRI string
+		wantValid  bool
+	}{
+		{name: "empty (unset) is valid", defaultCRI: "", wantValid: true},
+		{name: "Containerd is valid", defaultCRI: "Containerd", wantValid: true},
+		{name: "NotManaged is valid", defaultCRI: "NotManaged", wantValid: true},
+		{name: "unknown value is rejected", defaultCRI: "Docker", wantValid: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// cli is only consulted for the ContainerdV2 path, which these cases avoid.
+			res, err := validateDefaultCRI(tt.defaultCRI, nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if res.Valid != tt.wantValid {
+				t.Fatalf("validateDefaultCRI(%q) valid = %v, want %v (message: %q)", tt.defaultCRI, res.Valid, tt.wantValid, res.Message)
+			}
+		})
+	}
+}
+
 func TestParseVersion(t *testing.T) {
 	tests := []struct {
 		name        string

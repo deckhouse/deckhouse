@@ -301,6 +301,47 @@ spec:
 	})
 }
 
+func TestEffectiveDefaultCRI(t *testing.T) {
+	nodeManagerMC := func(cri string) []*ModuleConfig {
+		settings := SettingsValues{}
+		if cri != "" {
+			settings["defaultCRI"] = cri
+		}
+		mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
+		mc.SetName("node-manager")
+		return []*ModuleConfig{mc}
+	}
+	clusterConfig := func(cri string) map[string]json.RawMessage {
+		if cri == "" {
+			return map[string]json.RawMessage{}
+		}
+		return map[string]json.RawMessage{"defaultCRI": json.RawMessage(`"` + cri + `"`)}
+	}
+
+	tests := []struct {
+		name       string
+		clusterCRI string
+		moduleCRI  string
+		expected   string
+	}{
+		{name: "only ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "", expected: "ContainerdV2"},
+		{name: "only ModuleConfig", clusterCRI: "", moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
+		{name: "ModuleConfig overrides ClusterConfiguration", clusterCRI: "Containerd", moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
+		{name: "ModuleConfig at default falls back to ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "Containerd", expected: "ContainerdV2"},
+		{name: "neither set falls back to built-in default", clusterCRI: "", moduleCRI: "", expected: "Containerd"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MetaConfig{
+				ClusterConfig: clusterConfig(tt.clusterCRI),
+				ModuleConfigs: nodeManagerMC(tt.moduleCRI),
+			}
+			require.Equal(t, tt.expected, m.effectiveDefaultCRI())
+		})
+	}
+}
+
 func TestEnrichProxyData(t *testing.T) {
 	t.Run("proxy config is absent", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})

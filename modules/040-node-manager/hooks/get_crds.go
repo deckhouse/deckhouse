@@ -496,8 +496,17 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 			defaultCRIType = CRITypeDocker
 		}
 
+		// ClusterConfiguration.defaultCRI is deprecated and kept as a fallback.
 		if criValue, has := input.Values.GetOk("global.clusterConfiguration.defaultCRI"); has {
 			defaultCRIType = criValue.String()
+		}
+
+		// node-manager ModuleConfig setting takes precedence over the deprecated
+		// ClusterConfiguration field when it is set to a non-default value.
+		if criValue, has := input.Values.GetOk("nodeManager.defaultCRI"); has {
+			if v := criValue.String(); v != "" && v != NodeGroupDefaultCRIType {
+				defaultCRIType = v
+			}
 		}
 
 		newCRIType := nodeGroup.Spec.CRI.Type

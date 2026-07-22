@@ -372,6 +372,40 @@ alerts:
         Bashible-apiserver has been locked for too long.
       severity: "6"
       markupFormat: markdown
+    - name: D8ObsoleteDefaultCRIInClusterConfiguration
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |-
+        The `defaultCRI` field is set to a non-default value in ClusterConfiguration but has not been migrated to ModuleConfig `node-manager` yet.
+
+        Until the migration is complete, the value from ClusterConfiguration is used to avoid unintended container runtime changes on nodes.
+
+        **To resolve this alert, migrate the setting:**
+
+        1. Migrate the value from ClusterConfiguration to ModuleConfig in one command:
+
+           ```bash
+           d8 k patch moduleconfig node-manager --type merge -p "$(cat <<EOF
+           {"spec": {"version": 3, "settings": {"defaultCRI": "$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep defaultCRI | awk '{print $2}')"}}}
+           EOF
+           )"
+           ```
+
+        Once ModuleConfig is updated, this alert will be resolved automatically.
+
+        2. Remove `defaultCRI` from ClusterConfiguration:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete the `defaultCRI` field and save.
+      summary: |
+        Obsolete defaultCRI in ClusterConfiguration needs to be migrated to node-manager ModuleConfig.
+      severity: "6"
+      markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
       moduleUrl: 040-node-manager

@@ -457,11 +457,10 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
-	// Default CRI
-	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
-		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
-			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
-		}
+	// Default CRI. The node-manager ModuleConfig setting takes precedence over the
+	// deprecated ClusterConfiguration.defaultCRI field (see effectiveDefaultCRI).
+	if cri := m.effectiveDefaultCRI(); cri != "" {
+		defaultCRI = registry_const.CRIType(cri)
 	}
 
 	registry, err := registry.NewConfigProvider(
@@ -703,7 +702,10 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		configForBashibleBundleTemplate["provider"] = m.ProviderName
 	}
 
-	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
+	// The node-manager ModuleConfig setting takes precedence over the deprecated
+	// ClusterConfiguration.defaultCRI field, with a built-in fallback when neither
+	// is set (see effectiveDefaultCRI).
+	configForBashibleBundleTemplate["cri"] = m.effectiveDefaultCRI()
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
 	configForBashibleBundleTemplate["clusterBootstrap"] = clusterBootstrap
@@ -1006,8 +1008,34 @@ func (m *MetaConfig) LoadImagesDigests() error {
 	return nil
 }
 
-// FindModuleConfig
-// if not found returns nil
+// effectiveDefaultCRI resolves the container runtime that should be used for the
+// bootstrapped node. The node-manager ModuleConfig setting (spec.settings.defaultCRI)
+// is the new home for this option and takes precedence over the deprecated
+// ClusterConfiguration.defaultCRI field when it is set to a non-default value.
+// When neither source specifies a value it falls back to the built-in default
+// (Containerd) — the ClusterConfiguration schema no longer defaults this field,
+// so dhctl must supply the default itself to keep bootstrap deterministic.
+func (m *MetaConfig) effectiveDefaultCRI() string {
+	if mc := m.FindModuleConfig("node-manager"); mc != nil {
+		if raw, ok := mc.Spec.Settings["defaultCRI"]; ok {
+			if cri, ok := raw.(string); ok && cri != "" && cri != string(registry_const.CRIContainerdV1) {
+				return cri
+			}
+		}
+	}
+
+	if raw, ok := m.ClusterConfig["defaultCRI"]; ok {
+		var cri string
+		if err := json.Unmarshal(raw, &cri); err == nil && cri != "" {
+			return cri
+		}
+	}
+
+	return string(registry_const.CRIContainerdV1)
+}
+
+// FindModuleConfig returns the ModuleConfig with the given name, or nil if not found.
+
 func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
 	if len(m.ModuleConfigs) == 0 {
 		return nil

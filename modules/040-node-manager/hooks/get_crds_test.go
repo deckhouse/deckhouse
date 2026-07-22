@@ -1250,6 +1250,56 @@ spec:
 		})
 	})
 
+	Context("Cluster with proper NG, defaultCRI is set in node-manager ModuleConfig only", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+			setK8sVersionAsClusterConfig(f, "1.32")
+			f.ValuesSet("nodeManager.defaultCRI", "NotManaged")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.32.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
+			f.RunHook()
+		})
+
+		It("Hook must not fail; ModuleConfig value must be used", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
+		})
+	})
+
+	Context("Cluster with proper NG, defaultCRI set in both ClusterConfiguration and node-manager ModuleConfig", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+			setK8sVersionAsClusterConfig(f, "1.32")
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Containerd")
+			f.ValuesSet("nodeManager.defaultCRI", "NotManaged")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.32.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
+			f.RunHook()
+		})
+
+		It("Hook must not fail; ModuleConfig value takes precedence", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
+		})
+	})
+
+	Context("Cluster with proper NG, node-manager ModuleConfig defaultCRI left at default, ClusterConfiguration set", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+			setK8sVersionAsClusterConfig(f, "1.32")
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", "NotManaged")
+			f.ValuesSet("nodeManager.defaultCRI", "Containerd")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.32.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
+			f.RunHook()
+		})
+
+		It("Hook must not fail; falls back to ClusterConfiguration when ModuleConfig is at the default value", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
+		})
+	})
+
 	assertNodeCapacity := func(f *HookExecutionConfig, expectType v1alpha1.InstanceType) {
 		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").Exists()).To(BeTrue())
 
