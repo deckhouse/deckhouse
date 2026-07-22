@@ -1012,9 +1012,12 @@ func (m *MetaConfig) LoadImagesDigests() error {
 // bootstrapped node. The node-manager ModuleConfig setting (spec.settings.defaultCRI)
 // is the new home for this option and takes precedence over the deprecated
 // ClusterConfiguration.defaultCRI field when it is set to a non-default value.
+//
 // When neither source specifies a value it falls back to the built-in default
-// (Containerd) — the ClusterConfiguration schema no longer defaults this field,
-// so dhctl must supply the default itself to keep bootstrap deterministic.
+// (Containerd), but only if a ClusterConfiguration is present. This mirrors the
+// former ClusterConfiguration schema default, which applied only within a
+// ClusterConfiguration document: with no ClusterConfiguration there is no cluster
+// to bootstrap, and the registry config relies on an empty CRI to stay disabled.
 func (m *MetaConfig) effectiveDefaultCRI() string {
 	if mc := m.FindModuleConfig("node-manager"); mc != nil {
 		if raw, ok := mc.Spec.Settings["defaultCRI"]; ok {
@@ -1031,7 +1034,11 @@ func (m *MetaConfig) effectiveDefaultCRI() string {
 		}
 	}
 
-	return string(registry_const.CRIContainerdV1)
+	if len(m.ClusterConfig) > 0 {
+		return string(registry_const.CRIContainerdV1)
+	}
+
+	return ""
 }
 
 // FindModuleConfig returns the ModuleConfig with the given name, or nil if not found.

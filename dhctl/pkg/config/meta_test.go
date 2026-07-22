@@ -311,30 +311,35 @@ func TestEffectiveDefaultCRI(t *testing.T) {
 		mc.SetName("node-manager")
 		return []*ModuleConfig{mc}
 	}
-	clusterConfig := func(cri string) map[string]json.RawMessage {
-		if cri == "" {
-			return map[string]json.RawMessage{}
+	// presentCC returns a ClusterConfiguration map that always contains a
+	// ClusterConfiguration (marked by clusterType), with defaultCRI only when set.
+	presentCC := func(cri string) map[string]json.RawMessage {
+		cc := map[string]json.RawMessage{"clusterType": json.RawMessage(`"Cloud"`)}
+		if cri != "" {
+			cc["defaultCRI"] = json.RawMessage(`"` + cri + `"`)
 		}
-		return map[string]json.RawMessage{"defaultCRI": json.RawMessage(`"` + cri + `"`)}
+		return cc
 	}
 
 	tests := []struct {
 		name       string
-		clusterCRI string
+		clusterCfg map[string]json.RawMessage
 		moduleCRI  string
 		expected   string
 	}{
-		{name: "only ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "", expected: "ContainerdV2"},
-		{name: "only ModuleConfig", clusterCRI: "", moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
-		{name: "ModuleConfig overrides ClusterConfiguration", clusterCRI: "Containerd", moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
-		{name: "ModuleConfig at default falls back to ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "Containerd", expected: "ContainerdV2"},
-		{name: "neither set falls back to built-in default", clusterCRI: "", moduleCRI: "", expected: "Containerd"},
+		{name: "only ClusterConfiguration", clusterCfg: presentCC("ContainerdV2"), moduleCRI: "", expected: "ContainerdV2"},
+		{name: "only ModuleConfig", clusterCfg: presentCC(""), moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
+		{name: "ModuleConfig overrides ClusterConfiguration", clusterCfg: presentCC("Containerd"), moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
+		{name: "ModuleConfig at default falls back to ClusterConfiguration", clusterCfg: presentCC("ContainerdV2"), moduleCRI: "Containerd", expected: "ContainerdV2"},
+		{name: "ClusterConfiguration present, nothing set, built-in default", clusterCfg: presentCC(""), moduleCRI: "", expected: "Containerd"},
+		{name: "no ClusterConfiguration, empty", clusterCfg: nil, moduleCRI: "", expected: ""},
+		{name: "no ClusterConfiguration but ModuleConfig set", clusterCfg: nil, moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &MetaConfig{
-				ClusterConfig: clusterConfig(tt.clusterCRI),
+				ClusterConfig: tt.clusterCfg,
 				ModuleConfigs: nodeManagerMC(tt.moduleCRI),
 			}
 			require.Equal(t, tt.expected, m.effectiveDefaultCRI())
