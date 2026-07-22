@@ -12,14 +12,12 @@
         {{- end }}
       {{- end }}
       {{- if eq $engine "CAPI" }}
-        {{- /* The MachineDeployment is rendered by node-controller (capi.reconcileCloudMDsRendered). Helm owns the instance-class checksum: it renders the bootstrap Secret (its content needs candi/tpl) and the infrastructure MachineTemplate (carrying the checksum/instance-class annotation). node-controller reads that annotation to name the MD's template/secret refs, so it never recomputes the checksum and existing nodes never roll. */ -}}
+        {{- /* The MachineDeployment and the infrastructure MachineTemplate are rendered by node-controller (capi.reconcileCloudMDsRendered) from the cloud-provider CAPI template secret. Helm only renders the bootstrap Secret (its cloud-init needs candi/tpl); it keeps mirroring the checksum-based name so the MD's dataSecretName stays byte-identical and existing nodes never roll. node-controller computes the same instance-class checksum, so both sides agree on the name. */ -}}
         {{- range $zone_name := $ng.cloudInstances.zones }}
           {{ $instance_class_checksum := include "capi_node_group_instance_class_checksum" (list $ $ng) }}
           {{ $instance_class_hash := printf "%v%v%v" $.Values.global.discovery.clusterUUID $zone_name $instance_class_checksum | sha256sum | trunc 8 }}
-          {{ $template_name := printf "%s-%s" $ng.name $instance_class_hash }}
-          {{ $bootstrap_secret_name := $template_name }}
+          {{ $bootstrap_secret_name := printf "%s-%s" $ng.name $instance_class_hash }}
           {{- include "capi_node_group_machine_bootstrap_secret" (list $ $ng $zone_name $bootstrap_secret_name) }}
-          {{- include "capi_node_group_machine_template" (list $ $ng $zone_name $template_name $instance_class_checksum) }}
         {{- end }}
       {{- else if eq $engine "MCM" }}
         {{- /* MachineClass CR and MachineDeployment are rendered by node-controller (capi.reconcileCloudMCMs). Only the MachineClass Secret stays in helm. */ -}}
