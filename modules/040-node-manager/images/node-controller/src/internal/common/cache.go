@@ -114,6 +114,11 @@ func CacheOptions() (cache.Options, client.Options) {
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "Cluster"):                               machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineHealthCheck"):                    machineNS,
 			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,
+			// The NodeGroup webhook reads only ModuleConfig "global"; without this scope the
+			// lazily-created informer would watch and cache every ModuleConfig cluster-wide.
+			newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig"): {
+				Field: fields.SelectorFromSet(fields.Set{"metadata.name": "global"}),
+			},
 		},
 	}
 
