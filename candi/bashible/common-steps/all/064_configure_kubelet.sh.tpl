@@ -422,7 +422,7 @@ shutdownGracePeriodByPodPriority:
   shutdownGracePeriodSeconds: ${shutdownGracePeriod}
 {{- if hasKey .nodeGroup "staticInstances" }}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
-{{- else if eq (.provider | default "") "metal3" }}
+{{- else if or (eq (.cloudProviderType | default "") "metal3") (eq (.provider | default "") "metal3") }}
 $(if [ -s /var/lib/bashible/node-spec-provider-id ]; then printf 'providerID: %s\n' "$(cat /var/lib/bashible/node-spec-provider-id)"; fi)
 {{- end }}
 {{- if eq $topologyManagerEnabled true }}
