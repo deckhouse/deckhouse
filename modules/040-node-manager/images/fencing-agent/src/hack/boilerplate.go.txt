@@ -13,24 +13,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-package domain
-
-import "slices"
-
-type ProfileName string
-
-const (
-	ProfileCritical ProfileName = "critical"
-	ProfileMedium   ProfileName = "medium"
-	ProfileModerate ProfileName = "moderate"
-	ProfileSlow     ProfileName = "slow"
-)
-
-func ProfileNames() []ProfileName {
-	return []ProfileName{ProfileCritical, ProfileMedium, ProfileModerate, ProfileSlow}
-}
-
-func (p ProfileName) IsValid() bool {
-	return slices.Contains(ProfileNames(), p)
-}

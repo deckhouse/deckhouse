@@ -64,7 +64,7 @@ func run(cfg *config.Config, logger *log.Logger) error {
 
 	deps.FencingClient, err = fencingstate.NewClient(restCfg)
 	if err != nil {
-		return fmt.Errorf("create FencingNodeState client: %w", err)
+		return fmt.Errorf("create FencingFailedNodeState client: %w", err)
 	}
 
 	resolveCtx, cancel := context.WithTimeout(ctx, resolveIdentityTimeout)
