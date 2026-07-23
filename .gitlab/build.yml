@@ -76,27 +76,73 @@
       fi
 
       if [[ -n "${WERF_VAULT_AUTH_JWT}" ]]; then
-        echo "Received Vault JWT"
+        echo "Received Vault JWT (length=${#WERF_VAULT_AUTH_JWT})"
       else
         echo "Vault JWT empty" >&2
+        exit 1
+      fi
+
+      echo "Vault login: addr=${VAULT_ADDR} auth_path=${WERF_VAULT_AUTH_PATH} role=${WERF_VAULT_AUTH_ROLE}"
+      vault_login_body="$(mktemp)"
+      vault_login_http="$(curl -sS -o "${vault_login_body}" -w '%{http_code}' -X POST \
+        "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" \
+        -H 'Content-Type: application/json' \
+        -d "{\"role\":\"${WERF_VAULT_AUTH_ROLE}\",\"jwt\":\"${WERF_VAULT_AUTH_JWT}\"}" \
+        || true)"
+      echo "Vault login HTTP status: ${vault_login_http}"
+      if [[ "${vault_login_http}" != "200" ]]; then
+        echo "Vault login failed. Response body:" >&2
+        cat "${vault_login_body}" >&2 || true
+        rm -f "${vault_login_body}"
+        exit 1
       fi
       export VAULT_TOKEN
-      VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" \
-        -d "{\"role\":\"${WERF_VAULT_AUTH_ROLE}\",\"jwt\":\"${WERF_VAULT_AUTH_JWT}\"}" \
-        | jq -r '.auth.client_token')"
+      VAULT_TOKEN="$(jq -r '.auth.client_token // empty' "${vault_login_body}")"
+      rm -f "${vault_login_body}"
       if [[ -n "${VAULT_TOKEN}" && "${VAULT_TOKEN}" != "null" ]]; then
-        echo "Received Vault token"
+        echo "Received Vault token (length=${#VAULT_TOKEN})"
       else
-        echo "Vault token empty" >&2
+        echo "Vault token empty after HTTP 200" >&2
+        exit 1
       fi
 
       if $sign_supported; then
         echo "Using WERF_SIGN_MANIFEST=${WERF_SIGN_MANIFEST}"
+        echo "Fetching intermediary cert: ${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}"
         export WERF_SIGN_INTERMEDIATES
         export WERF_SIGN_CERT
-        WERF_SIGN_INTERMEDIATES="$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)"
-        WERF_SIGN_CERT="$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" \
-          "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)"
+        inter_body="$(mktemp)"
+        inter_http="$(curl -sS -o "${inter_body}" -w '%{http_code}' \
+          "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" || true)"
+        echo "Intermediary cert HTTP status: ${inter_http}"
+        if [[ "${inter_http}" != "200" ]]; then
+          echo "Failed to fetch intermediary cert. Response:" >&2
+          cat "${inter_body}" >&2 || true
+          rm -f "${inter_body}"
+          exit 1
+        fi
+        WERF_SIGN_INTERMEDIATES="$(base64 -w0 < "${inter_body}")"
+        rm -f "${inter_body}"
+
+        echo "Fetching signing cert: ${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}"
+        sign_body="$(mktemp)"
+        sign_http="$(curl -sS -o "${sign_body}" -w '%{http_code}' \
+          --header "X-Vault-Token: ${VAULT_TOKEN}" \
+          "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" || true)"
+        echo "Signing cert HTTP status: ${sign_http}"
+        if [[ "${sign_http}" != "200" ]]; then
+          echo "Failed to fetch signing cert. Response:" >&2
+          cat "${sign_body}" >&2 || true
+          rm -f "${sign_body}"
+          exit 1
+        fi
+        WERF_SIGN_CERT="$(jq -r '.data.certificate // empty' "${sign_body}" | base64 -w0)"
+        rm -f "${sign_body}"
+        if [[ -z "${WERF_SIGN_CERT}" ]]; then
+          echo "Signing cert empty in Vault response" >&2
+          exit 1
+        fi
+        echo "Signing material loaded (intermediates_b64_len=${#WERF_SIGN_INTERMEDIATES} cert_b64_len=${#WERF_SIGN_CERT})"
       else
         export WERF_SIGN_MANIFEST="0"
         echo "Fallback to WERF_SIGN_MANIFEST=${WERF_SIGN_MANIFEST}"

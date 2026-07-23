@@ -36,6 +36,7 @@ tests:
   variables:
     TEST_TIMEOUT: 15m
     TESTS_TIMEOUT: 15m
+    CGO_ENABLED: "1"
   script:
     - |
       set -euo pipefail
