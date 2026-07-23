@@ -118,7 +118,15 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 
 func (r *MachineDeploymentReconciler) capiDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) (int32, error) {
 	existing := newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment")
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing); err != nil {
+	// Read spec.replicas LIVE (APIReader), not from the informer cache. The cluster
+	// autoscaler owns spec.replicas; we read its current value, clamp it into [min,max],
+	// then re-apply the whole MachineDeployment with ForceOwnership — so this is a
+	// read-modify-write of a field a foreign controller changes at will. A cached read can
+	// lag the autoscaler's write by the informer's propagation delay (seconds under load),
+	// which would make us re-apply a stale value and stomp a fresh scale-up/down until the
+	// autoscaler retries. A live GET keeps the read-modify-write window at microseconds,
+	// matching the behavior node-controller shipped before unstructured reads were cached.
+	if err := r.APIReader.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing); err != nil {
 		if errors.IsNotFound(err) {
 			return minReplicas, nil
 		}

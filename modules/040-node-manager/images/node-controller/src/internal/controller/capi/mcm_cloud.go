@@ -239,7 +239,12 @@ func (r *MachineDeploymentReconciler) deleteReferencedMachineClass(ctx context.C
 
 func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) (int64, error) {
 	existing := newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment")
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing); err != nil {
+	// Read spec.replicas LIVE (APIReader), not from the informer cache — see the identical
+	// reasoning in capiDesiredReplicas. MCM is the more dangerous of the two engines here:
+	// it has no mutating webhook to re-default the field, so a stale cached read that stomps
+	// a fresh autoscaler value has no safety net. A live GET keeps the read-modify-write
+	// window at microseconds.
+	if err := r.APIReader.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing); err != nil {
 		if errors.IsNotFound(err) {
 			return int64(minReplicas), nil
 		}
