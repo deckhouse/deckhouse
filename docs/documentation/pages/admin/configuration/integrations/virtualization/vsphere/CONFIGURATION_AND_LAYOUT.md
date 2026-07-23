@@ -64,312 +64,165 @@ zones:
 
 Required parameters for the [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) resource:
 
-- `region`: Tag assigned to the Datacenter object.
-- `zoneTagCategory` and `regionTagCategory`: Tag categories used to identify regions and zones.
-- `internalNetworkCIDR`: Subnet for assigning internal IP addresses.
-- `vmFolderPath`: Path to the folder where cluster virtual machines will be placed.
-- `sshPublicKey`: Public SSH key used to access the nodes.
-- `zones`: List of zones available for node placement.
+- `layout` — layout scheme (`Standard`);
+- `provider` — vCenter connection parameters;
+- `masterNodeGroup` — master node definition (`instanceClass` requires `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`);
+- `region` — tag assigned to the Datacenter object;
+- `zoneTagCategory` and `regionTagCategory` — tag categories used to identify regions and zones;
+- `vmFolderPath` — path to the folder where cluster virtual machines will be placed;
+- `sshPublicKey` — public SSH key used to access the nodes;
+- `zones` — list of zones available for node placement.
 
 {% alert level="info" %}
 All nodes placed in different zones must have access to shared datastores with matching zone tags.
 {% endalert %}
 
-## List of required privileges
+## Network parameters {#network-parameters}
+
+Network-related settings for the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module are spread across [`VsphereClusterConfiguration`](/modules/cloud-provider-vsphere/cluster_configuration.html), [`VsphereInstanceClass`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), and [`ModuleConfig`](/modules/cloud-provider-vsphere/configuration.html). The table below summarizes parameter requirements and applicability by node type.
+
+| Parameter | Where to set | CloudPermanent | CloudEphemeral | Purpose |
+|-----------|--------------|----------------|----------------|---------|
+| [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) | `instanceClass` / `VsphereInstanceClass` | **Required** | **Required** (if omitted in `VsphereInstanceClass`, the master node value is used when available) | Port group for the VM primary NIC during provisioning |
+| [`internalNetworkCIDR`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworkcidr) | `VsphereClusterConfiguration` | **Required** if `additionalNetworks` is set on the master; otherwise not used | Not used | Static IP allocation for master nodes with additional NICs (Terraform) |
+| [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) | `VsphereClusterConfiguration` / `ModuleConfig` | Optional | Optional | `vsphere-cloud-controller-manager`: `InternalIP` in `Node.status.addresses` |
+| [`externalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-externalnetworknames) | `VsphereClusterConfiguration` / `ModuleConfig` | Optional | Optional | `vsphere-cloud-controller-manager`: `ExternalIP` in `Node.status.addresses` |
+| [`resourcePool`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-resourcepool) | `instanceClass` / `VsphereInstanceClass` | Optional (DKP can create a nested pool) | Optional (must already exist if set) | VM placement in a Resource Pool |
+
+`mainNetwork` selects the network used when creating a VM. `internalNetworkNames` and `externalNetworkNames` do not affect VM provisioning — they only affect how node IP addresses are published in the Kubernetes API after the VM is created.
+
+### mainNetwork {#mainnetwork}
+
+**Required** in `instanceClass`:
+
+- for `masterNodeGroup` and `nodeGroups` in `VsphereClusterConfiguration` ([CloudPermanent](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) nodes, provisioned by Terraform);
+- for [`VsphereInstanceClass`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) when provisioning [CloudEphemeral](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) nodes (provisioned by machine-controller-manager) — if omitted, the value from the master node configuration is used when available.
+
+Specifies the port group for the VM's primary NIC (default route).
+
+**Value format** — network path **relative to the Datacenter** (not the network display name alone and not the full inventory path from the vCenter root):
+
+| Value | Description |
+|-------|-------------|
+| `net3-k8s` | Port group name at the root of the datacenter Networks section |
+| `k8s-msk/test_187` | Port group `test_187` in folder `k8s-msk` |
+| `"PROD NET"` | Port group name with a space — quote it in YAML |
+
+```yaml
+instanceClass:
+  mainNetwork: "PROD NET"
+  # or with a folder:
+  # mainNetwork: "k8s-networks/PROD NET"
+```
+
+### CloudPermanent and CloudEphemeral nodes {#cloudpermanent-and-cloudephemeral-nodes}
+
+[CloudPermanent](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) and [CloudEphemeral](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) nodes in vSphere are provisioned by different components — Terraform (`dhctl`) and [machine-controller-manager](https://github.com/gardener/machine-controller-manager), respectively.
+
+Both accept a network path relative to the Datacenter, but the vSphere Inventory lookup mechanism differs. Because of this, network issues may manifest differently for different node types: for one type the network may be found correctly, while provisioning for the other may fail due to permissions, path, or lookup method.
+
+For example, "network not found" errors with a valid master node configuration may appear only when creating ephemeral nodes — verify `mainNetwork` in `VsphereInstanceClass` and [`Network.Assign`](authorization.html#verifying-network-permissions-with-govc) permissions on the target network.
+
+### internalNetworkCIDR
+
+**Optional** `VsphereClusterConfiguration` parameter.
+
+| Node type | Required? | Used by |
+|-----------|-----------|---------|
+| CloudPermanent (master with `additionalNetworks`) | **Yes** | Terraform — assigns IP addresses to master nodes from the specified subnet (starting at the tenth address: for `192.168.199.0/24`, from `192.168.199.10`) |
+| CloudPermanent (master without `additionalNetworks`) | No | Not used |
+| CloudPermanent (workers in `nodeGroups`) | No | Not used |
+| CloudEphemeral | No | Not used |
+
+### internalNetworkNames and externalNetworkNames {#internalnetworknames-and-externalnetworknames}
+
+**Optional** parameters. Set in `VsphereClusterConfiguration` and/or in the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/configuration.html) module settings (`ModuleConfig`).
+
+| Node type | Required? | Used by |
+|-----------|-----------|---------|
+| CloudPermanent | No | `vsphere-cloud-controller-manager` |
+| CloudEphemeral | No | `vsphere-cloud-controller-manager` |
+
+Used to populate `InternalIP` and `ExternalIP` in `Node.status.addresses`. Does not affect which network a VM is connected to during provisioning.
 
 {% alert level="info" %}
-To create a role and assign it to a user, refer to [Configuration in vSphere Client](authorization.html#configuration-in-vsphere-client) and [Configuration with govc](authorization.html#configuration-with-govc) sections.
+Specify the **network name only** (port group) — without a path, as displayed in the VM network adapter properties in vSphere. This differs from the `mainNetwork` format.
 {% endalert %}
 
-A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
+Recommended when nodes have multiple network interfaces and you need to explicitly separate internal/external addresses for Kubernetes.
 
-<table>
-  <thead>
-    <tr>
-      <th>Privilege category in UI</th>
-      <th>Privileges in UI</th>
-      <th>Privileges in API</th>
-      <th>Purpose in Deckhouse</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>—</td>
-      <td>— (assigned by default when creating a role)</td>
-      <td>
-        <code>System.Anonymous</code><br/>
-        <code>System.Read</code><br/>
-        <code>System.View</code>
-      </td>
-      <td>Basic access to vSphere Inventory objects required for all Deckhouse vSphere integration components.</td>
-    </tr>
-    <tr>
-      <td>Cns</td>
-      <td>Searchable</td>
-      <td><code>Cns.Searchable</code></td>
-      <td>Search and mapping of Container Native Storage objects when the CSI driver works with Kubernetes volumes.</td>
-    </tr>
-    <tr>
-      <td>Datastore</td>
-      <td>
-        Allocate space,<br/>
-        Browse datastore,<br/>
-        Low level file operations
-      </td>
-      <td>
-        <code>Datastore.AllocateSpace</code><br/>
-        <code>Datastore.Browse</code><br/>
-        <code>Datastore.FileManagement</code>
-      </td>
-      <td>Disk provisioning when creating virtual machines and ordering <code>PersistentVolumes</code> in the cluster.</td>
-    </tr>
-    <tr>
-      <td>Folder</td>
-      <td>
-        Create folder,<br/>
-        Delete folder,<br/>
-        Move folder,<br/>
-        Rename folder
-      </td>
-      <td>
-        <code>Folder.Create</code><br/>
-        <code>Folder.Delete</code><br/>
-        <code>Folder.Move</code><br/>
-        <code>Folder.Rename</code>
-      </td>
-      <td>Grouping a Deckhouse Kubernetes Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Global</td>
-      <td>
-        Global tag,<br/>
-        System tag
-      </td>
-      <td>
-        <code>Global.GlobalTag</code><br/>
-        <code>Global.SystemTag</code>
-      </td>
-      <td>Access to global and system tags used by Deckhouse Kubernetes Platform when working with vSphere objects.</td>
-    </tr>
-    <tr>
-      <td>vSphere Tagging</td>
-      <td>
-        Assign or Unassign vSphere Tag,<br/>
-        Assign or Unassign vSphere Tag on Object,<br/>
-        Create vSphere Tag,<br/>
-        Create vSphere Tag Category,<br/>
-        Delete vSphere Tag,<br/>
-        Delete vSphere Tag Category,<br/>
-        Edit vSphere Tag,<br/>
-        Edit vSphere Tag Category,<br/>
-        Modify UsedBy Field for Category,<br/>
-        Modify UsedBy Field for Tag
-      </td>
-      <td>
-        <code>InventoryService.Tagging.AttachTag</code><br/>
-        <code>InventoryService.Tagging.ObjectAttachable</code><br/>
-        <code>InventoryService.Tagging.CreateTag</code><br/>
-        <code>InventoryService.Tagging.CreateCategory</code><br/>
-        <code>InventoryService.Tagging.DeleteTag</code><br/>
-        <code>InventoryService.Tagging.DeleteCategory</code><br/>
-        <code>InventoryService.Tagging.EditTag</code><br/>
-        <code>InventoryService.Tagging.EditCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForTag</code>
-      </td>
-      <td>Deckhouse Kubernetes Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code>, and <code>Datastore</code> objects available to it, as well as to identify the virtual machines under its control.</td>
-    </tr>
-    <tr>
-      <td>Network</td>
-      <td>Assign network</td>
-      <td><code>Network.Assign</code></td>
-      <td>Connecting networks and port groups to Deckhouse Kubernetes Platform cluster virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Resource</td>
-      <td>
-        Assign virtual machine to resource pool,<br/>
-        Create resource pool,<br/>
-        Modify resource pool,<br/>
-        Remove resource pool,<br/>
-        Rename resource pool
-      </td>
-      <td>
-        <code>Resource.AssignVMToPool</code><br/>
-        <code>Resource.CreatePool</code><br/>
-        <code>Resource.DeletePool</code><br/>
-        <code>Resource.EditPool</code><br/>
-        <code>Resource.RenamePool</code>
-      </td>
-      <td>Placement of Deckhouse Kubernetes Platform cluster virtual machines into the target resource pool and management of this pool.</td>
-    </tr>
-    <tr>
-      <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> in vSphere 7)</td>
-      <td>View VM storage policies (<em>Profile-driven storage view</em> in vSphere 7)</td>
-      <td><code>StorageProfile.View</code></td>
-      <td>Viewing storage policies used when creating virtual machines and dynamically provisioning volumes in the cluster.</td>
-    </tr>
-    <tr>
-      <td>vApp</td>
-      <td>
-        Add virtual machine,<br/>
-        Assign resource pool,<br/>
-        Create,<br/>
-        Delete,<br/>
-        Import,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        View OVF Environment,<br/>
-        vApp application configuration,<br/>
-        vApp instance configuration,<br/>
-        vApp resource configuration
-      </td>
-      <td>
-        <code>VApp.ApplicationConfig</code><br/>
-        <code>VApp.AssignResourcePool</code><br/>
-        <code>VApp.AssignVM</code><br/>
-        <code>VApp.Create</code><br/>
-        <code>VApp.Delete</code><br/>
-        <code>VApp.ExtractOvfEnvironment</code><br/>
-        <code>VApp.Import</code><br/>
-        <code>VApp.InstanceConfig</code><br/>
-        <code>VApp.PowerOff</code><br/>
-        <code>VApp.PowerOn</code><br/>
-        <code>VApp.ResourceConfig</code>
-      </td>
-      <td>Managing operations related to deployment and configuration of vApp and OVF templates used when creating virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Change Configuration</td>
-      <td>
-        Add existing disk,<br/>
-        Add new disk,<br/>
-        Add or remove device,<br/>
-        Advanced configuration,<br/>
-        Set annotation,<br/>
-        Change CPU count,<br/>
-        Toggle disk change tracking,<br/>
-        Extend virtual disk,<br/>
-        Acquire disk lease,<br/>
-        Modify device settings,<br/>
-        Configure managedBy,<br/>
-        Change Memory,<br/>
-        Query unowned files,<br/>
-        Configure Raw device,<br/>
-        Reload from path,<br/>
-        Remove disk,<br/>
-        Rename,<br/>
-        Reset guest information,<br/>
-        Change resource,<br/>
-        Change Settings,<br/>
-        Change Swapfile placement,<br/>
-        Upgrade virtual machine compatibility
-      </td>
-      <td>
-        <code>VirtualMachine.Config.AddExistingDisk</code><br/>
-        <code>VirtualMachine.Config.AddNewDisk</code><br/>
-        <code>VirtualMachine.Config.AddRemoveDevice</code><br/>
-        <code>VirtualMachine.Config.AdvancedConfig</code><br/>
-        <code>VirtualMachine.Config.Annotation</code><br/>
-        <code>VirtualMachine.Config.CPUCount</code><br/>
-        <code>VirtualMachine.Config.ChangeTracking</code><br/>
-        <code>VirtualMachine.Config.DiskExtend</code><br/>
-        <code>VirtualMachine.Config.DiskLease</code><br/>
-        <code>VirtualMachine.Config.EditDevice</code><br/>
-        <code>VirtualMachine.Config.ManagedBy</code><br/>
-        <code>VirtualMachine.Config.Memory</code><br/>
-        <code>VirtualMachine.Config.QueryUnownedFiles</code><br/>
-        <code>VirtualMachine.Config.RawDevice</code><br/>
-        <code>VirtualMachine.Config.ReloadFromPath</code><br/>
-        <code>VirtualMachine.Config.RemoveDisk</code><br/>
-        <code>VirtualMachine.Config.Rename</code><br/>
-        <code>VirtualMachine.Config.ResetGuestInfo</code><br/>
-        <code>VirtualMachine.Config.Resource</code><br/>
-        <code>VirtualMachine.Config.Settings</code><br/>
-        <code>VirtualMachine.Config.SwapPlacement</code><br/>
-        <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
-      </td>
-      <td>Managing the lifecycle of Deckhouse Kubernetes Platform cluster virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Edit Inventory</td>
-      <td>
-        Create new,<br/>
-        Create from existing,<br/>
-        Remove,<br/>
-        Move
-      </td>
-      <td>
-        <code>VirtualMachine.Inventory.Create</code><br/>
-        <code>VirtualMachine.Inventory.CreateFromExisting</code><br/>
-        <code>VirtualMachine.Inventory.Delete</code><br/>
-        <code>VirtualMachine.Inventory.Move</code>
-      </td>
-      <td>Creating, deleting, and moving Deckhouse Kubernetes Platform cluster virtual machines in vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Guest Operations</td>
-      <td>Guest Operation Queries</td>
-      <td><code>VirtualMachine.GuestOperations.Query</code></td>
-      <td>Retrieving information from the guest operating system of virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Interaction</td>
-      <td>
-        Answer question,<br/>
-        Device connection,<br/>
-        Guest operating system management by VIX API,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        Reset,<br/>
-        Configure CD media,<br/>
-        Install VMware Tools
-      </td>
-      <td>
-        <code>VirtualMachine.Interact.AnswerQuestion</code><br/>
-        <code>VirtualMachine.Interact.DeviceConnection</code><br/>
-        <code>VirtualMachine.Interact.GuestControl</code><br/>
-        <code>VirtualMachine.Interact.PowerOff</code><br/>
-        <code>VirtualMachine.Interact.PowerOn</code><br/>
-        <code>VirtualMachine.Interact.Reset</code><br/>
-        <code>VirtualMachine.Interact.SetCDMedia</code><br/>
-        <code>VirtualMachine.Interact.ToolsInstall</code>
-      </td>
-      <td>Managing virtual machine power state, device connections, and interaction with the guest operating system.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Provisioning</td>
-      <td>
-        Clone virtual machine,<br/>
-        Customize guest,<br/>
-        Deploy template,<br/>
-        Allow virtual machine download,<br/>
-        Allow virtual machine files upload,<br/>
-        Read customization specifications
-      </td>
-      <td>
-        <code>VirtualMachine.Provisioning.Clone</code><br/>
-        <code>VirtualMachine.Provisioning.Customize</code><br/>
-        <code>VirtualMachine.Provisioning.DeployTemplate</code><br/>
-        <code>VirtualMachine.Provisioning.GetVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
-      </td>
-      <td>Cloning virtual machine templates, customizing them, and deploying them when creating Deckhouse Kubernetes Platform cluster nodes.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Snapshot Management</td>
-      <td>
-        Create snapshot,<br/>
-        Remove Snapshot,<br/>
-        Rename Snapshot
-      </td>
-      <td>
-        <code>VirtualMachine.State.CreateSnapshot</code><br/>
-        <code>VirtualMachine.State.RemoveSnapshot</code><br/>
-        <code>VirtualMachine.State.RenameSnapshot</code>
-      </td>
-      <td>Managing snapshots of virtual machines and volumes in scenarios where this functionality is used by platform components.</td>
-    </tr>
-  </tbody>
-</table>
+Example:
+
+```yaml
+internalNetworkNames:
+  - K8S_INTERNAL
+externalNetworkNames:
+  - PUBLIC_NET
+```
+
+### Network permissions in vSphere {#network-permissions-in-vsphere}
+
+The service account must have the [`Network.Assign`](authorization.html#list-of-required-privileges) privilege on each port group specified in `mainNetwork` (and `additionalNetworks` if used). With the [granular permission model](authorization.html#granular-permission-model), this privilege must be assigned on **each** target port group or inherited from a parent object.
+
+Verify that the service account has the required permissions on the target network:
+
+```shell
+export GOVC_URL="https://<VCENTER_FQDN>/sdk"
+export GOVC_USERNAME="<USERNAME@DOMAIN.LOCAL>"
+export GOVC_PASSWORD="<PASSWORD>"
+export GOVC_INSECURE=true
+
+govc permissions.ls -r "/<Datacenter>/network/<NETWORK_NAME>"
+```
+
+Example for a network with a space in the name:
+
+```shell
+govc permissions.ls -r "/<Datacenter>/network/PROD NET"
+```
+
+The command output must show a role for the DKP account that includes the `Network.Assign` privilege. The `-r` (`--recursive`) flag displays permissions inherited from parent objects.
+
+For path examples and more details, see [Verifying network permissions with govc](authorization.html#verifying-network-permissions-with-govc).
+
+### resourcePool {#resourcepool}
+
+**Optional** `instanceClass` parameter.
+
+| Node type | Behavior |
+|-----------|----------|
+| **CloudPermanent** | With [`useNestedResourcePool`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-usenestedresourcepool): `true` (default), DKP automatically creates a nested resource pool in each zone. The `resourcePool` value in `instanceClass` overrides the default pool |
+| **CloudEphemeral** | If `resourcePool` is explicitly set in `VsphereInstanceClass` or NodeGroup settings, the corresponding resource pool **must already exist** in vSphere — machine-controller-manager does not create Resource Pools automatically. VM provisioning fails if the pool at the specified path is not found |
+
+{% alert level="warning" %}
+If `resourcePool` is set in `VsphereInstanceClass` or NodeGroup settings, the Resource Pool must already exist in vSphere. Machine-controller-manager does not create Resource Pools automatically. If the specified Resource Pool is not found, MCM fails node provisioning with an error.
+
+This is important when different NodeGroups need placement in different Resource Pools.
+{% endalert %}
+
+By default, ephemeral nodes in a cloud cluster use `resourcePoolPath` from `VsphereCloudDiscoveryData`, created during cluster deployment.
+
+## Troubleshooting node provisioning {#troubleshooting-node-provisioning}
+
+If node provisioning fails, check the following:
+
+1. **machine-controller-manager logs** (for CloudEphemeral nodes):
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get machinesets,machines -o wide
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
+   ```
+
+1. **Service account permissions on the network** — verify with [`govc permissions.ls`](#network-permissions-in-vsphere) that the account has `Network.Assign` on the port group from `mainNetwork`.
+
+1. **Network name/path in `mainNetwork`** — use the Datacenter-relative path format; quote names with spaces in YAML (for example, `mainNetwork: "PROD NET"`). See [mainNetwork](#mainnetwork).
+
+1. **`resourcePool` existence** — if set in `VsphereInstanceClass`, verify that the Resource Pool already exists in vSphere.
+
+1. **Permanent vs ephemeral provisioning** — CloudPermanent nodes are created by Terraform (`dhctl`), CloudEphemeral nodes by machine-controller-manager. A network issue may appear only for one node type even when `mainNetwork` looks correct for the other.
+
+For additional diagnostics, see [Troubleshooting common issues](services.html#troubleshooting-common-issues).
+
+## vSphere privileges
+
+The full list of required privileges, role creation instructions, and granular permission model options are described in [Connection and authorization](authorization.html#list-of-required-privileges).
