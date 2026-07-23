@@ -65,7 +65,17 @@ func (r *reconciler) reconcileALB(ctx context.Context, vcp *controlplanev1alpha1
 	}
 
 	for _, target := range objects {
-		if err := applyObject(ctx, r.client, target, patchSpecData); err != nil {
+		// Cross-namespace objects (e.g. ReferenceGrant in d8-cloud-instance-manager) cannot be
+		// owned by a namespaced VirtualControlPlane; apply without controller ownerRef.
+		sameNS := target.GetNamespace() == "" || target.GetNamespace() == vcp.Namespace
+		mutate := patchSpecData
+		if sameNS {
+			if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+				return reconcile.Result{}, err
+			}
+			mutate = patchSpecDataAndOwnerRefs
+		}
+		if err := applyObject(ctx, r.client, target, mutate); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

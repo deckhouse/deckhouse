@@ -28,12 +28,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
-	konnectivityAgentCPSecretName       = "konnectivity-agent-cp"
 	konnectivityAgentNamespace          = "kube-system"
 	konnectivityAgentSAName             = "konnectivity-agent"
 	konnectivityAudience                = "system:konnectivity-server"
@@ -42,6 +40,10 @@ const (
 	konnectivityAgentCPPlaceholderToken = "placeholder"
 	konnectivityAgentCPTokenExpiresAt   = "control-plane.deckhouse.io/token-expires-at"
 )
+
+func konnectivityAgentCPSecretName(vcpName string) string {
+	return constants.VirtualResourceName(constants.VirtualKonnectivityAgentCPSecretName, vcpName)
+}
 
 // reconcileKonnectivityCPAgentSecret upgrades the parent secret with a real nested TokenRequest
 // token once the nested API and konnectivity-agent SA are available.
@@ -64,7 +66,10 @@ func (r *reconciler) reconcileKonnectivityCPAgentSecret(
 	}
 
 	target := r.konnectivityCPAgentSecret(vcp, pkiSecret.Data["ca.crt"], token, exp)
-	current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName)
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+	current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName(vcp.Name))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -73,6 +78,7 @@ func (r *reconciler) reconcileKonnectivityCPAgentSecret(
 	current.Data = target.Data
 	current.Labels = target.Labels
 	current.Annotations = target.Annotations
+	syncOwnerReferences(current, target)
 	return reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
@@ -83,7 +89,8 @@ func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	caPEM []byte,
 ) error {
-	current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName)
+	secretName := konnectivityAgentCPSecretName(vcp.Name)
+	current, err := r.getSecret(ctx, vcp.Namespace, secretName)
 	if apierrors.IsNotFound(err) {
 		target := r.konnectivityCPAgentSecret(
 			vcp,
@@ -91,7 +98,7 @@ func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
 			konnectivityAgentCPPlaceholderToken,
 			"",
 		)
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+		if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
 			return err
 		}
 		return r.createSecret(ctx, target)
@@ -100,7 +107,12 @@ func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
 		return err
 	}
 
-	if string(current.Data["ca.crt"]) == string(caPEM) {
+	target := r.konnectivityCPAgentSecret(vcp, caPEM, string(current.Data["token"]), current.Annotations[konnectivityAgentCPTokenExpiresAt])
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return err
+	}
+
+	if string(current.Data["ca.crt"]) == string(caPEM) && !ownerReferencesDiffer(current, target) {
 		return nil
 	}
 	base := current.DeepCopy()
@@ -108,6 +120,7 @@ func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
 		current.Data = map[string][]byte{}
 	}
 	current.Data["ca.crt"] = caPEM
+	syncOwnerReferences(current, target)
 	return r.patchSecret(ctx, base, current)
 }
 
@@ -152,7 +165,7 @@ func (r *reconciler) ensureKonnectivityCPAgentToken(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 ) (string, string, error) {
-	if current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName); err == nil {
+	if current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName(vcp.Name)); err == nil {
 		token := string(current.Data["token"])
 		if token != "" && token != konnectivityAgentCPPlaceholderToken {
 			if expRaw := current.Annotations[konnectivityAgentCPTokenExpiresAt]; expRaw != "" {
@@ -201,7 +214,7 @@ func (r *reconciler) konnectivityCPAgentSecret(
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        konnectivityAgentCPSecretName,
+			Name:        konnectivityAgentCPSecretName(vcp.Name),
 			Namespace:   vcp.Namespace,
 			Annotations: annotations,
 			Labels: map[string]string{

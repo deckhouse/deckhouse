@@ -127,7 +127,7 @@ func (e *StepExecutor) loadTenantPKIConfig(ctx context.Context) (tenantPKIConfig
 	secret := &corev1.Secret{}
 	key := client.ObjectKey{
 		Namespace: e.tenantIdentity.Namespace,
-		Name:      constants.VirtualRenderedConfigSecretName,
+		Name:      e.tenantIdentity.configSecretName(),
 	}
 	err := e.client.Get(ctx, key, secret)
 	if apierrors.IsNotFound(err) {
@@ -172,7 +172,7 @@ func createComponentPKIBundle(
 
 func (e *StepExecutor) apiserverClusterIP(ctx context.Context) (net.IP, error) {
 	svc := &corev1.Service{}
-	key := client.ObjectKey{Namespace: e.tenantIdentity.Namespace, Name: "kube-apiserver"}
+	key := client.ObjectKey{Namespace: e.tenantIdentity.Namespace, Name: e.tenantIdentity.apiServerServiceName()}
 	if err := e.client.Get(ctx, key, svc); err != nil {
 		return nil, fmt.Errorf("get apiserver service: %w", err)
 	}
@@ -187,7 +187,7 @@ func (e *StepExecutor) getPKISecret(ctx context.Context) (*corev1.Secret, error)
 	secret := &corev1.Secret{}
 	key := client.ObjectKey{
 		Namespace: e.tenantIdentity.Namespace,
-		Name:      constants.VirtualPKISecretName,
+		Name:      e.tenantIdentity.pkiSecretName(),
 	}
 	if err := e.client.Get(ctx, key, secret); err != nil {
 		return nil, fmt.Errorf("get pki secret %s: %w", key.Name, err)

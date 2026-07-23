@@ -17,6 +17,7 @@ limitations under the License.
 package constants
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -48,6 +49,12 @@ const (
 	VirtualPKISecretName                      = "d8-pki-virtual"
 	VirtualKubeconfigSecretName               = "d8-kubeconfig-virtual"
 	VirtualAdminKubeconfigSecretName          = "d8-admin-kubeconfig-virtual"
+	VirtualAPIServerServiceName               = "kube-apiserver"
+	VirtualKonnectivityEgressConfigMapName    = "konnectivity-egress"
+	VirtualKonnectivityServerServiceName      = "konnectivity-server"
+	VirtualKonnectivityAgentCPSecretName      = "konnectivity-agent-cp"
+	VirtualDatastoreName                      = "d8-datastore-virtual"
+	VirtualDatastoreCredsSecretName           = "d8-datastore-creds-virtual"
 	VirtualControlPlaneNodeOrdinalLabelKey    = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
 	VirtualControlPlaneScopeLabelKey          = "control-plane.deckhouse.io/virtual-control-plane"
 	VirtualJoinScriptSecretName               = "d8-vcp-join-script"
@@ -147,4 +154,13 @@ func SignatureEnabled() bool {
 // ToRelativePath returns path without leading slash for using in tmp directory sync
 func ToRelativePath(absolutePath string) string {
 	return strings.TrimPrefix(absolutePath, "/")
+}
+
+// VirtualResourceName returns a per-VCP unique object name so multiple VirtualControlPlanes
+// can coexist in one Namespace without colliding on hardcoded resource names.
+func VirtualResourceName(base, vcpName string) string {
+	if vcpName == "" {
+		return base
+	}
+	return fmt.Sprintf("%s-%s", base, vcpName)
 }
