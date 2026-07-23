@@ -69,4 +69,31 @@ nodeManager:
 		})
 	})
 
+	Context("BeforeHelm — global.prefix (global ModuleConfig) is set, instancePrefix isn't", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.prefix", "mcprefix")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("uses global.prefix over the deprecated ClusterConfiguration.cloud.prefix", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.instancePrefix").String()).To(Equal("mcprefix"))
+		})
+	})
+
+	Context("BeforeHelm — nodeManager.instancePrefix takes precedence over global.prefix", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.instancePrefix", "kube")
+			f.ValuesSet("global.prefix", "mcprefix")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("uses nodeManager.instancePrefix", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.instancePrefix").String()).To(Equal("kube"))
+		})
+	})
+
 })

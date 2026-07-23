@@ -33,6 +33,37 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
+func TestEffectiveClusterPrefix(t *testing.T) {
+	globalMC := func(prefix string) []*ModuleConfig {
+		settings := SettingsValues{}
+		if prefix != "" {
+			settings["prefix"] = prefix
+		}
+		mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
+		mc.SetName("global")
+		return []*ModuleConfig{mc}
+	}
+
+	tests := []struct {
+		name        string
+		moduleCfgs  []*ModuleConfig
+		cloudPrefix string
+		expected    string
+	}{
+		{name: "global MC prefix takes precedence", moduleCfgs: globalMC("mcprefix"), cloudPrefix: "cloudprefix", expected: "mcprefix"},
+		{name: "global MC prefix unset falls back to cloud.prefix", moduleCfgs: globalMC(""), cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "no global MC falls back to cloud.prefix", moduleCfgs: nil, cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "neither set", moduleCfgs: globalMC(""), cloudPrefix: "", expected: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MetaConfig{ModuleConfigs: tt.moduleCfgs}
+			require.Equal(t, tt.expected, m.effectiveClusterPrefix(tt.cloudPrefix))
+		})
+	}
+}
+
 func TestGetDNSAddress(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -156,7 +156,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 	if err != nil {
 		return nil, err
 	}
-	m.ClusterPrefix = cloudSpec.Prefix
+	m.ClusterPrefix = m.effectiveClusterPrefix(cloudSpec.Prefix)
 
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
@@ -1008,6 +1008,22 @@ func (m *MetaConfig) LoadImagesDigests() error {
 
 // FindModuleConfig
 // if not found returns nil
+// effectiveClusterPrefix resolves the cluster prefix used to name cloud
+// infrastructure. The global ModuleConfig setting (spec.settings.prefix) is the
+// new home for this value and takes precedence over the deprecated
+// ClusterConfiguration.cloud.prefix, which is being removed together with the
+// whole cloud section. Falls back to cloudPrefix during the transition.
+func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) string {
+	if mc := m.FindModuleConfig("global"); mc != nil {
+		if raw, ok := mc.Spec.Settings["prefix"]; ok {
+			if p, ok := raw.(string); ok && p != "" {
+				return p
+			}
+		}
+	}
+	return cloudPrefix
+}
+
 func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
 	if len(m.ModuleConfigs) == 0 {
 		return nil

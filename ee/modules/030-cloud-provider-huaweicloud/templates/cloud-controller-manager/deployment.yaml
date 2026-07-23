@@ -7,7 +7,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 {{- end }}
 
 {{- define "huaweicloud_ccm_args" }}
-- --cluster-name={{- .Values.global.clusterConfiguration.cloud.prefix }}
+- --cluster-name={{- (.Values.global.prefix | default .Values.global.clusterConfiguration.cloud.prefix) }}
 - --cluster-cidr={{- .Values.global.discovery.podSubnet }}
 - --allocate-node-cidrs=true
 - --configure-cloud-routes=true
