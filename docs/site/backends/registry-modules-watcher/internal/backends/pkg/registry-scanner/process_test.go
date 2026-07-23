@@ -27,6 +27,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -34,6 +35,7 @@ import (
 
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
+	"registry-modules-watcher/internal/metrics"
 )
 
 func TestGetMetadataFromImage(t *testing.T) {
@@ -86,10 +88,12 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		clientOne := setupCompleteClientOne(mc)
 		clientTwo := setupCompleteClientTwo(mc)
 
+		ms := metricsstorage.NewMetricStorage(metricsstorage.WithNewRegistry())
 		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-			cache:           cache.New(metricsstorage.NewMetricStorage()),
+			cache:           cache.New(ms),
+			ms:              ms,
 		}
 
 		tasks := scanner.processRegistries(context.Background())
@@ -125,10 +129,12 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		clientOne := setupCompleteClientOne(mc)
 		clientTwo := setupCompleteClientTwo(mc)
 
+		ms := metricsstorage.NewMetricStorage(metricsstorage.WithNewRegistry())
 		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-			cache:           cache.New(metricsstorage.NewMetricStorage()),
+			cache:           cache.New(ms),
+			ms:              ms,
 		}
 
 		scanner.processRegistries(context.Background())
@@ -166,6 +172,42 @@ func Test_RegistryScannerProcess(t *testing.T) {
 
 		assertTasksMatch(t, expectedCachedTasks, scanner.cache.GetState())
 	})
+}
+
+// Regression: the image-derived telemetry gauges are set only on the cache-miss
+// path. They must live outside the scan-start expire group so that on a warm
+// cache (unchanged release digest) the value set by the cold scan survives.
+func Test_TelemetryReemitsOnWarmCache(t *testing.T) {
+	mc := minimock.NewController(t)
+
+	// Image without module.yaml and a stable digest across scans.
+	img := createMockImage("testmodhex", "1.0.0")
+	client := NewClientMock(mc)
+	client.NameMock.Return("reg")
+	client.ModulesMock.Return([]string{"testmod"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "testmod").Then([]string{"stable"}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "testmod", "stable").Then(img, nil)
+	client.ImageMock.When(minimock.AnyContext, "testmod", "1.0.0").Then(img, nil)
+
+	ms := metricsstorage.NewMetricStorage(metricsstorage.WithNewRegistry())
+	scanner := &registryscanner{
+		logger:          log.NewNop(),
+		registryClients: map[string]Client{"reg": client},
+		cache:           cache.New(ms),
+		ms:              ms,
+	}
+
+	count := func() int {
+		return testutil.CollectAndCount(ms.Grouped().Collector(), metrics.RegistryScannerNoModuleYamlMetric)
+	}
+
+	// First scan (cold): emits the metric and warms the cache.
+	scanner.processRegistries(context.Background())
+	assert.Equal(t, 1, count(), "metric should be set after the cold scan")
+
+	// Second scan (warm hit): the cold-scan value must survive the scan-start expire.
+	scanner.processRegistries(context.Background())
+	assert.Equal(t, 1, count(), "metric must survive a warm-cache scan")
 }
 
 func assertTasksMatch(t *testing.T, expected, actual []backends.DocumentationTask) {

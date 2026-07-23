@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -60,6 +62,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, convertStaticClusterConfigurationHandler)
 
+const internalNetworkCIDRsPath = "nodeManager.internal.static.internalNetworkCIDRs"
+
 func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hook.HookInput) error {
 	secret := input.Snapshots.Get("static_cluster_configuration")
 
@@ -78,20 +82,34 @@ func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hoo
 		return err
 	}
 
-	input.Values.Set("nodeManager.internal.static.internalNetworkCIDRs", internalNetwork)
+	if isEmptyInternalNetwork(internalNetwork) {
+		if existing := input.Values.Get(internalNetworkCIDRsPath); len(existing.Array()) > 0 {
+			return fmt.Errorf(
+				"static-cluster-configuration.yaml no longer contains 'internalNetworkCIDRs', but %q is currently set to %s; "+
+					"refusing to silently clear it, since this looks like an accidental config change that could break node network setup",
+				internalNetworkCIDRsPath, existing.String(),
+			)
+		}
+	}
+
+	input.Values.Set(internalNetworkCIDRsPath, internalNetwork)
 	return nil
 }
 
 func internalNetworkFromStaticConfiguration(data []byte) (any, error) {
+	if isBlankYAMLDocument(data) {
+		return []any{}, nil
+	}
+
 	if err := validation.ValidateData([]string{}, &data); err != nil {
 		if !errors.Is(err, validation.ErrSchemaNotFound) {
-			return "", err
+			return nil, err
 		}
 	}
 	res := make(map[any]any)
 	err := yaml.Unmarshal(data, &res)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	intNet, ok := res["internalNetworkCIDRs"]
@@ -99,5 +117,27 @@ func internalNetworkFromStaticConfiguration(data []byte) (any, error) {
 		return intNet, nil
 	}
 
-	return "", nil
+	return []any{}, nil
+}
+
+// isBlankYAMLDocument reports whether data contains no actual YAML content:
+// only whitespace and/or "---" document separators (e.g. "", "\n", "---", "---\n").
+func isBlankYAMLDocument(data []byte) bool {
+	trimmed := strings.TrimFunc(string(data), func(r rune) bool {
+		return r == '-' || unicode.IsSpace(r)
+	})
+	return trimmed == ""
+}
+
+func isEmptyInternalNetwork(v any) bool {
+	switch t := v.(type) {
+	case nil:
+		return true
+	case []any:
+		return len(t) == 0
+	case string:
+		return t == ""
+	default:
+		return false
+	}
 }

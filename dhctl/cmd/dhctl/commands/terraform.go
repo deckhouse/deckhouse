@@ -44,7 +44,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
 		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
@@ -129,10 +129,9 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,
 			kubeCl,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(),
-			),
+			infrastructureprovider.MetaConfigValidatorProvider(),
 			&opts.Global,
+			infrastructureprovider.DhctlOperationConverge,
 		)
 		if err != nil {
 			return err

@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	"github.com/deckhouse/virtualization/api/core/v1alpha2/vdcondition"
 )
 
 const (
@@ -162,18 +163,6 @@ func (d *DiskService) CreateDiskFromDataSource(
 		return nil, err
 	}
 
-	sc, err := d.GetStorageClass(ctx, diskStorageClass)
-	if err != nil {
-		return nil, err
-	}
-
-	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode != storagev1.VolumeBindingWaitForFirstConsumer {
-		err = d.WaitDiskCreation(ctx, diskName)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return newDisk, nil
 }
 
@@ -282,8 +271,48 @@ func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) erro
 			return false, fmt.Errorf("expected a VirtualMachineDisk but got a %T", obj)
 		}
 
-		return vmd.Status.Phase == v1alpha2.DiskReady, nil
+		if vmd.Status.Phase == v1alpha2.DiskReady || vmd.Status.Phase == v1alpha2.DiskWaitForFirstConsumer {
+			return true, nil
+		}
+
+		if err := TerminalDiskError(vmd); err != nil {
+			return false, err
+		}
+
+		return false, nil
 	})
+}
+
+func isTerminalDiskErrorReason(reason vdcondition.ReadyReason) bool {
+	switch reason {
+	case vdcondition.ProvisioningFailed,
+		vdcondition.QuotaExceeded,
+		vdcondition.ImagePullFailed,
+		vdcondition.DatasourceIsNotFound,
+		vdcondition.StorageClassIsNotReady,
+		vdcondition.Lost:
+		return true
+	}
+	return false
+}
+
+// TerminalDiskError returns a non-nil error if the VirtualDisk is in a terminal failure state,
+// nil if the disk is healthy or still provisioning.
+func TerminalDiskError(vmd *v1alpha2.VirtualDisk) error {
+	for _, cond := range vmd.Status.Conditions {
+		if cond.Type == vdcondition.ReadyType.String() && cond.Status == metav1.ConditionFalse {
+			if isTerminalDiskErrorReason(vdcondition.ReadyReason(cond.Reason)) {
+				if cond.Reason == vdcondition.QuotaExceeded.String() {
+					return fmt.Errorf("%w: %s", ErrQuotaExceeded, cond.Message)
+				}
+				return fmt.Errorf("%s: %s", cond.Reason, cond.Message)
+			}
+		}
+	}
+	if vmd.Status.Phase == v1alpha2.DiskFailed {
+		return fmt.Errorf("disk %q is in Failed phase", vmd.Name)
+	}
+	return nil
 }
 
 func (d *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) error {

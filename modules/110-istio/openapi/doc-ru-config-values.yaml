@@ -48,6 +48,11 @@ properties:
               Дополнительные аннотации для сервиса ingressgateway.
 
               Полезно, например, для настройки локального LB в Yandex Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
+          loadBalancerClass:
+            description: |
+              Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
+
+              Применяется только при `inlet`, равном `LoadBalancer`.
           gatewayPodAnnotations:
             description: |
               Дополнительные аннотации для подов DaemonSet'а ingressgateway.

@@ -158,7 +158,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToConverge, h.commanderMode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.kubeGetter, h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
@@ -184,10 +184,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
-	}
-	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
 	if !h.commanderMode {
@@ -219,7 +215,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
 	}
 
-	err = waitEtcdHasMember(ctx, kubeClient.KubeClient.(libcon.KubeClient), h.nodeToConverge)
+	err = waitEtcdHasMember(ctx, h.kubeGetter, h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %w", h.nodeToConverge, err)
 	}

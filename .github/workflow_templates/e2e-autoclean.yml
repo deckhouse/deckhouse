@@ -34,7 +34,7 @@ jobs:
     steps:
     - name: Do nothing
       run: echo "Empty action to fulfil Github requirements."
-  e2e-autoclean:
+  e2e-en-autoclean:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     name: Run
     needs:
@@ -62,7 +62,35 @@ jobs:
       run: |
         python ${SCRIPT_DIR}/main.py --auto
     {!{ tmpl.Exec "send_fail_report" . | strings.Indent 4 }!}
-  e2e-pr-clean:
+  e2e-ru-autoclean:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    name: Run
+    needs:
+    - skip_tests_repos
+    permissions:
+      id-token: write
+    runs-on: [self-hosted, regular]
+    steps:
+    {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    {!{- $secrets := slice -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4  }!}
+    - uses: {!{ index (ds "actions") "actions/setup-python" }!}
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Install deps
+      run: |
+        pip install -r ${SCRIPT_DIR}/requirements.txt
+    - name: Run clean
+      env:
+        E2E_COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        E2E_COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+      run: |
+        python ${SCRIPT_DIR}/main.py --auto
+    {!{ tmpl.Exec "send_fail_report" . | strings.Indent 4 }!}
+  e2e-en-pr-clean:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     env:
       PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -77,6 +105,39 @@ jobs:
     {!{- $secrets := slice -}!}
     {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
     {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4  }!}
+    - uses: {!{ index (ds "actions") "actions/setup-python" }!}
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Install deps
+      run: |
+        pip install -r ${SCRIPT_DIR}/requirements.txt
+    - name: Run clean
+      env:
+        E2E_COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        E2E_COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+      run: |
+        REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+        if [[ deckhouse/deckhouse == $GITHUB_REPOSITORY ]] ; then
+          # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+          REPO_SUFFIX=
+        fi
+        python ${SCRIPT_DIR}/main.py --pr ${PULL_REQUEST_NUMBER}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+  e2e-ru-pr-clean:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    env:
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+    name: Run
+    needs:
+    - skip_tests_repos
+    permissions:
+      id-token: write
+    runs-on: [ self-hosted, regular ]
+    steps:
+    {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    {!{- $secrets := slice -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
     {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4  }!}
     - uses: {!{ index (ds "actions") "actions/setup-python" }!}
       with:

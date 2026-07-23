@@ -2,25 +2,39 @@
 
 ### 001-go-mod.patch
 
-To create this patch run commands:
+Bumps Go module dependencies to remediate CVEs reported by Trivy for the
+cluster-autoscaler binary. The vulnerabilities live in indirect/build
+dependencies that are linked into the binary (x/crypto/ssh, x/net, k8s
+staging modules), not in cluster-autoscaler logic, so the fix is a pure
+`go.mod`/`go.sum` bump. The gardener tag stays `v1.32.3`.
+
+Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
+
+- `go` directive: `1.23.0` (+ `toolchain go1.23.2`) -> `1.25.0`
+- `golang.org/x/net`: `v0.38.0` -> `v0.55.0` (HTML parser / HTTP2 / idna CVEs)
+- `golang.org/x/sys`: `v0.31.0` -> `v0.45.0`
+- `golang.org/x/crypto`: `v0.36.0` -> `v0.51.0` (x/crypto/ssh CVEs)
+- `k8s.io/kubernetes`: `v1.32.0` -> `v1.32.10`, and all `k8s.io/*` staging
+  modules (require + replace) synced to `v0.32.10` (kube-controller-manager
+  SSRF, CVE-2025-13281)
+
+To recreate this patch, check out the clean tag and re-apply the bumps:
 
 ```shell
+git clone <SOURCE_REPO>/gardener/autoscaler.git
+cd autoscaler && git checkout v1.32.3
 cd cluster-autoscaler
-go mod edit -go 1.23
-go get github.com/golang-jwt/jwt/v4@v4.5.1
-go get github.com/opencontainers/runc@v1.1.14
-go get golang.org/x/crypto@v0.31.0
-go get golang.org/x/net@v0.33.0
-
-go get k8s.io/kubernetes@v1.30.8
-go get k8s.io/kubelet@v0.30.8
-#replase all in k8s.io  v0.30.1 -> v0.30.8
-cd apis
-go get golang.org/x/net@v0.33.0
+go get golang.org/x/crypto@v0.51.0
+go get golang.org/x/net@v0.55.0
+go get golang.org/x/sys@v0.45.0
+go get k8s.io/kubernetes@v1.32.10
+# sync every k8s.io/* require and replace directive to v0.32.10
+cd apis && go get golang.org/x/net@v0.55.0 && cd ..
+go mod tidy && (cd apis && go mod tidy)
 cd ..
-go mod tidy
-git diff > patches/001-go_mod.patch
-#git apply patches/001-go_mod.patch
+git diff -- cluster-autoscaler/go.mod cluster-autoscaler/go.sum \
+            cluster-autoscaler/apis/go.mod cluster-autoscaler/apis/go.sum \
+  > 001-go-mod.patch
 ```
 
 ### 002-kruise-ads.patch

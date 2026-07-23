@@ -22,10 +22,11 @@ import (
 
 // ConvergeOptions covers the converge / converge-exporter / migration commands.
 type ConvergeOptions struct {
-	MetricsPath   string
-	ListenAddress string
-	CheckInterval time.Duration
-	OutputFormat  string
+	MetricsPath         string
+	ListenAddress       string
+	CheckInterval       time.Duration
+	OutputFormat        string
+	DestructiveApproved bool
 
 	CheckHasTerraformStateBeforeMigrateToTofu bool
 }

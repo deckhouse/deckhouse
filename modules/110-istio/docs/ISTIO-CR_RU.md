@@ -1,5 +1,5 @@
 ---
-title: "Модуль istio: Custom Resources (от istio.io)"
+title: "Модуль istio: Кастомные ресурсы (от istio.io)"
 description: "Справочник по апстрим-ресурсам Istio, используемым модулем: маршрутизация (DestinationRule, VirtualService, ServiceEntry), аутентификация (PeerAuthentication, RequestAuthentication), авторизация (AuthorizationPolicy) и Sidecar."
 ---
 

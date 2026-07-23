@@ -21,18 +21,29 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          x-kubernetes-validations:
+            - rule: 'size(self.metadata.name) <= 36'
+              message: 'IngressIstioController name must be no longer than 36 characters.'
+            - rule: "self.metadata.name.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')"
+              message: 'IngressIstioController name must be a DNS label.'
           required: ['spec']
           properties:
             spec:
               type: object
+              x-kubernetes-validations:
+                - rule: 'self.ingressGatewayClass == oldSelf.ingressGatewayClass'
+                  message: 'ingressGatewayClass is immutable.'
               required: ['ingressGatewayClass', 'inlet']
               properties:
                 ingressGatewayClass:
                   type: string
+                  maxLength: 63
                   description: |
                     Ingress gateway class is used by application [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resources for identifying the right Ingress gateway setup.
 
                     The identification is organized by setting the spec.selector: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`.
+
+                    This parameter does not change during the entire resource life.
                   x-doc-examples: ['istio']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                 inlet:
@@ -45,6 +56,32 @@ spec:
 
                       > **Caution.** There can be only one controller with this inlet type on a host.
                   enum: ["LoadBalancer","HostPort","NodePort"]
+                networkTopology:
+                  type: object
+                  description: |
+                    Configures how the gateway extracts the client's original attributes (e.g. the source IP address) when it is deployed behind other proxies or load balancers.
+
+                    See [Configuring Gateway Network Topology](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/) in the Istio documentation.
+                  properties:
+                    numTrustedProxies:
+                      type: integer
+                      minimum: 0
+                      x-doc-examples: [2]
+                      description: |
+                        Number of trusted proxies deployed in front of the Istio gateway proxy.
+
+                        It is used to correctly extract the client address from the `X-Forwarded-For` header and populate the `X-Envoy-External-Address` header consumed by upstream services.
+
+                        For example, if there is a cloud load balancer and a reverse proxy in front of the gateway, set this to `2`.
+
+                        It can be used with `proxyProtocol`. When both are configured and an incoming request contains an `X-Forwarded-For` header, Istio uses the trusted `X-Forwarded-For` chain in preference to the PROXY protocol attributes.
+                    proxyProtocol:
+                      type: boolean
+                      x-doc-examples: [true]
+                      description: |
+                        Enables the [PROXY protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) on the gateway's TCP listeners, so that client attributes (such as the source IP) forwarded by an upstream L4/TCP load balancer are preserved.
+
+                        It can be used with `numTrustedProxies`. When both are configured and an incoming request contains an `X-Forwarded-For` header, Istio uses the trusted `X-Forwarded-For` chain in preference to the PROXY protocol attributes.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -94,6 +131,10 @@ spec:
                         Annotations to assign to the service for flexible configuration of the load balancer.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
                 hostPort:
                   type: object
                   description: |
@@ -123,7 +164,7 @@ spec:
                 nodePort:
                   type: object
                   description: |
-                    `HostPort` inlet settings.
+                    `NodePort` inlet settings.
                   anyOf:
                     - {required: ["httpPort"]}
                     - {required: ["httpsPort"]}
@@ -150,70 +191,80 @@ spec:
                   required: ['mode']
                   type: object
                   description: |
-                    Max amounts of CPU and memory resources that the pod can request when selecting a node (if the VPA is disabled, then these values become the default ones).
+                    Settings for CPU and memory requests and limits by ingress gateway pods.
+
+                    If omitted, the built-in VPA mode defaults are used. In `Static` mode, requests are specified directly in `static`. In `VPA` mode, the VPA adjusts requests within the configured minimum and maximum bounds.
                   properties:
                     mode:
                       type: string
                       description: |
-                        The mode for managing resource requests.
+                        Resource management mode:
+                        - `Static` — allows you to specify requests directly in the `static` section;
+                        - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the `vpa` section.
                       enum: ['VPA', 'Static']
                       default: 'VPA'
                     vpa:
                       type: object
                       description: |
-                        Parameters of the vpa mode.
+                        Resource management options for the `VPA` mode.
                       properties:
                         mode:
                           type: string
                           description: |
-                            The VPA usage mode.
-                          enum: ['Initial', 'Auto']
+                            VPA operating mode.
+
+                            - `Initial` — VPA sets initial values for pod resource requests at pod creation time. Resource values are not changed automatically afterwards.
+
+                            - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster. If in-place updates are not possible, the pod is recreated.
+
+                            - `Auto` — VPA automatically recreates pods to apply updated resource values. This mode is considered legacy starting from Deckhouse version 1.75; `InPlaceOrRecreate` is recommended.
+                          enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
                           default: 'Initial'
                         cpu:
                           type: object
                           description: |
-                            CPU-related parameters.
+                            CPU-related VPA settings.
                           properties:
                             max:
                               description: |
-                                Maximum allowed CPU requests.
-                              default: '100m'
+                                The maximum value that the VPA can set for the CPU requests.
+                              default: '1000m'
                               type: string
                             min:
                               description: |
-                                Minimum allowed CPU requests.
-                              default: '50m'
+                                The minimum value that the VPA can set for the CPU requests.
+                              default: '100m'
                               type: string
                         memory:
                           type: object
                           description: |
-                            The amount of memory requested.
+                            Memory-related VPA settings.
                           properties:
                             max:
                               description: |
-                                Maximum allowed memory requests.
-                              default: '200Mi'
+                                The maximum memory requests the VPA can set.
+                              default: '2000Mi'
                               type: string
                             min:
                               description: |
-                                Minimum allowed memory requests.
-                              default: '100Mi'
+                                The minimum memory requests the VPA can set.
+                              default: '128Mi'
                               type: string
                     static:
                       type: object
                       description: |
-                        Static mode settings.
+                        Resource management options for the `Static` mode.
                       properties:
                         cpu:
                           type: string
                           description: |
-                            CPU requests.
-                          default: '350m'
+                            Configuring CPU requests.
+                          default: '100m'
                         memory:
                           type: string
                           description: |
-                            Memory requests.
-                          default: '500Mi'
+                            Configuring memory requests.
+                          default: '128Mi'
               oneOf:
                 - properties:
                     inlet:

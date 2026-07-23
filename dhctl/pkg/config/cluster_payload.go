@@ -49,8 +49,8 @@ func PayloadHasClusterConfiguration(payload string) bool {
 
 // ParseClusterPayload extracts cluster intent (ClusterConfiguration,
 // *ClusterConfiguration, ModuleConfigs) without running OpenAPI validation
-// or the heavyweight bootstrap-time Prepare (registry init, preparator
-// hooks). It reuses parseDocument via ValidateOptionSkipSchemaValidation so
+// or the heavyweight bootstrap-time Prepare (registry init, provider
+// validation). It reuses parseDocument via ValidateOptionSkipSchemaValidation so
 // the per-kind switch stays single-sourced.
 //
 // Used by domain analyzers (CNI mismatch, future ones) that need a partial

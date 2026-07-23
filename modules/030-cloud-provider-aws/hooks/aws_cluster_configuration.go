@@ -114,13 +114,12 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 
 	cloudDiscoveryData := secret.Data["cloud-provider-discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&cloudDiscoveryData, []string{"/deckhouse/modules/030-cloud-provider-aws/candi/openapi", "/deckhouse/candi/cloud-providers/aws/openapi"}, nil)
+	_, err = config.ValidateDiscoveryData(&cloudDiscoveryData, nil, nil)
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 	}
 
-	metaCfg, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider(
-		infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()), nil)
+	metaCfg, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), infrastructureprovider.MetaConfigValidatorProvider(), nil)
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 	}
