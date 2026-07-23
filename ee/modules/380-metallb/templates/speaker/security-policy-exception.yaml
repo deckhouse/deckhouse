@@ -1,0 +1,53 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: speaker
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "speaker")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          MetalLB speaker must run as root to send gratuitous ARP/NDP announcements
+          on the host network interfaces.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for raw network operations used by L2 service advertisement.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_RAW
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_RAW is required to craft ARP/NDP packets that announce LoadBalancer IPs
+          on the local network segment.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          The speaker must join the host network namespace to advertise service IPs
+          via ARP/NDP on the node interfaces and to participate in memberlist gossip.
+    hostPorts:
+      - port: 4218
+        protocol: TCP
+        metadata:
+          description: MetalLB memberlist TCP gossip port used by speaker.
+      - port: 4218
+        protocol: UDP
+        metadata:
+          description: MetalLB memberlist UDP gossip port used by speaker.
+      - port: 4220
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint exposed through kube-rbac-proxy.
+{{- end }}
