@@ -1,23 +1,23 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-b7f1dd6c80424d99d565815dc1b763c0cea2d579a014fe4a378580b87ffb0071",
+  "@id": "https://openvex.dev/docs/public/vex-df6b6953a9785c5863466787aeffe87d8ce9c15df1baf8c67b84a68cae7334a5",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 1,
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2026-39883"
+        "name": "GO-2026-5932"
       },
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+          "@id": "pkg:golang/golang.org/x/crypto"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Данная уязвимость специфична только для систем семейства BSD и Solaris, где используется команда kenv для получения идентификатора хоста. Образы Deckhouse работают на базе Linux, в которых данный код не компилируется и не исполняется, что делает эксплуатацию вектора атаки через PATH hijacking невозможной.",
-      "timestamp": "2026-04-14T14:37:21.591261Z"
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе присутствует только модуль golang.org/x/crypto (используемый для SSH и других криптографических примитивов), тогда как сам пакет openpgp транзитивно не импортируется. Проверка govulncheck подтверждает, что пакет openpgp отсутствует в графе импортов coredns и его плагинов (включая kubeforward), а уязвимый код не входит ни в один путь исполнения образа. Поэтому уязвимость для образа недостижима.",
+      "timestamp": "2026-07-21T10:13:53.689731Z"
     }
   ],
-  "timestamp": "2026-04-14T14:37:21Z"
+  "timestamp": "2026-07-21T10:13:53Z"
 }
