@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 7673957347..4a5e5b1df3 100644
+index 7673957347..f67a27d904 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -10,6 +10,15 @@ index 7673957347..4a5e5b1df3 100644
  
  require (
  	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6
+@@ -36,7 +36,7 @@ require (
+ 	github.com/docker/docker v27.4.0+incompatible
+ 	github.com/docker/libnetwork v0.8.0-dev.2.0.20210525090646-64b7a4574d14
+ 	github.com/envoyproxy/go-control-plane/contrib v1.32.4
+-	github.com/envoyproxy/go-control-plane/envoy v1.36.0
++	github.com/envoyproxy/go-control-plane/envoy v1.37.0
+ 	github.com/evanphx/json-patch v5.9.0+incompatible
+ 	github.com/fatih/color v1.18.0
+ 	github.com/fsnotify/fsnotify v1.8.0
 @@ -85,7 +85,7 @@ require (
  	github.com/russross/blackfriday/v2 v2.1.0
  	github.com/sasha-s/go-deadlock v0.3.5
