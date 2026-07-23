@@ -64,6 +64,44 @@ func TestEffectiveClusterPrefix(t *testing.T) {
 	}
 }
 
+func TestMaterializeCloudPrefix(t *testing.T) {
+	t.Run("cloud cluster, prefix from global MC, injected into cloud", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   CloudClusterType,
+			ClusterPrefix: "lysov-test",
+			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"Yandex"}`)},
+		}
+		require.NoError(t, m.materializeCloudPrefix())
+		var cloud map[string]any
+		require.NoError(t, json.Unmarshal(m.ClusterConfig["cloud"], &cloud))
+		require.Equal(t, "lysov-test", cloud["prefix"])
+		require.Equal(t, "Yandex", cloud["provider"], "existing cloud fields must be preserved")
+	})
+
+	t.Run("global MC prefix overrides existing cloud.prefix", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   CloudClusterType,
+			ClusterPrefix: "from-mc",
+			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"AWS","prefix":"old"}`)},
+		}
+		require.NoError(t, m.materializeCloudPrefix())
+		var cloud map[string]any
+		require.NoError(t, json.Unmarshal(m.ClusterConfig["cloud"], &cloud))
+		require.Equal(t, "from-mc", cloud["prefix"])
+	})
+
+	t.Run("static cluster is a no-op", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   StaticClusterType,
+			ClusterPrefix: "x",
+			ClusterConfig: map[string]json.RawMessage{},
+		}
+		require.NoError(t, m.materializeCloudPrefix())
+		_, ok := m.ClusterConfig["cloud"]
+		require.False(t, ok)
+	})
+}
+
 func TestGetDNSAddress(t *testing.T) {
 	tests := []struct {
 		name   string

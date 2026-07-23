@@ -157,6 +157,9 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		return nil, err
 	}
 	m.ClusterPrefix = m.effectiveClusterPrefix(cloudSpec.Prefix)
+	if err := m.materializeCloudPrefix(); err != nil {
+		return nil, err
+	}
 
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
@@ -1022,6 +1025,37 @@ func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) string {
 		}
 	}
 	return cloudPrefix
+}
+
+// materializeCloudPrefix writes the resolved cluster prefix back into the cloud
+// section of the ClusterConfiguration. Terraform layouts and other legacy
+// consumers read var.clusterConfiguration.cloud.prefix directly and cannot read
+// the global ModuleConfig, so when the prefix is provided via the global
+// ModuleConfig (and omitted from ClusterConfiguration.cloud), dhctl fills it in
+// here to keep those consumers working during the migration.
+func (m *MetaConfig) materializeCloudPrefix() error {
+	if m.ClusterType != CloudClusterType || m.ClusterPrefix == "" {
+		return nil
+	}
+	rawCloud, ok := m.ClusterConfig["cloud"]
+	if !ok {
+		return nil
+	}
+	cloud := map[string]json.RawMessage{}
+	if err := json.Unmarshal(rawCloud, &cloud); err != nil {
+		return fmt.Errorf("unmarshal cloud config: %w", err)
+	}
+	prefixJSON, err := json.Marshal(m.ClusterPrefix)
+	if err != nil {
+		return fmt.Errorf("marshal cluster prefix: %w", err)
+	}
+	cloud["prefix"] = prefixJSON
+	newCloud, err := json.Marshal(cloud)
+	if err != nil {
+		return fmt.Errorf("marshal cloud config: %w", err)
+	}
+	m.ClusterConfig["cloud"] = newCloud
+	return nil
 }
 
 func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
