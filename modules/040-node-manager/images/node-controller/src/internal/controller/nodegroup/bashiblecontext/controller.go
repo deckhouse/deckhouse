@@ -60,11 +60,27 @@ func (c *Controller) Setup(mgr ctrl.Manager) error {
 
 var assembleRequest = []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "assemble"}}}
 
+// ForPredicates: the assembled context depends on NodeGroup specs only, so status writes
+// and finalizer patches must not re-run the whole assembly (each run derives every
+// NodeGroup — during a burst the unfiltered events multiplied into hundreds of passes).
+func (c *Controller) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)}
+}
+
 func (c *Controller) SetupWatches(w register.Watcher) {
 	enqueue := handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
 		return assembleRequest
 	})
-	w.Watches(&corev1.Secret{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS, cloudInstanceManagerNS)))
+	// The controller's own output Secret must not feed back into its trigger, otherwise
+	// every assembly re-enqueues the next one and the loop free-runs.
+	notOwnSecret := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return !(obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == secretName)
+	})
+	w.Watches(&corev1.Secret{}, enqueue, builder.WithPredicates(predicate.And(
+		inNamespaces(kubeSystemNS, cloudInstanceManagerNS), notOwnSecret)))
 	w.Watches(&corev1.ConfigMap{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS, versionInfoCMNS)))
 	w.Watches(&corev1.Service{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))
 	w.Watches(&corev1.Pod{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))

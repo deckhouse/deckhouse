@@ -61,6 +61,16 @@ func (r *Status) Setup(mgr ctrl.Manager) error {
 	return nil
 }
 
+// ForPredicates: the status is derived from the NodeGroup spec plus Node/Machine/MD state
+// (watched separately below); the controller's own status writes must not re-enqueue the
+// NodeGroup — during a burst that echo multiplied reconciles ~40x per NodeGroup.
+func (r *Status) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)}
+}
+
 func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(ngcommon.NodeToNodeGroup), builder.WithPredicates(ngcommon.NodeHasGroupLabelPredicate()))
 	w.Watches(&mcmv1alpha1.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
