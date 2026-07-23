@@ -90,7 +90,7 @@
         },
         {
           "@id": "pkg:golang/stdlib@v1.26.4"
-        },
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
