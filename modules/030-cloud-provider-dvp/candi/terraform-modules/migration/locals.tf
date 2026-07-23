@@ -57,6 +57,7 @@ locals {
         nodes = {
           parameters = {
             sshPublicKey = try(local._pcc.sshPublicKey, "")
+            sshCAKeys    = try(local._pcc.sshCAKeys, [])
             region       = try(local._pcc.region, "")
             zones        = try(local._pcc.zones, [])
           }

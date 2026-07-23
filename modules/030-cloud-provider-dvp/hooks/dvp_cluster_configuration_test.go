@@ -259,6 +259,101 @@ metadata:
 		})
 	})
 
+	// ---- State B with sshCAKeys present in PCC ----
+	stateAClusterConfigurationWithCA := fmt.Sprintf(`
+apiVersion: deckhouse.io/v1
+kind: DVPClusterConfiguration
+layout: Standard
+masterNodeGroup:
+  instanceClass:
+    etcdDisk:
+      size: 15Gi
+      storageClass: ceph-pool-r2-csi-rbd-immediate
+    rootDisk:
+      image:
+        kind: ClusterVirtualImage
+        name: ubuntu-2204
+      size: 50Gi
+      storageClass: ceph-pool-r2-csi-rbd-immediate
+    virtualMachine:
+      virtualMachineClassName: superbe-class
+      bootloader: EFI
+      cpu:
+        coreFraction: 100%%
+        cores: 4
+      liveMigrationPolicy: PreferForced
+      runPolicy: AlwaysOnUnlessStoppedManually
+      ipAddresses:
+        - Auto
+      memory:
+        size: 8Gi
+  replicas: 3
+provider:
+  kubeconfigDataBase64: %s
+  namespace: cloud-provider01
+sshPublicKey: ssh-rsa AAAAB3N
+sshCAKeys:
+- ssh-rsa-cert-v01@openssh.com AAAACA
+- ssh-rsa-cert-v01@openssh.com BBBBCB
+region: ru-msk-1
+zones:
+- default
+`, kubeconfigDataBase64)
+	notEmptyPCCStateWithCA := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfigurationWithCA)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+	Context("State B: PCC present, sshCAKeys set", func() {
+		bCA := HookExecutionConfigInit(emptyValues, `{}`)
+		bCA.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		bCA.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		bCA.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			bCA.KubeStateSet(notEmptyPCCStateWithCA)
+			bCA.BindingContexts.Set(bCA.GenerateBeforeHelmContext())
+			bCA.RunHook()
+		})
+
+		It("should propagate sshCAKeys from PCC to nodes.parameters alongside sshPublicKey", func() {
+			Expect(bCA).To(ExecuteSuccessfully())
+
+			Expect(bCA.ValuesGet("cloudProviderDvp.nodes.parameters.sshPublicKey").String()).To(Equal("ssh-rsa AAAAB3N"))
+			Expect(bCA.ValuesGet("cloudProviderDvp.nodes.parameters.sshCAKeys").String()).To(MatchJSON(
+				`["ssh-rsa-cert-v01@openssh.com AAAACA", "ssh-rsa-cert-v01@openssh.com BBBBCB"]`))
+		})
+	})
+
+	Context("State B: PCC present, sshCAKeys absent (must not appear in values at all)", func() {
+		// Guards the `len(*pcc.SSHCAKeys) > 0` check in mapPCCtoRootValues: an empty
+		// list must not leave a stray `sshCAKeys: []` in values, and must not be
+		// confused with "the key was explicitly cleared".
+		b2 := HookExecutionConfigInit(emptyValues, `{}`)
+		b2.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		b2.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		b2.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			b2.KubeStateSet(notEmptyPCCState)
+			b2.BindingContexts.Set(b2.GenerateBeforeHelmContext())
+			b2.RunHook()
+		})
+
+		It("should leave nodes.parameters.sshCAKeys unset", func() {
+			Expect(b2).To(ExecuteSuccessfully())
+
+			Expect(b2.ValuesGet("cloudProviderDvp.nodes.parameters.sshPublicKey").String()).To(Equal("ssh-rsa AAAAB3N"))
+			Expect(b2.ValuesGet("cloudProviderDvp.nodes.parameters.sshCAKeys").Exists()).To(BeFalse())
+		})
+	})
+
 	// ---- setDefaultZones: direct unit test for the live-hook default-zone fallback ----
 	Context("setDefaultZones default-zone fallback", func() {
 		strPtr := func(s string) *string { return &s }

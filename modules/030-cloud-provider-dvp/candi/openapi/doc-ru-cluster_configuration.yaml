@@ -19,6 +19,12 @@ apiVersions:
         sshPublicKey:
           description: |
             Публичный ключ для доступа на узлы.
+        sshCAKeys:
+          description: |
+            Список публичных ключей SSH CA, доверенных для проверки
+            короткоживущих пользовательских сертификатов. При указании узлы
+            будут доверять сертификатам, подписанным этими CA, в дополнение к
+            (а не вместо) `sshPublicKey`.
         masterNodeGroup:
           description: |
             Спецификация для описания NodeGroup master-узлов.

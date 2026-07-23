@@ -125,6 +125,11 @@ variable "ssh_public_key" {
   type = string
 }
 
+variable "ssh_ca_keys" {
+  default = []
+  type    = list(string)
+}
+
 variable "virtual_machine_class_name" {
   type    = string
   default = "generic"

@@ -81,6 +81,7 @@ locals {
 
   namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
   ssh_public_key = try(module.migration.settings.spec.settings.nodes.parameters.sshPublicKey, "")
+  ssh_ca_keys    = try(module.migration.settings.spec.settings.nodes.parameters.sshCAKeys, [])
   region         = try(module.migration.settings.spec.settings.nodes.parameters.region, "")
   actual_zones   = try(module.migration.settings.spec.settings.nodes.parameters.zones, [])
   zones          = try(local._master_ng.spec.cloudInstances.zones, null) != null ? tolist(setintersection(local.actual_zones, local._master_ng.spec.cloudInstances.zones)) : local.actual_zones

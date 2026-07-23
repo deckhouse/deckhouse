@@ -295,6 +295,40 @@ internal:
       name: 1test
 `
 
+const moduleValuesWithCACerts = `
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+    sshCAKeys:
+      - ssh-rsa-ca-AAAA-fake-vault-ca-key-1
+      - ssh-rsa-ca-AAAA-fake-vault-ca-key-2
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  disabled: false
+  parameters: {}
+ccm:
+  disabled: false
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses: []
+`
+
 const moduleValuesWithoutCCM = `
 nodes:
   disabled: false
@@ -1261,6 +1295,51 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(ccmDeployment.Exists()).To(BeTrue())
 			Expect(ccmDeployment.Field(`spec.template.spec.containers.0.args`).String()).
 				To(ContainSubstring(`--controllers=cloud-node,cloud-node-lifecycle,service-lb-controller`))
+		})
+	})
+
+	Context("DVP without sshCAKeys (default)", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
+			f.HelmRender()
+		})
+
+		It("must not render the SSH CA NodeGroupConfiguration", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ngc := f.KubernetesGlobalResource("NodeGroupConfiguration", "dvp-ssh-ca-trust.sh")
+			Expect(ngc.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("DVP with sshCAKeys set", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesWithCACerts)
+			f.HelmRender()
+		})
+
+		It("must render the SSH CA NodeGroupConfiguration for all node groups/bundles", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ngc := f.KubernetesGlobalResource("NodeGroupConfiguration", "dvp-ssh-ca-trust.sh")
+			Expect(ngc.Exists()).To(BeTrue())
+			Expect(ngc.Field("spec.nodeGroups").String()).To(MatchYAML(`["*"]`))
+			Expect(ngc.Field("spec.bundles").String()).To(MatchYAML(`["*"]`))
+
+			content := ngc.Field("spec.content").String()
+			Expect(content).To(ContainSubstring("ssh-rsa-ca-AAAA-fake-vault-ca-key-1"))
+			Expect(content).To(ContainSubstring("ssh-rsa-ca-AAAA-fake-vault-ca-key-2"))
+			Expect(content).To(ContainSubstring("/etc/ssh/trusted-user-ca-keys.pem"))
+			Expect(content).To(ContainSubstring("TrustedUserCAKeys /etc/ssh/trusted-user-ca-keys.pem"))
+			Expect(content).To(ContainSubstring("sshd -t && systemctl reload ssh"))
 		})
 	})
 

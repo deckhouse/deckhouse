@@ -230,6 +230,7 @@ run "with_pcc_migration_in_progress" {
         networkPolicy        = "Isolated"
       }
       sshPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZakrNbKZ7i/uDQqxy7/FtPr4+H+pT7VC7ZxdVp0QXA"
+      sshCAKeys    = ["ssh-rsa-ca-AAAA-fake-vault-ca-key-1", "ssh-rsa-ca-AAAA-fake-vault-ca-key-2"]
     }
 
     nodeGroups      = {}
@@ -286,6 +287,11 @@ run "with_pcc_migration_in_progress" {
   assert {
     condition     = output.settings.spec.version == 2
     error_message = "expected synthesised settings.spec.version == 2"
+  }
+
+  assert {
+    condition     = output.settings.spec.settings.nodes.parameters.sshCAKeys == ["ssh-rsa-ca-AAAA-fake-vault-ca-key-1", "ssh-rsa-ca-AAAA-fake-vault-ca-key-2"]
+    error_message = "expected sshCAKeys to be synthesised from PCC into settings.spec.settings.nodes.parameters"
   }
 }
 

@@ -57,6 +57,12 @@ properties:
 
               > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             type: string
+          sshCAKeys:
+            description: |-
+              A list of SSH CA public keys trusted for signing short-lived user certificates. When set, nodes trust certificates signed by these CAs in addition to (not instead of) `sshPublicKey`.
+            items:
+              type: string
+            type: array
           sshPublicKey:
             description: A public key for accessing nodes.
             type: string

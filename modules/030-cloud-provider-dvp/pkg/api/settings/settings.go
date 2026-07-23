@@ -112,6 +112,12 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Публичный ключ для доступа на узлы."
 	// +deckhouse:XRules=sshPublicKey
 	SSHPublicKey string `json:"sshPublicKey"`
+	// A list of SSH CA public keys trusted for signing short-lived user
+	// certificates. When set, nodes trust certificates signed by these CAs
+	// in addition to (not instead of) `sshPublicKey`.
+	// +deckhouse:ru:description:value="Список публичных ключей SSH CA, доверенных для проверки короткоживущих пользовательских сертификатов. При указании узлы будут доверять сертификатам, подписанным этими CA, в дополнение к (а не вместо) `sshPublicKey`."
+	// +optional
+	SSHCAKeys []string `json:"sshCAKeys,omitempty"`
 	// Layout name.
 	//
 	// [Read more about possible provider layouts](/modules/cloud-provider-dvp/layouts.html).

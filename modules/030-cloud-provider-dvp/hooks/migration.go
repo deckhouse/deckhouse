@@ -139,6 +139,9 @@ func buildModuleConfigFromPCC(cfg *v1.DvpProviderClusterConfiguration) (map[stri
 		"layout":       layout,
 		"sshPublicKey": sshPublicKey,
 	}
+	if cfg.SSHCAKeys != nil && len(*cfg.SSHCAKeys) > 0 {
+		nodesParameters["sshCAKeys"] = stringsToAnySlice(*cfg.SSHCAKeys)
+	}
 	if cfg.Region != nil {
 		nodesParameters["region"] = *cfg.Region
 	}
