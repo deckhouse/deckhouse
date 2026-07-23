@@ -33,6 +33,7 @@ import (
 
 const (
 	DefaultBundle   = "Default"
+	MinimalBundle   = "Minimal"
 	DefaultLogLevel = "Info"
 )
 
