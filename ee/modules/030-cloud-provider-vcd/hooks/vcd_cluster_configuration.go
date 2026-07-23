@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks/internal/v1"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
@@ -73,11 +75,14 @@ var _ = cluster_configuration.RegisterHook(
 
 		return nil
 	},
-	// Prepare and prefix validation are skipped: this hook runs after installation,
-	// metaconfig is already prepared, and VCD version discovery happens in the
-	// data-discoverer hook (order 10). Validation that matters is done locally by
-	// validateProviderClusterConfig.
-	cluster_configuration.NewConfig(config.DummyPreparatorProvider()),
+	// The validator runs on every reconcile: it checks provider.server format
+	// (e.g. no trailing slash) but skips the cluster prefix, which is not present
+	// here. It never mutates the config — VCD version discovery / legacyMode
+	// happens in the data-discoverer hook (order 10). Structural field checks stay
+	// in validateProviderClusterConfig.
+	cluster_configuration.NewConfig(func(_ context.Context, _, _ string) config.ProviderValidateFunc {
+		return vcd.NewMetaConfigValidator(false).Validate
+	}),
 )
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {

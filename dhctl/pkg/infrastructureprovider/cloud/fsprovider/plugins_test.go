@@ -28,43 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 )
 
-func TestCopyTFVersionFileCopiesVersionsAndPlanRules(t *testing.T) {
-	root := t.TempDir()
-	tfManagerDir := filepath.Join(root, "terraform-manager")
-	require.NoError(t, os.MkdirAll(tfManagerDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(tfManagerDir, versionFile), []byte("terraform: 1\n"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(tfManagerDir, planRulesFilename), []byte("vmResource:\n  type: kubernetes_manifest\n"), 0o644))
-
-	require.NoError(t, copyTFVersionFile(root, tfManagerDir))
-
-	candi := filepath.Join(root, "deckhouse", "candi")
-	// plan_rules must land next to terraform_versions so loadPlanRules finds it.
-	require.FileExists(t, filepath.Join(candi, versionFile))
-	require.FileExists(t, filepath.Join(candi, planRulesFilename))
-}
-
-func TestCopyTFVersionFilePlanRulesOptional(t *testing.T) {
-	root := t.TempDir()
-	tfManagerDir := filepath.Join(root, "terraform-manager")
-	require.NoError(t, os.MkdirAll(tfManagerDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(tfManagerDir, versionFile), []byte("terraform: 1\n"), 0o644))
-
-	// A provider bundle without plan_rules.yml must not fail the copy.
-	require.NoError(t, copyTFVersionFile(root, tfManagerDir))
-
-	candi := filepath.Join(root, "deckhouse", "candi")
-	require.FileExists(t, filepath.Join(candi, versionFile))
-	require.NoFileExists(t, filepath.Join(candi, planRulesFilename))
-}
-
-func TestCopyTFVersionFileMissingVersionsFails(t *testing.T) {
-	root := t.TempDir()
-	tfManagerDir := filepath.Join(root, "terraform-manager")
-	require.NoError(t, os.MkdirAll(tfManagerDir, 0o755))
-
-	require.Error(t, copyTFVersionFile(root, tfManagerDir))
-}
-
 func TestDownloadPluginUsesUnpackedBundle(t *testing.T) {
 	root := t.TempDir()
 	bundleTM := filepath.Join(root, "dvp", "terraform-manager")
@@ -91,5 +54,7 @@ func TestDownloadPluginUsesUnpackedBundle(t *testing.T) {
 	}, dest, &config.MetaConfig{DownloadRootDir: root})
 	require.NoError(t, err)
 	require.FileExists(t, dest)
-	require.FileExists(t, filepath.Join(root, "deckhouse", "candi", versionFile))
+	// Bundle settings are read where the bundle keeps them; nothing is copied
+	// into the shared candi dir any more.
+	require.NoFileExists(t, filepath.Join(root, "deckhouse", "candi", versionFile))
 }

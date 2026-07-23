@@ -88,5 +88,5 @@ func TestCloudFiller_NeitherMarker(t *testing.T) {
 	_, err := filler.Cloud(context.Background(), mc)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "ModuleConfig")
-	require.Contains(t, err.Error(), legacyProviderClusterConfigSecretName)
+	require.Contains(t, err.Error(), LegacyProviderClusterConfigSecret)
 }

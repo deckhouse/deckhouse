@@ -4,7 +4,10 @@
 # at runtime (see DHCTL_IMAGES_DIGESTS_FILE in the terraform-manager templates).
 # Nothing provider-specific is baked into this image.
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "kubernetes") }}'
+# The base is pinned directly instead of being looked up in candi's
+# terraform_versions.yml: DVP's settings (useOpentofu included) live in its own
+# bundle, so candi carries no dvp entry to look up.
+fromImage: terraform-manager/base-terraform-manager-opentofu
 
 {{ include "image_spec_for_infrastructure_manager" . }}
 {{- end }}

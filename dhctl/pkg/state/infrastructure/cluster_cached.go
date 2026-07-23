@@ -74,11 +74,10 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, globalOpt
 		return nil, err
 	}
 
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 	metaConfig, err = config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		globalOptions,
 		s.operation,
 	)

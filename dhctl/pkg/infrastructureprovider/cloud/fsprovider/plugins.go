@@ -16,10 +16,6 @@ package fsprovider
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,9 +65,6 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if _, statErr := os.Stat(source); statErr == nil {
-		if err := copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
-			return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
-		}
 		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
@@ -82,66 +75,14 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	bundleTerraformManagerDir := filepath.Join(conf.DownloadRootDir, cloudName, "terraform-manager")
 	source = filepath.Join(bundleTerraformManagerDir, params.Settings.DestinationBinary())
 	if _, statErr := os.Stat(source); statErr == nil {
-		if err := copyTFVersionFile(conf.DownloadRootDir, bundleTerraformManagerDir); err != nil {
-			return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
-		}
 		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
 	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
 		return err
 	}
-	if err = copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
-		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
-	}
 
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 
 	return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
-}
-
-func copyTFVersionFile(downloadRootDir, terraformManagerDir string) error {
-	downloadCandiPath := filepath.Join(downloadRootDir, "deckhouse", "candi")
-	if err := os.MkdirAll(downloadCandiPath, 0o755); err != nil {
-		return fmt.Errorf("mkdir %s: %w", downloadCandiPath, err)
-	}
-
-	// terraform_versions.yml is required. plan_rules.yml is optional (only
-	// providers with a vmResource rule ship it) and must land next to the
-	// versions file so loadPlanRules picks the rule up adjacent to it.
-	if err := copyCandiFile(terraformManagerDir, downloadCandiPath, versionFile, true); err != nil {
-		return err
-	}
-	return copyCandiFile(terraformManagerDir, downloadCandiPath, planRulesFilename, false)
-}
-
-func copyCandiFile(srcDir, dstDir, name string, required bool) error {
-	src := filepath.Join(srcDir, name)
-	f, err := os.Open(src)
-	if err != nil {
-		if !required && errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("open %s: %w", src, err)
-	}
-	defer f.Close()
-
-	dstPath := filepath.Join(dstDir, name)
-	if err := os.RemoveAll(dstPath); err != nil {
-		return fmt.Errorf("remove %s: %w", dstPath, err)
-	}
-
-	dst, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
-	if err != nil {
-		return fmt.Errorf("create %s: %w", dstPath, err)
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, f); err != nil {
-		return fmt.Errorf("copy %s -> %s: %w", src, dstPath, err)
-	}
-	if err := dst.Sync(); err != nil {
-		return fmt.Errorf("sync %s: %w", dstPath, err)
-	}
-	return nil
 }

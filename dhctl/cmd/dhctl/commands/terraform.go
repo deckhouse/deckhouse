@@ -126,11 +126,10 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
-		preparatorParams := infrastructureprovider.NewPreparatorProviderParams()
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,
 			kubeCl,
-			infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+			infrastructureprovider.MetaConfigValidatorProvider(),
 			&opts.Global,
 			infrastructureprovider.DhctlOperationConverge,
 		)

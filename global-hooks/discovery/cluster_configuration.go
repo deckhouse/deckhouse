@@ -87,9 +87,9 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		configYamlBytes := currentConfig[0]
 
 		var metaConfig *config.MetaConfig
-		// we use dummy preparator because we do not need any preparation and validation from cloud providers
+		// we use dummy validator because no provider validation is needed here from cloud providers
 		// we use only ClusterConfiguration here
-		metaConfig, err = config.ParseConfigFromData(ctx, string(configYamlBytes.Content), config.DummyPreparatorProvider(), nil)
+		metaConfig, err = config.ParseConfigFromData(ctx, string(configYamlBytes.Content), config.DummyValidatorProvider(), nil)
 		if err != nil {
 			return fmt.Errorf("parse config from data: %w", err)
 		}

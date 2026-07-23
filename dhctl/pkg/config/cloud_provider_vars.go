@@ -54,12 +54,6 @@ const CloudProviderCredentialsSecretType = corev1.SecretType(proto.CredentialsSe
 
 var nodeGroupGVR = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 
-// cloudProviderNamespace returns the canonical d8-cloud-provider-<name>
-// namespace of the provider module.
-func cloudProviderNamespace(providerName string) string {
-	return CloudProviderNamespace(providerName)
-}
-
 // CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and
 // credential Secrets from the cluster. Settings stays empty here and is filled
 // later by applyCloudProviderModuleSettings from the provider ModuleConfig.
@@ -152,7 +146,7 @@ func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.Kuber
 	if providerName == "" {
 		return nil, nil
 	}
-	ns := cloudProviderNamespace(providerName)
+	ns := CloudProviderNamespace(providerName)
 	list, err := kubeCl.CoreV1().Secrets(ns).List(ctx, metav1.ListOptions{
 		FieldSelector: "type=" + string(CloudProviderCredentialsSecretType),
 	})

@@ -17,6 +17,8 @@ package fsprovider
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/name212/govalue"
@@ -40,7 +42,6 @@ var tofuProviders = []string{
 	yandex.ProviderName,
 	"dynamix",
 	"zvirt",
-	"dvp",
 	"vsphere",
 	"huaweicloud",
 	"openstack",
@@ -48,7 +49,7 @@ var tofuProviders = []string{
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(t.Context(), options.DefaultInfrastructureVersions)
+	s, err := loadProvidersForTest(t.Context(), options.DefaultInfrastructureVersions)
 	require.NoError(t, err)
 
 	all := append(make([]string, 0), tofuProviders...)
@@ -58,7 +59,7 @@ func TestAllProviderPresentInStore(t *testing.T) {
 }
 
 func TestProvidersSettings(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(t.Context(), options.DefaultInfrastructureVersions)
+	s, err := loadProvidersForTest(t.Context(), options.DefaultInfrastructureVersions)
 	require.NoError(t, err)
 
 	assertSettings := func(t *testing.T, s settingsStore, p string, assertProvider func(t *testing.T, settings settings.ProviderSettings)) {
@@ -94,12 +95,12 @@ func TestProvidersSettings(t *testing.T) {
 
 func TestProviderSettingsLoadError(t *testing.T) {
 	// settings store returns error on not exists file
-	sFailed := newSettingsProvider(t.Context(), "/not/exists/file-aakjdiejfuefuefjej", func(_ context.Context, _ string) (settingsStore, error) {
+	sFailed := newSettingsProvider(t.Context(), "/not/exists/file-aakjdiejfuefuefjej", "", func(_ context.Context, _, _ string) (settingsStore, error) {
 		return nil, fmt.Errorf("file does not exist")
 	})
 	require.Error(t, sFailed.initError)
 	require.Nil(t, sFailed.store)
-	require.Len(t, fileToSettingsStore, 0)
+	require.NotContains(t, candiStoreCache, "/not/exists/file-aakjdiejfuefuefjej")
 
 	// failed store returns init error due getting
 	_, err := sFailed.GetSettings(t.Context(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
@@ -109,25 +110,24 @@ func TestProviderSettingsLoadError(t *testing.T) {
 func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 	file := options.DefaultInfrastructureVersions
 
-	assertOneStoreInCache := func(t *testing.T, store *SettingsProvider) {
+	assertCandiCached := func(t *testing.T, store *SettingsProvider) {
 		require.NoError(t, store.initError)
 		require.NotNil(t, store)
-		require.Len(t, fileToSettingsStore, 1)
-		require.Contains(t, fileToSettingsStore, file)
+		require.Contains(t, candiStoreCache, file)
 	}
 
 	allProviders := append(make([]string, 0), tofuProviders...)
 	allProviders = append(allProviders, terraformProviders...)
 	assertGettingDoesNotAffectStores := func(t *testing.T, store *SettingsProvider) {
-		require.Len(t, fileToSettingsStore, 1)
+		require.Contains(t, candiStoreCache, file)
 		require.Len(t, store.store, len(allProviders))
 	}
 
-	sFirst := newSettingsProvider(t.Context(), file, loadOrGetStore)
-	assertOneStoreInCache(t, sFirst)
+	sFirst := newSettingsProvider(t.Context(), file, "", loadOrGetStore)
+	assertCandiCached(t, sFirst)
 
-	sSecond := newSettingsProvider(t.Context(), file, loadOrGetStore)
-	assertOneStoreInCache(t, sSecond)
+	sSecond := newSettingsProvider(t.Context(), file, "", loadOrGetStore)
+	assertCandiCached(t, sSecond)
 
 	require.Equal(t, sFirst.store, sSecond.store)
 
@@ -142,4 +142,171 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 	_, err = sFirst.GetSettings(t.Context(), "incorrect", cloud.ProviderAdditionalParams{})
 	require.Error(t, err)
 	assertGettingDoesNotAffectStores(t, sFirst)
+}
+
+// An external provider ships its settings inside its OCI bundle, not in the
+// candi image. The fixture is the artifact werf actually packs (see
+// modules/030-cloud-provider-dvp/images/terraform-manager/werf.inc.yaml), not a
+// hand-written copy: the real file carries no `terraform:` key, and a fixture
+// that invents one hides that the loader rejects it.
+func TestBundleSettingsMergedFromDownloadDir(t *testing.T) {
+	downloadDir := t.TempDir()
+	installDVPBundle(t, downloadDir, "dvp")
+
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
+	require.NoError(t, err)
+
+	set, ok := store["dvp"]
+	require.True(t, ok, "provider settings must come from the unpacked bundle")
+
+	// The precise rule from the bundle's plan_rules.yml — not the coarse
+	// type-only fallback — so a converge only calls a VirtualMachine delete a VM
+	// change, not every kubernetes_manifest (disks, IPs) delete.
+	rule := set.VMResource()
+	require.NotNil(t, rule)
+	require.Equal(t, "kubernetes_manifest", rule.Type)
+	require.NotNil(t, rule.FieldEquals)
+	require.Equal(t, "manifest.kind", rule.FieldEquals.Path)
+	require.Equal(t, "VirtualMachine", rule.FieldEquals.Value)
+}
+
+// A bundle delivered after the store was first built (long-lived dhctl-server,
+// converge exporter) must be picked up: the store caches only the candi file,
+// so the second call re-merges the now-present bundle instead of returning the
+// pre-bundle map.
+func TestBundleDeliveredAfterFirstBuildIsPickedUp(t *testing.T) {
+	candiFile := writeCandiVersions(t)
+	downloadDir := t.TempDir()
+
+	before, err := loadOrGetStore(t.Context(), candiFile, downloadDir)
+	require.NoError(t, err)
+	require.NotContains(t, before, "dvp", "bundle not delivered yet")
+
+	installDVPBundle(t, downloadDir, "dvp")
+
+	after, err := loadOrGetStore(t.Context(), candiFile, downloadDir)
+	require.NoError(t, err)
+	require.Contains(t, after, "dvp", "store must reflect a bundle delivered after the first build")
+}
+
+// writeCandiVersions stands in for the candi versions file, so the bundle tests
+// exercise the merge whatever providers the shipped candi happens to carry.
+func writeCandiVersions(t *testing.T) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), versionFile)
+	require.NoError(t, os.WriteFile(path, []byte(`opentofu: 1.12.0
+terraform: 0.14.8
+aws:
+  namespace: hashicorp
+  cloudName: AWS
+  type: aws
+  version: "4.62.0"
+  artifact: terraform-provider-aws
+  artifactBinary: terraform-provider-aws
+  destinationBinary: terraform-provider-aws
+  vmResourceType: aws_instance
+  useOpentofu: false
+yandex:
+  namespace: yandex-cloud
+  cloudName: Yandex
+  type: yandex
+  version: "0.121.0"
+  artifact: terraform-provider-yandex
+  artifactBinary: terraform-provider-yandex
+  destinationBinary: terraform-provider-yandex
+  vmResourceType: yandex_compute_instance
+  useOpentofu: true
+`), 0o644))
+
+	return path
+}
+
+// installDVPBundle lays out an unpacked bundle from the files the DVP module
+// ships, so the test breaks whenever the shipped artifact stops loading.
+func installDVPBundle(t *testing.T, downloadDir, dirName string) {
+	t.Helper()
+
+	moduleCandi := filepath.Join("..", "..", "..", "..", "..", "modules", "030-cloud-provider-dvp", "candi")
+	tm := filepath.Join(downloadDir, dirName, "terraform-manager")
+	require.NoError(t, os.MkdirAll(tm, 0o755))
+
+	for _, name := range []string{versionFile, planRulesFilename} {
+		data, err := os.ReadFile(filepath.Join(moduleCandi, name))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tm, name), data, 0o644))
+	}
+}
+
+// Only the canonical <provider> symlink is read: the digest dir it points at is
+// also on disk (as are digest dirs of previously delivered versions and, mid
+// unpack, an incomplete *.partial tree), and picking one of those would make the
+// effective settings depend on directory ordering.
+func TestBundleSettingsSkipDigestAndPartialDirs(t *testing.T) {
+	downloadDir := t.TempDir()
+	writeBundle := func(dir, cloudName string) {
+		tm := filepath.Join(downloadDir, dir, "terraform-manager")
+		require.NoError(t, os.MkdirAll(tm, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(tm, versionFile), fmt.Appendf(nil, `opentofu: 1.12.0
+terraform: 0.14.8
+kubernetes:
+  namespace: hashicorp
+  cloudName: %s
+  type: kubernetes
+  version: "2.38.0"
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true
+`, cloudName), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(tm, planRulesFilename), []byte("vmResource:\n  type: kubernetes_manifest\n"), 0o644))
+	}
+
+	// Current bundle, a stale one and an interrupted unpack, as they coexist on disk.
+	writeBundle("dvp@sha256:current", "DVP")
+	writeBundle("dvp@sha256:stale", "STALEDVP")
+	writeBundle("dvp@sha256:broken.partial", "PARTIALDVP")
+	require.NoError(t, os.Symlink("dvp@sha256:current", filepath.Join(downloadDir, "dvp")))
+
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
+	require.NoError(t, err)
+
+	require.Contains(t, store, "dvp")
+	require.NotContains(t, store, "staledvp")
+	require.NotContains(t, store, "partialdvp")
+}
+
+// In-tree providers unpack their terraform-manager bundle into the same
+// download dir, and their fragment describes only themselves — no plan_rules,
+// and only the one tool version they use. Those bundles must be ignored: candi
+// already carries the provider, and treating them as external once broke every
+// provider at once.
+func TestBundleSettingsIgnoreInTreeAndBrokenBundles(t *testing.T) {
+	downloadDir := t.TempDir()
+
+	inTree := filepath.Join(downloadDir, "aws", "terraform-manager")
+	require.NoError(t, os.MkdirAll(inTree, 0o755))
+	awsFragment, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "modules", "030-cloud-provider-aws", "candi", versionFile))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(inTree, versionFile), awsFragment, 0o644))
+
+	broken := filepath.Join(downloadDir, "brokenprovider", "terraform-manager")
+	require.NoError(t, os.MkdirAll(broken, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(broken, versionFile), []byte("not yaml: [{"), 0o644))
+
+	installDVPBundle(t, downloadDir, "dvp")
+
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
+	require.NoError(t, err, "one unusable bundle must not take down the whole store")
+	require.Contains(t, store, "aws", "candi stays authoritative for in-tree providers")
+	require.Contains(t, store, "dvp")
+	require.NotContains(t, store, "brokenprovider")
+}
+
+// loadProvidersForTest keeps the tests focused on the providers a versions file
+// describes, without the tool versions loadVersionsFile also returns.
+func loadProvidersForTest(ctx context.Context, filename string) (settingsStore, error) {
+	file, err := loadVersionsFile(ctx, filename, toolVersions{})
+	return file.providers, err
 }

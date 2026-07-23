@@ -1,11 +1,11 @@
 # DVP validator
 
-External provider binary for dhctl. Implements the `validate` and `prepare` subcommands
+External provider binary for dhctl. Implements the `validate` subcommand
 of the [dhctl external provider protocol](../../../../../go_lib/dhctl-provider-protocol).
 
 ## How it works
 
-dhctl invokes this binary as a subprocess with one argument — `validate` or `prepare`.
+dhctl invokes this binary as a subprocess with one argument — `validate`.
 The request JSON is read from stdin; the response JSON is written to stdout.
 Diagnostics go to stderr.
 
@@ -49,19 +49,6 @@ On success writes `{}` to stdout and exits 0.
 On validation error writes `{"error":"..."}` to stdout and exits 0.
 On protocol/decode error writes to stderr and exits 1.
 
-### prepare
-
-Returns `input.vars` and unchanged `providerClusterConfiguration`.
-dhctl builds `vars` before calling the provider binary.
-
-`vars` fields:
-
-| Field             | Source |
-| ----------------- | ------ |
-| `settings`        | ModuleConfig settings for `cloud-provider-dvp` |
-| `nodeGroups`      | CloudPermanent NodeGroups |
-| `instanceClasses` | Provider InstanceClasses |
-| `secrets`         | Credential Secrets in `d8-cloud-provider-dvp` |
 
 ## Build
 
@@ -105,30 +92,3 @@ EOF
 # {"error":"NodeGroup/master: NodeGroup \"master\" is required"}
 ```
 
-### prepare — passthrough vars
-
-```bash
-cat > /tmp/req.json << 'EOF'
-{
-  "version": "1",
-  "input": {
-    "providerName": "dvp",
-    "operation": "bootstrap",
-    "providerClusterConfiguration": {"apiVersion": "deckhouse.io/v1", "kind": "DVPClusterConfiguration"},
-    "vars": {
-      "settings": {"provider": {"parameters": {"namespace": "default"}}},
-      "nodeGroups": {
-        "worker": {
-          "metadata": {"name": "worker"},
-          "spec": {"nodeType": "CloudPermanent"}
-        }
-      }
-    }
-  }
-}
-EOF
-/tmp/dvp-validator prepare < /tmp/req.json
-# {"result":{"vars":{...},"providerClusterConfiguration":{...}}}
-```
-
-Manual test configs: `~/flant/bootstrap-configs/dvp/tests/` (see `TEST-CASES.md`).

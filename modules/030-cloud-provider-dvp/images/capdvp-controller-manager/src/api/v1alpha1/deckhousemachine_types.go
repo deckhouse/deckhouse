@@ -41,6 +41,8 @@ const (
 	DiskMigrationInProgressReason = "DiskMigrationInProgress"
 	DiskMigrationFailedReason     = "DiskMigrationFailed"
 	DiskMigrationCompletedReason  = "DiskMigrationCompleted"
+
+	BootDiskProvisioningFailedReason = "BootDiskProvisioningFailed"
 )
 
 // CPU defines the VM CPU, made of variable number of cores, each getting the Fraction amount of processing time on a physical core.
