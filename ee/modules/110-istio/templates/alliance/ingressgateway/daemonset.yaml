@@ -176,10 +176,10 @@ spec:
           failureThreshold: 30
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          runAsGroup: 1337
           runAsNonRoot: true
           runAsUser: 1337
-          runAsGroup: 1337
+          readOnlyRootFilesystem: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
