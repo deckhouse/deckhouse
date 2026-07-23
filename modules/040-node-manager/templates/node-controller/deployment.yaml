@@ -84,8 +84,11 @@ spec:
         - --metrics-bind-address=127.0.0.1:4291
         - --health-probe-bind-address=0.0.0.0:4292
         - --webhook-port=4290
-        {{- /* bashible-context assembles one shared context from every NodeGroup and
-        debounces via per-instance state, so it must run with a single worker. */}}
+        {{- /* bashible-context rebuilds the single shared context (all NodeGroups → one
+        Secret) on any trigger, so extra workers only duplicate the same full assembly and
+        race on the one output object; a single worker + the controller's debounce collapse
+        any burst into 1-2 builds regardless of the NodeGroup count. Its debounce state is
+        also unsynchronized and relies on this. */}}
         - --max-concurrent-reconciles=10,bashible-context=1
         - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
         - -v=2
