@@ -139,6 +139,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	// TODO: Remove this once node-manager is deployed in the tenant cluster.
+	if err := r.reconcileTenantKubeletServingCSRs(ctx, vcp); err != nil {
+		log.FromContext(ctx).Error(err, "approve tenant kubelet-serving CSRs (non-fatal)")
+	}
+
 	if res, err := r.reconcileKonnectivityCPAgentSecret(ctx, vcp, pkiSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -157,11 +162,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP); err != nil || !res.IsZero() {
 		return res, err
-	}
-
-	// TODO: Remove this once node-manager is deployed in the tenant cluster.
-	if err := r.reconcileTenantKubeletServingCSRs(ctx, vcp); err != nil {
-		log.FromContext(ctx).Error(err, "approve tenant kubelet-serving CSRs (non-fatal)")
 	}
 
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
