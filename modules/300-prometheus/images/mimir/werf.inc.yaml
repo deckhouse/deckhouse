@@ -61,6 +61,7 @@ import:
     to: /
     includePaths:
     - usr/bin/sleep
+    - usr/bin/coreutils
     before: setup
 git:
 {{- include "image mount points" . }}    
