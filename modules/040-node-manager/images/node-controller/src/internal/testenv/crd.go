@@ -44,7 +44,10 @@ func RealCacheCRDPaths() []string {
 	return slices.Concat(
 		ControllerCRDPaths(MachineCRDFile, MachineDeploymentCRDFile, ClusterCRDFile, MachineHealthCheckCRDFile),
 		NodeManagerCRDPaths(MCMCRDFile),
-		[]string{testdataPath("deckhousecontrolplane-crd.yaml")},
+		[]string{
+			testdataPath("deckhousecontrolplane-crd.yaml"),
+			testdataPath("moduleconfig-crd.yaml"),
+		},
 	)
 }
 
