@@ -194,6 +194,15 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
 
+	loggerFor.LogErrorF(
+		"CONFIGS!, %s\n\n%s\n\n%s\n\n%s\n\n%s\n\n",
+		p.request.ClusterConfig,
+		p.request.InitConfig,
+		p.request.ProviderSpecificClusterConfig,
+		p.request.InitResources,
+		p.request.Resources,
+	)
+
 	var (
 		configPaths             []string
 		configPath              string
