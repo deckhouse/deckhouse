@@ -98,6 +98,10 @@ func createChecksumSecret(ngName, checksum string) *corev1.Secret {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.ConfigurationChecksumsSecretName,
 			Namespace: common.MachineNamespace,
+			// bashible-apiserver owns and labels this secret in production; the production
+			// cache scopes machine-namespace Secret informers by that label, so cached reads
+			// (and the checksum watch) see the fixture only when it carries the label.
+			Labels: map[string]string{"app": "bashible-apiserver"},
 		},
 		Data: map[string][]byte{ngName: []byte(checksum)},
 	}
