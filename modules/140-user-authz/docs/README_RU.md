@@ -42,9 +42,9 @@ description: "Авторизация и управление доступом п
 
 Ограничения по неймспейсам, заданные в ClusterAuthorizationRule, распространяются только на права, выданные этим ClusterAuthorizationRule. Они не отменяют права, выданные через RoleBinding, ClusterRoleBinding или AuthorizationRule в других неймспейсах. При этом уровень доступа ClusterAuthorizationRule на эти неймспейсы не распространяется.
 
-Например, если у пользователя есть ClusterAuthorizationRule с уровнем доступа `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, а также RoleBinding с ролью `view` в неймспейсе `ns-b`, то он получит права уровня `Editor` в неймспейсе `ns-a` и права только на чтение в неймспейсе `ns-b`. Права, предоставленные через RoleBinding, не ограничиваются ClusterAuthorizationRule, а уровень доступа `Editor` из ClusterAuthorizationRule не распространяется на неймспейс `ns-b`.
+Например, если у пользователя есть ClusterAuthorizationRule с уровнем доступа `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, а также RoleBinding с ролью `view` в неймспейсе `ns-b`, то он получит права уровня `Editor` в неймспейсе `ns-a` и права только на чтение в неймспейсе `ns-b`. Права, предоставленные через RoleBinding, не ограничиваются ClusterAuthorizationRule, а уровень доступа `Editor`, заданный ClusterAuthorizationRule, не распространяется на неймспейс `ns-b`.
 
-Начиная с DKP 1.76.5, RoleBinding и ClusterAuthorizationRule можно использовать совместно для одного пользователя. В более более ранних версиях DKP вебхук модуля `user-authz` отклонял все запросы в неймспейсы, не указанные в ClusterAuthorizationRule пользователя, даже при наличии соответствующих ресурсов RoleBinding.
+Начиная с DKP 1.76.5, RoleBinding и ClusterAuthorizationRule можно использовать совместно для одного пользователя. В более ранних версиях DKP вебхук модуля `user-authz` отклонял все запросы в неймспейсы, не указанные в ClusterAuthorizationRule пользователя, даже при наличии соответствующих ресурсов RoleBinding.
 
 ### Use-роли
 
