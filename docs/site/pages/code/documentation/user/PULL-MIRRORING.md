@@ -35,6 +35,32 @@ To configure pull mirroring of a repository, follow these steps:
      - "Password": Your password or access token.
    - If using SSH mirroring, specify the username (typically `git`). After saving the configuration, Deckhouse Code will generate an SSH key to be used for access.
 
+## Importing a repository by URL as a pull mirror
+
+You can set up pull mirroring while importing a repository by URL, so that the project is created and immediately configured as a pull mirror of the source repository. This way, you do not need to configure mirroring separately after the import.
+
+{% alert level="info" %}
+Repository mirroring must be enabled for the instance by an administrator. In the "Admin area", go to "Settings" → "Repository" → "Repository mirroring" (the `mirror_available` setting). If mirroring is not enabled for the instance, the "Mirror repository" checkbox is not offered.
+{% endalert %}
+
+To import a repository by URL as a pull mirror, follow these steps:
+
+1. Create a new project:
+
+   - Go to "New project" → "Import project" → "Repository by URL".
+   - Specify the URL of the source repository.
+   - If the source repository requires authentication, provide the credentials used to access it.
+
+1. Select the "Mirror repository" checkbox.
+
+1. Optionally, choose to mirror only the protected branches of the source repository.
+
+1. Create the project.
+
+During the initial import, the repository is created and populated from the source. After that, the project is kept in sync with the source repository automatically, on the pull mirroring schedule (see the "Scheduling and error handling" section below).
+
+You can also configure an existing project as a pull mirror by importing into it; this requires the Maintainer role. Mirroring runs on behalf of the user who set it up.
+
 ## Scheduling and error handling
 
 - Pull mirroring tasks are scheduled once per hour (`Projects::PullMirrorScheduleWorker`).  
