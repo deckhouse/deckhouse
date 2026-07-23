@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
@@ -58,9 +57,7 @@ type HookForUpdatePipeline struct {
 func NewHookForUpdatePipeline(
 	kubeGetter kubernetes.KubeClientProviderWithCtx,
 	sshProvider libcon.SSHProvider,
-	providerSettings *settings.BaseProviders,
 	nodeToHostForChecks map[string]string,
-	clusterUUID string,
 	commanderMode bool,
 	skipChecks bool,
 ) *HookForUpdatePipeline {
@@ -71,15 +68,22 @@ func NewHookForUpdatePipeline(
 	if !commanderMode && !skipChecks {
 		checkers = append(
 			checkers,
-			NewKubeProxyChecker().
-				WithExternalIPs(nodeToHostForChecks).
-				WithClusterUUID(clusterUUID).
-				WithSSHProvider(sshProvider, providerSettings))
+			NewSSHChecker(
+				sshProvider,
+				nodeToHostForChecks,
+			),
+		)
 	}
 
 	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
 	checkers = append(checkers, NewStrongholdReadinessChecker(kubeGetter))
-	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
+
+	checker := NewChecker(
+		nodeToHostForChecks,
+		checkers,
+		"",
+		DefaultConfirm,
+	)
 
 	return &HookForUpdatePipeline{
 		Checker:       checker,

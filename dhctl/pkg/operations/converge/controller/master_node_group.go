@@ -283,7 +283,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		}
 
 		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
+		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
 		if err != nil {
 			return err
 		}
@@ -376,7 +376,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return nil
 	}
 
-	hook := c.newHookForUpdatePipeline(ctx, nodeName, metaConfig)
+	hook := c.newHookForUpdatePipeline(ctx, nodeName)
 
 	var nodeGroupSettingsFromConfig []byte
 
@@ -477,7 +477,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
 }
 
-func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string, metaConfig *config.MetaConfig) infrastructure.InfraActionHook {
+func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string) infrastructure.InfraActionHook {
 	err := c.populateNodeToHost(ctx)
 	if err != nil {
 		return nil
@@ -500,7 +500,13 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		return nil
 	}
 
-	return controlplane.NewHookForUpdatePipeline(ctx, sshProvider, ctx.SSHProviderInitializer.GetSettings(), nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
+	return controlplane.NewHookForUpdatePipeline(
+		ctx,
+		sshProvider,
+		nodesToCheck,
+		ctx.CommanderMode(),
+		c.skipChecks,
+	).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm).
