@@ -118,6 +118,33 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Список публичных ключей SSH CA, доверенных для проверки короткоживущих пользовательских сертификатов. При указании узлы будут доверять сертификатам, подписанным этими CA, в дополнение к (а не вместо) `sshPublicKey`."
 	// +optional
 	SSHCAKeys []string `json:"sshCAKeys,omitempty"`
+	// dev-note, not part of the doc comment below (blank line keeps it out
+	// of the generated description): config-values.yaml can't carry a
+	// `pattern` here - openapigen only supports that marker for
+	// map[string][]string, not plain []string, so `make generate` drops it.
+	// The hard boundary is templates/ngc-additional-users.yaml's `fail`
+	// guard; cluster_configuration.yaml (v1, hand-written) and
+	// cloudinit-merge/variables.tf keep the pattern for early rejection.
+
+	// A list of additional OS user names to create on every node (in
+	// addition to the default user of the image used), with passwordless
+	// `sudo`. Useful together with `sshCAKeys` to log in under a personal
+	// user name instead of the image's default user from the very first
+	// boot, without building a custom image.
+	//
+	// These users get no keys of their own: access to them relies entirely
+	// on `sshCAKeys` (`TrustedUserCAKeys` is host-wide, not per-user) or on
+	// a certificate/key you add out-of-band.
+	//
+	// `default` is reserved (it already refers to the image's own default
+	// user) and cannot be used here.
+	// +deckhouse:ru:description:value="Список дополнительных имён ОС-пользователей, которые будут созданы на каждом узле (в дополнение к пользователю по умолчанию из используемого образа), с passwordless `sudo`. Удобно использовать вместе с `sshCAKeys`, чтобы заходить под личным именем пользователя вместо пользователя по умолчанию из образа с самого первого запуска, без сборки собственного образа."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="У этих пользователей нет собственных ключей: доступ к ним целиком зависит от `sshCAKeys` (`TrustedUserCAKeys` настроен на уровне узла, а не пользователя) либо от ключа/сертификата, добавленного отдельно."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Имя `default` зарезервировано (оно уже означает пользователя по умолчанию из образа) и не может быть использовано здесь."
+	// +optional
+	AdditionalUsers []string `json:"additionalUsers,omitempty"`
 	// Layout name.
 	//
 	// [Read more about possible provider layouts](/modules/cloud-provider-dvp/layouts.html).

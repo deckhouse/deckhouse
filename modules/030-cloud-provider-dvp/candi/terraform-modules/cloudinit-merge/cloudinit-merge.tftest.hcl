@@ -68,7 +68,7 @@ run "master0_with_ca" {
     hostname       = "master-0"
     ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZakrNbKZ7i/uDQqxy7/FtPr4+H+pT7VC7ZxdVp0QXA"
     user_data      = ""
-    ssh_ca_keys    = ["ssh-rsa-ca-AAAA-fake-vault-ca-key"]
+    ssh_ca_keys    = ["ssh-rsa-ca-AAAA-fake-ca-key"]
   }
 
   assert {
@@ -92,7 +92,7 @@ run "master0_with_ca" {
   }
 
   assert {
-    condition     = strcontains([for wf in output.merged_cloud_config.write_files : wf.content if wf.path == "/etc/ssh/trusted-user-ca-keys.pem"][0], "ssh-rsa-ca-AAAA-fake-vault-ca-key")
+    condition     = strcontains([for wf in output.merged_cloud_config.write_files : wf.content if wf.path == "/etc/ssh/trusted-user-ca-keys.pem"][0], "ssh-rsa-ca-AAAA-fake-ca-key")
     error_message = "expected the configured CA key bytes to be present in trusted-user-ca-keys.pem content"
   }
 
@@ -190,7 +190,7 @@ run "multimaster_with_ca_merges_without_collision" {
       runcmd:
       - /var/lib/bashible/bootstrap.sh
     EOT
-    ssh_ca_keys    = ["ssh-rsa-ca-AAAA-fake-vault-ca-key-1", "ssh-rsa-ca-AAAA-fake-vault-ca-key-2"]
+    ssh_ca_keys    = ["ssh-rsa-ca-AAAA-fake-ca-key-1", "ssh-rsa-ca-AAAA-fake-ca-key-2"]
   }
 
   assert {
@@ -232,4 +232,158 @@ run "multimaster_with_ca_merges_without_collision" {
     condition     = join("\n", var.ssh_ca_keys) == [for wf in output.merged_cloud_config.write_files : wf.content if wf.path == "/etc/ssh/trusted-user-ca-keys.pem"][0]
     error_message = "expected both configured CA keys to be present in trusted-user-ca-keys.pem, newline separated"
   }
+}
+
+# Scenario 5: additional_users used WITHOUT ssh_ca_keys. This must still take
+# the merged (structural) path - additional_users alone must not silently
+# fall back to the legacy path and get dropped - but must NOT emit any CA
+# write_files/runcmd (those are gated on ssh_ca_keys specifically).
+run "additional_users_only_no_ca" {
+  command = plan
+
+  variables {
+    hostname         = "master-0"
+    ssh_public_key   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZakrNbKZ7i/uDQqxy7/FtPr4+H+pT7VC7ZxdVp0QXA"
+    user_data        = ""
+    ssh_ca_keys      = []
+    additional_users = ["alice"]
+  }
+
+  assert {
+    condition     = startswith(output.user_data, "#cloud-config\n")
+    error_message = "additional_users alone must still take the merged (structural) path, not the legacy templatefile path"
+  }
+
+  assert {
+    condition     = !strcontains(output.user_data, "trusted-user-ca-keys")
+    error_message = "additional_users without ssh_ca_keys must not emit any CA content"
+  }
+
+  assert {
+    condition     = length(output.merged_cloud_config.write_files) == 0
+    error_message = "additional_users without ssh_ca_keys and without bashible payload must not introduce any write_files"
+  }
+
+  assert {
+    condition     = length(output.merged_cloud_config.users) == 2
+    error_message = "expected users == [default, alice]"
+  }
+
+  assert {
+    condition     = output.merged_cloud_config.users[0] == "default"
+    error_message = "the image's default user must always be kept, additional_users only adds to it"
+  }
+
+  assert {
+    condition     = output.merged_cloud_config.users[1].name == "alice"
+    error_message = "expected the configured additional user name to be present"
+  }
+
+  assert {
+    condition     = output.merged_cloud_config.users[1].sudo == "ALL=(ALL) NOPASSWD:ALL"
+    error_message = "expected the additional user to have passwordless sudo"
+  }
+}
+
+# Scenario 6: THE full combination - additional_users AND ssh_ca_keys together,
+# on top of a real bashible payload (master-1/2/3 or static-node). Proves both
+# features compose without collision: bashible's write_files/runcmd survive,
+# CA write_files/runcmd are added, and the extra user is created alongside
+# "default", all in one rendering.
+run "multimaster_with_additional_users_and_ca" {
+  command = plan
+
+  variables {
+    hostname         = "master-1"
+    ssh_public_key   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZakrNbKZ7i/uDQqxy7/FtPr4+H+pT7VC7ZxdVp0QXA"
+    user_data        = <<-EOT
+      #cloud-config
+      package_update: false
+      package_upgrade: false
+      manage_etc_hosts: localhost
+      write_files:
+      - path: '/var/lib/bashible/bootstrap.sh'
+        permissions: '0700'
+        content: |
+          #!/bin/bash
+          set -Eeuo pipefail
+          mkdir -p /var/lib/bashible
+          echo "bootstrapping node" >> /var/log/bashible.log
+          exit 0
+      - path: /var/lib/bashible/first_run
+      runcmd:
+      - /var/lib/bashible/bootstrap.sh
+    EOT
+    ssh_ca_keys      = ["ssh-rsa-ca-AAAA-fake-ca-key-1"]
+    additional_users = ["alice", "s.bob"]
+  }
+
+  assert {
+    condition     = length(output.merged_cloud_config.write_files) == 4
+    error_message = "expected 2 bashible write_files + 2 CA write_files = 4, none overwritten"
+  }
+
+  assert {
+    condition     = length(output.merged_cloud_config.runcmd) == 3
+    error_message = "expected 1 bashible runcmd + 2 CA runcmd = 3, none overwritten"
+  }
+
+  assert {
+    condition     = length(output.merged_cloud_config.users) == 3
+    error_message = "expected users == [default, alice, s.bob]"
+  }
+
+  assert {
+    condition     = [for u in output.merged_cloud_config.users : u if try(u.name, "") == "alice"][0].name == "alice"
+    error_message = "expected alice to be present among the created users"
+  }
+
+  assert {
+    condition     = [for u in output.merged_cloud_config.users : u if try(u.name, "") == "s.bob"][0].name == "s.bob"
+    error_message = "expected s.bob (a dotted name) to be present among the created users"
+  }
+
+  assert {
+    condition     = contains([for wf in output.merged_cloud_config.write_files : wf.path], "/var/lib/bashible/bootstrap.sh")
+    error_message = "bashible's write_files entry must survive alongside additional_users and ssh_ca_keys"
+  }
+}
+
+# Scenario 7: additional_users must be rejected up front (at plan time, before
+# ever reaching a rendered cloud-config) if it contains anything other than a
+# boring Linux user name. additional_users names end up embedded verbatim in
+# rendered YAML, and (via the day-2 NodeGroupConfiguration, see
+# templates/ngc-additional-users.yaml) in a root-run bash script - so this is
+# a security boundary, not just a UX nicety. A value like this one is a
+# textbook shell command-injection payload if it were ever allowed through.
+run "additional_users_rejects_malicious_name" {
+  command = plan
+
+  variables {
+    hostname         = "master-0"
+    ssh_public_key   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZakrNbKZ7i/uDQqxy7/FtPr4+H+pT7VC7ZxdVp0QXA"
+    user_data        = ""
+    ssh_ca_keys      = []
+    additional_users = ["$(touch /tmp/pwned)"]
+  }
+
+  expect_failures = [var.additional_users]
+}
+
+# Scenario 8: "default" is the cloud-init keyword for the image's own default
+# user (see local.static_block's `concat(["default"], ...)`); allowing it
+# into additional_users too would silently create a second, unrelated user
+# literally named "default" instead of doing what the operator meant.
+run "additional_users_rejects_reserved_default_name" {
+  command = plan
+
+  variables {
+    hostname         = "master-0"
+    ssh_public_key   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZakrNbKZ7i/uDQqxy7/FtPr4+H+pT7VC7ZxdVp0QXA"
+    user_data        = ""
+    ssh_ca_keys      = []
+    additional_users = ["default"]
+  }
+
+  expect_failures = [var.additional_users]
 }

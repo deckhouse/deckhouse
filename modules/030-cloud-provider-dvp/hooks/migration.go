@@ -116,10 +116,11 @@ func buildD8CredentialsSecret(kubeconfigDataBase64 string) map[string]any {
 
 // buildModuleConfigFromPCC builds the ModuleConfig v2 manifest for the PCC (cloud
 // DVP) migration path. Provider and nodes settings are derived from the
-// ProviderClusterConfiguration: namespace, layout, sshPublicKey, region, zones
-// and the per-NodeGroup ipAddresses aggregated from the master and worker
-// NodeGroups. storage.parameters is emitted empty and disabled flags are omitted
-// so schema defaults apply, matching buildModuleConfigForHybrid.
+// ProviderClusterConfiguration: namespace, layout, sshPublicKey, sshCAKeys,
+// additionalUsers, region, zones and the per-NodeGroup ipAddresses aggregated
+// from the master and worker NodeGroups. storage.parameters is emitted empty
+// and disabled flags are omitted so schema defaults apply, matching
+// buildModuleConfigForHybrid.
 func buildModuleConfigFromPCC(cfg *v1.DvpProviderClusterConfiguration) (map[string]any, error) {
 	providerSettings := map[string]any{
 		"parameters": map[string]any{
@@ -141,6 +142,9 @@ func buildModuleConfigFromPCC(cfg *v1.DvpProviderClusterConfiguration) (map[stri
 	}
 	if cfg.SSHCAKeys != nil && len(*cfg.SSHCAKeys) > 0 {
 		nodesParameters["sshCAKeys"] = stringsToAnySlice(*cfg.SSHCAKeys)
+	}
+	if cfg.AdditionalUsers != nil && len(*cfg.AdditionalUsers) > 0 {
+		nodesParameters["additionalUsers"] = stringsToAnySlice(*cfg.AdditionalUsers)
 	}
 	if cfg.Region != nil {
 		nodesParameters["region"] = *cfg.Region

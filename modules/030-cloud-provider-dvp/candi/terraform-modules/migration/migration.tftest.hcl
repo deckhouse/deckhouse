@@ -229,8 +229,9 @@ run "with_pcc_migration_in_progress" {
         namespace            = "team-d8-cloud-providers"
         networkPolicy        = "Isolated"
       }
-      sshPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZakrNbKZ7i/uDQqxy7/FtPr4+H+pT7VC7ZxdVp0QXA"
-      sshCAKeys    = ["ssh-rsa-ca-AAAA-fake-vault-ca-key-1", "ssh-rsa-ca-AAAA-fake-vault-ca-key-2"]
+      sshPublicKey    = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZakrNbKZ7i/uDQqxy7/FtPr4+H+pT7VC7ZxdVp0QXA"
+      sshCAKeys       = ["ssh-rsa-ca-AAAA-fake-ca-key-1", "ssh-rsa-ca-AAAA-fake-ca-key-2"]
+      additionalUsers = ["alice"]
     }
 
     nodeGroups      = {}
@@ -290,8 +291,13 @@ run "with_pcc_migration_in_progress" {
   }
 
   assert {
-    condition     = output.settings.spec.settings.nodes.parameters.sshCAKeys == ["ssh-rsa-ca-AAAA-fake-vault-ca-key-1", "ssh-rsa-ca-AAAA-fake-vault-ca-key-2"]
+    condition     = output.settings.spec.settings.nodes.parameters.sshCAKeys == ["ssh-rsa-ca-AAAA-fake-ca-key-1", "ssh-rsa-ca-AAAA-fake-ca-key-2"]
     error_message = "expected sshCAKeys to be synthesised from PCC into settings.spec.settings.nodes.parameters"
+  }
+
+  assert {
+    condition     = output.settings.spec.settings.nodes.parameters.additionalUsers == ["alice"]
+    error_message = "expected additionalUsers to be synthesised from PCC into settings.spec.settings.nodes.parameters"
   }
 }
 

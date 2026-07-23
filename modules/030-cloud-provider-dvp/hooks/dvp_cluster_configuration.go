@@ -431,6 +431,9 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 	if pcc.SSHCAKeys != nil && len(*pcc.SSHCAKeys) > 0 {
 		nodesParams["sshCAKeys"] = *pcc.SSHCAKeys
 	}
+	if pcc.AdditionalUsers != nil && len(*pcc.AdditionalUsers) > 0 {
+		nodesParams["additionalUsers"] = *pcc.AdditionalUsers
+	}
 	if pcc.Region != nil {
 		nodesParams["region"] = *pcc.Region
 	}

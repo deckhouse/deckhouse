@@ -29,6 +29,23 @@ properties:
       parameters:
         additionalProperties: false
         properties:
+          additionalUsers:
+            description: |-
+              A list of additional OS user names to create on every node (in
+              addition to the default user of the image used), with passwordless
+              `sudo`. Useful together with `sshCAKeys` to log in under a personal
+              user name instead of the image's default user from the very first
+              boot, without building a custom image.
+
+              These users get no keys of their own: access to them relies entirely
+              on `sshCAKeys` (`TrustedUserCAKeys` is host-wide, not per-user) or on
+              a certificate/key you add out-of-band.
+
+              `default` is reserved (it already refers to the image's own default
+              user) and cannot be used here.
+            items:
+              type: string
+            type: array
           ipAddresses:
             additionalProperties:
               items:

@@ -32,11 +32,23 @@ spec:
       sshd -t && systemctl reload ssh
     }
 
-    bb-sync-file /etc/ssh/trusted-user-ca-keys.pem - dvp-ssh-ca-changed << "EOF"
+    {{- range .Values.cloudProviderDvp.nodes.parameters.sshCAKeys }}
+    {{- /*
+    A quoted heredoc delimiter blocks variable/command expansion inside the
+    body, but a body line that exactly matches the delimiter still
+    terminates the heredoc early (heredoc injection) - reject any value that
+    could produce such a line. Also a correctness check: a real SSH CA
+    public key is always a single line.
+    */ -}}
+    {{- if or (contains "\n" .) (eq . "DVP_SSH_CA_KEYS_EOF") }}
+    {{- fail (printf "cloud-provider-dvp: nodes.parameters.sshCAKeys: entry %q is not a valid single-line SSH CA public key (must not contain a newline, and must not be exactly \"DVP_SSH_CA_KEYS_EOF\")" .) }}
+    {{- end }}
+    {{- end }}
+    bb-sync-file /etc/ssh/trusted-user-ca-keys.pem - dvp-ssh-ca-changed << "DVP_SSH_CA_KEYS_EOF"
     {{- range .Values.cloudProviderDvp.nodes.parameters.sshCAKeys }}
     {{ . }}
     {{- end }}
-    EOF
+    DVP_SSH_CA_KEYS_EOF
 
     bb-sync-file /etc/ssh/sshd_config.d/50-trusted-ca.conf - dvp-ssh-ca-changed << "EOF"
     TrustedUserCAKeys /etc/ssh/trusted-user-ca-keys.pem

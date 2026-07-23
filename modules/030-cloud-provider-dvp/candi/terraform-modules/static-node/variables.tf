@@ -130,6 +130,12 @@ variable "ssh_ca_keys" {
   type    = list(string)
 }
 
+variable "additional_users" {
+  description = "Additional OS user names to create via cloud-init on first boot. Not part of vm_destructive_params: adding/removing names must not recreate the VM."
+  default     = []
+  type        = list(string)
+}
+
 variable "virtual_machine_class_name" {
   type    = string
   default = "generic"

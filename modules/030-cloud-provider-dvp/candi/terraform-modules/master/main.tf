@@ -15,10 +15,11 @@
 module "cloudinit" {
   source = "../cloudinit-merge"
 
-  hostname       = var.hostname
-  ssh_public_key = var.ssh_public_key
-  user_data      = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
-  ssh_ca_keys    = var.ssh_ca_keys
+  hostname         = var.hostname
+  ssh_public_key   = var.ssh_public_key
+  user_data        = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
+  ssh_ca_keys      = var.ssh_ca_keys
+  additional_users = var.additional_users
 }
 
 resource "kubernetes_secret" "cloudinit-secret" {

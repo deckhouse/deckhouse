@@ -354,6 +354,101 @@ data:
 		})
 	})
 
+	// ---- State B with additionalUsers present in PCC ----
+	stateAClusterConfigurationWithAdditionalUsers := fmt.Sprintf(`
+apiVersion: deckhouse.io/v1
+kind: DVPClusterConfiguration
+layout: Standard
+masterNodeGroup:
+  instanceClass:
+    etcdDisk:
+      size: 15Gi
+      storageClass: ceph-pool-r2-csi-rbd-immediate
+    rootDisk:
+      image:
+        kind: ClusterVirtualImage
+        name: ubuntu-2204
+      size: 50Gi
+      storageClass: ceph-pool-r2-csi-rbd-immediate
+    virtualMachine:
+      virtualMachineClassName: superbe-class
+      bootloader: EFI
+      cpu:
+        coreFraction: 100%%
+        cores: 4
+      liveMigrationPolicy: PreferForced
+      runPolicy: AlwaysOnUnlessStoppedManually
+      ipAddresses:
+        - Auto
+      memory:
+        size: 8Gi
+  replicas: 3
+provider:
+  kubeconfigDataBase64: %s
+  namespace: cloud-provider01
+sshPublicKey: ssh-rsa AAAAB3N
+additionalUsers:
+- alice
+- bob
+region: ru-msk-1
+zones:
+- default
+`, kubeconfigDataBase64)
+	notEmptyPCCStateWithAdditionalUsers := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfigurationWithAdditionalUsers)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+	Context("State B: PCC present, additionalUsers set", func() {
+		bUsers := HookExecutionConfigInit(emptyValues, `{}`)
+		bUsers.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		bUsers.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		bUsers.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			bUsers.KubeStateSet(notEmptyPCCStateWithAdditionalUsers)
+			bUsers.BindingContexts.Set(bUsers.GenerateBeforeHelmContext())
+			bUsers.RunHook()
+		})
+
+		It("should propagate additionalUsers from PCC to nodes.parameters alongside sshPublicKey", func() {
+			Expect(bUsers).To(ExecuteSuccessfully())
+
+			Expect(bUsers.ValuesGet("cloudProviderDvp.nodes.parameters.sshPublicKey").String()).To(Equal("ssh-rsa AAAAB3N"))
+			Expect(bUsers.ValuesGet("cloudProviderDvp.nodes.parameters.additionalUsers").String()).To(MatchJSON(
+				`["alice", "bob"]`))
+		})
+	})
+
+	Context("State B: PCC present, additionalUsers absent (must not appear in values at all)", func() {
+		// Guards the `len(*pcc.AdditionalUsers) > 0` check in mapPCCtoRootValues: an
+		// empty list must not leave a stray `additionalUsers: []` in values, and
+		// must not be confused with "the key was explicitly cleared".
+		b3 := HookExecutionConfigInit(emptyValues, `{}`)
+		b3.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		b3.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		b3.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			b3.KubeStateSet(notEmptyPCCState)
+			b3.BindingContexts.Set(b3.GenerateBeforeHelmContext())
+			b3.RunHook()
+		})
+
+		It("should leave nodes.parameters.additionalUsers unset", func() {
+			Expect(b3).To(ExecuteSuccessfully())
+
+			Expect(b3.ValuesGet("cloudProviderDvp.nodes.parameters.sshPublicKey").String()).To(Equal("ssh-rsa AAAAB3N"))
+			Expect(b3.ValuesGet("cloudProviderDvp.nodes.parameters.additionalUsers").Exists()).To(BeFalse())
+		})
+	})
+
 	// ---- setDefaultZones: direct unit test for the live-hook default-zone fallback ----
 	Context("setDefaultZones default-zone fallback", func() {
 		strPtr := func(s string) *string { return &s }

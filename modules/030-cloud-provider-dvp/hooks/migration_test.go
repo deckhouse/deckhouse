@@ -94,6 +94,68 @@ func TestBuildModuleConfigFromPCC_OmitsSSHCAKeysWhenEmpty(t *testing.T) {
 	require.False(t, present, "an empty (but non-nil) sshCAKeys list must not leave a stray empty key in the ModuleConfig")
 }
 
+func TestBuildModuleConfigFromPCC_PropagatesAdditionalUsers(t *testing.T) {
+	cfg := &v1.DvpProviderClusterConfiguration{
+		Provider: &v1.DvpProvider{
+			Namespace:            strPtr("cloud-provider01"),
+			KubeconfigDataBase64: strPtr("ZmFrZQ=="),
+		},
+		Layout:          strPtr("Standard"),
+		SSHPublicKey:    strPtr("ssh-rsa AAAAB3N"),
+		AdditionalUsers: slicePtr([]string{"alice", "bob"}),
+		Region:          strPtr("ru-msk-1"),
+	}
+
+	mc, err := buildModuleConfigFromPCC(cfg)
+	require.NoError(t, err)
+
+	nodesParameters := digMap(t, mc, "spec", "settings", "nodes", "parameters")
+	require.Equal(t, "Standard", nodesParameters["layout"])
+	require.Equal(t, "ssh-rsa AAAAB3N", nodesParameters["sshPublicKey"])
+	require.Equal(t,
+		[]any{"alice", "bob"},
+		nodesParameters["additionalUsers"],
+		"additionalUsers must be propagated into the synthesized v2 ModuleConfig alongside sshPublicKey")
+}
+
+func TestBuildModuleConfigFromPCC_OmitsAdditionalUsersWhenAbsent(t *testing.T) {
+	cfg := &v1.DvpProviderClusterConfiguration{
+		Provider: &v1.DvpProvider{
+			Namespace:            strPtr("cloud-provider01"),
+			KubeconfigDataBase64: strPtr("ZmFrZQ=="),
+		},
+		Layout:       strPtr("Standard"),
+		SSHPublicKey: strPtr("ssh-rsa AAAAB3N"),
+		// AdditionalUsers intentionally nil - the common case, must not appear at all.
+	}
+
+	mc, err := buildModuleConfigFromPCC(cfg)
+	require.NoError(t, err)
+
+	nodesParameters := digMap(t, mc, "spec", "settings", "nodes", "parameters")
+	_, present := nodesParameters["additionalUsers"]
+	require.False(t, present, "additionalUsers must be entirely absent from the synthesized ModuleConfig when the source PCC has none")
+}
+
+func TestBuildModuleConfigFromPCC_OmitsAdditionalUsersWhenEmpty(t *testing.T) {
+	cfg := &v1.DvpProviderClusterConfiguration{
+		Provider: &v1.DvpProvider{
+			Namespace:            strPtr("cloud-provider01"),
+			KubeconfigDataBase64: strPtr("ZmFrZQ=="),
+		},
+		Layout:          strPtr("Standard"),
+		SSHPublicKey:    strPtr("ssh-rsa AAAAB3N"),
+		AdditionalUsers: slicePtr([]string{}), // explicitly present but empty
+	}
+
+	mc, err := buildModuleConfigFromPCC(cfg)
+	require.NoError(t, err)
+
+	nodesParameters := digMap(t, mc, "spec", "settings", "nodes", "parameters")
+	_, present := nodesParameters["additionalUsers"]
+	require.False(t, present, "an empty (but non-nil) additionalUsers list must not leave a stray empty key in the ModuleConfig")
+}
+
 // digMap walks a chain of map[string]any keys, failing the test immediately
 // (with the full path) if any intermediate value is missing or not a map.
 func digMap(t *testing.T, root map[string]any, path ...string) map[string]any {

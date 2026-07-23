@@ -79,13 +79,14 @@ locals {
   _master_ic_name = try(local._master_ng.spec.cloudInstances.classReference.name, "")
   instance_class  = try(module.migration.instanceClasses[local._master_ic_name].spec, {})
 
-  namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
-  ssh_public_key = try(module.migration.settings.spec.settings.nodes.parameters.sshPublicKey, "")
-  ssh_ca_keys    = try(module.migration.settings.spec.settings.nodes.parameters.sshCAKeys, [])
-  region         = try(module.migration.settings.spec.settings.nodes.parameters.region, "")
-  actual_zones   = try(module.migration.settings.spec.settings.nodes.parameters.zones, [])
-  zones          = try(local._master_ng.spec.cloudInstances.zones, null) != null ? tolist(setintersection(local.actual_zones, local._master_ng.spec.cloudInstances.zones)) : local.actual_zones
-  zone           = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
+  namespace        = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  ssh_public_key   = try(module.migration.settings.spec.settings.nodes.parameters.sshPublicKey, "")
+  ssh_ca_keys      = try(module.migration.settings.spec.settings.nodes.parameters.sshCAKeys, [])
+  additional_users = try(module.migration.settings.spec.settings.nodes.parameters.additionalUsers, [])
+  region           = try(module.migration.settings.spec.settings.nodes.parameters.region, "")
+  actual_zones     = try(module.migration.settings.spec.settings.nodes.parameters.zones, [])
+  zones            = try(local._master_ng.spec.cloudInstances.zones, null) != null ? tolist(setintersection(local.actual_zones, local._master_ng.spec.cloudInstances.zones)) : local.actual_zones
+  zone             = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
 
   node_replicas = try(local._master_ng.spec.cloudInstances.minPerZone, 1)
 

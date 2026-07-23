@@ -31,3 +31,24 @@ variable "ssh_ca_keys" {
   type        = list(string)
   default     = []
 }
+
+variable "additional_users" {
+  description = "Additional OS user names to create at first boot (in addition to the image's default user), with passwordless sudo. Empty by default: rendering must stay bit-identical to the pre-existing behavior."
+  type        = list(string)
+  default     = []
+
+  # Names end up embedded in the rendered cloud-config YAML - keep them
+  # limited to a safe charset matching a real Linux user name (mirrors
+  # templates/ngc-additional-users.yaml's own guard for the day-2 path).
+  validation {
+    condition = alltrue([
+      for name in var.additional_users : can(regex("^[a-z_][a-z0-9_.-]{0,31}$", name))
+    ])
+    error_message = "each additional_users entry must match ^[a-z_][a-z0-9_.-]{0,31}$ (a valid, boring Linux user name, max 32 chars)."
+  }
+
+  validation {
+    condition     = !contains(var.additional_users, "default")
+    error_message = "\"default\" is reserved (it already refers to the image's own default user) and cannot be used in additional_users."
+  }
+}

@@ -302,8 +302,191 @@ nodes:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
     sshCAKeys:
-      - ssh-rsa-ca-AAAA-fake-vault-ca-key-1
-      - ssh-rsa-ca-AAAA-fake-vault-ca-key-2
+      - ssh-rsa-ca-AAAA-fake-ca-key-1
+      - ssh-rsa-ca-AAAA-fake-ca-key-2
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  disabled: false
+  parameters: {}
+ccm:
+  disabled: false
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses: []
+`
+
+// moduleValuesWithHeredocBreakoutCACert covers a sshCAKeys entry crafted to
+// prematurely terminate the quoted heredoc that embeds it in
+// templates/ngc-ssh-ca.yaml (embedded newline + a line matching the heredoc
+// delimiter) - a quoted heredoc delimiter blocks variable/command expansion
+// inside the body, but does not stop the body from containing a line that
+// happens to equal the delimiter itself, which bash treats as the
+// terminator regardless of quoting.
+const moduleValuesWithHeredocBreakoutCACert = `
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+    sshCAKeys:
+      - "ssh-rsa AAAA\nDVP_SSH_CA_KEYS_EOF\necho PWNED > /tmp/pwned\nssh-rsa AAAA2"
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  disabled: false
+  parameters: {}
+ccm:
+  disabled: false
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses: []
+`
+
+const moduleValuesWithAdditionalUsers = `
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+    additionalUsers:
+      - alice
+      - s.bob
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  disabled: false
+  parameters: {}
+ccm:
+  disabled: false
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses: []
+`
+
+// moduleValuesWithReservedAdditionalUser covers the case where "root" (an
+// always-existing system account) is accidentally listed in additionalUsers.
+const moduleValuesWithReservedAdditionalUser = `
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+    additionalUsers:
+      - root
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  disabled: false
+  parameters: {}
+ccm:
+  disabled: false
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses: []
+`
+
+// moduleValuesWithMaliciousAdditionalUser covers a shell command-injection
+// payload disguised as a user name (see the Context using this fixture for
+// why schema validation alone can't be relied on to catch it).
+const moduleValuesWithMaliciousAdditionalUser = `
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+    additionalUsers:
+      - $(touch /tmp/pwned)
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  disabled: false
+  parameters: {}
+ccm:
+  disabled: false
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses: []
+`
+
+// moduleValuesWithReservedDefaultAdditionalUser covers "default" - the
+// cloud-init keyword that already refers to the image's own default user
+// (see cloudinit-merge module's static_block.users). Allowing it into
+// additionalUsers would silently create an unrelated second user literally
+// named "default" instead of doing what the operator meant.
+const moduleValuesWithReservedDefaultAdditionalUser = `
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+    additionalUsers:
+      - default
 provider:
   parameters:
     namespace: cloud-provider01
@@ -1335,11 +1518,166 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(ngc.Field("spec.bundles").String()).To(MatchYAML(`["*"]`))
 
 			content := ngc.Field("spec.content").String()
-			Expect(content).To(ContainSubstring("ssh-rsa-ca-AAAA-fake-vault-ca-key-1"))
-			Expect(content).To(ContainSubstring("ssh-rsa-ca-AAAA-fake-vault-ca-key-2"))
+			Expect(content).To(ContainSubstring("ssh-rsa-ca-AAAA-fake-ca-key-1"))
+			Expect(content).To(ContainSubstring("ssh-rsa-ca-AAAA-fake-ca-key-2"))
 			Expect(content).To(ContainSubstring("/etc/ssh/trusted-user-ca-keys.pem"))
 			Expect(content).To(ContainSubstring("TrustedUserCAKeys /etc/ssh/trusted-user-ca-keys.pem"))
 			Expect(content).To(ContainSubstring("sshd -t && systemctl reload ssh"))
+		})
+	})
+
+	Context("DVP with sshCAKeys containing a heredoc-breakout payload", func() {
+		// Must never reach a rendered NodeGroupConfiguration at all: there is
+		// no schema-level constraint that could catch this (a CA public key
+		// has no fixed regex the way a user name does), so
+		// templates/ngc-ssh-ca.yaml's own guard is the only line of defense.
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesWithHeredocBreakoutCACert)
+			f.HelmRender()
+		})
+
+		It("must fail the whole render instead of ever emitting a line that collides with the heredoc delimiter", func() {
+			Expect(f.RenderError).Should(HaveOccurred())
+			Expect(f.RenderError.Error()).To(ContainSubstring("is not a valid single-line SSH CA public key"))
+		})
+	})
+
+	Context("DVP without additionalUsers (default)", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
+			f.HelmRender()
+		})
+
+		It("must not render the additional-users NodeGroupConfiguration", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ngc := f.KubernetesGlobalResource("NodeGroupConfiguration", "dvp-additional-users.sh")
+			Expect(ngc.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("DVP with additionalUsers set", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesWithAdditionalUsers)
+			f.HelmRender()
+		})
+
+		It("must render the additional-users NodeGroupConfiguration for all node groups/bundles", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ngc := f.KubernetesGlobalResource("NodeGroupConfiguration", "dvp-additional-users.sh")
+			Expect(ngc.Exists()).To(BeTrue())
+			Expect(ngc.Field("spec.nodeGroups").String()).To(MatchYAML(`["*"]`))
+			Expect(ngc.Field("spec.bundles").String()).To(MatchYAML(`["*"]`))
+
+			content := ngc.Field("spec.content").String()
+			Expect(content).To(ContainSubstring(`id -u "alice"`))
+			Expect(content).To(ContainSubstring(`useradd --create-home --shell /bin/bash "alice"`))
+			Expect(content).To(ContainSubstring("/etc/sudoers.d/90-0"))
+			Expect(content).To(ContainSubstring("alice ALL=(ALL) NOPASSWD:ALL"))
+			Expect(content).To(ContainSubstring(`id -u "s.bob"`))
+			Expect(content).To(ContainSubstring("/etc/sudoers.d/90-1"))
+			Expect(content).To(ContainSubstring("s.bob ALL=(ALL) NOPASSWD:ALL"))
+
+			// Filename must be index-based, not name-based: sudo's
+			// #includedir skips files with a "." in the name, which would
+			// silently disable sudo for a dotted name like "s.bob".
+			Expect(content).ToNot(ContainSubstring("/etc/sudoers.d/90-alice"))
+			Expect(content).ToNot(ContainSubstring("/etc/sudoers.d/90-s.bob"))
+			Expect(content).ToNot(ContainSubstring(`/etc/sudoers.d/90-"`))
+
+			// No group membership must ever be granted here: "sudo" (Debian)
+			// vs "wheel" (RHEL/SUSE/AltLinux) differs per OS family, and the
+			// per-user sudoers.d entry above already grants access on its own.
+			Expect(content).ToNot(ContainSubstring("usermod"))
+			Expect(content).ToNot(ContainSubstring(`groups`))
+
+			// Must refuse to grant sudo to an existing system account (e.g. if
+			// someone lists "root" in additionalUsers by mistake) - guarded by
+			// UID, not by "already exists", since useradd is a no-op for an
+			// existing account either way.
+			Expect(content).To(ContainSubstring(`-lt 1000`))
+			Expect(content).To(ContainSubstring("refusing to manage"))
+		})
+	})
+
+	Context("DVP with additionalUsers containing a reserved system account name", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesWithReservedAdditionalUser)
+			f.HelmRender()
+		})
+
+		It("must render a UID-guarded refusal for root instead of an unconditional sudoers grant", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ngc := f.KubernetesGlobalResource("NodeGroupConfiguration", "dvp-additional-users.sh")
+			Expect(ngc.Exists()).To(BeTrue())
+
+			content := ngc.Field("spec.content").String()
+			// The sudoers grant is only reachable through the UID-guarded
+			// else-branch - assert the exact guard sequence around "root" as
+			// one contiguous block, so a refactor that makes the grant
+			// unconditional (or drops the guard) fails this test.
+			Expect(content).To(ContainSubstring(
+				"_DVP_UID=\"$(id -u \"root\" 2>/dev/null || true)\"\n" +
+					"if [ -n \"$_DVP_UID\" ] && [ \"$_DVP_UID\" -lt 1000 ]; then\n" +
+					"  echo \"dvp-additional-users: refusing to manage root - it is an existing system account (uid=$_DVP_UID), not one we created\" >&2\n" +
+					"else\n",
+			))
+		})
+	})
+
+	Context("DVP with additionalUsers containing a shell command-injection payload", func() {
+		// config-values.yaml can't carry a `pattern` here (see the dev-note
+		// on NodesParameters.AdditionalUsers), so ValidateValues() lets this
+		// through - confirm that, then confirm the Helm template's `fail`
+		// guard is the actual boundary.
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesWithMaliciousAdditionalUser)
+		})
+
+		It("passes schema validation but is rejected by the Helm template guard before any rendering happens", func() {
+			Expect(f.ValidateValues()).ShouldNot(HaveOccurred())
+
+			f.HelmRender()
+			Expect(f.RenderError).Should(HaveOccurred())
+			Expect(f.RenderError.Error()).To(ContainSubstring("is not a valid Linux user name"))
+		})
+	})
+
+	Context("DVP with additionalUsers containing the reserved \"default\" name", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesWithReservedDefaultAdditionalUser)
+			f.HelmRender()
+		})
+
+		It("must fail the whole render instead of creating an unrelated user literally named \"default\"", func() {
+			Expect(f.RenderError).Should(HaveOccurred())
+			Expect(f.RenderError.Error()).To(ContainSubstring("is a reserved cloud-init keyword"))
 		})
 	})
 
