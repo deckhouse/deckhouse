@@ -1,0 +1,42 @@
+- name: d8.user-authz.rbacv2.legacy-custom-roles
+  rules:
+  # A custom role/capability of the legacy experimental RBACv2 scheme ("custom:*" name with the
+  # rbac.deckhouse.io/kind: manage|use markers). The DKP 1.78 role model renames the aggregation
+  # labels, and custom roles get NO compatibility aliases — such roles stop aggregating permissions,
+  # and the DKP 1.78 release is blocked by the legacyRBACv2CustomRolesCount requirement until they
+  # are migrated.
+  - alert: D8UserAuthzLegacyRBACv2CustomRoleFound
+    expr: |
+      max by (name) (d8_rbacv2_legacy_custom_role) > 0
+    for: 15m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: rbacv2
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoleFound,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoleFound,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A legacy RBACv2 custom role is present in the cluster.
+      description: |-
+        The ClusterRole `{{ $labels.name }}` is a custom role or capability created with the legacy experimental RBACv2 scheme. Such roles have a `custom:*` name and use either the `rbac.deckhouse.io/kind: manage` or `use` labels, or aggregation selectors based on these labels.
+
+        In DKP 1.78, the role model changes the labels that drive aggregation. Legacy custom roles get **no compatibility aliases** and will stop aggregating permissions entirely after the upgrade.
+
+        Until every such role is migrated, the upgrade to DKP 1.78 is blocked by the `legacyRBACv2CustomRolesCount` release requirement.
+
+        Migrate the role to the new scheme:
+
+        - Rename it using the `d8:custom:` name prefix.
+        - Replace the labels with the `rbac.deckhouse.io/kind: custom-role` or `custom-capability` label.
+        - Update aggregation selectors to use the new labels.
+
+        For migration instructions, refer to the [corresponding section](https://deckhouse.io/modules/user-authz/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178) in the `user-authz` module FAQ.
+
+        List all legacy custom roles:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | startswith("custom:")) and ((.metadata.labels["rbac.deckhouse.io/kind"] // "" | IN("manage", "use")) or ([.aggregationRule.clusterRoleSelectors[]?.matchLabels["rbac.deckhouse.io/kind"] // ""] | any(IN("manage", "use"))))) | .metadata.name'
+        ```
