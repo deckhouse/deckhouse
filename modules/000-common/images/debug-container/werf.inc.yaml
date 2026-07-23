@@ -36,7 +36,7 @@ import:
   to: /lib/ld-musl-x86_64.so.1
   before: install
 - image: tools/curl
-  add: /usr/bin/curl
+  add: /usr/bin/curl-static
   to: /usr/bin/curl
   before: install
 - image: tools/bash
