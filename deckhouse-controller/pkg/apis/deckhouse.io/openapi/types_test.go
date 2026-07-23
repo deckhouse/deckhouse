@@ -31,6 +31,7 @@ func jsonPtr(raw string) *apiextensionsv1.JSON {
 func float64Ptr(v float64) *float64 { return &v }
 func int64Ptr(v int64) *int64       { return &v }
 func stringPtr(v string) *string    { return &v }
+func boolPtr(v bool) *bool          { return &v }
 
 // TestMarshalRoundtrip_shallowSchema verifies a simple object schema roundtrips
 // through JSON.
@@ -179,7 +180,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 				Type:        "integer",
 				Default:     jsonPtr("1"),
 				Deprecated:  true,
-				XUIAdvanced: true,
+				XUIAdvanced: boolPtr(true),
 				XUI:         jsonPtr(`{"label":{"en":"Replicas","ru":"Реплики"},"widget":{"name":"ResourceSelect","foreignResources":[{"name":"groups.deckhouse.io"}],"props":{"multiple":true}}}`),
 			},
 		},
@@ -210,8 +211,8 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	if !ok {
 		t.Fatal("missing replicas property")
 	}
-	if !rep.XUIAdvanced {
-		t.Errorf("x-deckhouse-ui-advanced: got false, want true")
+	if rep.XUIAdvanced == nil || !*rep.XUIAdvanced {
+		t.Errorf("x-deckhouse-ui-advanced: got %v, want true", rep.XUIAdvanced)
 	}
 	if !rep.Deprecated {
 		t.Errorf("deprecated: got false, want true")
@@ -225,6 +226,53 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if len(restored.XValidations) != 1 || restored.XValidations[0].Rule != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
+	}
+}
+
+func TestMarshalRoundtrip_xDeckhouseUIAdvancedPresence(t *testing.T) {
+	schema := OpenAPIV3Schema{
+		Type: "object",
+		Properties: map[string]OpenAPIV3Schema{
+			"absent": {Type: "string"},
+			"basic":  {Type: "string", XUIAdvanced: boolPtr(false)},
+			"expert": {Type: "string", XUIAdvanced: boolPtr(true)},
+		},
+	}
+
+	raw, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var encoded map[string]any
+	if err := json.Unmarshal(raw, &encoded); err != nil {
+		t.Fatalf("decode encoded schema: %v", err)
+	}
+	properties := encoded["properties"].(map[string]any)
+	if _, ok := properties["absent"].(map[string]any)["x-deckhouse-ui-advanced"]; ok {
+		t.Fatal("absent marker must stay absent")
+	}
+	if got := properties["basic"].(map[string]any)["x-deckhouse-ui-advanced"]; got != false {
+		t.Fatalf("basic marker: got %v, want false", got)
+	}
+	if got := properties["expert"].(map[string]any)["x-deckhouse-ui-advanced"]; got != true {
+		t.Fatalf("expert marker: got %v, want true", got)
+	}
+
+	var restored OpenAPIV3Schema
+	if err := json.Unmarshal(raw, &restored); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if restored.Properties["absent"].XUIAdvanced != nil {
+		t.Fatal("absent marker restored as present")
+	}
+	basic := restored.Properties["basic"].XUIAdvanced
+	if basic == nil || *basic {
+		t.Fatalf("basic marker: got %v, want false", basic)
+	}
+	expert := restored.Properties["expert"].XUIAdvanced
+	if expert == nil || !*expert {
+		t.Fatalf("expert marker: got %v, want true", expert)
 	}
 }
 
@@ -417,7 +465,7 @@ func realModuleSchema() *OpenAPIV3Schema {
 				Default:     jsonPtr("1"),
 				Minimum:     float64Ptr(1),
 				Maximum:     float64Ptr(10),
-				XUIAdvanced: true,
+				XUIAdvanced: boolPtr(true),
 				XValidations: []ValidationRule{
 					{
 						Rule:      "self >= 1 && self <= 10",
@@ -533,7 +581,7 @@ func TestRealModuleSchema_roundtrip(t *testing.T) {
 	}
 
 	replicas, ok := restored.Properties["replicas"]
-	if !ok || len(replicas.XValidations) != 1 || !replicas.XUIAdvanced {
+	if !ok || len(replicas.XValidations) != 1 || replicas.XUIAdvanced == nil || !*replicas.XUIAdvanced {
 		t.Errorf("replicas extensions lost")
 	}
 

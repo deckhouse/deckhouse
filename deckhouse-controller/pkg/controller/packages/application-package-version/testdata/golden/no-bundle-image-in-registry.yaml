@@ -26,6 +26,8 @@ status:
       en: Test package
       ru: Ru Test package
     stage: Preview
+  packageSchemas:
+    serializationVersion: "2"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

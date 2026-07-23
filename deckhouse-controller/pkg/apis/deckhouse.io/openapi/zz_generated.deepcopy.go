@@ -193,6 +193,11 @@ func (in *OpenAPIV3Schema) DeepCopyInto(out *OpenAPIV3Schema) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.XUIAdvanced != nil {
+		in, out := &in.XUIAdvanced, &out.XUIAdvanced
+		*out = new(bool)
+		**out = **in
+	}
 	if in.XUI != nil {
 		in, out := &in.XUI, &out.XUI
 		*out = new(v1.JSON)

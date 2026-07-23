@@ -140,6 +140,12 @@ type PackageSchema struct {
 }
 
 type ApplicationPackageVersionStatusSchemas struct {
+	// SerializationVersion identifies the controller schema projection used to
+	// populate this status. Controllers use it to rehydrate schemas that were
+	// written before custom Console extensions were preserved.
+	// +optional
+	SerializationVersion string `json:"serializationVersion,omitempty"`
+
 	// SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
 	// settings of the package. Stored as an opaque object because its contents
 	// form a recursive JSON schema that cannot be expressed structurally in a

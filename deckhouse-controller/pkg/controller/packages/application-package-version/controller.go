@@ -48,6 +48,8 @@ const (
 
 	defaultRequeue = 15 * time.Second
 
+	currentPackageSchemaSerializationVersion = "2"
+
 	schemaTypeSettings = iota
 	schemaTypeValues
 )
@@ -123,7 +125,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 //  5. Check if the package image exists in the registry and label accordingly
 //  6. Add a finalizer and remove the draft label, completing promotion
 //
-// Non-draft resources are skipped since they have already been promoted.
+// Non-draft resources written with the current schema serialization are
+// skipped. Older promoted resources are rehydrated in place from their
+// immutable package artifact.
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) error {
 	logger := r.logger.With(
 		slog.String("name", apv.Name),
@@ -131,11 +135,17 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		slog.String("version", apv.Spec.PackageVersion),
 		slog.String("repository", apv.Spec.PackageRepositoryName))
 
-	// Non-draft APVs have already been promoted — nothing to do.
-	if !apv.IsDraft() {
+	isDraft := apv.IsDraft()
+
+	// Current promoted APVs have already been projected by this controller.
+	if !isDraft && hasCurrentSchemaSerialization(apv) {
 		logger.Debug("package is not draft")
 
 		return nil
+	}
+
+	if !isDraft {
+		logger.Info("rehydrating package metadata written by an older schema serializer")
 	}
 
 	repo := new(v1alpha1.PackageRepository)
@@ -144,7 +154,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get repository '%s': %s", apv.Spec.PackageRepositoryName, err.Error()),
+			metadataLoadConditionMessage(
+				isDraft,
+				fmt.Sprintf("failed to get repository '%s': %s", apv.Spec.PackageRepositoryName, err.Error()),
+			),
 		)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -164,7 +177,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
-			fmt.Sprintf("get image: %s", err.Error()),
+			metadataLoadConditionMessage(isDraft, fmt.Sprintf("get image: %s", err.Error())),
 		)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -180,7 +193,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
-			fmt.Sprintf("fetch package metadata: %s", err.Error()),
+			metadataLoadConditionMessage(isDraft, fmt.Sprintf("fetch package metadata: %s", err.Error())),
 		)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -195,7 +208,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
-			fmt.Sprintf("fetch package metadata: %s", err.Error()),
+			metadataLoadConditionMessage(isDraft, fmt.Sprintf("fetch package metadata: %s", err.Error())),
 		)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -205,10 +218,21 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		return fmt.Errorf("set package metadata '%s': %w", apv.Name, err)
 	}
 
+	if apv.Status.PackageSchemas == nil {
+		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
+	}
+	apv.Status.PackageSchemas.SerializationVersion = currentPackageSchemaSerializationVersion
+
 	r.setMetadataLoadedConditionTrue(apv)
 
 	if err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch status '%s': %w", apv.Name, err)
+	}
+
+	// Rehydration updates status only. Spec, labels, finalizers and usedBy
+	// references remain untouched.
+	if !isDraft {
+		return nil
 	}
 
 	original = apv.DeepCopy()
@@ -237,6 +261,19 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	return nil
+}
+
+func hasCurrentSchemaSerialization(apv *v1alpha1.ApplicationPackageVersion) bool {
+	return apv.Status.PackageSchemas != nil &&
+		apv.Status.PackageSchemas.SerializationVersion == currentPackageSchemaSerializationVersion
+}
+
+func metadataLoadConditionMessage(isDraft bool, draftMessage string) string {
+	if isDraft {
+		return draftMessage
+	}
+
+	return "failed to rehydrate immutable package metadata; retrying"
 }
 
 // handleDelete removes the finalizer from the ApplicationPackageVersion once it is

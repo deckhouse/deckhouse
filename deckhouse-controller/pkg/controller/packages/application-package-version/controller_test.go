@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -68,6 +69,14 @@ func TestSetPackageSchemaPreservesXUI(t *testing.T) {
 	rawSchema := []byte(`
 type: object
 properties:
+  basic:
+    type: string
+    x-deckhouse-ui-advanced: false
+  expert:
+    type: string
+    x-deckhouse-ui-advanced: true
+  unclassified:
+    type: string
   groups:
     type: array
     items:
@@ -121,6 +130,188 @@ properties:
 	legacyGroup := apv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties["legacyGroup"]
 	require.True(t, legacyGroup.Deprecated)
 	require.NotNil(t, legacyGroup.XUI)
+
+	basic := apv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties["basic"]
+	require.NotNil(t, basic.XUIAdvanced)
+	require.False(t, *basic.XUIAdvanced)
+	expert := apv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties["expert"]
+	require.NotNil(t, expert.XUIAdvanced)
+	require.True(t, *expert.XUIAdvanced)
+	unclassified := apv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties["unclassified"]
+	require.Nil(t, unclassified.XUIAdvanced)
+}
+
+func TestPromotedAPVSchemaRehydration(t *testing.T) {
+	t.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+
+	t.Run("rehydrates once and then skips registry", func(t *testing.T) {
+		ctr, kubeClient := setupFakeController(t, "missing-rehydration-testdata.yaml")
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Times(1).Return(packageImageWithSettings(), nil)
+		ctr.dc = dc
+		ctr.registry = registry.NewService(dc, log.NewNop())
+
+		createRehydrationObjects(t, kubeClient, "")
+
+		request := ctrl.Request{NamespacedName: types.NamespacedName{Name: "deckhouse-test-v1.0.0"}}
+		_, err := ctr.Reconcile(context.Background(), request)
+		require.NoError(t, err)
+
+		apv := getAPV(t, kubeClient)
+		require.Equal(t, currentPackageSchemaSerializationVersion, apv.Status.PackageSchemas.SerializationVersion)
+		require.Equal(t, 1, apv.Status.UsedByCount)
+		require.Equal(t, "demo", apv.Status.UsedBy[0].Name)
+		require.Contains(t, apv.Finalizers, v1alpha1.ApplicationPackageVersionFinalizer)
+		require.Equal(t, "preserved", apv.Labels["test.deckhouse.io/preserved"])
+
+		root := apv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema
+		require.NotNil(t, root.XUI)
+		basic := root.Properties["mode"].XUIAdvanced
+		require.NotNil(t, basic)
+		require.False(t, *basic)
+
+		_, err = ctr.Reconcile(context.Background(), request)
+		require.NoError(t, err)
+	})
+
+	t.Run("current serialization does not read registry", func(t *testing.T) {
+		ctr, kubeClient := setupFakeController(t, "missing-current-testdata.yaml")
+		dc := dependency.NewMockedContainer()
+		calls := 0
+		dc.CRClient.ImageMock.Optional().Set(func(_ context.Context, _ string) (crv1.Image, error) {
+			calls++
+			return packageImageWithSettings(), nil
+		})
+		ctr.dc = dc
+		ctr.registry = registry.NewService(dc, log.NewNop())
+
+		createRehydrationObjects(t, kubeClient, currentPackageSchemaSerializationVersion)
+
+		_, err := ctr.Reconcile(context.Background(), ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: "deckhouse-test-v1.0.0"},
+		})
+		require.NoError(t, err)
+		require.Zero(t, calls)
+	})
+
+	t.Run("registry failure preserves existing status", func(t *testing.T) {
+		ctr, kubeClient := setupFakeController(t, "missing-error-testdata.yaml")
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Times(1).Return(nil, fmt.Errorf("registry credential must not reach status"))
+		ctr.dc = dc
+		ctr.registry = registry.NewService(dc, log.NewNop())
+
+		createRehydrationObjects(t, kubeClient, "")
+		before := getAPV(t, kubeClient)
+
+		_, err := ctr.Reconcile(context.Background(), ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: before.Name},
+		})
+		require.Error(t, err)
+
+		after := getAPV(t, kubeClient)
+		require.Equal(t, before.Status.PackageMetadata, after.Status.PackageMetadata)
+		require.Equal(t, before.Status.PackageSchemas, after.Status.PackageSchemas)
+		require.Equal(t, before.Status.UsedBy, after.Status.UsedBy)
+		condition := findCondition(after.Status.Conditions, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
+		require.NotNil(t, condition)
+		require.Equal(t, metav1.ConditionFalse, condition.Status)
+		require.Equal(t, "failed to rehydrate immutable package metadata; retrying", condition.Message)
+	})
+}
+
+func packageImageWithSettings() crv1.Image {
+	return &crfake.FakeImage{
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{Layers: []crv1.Descriptor{}}, nil
+		},
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
+				"package.yaml": `name: test
+descriptions:
+  en: Test package
+  ru: Test package
+stage: Preview
+type: Application
+version: "1.0.0"
+`,
+				"version.json": `{"version":"1.0.0"}`,
+				"openapi/settings.yaml": `x-config-version: 1
+type: object
+x-ui:
+  propertiesOrder:
+    - mode
+properties:
+  mode:
+    type: string
+    x-deckhouse-ui-advanced: false
+`,
+			}}}, nil
+		},
+	}
+}
+
+func createRehydrationObjects(t *testing.T, kubeClient client.Client, serializationVersion string) {
+	t.Helper()
+
+	repo := &v1alpha1.PackageRepository{
+		ObjectMeta: metav1.ObjectMeta{Name: "deckhouse"},
+		Spec: v1alpha1.PackageRepositorySpec{
+			Registry: v1alpha1.PackageRepositorySpecRegistry{
+				Scheme:    "https",
+				Repo:      "registry.example.com/test",
+				DockerCFG: "test-docker-cfg",
+			},
+		},
+	}
+	require.NoError(t, kubeClient.Create(context.Background(), repo))
+
+	apv := &v1alpha1.ApplicationPackageVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "deckhouse-test-v1.0.0",
+			Labels:     map[string]string{"test.deckhouse.io/preserved": "preserved"},
+			Finalizers: []string{v1alpha1.ApplicationPackageVersionFinalizer},
+		},
+		Spec: v1alpha1.ApplicationPackageVersionSpec{
+			PackageName:           "test",
+			PackageRepositoryName: "deckhouse",
+			PackageVersion:        "v1.0.0",
+		},
+	}
+	require.NoError(t, kubeClient.Create(context.Background(), apv))
+
+	apv.Status = v1alpha1.ApplicationPackageVersionStatus{
+		PackageMetadata: &v1alpha1.ApplicationPackageVersionStatusMetadata{
+			Description: &v1alpha1.PackageDescription{En: "legacy"},
+		},
+		PackageSchemas: &v1alpha1.ApplicationPackageVersionStatusSchemas{
+			SerializationVersion: serializationVersion,
+			SettingsSchema: &v1alpha1.PackageSchema{
+				OpenAPIV3Schema: &openapi.OpenAPIV3Schema{Type: "object"},
+			},
+		},
+		UsedBy:      []v1alpha1.ApplicationPackageVersionStatusInstance{{Namespace: "demo", Name: "demo"}},
+		UsedByCount: 1,
+	}
+	require.NoError(t, kubeClient.Status().Update(context.Background(), apv))
+}
+
+func getAPV(t *testing.T, kubeClient client.Client) *v1alpha1.ApplicationPackageVersion {
+	t.Helper()
+
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	require.NoError(t, kubeClient.Get(context.Background(), client.ObjectKey{Name: "deckhouse-test-v1.0.0"}, apv))
+	return apv
+}
+
+func findCondition(conditions []metav1.Condition, conditionType string) *metav1.Condition {
+	for i := range conditions {
+		if conditions[i].Type == conditionType {
+			return &conditions[i]
+		}
+	}
+
+	return nil
 }
 
 type ControllerTestSuite struct {

@@ -11,6 +11,9 @@ spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: "v1.0.0"
+status:
+  packageSchemas:
+    serializationVersion: "2"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

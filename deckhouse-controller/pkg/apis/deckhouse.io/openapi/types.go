@@ -95,7 +95,7 @@ type OpenAPIV3Schema struct {
 	// x-deckhouse-ui-advanced marks a settings field as "advanced", hiding it behind
 	// a toggle in the web console UI.
 	// +optional
-	XUIAdvanced bool `json:"x-deckhouse-ui-advanced,omitempty"`
+	XUIAdvanced *bool `json:"x-deckhouse-ui-advanced,omitempty"`
 
 	// x-ui contains opaque Console form-presentation metadata. Keeping this as
 	// raw JSON lets package authors use current and future widgets without

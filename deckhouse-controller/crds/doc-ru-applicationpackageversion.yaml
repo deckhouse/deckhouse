@@ -253,6 +253,9 @@ spec:
                   description: |
                     Схемы OpenAPI для валидации настроек и значений, передаваемых пакету.
                   properties:
+                    serializationVersion:
+                      description: |
+                        Версия проекции схемы, которой контроллер заполнил статус. Используется для одноразового восстановления схем, опубликованных до поддержки расширений Console.
                     settingsSchema:
                       description: |
                         Схема OpenAPI v3, используемая для валидации пользовательских настроек пакета (`Application.spec.settings`).
