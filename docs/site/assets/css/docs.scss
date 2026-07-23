@@ -1571,6 +1571,58 @@ a.comparison-table__module-proprietaryOkmeter::after {
     margin-bottom: 0;
 }
 
+.docs .pdf-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    // Standalone (button on its own line, e.g. guides layouts): space it from
+    // the heading above. Inside `.docs__wrap-title` (page.html) it sits on the
+    // same row as the title, so the left offset is applied there instead.
+    margin: 12px 0 24px;
+    padding: 8px 14px;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    background: #fff;
+    color: #0066ff;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease;
+
+    &:hover {
+      background: #f5f8ff;
+      border-color: #0066ff;
+    }
+
+    &:disabled,
+    &.is-loading {
+      opacity: .6;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .pdf-download__icon {
+      flex: 0 0 auto;
+      width: 20px;
+      height: 20px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      .pdf-download__label {
+        display: none;
+      }
+      padding: 8px;
+    }
+}
+
+// When the button lives inside the title flex-wrapper (page.html), keep it on
+// the same row, aligned to the right of the heading.
+.docs .docs__wrap-title .pdf-download {
+    margin: 0 0 0 20px;
+}
+
 .docs h2 {
   width: max-content;
   max-width: 100%;

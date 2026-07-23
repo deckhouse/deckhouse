@@ -1,0 +1,16 @@
+{%- comment %}
+Renders the "Download page as PDF" button when the page enables it via front
+matter (`allowPDFDownload: true`). Reused across layouts so the behaviour stays
+identical regardless of the surrounding heading markup. The button carries the
+`.pdf-download` class / `#pdf-download-button` id that pdf-export.js hooks into,
+and the pdfmake libraries are loaded (in head-site.html) under the same flag.
+{%- endcomment %}
+{%- if page.allowPDFDownload %}
+{%- assign pdfDownloadLabel = site.data.i18n.common.pdf_download[page.lang] %}
+<button type="button" class="pdf-download" id="pdf-download-button" title="{{ pdfDownloadLabel }}" aria-label="{{ pdfDownloadLabel }}">
+    <svg class="pdf-download__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12 3v10m0 0l-4-4m4 4l4-4M5 17v2a2 2 0 002 2h10a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="pdf-download__label">{{ pdfDownloadLabel }}</span>
+</button>
+{%- endif %}
