@@ -50,6 +50,13 @@ import:
     add: /src/promxy
     to: /app/promxy
     after: setup
+  - image: tools/coreutils
+    add: /
+    to: /
+    includePaths:
+    - usr/bin/sleep
+    - usr/bin/coreutils
+    before: setup
 git:
 {{- include "image mount points" . }}
 imageSpec:
