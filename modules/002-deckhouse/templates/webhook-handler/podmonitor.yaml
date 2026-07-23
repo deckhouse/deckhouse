@@ -21,6 +21,8 @@ spec:
       replacement: cluster
     - targetLabel: scrape_source
       replacement: self
+    - targetLabel: source
+      replacement: deckhouse
     metricRelabelings:
     - sourceLabels: [__name__]
       regex: 'webhook_handler_hook_run_seconds_bucket|webhook_handler_kube_jq_filter_duration_seconds_bucket|webhook_handler_kube_event_duration_seconds_bucket|webhook_handler_hook_run_user_cpu_seconds_bucket|webhook_handler_hook_run_sys_cpu_seconds_bucket|webhook_handler_tasks_queue_action_duration_seconds_bucket'
@@ -35,6 +37,8 @@ spec:
       replacement: cluster
     - targetLabel: scrape_source
       replacement: hooks
+    - targetLabel: source
+      replacement: deckhouse
   selector:
     matchLabels:
       app: webhook-handler
