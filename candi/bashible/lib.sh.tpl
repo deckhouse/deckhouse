@@ -490,7 +490,7 @@ get_phase2() {
   local count_401=0
   local rc server url
   while :; do
-    for server in {{ .Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
+    for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
       url="https://${server}${path}"
       if fetch_bootstrap "$url" "$token" "$out"; then
         rm -f "$out"

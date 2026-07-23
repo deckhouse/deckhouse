@@ -59,17 +59,22 @@ const (
 	bashibleSecurePort        = 4221
 	bashibleNestedServicePort = 443
 
-	bashibleKubeconfigSecretName = "bashible-apiserver-kubeconfig"
-	bashibleContextSecretName    = "bashible-apiserver-context"
-	bashibleRegistrySecretName   = "deckhouse-registry"
-	bashibleRegistrySecretNS     = "d8-system"
-	bashibleFilesConfigMapName   = "bashible-apiserver-files"
-	bashibleTLSSecretName        = "bashible-apiserver-tls"
+	bashibleKubeconfigSecretName  = "bashible-apiserver-kubeconfig"
+	bashibleContextSecretName     = "bashible-apiserver-context"
+	bashibleRegistrySecretName    = "deckhouse-registry"
+	bashibleRegistrySecretNS      = "d8-system"
+	bashibleBashboosterSecretName = "bashible-bashbooster"
+	bashibleFilesConfigMapName    = "bashible-apiserver-files"
+	bashibleTLSSecretName         = "bashible-apiserver-tls"
 
 	bashibleAPIServiceName    = "v1alpha1.bashible.deckhouse.io"
 	bashibleAPIGroup          = "bashible.deckhouse.io"
 	bashibleAPIVersion        = "v1alpha1"
 	bashibleEndpointSliceName = "bashible-api-manual"
+
+	bashibleFirstRunFinishedLabel = "node.deckhouse.io/bashible-first-run-finished"
+	bashibleUninitializedTaintKey = "node.deckhouse.io/bashible-uninitialized"
+	nodeUninitializedTaintKey     = "node.deckhouse.io/uninitialized"
 )
 
 func (r *reconciler) reconcileBashibleApiserver(
@@ -112,6 +117,11 @@ func (r *reconciler) reconcileBashibleApiserver(
 		return res, err
 	}
 
+	// 6a. Nested: bashbooster library secret (bootstrapping nodes fetch it with the bootstrap token).
+	if res, err := r.reconcileBashibleBashboosterSecret(ctx, nestedClient); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	// 7. Nested: Context Secret
 	if res, err := r.reconcileBashibleContext(ctx, nestedClient, vcp, pkiSecret, joinToken, configSecret); err != nil || !res.IsZero() {
 		return res, err
@@ -144,7 +154,62 @@ func (r *reconciler) reconcileBashibleApiserver(
 		return res, err
 	}
 
+	// 13. Nested: node cleanup (no node-manager runs in the nested cluster to do it).
+	if res, err := r.reconcileNestedNodeCleanup(ctx, nestedClient); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	return reconcile.Result{}, nil
+}
+
+// reconcileNestedNodeCleanup ports node-controller bashiblecleanup for the nested cluster
+// once a node reports bashible-first-run-finished, drop that label and the uninitialized taints in one patch so it becomes schedulable and bashible does not re-apply the label.
+func (r *reconciler) reconcileNestedNodeCleanup(ctx context.Context, nestedClient client.Client) (reconcile.Result, error) {
+	nodes := &corev1.NodeList{}
+	if err := nestedClient.List(ctx, nodes, client.HasLabels{bashibleFirstRunFinishedLabel}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("list nested nodes: %w", err)
+	}
+
+	for i := range nodes.Items {
+		node := &nodes.Items[i]
+		base := node.DeepCopy()
+
+		delete(node.Labels, bashibleFirstRunFinishedLabel)
+		node.Spec.Taints = filterTaints(node.Spec.Taints, nodeUninitializedTaintKey, bashibleUninitializedTaintKey)
+
+		if equality.Semantic.DeepEqual(base.Labels, node.Labels) &&
+			equality.Semantic.DeepEqual(base.Spec.Taints, node.Spec.Taints) {
+			continue
+		}
+		if err := nestedClient.Patch(ctx, node, client.MergeFrom(base)); err != nil {
+			return reconcile.Result{}, fmt.Errorf("cleanup nested node %s: %w", node.Name, err)
+		}
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func helmOwnershipMeta(releaseName string) (labels map[string]string, annotations map[string]string) {
+	return map[string]string{
+			"app.kubernetes.io/managed-by": "Helm",
+		}, map[string]string{
+			"meta.helm.sh/release-name":      releaseName,
+			"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
+		}
+}
+
+func filterTaints(taints []corev1.Taint, dropKeys ...string) []corev1.Taint {
+	drop := make(map[string]struct{}, len(dropKeys))
+	for _, k := range dropKeys {
+		drop[k] = struct{}{}
+	}
+	out := make([]corev1.Taint, 0, len(taints))
+	for _, t := range taints {
+		if _, ok := drop[t.Key]; !ok {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func (r *reconciler) reconcileBashibleKubeconfigSecret(
@@ -292,6 +357,11 @@ func (r *reconciler) reconcileBashibleContext(
 		return reconcile.Result{}, fmt.Errorf("resolve apiserverProxyCerts: %w", err)
 	}
 
+	rppToken, err := r.registryPackagesProxyToken(ctx)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("get registry-packages-proxy token: %w", err)
+	}
+
 	contextInputYAML, err := bashibleapiserver.BuildContextInputYAML(bashibleapiserver.ContextInputParams{
 		VCP:                 vcp,
 		CA:                  pkiSecret.Data["ca.crt"],
@@ -299,6 +369,7 @@ func (r *reconciler) reconcileBashibleContext(
 		ClusterUUID:         string(configSecret.Data["cluster-uuid"]),
 		APIHost:             apiExposeHost(vcp),
 		PackagesHost:        packagesExposeHost(vcp),
+		RPPToken:            rppToken,
 		APIServerProxyCerts: proxyCerts,
 	})
 	if err != nil {
@@ -411,10 +482,59 @@ func (r *reconciler) reconcileBashibleRegistrySecret(
 		return reconcile.Result{}, err
 	}
 
+	registryLabels, registryAnnotations := helmOwnershipMeta("deckhouse")
 	target := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      bashibleRegistrySecretName,
-			Namespace: bashibleRegistrySecretNS,
+			Name:        bashibleRegistrySecretName,
+			Namespace:   bashibleRegistrySecretNS,
+			Labels:      registryLabels,
+			Annotations: registryAnnotations,
+		},
+		Type: parentSecret.Type,
+		Data: maps.Clone(parentSecret.Data),
+	}
+
+	current := &corev1.Secret{}
+	key := client.ObjectKeyFromObject(target)
+	err = nestedClient.Get(ctx, key, current)
+	if apierrors.IsNotFound(err) {
+		return reconcile.Result{}, nestedClient.Create(ctx, target)
+	}
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) && current.Type == target.Type {
+		return reconcile.Result{}, nil
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+	current.Type = target.Type
+	return reconcile.Result{}, nestedClient.Patch(ctx, current, client.MergeFrom(base))
+}
+
+// reconcileBashibleBashboosterSecret mirrors the parent bashible-bashbooster secret (the bashbooster shell library) into the nested cluster
+// node-manager helm does not run to create it in vcp
+func (r *reconciler) reconcileBashibleBashboosterSecret(
+	ctx context.Context,
+	nestedClient client.Client,
+) (reconcile.Result, error) {
+	parentSecret, err := r.getSecret(ctx, bashibleDeckhouseNamespace, bashibleBashboosterSecretName)
+	if apierrors.IsNotFound(err) {
+		return reconcile.Result{}, fmt.Errorf("parent secret %s/%s not found", bashibleDeckhouseNamespace, bashibleBashboosterSecretName)
+	}
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	bashboosterLabels, bashboosterAnnotations := helmOwnershipMeta("node-manager")
+	target := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        bashibleBashboosterSecretName,
+			Namespace:   bashibleDeckhouseNamespace,
+			Labels:      bashboosterLabels,
+			Annotations: bashboosterAnnotations,
 		},
 		Type: parentSecret.Type,
 		Data: maps.Clone(parentSecret.Data),
@@ -516,9 +636,9 @@ var bashibleVersionMap string
 func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
 	namespace := vcpNamespace(vcp)
 
-	bashibleImagesDigestsJSON, err := r.getImagesDigestsJSON(ctx)
+	versionMap, imagesDigestsJSON, err := r.getBashibleFiles(ctx)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("get images digests JSON: %w", err)
+		return reconcile.Result{}, err
 	}
 
 	target := &corev1.ConfigMap{
@@ -527,8 +647,8 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 			Namespace: namespace,
 		},
 		Data: map[string]string{
-			"version_map.yml":     bashibleVersionMap,
-			"images_digests.json": bashibleImagesDigestsJSON,
+			"version_map.yml":     versionMap,
+			"images_digests.json": imagesDigestsJSON,
 		},
 	}
 
@@ -553,17 +673,24 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 	return reconcile.Result{}, r.patchConfigMap(ctx, base, current)
 }
 
-func (r *reconciler) getImagesDigestsJSON(ctx context.Context) (string, error) {
+// getBashibleFiles reads version_map.yml and images_digests.json from the parent bashible-apiserver-files configmap for consistency on bashible (for images and versions)
+func (r *reconciler) getBashibleFiles(ctx context.Context) (versionMap string, imagesDigestsJSON string, err error) {
 	configMap, err := r.getConfigMap(ctx, bashibleDeckhouseNamespace, bashibleFilesConfigMapName)
 	if err != nil {
-		return "", fmt.Errorf("get images digests JSON: %w", err)
+		return "", "", fmt.Errorf("get bashible-apiserver-files configmap: %w", err)
 	}
 
-	if configMap.Data["images_digests.json"] == "" {
-		return "", fmt.Errorf("images digests JSON is empty")
+	imagesDigestsJSON = configMap.Data["images_digests.json"]
+	if imagesDigestsJSON == "" {
+		return "", "", fmt.Errorf("images digests JSON is empty")
 	}
 
-	return configMap.Data["images_digests.json"], nil
+	versionMap = configMap.Data["version_map.yml"]
+	if versionMap == "" {
+		versionMap = bashibleVersionMap
+	}
+
+	return versionMap, imagesDigestsJSON, nil
 }
 
 func (r *reconciler) reconcileBashibleService(

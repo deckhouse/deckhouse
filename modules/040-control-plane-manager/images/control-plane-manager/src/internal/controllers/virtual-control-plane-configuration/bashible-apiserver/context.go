@@ -37,6 +37,7 @@ type ContextInputParams struct {
 	ClusterUUID         string
 	APIHost             string
 	PackagesHost        string
+	RPPToken            string
 	APIServerProxyCerts ContextAPIServerProxyCerts
 }
 
@@ -55,6 +56,7 @@ type contextInput struct {
 	KubernetesCA            string                     `json:"kubernetesCA"`
 	AllowedBundles          []string                   `json:"allowedBundles"`
 	NodeGroups              []map[string]interface{}   `json:"nodeGroups"`
+	PackagesProxy           map[string]interface{}     `json:"packagesProxy"`
 }
 
 type ContextAPIServerProxyCerts struct {
@@ -111,14 +113,11 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 		},
 		ClusterMasterEndpoints: []contextMasterEndpoint{
 			{
-				Address:                p.APIHost,
-				KubeAPIPort:            6443,
-				RPPServerPort:          vcpPackagesProxyPort,
-				RPPBootstrapServerPort: vcpPackagesProxyBootstrapPort,
+				Address:     p.APIHost,
+				KubeAPIPort: 6443,
 			},
 			{
 				Address:                p.PackagesHost,
-				KubeAPIPort:            6443,
 				RPPServerPort:          vcpPackagesProxyPort,
 				RPPBootstrapServerPort: vcpPackagesProxyBootstrapPort,
 			},
@@ -135,6 +134,11 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 					"type": "Containerd",
 				},
 			},
+		},
+		// direct: bypassing the kube-apiserver-proxy pod discovery that assumes an in-cluster RPP.
+		PackagesProxy: map[string]any{
+			"direct": true,
+			"token":  p.RPPToken,
 		},
 	}
 

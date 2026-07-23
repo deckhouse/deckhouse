@@ -354,7 +354,14 @@ function main() {
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
   export BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages" # Deprecated, backward compatibility
   export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="{{ .clusterMasterRPPBootstrapAddresses | join " " }}"
-{{ if eq .runType "Normal" }}
+{{ if get $packagesProxy "direct" }}
+  {{- /* direct RPP over addresses+token (see 01-bootstrap-prerequisites): the packages proxy is not
+         an in-cluster pod discoverable via the kube-apiserver, so keep kube-discovery disabled. */}}
+  export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
+  export PACKAGES_PROXY_ADDRESSES="{{ .clusterMasterRPPAddresses | join "," }}"
+  export PACKAGES_PROXY_TOKEN="{{ get $packagesProxy "token" | default "passthrough" }}"
+  unset PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS
+{{ else if eq .runType "Normal" }}
   export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
   export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="{{ .clusterMasterKubeAPIEndpoints | join "," }}"
   unset PACKAGES_PROXY_ADDRESSES
@@ -381,7 +388,7 @@ function main() {
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
 
 {{ if eq .runType "Normal" }}
-  {{- if .packagesProxy }}
+  {{- if and .packagesProxy (not (get $packagesProxy "direct")) }}
   rpp_addr="$(get_rpp_address)"
   if [[ -n $rpp_addr ]]; then
     export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
