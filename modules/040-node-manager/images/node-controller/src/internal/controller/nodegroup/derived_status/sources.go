@@ -85,15 +85,17 @@ type clusterConfiguration struct {
 }
 
 func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
-	// Read as unstructured: the client serves it from the dedicated single-secret informer
-	// (see common.CacheOptions), so a NodeGroup burst does not turn every derived-status
-	// pass into a live apiserver GET. The watch keeps the value fresh.
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{Version: "v1", Kind: "Secret"})
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, obj); err != nil {
+	// Deliberately an uncached read: the cache scopes kube-system Secrets to the
+	// cloud-provider secret only, and a second Secret ByObject entry is impossible (see the
+	// GVK-collision note in common.CacheOptions).
+	secret := &corev1.Secret{}
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
 		return nil, ""
 	}
-	data, _, _ := unstructured.NestedStringMap(obj.Object, "data")
+	data := make(map[string]string, len(secret.Data))
+	for k, v := range secret.Data {
+		data[k] = string(v)
+	}
 
 	raw, ok := []byte(data["cluster-configuration.yaml"]), data["cluster-configuration.yaml"] != ""
 	if !ok {

@@ -103,22 +103,10 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&mcmv1alpha1.Machine{}: machineNS,
 			&capiv1beta2.Machine{}: machineNS,
-			// The derived-status service reads d8-cluster-configuration on every pass; a live
-			// GET there costs hundreds of ms during a NodeGroup burst. Reading it as
-			// unstructured hits this scoped informer instead (typed Secret reads keep their
-			// own scoped informer above). The machine namespace is included because the
-			// bashible-context and update-approval controllers read their secrets there as
-			// unstructured too — a namespace absent from this map fails those reads outright.
-			newUnstructured("", "v1", "Secret"): {
-				Namespaces: map[string]cache.Config{
-					MachineNamespace: {},
-					"kube-system": {
-						FieldSelector: fields.SelectorFromSet(fields.Set{
-							"metadata.name": "d8-cluster-configuration",
-						}),
-					},
-				},
-			},
+			// NOTE: ByObject keys are mapped by GVK, so a typed and an unstructured key of
+			// the same kind (e.g. corev1.Secret and an unstructured v1/Secret) COLLIDE: map
+			// iteration order decides which scope wins and the loser's reads break
+			// non-deterministically. Never add per-representation Secret entries here.
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"):                 machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):                     machineNS,
 			&capiv1beta2.MachineDeployment{}:                                                        machineNS,
