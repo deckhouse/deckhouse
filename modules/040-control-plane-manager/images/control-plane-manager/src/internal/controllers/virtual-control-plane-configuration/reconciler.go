@@ -39,7 +39,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -589,7 +588,7 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 		return nil, reconcile.Result{}, fmt.Errorf("render manifests: %w", err)
 	}
 
-	target := buildTargetConfigSecret(vcp.Namespace)
+	target := buildTargetConfigSecret(vcp)
 	target.Data = data
 	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
 		return nil, reconcile.Result{}, err
@@ -652,10 +651,6 @@ func (r *reconciler) reconcileControlPlaneNodes(
 
 		current, err := r.getControlPlaneNode(ctx, target.Namespace, target.Name)
 		if apierrors.IsNotFound(err) {
-			if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-				return reconcile.Result{}, err
-			}
-
 			if err := r.createControlPlaneNode(ctx, target); err != nil {
 				return reconcile.Result{}, err
 			}
@@ -773,11 +768,13 @@ func computeControlPlaneNodeName(vcp *controlplanev1alpha1.VirtualControlPlane, 
 
 func isControlPlaneNodeInSync(current, target *controlplanev1alpha1.ControlPlaneNode) bool {
 	return equality.Semantic.DeepEqual(current.Labels, target.Labels) &&
+		equality.Semantic.DeepEqual(current.OwnerReferences, target.OwnerReferences) &&
 		equality.Semantic.DeepEqual(current.Spec, target.Spec)
 }
 
 func applyControlPlaneNodeTarget(current, target *controlplanev1alpha1.ControlPlaneNode) {
 	current.Labels = target.Labels
+	current.OwnerReferences = target.OwnerReferences
 	current.Spec = target.Spec
 }
 

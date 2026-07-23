@@ -756,7 +756,7 @@ func (r *reconciler) reconcileBashibleDeployment(
 		return reconcile.Result{}, fmt.Errorf("get bashible apiserver image: %w", err)
 	}
 
-	target, err := buildTargetBashibleDeployment(vcp.Namespace, image)
+	target, err := buildTargetBashibleDeployment(vcp, image)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

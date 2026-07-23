@@ -66,7 +66,7 @@ func (r *reconciler) tenantKubeconfigRaw(ctx context.Context, vcp *controlplanev
 // Building client.New triggers discovery against the tenant API server, so cached
 // entries are reused until the admin kubeconfig content changes (e.g. cert rotation).
 func (r *reconciler) tenantClients(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (kubernetes.Interface, client.Client, error) {
-	raw, err := r.tenantKubeconfigRaw(ctx, vcp.Namespace)
+	raw, err := r.tenantKubeconfigRaw(ctx, vcp)
 	if err != nil {
 		return nil, nil, err
 	}
