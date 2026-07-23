@@ -267,7 +267,6 @@ func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinit
 	if err != nil {
 		return fmt.Errorf("Cannot create SSH client: %w", err)
 	}
-	defer client.Stop()
 
 	if err := client.Start(ctx); err != nil {
 		return fmt.Errorf("Cannot connect to SSH host %s: %w", address, err)

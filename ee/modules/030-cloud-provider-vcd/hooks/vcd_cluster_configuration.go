@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 
@@ -19,24 +20,6 @@ import (
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
-
-func preparatorProvider(_ string) config.MetaConfigPreparator {
-	return vcd.NewMetaConfigPreparator(
-		vcd.MetaConfigPreparatorParams{
-			// todo it was bad idea patch metaconfig during installation
-			// we need to prepare meta config in dhctl during installation
-			// for checking vcd version
-			// we do not want to prepare metaconfig here because we already got prepared
-			// after installation during first deckhouse converge and legacy mode will get
-			// in legacy_mode.go hook with order 10, this hook has 20 order index
-			// after first converge we deploy vcd data discoverer and hook legacy_mode.go
-			// directory form data discoverer
-			PrepareMetaConfig: false,
-			// cluster prefix does not provide here
-			ValidateClusterPrefix: false,
-		},
-	)
-}
 
 var _ = cluster_configuration.RegisterHook(
 	func(
@@ -91,7 +74,15 @@ var _ = cluster_configuration.RegisterHook(
 		input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", discoveryData)
 
 		return nil
-	}, cluster_configuration.NewConfig(preparatorProvider),
+	},
+	// The validator runs on every reconcile: it checks provider.server format
+	// (e.g. no trailing slash) but skips the cluster prefix, which is not present
+	// here. It never mutates the config — VCD version discovery / legacyMode
+	// happens in the data-discoverer hook (order 10). Structural field checks stay
+	// in validateProviderClusterConfig.
+	cluster_configuration.NewConfig(func(_ context.Context, _, _ string) config.ProviderValidateFunc {
+		return vcd.NewMetaConfigValidator(false).Validate
+	}),
 )
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {

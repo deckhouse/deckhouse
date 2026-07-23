@@ -1,0 +1,5 @@
+vmResource:
+  type: kubernetes_manifest
+  fieldEquals:
+    path: manifest.kind
+    value: VirtualMachine

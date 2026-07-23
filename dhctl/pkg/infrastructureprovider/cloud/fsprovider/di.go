@@ -29,6 +29,10 @@ type DIParams struct {
 	BinariesDir       string
 	CloudProviderDir  string
 	PluginsDir        string
+	// DownloadDir is the root for OCI-unpacked provider trees (e.g. external
+	// cloud providers like DVP) — used as a fallback when modules/specs are not
+	// present under CloudProviderDir (bundled candi). May be empty.
+	DownloadDir string
 }
 
 func isDir(dir, errPrefix string) error {
@@ -85,18 +89,26 @@ func GetDi(ctx context.Context, params *DIParams) (*cloud.ProviderDI, error) {
 		return nil, err
 	}
 
+	// External providers ship no bundled candi/plugins in the image (e.g. the
+	// terraform-manager pods): modules and the terraform plugin are unpacked
+	// under DownloadDir at runtime, and both providers below fall back there.
+	// So when DownloadDir is set, these directories may legitimately be absent.
 	if err := isNotRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
-		return nil, err
+		if params.DownloadDir == "" {
+			return nil, err
+		}
 	}
 
 	if err := isDir(params.PluginsDir, "PluginsDir"); err != nil {
-		return nil, err
+		if params.DownloadDir == "" {
+			return nil, err
+		}
 	}
 
 	return &cloud.ProviderDI{
-		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, loadOrGetStore),
+		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, params.DownloadDir, loadOrGetStore),
 		InfraUtilProvider:   newInfrastructureUtilProvider(params.BinariesDir),
 		InfraPluginProvider: newPluginsProvider(params.PluginsDir),
-		ModulesProvider:     newModulesProvider(params.CloudProviderDir),
+		ModulesProvider:     newModulesProvider(params.CloudProviderDir, params.DownloadDir),
 	}, nil
 }

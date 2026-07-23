@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -178,6 +178,9 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		versionData.Version = version
 		versionData.TarFile = tarFile
 
+		// Warm cache: the release digest is unchanged, so the telemetry gauges set
+		// on the cold path still hold. They live outside the scan-start expire
+		// group, so nothing wiped them and there is nothing to re-emit.
 		return versionData, nil
 	}
 
@@ -192,9 +195,7 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	}
 
 	// check that the module sign annotation exists
-	if len(manifest.Annotations) == 0 || manifest.Annotations[ImageAnnotationSignature] == "" {
-		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
-	}
+	noModuleSign := len(manifest.Annotations) == 0 || manifest.Annotations[ImageAnnotationSignature] == ""
 
 	// Extract version from image
 	imageMeta, err := getMetadataFromImage(versionData.Image)
@@ -206,14 +207,10 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		slog.String("channel", releaseChannel),
 		slog.Bool("found", imageMeta.ModuleDefinitionFound),
 		slog.Bool("critical", imageMeta.ModuleCritical))
-	if !imageMeta.ModuleDefinitionFound {
-		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
-	}
 
-	// Track critical modules to identify potential "critical" field misuse
-	if imageMeta.ModuleCritical {
-		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerCriticalMetricSet, 1.0, map[string]string{"module": module})
-	}
+	// Only reached on a cache miss (new/changed release digest), so recompute and
+	// overwrite the gauges here. Critical tracks potential "critical" field misuse.
+	s.emitModuleTelemetry(module, noModuleSign, !imageMeta.ModuleDefinitionFound, imageMeta.ModuleCritical)
 
 	versionData.Version = imageMeta.Version
 
@@ -225,6 +222,25 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	versionData.TarFile = tarFile
 
 	return versionData, nil
+}
+
+// emitModuleTelemetry overwrites the per-module telemetry gauges. Unlike the
+// other scanner metrics these are NOT in RegistryScannerTelemetryGroup, so the
+// scan-start ExpireGroupMetrics does not wipe them: the value set on a cache miss
+// persists across warm scans until the release digest changes. We always Set an
+// explicit 0/1 so a resolved condition clears instead of sticking at 1.
+func (s *registryscanner) emitModuleTelemetry(module string, noSign, noYaml, critical bool) {
+	labels := map[string]string{"module": module}
+	s.ms.GaugeSet(metrics.RegistryScannerNoModuleSign, boolToFloat(noSign), labels)
+	s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, boolToFloat(noYaml), labels)
+	s.ms.GaugeSet(metrics.RegistryScannerCriticalMetricSet, boolToFloat(critical), labels)
+}
+
+func boolToFloat(b bool) float64 {
+	if b {
+		return 1.0
+	}
+	return 0.0
 }
 
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {

@@ -267,10 +267,9 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 	metaConfig, err := config.ParseConfigInCluster(
 		ctx,
 		c.kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		c.globalOptions,
+		infrastructureprovider.DhctlOperationConverge,
 	)
 	if err != nil {
 		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))

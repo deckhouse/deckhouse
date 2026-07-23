@@ -95,6 +95,48 @@ internal:
     vmFolderPath: dev/test
 `
 
+const moduleValuesDCClusterFirst = `
+host: myhost
+username: myuname
+password: myPaSsWd
+vmFolderPath: dev/test
+regionTagCategory: myregtagcat
+zoneTagCategory: myzonetagcat
+region: myreg
+zones: ["zone-a"]
+internal:
+  storageClasses:
+  - name: aaa-dscluster
+    datastoreType: DatastoreCluster
+    datastoreURL: ""
+    path: /dc/datastore/aaa-dscluster
+    zones: ["zone-a"]
+  - name: bbb-datastore
+    datastoreType: Datastore
+    datastoreURL: ds:///vmfs/volumes/bbb/
+    path: /dc/datastore/bbb
+    zones: ["zone-a"]
+  - name: ccc-datastore
+    datastoreType: Datastore
+    datastoreURL: ds:///vmfs/volumes/ccc/
+    path: /dc/datastore/ccc
+    zones: ["zone-a"]
+  compatibilityFlag: ""
+  providerDiscoveryData:
+    datacenter: X1
+    zones: ["zone-a"]
+  providerClusterConfiguration:
+    provider:
+      server: myhost
+      username: myuname
+      password: myPaSsWd
+      insecure: true
+    regionTagCategory: myregtagcat
+    zoneTagCategory: myzonetagcat
+    region: myreg
+    vmFolderPath: dev/test
+`
+
 const moduleValuesB = `
     host: myhost
     username: myuname
@@ -250,6 +292,27 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("Vsphere: DatastoreCluster at index 0 is not rendered (defense-in-depth)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("csiVsphere", moduleValuesDCClusterFirst)
+			f.HelmRender()
+		})
+
+		It("DatastoreCluster StorageClass is not created; Datastore StorageClasses are rendered", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			scDC := f.KubernetesGlobalResource("StorageClass", "aaa-dscluster")
+			scBbb := f.KubernetesGlobalResource("StorageClass", "bbb-datastore")
+			scCcc := f.KubernetesGlobalResource("StorageClass", "ccc-datastore")
+
+			Expect(scDC.Exists()).To(BeFalse())
+			Expect(scBbb.Exists()).To(BeTrue())
+			Expect(scCcc.Exists()).To(BeTrue())
 		})
 	})
 

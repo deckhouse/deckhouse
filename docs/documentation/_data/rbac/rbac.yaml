@@ -1210,38 +1210,6 @@ modules:
     namespace: d8-metallb
     subsystems:
     - networking
-  monitoring-applications:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:monitoring-applications:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - monitoring-applications
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:monitoring-applications:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - monitoring-applications
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-monitoring
-    subsystems:
-    - observability
   monitoring-custom:
     capabilities:
       manage:
@@ -2459,7 +2427,6 @@ subsystems:
     - kube-system
   observability:
     modules:
-    - monitoring-applications
     - operator-prometheus
     - prometheus
     - prometheus-metrics-adapter

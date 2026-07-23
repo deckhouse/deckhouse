@@ -48,7 +48,7 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyPreparatorProvider(), nil)
+	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyValidatorProvider(), nil)
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}

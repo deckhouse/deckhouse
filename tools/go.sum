@@ -195,8 +195,8 @@ github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
 github.com/deckhouse/lib-dhctl v0.21.0 h1:6pO9qOj3mdQpX+zD07ZRlorKCtjvn5VEyigmT4k5SBw=
 github.com/deckhouse/lib-dhctl v0.21.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
-github.com/deckhouse/module-sdk v0.12.0 h1:kQe0RmhHz3+A2VoxG56/8Dd4WeVSbwc38Ocg3Can16g=
-github.com/deckhouse/module-sdk v0.12.0/go.mod h1:v3pnOUIY8hCv7qQ5YaffiAYKj5oH8WBonG614KvRPXw=
+github.com/deckhouse/module-sdk v0.12.1 h1:kcfvgIKwXUtcDXdK5e7D69lvdyaHctp8ectYKi+BYKw=
+github.com/deckhouse/module-sdk v0.12.1/go.mod h1:v3pnOUIY8hCv7qQ5YaffiAYKj5oH8WBonG614KvRPXw=
 github.com/denis-tingajkin/go-header v0.4.2 h1:jEeSF4sdv8/3cT/WY8AgDHUoItNSoEZ7qg9dX7pc218=
 github.com/denis-tingajkin/go-header v0.4.2/go.mod h1:eLRHAVXzE5atsKAnNRDB90WHCFFnBUn4RN0nRcs1LJA=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
@@ -237,8 +237,8 @@ github.com/fatih/structtag v1.2.0 h1:/OdNE99OxoI/PqaW/SuSK9uxxT3f/tcSZgon/ssNSx4
 github.com/fatih/structtag v1.2.0/go.mod h1:mBJUNpUnHmRKrKlQQlmCrh5PuhftFbNv8Ys4/aAZl94=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/flant/addon-operator v1.24.1 h1:O1zzpAfKUQ0umC5ckMJ5b122hxZrm36IC96vM/s1QCI=
-github.com/flant/addon-operator v1.24.1/go.mod h1:GlDlzwuEHLhT4VheDwUrTfEcnWgRkRzmho1+w9toxec=
+github.com/flant/addon-operator v1.24.6 h1:ajXaRpt3hQVG3svBT2D8FAizgqPGMAmDe7tySMAOJEc=
+github.com/flant/addon-operator v1.24.6/go.mod h1:MdWesd9tU5lvwpDsm9RiDUA0/mIAOG4/bV1f+IQ5TPk=
 github.com/flant/kube-client v1.9.1 h1:B5Sa++5arl3N/KBdL1KNMlUBtzQXKz1o2FIiFb4X+VA=
 github.com/flant/kube-client v1.9.1/go.mod h1:jAQ01+f5Q8UJJ4RYZlk5xqoA+OOalpr/QJ3e3Q/saqw=
 github.com/flant/shell-operator v1.20.2 h1:rI2lIkhZxIfMVR0NFMSZ5xyXMvtBj+Wai2MPopb/Yp0=

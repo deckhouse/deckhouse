@@ -77,6 +77,7 @@ CAPI
 CAs
 CCM
 CEF
+CEL
 CEPH
 CI
 CIDR
@@ -116,6 +117,7 @@ Changelog
 CheckFunc
 Chrony
 CiliumClusterwideNetworkPolicies
+CiliumClusterwideNetworkPolicy
 CiliumEgressGatewayPolicy
 Cirros
 Citrix
@@ -616,6 +618,7 @@ PodLogginConfig
 PodLoggingConfig
 PodMonitor
 PodMonitors
+PodNetwork
 Poly
 PostgreSQL
 PowerShell
@@ -1768,6 +1771,7 @@ zoneTagCategory
 Аудиофайлы
 Б
 БД
+Булевый
 ВМ
 Визуализировать
 Гб

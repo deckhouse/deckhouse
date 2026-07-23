@@ -79,7 +79,12 @@ spec:
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 sendAuthorizationHeader:
                   type: boolean
-                  description: 'Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.'
+                  description: |-
+                    Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.
+
+                    > **Warning.** Enable it only if the application can process this header.
+                    >
+                    > When setting `sendAuthorizationHeader: true`, list all necessary headers in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation of the Ingress, since the `Authorization` header is not transmitted by default.
                 applicationIngressCertificateSecretName:
                   type: string
                   description: |-
@@ -133,8 +138,13 @@ spec:
                 keepUsersLoggedInFor:
                   type: string
                   description: |-
-                    User session will be kept for specified amount of time even if user will not log in.
-                    Specified with  `s`, `m` or `h` suffix.
+                    Maximum period of user inactivity during which the user session remains active.
+
+                    Set as a string specifying hours, minutes, or seconds: `30m`, `20s`, `2h30m10s`, `24h`.
+
+                    Specified value can't be shorter or equal to the [`idTokenTTL`](configuration.html#parameters-idtokenttl) value set in the module settings. If you set a value that is shorter or equal to `idTokenTTL`, the effective logout time will be `idTokenTTL + 1s`.
+
+                    To force logout sooner than the default `idTokenTTL`, decrease the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter value in the module settings as well.
                   x-doc-examples: ['24h']
                   x-doc-default: '168h'
                 allowedEmails:
@@ -424,13 +434,22 @@ spec:
                           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
                 sendAuthorizationHeader:
                   type: boolean
-                  description: 'Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.'
+                  description: |-
+                    Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.
+
+                    > **Warning.** Enable it only if the application can process this header.
+                    >
+                    > When setting `sendAuthorizationHeader: true`, list all necessary headers in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation of the Ingress, since the `Authorization` header is not transmitted by default.
                 keepUsersLoggedInFor:
                   type: string
                   description: |-
-                    User session will be kept for specified amount of time even if user will not log in.
+                    Maximum period of user inactivity during which the user session remains active.
 
-                    Specified with  `s`, `m` or `h` suffix.
+                    Set as a string specifying hours, minutes, or seconds: `30m`, `20s`, `2h30m10s`, `24h`.
+
+                    Specified value can't be shorter or equal to the [`idTokenTTL`](configuration.html#parameters-idtokenttl) value set in the module settings. If you set a value that is shorter or equal to `idTokenTTL`, the effective logout time will be `idTokenTTL + 1s`.
+
+                    To force logout sooner than the default `idTokenTTL`, decrease the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter value in the module settings as well.
                   x-doc-default: '168h'
                 allowedEmails:
                   type: array

@@ -116,6 +116,43 @@ Manage-роль определяет права на доступ:
 
 {% include rbac/rbac-subsystems-list.liquid %}
 
+### Миграция на новые имена ролей в DKP 1.78
+
+{% alert level="warning" %}
+До DKP 1.78 роли продолжают работать под существующими именами.
+{% endalert %}
+
+В DKP 1.78 роли экспериментальной модели будут переименованы, а текущие имена (`d8:manage:<подсистема>:<уровень>`, `d8:manage:all:<уровень>` и `d8:use:role:<уровень>`) станут устаревшими. Для обратной совместимости они будут сохранены как роли-псевдонимы ровно на один релиз: существующие привязки продолжат работать и давать те же права, что и новые роли, после чего псевдонимы будут удалены.
+
+Соответствие имён:
+
+| Текущее имя (станет устаревшим) | Новое имя |
+|----------------|-----------|
+| `d8:manage:all:<уровень>` | `d8:system:<уровень>` |
+| `d8:manage:<подсистема>:<уровень>` | `d8:subsystem:<подсистема>:<уровень>` |
+| `d8:use:role:<уровень>` | `d8:namespace:<уровень>` |
+
+В новой модели также появится уровень доступа `superadmin` (например, `d8:namespace:superadmin`, `d8:system:superadmin`) — для управления системными ресурсами.
+
+{% alert level="info" %}
+Роль `d8:use:role:admin` будет соответствовать роли `d8:namespace:admin` и, как следствие, перестанет давать права на выпуск токенов для сервисных аккаунтов и выполнение impersonation — для этого понадобится уровень `superadmin`.
+{% endalert %}
+
+Capabilities (роли-кирпичики `d8:manage:permission:*` и `d8:use:capability:*`) будут переименованы **без** псевдонимов совместимости, поскольку они предназначены для агрегации в роли, а не для прямой привязки. Если у вас есть объекты RoleBinding или ClusterRoleBinding на такую capability, после обновления они перестанут давать права. Пересоздайте привязку на подходящую роль (или на собственную роль, агрегирующую новую capability).
+
+Как подготовиться к миграции:
+
+1. Найдите привязки, использующие текущие имена ролей:
+
+   ```shell
+   d8 k get clusterrolebindings,rolebindings -A -o json \
+     | jq -r '.items[] | select(.roleRef.name | test("^d8:(manage|use):")) | "\(.kind) \(.metadata.namespace // "-") \(.metadata.name) -> \(.roleRef.name)"'
+   ```
+
+1. После обновления на DKP 1.78 переведите эти объекты RoleBinding и ClusterRoleBinding на новые имена ролей в течение одного релизного цикла. Поскольку поле `roleRef` неизменяемо, привязку нужно удалить и создать заново с новым именем роли.
+
+Порядок миграции кастомных ролей описан [в разделе «FAQ»](faq.html#как-перевести-кастомные-роли-на-новую-схему-в-dkp-178).
+
 <div style="height: 0;" id="устаревшая-ролевая-модель"></div>
 
 ## Текущая ролевая модель
@@ -394,17 +431,15 @@ delete,deletecollection:
     - apps/replicasets
     - cert-manager.io/certificaterequests
     - extensions/replicasets
-read:
-    - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
 read-write:
     - deckhouse.io/authorizationrules
+    - deckhouse.io/moduleconfigs
 write:
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
     - deckhouse.io/deckhousereleases
-    - deckhouse.io/moduleconfigs
     - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
@@ -434,7 +469,6 @@ read:
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
-    - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
     - install.istio.io/istiooperators
     - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
     - multitenancy.deckhouse.io/grantableclusterresourcereferences
@@ -446,6 +480,7 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
+    - deckhouse.io/moduleconfigs
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - multitenancy.deckhouse.io/clusterresourcegrantpolicies
@@ -461,7 +496,6 @@ write:
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
-    - deckhouse.io/moduleconfigs
     - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases

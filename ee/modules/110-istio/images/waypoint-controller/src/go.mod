@@ -3,6 +3,7 @@ module waypoint-controller
 go 1.25.0
 
 require (
+	golang.org/x/mod v0.33.0
 	k8s.io/api v0.35.1
 	k8s.io/apiextensions-apiserver v0.35.0
 	k8s.io/apimachinery v0.35.1
@@ -58,7 +59,6 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.50.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect

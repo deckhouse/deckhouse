@@ -1,0 +1,61 @@
+diff --git a/pkg/cloudprovider/huaweicloud/instances.go b/pkg/cloudprovider/huaweicloud/instances.go
+index 7dba24a..418ca19 100644
+--- a/pkg/cloudprovider/huaweicloud/instances.go
++++ b/pkg/cloudprovider/huaweicloud/instances.go
+@@ -54,6 +54,10 @@ func (i *Instances) NodeAddresses(ctx context.Context, name types.NodeName) ([]v
+ // NodeAddressesByProviderID returns the addresses of the specified instance.
+ func (i *Instances) NodeAddressesByProviderID(_ context.Context, providerID string) ([]v1.NodeAddress, error) {
+ 	klog.Infof("NodeAddressesByProviderID is called with provider ID %s", providerID)
++	if strings.HasPrefix(providerID, "static://") {
++		return nil, nil
++	}
++
+ 	instanceID, err := parseInstanceID(providerID)
+ 	if err != nil {
+ 		return nil, err
+@@ -146,6 +150,10 @@ func (i *Instances) CurrentNodeName(_ context.Context, hostname string) (types.N
+ // InstanceExistsByProviderID returns true if the instance for the given provider exists.
+ func (i *Instances) InstanceExistsByProviderID(_ context.Context, providerID string) (bool, error) {
+ 	klog.Infof("InstanceExistsByProviderID is called with provider ID %s", providerID)
++	if strings.HasPrefix(providerID, "static://") {
++		return true, nil
++	}
++
+ 	instanceID, err := parseInstanceID(providerID)
+ 	if err != nil {
+ 		return false, err
+@@ -165,6 +173,10 @@ func (i *Instances) InstanceExistsByProviderID(_ context.Context, providerID str
+ // InstanceShutdownByProviderID returns true if the instance is shutdown in cloudprovider
+ func (i *Instances) InstanceShutdownByProviderID(_ context.Context, providerID string) (bool, error) {
+ 	klog.Infof("InstanceShutdownByProviderID is called with provider ID %s", providerID)
++	if strings.HasPrefix(providerID, "static://") {
++		return false, nil
++	}
++
+ 	instanceID, err := parseInstanceID(providerID)
+ 	if err != nil {
+ 		return false, err
+@@ -180,6 +192,10 @@ func (i *Instances) InstanceShutdownByProviderID(_ context.Context, providerID s
+ // InstanceExists returns true if the instance for the given node exists according to the cloud provider.
+ func (i *Instances) InstanceExists(ctx context.Context, node *v1.Node) (bool, error) {
+ 	klog.Infof("InstanceExists is called with node %s", node.Name)
++	if strings.HasPrefix(node.Spec.ProviderID, "static://") {
++		return true, nil
++	}
++
+ 	_, err := i.ecsClient.GetByNodeName(node.Name)
+
+ 	if err != nil {
+@@ -201,6 +217,12 @@ func (i *Instances) InstanceShutdown(ctx context.Context, node *v1.Node) (bool,
+ // translated into specific fields in the Node object on registration.
+ func (i *Instances) InstanceMetadata(ctx context.Context, node *v1.Node) (*cloudprovider.InstanceMetadata, error) {
+ 	klog.Infof("InstanceMetadata is called with node %s", node.Name)
++	if strings.HasPrefix(node.Spec.ProviderID, "static://") {
++		return &cloudprovider.InstanceMetadata{
++			ProviderID: node.Spec.ProviderID,
++		}, nil
++	}
++
+ 	providerID := node.Spec.ProviderID
+ 	if providerID == "" {
+ 		klog.V(4).Infof("node.Spec.ProviderID is empty, query ECS details by hostname: %s", node.Name)
