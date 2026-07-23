@@ -1,6 +1,7 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "is_basic_auth_enabled" .) (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "is_basic_auth_enabled" .) .Values.userAuthn.publishAPI.enabled (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- $apiHost := include "helm_lib_module_public_domain" (list . "api") }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
