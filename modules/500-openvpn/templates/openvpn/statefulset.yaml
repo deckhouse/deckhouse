@@ -99,6 +99,7 @@ spec:
     metadata:
       labels:
         app: {{ .Chart.Name }}
+        security.deckhouse.io/security-policy-exception: openvpn
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/openvpn/configmap.yaml") . | sha256sum }}
     spec:
