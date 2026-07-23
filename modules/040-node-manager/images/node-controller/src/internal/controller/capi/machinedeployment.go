@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -46,6 +47,7 @@ import (
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -78,14 +80,33 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	})
 	// Re-enqueue only on spec/generation changes — status updates (e.g. from
 	// capi-controller-manager) must not trigger a re-apply, otherwise reconcile loops.
+	// Create events are also dropped: the only creator of these MachineDeployments is this
+	// controller's own SSA apply, and re-running the full render right after creating the
+	// object doubles the work of a NodeGroup burst for nothing. A deleted MD is restored
+	// via the Delete event; resyncInterval covers anything else.
+	mdEventFilter := predicate.And(
+		predicate.GenerationChangedPredicate{},
+		predicate.Funcs{CreateFunc: func(event.CreateEvent) bool { return false }},
+	)
 	w.Watches(mcmMD, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup),
-		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+		builder.WithPredicates(mdEventFilter))
 	w.Watches(&capiv1beta2.MachineDeployment{}, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup),
-		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+		builder.WithPredicates(mdEventFilter))
 	// A change to the cloud-provider secret (provider defaults, instanceClassKind, zones)
 	// can change every rendered MachineClass/MachineDeployment, so re-enqueue all NodeGroups.
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodeGroups),
 		builder.WithPredicates(predicate.NewPredicateFuncs(isCloudProviderSecret)))
+}
+
+// ForPredicates filters NodeGroup events: the rendered MachineDeployments depend only on
+// the spec (generation) and annotations (use-mcm, manual-rollout-id) — the engine is derived
+// in Reconcile, so status writes by the status controller and finalizer patches must not
+// re-enqueue every NodeGroup. resyncInterval still bounds staleness of anything filtered.
+func (r *MachineDeploymentReconciler) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)}
 }
 
 func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
@@ -139,7 +160,15 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	switch ng.Spec.NodeType {
 	case deckhousev1.NodeTypeCloudEphemeral:
-		switch ng.Status.Engine {
+		// Derive the engine instead of waiting for the status controller to publish
+		// status.engine: with the derived value the MachineDeployment is rendered in the
+		// first reconcile right after the NodeGroup is created. status.engine, once set,
+		// stays the pin (ComputeEngine prefers it).
+		cloudProvider, err := r.readCloudProviderTree(ctx)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		switch derived_status.ComputeEngine(ng, cloudProvider) {
 		case engineCAPI:
 			if err := r.reconcileCloudMDsRendered(ctx, ng); err != nil {
 				return ctrl.Result{}, err
@@ -149,7 +178,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				return ctrl.Result{}, err
 			}
 		default:
-			logger.V(1).Info("skipping: engine not set or unsupported", "engine", ng.Status.Engine)
+			logger.V(1).Info("skipping: engine not resolvable", "statusEngine", ng.Status.Engine)
 		}
 	case deckhousev1.NodeTypeStatic, deckhousev1.NodeTypeCloudStatic:
 		if ng.Spec.StaticInstances != nil {
