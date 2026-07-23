@@ -5,18 +5,20 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: basic-auth-proxy
+  name: kubernetes-api-basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    alb.network.deckhouse.io/rewrite-target: /\2
     alb.network.deckhouse.io/buffer-max-request-bytes: "10485760"
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
     alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
   {{- end }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   hostnames:
-  - {{ include "helm_lib_module_public_domain" (list . "api") }}
+  - {{ $apiHost }}
   parentRefs:
   - group: gateway.networking.k8s.io
     kind: ListenerSet
@@ -31,7 +33,11 @@ spec:
       port: 7332
       weight: 1
     matches:
-    - path:
+    - headers:
+      - name: Authorization
         type: RegularExpression
-        value: /basic-auth(/|$)(.*)
+        value: ^(.*)Basic(.*)$
+      path:
+        type: PathPrefix
+        value: /
 {{- end }}
