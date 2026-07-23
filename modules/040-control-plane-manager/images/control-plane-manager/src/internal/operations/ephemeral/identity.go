@@ -41,6 +41,10 @@ func (t tenantIdentity) configSecretName() string {
 	return constants.VirtualResourceName(constants.VirtualRenderedConfigSecretName, t.VCPName)
 }
 
+func (t tenantIdentity) kubeconfigSecretName() string {
+	return constants.VirtualResourceName(constants.VirtualKubeconfigSecretName, t.VCPName)
+}
+
 func (t tenantIdentity) apiServerServiceName() string {
 	return constants.VirtualResourceName(constants.VirtualAPIServerServiceName, t.VCPName)
 }

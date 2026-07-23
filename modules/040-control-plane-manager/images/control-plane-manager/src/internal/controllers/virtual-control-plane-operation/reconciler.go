@@ -319,10 +319,15 @@ func (r *reconciler) patchOperationStatus(ctx context.Context, operation, base *
 }
 
 func (r *reconciler) getSecrets(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (*corev1.Secret, *corev1.Secret, *corev1.Secret, error) {
+	vcpName := operation.Labels[constants.VirtualControlPlaneScopeLabelKey]
+	if vcpName == "" {
+		return nil, nil, nil, fmt.Errorf("operation %s/%s missing label %s", operation.Namespace, operation.Name, constants.VirtualControlPlaneScopeLabelKey)
+	}
+
 	configSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Namespace: operation.Namespace,
-		Name:      constants.VirtualRenderedConfigSecretName,
+		Name:      constants.VirtualResourceName(constants.VirtualRenderedConfigSecretName, vcpName),
 	}, configSecret); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get config secret: %v", err)
 	}
@@ -330,7 +335,7 @@ func (r *reconciler) getSecrets(ctx context.Context, operation *controlplanev1al
 	pkiSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Namespace: operation.Namespace,
-		Name:      constants.VirtualPKISecretName,
+		Name:      constants.VirtualResourceName(constants.VirtualPKISecretName, vcpName),
 	}, pkiSecret); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get pki secret: %v", err)
 	}
@@ -338,7 +343,7 @@ func (r *reconciler) getSecrets(ctx context.Context, operation *controlplanev1al
 	kubeconfigSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Namespace: operation.Namespace,
-		Name:      constants.VirtualKubeconfigSecretName,
+		Name:      constants.VirtualResourceName(constants.VirtualKubeconfigSecretName, vcpName),
 	}, kubeconfigSecret); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get kubeconfig secret: %v", err)
 	}
