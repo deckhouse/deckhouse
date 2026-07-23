@@ -111,7 +111,6 @@ func CacheOptions() (cache.Options, client.Options) {
 			// non-deterministically. Never add per-representation Secret entries here.
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"):                 machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):                     machineNS,
-			&capiv1beta2.MachineDeployment{}:                                                        machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "Cluster"):                               machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineHealthCheck"):                    machineNS,
 			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,

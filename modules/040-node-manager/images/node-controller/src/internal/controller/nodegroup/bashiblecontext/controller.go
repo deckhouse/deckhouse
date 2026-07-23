@@ -46,9 +46,10 @@ type Controller struct {
 	register.Base
 	apiReader client.Reader
 	clientset kubernetes.Interface
-	// lastAssemble implements the debounce. Every event maps to the single fixed "assemble"
-	// request key, and the workqueue never hands one key to two workers at once, so the
-	// field is only ever touched sequentially — no synchronization needed.
+	// lastAssemble implements the debounce. NodeGroup events enqueue per-name keys (only
+	// the secondary watches map to the fixed "assemble" key), so sequential access relies
+	// on the controller running with a single worker — enforced via
+	// --max-concurrent-reconciles=...,bashible-context=1 in the deployment.
 	lastAssemble time.Time
 }
 

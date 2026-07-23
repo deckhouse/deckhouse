@@ -84,7 +84,9 @@ spec:
         - --metrics-bind-address=127.0.0.1:4291
         - --health-probe-bind-address=0.0.0.0:4292
         - --webhook-port=4290
-        - --max-concurrent-reconciles=10
+        {{- /* bashible-context assembles one shared context from every NodeGroup and
+        debounces via per-instance state, so it must run with a single worker. */}}
+        - --max-concurrent-reconciles=10,bashible-context=1
         - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
         - -v=2
         livenessProbe:

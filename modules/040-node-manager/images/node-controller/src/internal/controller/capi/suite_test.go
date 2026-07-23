@@ -131,8 +131,8 @@ var _ = BeforeSuite(func() {
 	clusterCfg := &corev1.Secret{}
 	clusterCfg.Namespace = clusterConfigSecretNamespace
 	clusterCfg.Name = clusterConfigSecretName
-	// The derived-status service reads this secret as unstructured through an informer
-	// scoped by metadata.name, so the fixture name must match production exactly.
+	// The derived-status service and the pod-subnet reader resolve this secret by its
+	// production name, so the fixture name must match exactly.
 	clusterCfg.Data = map[string][]byte{
 		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\n"),
 	}

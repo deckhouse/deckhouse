@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -70,7 +69,6 @@ func init() {
 
 type MachineDeploymentReconciler struct {
 	BaseWithReader
-	providerTemplateCache sync.Map
 }
 
 func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
