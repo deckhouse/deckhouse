@@ -88,5 +88,6 @@ func nodeRef(cpn *controlplanev1alpha1.ControlPlaneNode) operations.NodeRef {
 		Name:      cpn.Name,
 		Type:      cpn.Labels[constants.ControlPlaneTypeLabelKey],
 		UID:       cpn.UID,
+		VCPName:   cpn.Labels[constants.VirtualControlPlaneScopeLabelKey],
 	}
 }

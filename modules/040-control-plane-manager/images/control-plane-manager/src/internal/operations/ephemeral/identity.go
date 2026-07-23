@@ -19,17 +19,32 @@ package ephemeral
 import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-	"strings"
 )
 
 type tenantIdentity struct {
-	Name      string
 	Namespace string
+	VCPName   string
 }
 
 func tenantIdentityFromOperation(operation *controlplanev1alpha1.ControlPlaneOperation) tenantIdentity {
 	return tenantIdentity{
-		Name:      strings.TrimPrefix(operation.Namespace, constants.VirtualControlPlaneNamespacePrefix),
 		Namespace: operation.Namespace,
+		VCPName:   operation.Labels[constants.VirtualControlPlaneScopeLabelKey],
 	}
+}
+
+func (t tenantIdentity) pkiSecretName() string {
+	return constants.VirtualResourceName(constants.VirtualPKISecretName, t.VCPName)
+}
+
+func (t tenantIdentity) configSecretName() string {
+	return constants.VirtualResourceName(constants.VirtualRenderedConfigSecretName, t.VCPName)
+}
+
+func (t tenantIdentity) kubeconfigSecretName() string {
+	return constants.VirtualResourceName(constants.VirtualKubeconfigSecretName, t.VCPName)
+}
+
+func (t tenantIdentity) apiServerServiceName() string {
+	return constants.VirtualResourceName(constants.VirtualAPIServerServiceName, t.VCPName)
 }

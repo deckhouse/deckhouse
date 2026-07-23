@@ -37,8 +37,11 @@ const (
 )
 
 func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (reconcile.Result, error) {
-	target, err := buildTargetPostgres(configSecret, vcp)
+	target, err := buildTargetPostgres(configSecret, vcp.Namespace)
 	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -52,6 +55,14 @@ func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1a
 	}
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("get Postgres: %w", err)
+	}
+
+	if ownerReferencesDiffer(current, target) {
+		base := current.DeepCopy()
+		syncOwnerReferences(current, target)
+		if err := r.client.Patch(ctx, current, client.MergeFrom(base)); err != nil {
+			return reconcile.Result{}, fmt.Errorf("patch Postgres ownerRefs: %w", err)
+		}
 	}
 
 	if !isPostgresAvailable(current) {
@@ -68,7 +79,7 @@ func postgres() *unstructured.Unstructured {
 	return obj
 }
 
-func buildTargetPostgres(configSecret *corev1.Secret, vcp *controlplanev1alpha1.VirtualControlPlane) (*unstructured.Unstructured, error) {
+func buildTargetPostgres(configSecret *corev1.Secret, namespace string) (*unstructured.Unstructured, error) {
 	raw, ok := configSecret.Data[datastoreManifestKey]
 	if !ok {
 		return nil, fmt.Errorf("config Secret missing %q", datastoreManifestKey)
@@ -78,7 +89,7 @@ func buildTargetPostgres(configSecret *corev1.Secret, vcp *controlplanev1alpha1.
 	if err := yaml.Unmarshal(raw, obj); err != nil {
 		return nil, fmt.Errorf("decode datastore manifest: %w", err)
 	}
-	obj.SetNamespace(vcpNamespace(vcp))
+	obj.SetNamespace(namespace)
 
 	return obj, nil
 }

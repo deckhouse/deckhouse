@@ -46,8 +46,9 @@ type tenantClientSet struct {
 }
 
 func (r *reconciler) tenantKubeconfigRaw(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) ([]byte, error) {
-	ns := vcpNamespace(vcp)
-	sec, err := r.getSecret(ctx, ns, constants.VirtualAdminKubeconfigSecretName)
+	ns := vcp.Namespace
+	name := constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name)
+	sec, err := r.getSecret(ctx, ns, name)
 	if err != nil {
 		return nil, fmt.Errorf("get admin kubeconfig secret: %w", err)
 	}
@@ -71,7 +72,7 @@ func (r *reconciler) tenantClients(ctx context.Context, vcp *controlplanev1alpha
 	}
 	hash := sha256.Sum256(raw)
 
-	if v, ok := r.tenantClientSets.Load(vcp.Name); ok {
+	if v, ok := r.tenantClientSets.Load(tenantClientCacheKey(vcp.Namespace, vcp.Name)); ok {
 		if cached := v.(*tenantClientSet); cached.kubeconfigHash == hash {
 			return cached.clientset, cached.client, nil
 		}
@@ -95,7 +96,7 @@ func (r *reconciler) tenantClients(ctx context.Context, vcp *controlplanev1alpha
 		return nil, nil, fmt.Errorf("build tenant client: %w", err)
 	}
 
-	r.tenantClientSets.Store(vcp.Name, &tenantClientSet{
+	r.tenantClientSets.Store(tenantClientCacheKey(vcp.Namespace, vcp.Name), &tenantClientSet{
 		kubeconfigHash: hash,
 		clientset:      cs,
 		client:         c,
@@ -104,6 +105,10 @@ func (r *reconciler) tenantClients(ctx context.Context, vcp *controlplanev1alpha
 }
 
 // forgetTenantClients drops cached tenant clients for a deleted VirtualControlPlane.
-func (r *reconciler) forgetTenantClients(vcpName string) {
-	r.tenantClientSets.Delete(vcpName)
+func (r *reconciler) forgetTenantClients(namespace, name string) {
+	r.tenantClientSets.Delete(tenantClientCacheKey(namespace, name))
+}
+
+func tenantClientCacheKey(namespace, name string) string {
+	return namespace + "/" + name
 }

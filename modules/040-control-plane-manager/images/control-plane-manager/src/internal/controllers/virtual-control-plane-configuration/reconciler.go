@@ -43,7 +43,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -67,17 +66,13 @@ type reconciler struct {
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log.FromContext(ctx).Info("Reconcile started")
 
-	vcp, err := r.getVirtualControlPlane(ctx, req.Name)
+	vcp, err := r.getVirtualControlPlane(ctx, req.NamespacedName)
 	if apierrors.IsNotFound(err) {
-		r.forgetTenantClients(req.Name)
+		r.forgetTenantClients(req.Namespace, req.Name)
 		return reconcile.Result{}, nil
 	}
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("get VirtualControlPlane: %w", err)
-	}
-
-	if res, err := r.reconcileNamespace(ctx, vcp); err != nil || !res.IsZero() {
-		return res, err
 	}
 
 	albVIP, err := r.albVIP(ctx, vcp)
@@ -162,67 +157,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
-func (r *reconciler) reconcileNamespace(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
-	target := buildTargetNamespace(vcp)
-
-	current, err := r.getNamespace(ctx, target.Name)
-	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		return reconcile.Result{}, r.createNamespace(ctx, target)
-	}
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("get Namespace: %w", err)
-	}
-
-	if isNamespaceInSync(current, target) {
-		return reconcile.Result{}, nil
-	}
-
-	base := current.DeepCopy()
-	applyNamespaceTarget(current, target)
-
-	return reconcile.Result{}, r.patchNamespace(ctx, base, current)
-}
-
-func buildTargetNamespace(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Namespace {
-	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: vcpNamespace(vcp),
-			Labels: map[string]string{
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
-			},
-		},
-	}
-}
-
-func isNamespaceInSync(current, target *corev1.Namespace) bool {
-	for key, value := range target.Labels {
-		if current.Labels[key] != value {
-			return false
-		}
-	}
-	return true
-}
-
-func applyNamespaceTarget(current, target *corev1.Namespace) {
-	if current.Labels == nil {
-		current.Labels = map[string]string{}
-	}
-
-	maps.Copy(current.Labels, target.Labels)
-}
-
 func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Service, reconcile.Result, error) {
 	target := buildTargetAPIServerService(vcp)
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return nil, reconcile.Result{}, err
+	}
 
 	current, err := r.getService(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return nil, reconcile.Result{}, err
-		}
 		if err := r.createService(ctx, target); err != nil {
 			return nil, reconcile.Result{}, err
 		}
@@ -248,21 +190,21 @@ func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *control
 }
 
 func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
-	namespace := vcpNamespace(vcp)
-
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kube-apiserver",
-			Namespace: namespace,
+			Name:      constants.VirtualResourceName(constants.VirtualAPIServerServiceName, vcp.Name),
+			Namespace: vcp.Namespace,
 			Labels: map[string]string{
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			// Always ClusterIP: external exposure is handled by the per-VCP ALB (TLSRoute backend), not the Service.
 			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
-				"app": "kube-apiserver",
+				"app":                                      "kube-apiserver",
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 			Ports: []corev1.ServicePort{
 				{
@@ -285,7 +227,8 @@ func isAPIServerServiceInSync(current, target *corev1.Service) bool {
 
 	return current.Spec.Type == target.Spec.Type &&
 		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
-		equality.Semantic.DeepEqual(current.Spec.Ports, target.Spec.Ports)
+		equality.Semantic.DeepEqual(current.Spec.Ports, target.Spec.Ports) &&
+		equality.Semantic.DeepEqual(current.OwnerReferences, target.OwnerReferences)
 }
 
 func applyAPIServerServiceTarget(current, target *corev1.Service) {
@@ -293,18 +236,12 @@ func applyAPIServerServiceTarget(current, target *corev1.Service) {
 		current.Labels = map[string]string{}
 	}
 
-	for key, value := range target.Labels {
-		current.Labels[key] = value
-	}
+	maps.Copy(current.Labels, target.Labels)
 
 	current.Spec.Type = target.Spec.Type
 	current.Spec.Selector = target.Spec.Selector
 	current.Spec.Ports = target.Spec.Ports
-}
-
-// vcpNamespace is the parent-cluster namespace that holds a VCP's control-plane objects.
-func vcpNamespace(vcp *controlplanev1alpha1.VirtualControlPlane) string {
-	return constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	current.OwnerReferences = target.OwnerReferences
 }
 
 // virtualAPIServerPort is the secure port the tenant kube-apiserver listens on.
@@ -331,6 +268,9 @@ func apiServerCertExtraSANs(vcp *controlplanev1alpha1.VirtualControlPlane) []str
 
 func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service, albVIP string) (*corev1.Secret, reconcile.Result, error) {
 	target := buildTargetPKISecret(vcp)
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return nil, reconcile.Result{}, err
+	}
 
 	extraSANs := apiServerCertExtraSANs(vcp)
 	if albVIP != "" {
@@ -345,9 +285,6 @@ func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1
 		}
 		target.Data = data
 
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return nil, reconcile.Result{}, err
-		}
 		if err := r.createSecret(ctx, target); err != nil {
 			return nil, reconcile.Result{}, err
 		}
@@ -364,26 +301,25 @@ func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1
 	}
 	target.Data = data
 
-	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+	if equality.Semantic.DeepEqual(current.Data, target.Data) && !ownerReferencesDiffer(current, target) {
 		return current, reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()
 	current.Data = target.Data
+	syncOwnerReferences(current, target)
 
 	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
 func buildTargetPKISecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	name := constants.VirtualPKISecretName
-	namespace := vcpNamespace(vcp)
-
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      constants.VirtualResourceName(constants.VirtualPKISecretName, vcp.Name),
+			Namespace: vcp.Namespace,
 			Labels: map[string]string{
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -408,9 +344,8 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 		}
 	}
 
-	nodeName := vcpNamespace(vcp)
 	if _, err := pki.CreatePKIBundle(
-		nodeName,
+		vcp.Namespace,
 		constants.DefaultTenantClusterDomain,
 		advertiseAddress,
 		constants.DefaultTenantServiceSubnetCIDR,
@@ -464,7 +399,8 @@ func (r *reconciler) reconcileKubeconfigSecret(
 	pkiSecret *corev1.Secret,
 ) (*corev1.Secret, reconcile.Result, error) {
 	endpoint := apiServerHTTPSURL(apiserverService.Spec.ClusterIP)
-	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualKubeconfigSecretName, componentKubeconfigFiles, endpoint)
+	name := constants.VirtualResourceName(constants.VirtualKubeconfigSecretName, vcp.Name)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, componentKubeconfigFiles, endpoint)
 }
 
 func (r *reconciler) reconcileAdminKubeconfigSecret(
@@ -474,7 +410,8 @@ func (r *reconciler) reconcileAdminKubeconfigSecret(
 	pkiSecret *corev1.Secret,
 	endpoint string,
 ) (*corev1.Secret, reconcile.Result, error) {
-	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, constants.VirtualAdminKubeconfigSecretName, adminKubeconfigFiles, endpoint)
+	name := constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, adminKubeconfigFiles, endpoint)
 }
 
 func (r *reconciler) reconcileKubeconfigSecretFiles(
@@ -487,6 +424,9 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 	endpoint string,
 ) (*corev1.Secret, reconcile.Result, error) {
 	target := buildTargetKubeconfigSecret(vcp, name)
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return nil, reconcile.Result{}, err
+	}
 
 	data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files, endpoint)
 	if err != nil {
@@ -496,29 +436,27 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return nil, reconcile.Result{}, err
-		}
 		return target, reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
 		return nil, reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
 	}
 
-	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+	if equality.Semantic.DeepEqual(current.Data, target.Data) && !ownerReferencesDiffer(current, target) {
 		return current, reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()
 	current.Data = target.Data
+	syncOwnerReferences(current, target)
 
 	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
 func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, endpoint string) error {
 	ref := &controlplanev1alpha1.VirtualControlPlaneKubeconfigSecretRef{
-		Namespace: vcpNamespace(vcp),
-		Name:      constants.VirtualAdminKubeconfigSecretName,
+		Namespace: vcp.Namespace,
+		Name:      constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name),
 	}
 
 	if vcp.Status.Endpoint == endpoint &&
@@ -535,14 +473,13 @@ func (r *reconciler) reconcileStatus(ctx context.Context, vcp *controlplanev1alp
 }
 
 func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane, name string) *corev1.Secret {
-	namespace := vcpNamespace(vcp)
-
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: vcp.Namespace,
 			Labels: map[string]string{
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -640,12 +577,12 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 
 	target := buildTargetConfigSecret(vcp)
 	target.Data = data
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return nil, reconcile.Result{}, err
+	}
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return nil, reconcile.Result{}, err
-		}
 		if err := r.createSecret(ctx, target); err != nil {
 			return nil, reconcile.Result{}, err
 		}
@@ -655,25 +592,25 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 		return nil, reconcile.Result{}, fmt.Errorf("get rendered config Secret: %w", err)
 	}
 
-	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+	if equality.Semantic.DeepEqual(current.Data, target.Data) && !ownerReferencesDiffer(current, target) {
 		return current, reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()
 	current.Data = target.Data
+	syncOwnerReferences(current, target)
 
 	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
 func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	namespace := vcpNamespace(vcp)
-
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.VirtualRenderedConfigSecretName,
-			Namespace: namespace,
+			Name:      constants.VirtualResourceName(constants.VirtualRenderedConfigSecretName, vcp.Name),
+			Namespace: vcp.Namespace,
 			Labels: map[string]string{
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -694,6 +631,10 @@ func (r *reconciler) reconcileControlPlaneNodes(
 	targetNames := make(map[string]struct{}, len(targets))
 	for _, target := range targets {
 		targetNames[target.Name] = struct{}{}
+
+		if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 
 		current, err := r.getControlPlaneNode(ctx, target.Namespace, target.Name)
 		if apierrors.IsNotFound(err) {
@@ -796,10 +737,11 @@ func buildTargetControlPlaneNode(
 	return &controlplanev1alpha1.ControlPlaneNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      computeControlPlaneNodeName(vcp, ordinal),
-			Namespace: vcpNamespace(vcp),
+			Namespace: vcp.Namespace,
 			Labels: map[string]string{
 				constants.HeritageLabelKey:                       constants.HeritageLabelValue,
 				constants.ControlPlaneTypeLabelKey:               string(constants.ControlPlaneTypeVirtual),
+				constants.VirtualControlPlaneScopeLabelKey:       vcp.Name,
 				constants.VirtualControlPlaneNodeOrdinalLabelKey: fmt.Sprintf("%d", ordinal),
 			},
 		},
@@ -808,7 +750,7 @@ func buildTargetControlPlaneNode(
 }
 
 func computeControlPlaneNodeName(vcp *controlplanev1alpha1.VirtualControlPlane, ordinal int32) string {
-	return fmt.Sprintf("%s%s-%d", constants.VirtualControlPlaneNamespacePrefix, vcp.Name, ordinal)
+	return fmt.Sprintf("%s-%d", vcp.Name, ordinal)
 }
 
 func isControlPlaneNodeInSync(current, target *controlplanev1alpha1.ControlPlaneNode) bool {
@@ -860,25 +802,10 @@ func controlPlaneNodeOrdinal(cpn *controlplanev1alpha1.ControlPlaneNode) int32 {
 
 // Kubernetes I/O helpers.
 // VirtualControlPlane
-func (r *reconciler) getVirtualControlPlane(ctx context.Context, name string) (*controlplanev1alpha1.VirtualControlPlane, error) {
+func (r *reconciler) getVirtualControlPlane(ctx context.Context, key client.ObjectKey) (*controlplanev1alpha1.VirtualControlPlane, error) {
 	vcp := &controlplanev1alpha1.VirtualControlPlane{}
-	err := r.client.Get(ctx, client.ObjectKey{Name: name}, vcp)
+	err := r.client.Get(ctx, key, vcp)
 	return vcp, err
-}
-
-// Namespace
-func (r *reconciler) getNamespace(ctx context.Context, name string) (*corev1.Namespace, error) {
-	ns := &corev1.Namespace{}
-	err := r.client.Get(ctx, client.ObjectKey{Name: name}, ns)
-	return ns, err
-}
-
-func (r *reconciler) createNamespace(ctx context.Context, ns *corev1.Namespace) error {
-	return r.client.Create(ctx, ns)
-}
-
-func (r *reconciler) patchNamespace(ctx context.Context, base, ns *corev1.Namespace) error {
-	return r.client.Patch(ctx, ns, client.MergeFrom(base))
 }
 
 // Secret
@@ -941,7 +868,10 @@ func (r *reconciler) getControlPlaneNodesByVirtualControlPlane(
 	err := r.client.List(
 		ctx,
 		cpnList,
-		client.InNamespace(constants.VirtualControlPlaneNamespacePrefix+vcp.Name),
+		client.InNamespace(vcp.Namespace),
+		client.MatchingLabels{
+			constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
+		},
 	)
 	if err != nil {
 		return nil, err

@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -100,22 +99,24 @@ func (r *reconciler) reconcileJoinScript(
 	)
 	rendered := replacer.Replace(string(tpl))
 
-	ns := vcpNamespace(vcp)
 	target := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.VirtualJoinScriptSecretName,
-			Namespace: ns,
-			Labels:    map[string]string{constants.HeritageLabelKey: constants.HeritageLabelValue},
+			Name:      constants.VirtualResourceName(constants.VirtualJoinScriptSecretName, vcp.Name),
+			Namespace: vcp.Namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
+			},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{"join.sh": []byte(rendered)},
 	}
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
 
-	current, err := r.getSecret(ctx, ns, target.Name)
+	current, err := r.getSecret(ctx, vcp.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
 		return reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
@@ -123,6 +124,7 @@ func (r *reconciler) reconcileJoinScript(
 	}
 	base := current.DeepCopy()
 	current.Data = target.Data
+	syncOwnerReferences(current, target)
 	return reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 

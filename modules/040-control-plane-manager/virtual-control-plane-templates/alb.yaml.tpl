@@ -5,7 +5,7 @@ metadata:
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   gatewayName: ${VCP_NAME}
   inlet:
@@ -20,11 +20,11 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: konnectivity-egress
+  name: ${KONNECTIVITY_EGRESS_CM_NAME}
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 data:
   egress-selector-configuration.yaml: |
     apiVersion: apiserver.k8s.io/v1beta1
@@ -41,15 +41,16 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: konnectivity-server
+  name: ${KONNECTIVITY_SERVER_SERVICE_NAME}
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   type: ClusterIP
   selector:
     app: kube-apiserver
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
   ports:
   - name: agent
     port: 8132
@@ -63,7 +64,7 @@ metadata:
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   parentRef:
     name: ${VCP_NAME}
@@ -84,14 +85,14 @@ spec:
 ---
 # Pure L4 route for the apiserver: matches by port only (no SNI), so it serves both external
 # kubelet traffic (api.<vcp>:6443) and in-cluster clients that dial the ClusterIP by IP.
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: TCPRoute
 metadata:
   name: ${VCP_NAME}-api
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   parentRefs:
   - name: ${VCP_NAME}
@@ -100,7 +101,7 @@ spec:
     port: 6443
   rules:
   - backendRefs:
-    - name: kube-apiserver
+    - name: ${KUBE_APISERVER_SERVICE_NAME}
       port: 6443
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -110,7 +111,7 @@ metadata:
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   parentRefs:
   - name: ${VCP_NAME}
@@ -122,7 +123,7 @@ spec:
   - ${VCP_KONN_HOST}
   rules:
   - backendRefs:
-    - name: konnectivity-server
+    - name: ${KONNECTIVITY_SERVER_SERVICE_NAME}
       port: 8132
 ---
 # SNI passthrough to RPP:443 (kube-rbac-proxy, token-gated). The token is the gate.
@@ -133,7 +134,7 @@ metadata:
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   parentRefs:
   - name: ${VCP_NAME}
@@ -158,7 +159,7 @@ metadata:
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   parentRefs:
   - name: ${VCP_NAME}
@@ -184,7 +185,7 @@ metadata:
   namespace: d8-cloud-instance-manager
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   from:
   - group: gateway.networking.k8s.io

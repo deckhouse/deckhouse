@@ -35,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -155,7 +154,7 @@ func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc clien
 		return fmt.Errorf("get parent registry secret: %w", err)
 	}
 
-	target := buildTargetRegistrySecret(parent, deckhouseSystemNamespace)
+	target := buildTargetRegistrySecret(parent, deckhouseSystemNamespace, deckhouseRegistrySecretName)
 	// The deckhouse module's chart renders this secret too; without helm
 	// adoption metadata the release install fails with "invalid ownership
 	// metadata" (same pattern as dhctl's DeckhouseRegistrySecret).
@@ -200,11 +199,11 @@ func isMetadataSubset(target, current map[string]string) bool {
 }
 
 // buildTargetRegistrySecret builds a copy of the parent cluster's
-// deckhouse-registry Secret for the given namespace.
-func buildTargetRegistrySecret(parent *corev1.Secret, namespace string) *corev1.Secret {
+// deckhouse-registry Secret for the given namespace and name.
+func buildTargetRegistrySecret(parent *corev1.Secret, namespace, name string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deckhouseRegistrySecretName,
+			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
 				constants.HeritageLabelKey: constants.HeritageLabelValue,
@@ -360,26 +359,34 @@ func (r *reconciler) reconcileParentRegistrySecret(ctx context.Context, vcp *con
 		return fmt.Errorf("get parent registry secret: %w", err)
 	}
 
-	target := buildTargetRegistrySecret(parent, constants.VirtualControlPlaneNamespacePrefix+vcp.Name)
+	target := buildTargetRegistrySecret(
+		parent,
+		vcp.Namespace,
+		constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name),
+	)
+	target.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return err
+	}
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return err
-		}
-
 		return r.createSecret(ctx, target)
 	}
 	if err != nil {
 		return err
 	}
 
-	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+	if equality.Semantic.DeepEqual(current.Data, target.Data) &&
+		equality.Semantic.DeepEqual(current.Labels, target.Labels) &&
+		!ownerReferencesDiffer(current, target) {
 		return nil
 	}
 
 	base := current.DeepCopy()
 	current.Data = target.Data
+	current.Labels = target.Labels
+	syncOwnerReferences(current, target)
 
 	return r.patchSecret(ctx, base, current)
 }
@@ -398,7 +405,7 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 	if err != nil {
 		return err
 	}
-	if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
 		return err
 	}
 
@@ -410,12 +417,16 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 		return err
 	}
 
-	if equality.Semantic.DeepEqual(current.Spec, target.Spec) {
+	if equality.Semantic.DeepEqual(current.Spec, target.Spec) &&
+		equality.Semantic.DeepEqual(current.Labels, target.Labels) &&
+		!ownerReferencesDiffer(current, target) {
 		return nil
 	}
 
 	base := current.DeepCopy()
 	current.Spec = target.Spec
+	current.Labels = target.Labels
+	syncOwnerReferences(current, target)
 
 	return r.patchDeployment(ctx, base, current)
 }
@@ -425,10 +436,8 @@ func buildTargetDeckhouseDeployment(
 	image string,
 	albVIP string,
 ) (*appsv1.Deployment, error) {
-	namespace := vcpNamespace(vcp)
-
 	rendered := strings.NewReplacer(
-		"${NAMESPACE}", namespace,
+		"${NAMESPACE}", vcp.Namespace,
 		"${IMAGE_DECKHOUSE}", image,
 		"${VCP_API_VIP}", albVIP,
 	).Replace(deckhouseDeploymentYAML)
@@ -436,6 +445,41 @@ func buildTargetDeckhouseDeployment(
 	deployment := &appsv1.Deployment{}
 	if err := yaml.Unmarshal([]byte(rendered), deployment); err != nil {
 		return nil, fmt.Errorf("unmarshal deckhouse Deployment: %w", err)
+	}
+
+	registrySecret := constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name)
+	adminKubeconfigSecret := constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name)
+
+	deployment.Name = constants.VirtualResourceName(deckhouseDeploymentName, vcp.Name)
+	if deployment.Labels == nil {
+		deployment.Labels = map[string]string{}
+	}
+	deployment.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+
+	if deployment.Spec.Selector == nil {
+		deployment.Spec.Selector = &metav1.LabelSelector{}
+	}
+	if deployment.Spec.Selector.MatchLabels == nil {
+		deployment.Spec.Selector.MatchLabels = map[string]string{}
+	}
+	deployment.Spec.Selector.MatchLabels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+
+	if deployment.Spec.Template.Labels == nil {
+		deployment.Spec.Template.Labels = map[string]string{}
+	}
+	deployment.Spec.Template.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+
+	for i := range deployment.Spec.Template.Spec.ImagePullSecrets {
+		if deployment.Spec.Template.Spec.ImagePullSecrets[i].Name == deckhouseRegistrySecretName {
+			deployment.Spec.Template.Spec.ImagePullSecrets[i].Name = registrySecret
+		}
+	}
+
+	for i := range deployment.Spec.Template.Spec.Volumes {
+		vol := &deployment.Spec.Template.Spec.Volumes[i]
+		if vol.Secret != nil && vol.Secret.SecretName == constants.VirtualAdminKubeconfigSecretName {
+			vol.Secret.SecretName = adminKubeconfigSecret
+		}
 	}
 
 	return deployment, nil

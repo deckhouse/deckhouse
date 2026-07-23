@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cilium-config
+  name: ${CILIUM_CONFIG_NAME}
   namespace: ${NAMESPACE}
 data:
 
@@ -261,7 +261,7 @@ data:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: cilium-operator
+  name: ${CILIUM_OPERATOR_NAME}
   namespace: ${NAMESPACE}
 automountServiceAccountToken: false
 ---
@@ -269,11 +269,11 @@ automountServiceAccountToken: false
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cilium-operator
+  name: ${CILIUM_OPERATOR_NAME}
   namespace: ${NAMESPACE}
   labels:
     io.cilium/app: operator
-    name: cilium-operator
+    name: ${CILIUM_OPERATOR_NAME}
     app.kubernetes.io/part-of: cilium
     app.kubernetes.io/name: cilium-operator
 spec:
@@ -283,7 +283,7 @@ spec:
   selector:
     matchLabels:
       io.cilium/app: operator
-      name: cilium-operator
+      name: ${CILIUM_OPERATOR_NAME}
   # ensure operator update on single node k8s clusters, by using rolling update with maxUnavailable=100% in case
   # of one replica and no user configured Recreate strategy.
   # otherwise an update might get stuck due to the default maxUnavailable=50% in combination with the
@@ -300,7 +300,7 @@ spec:
         prometheus.io/scrape: "true"
       labels:
         io.cilium/app: operator
-        name: cilium-operator
+        name: ${CILIUM_OPERATOR_NAME}
         app.kubernetes.io/part-of: cilium
         app.kubernetes.io/name: cilium-operator
     spec:
@@ -333,7 +333,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: debug
-              name: cilium-config
+              name: ${CILIUM_CONFIG_NAME}
               optional: true
         ports:
         - name: health
@@ -376,7 +376,7 @@ spec:
         terminationMessagePolicy: FallbackToLogsOnError
       restartPolicy: Always
       priorityClassName: system-cluster-critical
-      serviceAccountName: "cilium-operator"
+      serviceAccountName: "${CILIUM_OPERATOR_NAME}"
       automountServiceAccountToken: false
       # In HA mode, cilium-operator pods must not be scheduled on the same
       # node as they will clash with each other.
@@ -405,10 +405,10 @@ spec:
         # To read the configuration from the config map
       - name: cilium-config-path
         configMap:
-          name: cilium-config
+          name: ${CILIUM_CONFIG_NAME}
       - name: nested-kubeconfig
         secret:
-          secretName: d8-admin-kubeconfig-virtual
+          secretName: ${ADMIN_KUBECONFIG_SECRET_NAME}
           items:
           - key: super-admin.conf
             path: kubeconfig

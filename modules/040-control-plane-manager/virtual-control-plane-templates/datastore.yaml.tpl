@@ -1,18 +1,18 @@
 apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: Postgres
 metadata:
-  name: d8-datastore-virtual
+  name: ${DATASTORE_NAME}
   namespace: ${NAMESPACE}
   labels:
     heritage: deckhouse
-    control-plane.deckhouse.io/vcp: ${VCP_NAME}
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
 spec:
   postgresClassName: default
   type: Standalone
   users:
   - name: kine
     role: rw
-    storeCredsToSecret: d8-datastore-creds-virtual
+    storeCredsToSecret: ${DATASTORE_CREDS_SECRET_NAME}
   databases:
   - name: kine
   instance:
