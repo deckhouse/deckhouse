@@ -127,6 +127,8 @@ module "static-node" {
   run_policy                 = local.run_policy
   cpu                        = local.cpu
   ssh_public_key             = local.ssh_public_key
+  ssh_ca_keys                = local.ssh_ca_keys
+  additional_users           = local.additional_users
   hostname                   = local.hostname
   cluster_uuid               = local.cluster_uuid
   additional_labels          = local.additional_labels

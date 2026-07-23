@@ -23,6 +23,16 @@ properties:
         type: boolean
       parameters:
         properties:
+          additionalUsers:
+            description: |
+              Список дополнительных имён ОС-пользователей, которые будут созданы на каждом узле (в дополнение к пользователю по умолчанию из используемого образа), с passwordless `sudo`. Удобно использовать вместе с `sshCAKeys`, чтобы заходить под личным именем пользователя вместо пользователя по умолчанию из образа с самого первого запуска, без сборки собственного образа.
+
+              У этих пользователей нет собственных ключей: доступ к ним целиком зависит от `sshCAKeys` (`TrustedUserCAKeys` настроен на уровне узла, а не пользователя) либо от ключа/сертификата, добавленного отдельно.
+
+              Имя `default` зарезервировано (оно уже означает пользователя по умолчанию из образа) и не может быть использовано здесь.
+            items:
+              type: string
+            type: array
           ipAddresses:
             additionalProperties:
               items:
@@ -48,6 +58,12 @@ properties:
 
               > Чтобы установить требуемый лейбл для узла DVP, следуйте [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             type: string
+          sshCAKeys:
+            description: |
+              Список публичных ключей SSH CA, доверенных для проверки короткоживущих пользовательских сертификатов. При указании узлы будут доверять сертификатам, подписанным этими CA, в дополнение к (а не вместо) `sshPublicKey`.
+            items:
+              type: string
+            type: array
           sshPublicKey:
             description: |
               Публичный ключ для доступа на узлы.

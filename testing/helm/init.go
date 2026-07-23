@@ -201,6 +201,19 @@ func ManifestStringToUnstructed(doc string) *unstructured.Unstructured {
 	return unstructuredObj
 }
 
+// ValidateValues validates the current values against the module's OpenAPI
+// contract and returns the error, unlike HelmRender() which hard-asserts on
+// it. Use this to test that a malformed/malicious value is rejected by
+// ModuleConfig values validation, without HelmRender() aborting the spec.
+func (hec *Config) ValidateValues() error {
+	hec.values.SetByPath("global.modulesImages.registry.base", "registry.example.com")
+	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.cert", "test")
+	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.key", "test")
+	hec.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))
+
+	return hec.ValuesValidator.ValidateHelmValues(hec.moduleName, string(hec.values.JSONRepr))
+}
+
 func (hec *Config) HelmRender(options ...Option) {
 	opts := &configOptions{}
 
@@ -208,14 +221,8 @@ func (hec *Config) HelmRender(options ...Option) {
 		opt(opts)
 	}
 
-	// set some common values
-	hec.values.SetByPath("global.modulesImages.registry.base", "registry.example.com")
-	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.cert", "test")
-	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.key", "test")
-	hec.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))
-
 	// Validate Helm values
-	err := hec.ValuesValidator.ValidateHelmValues(hec.moduleName, string(hec.values.JSONRepr))
+	err := hec.ValidateValues()
 	Expect(err).To(Not(HaveOccurred()), "Helm values should conform to the contract in openapi/values.yaml")
 
 	hec.objectStore = make(object_store.ObjectStore)
