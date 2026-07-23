@@ -55,8 +55,6 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-#  - apk add --no-cache make bash binutils
   - pm install make bash binutils
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
