@@ -101,9 +101,9 @@ type OpenAPIV3Schema struct {
 	// +optional
 	XUIOrder *int64 `json:"x-deckhouse-ui-order,omitempty"`
 
-	// x-deckhouse-ui-validation-description overrides the validation error.
+	// x-deckhouse-ui-validation-message overrides the validation error.
 	// +optional
-	XUIValidationDescription string `json:"x-deckhouse-ui-validation-description,omitempty"`
+	XUIValidationMessage string `json:"x-deckhouse-ui-validation-message,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema

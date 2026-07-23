@@ -172,10 +172,10 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 		Type: "object",
 		Properties: map[string]OpenAPIV3Schema{
 			"storageClass": {
-				Type:                     "string",
-				XGrant:                   "storageclasses",
-				XUIOrder:                 int64Ptr(0),
-				XUIValidationDescription: "must reference an existing StorageClass",
+				Type:                 "string",
+				XGrant:               "storageclasses",
+				XUIOrder:             int64Ptr(0),
+				XUIValidationMessage: "must reference an existing StorageClass",
 			},
 			"replicas": {
 				Type:        "integer",
@@ -209,8 +209,8 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	if sc.XUIOrder == nil || *sc.XUIOrder != 0 {
 		t.Errorf("x-deckhouse-ui-order: explicit 0 not preserved")
 	}
-	if sc.XUIValidationDescription != "must reference an existing StorageClass" {
-		t.Errorf("x-deckhouse-ui-validation-description: got %q", sc.XUIValidationDescription)
+	if sc.XUIValidationMessage != "must reference an existing StorageClass" {
+		t.Errorf("x-deckhouse-ui-validation-message: got %q", sc.XUIValidationMessage)
 	}
 
 	rep, ok := restored.Properties["replicas"]
@@ -493,10 +493,10 @@ func realModuleSchema() *OpenAPIV3Schema {
 				},
 			},
 			"logLevel": {
-				Type:                     "string",
-				Pattern:                  "^(debug|info|warn|error)$",
-				Default:                  jsonPtr(`"info"`),
-				XUIValidationDescription: "log level must be one of: debug, info, warn, error",
+				Type:                 "string",
+				Pattern:              "^(debug|info|warn|error)$",
+				Default:              jsonPtr(`"info"`),
+				XUIValidationMessage: "log level must be one of: debug, info, warn, error",
 			},
 		},
 		XValidations: []ValidationRule{
@@ -576,8 +576,8 @@ func TestRealModuleSchema_roundtrip(t *testing.T) {
 	}
 
 	logLevel, ok := restored.Properties["logLevel"]
-	if !ok || logLevel.XUIValidationDescription != "log level must be one of: debug, info, warn, error" {
-		t.Errorf("logLevel ui-validation-description lost")
+	if !ok || logLevel.XUIValidationMessage != "log level must be one of: debug, info, warn, error" {
+		t.Errorf("logLevel ui-validation-message lost")
 	}
 
 	if len(restored.XValidations) != 1 {
