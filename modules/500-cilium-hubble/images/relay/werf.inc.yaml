@@ -61,7 +61,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   #
   - cd /src/cilium
-  - go mod vendor && go mod download -x
+  - go mod tidy && go mod download -x
   - make DESTDIR=/out/linux/amd64 build-container-hubble-relay install-container-binary-hubble-relay
   - chown 64535:64535 /out/linux/amd64/usr/bin/hubble-relay
   - chmod 0700 /out/linux/amd64/usr/bin/hubble-relay
