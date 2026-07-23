@@ -31,7 +31,7 @@ Using the `--scope` flag, you can define namespaces the resources will be return
 | `accessible` | Objects from every namespace where the user's RBAC allows the given operation on the given resource |
 | `projects` | Objects from namespaces belonging to any [project](/modules/multitenancy-manager/cr.html#project) |
 | `project:<name>` | Objects from the namespaces of one specific project |
-| `system` | Objects from system namespaces only: `default` and namespaces whose names start with `d8-` or `kube-`. This is a fixed name-based list; it is independent of projects. A namespace that neither belongs to a project nor matches this list is not returned by either `system` or `projects` |
+| `system` | Objects from system namespaces only: `default` and namespaces whose names start with `d8-` or `kube-`. This is a fixed list of namespaces defined by their names and independent of projects. Other namespaces that neither belong to a project nor match the list of system namespaces are not returned when setting either `system` or `projects` scope |
 
 ### Examples
 
