@@ -37,12 +37,6 @@ resource "kubernetes_manifest" "additional_disk" {
     update = var.timeouts.update
     delete = var.timeouts.delete
   }
-
-  lifecycle {
-    ignore_changes = [
-      object.spec.persistentVolumeClaim.storageClassName
-    ]
-  }
 }
 
 # WARNING! if you change this resource and list please
@@ -104,6 +98,41 @@ resource "kubernetes_resource_ready_v1" "additional_disk" {
   fail_conditions_appearance_duration = "3s"
 }
 
+resource "kubernetes_resource_ready_v1" "additional_disk_migration" {
+  api_version = kubernetes_manifest.additional_disk.object.apiVersion
+  kind        = kubernetes_manifest.additional_disk.object.kind
+  name        = kubernetes_manifest.additional_disk.object.metadata.name
+  namespace   = kubernetes_manifest.additional_disk.object.metadata.namespace
+
+  triggers = {
+    storage_class = coalesce(var.storage_class, "")
+  }
+
+  wait_timeout                                = var.timeouts.update
+  skip_check_on_create_with_resource_lifetime = "0"
+  fail_conditions_appearance_duration         = "3s"
+
+  # status.storageClassName reflects the actual SC in use; it only changes once
+  # DVP completes the live migration. For an explicit SC, this is the authoritative
+  # completion signal. For the default SC (null), only metadata.name is checked.
+  fields = merge(
+    {
+      "metadata.name" = ".+"
+    },
+    var.storage_class != null ? {
+      "status.storageClassName" = "^${replace(var.storage_class, ".", "\\.")}$"
+    } : {}
+  )
+
+  fail_condition {
+    type   = "Ready"
+    status = "False"
+    reason = format("^(%s)$", join("|", local.not_ready_fail_reasons))
+  }
+
+  depends_on = [kubernetes_resource_ready_v1.additional_disk]
+}
+
 data "kubernetes_resource" "additional_disk" {
   api_version = var.api_version
   kind        = "VirtualDisk"
@@ -114,8 +143,8 @@ data "kubernetes_resource" "additional_disk" {
   }
 
   depends_on = [
-    # wait to disk is ready
-    kubernetes_resource_ready_v1.additional_disk,
+    # wait to disk is ready and migration (if any) complete
+    kubernetes_resource_ready_v1.additional_disk_migration,
     kubernetes_manifest.additional_disk
   ]
 }
