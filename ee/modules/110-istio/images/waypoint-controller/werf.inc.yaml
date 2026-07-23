@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
+fromCacheVersion: 2307202601
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /waypoint-controller
