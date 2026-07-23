@@ -31,7 +31,7 @@ Using the `--scope` flag, you can define namespaces the resources will be return
 | `accessible` | Objects from every namespace where the user's RBAC allows the given operation on the given resource |
 | `projects` | Objects from namespaces belonging to any [project](/modules/multitenancy-manager/cr.html#project) |
 | `project:<name>` | Objects from the namespaces of one specific project |
-| `system` | Objects from system namespaces that do not belong to any project |
+| `system` | Objects from system namespaces only: `default` and namespaces whose names start with `d8-` or `kube-`. This is a fixed name-based list; it is independent of projects. A namespace that neither belongs to a project nor matches this list is not returned by either `system` or `projects` |
 
 ### Examples
 
@@ -115,7 +115,7 @@ Response semantics:
 |---|---|
 | No headers | Standard Kubernetes behavior (the `403 Forbidden` error for a user without permissions) |
 | Header present but RBAC denied the request | `200 OK` with a list of objects from accessible namespaces (the list can be empty) |
-| Header present, and the user has cluster-wide permissions | `200 OK`. The filtering is applied by namespace classification only (for example, `system` cuts off project namespaces) |
+| Header present, and the user has cluster-wide permissions | `200 OK`. The filtering is applied by namespace classification only (for example, `system` keeps only `default`, `d8-*`, and `kube-*` namespaces) |
 | The user has no cluster-wide permissions, and an invalid header value is submitted | `403 Forbidden` (fail-closed) |
 
 When using client-go, add the headers via `rest.Config.WrapTransport`.
