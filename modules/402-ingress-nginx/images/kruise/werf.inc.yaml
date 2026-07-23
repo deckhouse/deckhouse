@@ -17,8 +17,8 @@ shell:
     - git clone $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise.git /src
     - cd /src
     - git checkout {{ $version }}
-    - rm -rf /src/tools
     - git apply /patches/*.patch --verbose
+    - rm -rf /src/tools
     - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
