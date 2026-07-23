@@ -337,7 +337,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -752,7 +752,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -998,7 +998,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -1107,7 +1107,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -1271,7 +1271,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -1433,7 +1433,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -1595,7 +1595,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -1699,7 +1699,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -1802,7 +1802,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -1947,7 +1947,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -2056,7 +2056,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -2220,7 +2220,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -2382,7 +2382,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -2544,7 +2544,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -2648,7 +2648,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -2751,7 +2751,7 @@
             "sort": 0,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
             "buckets": null,
             "mode": "time",
@@ -2801,9 +2801,9 @@
         },
         "hide": 0,
         "includeAll": false,
-        "label": null,
+        "label": "Prometheus",
         "multi": false,
-        "name": "datasource",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "queryValue": "",

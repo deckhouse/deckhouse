@@ -30,6 +30,10 @@ linters-settings:
         - kind: Deployment
           name: metadata-exporter
           container: metadata-discovery
+      no-new-privileges:
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: install-cni
   templates:
     exclude-rules:
       service-port:
