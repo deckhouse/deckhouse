@@ -2,12 +2,44 @@
 # and https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/download-grpc-health-probe.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: cni-cilium/bin-cilium-src-artifact
   add: /src/cilium
   to: /src/cilium
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libm.so.6
+  to: /usr/lib64/libm.so.6
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libc.so.6
+  to: /usr/lib64/libc.so.6
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/ld-linux-x86-64.so.2
+  to: /usr/lib64/ld-linux-x86-64.so.2
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libpthread.so.0
+  to: /usr/lib64/libpthread.so.0
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libresolv.so.2
+  to: /usr/lib64/libresolv.so.2
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/librt.so.1
+  to: /usr/lib64/librt.so.1
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/lib64/libdl.so.2
+  to: /usr/lib64/libdl.so.2
+  before: install
+- from: {{ .ModuleName }}/glibc-artifact
+  add: /out/usr/lib/libtinfo*
+  to: /usr/lib64/
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -17,7 +49,8 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make bash binutils
+#  - apk add --no-cache make bash binutils
+  - pm install make bash binutils
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0

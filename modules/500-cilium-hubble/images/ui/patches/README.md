@@ -11,6 +11,13 @@ Hubble UI:
 
 > **NOTE:**  There is a SVG-file in the patch.
 
+
+> **NOTE:**  There is a SVG-file in the patch.
+
+## 002--gomod-gosum.backend.patch
+
+Updated go dependencies to fix vulnerabilities.
+
 ## 003--auth.backend.patch
 
 Added backend authorization logic.
