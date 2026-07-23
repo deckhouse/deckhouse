@@ -2,6 +2,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
+{{- include "image mount points" . }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /validation-webhook
   to: /validation-webhook
