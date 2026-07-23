@@ -85,12 +85,17 @@ type clusterConfiguration struct {
 }
 
 func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
-	secret := &corev1.Secret{}
-	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
+	// Read as unstructured: the client serves it from the dedicated single-secret informer
+	// (see common.CacheOptions), so a NodeGroup burst does not turn every derived-status
+	// pass into a live apiserver GET. The watch keeps the value fresh.
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Version: "v1", Kind: "Secret"})
+	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, obj); err != nil {
 		return nil, ""
 	}
+	data, _, _ := unstructured.NestedStringMap(obj.Object, "data")
 
-	raw, ok := secret.Data["cluster-configuration.yaml"]
+	raw, ok := []byte(data["cluster-configuration.yaml"]), data["cluster-configuration.yaml"] != ""
 	if !ok {
 		return nil, ""
 	}
@@ -106,8 +111,12 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 	var target *semver.Version
 	switch {
 	case cfg.KubernetesVersion == automaticKubernetesVersion:
-		if raw, ok := secret.Data[deckhouseDefaultK8sVersionKey]; ok {
-			if ver, err := semver.NewVersion(strings.TrimSpace(string(raw))); err == nil {
+		if enc, ok := data[deckhouseDefaultK8sVersionKey]; ok {
+			verRaw := []byte(enc)
+			if decoded, err := base64.StdEncoding.DecodeString(enc); err == nil {
+				verRaw = decoded
+			}
+			if ver, err := semver.NewVersion(strings.TrimSpace(string(verRaw))); err == nil {
 				target = ver
 			}
 		}

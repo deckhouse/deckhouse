@@ -103,6 +103,22 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&mcmv1alpha1.Machine{}: machineNS,
 			&capiv1beta2.Machine{}: machineNS,
+			// The derived-status service reads d8-cluster-configuration on every pass; a live
+			// GET there costs hundreds of ms during a NodeGroup burst. Reading it as
+			// unstructured hits this scoped informer instead (typed Secret reads keep their
+			// own scoped informer above). The machine namespace is included because the
+			// bashible-context and update-approval controllers read their secrets there as
+			// unstructured too — a namespace absent from this map fails those reads outright.
+			newUnstructured("", "v1", "Secret"): {
+				Namespaces: map[string]cache.Config{
+					MachineNamespace: {},
+					"kube-system": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"metadata.name": "d8-cluster-configuration",
+						}),
+					},
+				},
+			},
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"):                 machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):                     machineNS,
 			&capiv1beta2.MachineDeployment{}:                                                        machineNS,
@@ -114,6 +130,13 @@ func CacheOptions() (cache.Options, client.Options) {
 
 	clientOpts := client.Options{
 		Cache: &client.CacheOptions{
+			// Serve unstructured reads from informers too: InstanceClass objects and the
+			// InstanceTypesCatalog are read as unstructured on every derived-status pass,
+			// and the default (uncached) client turns each of them into a live apiserver
+			// GET/List — hundreds of requests during a NodeGroup burst. Informers keep the
+			// data watch-fresh; wide unstructured kinds (MachineDeployment, Cluster, ...)
+			// are already namespace/label-scoped via ByObject above.
+			Unstructured: true,
 			DisableFor: []client.Object{
 				&corev1.Pod{},
 				&coordinationv1.Lease{},
