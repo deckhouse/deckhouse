@@ -313,8 +313,9 @@ var _ = Describe("OpenAPIGen", func() {
 			Expect(specProps["port"].(map[string]any)["description"]).To(ContainSubstring("Целевой порт"))
 			Expect(specProps["protocol"].(map[string]any)["description"]).To(ContainSubstring("Протокол"))
 
-			// Fields without ru markers must be absent entirely from properties.
-			Expect(specProps).NotTo(HaveKey("weight"))
+			// Fields without ru markers must have no description but are present (controller-tools v0.19.0 behavior).
+			Expect(specProps).To(HaveKey("weight"))
+			Expect(specProps["weight"].(map[string]any)).NotTo(HaveKey("description"))
 
 			// No kubebuilder validation constraints in ru overlay.
 			Expect(specProps["host"]).NotTo(HaveKey("pattern"))
